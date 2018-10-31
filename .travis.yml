@@ -10,7 +10,7 @@ before_install:
 - docker run -dt --name app pybat-lead-acid
 
 script:
-- docker exec app python -m unittest discover
+- docker exec app python3 -m unittest discover
 
 after_script:
 - docker rm -f app
