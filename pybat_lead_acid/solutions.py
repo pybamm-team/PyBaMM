@@ -4,12 +4,16 @@ def square(x):
     Parameters
     ----------
     x : float, int
-        Number which is to be squares.
+        Number which is to be squared.
 
     Returns
     -------
     float, int
         Square of x.
 
+    Examples
+    --------
+    >>> square(3)
+    9
     """
     return x*x
