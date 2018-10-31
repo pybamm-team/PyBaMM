@@ -1,0 +1,17 @@
+*.txt
+*.pyc
+*.pdf
+*.tmp
+/local/
+
+# ignore Python cache
+*__pycache__/
+*.cache
+
+# ignore Sphinx build files
+docs/_build/
+docs/build/
+build/
+
+# ignore simulation outputs
+out/
