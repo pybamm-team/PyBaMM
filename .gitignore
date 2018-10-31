@@ -1,5 +1,6 @@
 *.txt
 *.pyc
+*.py~
 *.pdf
 *.tmp
 /local/
