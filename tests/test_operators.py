@@ -1,6 +1,6 @@
 from pybat_lead_acid.parameters import Parameters
 from pybat_lead_acid.mesh import Mesh, UniformMesh
-from pybat_lead_acid.spatial_operators import *
+from pybat_lead_acid.spatial_operators import Operators
 
 import numpy as np
 import unittest
@@ -20,15 +20,15 @@ class TestOperators(unittest.TestCase):
         N = np.ones_like(mesh.x)
 
         # Get operators
-        grad, div = get_spatial_operators("Finite Volumes", mesh)
+        operators = Operators("Finite Volumes", mesh)
 
         # Check output shape
-        self.assertEqual(grad(y).shape[0], y.shape[0] - 1)
-        self.assertEqual(div(N).shape[0], N.shape[0] - 1)
+        self.assertEqual(operators.grad_x(y).shape[0], y.shape[0] - 1)
+        self.assertEqual(operators.div_x(N).shape[0], N.shape[0] - 1)
 
         # Check grad and div are both zero
-        self.assertEqual(np.linalg.norm(grad(y)), 0)
-        self.assertEqual(np.linalg.norm(div(N)), 0)
+        self.assertEqual(np.linalg.norm(operators.grad_x(y)), 0)
+        self.assertEqual(np.linalg.norm(operators.div_x(N)), 0)
 
     def test_grad_div_1D_FV_convergence(self):
         # Convergence
@@ -43,13 +43,13 @@ class TestOperators(unittest.TestCase):
             div_exact = - np.sin(mesh.xc)
 
             # Get operators and flux
-            grad, div = get_spatial_operators("Finite Volumes", mesh)
-            grad_y_approx = grad(y)
+            operators = Operators("Finite Volumes", mesh)
+            grad_y_approx = operators.grad_x(y)
 
             # Calculate divergence of exact flux to avoid double errors
             # (test for those separately)
             N_exact = np.cos(mesh.x)
-            div_approx = div(N_exact)
+            div_approx = operators.div_x(N_exact)
 
             # Calculate errors
             grad_errs[i] = (np.linalg.norm(grad_y_approx-grad_y_exact)

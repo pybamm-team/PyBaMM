@@ -1,7 +1,6 @@
 from pybat_lead_acid.variables import Variables
-from pybat_lead_acid.spatial_operators import get_spatial_operators
+from pybat_lead_acid.spatial_operators import Operators
 
-import warnings
 import scipy.integrate as it
 
 KNOWN_INTEGRATORS = ["BDF", "analytical"]
@@ -71,13 +70,13 @@ class Solver:
         yinit, _ = model.get_initial_conditions(param, mesh)
 
         # Get grad and div
-        grad, div = get_spatial_operators(self.spatial_discretisation, mesh)
+        operators = Operators(self.spatial_discretisation, mesh)
 
         # Solve ODEs
         def derivs(t, y):
             # TODO: check if it's more expensive to create vars or update it
             vars = Variables(y, param)
-            dydt, _ = model.get_pdes_rhs(vars, param, grad, div)
+            dydt, _ = model.get_pdes_rhs(vars, param, operators)
             return dydt
 
         if self.integrator == 'analytical' and ANALYTICAL_AVAILABLE:

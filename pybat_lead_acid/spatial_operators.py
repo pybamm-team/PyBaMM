@@ -1,7 +1,7 @@
 import numpy as np
 
-def get_spatial_operators(spatial_discretisation, mesh):
-    """Returns functions that calculate the spatial derivatives.
+class Operators:
+    """Contains functions that calculate the spatial derivatives.
 
     Parameters
     ----------
@@ -10,61 +10,54 @@ def get_spatial_operators(spatial_discretisation, mesh):
     mesh : pybat_lead_acid.mesh.Mesh() instance
         The mesh used for the spatial discretisation.
 
-    Returns
-    -------
-    grad : function
-        A function that calculates the gradient along the mesh.
-    div : function
-        A function that calculates the divergence along the mesh.
-
     """
-    if spatial_discretisation == "Finite Volumes":
-        def grad(y):
-            """Calculates the 1D gradient using Finite Volumes.
+    def __init__(self, spatial_discretisation, mesh):
+        self.spatial_discretisation = spatial_discretisation
+        self.mesh = mesh
 
-            Parameters
-            ----------
-            y : array_like, shape (n,)
-                The variable whose gradient is to be calculated.
+    def grad_x(self, y):
+        """Calculates the 1D gradient using Finite Volumes.
 
-            Returns
-            -------
-            grad_y : array_like, shape (n-1,)
-                The gradient, grad(y).
+        Parameters
+        ----------
+        y : array_like, shape (n,)
+            The variable whose gradient is to be calculated.
 
-            """
+        Returns
+        -------
+        array_like, shape (n-1,)
+            The gradient, grad(y).
+
+        """
+        if self.spatial_discretisation == "Finite Volumes":
             # Run some basic checks on inputs
-            assert y.shape == mesh.xc.shape, \
+            assert y.shape == self.mesh.xc.shape, \
                 """xc and y should have the same shape,
-                but xc.shape = {} and yc.shape = {}""".format(mesh.xc.shape,
+                but xc.shape = {} and yc.shape = {}""".format(self.mesh.xc.shape,
                                                               y.shape)
 
             # Calculate internal flux
-            grad_y = np.diff(y)/np.diff(mesh.xc)
+            return np.diff(y)/np.diff(self.mesh.xc)
 
-            return grad_y
+    def div_x(self, N):
+        """Calculates the 1D divergence using Finite Volumes.
 
-        def div(N):
-            """Calculates the 1D divergence using Finite Volumes.
+        Parameters
+        ----------
+        N : array_like, shape (n,)
+            The flux whose divergence is to be calculated.
 
-            Parameters
-            ----------
-            N : array_like, shape (n,)
-                The flux whose divergence is to be calculated.
+        Returns
+        -------
+        array_like, shape (n-1,)
+            The divergence, div(N).
 
-            Returns
-            -------
-            div_N : array_like, shape (n-1,)
-                The divergence, div(N).
-
-            """
+        """
+        if self.spatial_discretisation == "Finite Volumes":
             # Run basic checks on inputs
-            assert N.shape == mesh.x.shape, \
+            assert N.shape == self.mesh.x.shape, \
                 """xc and y should have the same shape,
-                but x.shape = {} and N.shape = {}""".format(mesh.x.shape,
+                but x.shape = {} and N.shape = {}""".format(self.mesh.x.shape,
                                                             N.shape)
 
-            div_N = np.diff(N)/np.diff(mesh.x)
-            return div_N
-
-    return grad, div
+            return np.diff(N)/np.diff(self.mesh.x)

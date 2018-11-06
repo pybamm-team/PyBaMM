@@ -15,7 +15,7 @@ class Model:
         The model name:
             * "Simple Diffusion" : One-dimensional diffusion equation:
                 dt/dt = d2c/dx2
-                
+
     """
     def __init__(self, name):
         if name not in KNOWN_MODELS:
@@ -52,7 +52,7 @@ class Model:
 
         return y0, inits_dict
 
-    def get_pdes_rhs(self, vars, param, grad, div):
+    def get_pdes_rhs(self, vars, param, operators):
         """Calculates the spatial derivates of the spatial terms in the PDEs
            and returns the right-hand side to be used by the ODE solver
            (Method of Lines).
@@ -80,7 +80,7 @@ class Model:
         if self.name == "Simple Diffusion":
             lbc = np.array([0])
             rbc = np.array([0])
-            dcdt = components.simple_diffusion(vars.c, grad, div, lbc, rbc)
+            dcdt = components.simple_diffusion(vars.c, operators, lbc, rbc)
 
             # Create dydt and derivs_dict
             dydt = dcdt

@@ -1,6 +1,6 @@
 from pybat_lead_acid.parameters import Parameters
 from pybat_lead_acid.mesh import Mesh, UniformMesh
-from pybat_lead_acid.spatial_operators import get_spatial_operators
+from pybat_lead_acid.spatial_operators import Operators
 from pybat_lead_acid.models import components
 
 import numpy as np
@@ -20,13 +20,13 @@ class TestComponents(unittest.TestCase):
             # Set up
             mesh = Mesh(param, n)
             y0 = np.cos(2*np.pi*mesh.xc)
-            grad, div = get_spatial_operators("Finite Volumes", mesh)
+            operators = Operators("Finite Volumes", mesh)
             lbc = np.array([0])
             rbc = np.array([0])
             dydt_exact = - 4 * np.pi**2 * y0
 
             # Calculate solution and errors
-            dydt = components.simple_diffusion(y0, grad, div, lbc, rbc)
+            dydt = components.simple_diffusion(y0, operators, lbc, rbc)
             errs[i] = norm(dydt-dydt_exact)/norm(dydt_exact)
             mesh_sizes[i] = mesh.n
 

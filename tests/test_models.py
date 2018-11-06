@@ -1,7 +1,7 @@
 from pybat_lead_acid.parameters import Parameters
 from pybat_lead_acid.mesh import Mesh, UniformMesh
 from pybat_lead_acid.variables import Variables
-from pybat_lead_acid.spatial_operators import get_spatial_operators
+from pybat_lead_acid.spatial_operators import Operators
 from pybat_lead_acid.models.model_class import Model, KNOWN_MODELS
 
 import numpy as np
@@ -19,8 +19,8 @@ class TestModel(unittest.TestCase):
                 model = Model(model_name)
                 y0, _ = model.get_initial_conditions(param, mesh)
                 vars = Variables(y0, param)
-                grad, div = get_spatial_operators("Finite Volumes", mesh)
-                dydt, _ = model.get_pdes_rhs(vars, param, grad, div)
+                operators = Operators("Finite Volumes", mesh)
+                dydt, _ = model.get_pdes_rhs(vars, param, operators)
                 self.assertEqual(y0.shape, dydt.shape)
 
 if __name__ == "__main__":
