@@ -1,4 +1,4 @@
-from pybat_lead_acid.models import components
+from pybamm.models import components
 
 import numpy as np
 
@@ -29,9 +29,9 @@ class Model:
 
         Parameters
         ----------
-        param : pybat_lead_acid.parameters.Parameters() instance
+        param : pybamm.parameters.Parameters() instance
             The model parameters.
-        mesh : pybat_lead_acid.mesh.Mesh() instance
+        mesh : pybamm.mesh.Mesh() instance
             The mesh used for discretisation.
 
         Returns
@@ -59,9 +59,9 @@ class Model:
 
         Parameters
         ----------
-        vars : pybat_lead_acid.variables.Variables() instance
+        vars : pybamm.variables.Variables() instance
             The variables of the model.
-        param : pybat_lead_acid.parameters.Parameters() instance
+        param : pybamm.parameters.Parameters() instance
             The model parameters.
         grad : function
             The gradient operator.

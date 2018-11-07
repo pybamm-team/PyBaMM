@@ -19,11 +19,7 @@ class Solver:
     spatial_discretisation : string, optional
         The spatial discretisation scheme:
             * "Finite Volumes" (default): Finite Volumes discretisation.
-                Cell edges are on the boundaries between the subdomains, e.g.:
-
-                |---|---|---|---|---|---|
-                N c N      ...      N c N
-
+                Cell edges are on the boundaries between the subdomains
     """
     def __init__(self,
                  integrator="BDF",

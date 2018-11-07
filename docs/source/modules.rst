@@ -1,7 +1,7 @@
-pybat_lead_acid
-===============
+pybamm
+======
 
 .. toctree::
    :maxdepth: 4
 
-   pybat_lead_acid
+   pybamm

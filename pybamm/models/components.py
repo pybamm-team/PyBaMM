@@ -10,7 +10,7 @@ def simple_diffusion(c, operators, flux_bc_left, flux_bc_right, source=0):
     ----------
     c : array_like, shape (n,)
         The quantity being diffused.
-    operators : pybat_lead_acid.operators.Operators() instance
+    operators : pybamm.operators.Operators() instance
         The spatial operators.
     flux_bc_left : array_like, shape (1,)
         Flux on the left-hand side (Neumann BC).

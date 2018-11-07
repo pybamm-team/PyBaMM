@@ -19,7 +19,7 @@ class Mesh:
 
     """
     def __init__(self, param, target_npts, tsteps=100, tend=1):
-        """Space"""
+        # Space
         # We aim to create the grid as uniformly as possible
         targetmeshsize = min(param.ln, param.ls, param.lp)/target_npts
 
@@ -51,7 +51,7 @@ class Mesh:
         self.xcp = (self.xp[1:] + self.xp[:-1]) / 2
         self.xc = (self.x[1:] + self.x[:-1]) / 2
 
-        """Time"""
+        # Time
         self.time = np.linspace(0, tend, tsteps)
 
 class UniformMesh:

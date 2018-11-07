@@ -14,19 +14,19 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'PyBatLeadAcid'
+project = 'PyBaMM'
 copyright = '2018, Valentin Sulzer'
 author = 'Valentin Sulzer'
 
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = ''
 
 
 # -- General configuration ---------------------------------------------------
@@ -41,6 +41,7 @@ release = '0.0.1'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
@@ -49,7 +50,7 @@ extensions = [
 napoleon_google_docstring = False
 
 doctest_global_setup = """
-from pybat_lead_acid import *
+from docs import *
 """
 
 # Add any paths that contain templates here, relative to this directory.
@@ -85,7 +86,7 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -112,7 +113,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'PyBatLeadAciddoc'
+htmlhelp_basename = 'PyBaMMdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -139,7 +140,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'PyBatLeadAcid.tex', 'PyBat Lead Acid Documentation',
+    (master_doc, 'PyBaMM.tex', 'PyBaMM Documentation',
      'Valentin Sulzer', 'manual'),
 ]
 
@@ -149,7 +150,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'pybatleadacid', 'PyBat Lead Acid Documentation',
+    (master_doc, 'pybamm', 'PyBaMM Documentation',
      [author], 1)
 ]
 
@@ -160,8 +161,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'PyBatLeadAcid', 'PyBat Lead Acid Documentation',
-     author, 'PyBatLeadAcid', 'One line description of project.',
+    (master_doc, 'PyBaMM', 'PyBaMM Documentation',
+     author, 'PyBaMM', 'One line description of project.',
      'Miscellaneous'),
 ]
 
@@ -185,3 +186,8 @@ epub_exclude_files = ['search.html']
 
 
 # -- Extension configuration -------------------------------------------------
+
+# -- Options for intersphinx extension ---------------------------------------
+
+# Example configuration for intersphinx: refer to the Python standard library.
+intersphinx_mapping = {'https://docs.python.org/': None}
