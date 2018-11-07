@@ -4,14 +4,14 @@ class Simulation:
 
     Parameters
     ---------
-    model : pybat_lead_acid.models.(modelname).(ModelName)() instance
+    model : pybamm.models.(modelname).(ModelName)() instance
         The model to be used for the simulation. (modelname) and (ModelName)
         refer to a module and class to be chosen.
 
-    parameters : pybat_lead_acid.parameters.Parameters() instance
+    parameters : pybamm.parameters.Parameters() instance
         The parameters to be used for the simulation.
 
-    mesh : pybat_lead_acid.mesh.Mesh() instance
+    mesh : pybamm.mesh.Mesh() instance
         The mesh to be used for the simulation.
 
     name : string, optional
@@ -33,7 +33,7 @@ class Simulation:
 
         Parameters
         ----------
-        solver : pybat_lead_acid.solver.Solver() instance
+        solver : pybamm.solver.Solver() instance
             The algorithm for solving the model defined in self.model
         """
         self.solver_name = solver.name

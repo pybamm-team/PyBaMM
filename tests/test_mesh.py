@@ -1,5 +1,5 @@
-from pybat_lead_acid.mesh import *
-from pybat_lead_acid.parameters import *
+from pybamm.mesh import *
+from pybamm.parameters import *
 
 import numpy as np
 import unittest

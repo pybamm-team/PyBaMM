@@ -1,8 +1,8 @@
-from pybat_lead_acid.parameters import Parameters
-from pybat_lead_acid.mesh import Mesh, UniformMesh
-from pybat_lead_acid.variables import Variables
-from pybat_lead_acid.spatial_operators import Operators
-from pybat_lead_acid.models.model_class import Model, KNOWN_MODELS
+from pybamm.parameters import Parameters
+from pybamm.mesh import Mesh, UniformMesh
+from pybamm.variables import Variables
+from pybamm.spatial_operators import Operators
+from pybamm.models.model_class import Model, KNOWN_MODELS
 
 import numpy as np
 from numpy.linalg import norm

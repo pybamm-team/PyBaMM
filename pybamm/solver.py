@@ -1,5 +1,5 @@
-from pybat_lead_acid.variables import Variables
-from pybat_lead_acid.spatial_operators import Operators
+from pybamm.variables import Variables
+from pybamm.spatial_operators import Operators
 
 import scipy.integrate as it
 
@@ -7,7 +7,7 @@ KNOWN_INTEGRATORS = ["BDF", "analytical"]
 KNOWN_SPATIAL_DISCRETISATIONS = ["Finite Volumes"]
 
 class Solver:
-    """Solver for the simulation created in pybat_lead_acid.sim.
+    """Solver for the simulation created in pybamm.sim.
 
     Parameters
     ----------
@@ -53,12 +53,12 @@ class Solver:
 
         Parameters
         ----------
-        sim : pybat_lead_acid.simulation.Simulation() instance
+        sim : pybamm.simulation.Simulation() instance
             The simulation to be solved.
 
         Returns
         -------
-        vars : pybat_lead_acid.variables.Variables() instance
+        vars : pybamm.variables.Variables() instance
             The variables of the solved model.
 
         """

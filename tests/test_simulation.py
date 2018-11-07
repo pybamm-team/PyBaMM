@@ -1,4 +1,4 @@
-from pybat_lead_acid.simulation import *
+from pybamm.simulation import *
 import unittest
 
 class TestSolution(unittest.TestCase):
@@ -14,6 +14,6 @@ class TestSolution(unittest.TestCase):
         # integral of j is known
         # check convergence to steady state when current is zero
         # concentration and porosity limits
-        
+
 if __name__ == '__main__':
     unittest.main()

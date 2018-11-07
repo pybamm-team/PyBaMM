@@ -6,8 +6,8 @@ class Operators:
     Parameters
     ----------
     spatial_discretisation : string
-        The spatial discretisation scheme (see pybat_lead_acid.solver).
-    mesh : pybat_lead_acid.mesh.Mesh() instance
+        The spatial discretisation scheme (see pybamm.solver).
+    mesh : pybamm.mesh.Mesh() instance
         The mesh used for the spatial discretisation.
 
     """

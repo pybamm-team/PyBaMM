@@ -1,8 +1,8 @@
-from pybat_lead_acid.parameters import Parameters
-from pybat_lead_acid.mesh import Mesh
-from pybat_lead_acid.models.model_class import Model
-from pybat_lead_acid.simulation import Simulation
-from pybat_lead_acid.solver import Solver
+from pybamm.parameters import Parameters
+from pybamm.mesh import Mesh
+from pybamm.models.model_class import Model
+from pybamm.simulation import Simulation
+from pybamm.solver import Solver
 
 import numpy as np
 

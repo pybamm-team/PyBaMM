@@ -1,6 +1,6 @@
-from pybat_lead_acid.parameters import Parameters
-from pybat_lead_acid.mesh import Mesh, UniformMesh
-from pybat_lead_acid.spatial_operators import Operators
+from pybamm.parameters import Parameters
+from pybamm.mesh import Mesh, UniformMesh
+from pybamm.spatial_operators import Operators
 
 import numpy as np
 import unittest

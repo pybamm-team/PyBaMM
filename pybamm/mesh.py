@@ -6,7 +6,7 @@ class Mesh:
 
     Parameters
     ----------
-    param : pybat_lead_acid.parameters.Parameters() instance
+    param : pybamm.parameters.Parameters() instance
         The parameters defining the subdomain sizes.
     target_npts : int
         The target number of points in each domain. The mesh will be created
