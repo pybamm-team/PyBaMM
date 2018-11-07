@@ -14,5 +14,6 @@ docs/_build/
 docs/build/
 build/
 
-# ignore simulation outputs
-out/
+# ignore simulation inputs and outputs
+input/
+output/
