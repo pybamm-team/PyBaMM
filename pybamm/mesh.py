@@ -42,6 +42,7 @@ class Mesh:
                               self.ns)
         self.xp = np.linspace(param.ln + param.ls, 1., self.np)
         self.x = np.concatenate([self.xn, self.xs, self.xp])
+        self.dx = np.diff(self.x)
 
         # Grid: centres
         self.xcn = (self.xn[1:] + self.xn[:-1]) / 2
@@ -50,7 +51,8 @@ class Mesh:
                                self.ns + 1)
         self.xcp = (self.xp[1:] + self.xp[:-1]) / 2
         self.xc = (self.x[1:] + self.x[:-1]) / 2
-
+        self.dxc = np.diff(self.xc)
+        
         # Time
         self.time = np.linspace(0, tend, tsteps)
 

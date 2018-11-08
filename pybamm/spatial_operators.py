@@ -37,7 +37,7 @@ class Operators:
                                                               y.shape)
 
             # Calculate internal flux
-            return np.diff(y)/np.diff(self.mesh.xc)
+            return np.diff(y) / self.mesh.dxc
 
     def div_x(self, N):
         """Calculates the 1D divergence using Finite Volumes.
@@ -60,4 +60,4 @@ class Operators:
                 but x.shape = {} and N.shape = {}""".format(self.mesh.x.shape,
                                                             N.shape)
 
-            return np.diff(N)/np.diff(self.mesh.x)
+            return np.diff(N) / self.mesh.dx

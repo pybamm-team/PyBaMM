@@ -39,6 +39,11 @@ class Simulation:
         self.solver_name = solver.name
         self.vars = solver.get_simulation_vars(self)
 
+    def average(self):
+        """Average simulation variable attributes
+        over the relevant (sub)domain."""
+        self.vars.average(self.param, self.mesh)
+
     def save(self):
         raise NotImplementedError
 
