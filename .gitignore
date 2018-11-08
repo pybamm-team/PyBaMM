@@ -14,8 +14,11 @@ docs/_build/
 docs/build/
 build/
 
-# ignore simulation inputs and outputs
-input/
+# ignore inputs except parameters
+input/*
+!input/parameters
+
+# ignore simulation outputs
 out/
 
 # ignore ideas
