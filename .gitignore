@@ -16,4 +16,4 @@ build/
 
 # ignore simulation inputs and outputs
 input/
-output/
+out/
