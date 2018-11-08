@@ -68,11 +68,14 @@ class Solver:
         # Get grad and div
         operators = Operators(self.spatial_discretisation, mesh)
 
+        # Set mesh dependent parameters
+        param.set_mesh_dependent_parameters(mesh)
+
         # Solve ODEs
         def derivs(t, y):
             # TODO: check if it's more expensive to create vars or update it
-            vars = Variables(y, param)
-            dydt, _ = model.get_pdes_rhs(vars, param, operators)
+            vars = Variables(y, param, mesh)
+            dydt, _ = model.get_pdes_rhs(t, vars, param, operators)
             return dydt
 
         if self.integrator == 'analytical' and ANALYTICAL_AVAILABLE:
@@ -86,7 +89,7 @@ class Solver:
             # TODO: implement concentration cut-off event
 
         # Extract variables from y
-        vars = Variables(sol.y, param)
+        vars = Variables(sol.y, param, mesh)
 
         # Post-process (get potentials)
         # TODO: write post-processing function

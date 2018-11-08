@@ -14,13 +14,14 @@ class TestModel(unittest.TestCase):
     def test_models_shapes(self):
         param = Parameters()
         mesh = Mesh(param, 50)
+        param.set_mesh_dependent_parameters(mesh)
         for model_name in KNOWN_MODELS:
             with self.subTest(model_name=model_name):
                 model = Model(model_name)
                 y0, _ = model.get_initial_conditions(param, mesh)
-                vars = Variables(y0, param)
+                vars = Variables(y0, param, mesh)
                 operators = Operators("Finite Volumes", mesh)
-                dydt, _ = model.get_pdes_rhs(vars, param, operators)
+                dydt, _ = model.get_pdes_rhs(0, vars, param, operators)
                 self.assertEqual(y0.shape, dydt.shape)
 
 if __name__ == "__main__":

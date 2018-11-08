@@ -48,17 +48,19 @@ class Model:
 
             # Create y0 and inits_dict
             y0 = c0
-            inits_dict['c0'] = c0
+            inits_dict['c'] = c0
 
         return y0, inits_dict
 
-    def get_pdes_rhs(self, vars, param, operators):
+    def get_pdes_rhs(self, t, vars, param, operators):
         """Calculates the spatial derivates of the spatial terms in the PDEs
            and returns the right-hand side to be used by the ODE solver
            (Method of Lines).
 
         Parameters
         ----------
+        t : float
+            The simulation time.
         vars : pybamm.variables.Variables() instance
             The variables of the model.
         param : pybamm.parameters.Parameters() instance
@@ -80,10 +82,18 @@ class Model:
         if self.name == "Simple Diffusion":
             lbc = np.array([0])
             rbc = np.array([0])
-            dcdt = components.simple_diffusion(vars.c, operators, lbc, rbc)
+            j = np.concatenate([0*vars.cn + param.icell(t) / param.ln,
+                                0*vars.cs,
+                                0*vars.cp - param.icell(t) / param.lp])
+            source = param.s*j
+
+            dcdt = components.simple_diffusion(vars.c,
+                                               operators,
+                                               (lbc, rbc),
+                                               source=source)
 
             # Create dydt and derivs_dict
             dydt = dcdt
-            derivs_dict['dcdt'] = dcdt
+            derivs_dict['c'] = dcdt
 
         return dydt, derivs_dict
