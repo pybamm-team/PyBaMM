@@ -16,8 +16,14 @@ class TestParameters(unittest.TestCase):
             optional_parameters={'Ln': 1/3, 'Ls': 1/3, 'Lp': 1/3})
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
         param = Parameters(
-            optional_parameters='input/optional_parameters_test.csv')
+            optional_parameters='input/parameters/optional_test.csv')
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
+
+    def test_mesh_dependent_parameters(self):
+        param = Parameters()
+        mesh = Mesh(param, 10)
+        param.set_mesh_dependent_parameters(mesh)
+        self.assertEqual(param.s.shape, mesh.xc.shape)
 
 if __name__ == "__main__":
     unittest.main()

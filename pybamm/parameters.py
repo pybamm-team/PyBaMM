@@ -35,7 +35,7 @@ class Parameters:
         # Defaults ############################################################
         # Load default parameters from csv file
         default_parameters = read_parameters_csv(
-            'input/default_parameters.csv')
+            'input/parameters/default.csv')
         #######################################################################
         #######################################################################
 
@@ -76,29 +76,28 @@ class Parameters:
         # Total width [m]
         self.L = self.Ln + self.Ls + self.Lp
         # Area of the current collectors [m2]
-        self.A_cc = self.H*self.W
+        self.A_cc = self.H * self.W
         # Volume of a cell [m3]
-        self.Vc = self.A_cc*self.L
+        self.Vc = self.A_cc * self.L
 
         # Electrical
         # Reference current density [A.m-2]
         self.ibar = abs(self.current['Ibar']
-                        / (self.n_electrodes_parallel*self.A_cc))
+                        / (self.n_electrodes_parallel * self.A_cc))
         # C-rate [-]
-        self.Crate = self.current['Ibar']/self.Q
-
+        self.Crate = self.current['Ibar'] / self.Q
 
         # Effective reaction rates
         # Main reaction (neg) [-]
-        self.sn = - (self.spn + 2*self.tpw)/2
+        self.sn = - (self.spn + 2*self.tpw) / 2
         # Main reaction (pos) [-]
-        self.sp = - (self.spp + 2*self.tpw)/2
+        self.sp = - (self.spp + 2*self.tpw) / 2
 
         # Electrode physical properties
         # Effective lead conductivity (Bruggeman) [S.m-1]
-        self.sigma_eff_n = self.sigma_n*(1-self.epsnmax)**1.5
+        self.sigma_eff_n = self.sigma_n * (1-self.epsnmax)**1.5
         # Effective lead dioxide conductivity (Bruggeman) [S.m-1]
-        self.sigma_eff_p = self.sigma_p*(1-self.epspmax)**1.5
+        self.sigma_eff_p = self.sigma_p * (1-self.epspmax)**1.5
 
         # Dimensional volume changes
         # Net Molar Volume consumed in neg electrode [m3.mol-1]
@@ -111,42 +110,62 @@ class Parameters:
         self.DeltaVliqP = self.Ve*(1-2*self.tpw)
         self.DeltaVliqO2P = self.Ve*(2-2*self.tpw) - self.Vw
         self.DeltaVliqH2P = 0
+
+        # Temperature
+        # External temperature [K]
+        self.T_inf = self.T_ref
         #######################################################################
         #######################################################################
 
 
         #######################################################################
         # Dimensionless Parameters ############################################
+        self.scales = Scales(self)
+
+        # Geometric
         # Dimensionless half-width of negative electrode
-        self.ln = self.Ln/self.L
+        self.ln = self.Ln / self.scales.length
         # Dimensionless width of separator
-        self.ls = self.Ls/self.L
+        self.ls = self.Ls / self.scales.length
         # Dimensionless half-width of positive electrode
-        self.lp = self.Lp/self.L
+        self.lp = self.Lp / self.scales.length
+        # Aspect ratio
+        self.delta = self.L / self.H
+        # Width relative to height
+        self.w = self.W / self.H
+
+        # Exchange-current densities
+        # Main reaction, negative electrode
+        self.iota_ref_n = self.jref_n / self.scales.jn
+        # Oxygen reaction, negative electrode
+        self.iota_ref_O2_n = self.jrefO2_n / self.scales.jn
+        # Hydrogen reaction, negative electrode
+        self.iota_ref_H2_n = self.jrefH2_n / self.scales.jn
+        # Main reaction, positive electrode
+        self.iota_ref_p = self.jref_p / self.scales.jp
+        # Oxygen reaction, positive electrode
+        self.iota_ref_O2_p = self.jrefO2_p / self.scales.jp
+        # Hydrogen reaction, positive electrode
+        self.iota_ref_H2_p = self.jrefH2_p / self.scales.jp
         #######################################################################
         #######################################################################
+
+    def set_mesh_dependent_parameters(self, mesh):
+        """Create parameters that depend on the mesh
+        (e.g. different in each electrode and separator).
+
+        Parameters
+        ----------
+        mesh : pybamm.mesh.Mesh() instance
+            The mesh on which to evaluate the parameters.
+
+        """
+        self.s = np.concatenate([self.sn*np.ones_like(mesh.xcn),
+                                 np.zeros_like(mesh.xcs),
+                                 self.sp*np.ones_like(mesh.xcp)])
+
     def xxx(self):
 
-        # Butler-Volmer
-        # Reference exchange-current densities [A.m-2]
-        if system == 'Bernardi':
-            self.jref_n = 1e5/self.Anmax
-            self.jref_p = 1.1e5/self.Apmax
-            self.jrefO2_n = 1.15e-25/self.Anmax         # O2 neg
-            self.jrefH2_n = 0  # 1.56e-11        # H2 neg
-            self.jrefO2_p = 1.15e-13/self.Apmax         # O2 pos
-            self.jrefH2_p = 0               # H2 pos
-        else:
-            self.jref_n = fit['jref_n']     # main neg
-            self.jref_p = fit['jref_p']     # main pos
-            self.jrefO2_n = 2.5e-32         # O2 neg
-            self.jrefH2_n = 0  # 1.56e-11        # H2 neg
-            self.jrefO2_p = 2.5e-23         # O2 pos
-            self.jrefH2_p = 0               # H2 pos
-
-        # Temperature
-        self.T_inf = self.T_ref         # External temperature [K]
-        self.T_max = 273.15+60          # Maximum temperature [K]
         # Cell heat capacity [kg.m2.s-2.K-1][J/K]
         self.Cp = 293
         # Density times specific heat capacity [kg.m-1.s-2.K-1][J/m^3K]
@@ -156,8 +175,6 @@ class Parameters:
         # Convective heat transfer coefficient [kg.s-3.K-1][W/m^2K]
         self.h = 2
         self.Tinit_hat = self.T_inf     # Initial temperature [K]
-        # Scales
-        self.scales = Scales(self)
 
         # """Turn off side reactions?"""
         # self.jrefO2_n = self.jrefH2_n = self.jrefO2_p = self.jrefH2_p = 0
@@ -165,27 +182,9 @@ class Parameters:
         # self.satn0 = self.sats0 = self.satpw = 1
 
         """Dimensionless parameters"""
-        # Geometry
-        self.delta = self.L/self.H
-        self.w = self.W/self.H
-
         # Diffusional C-rate: diffusion timescale/discharge timescale
         self.Cd = ((self.L**2)/self.D_hat(self.cmax)
                    / (self.cmax*self.F*self.L/self.ibar))
-
-        # Exchange-current densities
-        # Dimensionless exchange-current density (neg)
-        self.iota_ref_n = self.jref_n/(self.ibar/(self.Anmax*self.L))
-        # Dimensionless exchange-current density (neg)
-        self.iota_ref_O2_n = self.jrefO2_n/(self.ibar/(self.Anmax*self.L))
-        # Dimensionless exchange-current density (neg)
-        self.iota_ref_H2_n = self.jrefH2_n/(self.ibar/(self.Anmax*self.L))
-        # Dimensionless exchange-current density (pos)
-        self.iota_ref_p = self.jref_p/(self.ibar/(self.Apmax*self.L))
-        # Dimensionless exchange-current density (pos)
-        self.iota_ref_O2_p = self.jrefO2_p/(self.ibar/(self.Apmax*self.L))
-        # Dimensionless exchange-current density (pos)
-        self.iota_ref_H2_p = self.jrefH2_p/(self.ibar/(self.Apmax*self.L))
 
         # OCPs
         self.U_O2_n = self.F/(self.R*self.T_ref) * \
@@ -225,38 +224,48 @@ class Parameters:
                                 / (self.ln*self.iota_s_n*self.delta**2 + self.lp*self.iota_s_p*self.delta**2))  # Ratio of scaled conductivities
 
         # Other
-        self.alpha = (2*self.Vw - self.Ve) * \
-            self.cmax    # Excluded volume fraction
+        # Excluded volume fraction
+        self.alpha = (2*self.Vw - self.Ve) * self.cmax
+        # Dimensionless double-layer capacity (neg)
         self.gamma_dl_n = (self.Cdl*self.R*self.T_ref*self.Anmax*self.L
                            / (self.F*self.ibar)
-                           / (self.cmax*self.F*self.L/self.ibar))   # Dimensionless double-layer capacity (neg)
+                           / (self.cmax*self.F*self.L/self.ibar))
+        # Dimensionless double-layer capacity (pos)
         self.gamma_dl_p = (self.Cdl*self.R*self.T_ref*self.Apmax*self.L
                            / (self.F*self.ibar)
-                           / (self.cmax*self.F*self.L/self.ibar))   # Dimensionless double-layer capacity (pos)
+                           / (self.cmax*self.F*self.L/self.ibar))
+        # Dimensionless voltage cut-off
         self.voltage_cutoff = (self.F/(self.R*self.T_ref)
                                * (self.voltage_cutoff_circuit/6
-                                  - (self.U_PbO2_ref - self.U_Pb_ref)))  # Dimensionless voltage cut-off
+                                  - (self.U_PbO2_ref - self.U_Pb_ref)))
         # Ratio of reference concentrations
         self.curlyC = 1/(self.cmax/self.cO2ref)
         # Ratio of reference diffusivities
         self.curlyD = self.D_hat(self.cmax)/self.DO2_hat(self.cO2ref)
         # Reaction velocity scale
         self.U_rxn = self.ibar/(self.cmax*self.F)
+        # Ratio of viscous pressure scale to osmotic pressure scale
         self.pi_os = (self.mu_hat(self.cmax)*self.U_rxn*self.L
-                      / (self.d**2*self.R*self.T_ref*self.cmax))         # Ratio of viscous pressure scale to osmotic pressure scale
+                      / (self.d**2*self.R*self.T_ref*self.cmax))
 
         # Temperature
+        # Dimensionless reaction coefficient
         self.thetarxn = (self.R*self.T_ref*self.cmax
-                         / (self.rhocp*(self.T_max-self.T_inf)))     # Dimensionless reaction coefficient
+                         / (self.rhocp*(self.T_max-self.T_inf)))
+        # Dimensionless thermal diffusion (should be small)
         self.thetadiff = (self.k*self.cmax*self.F
-                          / (self.L*self.rhocp))     # Dimensionless thermal diffusion (should be small)
+                          / (self.L*self.rhocp))
+        # Dimensionless thermal convection
         self.thetaconv = (self.h*self.A_cc*self.cmax*self.F*self.L
-                          / (self.Vc*self.rhocp*self.ibar))  # Dimensionless thermal convection
+                          / (self.Vc*self.rhocp*self.ibar))
         self.thetac = 0
 
         # Initial conditions
-        self.qmax = ((self.Ln*self.epsnmax+self.Ls*self.epssmax+self.Lp*self.epspmax)/self.L
-                     / (self.sp-self.sn))   # Dimensionless max capacity
+        # Dimensionless max capacity
+        self.qmax = ((self.Ln * self.epsnmax
+                      + self.Ls * self.epssmax
+                      + self.Lp * self.epspmax
+                      ) / self.L / (self.sp - self.sn))
         # if system == 'Bernardi':
         #     self.q0 = 0.39/4.94
         #     self.Un0 = 0.5
@@ -396,10 +405,10 @@ class Parameters:
     def U_Pb(self, c):
         """Dimensionless OCP in the negative electrode"""
         m = self.m(c*self.cmax)  # dimensionless
-        U = self.F/(self.R*self.T_ref)*(- 0.074*log10(m)
-                                        - 0.030*log10(m)**2
-                                        - 0.031*log10(m)**3
-                                        - 0.012*log10(m)**4)
+        U = self.F/(self.R*self.T_ref)*(- 0.074 * np.log10(m)
+                                        - 0.030 * np.log10(m)**2
+                                        - 0.031 * np.log10(m)**3
+                                        - 0.012 * np.log10(m)**4)
         return U
 
     def U_Pb_hat(self, c):
@@ -410,22 +419,22 @@ class Parameters:
     def dUPbdc(self, c):
         """Dimensionless derivative of U_Pb with respect to c"""
         m = self.m(c*self.cmax)  # dimensionless
-        dUdm = self.F/(self.R*self.T_ref)*(- 0.074/m/np.log(10)
-                                           - 0.030*2 *
-                                           np.log(m)/(m*np.log(10)**2)
-                                           - 0.031*3 *
-                                           np.log(m)**2/m/np.log(10)**3
-                                           - 0.012*4*np.log(m)**3/m/np.log(10)**4)
+        dUdm = self.F/(self.R*self.T_ref)*(
+            - 0.074/m/np.log(10)
+            - 0.030*2 * np.log(m)/(m*np.log(10)**2)
+            - 0.031*3 * np.log(m)**2/m/np.log(10)**3
+            - 0.012*4*np.log(m)**3/m/np.log(10)**4
+            )
         dmdc = self.dmdc(c*self.cmax)*self.cmax  # dimensionless
         return dmdc*dUdm
 
     def U_PbO2(self, c):
         """Dimensionless OCP in the positive electrode"""
         m = self.m(c*self.cmax)
-        U = self.F/(self.R*self.T_ref)*(0.074*log10(m)
-                                        + 0.033*log10(m)**2
-                                        + 0.043*log10(m)**3
-                                        + 0.022*log10(m)**4)
+        U = self.F/(self.R*self.T_ref)*(0.074 * np.log10(m)
+                                        + 0.033 * np.log10(m)**2
+                                        + 0.043 * np.log10(m)**3
+                                        + 0.022 * np.log10(m)**4)
         return U
 
     def U_PbO2_hat(self, c):
@@ -434,13 +443,118 @@ class Parameters:
                 + self.R*self.T_ref/self.F * self.U_PbO2(c/self.cmax))
 
     def dUPbO2dc(self, c):
-        """Dimensionless derivative of U_Pb with respect to c"""
+        """Dimensionless derivative of U_PbO2 with respect to c"""
         m = self.m(c*self.cmax)  # dimensionless
-        dUdm = self.F/(self.R*self.T_ref)*(0.074/m/np.log(10)
-                                           + 0.033*2 *
-                                           np.log(m)/(m*np.log(10)**2)
-                                           + 0.043*3 *
-                                           np.log(m)**2/m/np.log(10)**3
-                                           + 0.022*4*np.log(m)**3/m/np.log(10)**4)
+        dUdm = self.F/(self.R*self.T_ref)*(
+            0.074/m/np.log(10)
+            + 0.033*2 * np.log(m)/(m*np.log(10)**2)
+            + 0.043*3 * np.log(m)**2/m/np.log(10)**3
+            + 0.022*4*np.log(m)**3/m/np.log(10)**4
+            )
         dmdc = self.dmdc(c*self.cmax)*self.cmax  # dimensionless
         return dmdc*dUdm
+
+class Scales:
+    """Scales for non-dimensionalisation.
+
+    Parameters
+    ----------
+    param : Parameters() instance
+        The parameters from which to Calculate scales.
+
+    """
+    def __init__(self, param):
+        # Length scale [m]
+        self.length = param.L
+        # Discharge time scale [h]
+        self.time = param.cmax*param.F*param.L / param.ibar / 3600
+        # Concentration scale [mol.m-3]
+        self.conc = param.cmax
+        # Current density scale [A.m-2]
+        self.current = param.ibar
+        # Interfacial current density scale (neg) [A.m-2]
+        self.jn = param.ibar/(param.Anmax*param.L)
+        # Interfacial current density scale (pos) [A.m-2]
+        self.jp = param.ibar/(param.Apmax*param.L)
+        # Interfacial area scale (neg) [m2.m-3]
+        self.An = param.Anmax
+        # Interfacial area scale (pos) [m2.m-3]
+        self.Ap = param.Apmax
+        # Interfacial area times current density [A.m-3]
+        self.Aj = param.ibar/(param.L)
+        # Voltage scale (thermal voltage) [V]
+        self.pot = param.R*param.T_ref/param.F
+        # Porosity, SOC scale [-]
+        self.one = 1
+        # Temperature scale [K]
+        self.temp = param.T_max - param.T_inf
+
+        # Combined scales
+        self.It = self.current*self.time
+
+        # Dictionary matching solution attributes
+        # to re-dimensionalisation scales
+        self.match = {'t': 'time',
+                      'x': 'length',
+                      'icell': 'current',
+                      'Icircuit': 'current',
+                      'intI': 'It',
+                      'c0_v': 'conc',
+                      'c1': 'conc',
+                      'c': 'conc',
+                      'c_avg': 'conc',
+                      'cO2': 'concO2',
+                      'cO2_avg': 'concO2',
+                      'phi': ('pot', -param.U_Pb_ref),
+                      'phis': ('pot', 0, param.U_PbO2_ref - param.U_Pb_ref),
+                      'phisn': 'pot',
+                      'phisp': ('pot', param.U_PbO2_ref - param.U_Pb_ref),
+                      'xi': ('pot', -param.U_Pb_ref, param.U_PbO2_ref),
+                      'xin': ('pot', -param.U_Pb_ref),
+                      'xis': ('one', 0),
+                      'xip': ('pot', param.U_PbO2_ref),
+                      'V0': ('pot', param.U_PbO2_ref - param.U_Pb_ref),
+                      'V1': ('pot', param.U_PbO2_ref - param.U_Pb_ref),
+                      'V': ('pot', param.U_PbO2_ref - param.U_Pb_ref),
+                      'V0circuit': ('pot',
+                                    6*(param.U_PbO2_ref - param.U_Pb_ref)),
+                      'Vcircuit': ('pot',
+                                   6*(param.U_PbO2_ref - param.U_Pb_ref)),
+                      'j': ('jn', 'jp'),
+                      'jO2': ('jn', 'jp'),
+                      'jH2': ('jn', 'jp'),
+                      'jn': 'jn',
+                      'js': 'one',
+                      'jp': 'jp',
+                      'jO2n': 'jn',
+                      'jO2s': 'one',
+                      'jO2p': 'jp',
+                      'jH2n': 'jn',
+                      'jH2s': 'one',
+                      'jH2p': 'jp',
+                      'A': ('An', 'Ap'),
+                      'AO2': ('An', 'Ap'),
+                      'AH2': ('An', 'Ap'),
+                      'Adl': ('An', 'Ap'),
+                      'An': 'An',
+                      'As': 'one',
+                      'Ap': 'Ap',
+                      'AO2n': 'An',
+                      'AO2s': 'one',
+                      'AO2p': 'Ap',
+                      'AH2n': 'An',
+                      'AH2s': 'one',
+                      'AH2p': 'Ap',
+                      'Adln': 'An',
+                      'Adls': 'one',
+                      'Adlp': 'Ap',
+                      'i': 'current',
+                      'i_n': 'current',
+                      'i_p': 'current',
+                      'isolid': 'current',
+                      'q': 'one',
+                      'U': 'one',
+                      'Un': 'one',
+                      'Us': 'one',
+                      'Up': 'one',
+                      'T': ('temp', param.T_inf)}
