@@ -17,3 +17,6 @@ build/
 # ignore simulation inputs and outputs
 input/
 out/
+
+# ignore ideas
+ideas/
