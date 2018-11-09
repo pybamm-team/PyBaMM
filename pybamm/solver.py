@@ -75,7 +75,7 @@ class Solver:
         # Solve ODEs
         def derivs(t, y):
             # TODO: check if it's more expensive to create vars or update it
-            vars = Variables(t, y, param, mesh)
+            vars = Variables(t, y, model, mesh)
             dydt, _ = model.pdes_rhs(vars, param, operators)
             return dydt
 
@@ -91,7 +91,7 @@ class Solver:
             # TODO: implement concentration cut-off event
 
         # Extract variables from y
-        vars = Variables(sol.t, sol.y, param, mesh)
+        vars = Variables(sol.t, sol.y, model, mesh)
 
         # Post-process (get potentials)
         # TODO: write post-processing function

@@ -19,7 +19,7 @@ class TestModel(unittest.TestCase):
             with self.subTest(model_name=model_name):
                 model = Model(model_name)
                 y0, _ = model.initial_conditions(param, mesh)
-                vars = Variables(0, y0, param, mesh)
+                vars = Variables(0, y0, model, mesh)
                 operators = Operators("Finite Volumes", mesh)
                 dydt, _ = model.pdes_rhs(vars, param, operators)
                 self.assertEqual(y0.shape, dydt.shape)

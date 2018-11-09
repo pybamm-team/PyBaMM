@@ -3,7 +3,6 @@ from pybamm.models import components
 import numpy as np
 
 KNOWN_MODELS = ["Electrolyte diffusion",
-                "Electrolyte current",
                 ]
 # !Remember to update docstring with any new models!
 
@@ -65,8 +64,8 @@ class Model:
 
         """
         inits_dict = {}
-        if not self.tests:
-            if self.name == "Electrolyte diffusion":
+        if self.name == "Electrolyte diffusion":
+            if not self.tests:
                 c0 = np.ones_like(mesh.xc)
             else:
                 c0 = self.tests['inits']['c']
@@ -82,8 +81,8 @@ class Model:
                 c0 = self.tests['inits']['c']
 
             # Create y0 and inits_dict
-            y0 = c0
-            inits_dict['c'] = c0
+            y0 = np.concatenate([en0, ep0])
+            inits_dict['e'] = np.concatenate([en0, ep0])
         return y0, inits_dict
 
     def pdes_rhs(self, vars, param, operators):

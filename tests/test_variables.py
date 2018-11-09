@@ -1,5 +1,6 @@
 from pybamm.parameters import Parameters
 from pybamm.mesh import Mesh, UniformMesh
+from pybamm.models.model_class import Model
 from pybamm.variables import Variables
 
 import numpy as np
@@ -13,7 +14,8 @@ class TestVariables(unittest.TestCase):
         self.param = Parameters()
         self.mesh = Mesh(self.param, 50)
         self.y = np.ones_like(self.mesh.xc)
-        self.vars = Variables(self.mesh.time, self.y, self.param, self.mesh)
+        self.model = Model("Electrolyte diffusion")
+        self.vars = Variables(self.mesh.time, self.y, self.model, self.mesh)
 
     def tearDown(self):
         del self.param
@@ -39,7 +41,7 @@ class TestVariables(unittest.TestCase):
         for i, n in enumerate(ns):
             mesh = Mesh(self.param, n)
             y = mesh.xc**2
-            vars = Variables(mesh.time, y, self.param, mesh)
+            vars = Variables(mesh.time, y, self.model, mesh)
             vars.average(self.param, mesh)
             c_avg_exact = 1 / 3
             errs[i] = norm(vars.c_avg - c_avg_exact) / norm(c_avg_exact)

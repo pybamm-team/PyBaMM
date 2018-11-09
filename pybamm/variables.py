@@ -16,7 +16,7 @@ class Variables:
         The simulation mesh.
     """
     def __init__(self, t, y, model, mesh):
-        print(model.variables)
+        model.variables
         self.t = t
         # Split y
         self.c = y
