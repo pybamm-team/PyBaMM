@@ -58,7 +58,7 @@ class Solver:
             The variables of the solved model.
 
         """
-        param = sim.parameters
+        param = sim.param
         mesh = sim.mesh
         model = sim.model
 
@@ -74,8 +74,8 @@ class Solver:
         # Solve ODEs
         def derivs(t, y):
             # TODO: check if it's more expensive to create vars or update it
-            vars = Variables(y, param, mesh)
-            dydt, _ = model.get_pdes_rhs(t, vars, param, operators)
+            vars = Variables(t, y, param, mesh)
+            dydt, _ = model.get_pdes_rhs(vars, param, operators)
             return dydt
 
         if self.integrator == 'analytical' and ANALYTICAL_AVAILABLE:
@@ -89,7 +89,7 @@ class Solver:
             # TODO: implement concentration cut-off event
 
         # Extract variables from y
-        vars = Variables(sol.y, param, mesh)
+        vars = Variables(sol.t, sol.y, param, mesh)
 
         # Post-process (get potentials)
         # TODO: write post-processing function

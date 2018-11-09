@@ -13,7 +13,7 @@ class TestVariables(unittest.TestCase):
         self.param = Parameters()
         self.mesh = Mesh(self.param, 50)
         self.y = np.ones_like(self.mesh.xc)
-        self.vars = Variables(self.y, self.param, self.mesh)
+        self.vars = Variables(self.mesh.time, self.y, self.param, self.mesh)
 
     def tearDown(self):
         del self.param
@@ -39,11 +39,11 @@ class TestVariables(unittest.TestCase):
         for i, n in enumerate(ns):
             mesh = Mesh(self.param, n)
             y = mesh.xc**2
-            vars = Variables(y, self.param, mesh)
+            vars = Variables(mesh.time, y, self.param, mesh)
             vars.average(self.param, mesh)
             c_avg_exact = 1 / 3
             errs[i] = norm(vars.c_avg - c_avg_exact) / norm(c_avg_exact)
         [self.assertLess(errs[i+1]/errs[i], 0.26) for i in range(len(errs)-1)]
-        
+
 if __name__ == "__main__":
     unittest.main()

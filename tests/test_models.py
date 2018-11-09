@@ -19,9 +19,9 @@ class TestModel(unittest.TestCase):
             with self.subTest(model_name=model_name):
                 model = Model(model_name)
                 y0, _ = model.get_initial_conditions(param, mesh)
-                vars = Variables(y0, param, mesh)
+                vars = Variables(0, y0, param, mesh)
                 operators = Operators("Finite Volumes", mesh)
-                dydt, _ = model.get_pdes_rhs(0, vars, param, operators)
+                dydt, _ = model.get_pdes_rhs(vars, param, operators)
                 self.assertEqual(y0.shape, dydt.shape)
 
 if __name__ == "__main__":
