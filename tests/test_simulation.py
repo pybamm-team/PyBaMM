@@ -18,8 +18,8 @@ class TestSolution(unittest.TestCase):
         target_npts = 10
         mesh = Mesh(param, target_npts, tsteps=tsteps, tend=tend)
 
-        model = Model("Simple Diffusion")
-        simulation = Simulation(model, param, mesh, name="Simple Diffusion")
+        model = Model("Electrolyte diffusion")
+        simulation = Simulation(model, param, mesh, name="Electrolyte diffusion")
         solver = Solver(integrator="BDF",
                         spatial_discretisation="Finite Volumes")
 
@@ -39,7 +39,7 @@ class TestSolution(unittest.TestCase):
         # check convergence to steady state when current is zero
         # concentration and porosity limits
 
-    def test_simple_diffusion_convergence(self):
+    def test_electrolyte_diffusion_convergence(self):
         """
         Exact solution: c = exp(-4*pi**2*t * cos(2*pi*x))
         Initial conditions: c0 = cos(2*pi*x)
@@ -63,7 +63,7 @@ class TestSolution(unittest.TestCase):
             return {'c': 0}
         tests = {'inits': inits, 'bcs': bcs, 'sources': sources}
 
-        model = Model("Simple Diffusion", tests=tests)
+        model = Model("Electrolyte diffusion", tests=tests)
         simulation = Simulation(model, param, mesh)
 
         ns = [1,2,3]

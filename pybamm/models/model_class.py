@@ -2,7 +2,8 @@ from pybamm.models import components
 
 import numpy as np
 
-KNOWN_MODELS = ["Simple Diffusion",
+KNOWN_MODELS = ["Electrolyte diffusion",
+                "Electrolyte current",
                 ]
 # !Remember to update docstring with any new models!
 
@@ -13,8 +14,13 @@ class Model:
     ----------
     name : string
         The model name:
-            * "Simple Diffusion" : One-dimensional diffusion equation:
-                dt/dt = d2c/dx2
+            * "Electrolyte diffusion" : 1D reaction-diffusion equation for
+                the electrolyte:
+                dc/dt = d/dx(D*dc/dx) + s*j
+            * "Electrolyte current" : 1D MacInnes equation for the elecrolyte
+                potentials and current density:
+                i = kappa * (d(ln(c))/dx - dPhi/dx)
+                de/dt = 1/gamma_dl * (di/dx - j)
     tests : dict
         A dictionary for testing the convergence of the numerical solution:
             * {} (default): We are not running in test mode, use built-ins.
@@ -33,6 +39,12 @@ class Model:
             assert set(tests.keys()) == {'inits', 'bcs', 'sources'}, \
                 "tests.keys() must include, 'inits', 'bcs' and 'sources'"
         self.tests = tests
+
+        # Assign variables
+        if self.name == "Electrolyte diffusion":
+            self.variables = ['c']
+        elif self.name == "Electrolyte current":
+            self.variables = ['en', 'ep']
 
     def initial_conditions(self, param, mesh):
         """Calculates the initial conditions for the simulation.
@@ -53,9 +65,19 @@ class Model:
 
         """
         inits_dict = {}
-        if self.name == "Simple Diffusion":
-            if not self.tests:
+        if not self.tests:
+            if self.name == "Electrolyte diffusion":
                 c0 = np.ones_like(mesh.xc)
+            else:
+                c0 = self.tests['inits']['c']
+
+            # Create y0 and inits_dict
+            y0 = c0
+            inits_dict['c'] = c0
+        elif self.name == "Electrolyte current":
+            if not self.tests:
+                en0 = np.ones_like(mesh.xcn)
+                ep0 = np.ones_like(mesh.xcp)
             else:
                 c0 = self.tests['inits']['c']
 
@@ -91,8 +113,8 @@ class Model:
         derivs_dict = {}
         bcs = self.boundary_conditions(vars, param)
         sources = self.sources(vars, param)
-        if self.name == "Simple Diffusion":
-            dcdt = components.simple_diffusion(vars.c,
+        if self.name == "Electrolyte diffusion":
+            dcdt = components.electrolyte_diffusion(vars.c,
                                                operators,
                                                bcs['c'],
                                                source=sources['c'])
@@ -121,7 +143,7 @@ class Model:
 
         """
         bcs = {}
-        if self.name == "Simple Diffusion":
+        if self.name == "Electrolyte diffusion":
             if not self.tests:
                 bcs['c'] = (np.array([0]), np.array([0]))
             else:
@@ -147,7 +169,7 @@ class Model:
 
         """
         sources = {}
-        if self.name == "Simple Diffusion":
+        if self.name == "Electrolyte diffusion":
             if not self.tests:
                 j = np.concatenate([0*vars.cn + param.icell(vars.t) / param.ln,
                                     0*vars.cs,

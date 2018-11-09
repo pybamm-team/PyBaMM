@@ -10,7 +10,7 @@ import unittest
 
 class TestComponents(unittest.TestCase):
 
-    def test_simple_diffusion_finite_volumes_convergence(self):
+    def test_electrolyte_diffusion_finite_volumes_convergence(self):
         # Finite volume only has h**2 convergence if the mesh is uniform?
         uniform_lengths = {'Ln':1e-3, 'Ls': 1e-3, 'Lp':1e-3}
         param = Parameters(optional_parameters=uniform_lengths)
@@ -28,7 +28,7 @@ class TestComponents(unittest.TestCase):
             dydt_exact = - 4 * np.pi**2 * y0
 
             # Calculate solution and errors
-            dydt = components.simple_diffusion(y0, operators, (lbc, rbc))
+            dydt = components.electrolyte_diffusion(y0, operators, (lbc, rbc))
             errs[i] = norm(dydt-dydt_exact)/norm(dydt_exact)
             mesh_sizes[i] = mesh.n
 

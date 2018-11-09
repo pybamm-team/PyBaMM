@@ -3,7 +3,7 @@ The components that make up the model.
 """
 import numpy as np
 
-def simple_diffusion(c, operators, flux_bcs, source=0):
+def electrolyte_diffusion(c, operators, flux_bcs, source=0):
     """The 1D diffusion equation.
 
     Parameters
