@@ -14,3 +14,10 @@ script:
 
 after_script:
 - docker rm -f app
+
+notifications:
+  email:
+    recipients:
+      - sulzer@maths.ox.ac.uk
+    on_success: change # default: change
+    on_failure: always # default: always
