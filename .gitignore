@@ -1,9 +1,12 @@
 *.txt
-*.pyc
-*.py~
 *.pdf
 *.tmp
 /local/
+
+# ignore running files
+*.pyc
+*.py~
+.~lock*
 
 # ignore Python cache
 *__pycache__/

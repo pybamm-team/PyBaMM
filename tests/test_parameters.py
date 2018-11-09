@@ -6,6 +6,9 @@ import unittest
 
 class TestParameters(unittest.TestCase):
 
+    def test_read_parameters_csv(self):
+        data = read_parameters_csv('input/parameters/default.csv')
+
     def test_parameters_defaults(self):
         # basic tests on how the parameters interact
         param = Parameters()

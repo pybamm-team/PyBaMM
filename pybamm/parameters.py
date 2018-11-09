@@ -1,4 +1,5 @@
 import csv
+import pandas as pd
 import numpy as np
 import warnings
 
@@ -16,14 +17,10 @@ def read_parameters_csv(filename):
         {name: value} pairs for the parameters.
 
     """
-    with open(filename, mode='r') as infile:
-        reader = csv.reader(infile)
-        # Ignore header row
-        next(reader)
-        # Read rows to dictionary,
-        # ignoring empty rows and rows starting with '#'
-        return {row[0]:float(row[1]) for row in reader
-                if row[0] is not '' and row[0][0] is not '#'}
+    df = pd.read_csv(filename, comment='#', skip_blank_lines=True)
+    # Drop rows that are all NaN (seems to not work with skip_blank_lines)
+    df.dropna(how='all', inplace=True)
+    return {k: v for (k,v) in zip(df.Name, df.Value)}
 
 class Parameters:
     """

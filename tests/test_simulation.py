@@ -10,11 +10,6 @@ import scipy.integrate as it
 
 class TestSolution(unittest.TestCase):
 
-    def test_simulation_init(self):
-        name = 'name'
-        sim = Simulation(None, None, None, name=name)
-        self.assertEqual(sim.name, name)
-
     def test_simulation_physics(self):
         param = Parameters()
         tsteps = 100
@@ -35,7 +30,7 @@ class TestSolution(unittest.TestCase):
                           * it.cumtrapz(param.icell(simulation.vars.t),
                                         simulation.vars.t,
                                         initial=0.0))
-                                        
+
         self.assertTrue(np.allclose(simulation.vars.c_avg,
                                     c_avg_expected,
                                     atol=4e-16))
