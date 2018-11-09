@@ -8,6 +8,7 @@ class TestParameters(unittest.TestCase):
 
     def test_read_parameters_csv(self):
         data = read_parameters_csv('input/parameters/default.csv')
+        self.assertEqual(data['R'], 8.314)
 
     def test_parameters_defaults(self):
         # basic tests on how the parameters interact
