@@ -52,7 +52,7 @@ class Mesh:
         self.xcp = (self.xp[1:] + self.xp[:-1]) / 2
         self.xc = (self.x[1:] + self.x[:-1]) / 2
         self.dxc = np.diff(self.xc)
-        
+
         # Time
         self.time = np.linspace(0, tend, tsteps)
 
@@ -65,7 +65,10 @@ class UniformMesh:
         The number of cells.
 
     """
-    def __init__(self, n):
+    def __init__(self, n, tsteps=100, tend=1):
         self.n = n
         self.x = np.linspace(0,1,n+1)
+        self.dx = np.diff(self.x)
         self.xc = (self.x[1:] + self.x[:-1])/2
+        self.dxc = np.diff(self.xc)
+        self.time = np.linspace(0, tend, tsteps)

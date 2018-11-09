@@ -15,16 +15,26 @@ class Model:
         The model name:
             * "Simple Diffusion" : One-dimensional diffusion equation:
                 dt/dt = d2c/dx2
-
+    tests : dict
+        A dictionary for testing the convergence of the numerical solution:
+            * {} (default): We are not running in test mode, use built-ins.
+            * {'inits': dict of initial conditions,
+               'bcs': dict of boundary conditions,
+               'sources': dict of source terms
+               }: To be used for testing convergence to an exact solution.
     """
-    def __init__(self, name):
+    def __init__(self, name, tests={}):
         if name not in KNOWN_MODELS:
             raise NotImplementedError("""Model '{}' is not implemented.
                                       Valid choices: one of '{}'."""
                                       .format(name, KNOWN_MODELS))
         self.name = name
+        if tests:
+            assert set(tests.keys()) == {'inits', 'bcs', 'sources'}, \
+                "tests.keys() must include, 'inits', 'bcs' and 'sources'"
+        self.tests = tests
 
-    def get_initial_conditions(self, param, mesh):
+    def initial_conditions(self, param, mesh):
         """Calculates the initial conditions for the simulation.
 
         Parameters
@@ -44,15 +54,17 @@ class Model:
         """
         inits_dict = {}
         if self.name == "Simple Diffusion":
-            c0 = np.ones_like(mesh.xc)
+            if not self.tests:
+                c0 = np.ones_like(mesh.xc)
+            else:
+                c0 = self.tests['inits']['c']
 
             # Create y0 and inits_dict
             y0 = c0
             inits_dict['c'] = c0
-
         return y0, inits_dict
 
-    def get_pdes_rhs(self, vars, param, operators):
+    def pdes_rhs(self, vars, param, operators):
         """Calculates the spatial derivates of the spatial terms in the PDEs
            and returns the right-hand side to be used by the ODE solver
            (Method of Lines).
@@ -77,21 +89,71 @@ class Model:
 
         """
         derivs_dict = {}
+        bcs = self.boundary_conditions(vars, param)
+        sources = self.sources(vars, param)
         if self.name == "Simple Diffusion":
-            lbc = np.array([0])
-            rbc = np.array([0])
-            j = np.concatenate([0*vars.cn + param.icell(vars.t) / param.ln,
-                                0*vars.cs,
-                                0*vars.cp - param.icell(vars.t) / param.lp])
-            source = param.s*j
-
             dcdt = components.simple_diffusion(vars.c,
                                                operators,
-                                               (lbc, rbc),
-                                               source=source)
+                                               bcs['c'],
+                                               source=sources['c'])
 
             # Create dydt and derivs_dict
             dydt = dcdt
             derivs_dict['c'] = dcdt
 
         return dydt, derivs_dict
+
+    def boundary_conditions(self, vars, param):
+        """Returns the boundary conditions for the model (fluxes only).
+
+        Parameters
+        ----------
+        vars : pybamm.variables.Variables() instance
+            The variables of the model.
+        param : pybamm.parameters.Parameters() instance
+            The model parameters.
+
+        Returns
+        -------
+        bcs : dict of 2-tuples
+            Dictionary of flux boundary conditions:
+                {name: (left-hand flux bc, right-hand flux bc)}.
+
+        """
+        bcs = {}
+        if self.name == "Simple Diffusion":
+            if not self.tests:
+                bcs['c'] = (np.array([0]), np.array([0]))
+            else:
+                bcs = self.tests['bcs'](vars.t)
+
+        return bcs
+
+    def sources(self, vars, param):
+        """Returns the boundary conditions for the model (fluxes only).
+
+        Parameters
+        ----------
+        vars : pybamm.variables.Variables() instance
+            The variables of the model.
+        param : pybamm.parameters.Parameters() instance
+            The model parameters.
+
+        Returns
+        -------
+        sources : dict of 2-tuples
+            Dictionary of flux boundary conditions:
+                {name: (left-hand flux bc, right-hand flux bc)}.
+
+        """
+        sources = {}
+        if self.name == "Simple Diffusion":
+            if not self.tests:
+                j = np.concatenate([0*vars.cn + param.icell(vars.t) / param.ln,
+                                    0*vars.cs,
+                                    0*vars.cp - param.icell(vars.t) / param.lp])
+                sources['c'] = param.s*j
+            else:
+                sources = self.tests['sources'](vars.t)
+
+        return sources

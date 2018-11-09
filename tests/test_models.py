@@ -18,11 +18,14 @@ class TestModel(unittest.TestCase):
         for model_name in KNOWN_MODELS:
             with self.subTest(model_name=model_name):
                 model = Model(model_name)
-                y0, _ = model.get_initial_conditions(param, mesh)
+                y0, _ = model.initial_conditions(param, mesh)
                 vars = Variables(0, y0, param, mesh)
                 operators = Operators("Finite Volumes", mesh)
-                dydt, _ = model.get_pdes_rhs(vars, param, operators)
+                dydt, _ = model.pdes_rhs(vars, param, operators)
                 self.assertEqual(y0.shape, dydt.shape)
+
+    def test_models_boundary_conditions(self):
+        pass
 
 if __name__ == "__main__":
     suite = unittest.TestLoader().loadTestsFromTestCase(TestModel)

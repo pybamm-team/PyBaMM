@@ -23,26 +23,27 @@ class Solver:
     """
     def __init__(self,
                  integrator="BDF",
-                 spatial_discretisation="Finite Volumes"):
+                 spatial_discretisation="Finite Volumes",
+                 tol=1e-8):
 
         if integrator not in KNOWN_INTEGRATORS:
             raise NotImplementedError("""Integrator '{}' is not implemented.
                                       Valid choices: one of '{}'."""
-                                      .format(driver, KNOWN_INTEGRATORS))
+                                      .format(integrator, KNOWN_INTEGRATORS))
         self.integrator = integrator
 
         if spatial_discretisation not in KNOWN_SPATIAL_DISCRETISATIONS:
             raise NotImplementedError("""Spatial discretisation '{}' is not
                                       implemented. Valid choices: one of '{}'.
                                       """
-                                      .format(driver,
+                                      .format(spatial_discretisation,
                                               KNOWN_SPATIAL_DISCRETISATIONS))
         self.spatial_discretisation = spatial_discretisation
 
-        self.name = ("{}_{}".format(integrator, spatial_discretisation))
+        self.tol = tol
 
     def __str__(self):
-        return self.name
+        return "{}_{}".format(self.integrator, self.spatial_discretisation)
 
     def get_simulation_vars(self, sim):
         """Run a simulation.
@@ -63,7 +64,7 @@ class Solver:
         model = sim.model
 
         # Initialise
-        yinit, _ = model.get_initial_conditions(param, mesh)
+        yinit, _ = model.initial_conditions(param, mesh)
 
         # Get grad and div
         operators = Operators(self.spatial_discretisation, mesh)
@@ -75,17 +76,18 @@ class Solver:
         def derivs(t, y):
             # TODO: check if it's more expensive to create vars or update it
             vars = Variables(t, y, param, mesh)
-            dydt, _ = model.get_pdes_rhs(vars, param, operators)
+            dydt, _ = model.pdes_rhs(vars, param, operators)
             return dydt
 
-        if self.integrator == 'analytical' and ANALYTICAL_AVAILABLE:
+        if self.integrator == 'analytical':
             # TODO: implement analytical simulation
             pass
         elif self.integrator == 'BDF':
             target_time = mesh.time
             sol = it.solve_ivp(derivs,
                                (target_time[0], target_time[-1]), yinit,
-                               t_eval=target_time, method='BDF')
+                               t_eval=target_time, method='BDF',
+                               rtol=self.tol, atol=self.tol)
             # TODO: implement concentration cut-off event
 
         # Extract variables from y

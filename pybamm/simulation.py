@@ -36,7 +36,7 @@ class Simulation:
         solver : pybamm.solver.Solver() instance
             The algorithm for solving the model defined in self.model
         """
-        self.solver_name = solver.name
+        self.solver_name = str(solver)
         self.vars = solver.get_simulation_vars(self)
 
     def average(self):
