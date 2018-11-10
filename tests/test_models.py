@@ -18,10 +18,10 @@ class TestModel(unittest.TestCase):
         for model_name in KNOWN_MODELS:
             with self.subTest(model_name=model_name):
                 model = Model(model_name)
-                y0, _ = model.initial_conditions(param, mesh)
+                y0 = model.initial_conditions(param, mesh)
                 vars = Variables(0, y0, model, mesh)
                 operators = Operators("Finite Volumes", mesh)
-                dydt, _ = model.pdes_rhs(vars, param, operators)
+                dydt = model.pdes_rhs(vars, param, operators)
                 self.assertEqual(y0.shape, dydt.shape)
 
     def test_models_boundary_conditions(self):

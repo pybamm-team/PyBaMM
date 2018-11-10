@@ -56,7 +56,7 @@ class TestSolution(unittest.TestCase):
 
         def c_exact(t):
             return (np.exp(-4 * np.pi**2 * t) * np.cos(2 * np.pi * mesh.xc))
-        inits = {'c': c_exact(0)}
+        inits = c_exact(0)
         def bcs(t):
             return {'c': (np.array([0]), np.array([0]))}
         def sources(t):

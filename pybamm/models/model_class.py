@@ -13,10 +13,10 @@ class Model:
     ----------
     name : string
         The model name:
-            * "Electrolyte diffusion" : 1D reaction-diffusion equation for
+            * "Electrolyte diffusion": 1D reaction-diffusion equation for
                 the electrolyte:
                 dc/dt = d/dx(D*dc/dx) + s*j
-            * "Electrolyte current" : 1D MacInnes equation for the elecrolyte
+            * "Electrolyte current": 1D MacInnes equation for the elecrolyte
                 potentials and current density:
                 i = kappa * (d(ln(c))/dx - dPhi/dx)
                 de/dt = 1/gamma_dl * (di/dx - j)
@@ -59,31 +59,21 @@ class Model:
         -------
         y0 : array_like
             A concatenated vector of all the initial conditions.
-        inits_dict : dict
-            A dictionary of the initial conditions, for use by other models.
 
         """
-        inits_dict = {}
-        if self.name == "Electrolyte diffusion":
-            if not self.tests:
+        if not self.tests:
+            if self.name == "Electrolyte diffusion":
                 c0 = np.ones_like(mesh.xc)
-            else:
-                c0 = self.tests['inits']['c']
-
-            # Create y0 and inits_dict
-            y0 = c0
-            inits_dict['c'] = c0
-        elif self.name == "Electrolyte current":
-            if not self.tests:
+                y0 = c0
+            elif self.name == "Electrolyte current":
                 en0 = np.ones_like(mesh.xcn)
                 ep0 = np.ones_like(mesh.xcp)
-            else:
-                c0 = self.tests['inits']['c']
+                y0 = np.concatenate([en0, ep0])
 
-            # Create y0 and inits_dict
-            y0 = np.concatenate([en0, ep0])
-            inits_dict['e'] = np.concatenate([en0, ep0])
-        return y0, inits_dict
+        else:
+            y0 = self.tests['inits']
+
+        return y0
 
     def pdes_rhs(self, vars, param, operators):
         """Calculates the spatial derivates of the spatial terms in the PDEs
@@ -105,24 +95,20 @@ class Model:
         -------
         dydt : array_like
             A concatenated vector of all the derivatives.
-        derivs_dict : dict
-            A dictionary of the derivatives, for use by other models.
 
         """
-        derivs_dict = {}
         bcs = self.boundary_conditions(vars, param)
         sources = self.sources(vars, param)
         if self.name == "Electrolyte diffusion":
             dcdt = components.electrolyte_diffusion(vars.c,
-                                               operators,
-                                               bcs['c'],
-                                               source=sources['c'])
+                                                    operators,
+                                                    bcs['c'],
+                                                    source=sources['c'])
 
             # Create dydt and derivs_dict
             dydt = dcdt
-            derivs_dict['c'] = dcdt
 
-        return dydt, derivs_dict
+        return dydt
 
     def boundary_conditions(self, vars, param):
         """Returns the boundary conditions for the model (fluxes only).
@@ -141,12 +127,12 @@ class Model:
                 {name: (left-hand flux bc, right-hand flux bc)}.
 
         """
-        bcs = {}
-        if self.name == "Electrolyte diffusion":
-            if not self.tests:
+        if not self.tests:
+            bcs = {}
+            if self.name == "Electrolyte diffusion":
                 bcs['c'] = (np.array([0]), np.array([0]))
-            else:
-                bcs = self.tests['bcs'](vars.t)
+        else:
+            bcs = self.tests['bcs'](vars.t)
 
         return bcs
 
@@ -162,19 +148,18 @@ class Model:
 
         Returns
         -------
-        sources : dict of 2-tuples
-            Dictionary of flux boundary conditions:
-                {name: (left-hand flux bc, right-hand flux bc)}.
+        sources : dict
+            Dictionary of source terms
 
         """
-        sources = {}
-        if self.name == "Electrolyte diffusion":
-            if not self.tests:
+        if not self.tests:
+            if self.name == "Electrolyte diffusion":
+                sources = {}
                 j = np.concatenate([0*vars.cn + param.icell(vars.t) / param.ln,
                                     0*vars.cs,
                                     0*vars.cp - param.icell(vars.t) / param.lp])
                 sources['c'] = param.s*j
-            else:
-                sources = self.tests['sources'](vars.t)
+        else:
+            sources = self.tests['sources'](vars.t)
 
         return sources

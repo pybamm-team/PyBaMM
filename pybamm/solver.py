@@ -64,7 +64,7 @@ class Solver:
         model = sim.model
 
         # Initialise
-        yinit, _ = model.initial_conditions(param, mesh)
+        yinit = model.initial_conditions(param, mesh)
 
         # Get grad and div
         operators = Operators(self.spatial_discretisation, mesh)
@@ -76,7 +76,7 @@ class Solver:
         def derivs(t, y):
             # TODO: check if it's more expensive to create vars or update it
             vars = Variables(t, y, model, mesh)
-            dydt, _ = model.pdes_rhs(vars, param, operators)
+            dydt = model.pdes_rhs(vars, param, operators)
             return dydt
 
         if self.integrator == 'analytical':
