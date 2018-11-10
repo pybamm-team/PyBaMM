@@ -554,4 +554,5 @@ class Scales:
                       'Un': 'one',
                       'Us': 'one',
                       'Up': 'one',
-                      'T': ('temp', param.T_inf)}
+                      'T': ('temp', param.T_inf),
+                      }

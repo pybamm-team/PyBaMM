@@ -16,11 +16,15 @@ class Variables:
         The simulation mesh.
     """
     def __init__(self, t, y, model, mesh):
-        model.variables
         self.t = t
-        # Split y
-        self.c = y
-        # TODO: make model.variables an input of this class
+        # Get variables
+        variables = model.variables()
+        # Unpack y
+        start=0
+        for var, domain in variables:
+            end = start + mesh.sizes[domain]
+            self.__dict__[var] = y[start:end]
+            start = end
         self.cn, self.cs, self.cp = np.split(
             self.c, np.cumsum([mesh.nn - 1, mesh.ns + 1]))
 

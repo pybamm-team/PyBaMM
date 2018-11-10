@@ -56,6 +56,12 @@ class Mesh:
         # Time
         self.time = np.linspace(0, tend, tsteps)
 
+        # Sizes
+        self.sizes = {'neg': self.nn - 1,
+                      'sep': self.ns + 1,
+                      'pos': self.np - 1,
+                      'tot': self.n - 1,
+                      }
 class UniformMesh:
     """A uniform 1D mesh, for testing.
 

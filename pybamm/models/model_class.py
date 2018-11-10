@@ -39,11 +39,12 @@ class Model:
                 "tests.keys() must include, 'inits', 'bcs' and 'sources'"
         self.tests = tests
 
-        # Assign variables
+    def variables(self):
+        """The variables of the model."""
         if self.name == "Electrolyte diffusion":
-            self.variables = ['c']
+            return [('c', 'tot')]
         elif self.name == "Electrolyte current":
-            self.variables = ['en', 'ep']
+            return [('en', 'neg'), ('ep', 'pos')]
 
     def initial_conditions(self, param, mesh):
         """Calculates the initial conditions for the simulation.
