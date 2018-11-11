@@ -9,8 +9,8 @@ import numpy as np
 from numpy.linalg import norm
 import scipy.integrate as it
 
-class TestSolution(unittest.TestCase):
 
+class TestSolution(unittest.TestCase):
     def test_simulation_physics(self):
         param = Parameters()
         tsteps = 100
@@ -20,21 +20,17 @@ class TestSolution(unittest.TestCase):
 
         model = Model("Electrolyte diffusion")
         simulation = Simulation(model, param, mesh, name="Electrolyte diffusion")
-        solver = Solver(integrator="BDF",
-                        spatial_discretisation="Finite Volumes")
+        solver = Solver(integrator="BDF", spatial_discretisation="Finite Volumes")
 
         simulation.run(solver)
 
         simulation.average()
         # integral of c is known
-        c_avg_expected = (1 + (param.sn - param.sp)
-                          * it.cumtrapz(param.icell(simulation.vars.t),
-                                        simulation.vars.t,
-                                        initial=0.0))
+        c_avg_expected = 1 + (param.sn - param.sp) * it.cumtrapz(
+            param.icell(simulation.vars.t), simulation.vars.t, initial=0.0
+        )
 
-        self.assertTrue(np.allclose(simulation.vars.c_avg,
-                                    c_avg_expected,
-                                    atol=4e-16))
+        self.assertTrue(np.allclose(simulation.vars.c_avg, c_avg_expected, atol=4e-16))
         # integral of j is known
         # check convergence to steady state when current is zero
         # concentration and porosity limits
@@ -55,28 +51,35 @@ class TestSolution(unittest.TestCase):
         mesh = Mesh(param, 50, tsteps=tsteps, tend=tend)
 
         def c_exact(t):
-            return (np.exp(-4 * np.pi**2 * t) * np.cos(2 * np.pi * mesh.xc))
+            return np.exp(-4 * np.pi ** 2 * t) * np.cos(2 * np.pi * mesh.xc)
+
         inits = c_exact(0)
+
         def bcs(t):
-            return {'concentration': (np.array([0]), np.array([0]))}
+            return {"concentration": (np.array([0]), np.array([0]))}
+
         def sources(t):
-            return {'concentration': 0}
-        tests = {'inits': inits, 'bcs': bcs, 'sources': sources}
+            return {"concentration": 0}
+
+        tests = {"inits": inits, "bcs": bcs, "sources": sources}
 
         model = Model("Electrolyte diffusion", tests=tests)
         simulation = Simulation(model, param, mesh)
 
-        ns = [1,2,3]
-        errs = [0]*len(ns)
+        ns = [1, 2, 3]
+        errs = [0] * len(ns)
         for i, n in enumerate(ns):
-            solver = Solver(integrator="BDF",
-                            spatial_discretisation="Finite Volumes",
-                            tol=10**(-n))
+            solver = Solver(
+                integrator="BDF",
+                spatial_discretisation="Finite Volumes",
+                tol=10 ** (-n),
+            )
             simulation.run(solver)
-            errs[i] = (norm(simulation.vars.c.T
-                            - c_exact(mesh.time[:, np.newaxis]))
-                       / norm(c_exact(mesh.time[:, np.newaxis])))
-        [self.assertLess(errs[i+1]/errs[i], 0.14) for i in range(len(errs)-1)]
+            errs[i] = norm(
+                simulation.vars.c.T - c_exact(mesh.time[:, np.newaxis])
+            ) / norm(c_exact(mesh.time[:, np.newaxis]))
+        [self.assertLess(errs[i + 1] / errs[i], 0.14) for i in range(len(errs) - 1)]
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

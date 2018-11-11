@@ -6,6 +6,7 @@ import scipy.integrate as it
 KNOWN_INTEGRATORS = ["BDF", "analytical"]
 KNOWN_SPATIAL_DISCRETISATIONS = ["Finite Volumes"]
 
+
 class Solver:
     """Solver for the simulation created in pybamm.sim.
 
@@ -21,23 +22,28 @@ class Solver:
             * "Finite Volumes" (default): Finite Volumes discretisation.
                 Cell edges are on the boundaries between the subdomains
     """
-    def __init__(self,
-                 integrator="BDF",
-                 spatial_discretisation="Finite Volumes",
-                 tol=1e-8):
+
+    def __init__(
+        self, integrator="BDF", spatial_discretisation="Finite Volumes", tol=1e-8
+    ):
 
         if integrator not in KNOWN_INTEGRATORS:
-            raise NotImplementedError("""Integrator '{}' is not implemented.
-                                      Valid choices: one of '{}'."""
-                                      .format(integrator, KNOWN_INTEGRATORS))
+            raise NotImplementedError(
+                """Integrator '{}' is not implemented.
+                                      Valid choices: one of '{}'.""".format(
+                    integrator, KNOWN_INTEGRATORS
+                )
+            )
         self.integrator = integrator
 
         if spatial_discretisation not in KNOWN_SPATIAL_DISCRETISATIONS:
-            raise NotImplementedError("""Spatial discretisation '{}' is not
+            raise NotImplementedError(
+                """Spatial discretisation '{}' is not
                                       implemented. Valid choices: one of '{}'.
-                                      """
-                                      .format(spatial_discretisation,
-                                              KNOWN_SPATIAL_DISCRETISATIONS))
+                                      """.format(
+                    spatial_discretisation, KNOWN_SPATIAL_DISCRETISATIONS
+                )
+            )
         self.spatial_discretisation = spatial_discretisation
 
         self.tol = tol
@@ -67,10 +73,10 @@ class Solver:
         yinit = model.initial_conditions(param, mesh)
 
         # Get grad and div
-        operators = {domain: Operators(self.spatial_discretisation,
-                                       domain,
-                                       mesh)
-                     for domain in model.domains()}
+        operators = {
+            domain: Operators(self.spatial_discretisation, domain, mesh)
+            for domain in model.domains()
+        }
 
         # Set mesh dependent parameters
         param.set_mesh_dependent_parameters(mesh)
@@ -82,15 +88,20 @@ class Solver:
             dydt = model.pdes_rhs(vars, param, operators)
             return dydt
 
-        if self.integrator == 'analytical':
+        if self.integrator == "analytical":
             # TODO: implement analytical simulation
             pass
-        elif self.integrator == 'BDF':
+        elif self.integrator == "BDF":
             target_time = mesh.time
-            sol = it.solve_ivp(derivs,
-                               (target_time[0], target_time[-1]), yinit,
-                               t_eval=target_time, method='BDF',
-                               rtol=self.tol, atol=self.tol)
+            sol = it.solve_ivp(
+                derivs,
+                (target_time[0], target_time[-1]),
+                yinit,
+                t_eval=target_time,
+                method="BDF",
+                rtol=self.tol,
+                atol=self.tol,
+            )
             # TODO: implement concentration cut-off event
 
         # Extract variables from y

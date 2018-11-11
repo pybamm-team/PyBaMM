@@ -9,8 +9,8 @@ from numpy.linalg import norm
 
 import unittest
 
-class TestModel(unittest.TestCase):
 
+class TestModel(unittest.TestCase):
     def test_models_shapes(self):
         param = Parameters()
         mesh = Mesh(param, 50)
@@ -20,13 +20,16 @@ class TestModel(unittest.TestCase):
                 model = Model(model_name)
                 y0 = model.initial_conditions(param, mesh)
                 vars = Variables(0, y0, model, mesh)
-                operators = {domain: Operators("Finite Volumes", domain, mesh)
-                             for domain in model.domains()}
+                operators = {
+                    domain: Operators("Finite Volumes", domain, mesh)
+                    for domain in model.domains()
+                }
                 dydt = model.pdes_rhs(vars, param, operators)
                 self.assertEqual(y0.shape, dydt.shape)
 
     def test_models_boundary_conditions(self):
         pass
+
 
 if __name__ == "__main__":
     suite = unittest.TestLoader().loadTestsFromTestCase(TestModel)

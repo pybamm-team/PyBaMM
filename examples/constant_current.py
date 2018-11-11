@@ -24,7 +24,9 @@ solver = Solver(integrator="BDF", spatial_discretisation="Finite Volumes")
 
 # Run the simulation
 simulation.run(solver)
-import ipdb; ipdb.set_trace()
+import ipdb
+
+ipdb.set_trace()
 # Save
 simulation.save(filename)
 

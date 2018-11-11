@@ -18,7 +18,8 @@ class Simulation:
         The simulation name.
 
     """
-    def __init__(self, model, param, mesh, name='unnamed'):
+
+    def __init__(self, model, param, mesh, name="unnamed"):
         self.model = model
         self.param = param
         self.mesh = mesh
