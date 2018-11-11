@@ -127,13 +127,17 @@ class Model:
         #     param, vars.cn, vars.cs, vars.cp, vars.en, vars.ep)
 
         if self.name == "Electrolyte diffusion":
-            j = np.concatenate(
-                [
-                    0 * vars.cn + param.icell(vars.t) / param.ln,
-                    0 * vars.cs,
-                    0 * vars.cp - param.icell(vars.t) / param.lp,
-                ]
-            )
+            if not self.tests:
+                j = np.concatenate(
+                    [
+                        0 * vars.cn + param.icell(vars.t) / param.ln,
+                        0 * vars.cs,
+                        0 * vars.cp - param.icell(vars.t) / param.lp,
+                    ]
+                )
+            else:
+                j = self.tests["sources"](vars.t)["concentration"]
+                # TODO: make this less hacky
             dcdt = components.electrolyte_diffusion(
                 param, vars.c, operators["xc"], bcs["concentration"], j
             )
@@ -143,7 +147,11 @@ class Model:
             pass
         elif self.name == "Electrolyte current":
             dedt = components.elecrolyte_current(
-                param, (vars.cn, vars.en), operators["xcn"], bcs["current neg"], j
+                param,
+                (vars.cn, vars.en),
+                operators["xcn"],
+                bcs["current neg"],
+                j,
             )
 
             return dedt
@@ -170,8 +178,14 @@ class Model:
             if self.name == "Electrolyte diffusion":
                 bcs["concentration"] = (np.array([0]), np.array([0]))
             elif self.name == "Electrolyte current":
-                bcs["current neg"] = (np.array([param.icell(vars.t)]), np.array([0]))
-                bcs["current pos"] = (np.array([0]), np.array([param.icell(vars.t)]))
+                bcs["current neg"] = (
+                    np.array([param.icell(vars.t)]),
+                    np.array([0]),
+                )
+                bcs["current pos"] = (
+                    np.array([0]),
+                    np.array([param.icell(vars.t)]),
+                )
         else:
             bcs = self.tests["bcs"](vars.t)
 

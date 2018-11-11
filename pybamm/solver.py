@@ -24,7 +24,10 @@ class Solver:
     """
 
     def __init__(
-        self, integrator="BDF", spatial_discretisation="Finite Volumes", tol=1e-8
+        self,
+        integrator="BDF",
+        spatial_discretisation="Finite Volumes",
+        tol=1e-8,
     ):
 
         if integrator not in KNOWN_INTEGRATORS:
