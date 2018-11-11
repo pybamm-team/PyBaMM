@@ -17,16 +17,21 @@ class Variables:
     """
     def __init__(self, t, y, model, mesh):
         self.t = t
-        # Get variables
-        variables = model.variables()
         # Unpack y
-        start=0
+        variables = model.variables()
+        # Unpack y iteratively
+        start = 0
         for var, domain in variables:
             end = start + mesh.sizes[domain]
             self.__dict__[var] = y[start:end]
             start = end
-        self.cn, self.cs, self.cp = np.split(
-            self.c, np.cumsum([mesh.nn - 1, mesh.ns + 1]))
+            # Split 'tot' variables further into n, s and p
+            if domain == 'tot':
+                (self.__dict__[var+'n'],
+                 self.__dict__[var+'s'],
+                 self.__dict__[var+'p']) = np.split(
+                     self.__dict__[var],
+                     np.cumsum([mesh.nn - 1, mesh.ns + 1]))
 
     def average(self, param, mesh):
         """Average variable attributes over the relevant (sub)domain.

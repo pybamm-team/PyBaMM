@@ -1,5 +1,7 @@
 import numpy as np
 
+KNOWN_DOMAINS = ["x", "xn", "xs", "xp"]
+
 class Operators:
     """Contains functions that calculate the spatial derivatives.
 
@@ -11,11 +13,17 @@ class Operators:
         The mesh used for the spatial discretisation.
 
     """
-    def __init__(self, spatial_discretisation, mesh):
+    def __init__(self, spatial_discretisation, domain, mesh):
         self.spatial_discretisation = spatial_discretisation
+        if domain not in KNOWN_DOMAINS:
+            raise NotImplementedError("""Domain '{}' is not implemented.
+                                      Valid choices: one of '{}'."""
+                                      .format(domain, KNOWN_DOMAINS))
+        self.domain = domain
+
         self.mesh = mesh
 
-    def grad_x(self, y):
+    def grad(self, y):
         """Calculates the 1D gradient using Finite Volumes.
 
         Parameters
@@ -30,16 +38,22 @@ class Operators:
 
         """
         if self.spatial_discretisation == "Finite Volumes":
+            if self.domain == "x":
+                xc, dxc = self.mesh.xc, self.mesh.dxc
+            elif self.domain == "xn":
+                xc, dxc = self.mesh.xcn, self.mesh.dxn
+            elif self.domain == "xp":
+                xc, dxc = self.mesh.xcp, self.mesh.dxp
             # Run some basic checks on inputs
-            assert y.shape == self.mesh.xc.shape, \
+            assert y.shape == xc.shape, \
                 """xc and y should have the same shape,
-                but xc.shape = {} and yc.shape = {}""".format(self.mesh.xc.shape,
+                but xc.shape = {} and yc.shape = {}""".format(xc.shape,
                                                               y.shape)
 
             # Calculate internal flux
-            return np.diff(y) / self.mesh.dxc
+            return np.diff(y) / dxc
 
-    def div_x(self, N):
+    def div(self, N):
         """Calculates the 1D divergence using Finite Volumes.
 
         Parameters
@@ -54,10 +68,16 @@ class Operators:
 
         """
         if self.spatial_discretisation == "Finite Volumes":
+            if self.domain == "x":
+                x, dx = self.mesh.x, self.mesh.dx
+            elif self.domain == "xn":
+                x, dx = self.mesh.xn, self.mesh.dxn
+            elif self.domain == "xp":
+                x, dx = self.mesh.xcp, self.mesh.dxp
             # Run basic checks on inputs
-            assert N.shape == self.mesh.x.shape, \
-                """xc and y should have the same shape,
-                but x.shape = {} and N.shape = {}""".format(self.mesh.x.shape,
+            assert N.shape == x.shape, \
+                """x and N should have the same shape,
+                but x.shape = {} and N.shape = {}""".format(x.shape,
                                                             N.shape)
 
-            return np.diff(N) / self.mesh.dx
+            return np.diff(N) / dx

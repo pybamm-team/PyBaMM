@@ -21,15 +21,15 @@ class TestComponents(unittest.TestCase):
         for i, n in enumerate(ns):
             # Set up
             mesh = Mesh(param, n)
-            y0 = np.cos(2*np.pi*mesh.xc)
-            operators = Operators("Finite Volumes", mesh)
+            c0 = np.cos(2*np.pi*mesh.xc)
+            operators = Operators("Finite Volumes", "x", mesh)
             lbc = np.array([0])
             rbc = np.array([0])
-            dydt_exact = - 4 * np.pi**2 * y0
+            dcdt_exact = - 4 * np.pi**2 * c0
 
             # Calculate solution and errors
-            dydt = components.electrolyte_diffusion(y0, operators, (lbc, rbc))
-            errs[i] = norm(dydt-dydt_exact)/norm(dydt_exact)
+            dcdt = components.electrolyte_diffusion(c0, operators, (lbc, rbc))
+            errs[i] = norm(dcdt - dcdt_exact) / norm(dcdt_exact)
             mesh_sizes[i] = mesh.n
 
         # Expect h**2 convergence

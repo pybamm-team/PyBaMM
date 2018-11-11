@@ -58,9 +58,9 @@ class TestSolution(unittest.TestCase):
             return (np.exp(-4 * np.pi**2 * t) * np.cos(2 * np.pi * mesh.xc))
         inits = c_exact(0)
         def bcs(t):
-            return {'c': (np.array([0]), np.array([0]))}
+            return {'concentration': (np.array([0]), np.array([0]))}
         def sources(t):
-            return {'c': 0}
+            return {'concentration': 0}
         tests = {'inits': inits, 'bcs': bcs, 'sources': sources}
 
         model = Model("Electrolyte diffusion", tests=tests)

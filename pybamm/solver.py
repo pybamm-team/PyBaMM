@@ -67,7 +67,10 @@ class Solver:
         yinit = model.initial_conditions(param, mesh)
 
         # Get grad and div
-        operators = Operators(self.spatial_discretisation, mesh)
+        operators = {domain: Operators(self.spatial_discretisation,
+                                       domain,
+                                       mesh)
+                     for domain in model.domains()}
 
         # Set mesh dependent parameters
         param.set_mesh_dependent_parameters(mesh)

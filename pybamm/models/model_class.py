@@ -15,10 +15,10 @@ class Model:
         The model name:
             * "Electrolyte diffusion": 1D reaction-diffusion equation for
                 the electrolyte:
-                dc/dt = d/dx(D*dc/dx) + s*j
+                dc/dt = d/dx(D(c)*dc/dx) + s*j
             * "Electrolyte current": 1D MacInnes equation for the elecrolyte
                 potentials and current density:
-                i = kappa * (d(ln(c))/dx - dPhi/dx)
+                i = kappa(c) * (d(ln(c))/dx - dPhi/dx)
                 de/dt = 1/gamma_dl * (di/dx - j)
     tests : dict
         A dictionary for testing the convergence of the numerical solution:
@@ -46,6 +46,14 @@ class Model:
         elif self.name == "Electrolyte current":
             return [('en', 'neg'), ('ep', 'pos')]
 
+    def domains(self):
+        """The domains in which the model is defined."""
+        if self.name == "Electrolyte diffusion":
+            return ["x"]
+        elif self.name == "Electrolyte current":
+            return ["xn", "xp"]
+
+
     def initial_conditions(self, param, mesh):
         """Calculates the initial conditions for the simulation.
 
@@ -64,17 +72,20 @@ class Model:
         """
         if not self.tests:
             if self.name == "Electrolyte diffusion":
-                c0 = np.ones_like(mesh.xc)
-                y0 = c0
+                c0 = param.c0 * np.ones_like(mesh.xc)
+                return c0
+            elif self.name == "Porosity":
+                eps0 = np.concatenate([param.epsn0 * np.ones_like(mesh.xcn),
+                                       param.epss0 * np.ones_like(mesh.xcs),
+                                       param.epsp0 * np.ones_like(mesh.xcp)])
+                return eps0
             elif self.name == "Electrolyte current":
-                en0 = np.ones_like(mesh.xcn)
-                ep0 = np.ones_like(mesh.xcp)
-                y0 = np.concatenate([en0, ep0])
+                en0 = param.U_Pb(param.c0) * np.ones_like(mesh.xcn)
+                ep0 = param.U_PbO2(param.c0) * np.ones_like(mesh.xcp)
+                return np.concatenate([en0, ep0])
 
         else:
-            y0 = self.tests['inits']
-
-        return y0
+            return self.tests['inits']
 
     def pdes_rhs(self, vars, param, operators):
         """Calculates the spatial derivates of the spatial terms in the PDEs
@@ -101,16 +112,23 @@ class Model:
         bcs = self.boundary_conditions(vars, param)
         sources = self.sources(vars, param)
         if self.name == "Electrolyte diffusion":
-            dcdt = components.electrolyte_diffusion(vars.c,
-                                                    operators,
-                                                    bcs['c'],
-                                                    source=sources['c'])
+            dcdt = components.electrolyte_diffusion(
+                vars.c,
+                operators["x"],
+                bcs['concentration'],
+                source=sources['concentration'])
 
-            # Create dydt and derivs_dict
-            dydt = dcdt
+            return dcdt
+        elif self.name == "Porosity":
+            pass
+        elif self.name == "Electrolyte current":
+            dedt = components.elecrolyte_current(
+                (vars.cn, vars.en),
+                operators["xn"],
+                bcs["current neg"],
+                source=sources["current neg"])
 
-        return dydt
-
+            return dedt
     def boundary_conditions(self, vars, param):
         """Returns the boundary conditions for the model (fluxes only).
 
@@ -131,7 +149,12 @@ class Model:
         if not self.tests:
             bcs = {}
             if self.name == "Electrolyte diffusion":
-                bcs['c'] = (np.array([0]), np.array([0]))
+                bcs['concentration'] = (np.array([0]), np.array([0]))
+            elif self.name == "Electrolyte current":
+                bcs['current neg'] = (np.array([param.icell(vars.t)]),
+                                      np.array([0]))
+                bcs['current pos'] = (np.array([0]),
+                                      np.array([param.icell(vars.t)]))
         else:
             bcs = self.tests['bcs'](vars.t)
 
@@ -159,7 +182,7 @@ class Model:
                 j = np.concatenate([0*vars.cn + param.icell(vars.t) / param.ln,
                                     0*vars.cs,
                                     0*vars.cp - param.icell(vars.t) / param.lp])
-                sources['c'] = param.s*j
+                sources['concentration'] = param.s*j
         else:
             sources = self.tests['sources'](vars.t)
 
