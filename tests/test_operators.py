@@ -20,7 +20,7 @@ class TestOperators(unittest.TestCase):
         N = np.ones_like(mesh.x)
 
         # Get operators
-        operators = Operators("Finite Volumes", "x", mesh)
+        operators = Operators("Finite Volumes", "xc", mesh)
 
         # Check output shape
         self.assertEqual(operators.grad(y).shape[0], y.shape[0] - 1)
@@ -43,7 +43,7 @@ class TestOperators(unittest.TestCase):
             div_exact = - np.sin(mesh.xc)
 
             # Get operators and flux
-            operators = Operators("Finite Volumes", "x", mesh)
+            operators = Operators("Finite Volumes", "xc", mesh)
             grad_y_approx = operators.grad(y)
 
             # Calculate divergence of exact flux to avoid double errors

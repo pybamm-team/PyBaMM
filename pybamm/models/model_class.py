@@ -40,18 +40,21 @@ class Model:
         self.tests = tests
 
     def variables(self):
-        """The variables of the model."""
+        """
+        The variables of the model.
+        List of (name, domain)
+        """
         if self.name == "Electrolyte diffusion":
-            return [('c', 'tot')]
+            return [('c', 'xc')]
         elif self.name == "Electrolyte current":
-            return [('en', 'neg'), ('ep', 'pos')]
+            return [('en', 'xcn'), ('ep', 'xcp')]
 
     def domains(self):
         """The domains in which the model is defined."""
         if self.name == "Electrolyte diffusion":
-            return ["x"]
+            return ["xc"]
         elif self.name == "Electrolyte current":
-            return ["xn", "xp"]
+            return ["xcn", "xcp"]
 
 
     def initial_conditions(self, param, mesh):
@@ -114,7 +117,7 @@ class Model:
         if self.name == "Electrolyte diffusion":
             dcdt = components.electrolyte_diffusion(
                 vars.c,
-                operators["x"],
+                operators["xc"],
                 bcs['concentration'],
                 source=sources['concentration'])
 
@@ -124,11 +127,12 @@ class Model:
         elif self.name == "Electrolyte current":
             dedt = components.elecrolyte_current(
                 (vars.cn, vars.en),
-                operators["xn"],
+                operators["xcn"],
                 bcs["current neg"],
                 source=sources["current neg"])
 
             return dedt
+
     def boundary_conditions(self, vars, param):
         """Returns the boundary conditions for the model (fluxes only).
 

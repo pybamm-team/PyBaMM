@@ -1,6 +1,6 @@
 import numpy as np
 
-KNOWN_DOMAINS = ["x", "xn", "xs", "xp"]
+KNOWN_DOMAINS = ["xc", "xcn", "xcs", "xcp"]
 
 class Operators:
     """Contains functions that calculate the spatial derivatives.
@@ -38,11 +38,11 @@ class Operators:
 
         """
         if self.spatial_discretisation == "Finite Volumes":
-            if self.domain == "x":
+            if self.domain == "xc":
                 xc, dxc = self.mesh.xc, self.mesh.dxc
-            elif self.domain == "xn":
+            elif self.domain == "xcn":
                 xc, dxc = self.mesh.xcn, self.mesh.dxn
-            elif self.domain == "xp":
+            elif self.domain == "xcp":
                 xc, dxc = self.mesh.xcp, self.mesh.dxp
             # Run some basic checks on inputs
             assert y.shape == xc.shape, \
@@ -68,11 +68,11 @@ class Operators:
 
         """
         if self.spatial_discretisation == "Finite Volumes":
-            if self.domain == "x":
+            if self.domain == "xc":
                 x, dx = self.mesh.x, self.mesh.dx
-            elif self.domain == "xn":
+            elif self.domain == "xcn":
                 x, dx = self.mesh.xn, self.mesh.dxn
-            elif self.domain == "xp":
+            elif self.domain == "xcp":
                 x, dx = self.mesh.xcp, self.mesh.dxp
             # Run basic checks on inputs
             assert N.shape == x.shape, \

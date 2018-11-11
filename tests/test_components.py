@@ -22,7 +22,7 @@ class TestComponents(unittest.TestCase):
             # Set up
             mesh = Mesh(param, n)
             c0 = np.cos(2*np.pi*mesh.xc)
-            operators = Operators("Finite Volumes", "x", mesh)
+            operators = Operators("Finite Volumes", "xc", mesh)
             lbc = np.array([0])
             rbc = np.array([0])
             dcdt_exact = - 4 * np.pi**2 * c0

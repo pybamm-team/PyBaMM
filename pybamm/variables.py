@@ -22,11 +22,11 @@ class Variables:
         # Unpack y iteratively
         start = 0
         for var, domain in variables:
-            end = start + mesh.sizes[domain]
+            end = start + len(mesh.__dict__[domain])
             self.__dict__[var] = y[start:end]
             start = end
             # Split 'tot' variables further into n, s and p
-            if domain == 'tot':
+            if domain == 'xc':
                 (self.__dict__[var+'n'],
                  self.__dict__[var+'s'],
                  self.__dict__[var+'p']) = np.split(
