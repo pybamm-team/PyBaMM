@@ -26,3 +26,6 @@ out/
 
 # ignore ideas
 ideas/
+
+# ignore setup.py files
+*.egg-info
