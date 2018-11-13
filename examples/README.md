@@ -8,6 +8,6 @@ relevant code.
 
 ## Getting started
 
-- [Solve a simple diffusion equation](./solve-diffusion-equation.ipynb)
-- [Compare models](./compare-models.ipynb)
-- [Add a model](./add-model.ipynb)
+- [Solve a simple diffusion equation](./simple-diffusion.ipynb)
+<!-- - [Compare models](./compare-models.ipynb)
+- [Add a model](./add-model.ipynb) -->

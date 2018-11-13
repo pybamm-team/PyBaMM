@@ -299,7 +299,7 @@ Documentation is built using https://readthedocs.org/ and published on http://py
 
 ### Binder
 
-Editable notebooks are made available using [Binder](mybinder.readthedocs.io) at https://mybinder.org/v2/gh/tinosulzer/pybamm/master?filepath=examples.
+Editable notebooks are made available using [Binder](mybinder.readthedocs.io) at https://mybinder.org/v2/gh/tinosulzer/PyBaMM/master.
 
 Configuration files:
 
