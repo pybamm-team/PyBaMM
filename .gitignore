@@ -11,6 +11,7 @@
 # ignore Python cache
 *__pycache__/
 *.cache
+.ipynb_checkpoints/
 
 # ignore Sphinx build files
 docs/_build/
