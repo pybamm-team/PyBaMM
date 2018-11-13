@@ -30,3 +30,6 @@ ideas/
 
 # ignore setup.py files
 *.egg-info
+
+# don't ignore requirements
+!requirements*
