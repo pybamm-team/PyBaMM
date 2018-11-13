@@ -1,8 +1,10 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
+import pybamm
 
 import pandas as pd
 import numpy as np
+import os
 
 
 def read_parameters_csv(filename):
@@ -11,7 +13,8 @@ def read_parameters_csv(filename):
     Parameters
     ----------
     filename : string
-        The name of the csv file to be opened.
+        The name of the csv file containing the parameters.
+        Must be a file in `input/parameters/`
 
     Returns
     -------
@@ -19,6 +22,12 @@ def read_parameters_csv(filename):
         {name: value} pairs for the parameters.
 
     """
+    # Hack to access input/parameters from any working directory
+    filename = os.path.join(
+        pybamm.ABSOLUTE_PATH, "input", "parameters", filename
+    )
+
+    #
     df = pd.read_csv(filename, comment="#", skip_blank_lines=True)
     # Drop rows that are all NaN (seems to not work with skip_blank_lines)
     df.dropna(how="all", inplace=True)
@@ -35,9 +44,7 @@ class Parameters:
         #######################################################################
         # Defaults ############################################################
         # Load default parameters from csv file
-        default_parameters = read_parameters_csv(
-            "input/parameters/default.csv"
-        )
+        default_parameters = read_parameters_csv("default.csv")
         #######################################################################
         #######################################################################
 

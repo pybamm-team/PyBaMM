@@ -8,6 +8,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import sys
+import os
 
 #
 # Version info: Remember to keep this in sync with setup.py!
@@ -33,7 +34,9 @@ def version(formatted=False):
 # Float format: a float can be converted to a 17 digit decimal and back without
 # loss of information
 FLOAT_FORMAT = "{: .17e}"
-
+# Absolute path to the PyBaMM repo
+script_path = os.path.abspath(__file__)
+ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 
 #
 # Utility classes and methods
