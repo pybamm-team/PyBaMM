@@ -1,0 +1,33 @@
+[flake8]
+exclude=
+    .git,
+    problems,
+    __init__.py,
+ignore=
+    # Block comment should start with '# '
+    # Not if it's a commented out line
+    E265,
+
+    # Ambiguous variable names
+    # It's absolutely fine to have i and I
+    E741,
+
+    # List comprehension redefines variable
+    # Re-using throw-away variables like `i`, `x`, etc. is a Good Idea
+    F812,
+
+    # Blank line at end of file
+    # This increases readability
+    W391,
+
+    # Line break before binary operator
+    # This is now actually advised in pep8
+    W503,
+
+    # Line break after binary operator
+    W504,
+
+    # Invalid escape sequence
+    # These happen all the time in latex parts of docstrings,
+    # e.g. \sigma
+    W605,
