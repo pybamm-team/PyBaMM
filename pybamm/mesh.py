@@ -49,7 +49,9 @@ class Mesh:
         # Grid: centres
         self.xcn = (self.xn[1:] + self.xn[:-1]) / 2
         self.xcs = np.linspace(
-            param.ln + self.dxs / 2, param.ln + param.ls - self.dxs / 2, self.ns + 1
+            param.ln + self.dxs / 2,
+            param.ln + param.ls - self.dxs / 2,
+            self.ns + 1,
         )
         self.xcp = (self.xp[1:] + self.xp[:-1]) / 2
         self.xc = (self.x[1:] + self.x[:-1]) / 2

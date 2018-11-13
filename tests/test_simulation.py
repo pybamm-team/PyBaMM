@@ -19,8 +19,12 @@ class TestSolution(unittest.TestCase):
         mesh = Mesh(param, target_npts, tsteps=tsteps, tend=tend)
 
         model = Model("Electrolyte diffusion")
-        simulation = Simulation(model, param, mesh, name="Electrolyte diffusion")
-        solver = Solver(integrator="BDF", spatial_discretisation="Finite Volumes")
+        simulation = Simulation(
+            model, param, mesh, name="Electrolyte diffusion"
+        )
+        solver = Solver(
+            integrator="BDF", spatial_discretisation="Finite Volumes"
+        )
 
         simulation.run(solver)
 
@@ -30,7 +34,9 @@ class TestSolution(unittest.TestCase):
             param.icell(simulation.vars.t), simulation.vars.t, initial=0.0
         )
 
-        self.assertTrue(np.allclose(simulation.vars.c_avg, c_avg_expected, atol=4e-16))
+        self.assertTrue(
+            np.allclose(simulation.vars.c_avg, c_avg_expected, atol=4e-16)
+        )
         # integral of j is known
         # check convergence to steady state when current is zero
         # concentration and porosity limits
@@ -78,7 +84,10 @@ class TestSolution(unittest.TestCase):
             errs[i] = norm(
                 simulation.vars.c.T - c_exact(mesh.time[:, np.newaxis])
             ) / norm(c_exact(mesh.time[:, np.newaxis]))
-        [self.assertLess(errs[i + 1] / errs[i], 0.14) for i in range(len(errs) - 1)]
+        [
+            self.assertLess(errs[i + 1] / errs[i], 0.14)
+            for i in range(len(errs) - 1)
+        ]
 
 
 if __name__ == "__main__":

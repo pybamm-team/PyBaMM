@@ -33,7 +33,9 @@ class Variables:
                     self.__dict__[var + "n"],
                     self.__dict__[var + "s"],
                     self.__dict__[var + "p"],
-                ) = np.split(self.__dict__[var], np.cumsum([mesh.nn - 1, mesh.ns + 1]))
+                ) = np.split(
+                    self.__dict__[var], np.cumsum([mesh.nn - 1, mesh.ns + 1])
+                )
 
     def average(self, param, mesh):
         """Average variable attributes over the relevant (sub)domain.
@@ -58,6 +60,6 @@ class Variables:
                 self.__dict__[attr[:-1] + "n_avg"] = avg_n
 
                 # Positive
-                var_p = self.__dict__[attr[:-1]][mesh.nn + mesh.ns :]
+                var_p = self.__dict__[attr[:-1]][mesh.nn + mesh.ns : -1]
                 avg_p = np.sum(var_p) * mesh.dxp / param.lp
                 self.__dict__[attr[:-1] + "p_avg"] = avg_p

@@ -1,5 +1,5 @@
 from pybamm.parameters import Parameters
-from pybamm.mesh import Mesh, UniformMesh
+from pybamm.mesh import Mesh
 from pybamm.models.model_class import Model
 from pybamm.variables import Variables
 
@@ -45,7 +45,10 @@ class TestVariables(unittest.TestCase):
             vars.average(self.param, mesh)
             c_avg_exact = 1 / 3
             errs[i] = norm(vars.c_avg - c_avg_exact) / norm(c_avg_exact)
-        [self.assertLess(errs[i + 1] / errs[i], 0.26) for i in range(len(errs) - 1)]
+        [
+            self.assertLess(errs[i + 1] / errs[i], 0.26)
+            for i in range(len(errs) - 1)
+        ]
 
 
 if __name__ == "__main__":

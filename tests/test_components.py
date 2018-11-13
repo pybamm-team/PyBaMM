@@ -1,5 +1,5 @@
 from pybamm.parameters import Parameters
-from pybamm.mesh import Mesh, UniformMesh
+from pybamm.mesh import Mesh
 from pybamm.spatial_operators import Operators
 from pybamm.models import components
 
@@ -29,14 +29,17 @@ class TestComponents(unittest.TestCase):
             dcdt_exact = -4 * np.pi ** 2 * c0
 
             # Calculate solution and errors
-            dcdt = components.electrolyte_diffusion(param, c0, operators, (lbc, rbc), 0)
+            dcdt = components.electrolyte_diffusion(
+                param, c0, operators, (lbc, rbc), 0
+            )
             errs[i] = norm(dcdt - dcdt_exact) / norm(dcdt_exact)
             mesh_sizes[i] = mesh.n
 
         # Expect h**2 convergence
         [
             self.assertLess(
-                errs[i + 1] / errs[i], (mesh_sizes[i] / mesh_sizes[i + 1]) ** 2 + 0.01
+                errs[i + 1] / errs[i],
+                (mesh_sizes[i] / mesh_sizes[i + 1]) ** 2 + 0.01,
             )
             for i in range(len(errs) - 1)
         ]

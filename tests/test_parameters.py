@@ -1,7 +1,6 @@
-from pybamm.mesh import *
-from pybamm.parameters import *
+from pybamm.mesh import Mesh
+from pybamm.parameters import Parameters, read_parameters_csv
 
-import numpy as np
 import unittest
 
 
@@ -16,9 +15,13 @@ class TestParameters(unittest.TestCase):
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
 
     def test_parameters_options(self):
-        param = Parameters(optional_parameters={"Ln": 1 / 3, "Ls": 1 / 3, "Lp": 1 / 3})
+        param = Parameters(
+            optional_parameters={"Ln": 1 / 3, "Ls": 1 / 3, "Lp": 1 / 3}
+        )
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
-        param = Parameters(optional_parameters="input/parameters/optional_test.csv")
+        param = Parameters(
+            optional_parameters="input/parameters/optional_test.csv"
+        )
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
 
     def test_mesh_dependent_parameters(self):

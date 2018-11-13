@@ -1,11 +1,8 @@
 from pybamm.parameters import Parameters
-from pybamm.mesh import Mesh, UniformMesh
+from pybamm.mesh import Mesh
 from pybamm.variables import Variables
 from pybamm.spatial_operators import Operators
 from pybamm.models.model_class import Model, KNOWN_MODELS
-
-import numpy as np
-from numpy.linalg import norm
 
 import unittest
 

@@ -1,5 +1,5 @@
 from pybamm.parameters import Parameters
-from pybamm.mesh import Mesh, UniformMesh
+from pybamm.mesh import Mesh
 from pybamm.spatial_operators import Operators
 
 import numpy as np
@@ -55,9 +55,9 @@ class TestOperators(unittest.TestCase):
             grad_errs[i] = np.linalg.norm(
                 grad_y_approx - grad_y_exact
             ) / np.linalg.norm(grad_y_exact)
-            div_errs[i] = np.linalg.norm(div_approx - div_exact) / np.linalg.norm(
-                div_exact
-            )
+            div_errs[i] = np.linalg.norm(
+                div_approx - div_exact
+            ) / np.linalg.norm(div_exact)
 
         # Expect h**2 convergence
         [

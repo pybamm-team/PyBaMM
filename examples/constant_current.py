@@ -4,8 +4,6 @@ from pybamm.models.model_class import Model
 from pybamm.simulation import Simulation
 from pybamm.solver import Solver
 
-import numpy as np
-
 # Create parameters and mesh
 param = Parameters()
 tsteps = 100
@@ -24,11 +22,9 @@ solver = Solver(integrator="BDF", spatial_discretisation="Finite Volumes")
 
 # Run the simulation
 simulation.run(solver)
-import ipdb
 
-ipdb.set_trace()
 # Save
-simulation.save(filename)
+# simulation.save(filename)
 
 # Plot
-simulation.plot()
+# simulation.plot()
