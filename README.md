@@ -4,8 +4,7 @@
 [![Documentation Status](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
-
-**Py**thon **Ba**ttery **M**athematical **M** odelling solves continuum models for lead-acid batteries, using both numerical methods and asymptotic analysis
+Python Battery Mathematical Modelling solves continuum models for lead-acid batteries, using both numerical methods and asymptotic analysis
 
 ## How do I use PyBaMM?
 
@@ -44,8 +43,8 @@ $ pip uninstall pybamm
 
 ## How can I contribute to PyBaMM?
 
-If you'd like to help us develop PyBaMM by adding new methods, writing documentation, or fixing embarassing bugs, please have a look at these [guidelines](CONTRIBUTING.md) first.
+If you'd like to help us develop PyBaMM by adding new methods, writing documentation, or fixing embarrassing bugs, please have a look at these [guidelines](CONTRIBUTING.md) first.
 
 ## Licensing
 
-PyBaMM is fully open source. For more information about its license, see [LICENSE](./LICENSE).
+PyBaMM is fully open source. For more information about its license, see [LICENSE](./LICENSE.txt).
