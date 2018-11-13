@@ -4,6 +4,10 @@ exclude=
     problems,
     __init__.py,
 ignore=
+    # False positive for whitespace before ':' on list slice
+    # black should format these correctly
+    E203,
+
     # Block comment should start with '# '
     # Not if it's a commented out line
     E265,
