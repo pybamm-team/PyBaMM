@@ -1,6 +1,8 @@
-"""
-The components that make up the model.
-"""
+#
+# The components that make up the models.
+#
+from __future__ import absolute_import, division
+from __future__ import print_function, unicode_literals
 import numpy as np
 
 
@@ -39,7 +41,7 @@ def electrolyte_diffusion(param, c, operators, flux_bcs, j):
     return dcdt
 
 
-def electrolyte_current(param, *variables, operators, current_bcs, j):
+def electrolyte_current(param, variables, operators, current_bcs, j):
     """The 1D diffusion equation.
 
     Parameters
@@ -70,7 +72,7 @@ def electrolyte_current(param, *variables, operators, current_bcs, j):
     return dedt
 
 
-def current(param, *variables, operators, current_bcs):
+def current(param, variables, operators, current_bcs):
     """The 1D current.
 
     Parameters
