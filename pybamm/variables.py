@@ -60,6 +60,6 @@ class Variables:
                 self.__dict__[attr[:-1] + "n_avg"] = avg_n
 
                 # Positive
-                var_p = self.__dict__[attr[:-1]][mesh.nn + mesh.ns : -1]
+                var_p = self.__dict__[attr[:-1]][mesh.nn + mesh.ns :]
                 avg_p = np.sum(var_p) * mesh.dxp / param.lp
                 self.__dict__[attr[:-1] + "p_avg"] = avg_p
