@@ -1,6 +1,4 @@
-from pybamm.parameters import Parameters
-from pybamm.mesh import Mesh, UniformMesh
-from pybamm.spatial_operators import Operators
+import pybamm
 
 import numpy as np
 import unittest
@@ -9,18 +7,18 @@ import unittest
 class TestOperators(unittest.TestCase):
     def setUp(self):
         # Generate parameters and grids
-        self.param = Parameters()
+        self.param = pybamm.Parameters()
 
     def tearDown(self):
         del self.param
 
     def test_grad_div_1D_FV_basic(self):
-        mesh = Mesh(self.param, 50)
+        mesh = pybamm.Mesh(self.param, 50)
         y = np.ones_like(mesh.xc)
         N = np.ones_like(mesh.x)
 
         # Get operators
-        operators = Operators("Finite Volumes", "xc", mesh)
+        operators = pybamm.Operators("Finite Volumes", "xc", mesh)
 
         # Check output shape
         self.assertEqual(operators.grad(y).shape[0], y.shape[0] - 1)
@@ -37,13 +35,13 @@ class TestOperators(unittest.TestCase):
         div_errs = [0] * len(ns)
         for i, n in enumerate(ns):
             # Define problem and exact solutions
-            mesh = Mesh(self.param, n)
+            mesh = pybamm.Mesh(self.param, n)
             y = np.sin(mesh.xc)
             grad_y_exact = np.cos(mesh.x[1:-1])
             div_exact = -np.sin(mesh.xc)
 
             # Get operators and flux
-            operators = Operators("Finite Volumes", "xc", mesh)
+            operators = pybamm.Operators("Finite Volumes", "xc", mesh)
             grad_y_approx = operators.grad(y)
 
             # Calculate divergence of exact flux to avoid double errors
@@ -55,9 +53,9 @@ class TestOperators(unittest.TestCase):
             grad_errs[i] = np.linalg.norm(
                 grad_y_approx - grad_y_exact
             ) / np.linalg.norm(grad_y_exact)
-            div_errs[i] = np.linalg.norm(div_approx - div_exact) / np.linalg.norm(
-                div_exact
-            )
+            div_errs[i] = np.linalg.norm(
+                div_approx - div_exact
+            ) / np.linalg.norm(div_exact)
 
         # Expect h**2 convergence
         [

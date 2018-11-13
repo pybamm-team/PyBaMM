@@ -1,6 +1,8 @@
-"""
-The components that make up the model.
-"""
+#
+# The components that make up the models.
+#
+from __future__ import absolute_import, division
+from __future__ import print_function, unicode_literals
 import numpy as np
 
 
@@ -39,7 +41,7 @@ def electrolyte_diffusion(param, c, operators, flux_bcs, j):
     return dcdt
 
 
-def electrolyte_current(param, *variables, operators, current_bcs, j):
+def electrolyte_current(param, variables, operators, current_bcs, j):
     """The 1D diffusion equation.
 
     Parameters
@@ -70,7 +72,7 @@ def electrolyte_current(param, *variables, operators, current_bcs, j):
     return dedt
 
 
-def current(param, *variables, operators, current_bcs):
+def current(param, variables, operators, current_bcs):
     """The 1D current.
 
     Parameters
@@ -96,7 +98,7 @@ def current(param, *variables, operators, current_bcs):
     kappa = 1
 
     # Calculate inner current
-    i = kappa_over_c * operators.grad(c) + kappa * operators.grad(e)
+    i_inner = kappa_over_c * operators.grad(c) + kappa * operators.grad(e)
 
     # Add boundary conditions
     lbc, rbc = current_bcs
@@ -136,7 +138,12 @@ def butler_volmer(param, cn, cs, cp, en, ep):
     """
     jn = param.iota_ref_n * cn * np.sinh(en - param.U_Pb(cn))
     js = 0 * cs
-    jp = param.iota_ref_p * cp ** 2 * param.cw(cp) * np.sinh(ep - param.U_PbO2(cp))
+    jp = (
+        param.iota_ref_p
+        * cp ** 2
+        * param.cw(cp)
+        * np.sinh(ep - param.U_PbO2(cp))
+    )
 
     j = np.concatenate([jn, js, jp])
     return j, jn, jp

@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division
+from __future__ import print_function, unicode_literals
+
 import numpy as np
 
 
@@ -33,7 +36,9 @@ class Variables:
                     self.__dict__[var + "n"],
                     self.__dict__[var + "s"],
                     self.__dict__[var + "p"],
-                ) = np.split(self.__dict__[var], np.cumsum([mesh.nn - 1, mesh.ns + 1]))
+                ) = np.split(
+                    self.__dict__[var], np.cumsum([mesh.nn - 1, mesh.ns + 1])
+                )
 
     def average(self, param, mesh):
         """Average variable attributes over the relevant (sub)domain.
