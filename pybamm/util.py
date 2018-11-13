@@ -7,6 +7,7 @@
 import pybamm
 import timeit
 
+
 def strfloat(x):
     """
     Converts a float to a string, with maximum precision.
@@ -33,6 +34,7 @@ class Timer(object):
     print(timer.format(timer.time()))
 
     """
+
     def __init__(self):
         self.start = timeit.default_timer()
 
@@ -54,24 +56,24 @@ class Timer(object):
         if time is None:
             time = self.time()
         if time < 1e-2:
-            return str(time) + ' seconds'
+            return str(time) + " seconds"
         elif time < 60:
-            return str(round(time, 2)) + ' seconds'
+            return str(round(time, 2)) + " seconds"
         output = []
         time = int(round(time))
         units = [
-            (604800, 'week'),
-            (86400, 'day'),
-            (3600, 'hour'),
-            (60, 'minute'),
+            (604800, "week"),
+            (86400, "day"),
+            (3600, "hour"),
+            (60, "minute"),
         ]
         for k, name in units:
             f = time // k
             if f > 0 or output:
-                output.append(str(f) + ' ' + (name if f == 1 else name + 's'))
+                output.append(str(f) + " " + (name if f == 1 else name + "s"))
             time -= f * k
-        output.append('1 second' if time == 1 else str(time) + ' seconds')
-        return ', '.join(output)
+        output.append("1 second" if time == 1 else str(time) + " seconds")
+        return ", ".join(output)
 
     def reset(self):
         """

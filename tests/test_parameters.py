@@ -1,32 +1,31 @@
-from pybamm.mesh import Mesh
-from pybamm.parameters import Parameters, read_parameters_csv
+import pybamm
 
 import unittest
 
 
 class TestParameters(unittest.TestCase):
     def test_read_parameters_csv(self):
-        data = read_parameters_csv("input/parameters/default.csv")
+        data = pybamm.read_parameters_csv("input/parameters/default.csv")
         self.assertEqual(data["R"], 8.314)
 
     def test_parameters_defaults(self):
         # basic tests on how the parameters interact
-        param = Parameters()
+        param = pybamm.Parameters()
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
 
     def test_parameters_options(self):
-        param = Parameters(
+        param = pybamm.Parameters(
             optional_parameters={"Ln": 1 / 3, "Ls": 1 / 3, "Lp": 1 / 3}
         )
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
-        param = Parameters(
+        param = pybamm.Parameters(
             optional_parameters="input/parameters/optional_test.csv"
         )
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
 
     def test_mesh_dependent_parameters(self):
-        param = Parameters()
-        mesh = Mesh(param, 10)
+        param = pybamm.Parameters()
+        mesh = pybamm.Mesh(param, 10)
         param.set_mesh_dependent_parameters(mesh)
         self.assertEqual(param.s.shape, mesh.xc.shape)
 

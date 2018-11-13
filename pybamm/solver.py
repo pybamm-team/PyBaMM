@@ -1,5 +1,4 @@
-from pybamm.variables import Variables
-from pybamm.spatial_operators import Operators
+import pybamm
 
 import scipy.integrate as it
 
@@ -77,7 +76,7 @@ class Solver:
 
         # Get grad and div
         operators = {
-            domain: Operators(self.spatial_discretisation, domain, mesh)
+            domain: pybamm.Operators(self.spatial_discretisation, domain, mesh)
             for domain in model.domains()
         }
 
@@ -87,7 +86,7 @@ class Solver:
         # Solve ODEs
         def derivs(t, y):
             # TODO: check if it's more expensive to create vars or update it
-            vars = Variables(t, y, model, mesh)
+            vars = pybamm.Variables(t, y, model, mesh)
             dydt = model.pdes_rhs(vars, param, operators)
             return dydt
 
@@ -108,7 +107,7 @@ class Solver:
             # TODO: implement concentration cut-off event
 
         # Extract variables from y
-        vars = Variables(sol.t, sol.y, model, mesh)
+        vars = pybamm.Variables(sol.t, sol.y, model, mesh)
 
         # Post-process (get potentials)
         # TODO: write post-processing function

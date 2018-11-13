@@ -1,24 +1,24 @@
-from pybamm.parameters import Parameters
-from pybamm.mesh import Mesh
-from pybamm.models.model_class import Model
-from pybamm.simulation import Simulation
-from pybamm.solver import Solver
+import pybamm
 
 # Create parameters and mesh
-param = Parameters()
+param = pybamm.Parameters()
 tsteps = 100
 tend = 1
 target_npts = 10
-mesh = Mesh(param, target_npts, tsteps=tsteps, tend=tend)
+mesh = pybamm.Mesh(param, target_npts, tsteps=tsteps, tend=tend)
 
 # Choose the model
-model = Model("Electrolyte diffusion")
+model = pybamm.Model("Electrolyte diffusion")
 
 # Create a simulation
-simulation = Simulation(model, param, mesh, name="Electrolyte diffusion")
+simulation = pybamm.Simulation(
+    model, param, mesh, name="Electrolyte diffusion"
+)
 
 # Create a solver
-solver = Solver(integrator="BDF", spatial_discretisation="Finite Volumes")
+solver = pybamm.Solver(
+    integrator="BDF", spatial_discretisation="Finite Volumes"
+)
 
 # Run the simulation
 simulation.run(solver)
