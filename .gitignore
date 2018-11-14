@@ -3,33 +3,38 @@
 *.tmp
 /local/
 
-# ignore running files
+# don't ignore important .txt files
+!requirements*
+!LICENSE.txt
+
+# running files
 *.pyc
 *.py~
 .~lock*
 
-# ignore Python cache
+# Python cache
 *__pycache__/
 *.cache
 .ipynb_checkpoints/
 
-# ignore Sphinx build files
+# Sphinx build files
 docs/_build/
 docs/build/
 build/
 
-# ignore inputs except parameters
+# inputs except parameters
 input/*
 !input/parameters
 
-# ignore simulation outputs
+# simulation outputs
 out/
 
-# ignore ideas
+# ideas
 ideas/
 
-# ignore setup.py files
+# setup.py files
 *.egg-info
 
-# don't ignore requirements
-!requirements*
+# coverage
+.coverage
+coverage.xml

@@ -1,23 +1,109 @@
-sudo: required
+sudo: false
+
+dist: trusty
 
 language: python
 
-services:
-  - docker
+matrix:
+    include:
+        # Unit testing on Python 3.6 on Ubuntu
+        # - python: "2.7"
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
+        # - python: "2.7.6"
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
+        # - python: "3.4"
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
+        # - python: "3.5"
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
+        - python: "3.6"
+          env:
+            - PINTS_UNIT=true
+          if: type != cron
+        #- python: "3.7"
+        #  env:
+        #    - PINT_UNIT=true
+        #  if: type != cron
+        # Unit testing on OS/X
+        # - os: osx
+        #   language: generic
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
+        # Docs, style and cover checking, latest Python version only
+        - python: "3.6"
+          env:
+            - PINTS_DOCS=true
+          if: type != cron
+        - python: "3.6"
+          env:
+            - PINTS_STYLE=true
+          if: type != cron
+        - python: "3.6"
+          env:
+            - PINTS_COVER=true
+          if: type != cron
+          # Cron jobs
+        - python: "3.6"
+          if: type == cron
 
-before_install:
-- docker build . -t pybat-lead-acid
-- docker run -dt --name app pybat-lead-acid
+# Install dependencies
+# Note: Use pip (not apt-get) for Python dependencies
+# Note: Only install normal dependencies for unit tests; these should be tested
+#       without the packages from -dev and -doc!
+install:
+  - pip install --upgrade pip
+  - pip install .
+  - pip install -r requirements.txt
+  - if [[ $PINTS_DOCS == true ]]; then pip install -r requirements-docs.txt; fi;
+  - if [[ $PINTS_STYLE == true ]]; then pip install -r requirements-dev.txt; fi;
+  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then pip install -r requirements-dev.txt; fi;
+  - if [[ $PINTS_COVER == true ]]; then pip install coverage codecov; fi;
 
+before_script:
+- python --version
+
+# Note that default timeout is 10 minutes
+# This can be changed with travis_wait, but that leads to
+# issues with debug output:
+# https://github.com/travis-ci/travis-ci/issues/5716
 script:
-- docker exec app python3 -m unittest discover
+  - if [[ $PINTS_UNIT == true ]]; then python run-tests.py --unit; fi;
+  # - if [[ $PINTS_DOCS == true ]]; then python run-tests.py --doctest; fi;
+  - if [[ $PINTS_STYLE == true ]]; then python -m flake8; fi;
+  - if [[ $PINTS_COVER == true ]]; then coverage run run-tests.py --nosub; fi;
+  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then travis_wait 120 python run-tests.py --books; fi;
 
-after_script:
-- docker rm -f app
+after_success:
+  - if [[ $PINTS_COVER == true ]]; then codecov; fi;
 
 notifications:
   email:
     recipients:
       - sulzer@maths.ox.ac.uk
-    on_success: change # default: change
-    on_failure: always # default: always
+
+# Old docker installation
+#
+# sudo: required
+#
+# language: python
+#
+# services:
+#   - docker
+#
+# before_install:
+# - docker build . -t pybamm-image
+# - docker run -dt --name pybamm-container pybamm-image
+#
+# script:
+# - docker exec app python3 -m unittest discover
+#
+# after_script:
+# - docker rm -f app
