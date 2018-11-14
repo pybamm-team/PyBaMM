@@ -1,10 +1,6 @@
-from pybamm.parameters import Parameters
-from pybamm.mesh import Mesh
-from pybamm.models.model_class import Model
-from pybamm.simulation import Simulation
-from pybamm.solver import Solver
-import unittest
+import pybamm
 
+import unittest
 import numpy as np
 from numpy.linalg import norm
 import scipy.integrate as it
@@ -12,15 +8,19 @@ import scipy.integrate as it
 
 class TestSolution(unittest.TestCase):
     def test_simulation_physics(self):
-        param = Parameters()
+        param = pybamm.Parameters()
         tsteps = 100
         tend = 1
         target_npts = 10
-        mesh = Mesh(param, target_npts, tsteps=tsteps, tend=tend)
+        mesh = pybamm.Mesh(param, target_npts, tsteps=tsteps, tend=tend)
 
-        model = Model("Electrolyte diffusion")
-        simulation = Simulation(model, param, mesh, name="Electrolyte diffusion")
-        solver = Solver(integrator="BDF", spatial_discretisation="Finite Volumes")
+        model = pybamm.Model("Electrolyte diffusion")
+        simulation = pybamm.Simulation(
+            model, param, mesh, name="Electrolyte diffusion"
+        )
+        solver = pybamm.Solver(
+            integrator="BDF", spatial_discretisation="Finite Volumes"
+        )
 
         simulation.run(solver)
 
@@ -30,7 +30,9 @@ class TestSolution(unittest.TestCase):
             param.icell(simulation.vars.t), simulation.vars.t, initial=0.0
         )
 
-        self.assertTrue(np.allclose(simulation.vars.c_avg, c_avg_expected, atol=4e-16))
+        self.assertTrue(
+            np.allclose(simulation.vars.c_avg, c_avg_expected, atol=4e-16)
+        )
         # integral of j is known
         # check convergence to steady state when current is zero
         # concentration and porosity limits
@@ -45,10 +47,10 @@ class TestSolution(unittest.TestCase):
         Can achieve "convergence" in time by changing the integrator tolerance
         Can't get h**2 convergence in space
         """
-        param = Parameters()
+        param = pybamm.Parameters()
         tsteps = 100
         tend = 1
-        mesh = Mesh(param, 50, tsteps=tsteps, tend=tend)
+        mesh = pybamm.Mesh(param, 50, tsteps=tsteps, tend=tend)
 
         def c_exact(t):
             return np.exp(-4 * np.pi ** 2 * t) * np.cos(2 * np.pi * mesh.xc)
@@ -63,13 +65,13 @@ class TestSolution(unittest.TestCase):
 
         tests = {"inits": inits, "bcs": bcs, "sources": sources}
 
-        model = Model("Electrolyte diffusion", tests=tests)
-        simulation = Simulation(model, param, mesh)
+        model = pybamm.Model("Electrolyte diffusion", tests=tests)
+        simulation = pybamm.Simulation(model, param, mesh)
 
         ns = [1, 2, 3]
         errs = [0] * len(ns)
         for i, n in enumerate(ns):
-            solver = Solver(
+            solver = pybamm.Solver(
                 integrator="BDF",
                 spatial_discretisation="Finite Volumes",
                 tol=10 ** (-n),
@@ -78,7 +80,10 @@ class TestSolution(unittest.TestCase):
             errs[i] = norm(
                 simulation.vars.c.T - c_exact(mesh.time[:, np.newaxis])
             ) / norm(c_exact(mesh.time[:, np.newaxis]))
-        [self.assertLess(errs[i + 1] / errs[i], 0.14) for i in range(len(errs) - 1)]
+        [
+            self.assertLess(errs[i + 1] / errs[i], 0.14)
+            for i in range(len(errs) - 1)
+        ]
 
 
 if __name__ == "__main__":

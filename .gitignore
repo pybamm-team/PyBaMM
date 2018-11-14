@@ -11,6 +11,7 @@
 # ignore Python cache
 *__pycache__/
 *.cache
+.ipynb_checkpoints/
 
 # ignore Sphinx build files
 docs/_build/
@@ -26,3 +27,9 @@ out/
 
 # ignore ideas
 ideas/
+
+# ignore setup.py files
+*.egg-info
+
+# don't ignore requirements
+!requirements*

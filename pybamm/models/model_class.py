@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division
+from __future__ import print_function, unicode_literals
 from pybamm.models import components
 
 import numpy as np

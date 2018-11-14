@@ -1,7 +1,10 @@
-import csv
+from __future__ import absolute_import, division
+from __future__ import print_function, unicode_literals
+import pybamm
+
 import pandas as pd
 import numpy as np
-import warnings
+import os
 
 
 def read_parameters_csv(filename):
@@ -10,7 +13,8 @@ def read_parameters_csv(filename):
     Parameters
     ----------
     filename : string
-        The name of the csv file to be opened.
+        The name of the csv file containing the parameters.
+        Must be a file in `input/parameters/`
 
     Returns
     -------
@@ -18,6 +22,12 @@ def read_parameters_csv(filename):
         {name: value} pairs for the parameters.
 
     """
+    # Hack to access input/parameters from any working directory
+    filename = os.path.join(
+        pybamm.ABSOLUTE_PATH, "input", "parameters", filename
+    )
+
+    #
     df = pd.read_csv(filename, comment="#", skip_blank_lines=True)
     # Drop rows that are all NaN (seems to not work with skip_blank_lines)
     df.dropna(how="all", inplace=True)
@@ -34,7 +44,7 @@ class Parameters:
         #######################################################################
         # Defaults ############################################################
         # Load default parameters from csv file
-        default_parameters = read_parameters_csv("input/parameters/default.csv")
+        default_parameters = read_parameters_csv("default.csv")
         #######################################################################
         #######################################################################
 
@@ -214,14 +224,18 @@ class Parameters:
         )  # Hydrogen
 
         # Volume changes (minus sign comes from electron charge)
-        self.beta_liq_n = self.cmax * self.DeltaVliqN / 2  # Molar volume change
+        self.beta_liq_n = (
+            self.cmax * self.DeltaVliqN / 2
+        )  # Molar volume change
         self.beta_liq_O2_n = (
             self.cmax * self.DeltaVliqO2N / 2
         )  # Molar volume change
         self.beta_liq_H2_n = (
             self.cmax * self.DeltaVliqH2N / 2
         )  # Molar volume change
-        self.beta_liq_p = self.cmax * self.DeltaVliqP / 2  # Molar volume change
+        self.beta_liq_p = (
+            self.cmax * self.DeltaVliqP / 2
+        )  # Molar volume change
         self.beta_liq_O2_p = (
             self.cmax * self.DeltaVliqO2P / 2
         )  # Molar volume change
@@ -371,7 +385,6 @@ class Parameters:
         self.epssolids0 = 1 - self.epssmax
         self.epssolidp0 = 1 - (self.epspmax - self.epsDeltap * (1 - self.q0))
         self.c0 = self.q0
-        logger.debug("Un0 = {}, Up0 = {}".format(self.Un0, self.Up0))
         self.cO20 = 0
         self.T0 = (self.Tinit_hat - self.T_inf) / (
             self.T_max - self.T_inf
@@ -398,7 +411,9 @@ class Parameters:
         """The dimensionless current function (could be some data)"""
         # This is a function of dimensionless time; Icircuit is a function of
         # time in *hours*
-        return self.Icircuit(t * self.scales.time) / (8 * self.A_cc) / self.ibar
+        return (
+            self.Icircuit(t * self.scales.time) / (8 * self.A_cc) / self.ibar
+        )
 
     def D_hat(self, c):
         """
@@ -430,7 +445,7 @@ class Parameters:
 
     def kappa_hat(self, c):
         """Dimensional effective conductivity in the electrolyte [S.m-1]"""
-        return c * exp(6.23 - 1.34e-4 * c - 1.61e-8 * c ** 2) * 1e-4
+        return c * np.exp(6.23 - 1.34e-4 * c - 1.61e-8 * c ** 2) * 1e-4
 
     def kappa_eff(self, c, eps):
         """Dimensionless molar conductivity in the electrolyte"""
