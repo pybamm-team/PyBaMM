@@ -30,7 +30,7 @@ matrix:
 
 before_install:
 - docker build . -t pybamm-image
-- docker run -dt --name pybamm-container pybamm-image
+- docker run -dt $(bash <(curl -s https://codecov.io/env)) --name pybamm-container pybamm-image
 
 # Install dependencies
 # Note: Use pip (not apt-get) for Python dependencies
@@ -46,14 +46,25 @@ before_script:
 # issues with debug output:
 # https://github.com/travis-ci/travis-ci/issues/5716
 script:
-  - if [[ $PINTS_UNIT == true ]]; then docker exec pybamm-container python3 run-tests.py --unit3; fi;
+  - if [[ $PINTS_UNIT == true ]];
+    then docker exec pybamm-container python3 run-tests.py --unit3;
+    fi;
   # - if [[ $PINTS_DOCS == true ]]; then python run-tests.py --doctest; fi;
-  - if [[ $PINTS_STYLE == true ]]; then docker exec pybamm-container python3 -m flake8; fi;
-  - if [[ $PINTS_COVER == true ]]; then docker exec pybamm-container coverage run run-tests.py --nosub; fi;
-  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then travis_wait 120 docker exec pybamm-container python3 run-tests.py --books; fi;
+  - if [[ $PINTS_STYLE == true ]];
+    then docker exec pybamm-container python3 -m flake8;
+    fi;
+  - if [[ $PINTS_COVER == true ]];
+    then docker exec pybamm-container coverage run run-tests.py --nosub;
+    fi;
+  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]];
+    then travis_wait 120 docker exec pybamm-container python3 run-tests.py --books;
+    fi;
 
 after_success:
-  - if [[ $PINTS_COVER == true ]]; then docker exec pybamm-container codecov; fi;
+  - if [[ $PINTS_COVER == true ]]; then
+    docker exec pybamm-container codecov;
+    bash <(curl -s https://codecov.io/bash);
+    fi;
 
 after_script:
 - docker rm -f pybamm-container
