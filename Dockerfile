@@ -1,11 +1,20 @@
 from ubuntu:18.04
 
-RUN apt-get update && apt-get install -y python3 python3-pip
+RUN apt-get update
+RUN apt-get install -y python3
+RUN apt-get install -y python3-pip
 
-RUN pip3 install numpy scipy matplotlib
+# Add dependencies
+RUN pip3 install numpy scipy pandas
+RUN pip3 install matplotlib
+# dev
+RUN pip3 install flake8 jupyter
+# docs
+RUN pip3 install sphinx sphinx-rtd-theme
+# cover
+RUN pip3 install coverage codecov
 
-RUN pip3 install pandas
-
-RUN pip3 install sphinx sphinx_rtd_theme
-
+# Make sure we haven't missed any dependencies
+ADD . /app
 WORKDIR /app
+RUN python3 setup.py install
