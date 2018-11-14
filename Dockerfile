@@ -10,4 +10,4 @@ RUN pip install numpy scipy pandas
 # Make sure we haven't missed any dependencies
 ADD . /app
 WORKDIR /app
-RUN python3 setup.py install
+RUN python setup.py install
