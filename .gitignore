@@ -38,3 +38,6 @@ ideas/
 # coverage
 .coverage
 coverage.xml
+
+# black setup file seems to make Travis CI fail
+pyproject.toml
