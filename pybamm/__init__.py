@@ -47,7 +47,7 @@ from .util import Timer
 #
 # Mesh classes
 #
-from .mesh import Mesh, UniformMesh
+from .mesh import Mesh
 
 #
 # Parameters class and methods
