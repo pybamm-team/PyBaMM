@@ -2,12 +2,12 @@
 
 [![Build Status](https://travis-ci.org/tinosulzer/PyBaMM.svg?branch=master)](https://travis-ci.org/tinosulzer/PyBaMM)
 [![Documentation Status](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
-[![codecov](https://codecov.io/gh/r-lib/objectable/branch/master/graph/badge.svg)](https://codecov.io/gh/tinosulzer/PyBaMM)
+[![codecov](https://codecov.io/gh/tinosulzer/PyBaMM/branch/master/graph/badge.svg)](https://codecov.io/gh/tinosulzer/PyBaMM)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tinosulzer/PyBaMM/master)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 
-Python Battery Mathematical Modelling solves continuum models for lead-acid batteries, using both numerical methods and asymptotic analysis
+Python Battery Mathematical Modelling solves continuum models for batteries, using both numerical methods and asymptotic analysis.
 
 ## How do I use PyBaMM?
 

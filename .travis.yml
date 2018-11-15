@@ -1,17 +1,43 @@
-sudo: required
+sudo: false
+
+dist: trusty
 
 language: python
 
-services:
-  - docker
-
 matrix:
     include:
-        # Unit, docs, style and cover testing on latest version of Python on Ubuntu
+        # Unit testing on all supported Python versions on Ubuntu
+        # - python: "2.7"
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
+        # - python: "2.7.6"
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
+        # - python: "3.4"
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
+        # - python: "3.5"
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
         - python: "3.6"
           env:
             - PINTS_UNIT=true
           if: type != cron
+        #- python: "3.7"
+        #  env:
+        #    - PINT_UNIT=true
+        #  if: type != cron
+        # Unit testing on OS/X
+        # - os: osx
+        #   language: generic
+        #   env:
+        #     - PINTS_UNIT=true
+        #   if: type != cron
+        # Docs, style and cover checking, latest Python version only
         - python: "3.6"
           env:
             - PINTS_DOCS=true
@@ -28,15 +54,18 @@ matrix:
         - python: "3.6"
           if: type == cron
 
-before_install:
-- docker build . -t pybamm-image
-- docker run -dt $(bash <(curl -s https://codecov.io/env)) --name pybamm-container pybamm-image
-
 # Install dependencies
 # Note: Use pip (not apt-get) for Python dependencies
 # Note: Only install normal dependencies for unit tests; these should be tested
 #       without the packages from -dev and -doc!
-# todo: find out how to do this with docker
+install:
+  - pip install --upgrade pip
+  - pip install .
+  - pip install -r requirements.txt
+  - if [[ $PINTS_DOCS == true ]]; then pip install -r requirements-docs.txt; fi;
+  - if [[ $PINTS_STYLE == true ]]; then pip install -r requirements-dev.txt; fi;
+  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then pip install -r requirements-dev.txt; fi;
+  - if [[ $PINTS_COVER == true ]]; then pip install coverage codecov; fi;
 
 before_script:
 - python --version
@@ -46,28 +75,86 @@ before_script:
 # issues with debug output:
 # https://github.com/travis-ci/travis-ci/issues/5716
 script:
-  - if [[ $PINTS_UNIT == true ]];
-    then docker exec pybamm-container python3 run-tests.py --unit3;
-    fi;
-  # - if [[ $PINTS_DOCS == true ]]; then python run-tests.py --doctest; fi;
-  - if [[ $PINTS_STYLE == true ]];
-    then docker exec pybamm-container python3 -m flake8;
-    fi;
-  - if [[ $PINTS_COVER == true ]];
-    then docker exec pybamm-container coverage run run-tests.py --nosub;
-    fi;
-  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]];
-    then travis_wait 120 docker exec pybamm-container python3 run-tests.py --books;
-    fi;
+  - if [[ $PINTS_UNIT == true ]]; then python run-tests.py --unit; fi;
+  - if [[ $PINTS_DOCS == true ]]; then python run-tests.py --doctest; fi;
+  - if [[ $PINTS_STYLE == true ]]; then python -m flake8; fi;
+  - if [[ $PINTS_COVER == true ]]; then coverage run run-tests.py --nosub; fi;
+  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then travis_wait 120 python run-tests.py --books; fi;
 
 after_success:
-  - if [[ $PINTS_COVER == true ]]; then
-    docker exec pybamm-container codecov;
-    bash <(curl -s https://codecov.io/bash);
-    fi;
+  - if [[ $PINTS_COVER == true ]]; then codecov; fi;
 
-after_script:
-- docker rm -f pybamm-container
+#
+# sudo: required
+#
+# language: python
+#
+# services:
+#   - docker
+#
+# matrix:
+#     include:
+#         # Unit, docs, style and cover testing on latest version of Python on Ubuntu
+#         - python: "3.6"
+#           env:
+#             - PINTS_UNIT=true
+#           if: type != cron
+#         - python: "3.6"
+#           env:
+#             - PINTS_DOCS=true
+#           if: type != cron
+#         - python: "3.6"
+#           env:
+#             - PINTS_STYLE=true
+#           if: type != cron
+#         - python: "3.6"
+#           env:
+#             - PINTS_COVER=true
+#           if: type != cron
+#           # Cron jobs
+#         - python: "3.6"
+#           if: type == cron
+#
+# before_install:
+# - docker build . -t pybamm-image
+# - docker run -dt $(bash <(curl -s https://codecov.io/env)) --name pybamm-container pybamm-image
+#
+# # Install dependencies
+# # Note: Use pip (not apt-get) for Python dependencies
+# # Note: Only install normal dependencies for unit tests; these should be tested
+# #       without the packages from -dev and -doc!
+# # todo: find out how to do this with docker
+#
+# before_script:
+# - python --version
+#
+# # Note that default timeout is 10 minutes
+# # This can be changed with travis_wait, but that leads to
+# # issues with debug output:
+# # https://github.com/travis-ci/travis-ci/issues/5716
+# script:
+#   - if [[ $PINTS_UNIT == true ]];
+#     then docker exec pybamm-container python3 run-tests.py --unit3;
+#     fi;
+#   # - if [[ $PINTS_DOCS == true ]]; then python run-tests.py --doctest; fi;
+#   - if [[ $PINTS_STYLE == true ]];
+#     then docker exec pybamm-container python3 -m flake8;
+#     fi;
+#   - if [[ $PINTS_COVER == true ]];
+#     then docker exec pybamm-container coverage run run-tests.py --nosub;
+#     fi;
+#   - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]];
+#     then travis_wait 120 docker exec pybamm-container python3 run-tests.py --books;
+#     fi;
+#
+# after_success:
+#   - if [[ $PINTS_COVER == true ]]; then
+#     docker exec pybamm-container codecov;
+#     bash <(curl -s https://codecov.io/bash);
+#     fi;
+#
+# after_script:
+# - docker rm -f pybamm-container
 
 notifications:
   email:
