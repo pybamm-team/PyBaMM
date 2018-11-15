@@ -88,11 +88,18 @@ We use [black](https://black.readthedocs.io/en/stable/) to automatically configu
 ```
 $ black {source_file_or_directory}
 ```
-2. Editor: black can be [configured](https://black.readthedocs.io/en/stable/editor_integration.html) to automatically reformat a python script each time it is saved in an editor.
+2. Editor: black can be [configured](https://black.readthedocs.io/en/stable/editor_integration.html) to automatically reformat a python script each time the script is saved in an editor.
 
-By default, black sets the max line length to 88. To change this to the more common standard of 79, we use the `pyproject.toml` file (if using black through the command line). However, if you want to use black in your editor, you may need to change the max line length in your editor settings.
+By default, black sets the max line length to 88. To change this to the more common standard of 79, and you are using black from the command line, save the following to a file called `pyproject.toml`:
+```
+[tool.black]
+line-length = 79
+```
+This file is ignored by git as it breaks Travis CI during installation at the line `pip install .`.
 
-Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [Flake8](#flake8)
+If you want to use black in your editor, you may need to change the max line length in your editor settings.
+
+Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [Flake8](#flake8).
 
 ### Naming
 
