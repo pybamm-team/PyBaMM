@@ -38,10 +38,10 @@ matrix:
         #     - PINTS_UNIT=true
         #   if: type != cron
         # Docs, style and cover checking, latest Python version only
-        # - python: "3.6"
-        #   env:
-        #     - PINTS_DOCS=true
-        #   if: type != cron
+        - python: "3.6"
+          env:
+            - PINTS_DOCS=true
+          if: type != cron
         - python: "3.6"
           env:
             - PINTS_STYLE=true

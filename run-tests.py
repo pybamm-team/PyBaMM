@@ -75,14 +75,7 @@ def run_doctests():
     """
     print("Checking if docs can be built.")
     p = subprocess.Popen(
-        [
-            "sphinx-build",
-            "-b",
-            "doctest",
-            "docs/source",
-            "docs/build/html",
-            "-W",
-        ]
+        ["sphinx-build", "-b", "doctest", "docs", "docs/build/html", "-W"]
     )
     try:
         ret = p.wait()
@@ -335,7 +328,7 @@ if __name__ == "__main__":
     if args.quick:
         has_run = True
         run_flake8()
-        run_unit_tests("python")
+        run_unit_tests()
         run_doctests()
     # Help
     if not has_run:
