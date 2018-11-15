@@ -1,1 +1,1 @@
-pip install .
+python setup.py install
