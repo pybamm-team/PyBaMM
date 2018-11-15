@@ -6,25 +6,8 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
-import pybamm
 
 import timeit
-
-
-def strfloat(x):
-    """
-    Converts a float to a string, with maximum precision.
-
-    Arguments
-    ---------
-    x : float
-        The float to be converted.
-
-    Returns
-    string
-        The string representation of ``x``
-    """
-    return pybamm.FLOAT_FORMAT.format(float(x))
 
 
 class Timer(object):

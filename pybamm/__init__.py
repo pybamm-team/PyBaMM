@@ -41,7 +41,6 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 # Utility classes and methods
 #
-from .util import strfloat
 from .util import Timer
 
 #

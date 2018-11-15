@@ -83,7 +83,8 @@ class Operators:
             elif self.domain == "xcn":
                 x, dx = self.mesh.xn, self.mesh.dxn
             elif self.domain == "xcp":
-                x, dx = self.mesh.xcp, self.mesh.dxp
+                x, dx = self.mesh.xp, self.mesh.dxp
+
             # Run basic checks on inputs
             assert (
                 N.shape == x.shape

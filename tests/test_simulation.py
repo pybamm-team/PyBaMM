@@ -7,6 +7,10 @@ import scipy.integrate as it
 
 
 class TestSolution(unittest.TestCase):
+    def test_simulation_basic(self):
+        sim = pybamm.Simulation(None, None, None, "a simulation")
+        self.assertEqual(str(sim), "a simulation")
+
     def test_simulation_physics(self):
         param = pybamm.Parameters()
         tsteps = 100
