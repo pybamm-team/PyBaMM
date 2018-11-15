@@ -34,6 +34,7 @@ ideas/
 
 # setup.py files
 *.egg-info
+dist/
 
 # coverage
 .coverage

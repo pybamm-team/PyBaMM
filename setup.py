@@ -1,4 +1,7 @@
-from setuptools import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 # Load text for description and license
 with open("README.md") as f:
@@ -23,10 +26,7 @@ setup(
         "matplotlib>=2.0",
     ],
     extras_require={
-        "docs": [
-            "sphinx-rtd-theme>=0.4",  # Nice theme for docs
-            "sphinx>=1.5",  # For doc generation
-        ],
+        "docs": ["sphinx>=1.5"],  # For doc generation
         "dev": [
             "flake8>=3",  # For code style checking
             "jupyter",  # For documentation and testing
