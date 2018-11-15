@@ -60,7 +60,7 @@ matrix:
 #       without the packages from -dev and -doc!
 install:
   - pip install --upgrade pip
-  - pip install .
+  # - pip install .
   - pip install -r requirements.txt
   - if [[ $PINTS_DOCS == true ]]; then pip install -r requirements-docs.txt; fi;
   - if [[ $PINTS_STYLE == true ]]; then pip install -r requirements-dev.txt; fi;
