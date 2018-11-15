@@ -65,7 +65,7 @@ class Timer(object):
         """
         Resets this timer's start time.
         """
-        self._start = timeit.default_timer()
+        self.start = timeit.default_timer()
 
     def time(self):
         """

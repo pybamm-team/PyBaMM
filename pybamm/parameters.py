@@ -114,12 +114,6 @@ class Parameters:
         self.DeltaVsurfN = self.VPbSO4 - self.VPb
         # Net Molar Volume consumed in pos electrode [m3.mol-1]
         self.DeltaVsurfP = self.VPbO2 - self.VPbSO4
-        self.DeltaVliqN = self.Ve * (3 - 2 * self.tpw) - 2 * self.Vw
-        self.DeltaVliqO2N = self.Ve * (2 - 2 * self.tpw) - self.Vw
-        self.DeltaVliqH2N = self.Ve * (2 - 2 * self.tpw)
-        self.DeltaVliqP = self.Ve * (1 - 2 * self.tpw)
-        self.DeltaVliqO2P = self.Ve * (2 - 2 * self.tpw) - self.Vw
-        self.DeltaVliqH2P = 0
 
         # Temperature
         # External temperature [K]
@@ -143,19 +137,65 @@ class Parameters:
         # Width relative to height
         self.w = self.W / self.H
 
-        # Exchange-current densities
-        # Main reaction, negative electrode
+        # Diffusional C-rate: diffusion timescale/discharge timescale
+        self.Cd = (
+            (self.L ** 2)
+            / self.D_hat(self.cmax)
+            / (self.cmax * self.F * self.L / self.ibar)
+        )
+
+        # Electrode properties
+        # Dimensionless lead conductivity
+        self.iota_s_n = (
+            self.sigma_eff_n * self.scales.pot / (self.L * self.ibar)
+        )
+        # Dimensionless lead dioxide conductivity
+        self.iota_s_p = (
+            self.sigma_eff_p * self.scales.pot / (self.L * self.ibar)
+        )
+        # Electrode capacity (neg)
+        self.Qnmax = self.Qnmax_hat / (self.cmax * self.F)
+        # Electrode capacity (pos)
+        self.Qpmax = self.Qnmax_hat / (self.cmax * self.F)
+
+        # Reactions
+        # Dimensionless exchange-current density (neg)
         self.iota_ref_n = self.jref_n / self.scales.jn
-        # Oxygen reaction, negative electrode
-        self.iota_ref_O2_n = self.jrefO2_n / self.scales.jn
-        # Hydrogen reaction, negative electrode
-        self.iota_ref_H2_n = self.jrefH2_n / self.scales.jn
-        # Main reaction, positive electrode
+        # Dimensionless exchange-current density (pos)
         self.iota_ref_p = self.jref_p / self.scales.jp
-        # Oxygen reaction, positive electrode
-        self.iota_ref_O2_p = self.jrefO2_p / self.scales.jp
-        # Hydrogen reaction, positive electrode
-        self.iota_ref_H2_p = self.jrefH2_p / self.scales.jp
+        # Molar volume change (lead)
+        self.beta_surf_n = self.cmax * self.DeltaVsurfN / 2
+        # Molar volume change (lead dioxide)
+        self.beta_surf_p = self.cmax * self.DeltaVsurfP / 2
+        # Dimensionless double-layer capacity (neg)
+        self.gamma_dl_n = (
+            self.Cdl
+            * self.scales.pot
+            / self.scales.jn
+            / (self.scales.time * 3600)
+        )
+        # Dimensionless double-layer capacity (pos)
+        self.gamma_dl_p = (
+            self.Cdl
+            * self.scales.pot
+            / self.scales.jp
+            / (self.scales.time * 3600)
+        )
+
+        # Other
+        # Dimensionless voltage cut-off
+        self.voltage_cutoff = self.scales.pot * (
+            self.voltage_cutoff_circuit / 6 - (self.U_PbO2_ref - self.U_Pb_ref)
+        )
+        # Excluded volume fraction
+        self.alpha = (2 * self.Vw - self.Ve) * self.scales.conc
+        # Ratio of viscous pressure scale to osmotic pressure scale
+        self.pi_os = (
+            self.mu_hat(self.cmax)
+            * self.scales.U_rxn
+            * self.L
+            / (self.d ** 2 * self.R * self.T_ref * self.cmax)
+        )
         #######################################################################
         #######################################################################
 
@@ -163,6 +203,28 @@ class Parameters:
         # Initial conditions (dimensionless) ##################################
         # Concentration
         self.c0 = self.q0
+        # Dimensionless max capacity
+        self.qmax = (
+            (
+                self.Ln * self.epsnmax
+                + self.Ls * self.epssmax
+                + self.Lp * self.epspmax
+            )
+            / self.L
+            / (self.sp - self.sn)
+        )
+        # Initial electrode states of charge
+        self.Un0 = self.qmax / (self.Qnmax * self.ln) * (1 - self.q0)
+        self.Up0 = self.qmax / (self.Qpmax * self.lp) * (1 - self.q0)
+        # Initial porosities
+        self.epsDeltan = self.beta_surf_n / self.ln * self.qmax
+        self.epsDeltap = self.beta_surf_p / self.lp * self.qmax
+        # Negative electrode [-]
+        self.epsln0 = self.epsnmax - self.epsDeltan * (1 - self.q0)
+        # Separator [-]
+        self.epsls0 = self.epssmax
+        # Positive electrode [-]
+        self.epslp0 = self.epspmax - self.epsDeltap * (1 - self.q0)
         #######################################################################
         #######################################################################
 
@@ -183,212 +245,6 @@ class Parameters:
                 self.sp * np.ones_like(mesh.xcp),
             ]
         )
-
-    def xxx(self):
-
-        # Cell heat capacity [kg.m2.s-2.K-1][J/K]
-        self.Cp = 293
-        # Density times specific heat capacity [kg.m-1.s-2.K-1][J/m^3K]
-        self.rhocp = self.Cp / self.Vc
-        # Thermal conductivity of lead [kg.m.s-3.K-1][W/mK]
-        self.k = 34
-        # Convective heat transfer coefficient [kg.s-3.K-1][W/m^2K]
-        self.h = 2
-        self.Tinit_hat = self.T_inf  # Initial temperature [K]
-
-        # """Turn off side reactions?"""
-        # self.jrefO2_n = self.jrefH2_n = self.jrefO2_p = self.jrefH2_p = 0
-        # self.DeltaVliqN = self.DeltaVliqP = 0
-        # self.satn0 = self.sats0 = self.satpw = 1
-
-        """Dimensionless parameters"""
-        # Diffusional C-rate: diffusion timescale/discharge timescale
-        self.Cd = (
-            (self.L ** 2)
-            / self.D_hat(self.cmax)
-            / (self.cmax * self.F * self.L / self.ibar)
-        )
-
-        # OCPs
-        self.U_O2_n = (
-            self.F / (self.R * self.T_ref) * (self.U_O2_hat - self.U_Pb_ref)
-        )  # Oxygen
-        self.U_O2_p = (
-            self.F / (self.R * self.T_ref) * (self.U_O2_hat - self.U_PbO2_ref)
-        )  # Oxygen
-        self.U_H2_n = (
-            self.F / (self.R * self.T_ref) * (self.U_H2_hat - self.U_Pb_ref)
-        )  # Hydrogen
-        self.U_H2_p = (
-            self.F / (self.R * self.T_ref) * (self.U_H2_hat - self.U_PbO2_ref)
-        )  # Hydrogen
-
-        # Volume changes (minus sign comes from electron charge)
-        self.beta_liq_n = (
-            self.cmax * self.DeltaVliqN / 2
-        )  # Molar volume change
-        self.beta_liq_O2_n = (
-            self.cmax * self.DeltaVliqO2N / 2
-        )  # Molar volume change
-        self.beta_liq_H2_n = (
-            self.cmax * self.DeltaVliqH2N / 2
-        )  # Molar volume change
-        self.beta_liq_p = (
-            self.cmax * self.DeltaVliqP / 2
-        )  # Molar volume change
-        self.beta_liq_O2_p = (
-            self.cmax * self.DeltaVliqO2P / 2
-        )  # Molar volume change
-        self.beta_liq_H2_p = (
-            self.cmax * self.DeltaVliqH2P / 2
-        )  # Molar volume change
-        self.beta_surf_n = (
-            self.cmax * self.DeltaVsurfN / 2
-        )  # Molar volume change (lead)
-        self.beta_surf_p = (
-            self.cmax * self.DeltaVsurfP / 2
-        )  # Molar volume change (lead dioxide)
-
-        # Electrode properties
-        self.iota_s_n = (
-            self.sigma_eff_n
-            * self.R
-            * self.T_ref
-            / (self.F * self.L)
-            / self.ibar
-        )  # Dimensionless lead conductivity
-        self.iota_s_p = (
-            self.sigma_eff_p
-            * self.R
-            * self.T_ref
-            / (self.F * self.L)
-            / self.ibar
-        )  # Dimensionless lead dioxide conductivity
-        # Scaled electrode properties
-        self.iota_s_n_bar = self.iota_s_n * self.delta ** 2 * self.Cd
-        self.iota_s_p_bar = self.iota_s_p * self.delta ** 2 * self.Cd
-        # Electrode capacity (neg)
-        self.Qnmax = self.Qnmax_hat / (self.cmax * self.F)
-        # Electrode capacity (pos)
-        self.Qpmax = self.Qnmax_hat / (self.cmax * self.F)
-        self.vert_cond_ratio = (
-            self.ln
-            * self.iota_s_n
-            * self.delta ** 2
-            * self.lp
-            * self.iota_s_p
-            * self.delta ** 2
-            / (
-                self.ln * self.iota_s_n * self.delta ** 2
-                + self.lp * self.iota_s_p * self.delta ** 2
-            )
-        )  # Ratio of scaled conductivities
-
-        # Other
-        # Excluded volume fraction
-        self.alpha = (2 * self.Vw - self.Ve) * self.cmax
-        # Dimensionless double-layer capacity (neg)
-        self.gamma_dl_n = (
-            self.Cdl
-            * self.R
-            * self.T_ref
-            * self.Anmax
-            * self.L
-            / (self.F * self.ibar)
-            / (self.cmax * self.F * self.L / self.ibar)
-        )
-        # Dimensionless double-layer capacity (pos)
-        self.gamma_dl_p = (
-            self.Cdl
-            * self.R
-            * self.T_ref
-            * self.Apmax
-            * self.L
-            / (self.F * self.ibar)
-            / (self.cmax * self.F * self.L / self.ibar)
-        )
-        # Dimensionless voltage cut-off
-        self.voltage_cutoff = (
-            self.F
-            / (self.R * self.T_ref)
-            * (
-                self.voltage_cutoff_circuit / 6
-                - (self.U_PbO2_ref - self.U_Pb_ref)
-            )
-        )
-        # Ratio of reference concentrations
-        self.curlyC = 1 / (self.cmax / self.cO2ref)
-        # Ratio of reference diffusivities
-        self.curlyD = self.D_hat(self.cmax) / self.DO2_hat(self.cO2ref)
-        # Reaction velocity scale
-        self.U_rxn = self.ibar / (self.cmax * self.F)
-        # Ratio of viscous pressure scale to osmotic pressure scale
-        self.pi_os = (
-            self.mu_hat(self.cmax)
-            * self.U_rxn
-            * self.L
-            / (self.d ** 2 * self.R * self.T_ref * self.cmax)
-        )
-
-        # Temperature
-        # Dimensionless reaction coefficient
-        self.thetarxn = (
-            self.R
-            * self.T_ref
-            * self.cmax
-            / (self.rhocp * (self.T_max - self.T_inf))
-        )
-        # Dimensionless thermal diffusion (should be small)
-        self.thetadiff = self.k * self.cmax * self.F / (self.L * self.rhocp)
-        # Dimensionless thermal convection
-        self.thetaconv = (
-            self.h
-            * self.A_cc
-            * self.cmax
-            * self.F
-            * self.L
-            / (self.Vc * self.rhocp * self.ibar)
-        )
-        self.thetac = 0
-
-        # Initial conditions
-        # Dimensionless max capacity
-        self.qmax = (
-            (
-                self.Ln * self.epsnmax
-                + self.Ls * self.epssmax
-                + self.Lp * self.epspmax
-            )
-            / self.L
-            / (self.sp - self.sn)
-        )
-        # if system == 'Bernardi':
-        #     self.q0 = 0.39/4.94
-        #     self.Un0 = 0.5
-        #     self.Up0 = 0.5
-        # else:
-        self.Un0 = self.qmax / (self.Qnmax * self.ln) * (1 - self.q0)
-        self.Up0 = self.qmax / (self.Qpmax * self.lp) * (1 - self.q0)
-        self.epsDeltan = self.beta_surf_n / self.ln * self.qmax
-        self.epsDeltap = self.beta_surf_p / self.lp * self.qmax
-        # Initial pororsity (neg) [-]
-        self.epsln0 = self.satn0 * (
-            self.epsnmax - self.epsDeltan * (1 - self.q0)
-        )
-        # Initial pororsity (sep) [-]
-        self.epsls0 = self.sats0 * self.epssmax
-        # Initial pororsity (pos) [-]
-        self.epslp0 = self.satpw * (
-            self.epspmax - self.epsDeltap * (1 - self.q0)
-        )
-        self.epssolidn0 = 1 - (self.epsnmax - self.epsDeltan * (1 - self.q0))
-        self.epssolids0 = 1 - self.epssmax
-        self.epssolidp0 = 1 - (self.epspmax - self.epsDeltap * (1 - self.q0))
-        self.c0 = self.q0
-        self.cO20 = 0
-        self.T0 = (self.Tinit_hat - self.T_inf) / (
-            self.T_max - self.T_inf
-        )  # Dimensionless initial temperature
 
     def Icircuit(self, t):
         """The current in the external circuit.
@@ -622,6 +478,8 @@ class Scales:
         self.pot = param.R * param.T_ref / param.F
         # Porosity, SOC scale [-]
         self.one = 1
+        # Reaction velocity [m.s-1]
+        self.U_rxn = param.ibar / (param.cmax * param.F)
         # Temperature scale [K]
         self.temp = param.T_max - param.T_inf
 
