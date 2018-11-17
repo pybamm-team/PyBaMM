@@ -42,3 +42,6 @@ coverage.xml
 
 # black setup file seems to make Travis CI fail
 pyproject.toml
+
+# virtual enviroment
+venv/
