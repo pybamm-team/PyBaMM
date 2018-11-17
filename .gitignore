@@ -31,6 +31,7 @@ out/
 
 # ideas
 ideas/
+.idea
 
 # setup.py files
 *.egg-info
