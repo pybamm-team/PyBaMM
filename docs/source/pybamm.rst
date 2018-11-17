@@ -19,6 +19,14 @@ pybamm.mesh module
     :undoc-members:
     :show-inheritance:
 
+pybamm.operators module
+--------------------------------
+
+.. automodule:: pybamm.operators
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pybamm.parameters module
 ------------------------
 
@@ -39,14 +47,6 @@ pybamm.solver module
 --------------------
 
 .. automodule:: pybamm.solver
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-pybamm.spatial\_operators module
---------------------------------
-
-.. automodule:: pybamm.spatial_operators
     :members:
     :undoc-members:
     :show-inheritance:

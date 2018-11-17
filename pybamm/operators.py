@@ -6,7 +6,7 @@ import numpy as np
 KNOWN_DOMAINS = ["xc", "xcn", "xcs", "xcp"]
 
 
-class Operators:
+class Operators(object):
     """Contains functions that calculate the spatial derivatives.
 
     Parameters
