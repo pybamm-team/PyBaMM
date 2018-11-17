@@ -25,6 +25,7 @@ build/
 # inputs except parameters
 input/*
 !input/parameters
+!input/lithium-ion
 
 # simulation outputs
 out/
