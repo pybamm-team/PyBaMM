@@ -8,7 +8,7 @@ KNOWN_INTEGRATORS = ["BDF", "analytical"]
 KNOWN_SPATIAL_DISCRETISATIONS = ["Finite Volumes"]
 
 
-class Solver:
+class Solver(object):
     """Solver for the simulation created in pybamm.sim.
 
     Parameters

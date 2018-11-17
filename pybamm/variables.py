@@ -4,7 +4,7 @@ from __future__ import print_function, unicode_literals
 import numpy as np
 
 
-class Variables:
+class Variables(object):
     """
     Extracts and stores the model variables.
 

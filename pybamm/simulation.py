@@ -2,7 +2,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
 
-class Simulation:
+class Simulation(object):
     """
     The simulation class for a battery simulation.
 

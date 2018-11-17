@@ -4,7 +4,7 @@ from __future__ import print_function, unicode_literals
 import numpy as np
 
 
-class Mesh:
+class Mesh(object):
     """
     A 1D mesh for Finite Volumes.
 
