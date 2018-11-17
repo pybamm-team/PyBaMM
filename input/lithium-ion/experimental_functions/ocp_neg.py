@@ -1,6 +1,32 @@
 import numpy as np
 
 
+# Select OCP
+
+def get_ocp(electrode_name):
+    """
+           This function returns the OCP for the relevant chemistry.
+
+           Parameters
+           ----------
+           electrode_name: str
+                Name of electrode chemistry (e.g. graphite)
+
+           """
+
+    global u_n
+    if electrode_name=='graphite':
+        u_n = graphite_ocp
+    elif electrode_name=='silicon':
+        u_n = silicon_ocp
+    else:
+        NameError('Negative electrode chemistry not available')
+
+    return u_n
+
+
+# OCPs
+
 def graphite_ocp(sto):
     """
        Graphite OCP taken from Newman's DUALFOIL code (MCMB 2510 carbon (Bellcore))
