@@ -22,7 +22,7 @@ class Timer(object):
     """
 
     def __init__(self):
-        self.start = timeit.default_timer()
+        self._start = timeit.default_timer()
 
     def format(self, time=None):
         """
@@ -65,11 +65,11 @@ class Timer(object):
         """
         Resets this timer's start time.
         """
-        self.start = timeit.default_timer()
+        self._start = timeit.default_timer()
 
     def time(self):
         """
         Returns the time (float, in seconds) since this timer was created,
         or since meth:`reset()` was last called.
         """
-        return timeit.default_timer() - self.start
+        return timeit.default_timer() - self._start
