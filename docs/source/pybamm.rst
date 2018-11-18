@@ -20,7 +20,7 @@ pybamm.mesh module
     :show-inheritance:
 
 pybamm.operators module
---------------------------------
+-----------------------
 
 .. automodule:: pybamm.operators
     :members:

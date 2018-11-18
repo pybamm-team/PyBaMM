@@ -7,13 +7,34 @@ from __future__ import print_function, unicode_literals
 import numpy as np
 
 
-class Electrolyte:
+class Electrolyte(object):
+    """Equations for the electrolyte."""
+
     def set_simulation(self, param, operators, mesh):
+        """
+        Assign simulation-specific objects as attributes.
+
+        Parameters
+        ----------
+        param : :class:`pybamm.Parameters` instance
+            The parameters of the simulation
+        operators : :class:`pybamm.Operators` instance
+            The spatial operators.
+        mesh : :class:`pybamm.Mesh` instance
+            The spatial and temporal discretisation.
+        """
         self.param = param
         self.operators = operators
         self.mesh = mesh
 
     def initial_conditions(self):
+        """Calculates initial conditions for variables in the electrolyte.
+
+        Returns
+        -------
+        dict
+            The initial conditions
+        """
         c0 = self.param.c0 * np.ones_like(self.mesh.xc)
 
         return {"c": c0}
@@ -49,7 +70,17 @@ class Electrolyte:
         return dcdt
 
     def bcs_cation_flux(self):
-        return (np.array([0]), np.array([0]))
+        """Flux boundary conditions for the cation conservation equation.
+
+        Returns
+        -------
+        2-tuple of array_like, shape(1,)
+            The boundary conditions.
+
+        """
+        flux_bc_left = np.array([0])
+        flux_bc_right = np.array([0])
+        return (flux_bc_left, flux_bc_right)
 
     # def current_conservation(self, c, e, j, bcs=None):
     #     """The 1D diffusion equation.
@@ -106,7 +137,7 @@ class Electrolyte:
     #     kappa = 1
     #
     #     # Calculate inner current
-    #     i_inner = kappa_over_c * operators.grad(c) + kappa * operators.grad(e)
+    #     i_inner = kappa_over_c * operators.grad(c) + kappa * operators.grad(e
     #
     #     # Add boundary conditions
     #     lbc, rbc = current_bcs

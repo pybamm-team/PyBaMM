@@ -1,3 +1,6 @@
+#
+# Tests for the base model class
+#
 import pybamm
 
 import unittest

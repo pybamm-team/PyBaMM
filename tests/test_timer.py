@@ -17,11 +17,10 @@ class TestTimer(unittest.TestCase):
         super(TestTimer, self).__init__(name)
 
     def test_timing(self):
-        """ Test the time() and reset() methods. """
         t = pybamm.Timer()
         a = t.time()
         self.assertGreaterEqual(a, 0)
-        for i in range(100):
+        for i in range(10):
             self.assertGreater(t.time(), a)
         a = t.time()
         t.reset()
@@ -29,8 +28,7 @@ class TestTimer(unittest.TestCase):
         self.assertGreaterEqual(b, 0)
         self.assertLess(b, a)
 
-    def test_format(self):
-        """ Test the format() method. """
+    def test_timer_format(self):
         import sys
 
         t = pybamm.Timer()

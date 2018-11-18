@@ -8,43 +8,48 @@ import numpy as np
 
 
 class Interface(object):
-    def butler_volmer(self, param, c, e):
+    """Equations for the electrode-electrolyte interface."""
+
+    def set_simulation(self, param):
+        """
+        Assign simulation-specific objects as attributes.
+
+        Parameters
+        ----------
+        param : :class:`pybamm.Parameters` instance
+            The parameters of the simulation
+        """
+        self.param = param
+
+    def butler_volmer(self, c, e, domain):
         """Calculates the interfacial current densities
         using Butler-Volmer kinetics.
 
         Parameters
         ----------
-        param : pybamm.parameters.Parameters() instance
-            The parameters of the simulation.
-        cn : array_like, shape (n,)
-            The electrolyte concentration in the negative electrode.
-        cs : array_like, shape (s,)
-            The electrolyte concentration in the separator.
-        cp : array_like, shape (p,)
-            The electrolyte concentration in the positive electrode.
-        en : array_like, shape (n,)
-            The potential difference in the negative electrode.
-        ep : array_like, shape (p,)
-            The potential difference in the positive electrode.
+        c : array_like, shape (n,)
+            The electrolyte concentration.
+        e : array_like, shape (n,)
+            The potential difference.
+        domain : string
+            The domain in which to calculate the interfacial current density.
 
         Returns
         -------
-        j : array_like, shape (n+s+p,)
-            The interfacial current density across the whole cell.
-        jn : array_like, shape (n,)
-            The interfacial current density in the negative electrode.
-        jp : array_like, shape (p,)
-            The interfacial current density in the positive electrode.
+        j : array_like, shape (n,)
+            The interfacial current density.
 
         """
-        jn = param.iota_ref_n * cn * np.sinh(en - param.U_Pb(cn))
-        js = 0 * cs
-        jp = (
-            param.iota_ref_p
-            * cp ** 2
-            * param.cw(cp)
-            * np.sinh(ep - param.U_PbO2(cp))
-        )
+        if domain == "xcn":
+            j = self.param.iota_ref_n * c * np.sinh(e - self.param.U_Pb(c))
+        elif domain == "xcs":
+            j = 0 * c
+        elif domain == "xcp":
+            j = (
+                self.param.iota_ref_p
+                * c ** 2
+                * self.param.cw(c)
+                * np.sinh(e - self.param.U_PbO2(c))
+            )
 
-        j = np.concatenate([jn, js, jp])
-        return j, jn, jp
+        return j

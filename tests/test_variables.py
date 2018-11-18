@@ -1,3 +1,6 @@
+#
+# Tests the variables class
+#
 import pybamm
 
 import numpy as np
@@ -7,6 +10,8 @@ import unittest
 
 
 class TestVariables(unittest.TestCase):
+    """Test the variables class."""
+
     def setUp(self):
         self.param = pybamm.Parameters()
         self.mesh = pybamm.Mesh(self.param, 50)

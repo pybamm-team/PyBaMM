@@ -1,21 +1,28 @@
 pybamm.models package
 =====================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    pybamm.models.components
+
 Submodules
 ----------
 
-pybamm.models.components module
--------------------------------
+pybamm.models.core module
+-------------------------
 
-.. automodule:: pybamm.models.components
+.. automodule:: pybamm.models.core
     :members:
     :undoc-members:
     :show-inheritance:
 
-pybamm.models.model\_class module
----------------------------------
+pybamm.models.reaction\_diffusion module
+----------------------------------------
 
-.. automodule:: pybamm.models.model_class
+.. automodule:: pybamm.models.reaction_diffusion
     :members:
     :undoc-members:
     :show-inheritance:

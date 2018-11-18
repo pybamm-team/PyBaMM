@@ -1,3 +1,6 @@
+#
+# Tests for the electrolyte class
+#
 import pybamm
 
 import numpy as np
@@ -49,8 +52,11 @@ class TestComponents(unittest.TestCase):
     #     ep = np.arcsinh(
     #         -I / (param.iota_ref_p * cp ** 2 * param.cw(cp))
     #     ) + param.U_PbO2(cp)
-    #     j, jn, jp = models.components.butler_volmer(param, cn, cs, cp, en, ep)
+    #     jn = models.components.butler_volmer(cn, en)
+    #     js = models.components.butler_volmer(cs, es)
+    #     jp = models.components.butler_volmer(cp, ep)
     #     self.assertTrue(np.allclose(jn, I))
+    #     self.assertTrue(np.all(js==0))
     #     self.assertTrue(np.allclose(jp, -I))
 
 

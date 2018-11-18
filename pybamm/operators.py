@@ -1,3 +1,6 @@
+#
+# Spatial operators (grad, div, etc)
+#
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
@@ -13,6 +16,8 @@ class Operators(object):
     ----------
     spatial_discretisation : string
         The spatial discretisation scheme (see pybamm.solver).
+    domain : string
+        The domain in which the operators should be calculated.
     mesh : pybamm.mesh.Mesh() instance
         The mesh used for the spatial discretisation.
 

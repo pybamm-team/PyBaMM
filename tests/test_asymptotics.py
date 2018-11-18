@@ -1,1 +1,3 @@
-# check that asymptotic method converge to true solution in the expected way
+#
+# Test asymptotic methods against numerical solutions
+#

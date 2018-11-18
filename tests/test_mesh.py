@@ -1,3 +1,6 @@
+#
+# Test for the mesh class
+#
 import pybamm
 
 import numpy as np

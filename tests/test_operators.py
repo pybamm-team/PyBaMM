@@ -1,3 +1,6 @@
+#
+# Test for the operator class
+#
 import pybamm
 
 import numpy as np

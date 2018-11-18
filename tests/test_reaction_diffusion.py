@@ -1,3 +1,6 @@
+#
+# Test for the reaction-diffusion model
+#
 import pybamm
 from tests.shared import pdes_io
 

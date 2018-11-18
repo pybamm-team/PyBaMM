@@ -9,7 +9,7 @@ import numpy as np
 
 
 class ReactionDiffusionModel(pybamm.BaseModel):
-    """The (dimensionless) physical/chemical model to be used in the simulation.
+    """Reaction-diffusion model.
 
     Parameters
     ----------
@@ -25,6 +25,7 @@ class ReactionDiffusionModel(pybamm.BaseModel):
     def __init__(self, tests={}):
         super()
         self.name = "Reaction Diffusion"
+        # Assign tests as an attribute
         if tests:
             assert set(tests.keys()) == {
                 "inits",
@@ -40,6 +41,18 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         self.electrolyte = pybamm.Electrolyte()
 
     def set_simulation(self, param, operators, mesh):
+        """
+        Assign simulation-specific objects as attributes.
+
+        Parameters
+        ----------
+        param : :class:`pybamm.Parameters` instance
+            The parameters of the simulation
+        operators : :class:`pybamm.Operators` instance
+            The spatial operators.
+        mesh : :class:`pybamm.Mesh` instance
+            The spatial and temporal discretisation.
+        """
         self.param = param
         self.operators = operators
         self.mesh = mesh
@@ -48,37 +61,16 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         self.electrolyte.set_simulation(param, operators, mesh)
 
     def initial_conditions(self):
-        """Calculates the initial conditions for the simulation.
-
-        Returns
-        -------
-        y0 : array_like
-            A concatenated vector of all the initial conditions.
-
-        """
+        """See :meth:`pybamm.BaseModel.initial_conditions`"""
         if not self.tests:
             electrolyte_inits = self.electrolyte.initial_conditions()
-            c0 = electrolyte_inits["c"]
-            return c0
+            y0 = electrolyte_inits["c"]
+            return y0
         else:
             return self.tests["inits"]
 
     def pdes_rhs(self, vars):
-        """Calculates the spatial derivates of the spatial terms in the PDEs
-           and returns the right-hand side to be used by the ODE solver
-           (Method of Lines).
-
-        Parameters
-        ----------
-        vars : pybamm.variables.Variables() instance
-            The variables of the model.
-
-        Returns
-        -------
-        dydt : array_like
-            A concatenated vector of all the derivatives.
-
-        """
+        """See :meth:`pybamm.BaseModel.pdes_rhs`"""
         if not self.tests:
             j = np.concatenate(
                 [
