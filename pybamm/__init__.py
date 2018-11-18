@@ -55,19 +55,26 @@ from .parameters import read_parameters_csv
 from .parameters import Parameters
 
 #
+# Scales class
+#
+from .scales import Scales
+
+#
 # Simulation class
 #
 from .simulation import Simulation
 
 #
-# Solver class
+# Solver class and lists of known methods
 #
 from .solver import Solver
+from .solver import KNOWN_INTEGRATORS
+from .solver import KNOWN_SPATIAL_DISCRETISATIONS
 
 #
 # Operators class
 #
-from .spatial_operators import Operators
+from .operators import Operators
 
 #
 # Variables class
@@ -75,15 +82,15 @@ from .spatial_operators import Operators
 from .variables import Variables
 
 #
-#  Models
+#  Model classes
 #
-from .models.model_class import Model
-from .models.components import (
-    electrolyte_diffusion,
-    electrolyte_current,
-    current,
-    butler_volmer,
-)
+from .models.core import BaseModel
+from .models.reaction_diffusion import ReactionDiffusionModel
+
+#
+# Component classes
+#
+from .models.components.electrolyte import Electrolyte
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

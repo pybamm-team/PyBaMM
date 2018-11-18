@@ -22,11 +22,9 @@ class Variables(object):
 
     def __init__(self, t, y, model, mesh):
         self.t = t
-        # Unpack y
-        variables = model.variables()
         # Unpack y iteratively
         start = 0
-        for var, domain in variables:
+        for var, domain in model.variables:
             end = start + len(mesh.__dict__[domain])
             self.__dict__[var] = y[start:end]
             start = end

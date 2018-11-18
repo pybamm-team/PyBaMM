@@ -1,4 +1,5 @@
 import pybamm
+from tests.shared import pdes_io
 
 import unittest
 import numpy as np
@@ -6,21 +7,38 @@ from numpy.linalg import norm
 import scipy.integrate as it
 
 
-class TestSolution(unittest.TestCase):
-    def test_simulation_basic(self):
-        sim = pybamm.Simulation(None, None, None, "a simulation")
-        self.assertEqual(str(sim), "a simulation")
-
-    def test_simulation_physics(self):
-        param = pybamm.Parameters()
+class TestReactionDiffusion(unittest.TestCase):
+    def setUp(self):
+        self.model = pybamm.ReactionDiffusionModel()
+        self.param = pybamm.Parameters()
+        target_npts = 100
         tsteps = 100
         tend = 1
-        target_npts = 10
-        mesh = pybamm.Mesh(param, target_npts, tsteps=tsteps, tend=tend)
+        self.mesh = pybamm.Mesh(
+            self.param, target_npts, tsteps=tsteps, tend=tend
+        )
+        self.param.set_mesh_dependent_parameters(self.mesh)
 
-        model = pybamm.Model("Electrolyte diffusion")
+    def tearDown(self):
+        del self.model
+        del self.param
+        del self.mesh
+
+    def test_model_shape(self):
+        for spatial_discretisation in pybamm.KNOWN_SPATIAL_DISCRETISATIONS:
+            operators = {
+                domain: pybamm.Operators(
+                    spatial_discretisation, domain, self.mesh
+                )
+                for domain in self.model.domains()
+            }
+            self.model.set_simulation(self.param, operators, self.mesh)
+            y, dydt = pdes_io(self.model)
+            self.assertEqual(y.shape, dydt.shape)
+
+    def test_model_physics(self):
         simulation = pybamm.Simulation(
-            model, param, mesh, name="Electrolyte diffusion"
+            self.model, self.param, self.mesh, name="Reaction diffusion"
         )
         solver = pybamm.Solver(
             integrator="BDF", spatial_discretisation="Finite Volumes"
@@ -30,8 +48,8 @@ class TestSolution(unittest.TestCase):
 
         simulation.average()
         # integral of c is known
-        c_avg_expected = 1 + (param.sn - param.sp) * it.cumtrapz(
-            param.icell(simulation.vars.t), simulation.vars.t, initial=0.0
+        c_avg_expected = 1 + (self.param.sn - self.param.sp) * it.cumtrapz(
+            self.param.icell(simulation.vars.t), simulation.vars.t, initial=0.0
         )
 
         self.assertTrue(
@@ -41,7 +59,7 @@ class TestSolution(unittest.TestCase):
         # check convergence to steady state when current is zero
         # concentration and porosity limits
 
-    def test_electrolyte_diffusion_convergence(self):
+    def test_model_convergence(self):
         """
         Exact solution: c = exp(-4*pi**2*t * cos(2*pi*x))
         Initial conditions: c0 = cos(2*pi*x)
@@ -51,13 +69,11 @@ class TestSolution(unittest.TestCase):
         Can achieve "convergence" in time by changing the integrator tolerance
         Can't get h**2 convergence in space
         """
-        param = pybamm.Parameters()
-        tsteps = 100
-        tend = 1
-        mesh = pybamm.Mesh(param, 50, tsteps=tsteps, tend=tend)
 
         def c_exact(t):
-            return np.exp(-4 * np.pi ** 2 * t) * np.cos(2 * np.pi * mesh.xc)
+            return np.exp(-4 * np.pi ** 2 * t) * np.cos(
+                2 * np.pi * self.mesh.xc
+            )
 
         inits = c_exact(0)
 
@@ -69,8 +85,8 @@ class TestSolution(unittest.TestCase):
 
         tests = {"inits": inits, "bcs": bcs, "sources": sources}
 
-        model = pybamm.Model("Electrolyte diffusion", tests=tests)
-        simulation = pybamm.Simulation(model, param, mesh)
+        model = pybamm.ReactionDiffusionModel(tests=tests)
+        simulation = pybamm.Simulation(model, self.param, self.mesh)
 
         ns = [1, 2, 3]
         errs = [0] * len(ns)
@@ -82,8 +98,8 @@ class TestSolution(unittest.TestCase):
             )
             simulation.run(solver)
             errs[i] = norm(
-                simulation.vars.c.T - c_exact(mesh.time[:, np.newaxis])
-            ) / norm(c_exact(mesh.time[:, np.newaxis]))
+                simulation.vars.c.T - c_exact(self.mesh.time[:, np.newaxis])
+            ) / norm(c_exact(self.mesh.time[:, np.newaxis]))
         [
             self.assertLess(errs[i + 1] / errs[i], 0.14)
             for i in range(len(errs) - 1)

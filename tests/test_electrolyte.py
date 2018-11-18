@@ -22,7 +22,7 @@ class TestComponents(unittest.TestCase):
             mesh = pybamm.Mesh(param, n)
             param.set_mesh_dependent_parameters(mesh)
             c0 = np.cos(2 * np.pi * mesh.xc)
-            operators = pybamm.Operators("Finite Volumes", "xc", mesh)
+            operators = {"xc": pybamm.Operators("Finite Volumes", "xc", mesh)}
             lbc = np.array([0])
             rbc = np.array([0])
             dcdt_exact = -4 * np.pi ** 2 * c0
@@ -55,5 +55,9 @@ class TestComponents(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestComponents)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    print("Add -v for more debug output")
+    import sys
+
+    if "-v" in sys.argv:
+        debug = True
+    unittest.main()

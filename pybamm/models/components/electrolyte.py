@@ -13,12 +13,12 @@ class Electrolyte:
         self.operators = operators
         self.mesh = mesh
 
-    def initial_conditions():
+    def initial_conditions(self):
         c0 = self.param.c0 * np.ones_like(self.mesh.xc)
 
         return {"c": c0}
 
-    def cation_conservation(self, c, j, flux_bcs=None):
+    def cation_conservation(self, c, j, flux_bcs):
         """Conservation of cations.
 
         Parameters
@@ -37,22 +37,18 @@ class Electrolyte:
 
         """
         # Calculate internal flux
-        N_internal = -self.operators.grad(c)
-
-        # Default boundary conditions is no flux
-        if flux_bcs == None:
-            flux_bcs = self._bcs_cation_flux()
+        N_internal = -self.operators["xc"].grad(c)
 
         # Add boundary conditions (Neumann)
         flux_bc_left, flux_bc_right = flux_bcs
         N = np.concatenate([flux_bc_left, N_internal, flux_bc_right])
 
         # Calculate time derivative
-        dcdt = -self.operators.div(N) + self.param.s * j
+        dcdt = -self.operators["xc"].div(N) + self.param.s * j
 
         return dcdt
 
-    def _bcs_cation_flux(self):
+    def bcs_cation_flux(self):
         return (np.array([0]), np.array([0]))
 
     # def current_conservation(self, c, e, j, bcs=None):

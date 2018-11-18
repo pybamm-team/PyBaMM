@@ -11,7 +11,7 @@ class TestVariables(unittest.TestCase):
         self.param = pybamm.Parameters()
         self.mesh = pybamm.Mesh(self.param, 50)
         self.y = np.ones_like(self.mesh.xc)
-        self.model = pybamm.Model("Electrolyte diffusion")
+        self.model = pybamm.ReactionDiffusionModel()
         self.vars = pybamm.Variables(
             self.mesh.time, self.y, self.model, self.mesh
         )

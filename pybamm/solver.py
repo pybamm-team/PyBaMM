@@ -73,23 +73,26 @@ class Solver(object):
         mesh = sim.mesh
         model = sim.model
 
-        # Initialise
-        yinit = model.initial_conditions(param, mesh)
+        # Set mesh dependent parameters
+        param.set_mesh_dependent_parameters(mesh)
 
-        # Get grad and div
+        # Create operators
         operators = {
             domain: pybamm.Operators(self.spatial_discretisation, domain, mesh)
             for domain in model.domains()
         }
 
-        # Set mesh dependent parameters
-        param.set_mesh_dependent_parameters(mesh)
+        # Assign param, operators and mesh as model attributes
+        model.set_simulation(param, operators, mesh)
+
+        # Initialise y for PDE solver
+        yinit = model.initial_conditions()
 
         # Solve ODEs
         def derivs(t, y):
             # TODO: check if it's more expensive to create vars or update it
             vars = pybamm.Variables(t, y, model, mesh)
-            dydt = model.pdes_rhs(vars, param, operators)
+            dydt = model.pdes_rhs(vars)
             return dydt
 
         if self.integrator == "analytical":
