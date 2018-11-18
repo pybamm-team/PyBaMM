@@ -13,22 +13,33 @@ class Variables(object):
 
     Parameters
     ----------
-    t : float or array_like
-        The simulation time.
-    y : array_like
-        An array containing variable values to be extracted.
-    param : pybamm.parameters.Parameters() instance
-        The simulation parameters.
-    mesh : pybamm.mesh.Mesh() instance
+    model : A model class instance
+        The simulation model.
+    mesh : :class:`pybamm.mesh.Mesh` instance
         The simulation mesh.
     """
 
-    def __init__(self, t, y, model, mesh):
+    def __init__(self, model, mesh):
+        self.model = model
+        self.mesh = mesh
+
+    def update(self, t, y):
+        """Update variables with a new t and y.
+        Note that we can't store variables at each timestep since the
+        timestepping is adaptive.
+
+        Parameters
+        ----------
+        t : float or array_like
+            The simulation time.
+        y : array_like
+            An array containing variable values to be extracted.
+        """
         self.t = t
         # Unpack y iteratively
         start = 0
-        for var, domain in model.variables:
-            end = start + len(mesh.__dict__[domain])
+        for var, domain in self.model.variables:
+            end = start + len(self.mesh.__dict__[domain])
             self.__dict__[var] = y[start:end]
             start = end
             # Split 'tot' variables further into n, s and p
@@ -38,20 +49,14 @@ class Variables(object):
                     self.__dict__[var + "s"],
                     self.__dict__[var + "p"],
                 ) = np.split(
-                    self.__dict__[var], np.cumsum([mesh.nn - 1, mesh.ns + 1])
+                    self.__dict__[var],
+                    np.cumsum([self.mesh.nn - 1, self.mesh.ns + 1]),
                 )
 
-    def average(self, param, mesh):
-        """Average variable attributes over the relevant (sub)domain.
-
-        Parameters
-        ----------
-        param : pybamm.parameters.Parameters() instance
-            The parameters of the simulation.
-        mesh : pybamm.mesh.Mesh() instance
-            The simulation mesh.
-
-        """
+    def average(self):
+        """Average variable attributes over the relevant (sub)domain."""
+        param = self.model.param
+        mesh = self.mesh
         old_keys = list(self.__dict__.keys())
         for attr in old_keys:
             if attr in ["c"]:
@@ -62,6 +67,13 @@ class Variables(object):
                 var_n = self.__dict__[attr[:-1]][: mesh.nn - 1]
                 avg_n = np.sum(var_n) * mesh.dxn / param.ln
                 self.__dict__[attr[:-1] + "n_avg"] = avg_n
+
+                # Separator
+                var_s = self.__dict__[attr[:-1]][
+                    mesh.nn - 1 : mesh.nn + mesh.ns
+                ]
+                avg_s = np.sum(var_s) * mesh.dxs / param.ls
+                self.__dict__[attr[:-1] + "s_avg"] = avg_s
 
                 # Positive
                 var_p = self.__dict__[attr[:-1]][mesh.nn + mesh.ns :]

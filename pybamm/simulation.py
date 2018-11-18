@@ -35,22 +35,40 @@ class Simulation(object):
     def __str__(self):
         return self.name
 
+    def initialise(self, solver):
+        """Initialise simulation to prepare for solving.
+
+        Parameters
+        ----------
+        solver : :class:`pybamm.solver.Solver` instance
+            The algorithm for solving the model defined in self.model.
+        """
+        # Set mesh dependent parameters
+        self.param.set_mesh_dependent_parameters(self.mesh)
+
+        # Create operators from solver
+        self.operators = solver.operators(self.model.domains(), self.mesh)
+
+        # Assign param, operators and mesh as model attributes
+        self.model.set_simulation(self.param, self.operators, self.mesh)
+
     def run(self, solver):
         """
         Run the simulation.
 
         Parameters
         ----------
-        solver : pybamm.solver.Solver() instance
-            The algorithm for solving the model defined in self.model
+        solver : :class:`pybamm.solver.Solver` instance
+            The algorithm for solving the model defined in self.model.
         """
         self.solver_name = str(solver)
+        self.initialise(solver)
         self.vars = solver.get_simulation_vars(self)
 
     def average(self):
         """Average simulation variable attributes
         over the relevant (sub)domain."""
-        self.vars.average(self.param, self.mesh)
+        self.vars.average()
 
     def save(self):
         raise NotImplementedError

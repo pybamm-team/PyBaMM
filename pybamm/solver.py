@@ -58,12 +58,36 @@ class Solver(object):
     def __str__(self):
         return "{}_{}".format(self.integrator, self.spatial_discretisation)
 
+    def operators(self, domains, mesh):
+        """Define the operators in each domain.
+
+        Parameters
+        ----------
+        domains : list
+            The domain(s) in which the operators are defined.
+        mesh : :class:`pybamm.mesh.Mesh` instance
+            The mesh on which the operators are defined.
+
+        Returns
+        -------
+        dict
+            {domain: operators}:
+                * domain (string): the domain for the operators
+                * operator (:class:`pybamm.operators.Operators` instance):
+                    The operators in that domain.
+
+        """
+        return {
+            domain: pybamm.Operators(self.spatial_discretisation, domain, mesh)
+            for domain in domains
+        }
+
     def get_simulation_vars(self, sim):
         """Run a simulation.
 
         Parameters
         ----------
-        sim : pybamm.simulation.Simulation() instance
+        sim : :class:`pybamm.simulation.Simulation` instance
             The simulation to be solved.
 
         Returns
@@ -72,37 +96,24 @@ class Solver(object):
             The variables of the solved model.
 
         """
-        param = sim.param
-        mesh = sim.mesh
-        model = sim.model
 
-        # Set mesh dependent parameters
-        param.set_mesh_dependent_parameters(mesh)
-
-        # Create operators
-        operators = {
-            domain: pybamm.Operators(self.spatial_discretisation, domain, mesh)
-            for domain in model.domains()
-        }
-
-        # Assign param, operators and mesh as model attributes
-        model.set_simulation(param, operators, mesh)
+        # Initialise variables
+        vars = pybamm.Variables(sim.model, sim.mesh)
 
         # Initialise y for PDE solver
-        yinit = model.initial_conditions()
+        yinit = sim.model.initial_conditions()
 
         # Solve ODEs
         def derivs(t, y):
-            # TODO: check if it's more expensive to create vars or update it
-            vars = pybamm.Variables(t, y, model, mesh)
-            dydt = model.pdes_rhs(vars)
+            vars.update(t, y)
+            dydt = sim.model.pdes_rhs(vars)
             return dydt
 
         if self.integrator == "analytical":
             # TODO: implement analytical simulation
             pass
         elif self.integrator == "BDF":
-            target_time = mesh.time
+            target_time = sim.mesh.time
             sol = it.solve_ivp(
                 derivs,
                 (target_time[0], target_time[-1]),
@@ -115,7 +126,7 @@ class Solver(object):
             # TODO: implement concentration cut-off event
 
         # Extract variables from y
-        vars = pybamm.Variables(sol.t, sol.y, model, mesh)
+        vars.update(sol.t, sol.y)
 
         # Post-process (get potentials)
         # TODO: write post-processing function
