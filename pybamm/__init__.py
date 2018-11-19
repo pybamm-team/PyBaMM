@@ -91,6 +91,7 @@ from .models.reaction_diffusion import ReactionDiffusionModel
 # Component classes
 #
 from .models.components.electrolyte import Electrolyte
+from .models.components.interface import Interface
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

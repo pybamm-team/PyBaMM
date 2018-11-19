@@ -48,6 +48,7 @@ extensions = [
     "sphinx.ext.napoleon",
 ]
 
+napoleon_use_rtype = True
 napoleon_google_docstring = False
 
 doctest_global_setup = """

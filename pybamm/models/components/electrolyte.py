@@ -16,11 +16,11 @@ class Electrolyte(object):
 
         Parameters
         ----------
-        param : :class:`pybamm.Parameters` instance
+        param : :class:`pybamm.parameters.Parameters` instance
             The parameters of the simulation
-        operators : :class:`pybamm.Operators` instance
+        operators : :class:`pybamm.operators.Operators` instance
             The spatial operators.
-        mesh : :class:`pybamm.Mesh` instance
+        mesh : :class:`pybamm.mesh.Mesh` instance
             The spatial and temporal discretisation.
         """
         self.param = param

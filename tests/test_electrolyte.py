@@ -9,8 +9,8 @@ from numpy.linalg import norm
 import unittest
 
 
-class TestComponents(unittest.TestCase):
-    def test_electrolyte_diffusion_finite_volumes_convergence(self):
+class TestElectrolyte(unittest.TestCase):
+    def test_cation_conservation_finite_volumes_convergence(self):
         electrolyte = pybamm.Electrolyte()
 
         # Finite volume only has h**2 convergence if the mesh is uniform?
@@ -41,23 +41,6 @@ class TestComponents(unittest.TestCase):
             self.assertLess(errs[i + 1] / errs[i], 0.26)
             for i in range(len(errs) - 1)
         ]
-
-    # def test_butler_volmer(self):
-    #     param = pybamm.Parameters()
-    #     I = np.array([1])
-    #     cn = np.array([0.4])
-    #     cs = np.array([0.5])
-    #     cp = np.array([0.56])
-    #     en = np.arcsinh(I / (param.iota_ref_n * cn)) + param.U_Pb(cn)
-    #     ep = np.arcsinh(
-    #         -I / (param.iota_ref_p * cp ** 2 * param.cw(cp))
-    #     ) + param.U_PbO2(cp)
-    #     jn = models.components.butler_volmer(cn, en)
-    #     js = models.components.butler_volmer(cs, es)
-    #     jp = models.components.butler_volmer(cp, ep)
-    #     self.assertTrue(np.allclose(jn, I))
-    #     self.assertTrue(np.all(js==0))
-    #     self.assertTrue(np.allclose(jp, -I))
 
 
 if __name__ == "__main__":

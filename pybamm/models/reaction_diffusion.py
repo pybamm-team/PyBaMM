@@ -5,8 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
-
 
 class ReactionDiffusionModel(pybamm.BaseModel):
     """Reaction-diffusion model.
@@ -39,6 +37,7 @@ class ReactionDiffusionModel(pybamm.BaseModel):
 
         # Initialise the class(es) that will be called upon for equations
         self.electrolyte = pybamm.Electrolyte()
+        self.interface = pybamm.Interface()
 
     def set_simulation(self, param, operators, mesh):
         """
@@ -59,6 +58,7 @@ class ReactionDiffusionModel(pybamm.BaseModel):
 
         # Set simulation for the components
         self.electrolyte.set_simulation(param, operators, mesh)
+        self.interface.set_simulation(param, mesh)
 
     def initial_conditions(self):
         """See :meth:`pybamm.BaseModel.initial_conditions`"""
@@ -72,14 +72,8 @@ class ReactionDiffusionModel(pybamm.BaseModel):
     def pdes_rhs(self, vars):
         """See :meth:`pybamm.BaseModel.pdes_rhs`"""
         if not self.tests:
-            j = np.concatenate(
-                [
-                    0 * vars.cn + self.param.icell(vars.t) / self.param.ln,
-                    0 * vars.cs,
-                    0 * vars.cp - self.param.icell(vars.t) / self.param.lp,
-                ]
-            )
             flux_bcs = self.electrolyte.bcs_cation_flux()
+            j = self.interface.uniform_current_density("xc", vars.t)
         else:
             flux_bcs = self.tests["bcs"](vars.t)["concentration"]
             # Set s to 1 so that we can provide any source term
