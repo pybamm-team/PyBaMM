@@ -52,7 +52,7 @@ class Simulation(object):
         # Assign param, operators and mesh as model attributes
         self.model.set_simulation(self.param, self.operators, self.mesh)
 
-    def run(self, solver):
+    def run(self, solver, use_force=False):
         """
         Run the simulation.
 

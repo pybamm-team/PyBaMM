@@ -54,14 +54,14 @@ class Interface(object):
 
         """
         if domain == "xcn":
-            assert c.shape == self.mesh.xcn.shape
-            assert e.shape == self.mesh.xcn.shape
+            assert c.shape == e.shape
+            assert e.shape[0] == len(self.mesh.xcn)
             j = self.param.iota_ref_n * c * np.sinh(e - self.param.U_Pb(c))
         elif domain == "xcs":
             j = np.zeros_like(self.mesh.xcs)
         elif domain == "xcp":
-            assert c.shape == self.mesh.xcp.shape
-            assert e.shape == self.mesh.xcp.shape
+            assert c.shape == e.shape
+            assert e.shape[0] == len(self.mesh.xcp)
             j = (
                 self.param.iota_ref_p
                 * c ** 2
@@ -69,7 +69,7 @@ class Interface(object):
                 * np.sinh(e - self.param.U_PbO2(c))
             )
         elif domain == "xc":
-            assert c.shape == self.mesh.xc.shape
+            assert c.shape[0] == len(self.mesh.xc)
             assert e.shape[0] == len(self.mesh.xcn) + len(self.mesh.xcp)
             cn, cs, cp = np.split(
                 c, np.array([self.mesh.nn - 1, self.mesh.nn + self.mesh.ns])

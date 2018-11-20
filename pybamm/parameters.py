@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 import os
 
+KNOWN_TESTS = ["", "convergence"]
+
 
 def read_parameters_csv(filename):
     """Reads parameters from csv file into dict.
@@ -40,9 +42,21 @@ def read_parameters_csv(filename):
 class Parameters(object):
     """
     The parameters for the simulation.
+
+    Parameters
+    ----------
+    current : dict, optional
+        {"Ibar": float or int, "type": string}, defines the external current
+    optional_parameters : dict or string, optional
+        dict or string (calls csv file) of optional parameters to overwrite
+        some of the default parameters
+    tests : string, optional
+        An option to change the parameters for easier testing:
+            * '' (default) : no tests, normal operation
+            * 'convergence' : convergence tests, simplify parameters
     """
 
-    def __init__(self, current=None, optional_parameters={}):
+    def __init__(self, current=None, optional_parameters={}, tests=""):
 
         #######################################################################
         # Defaults ############################################################
@@ -79,6 +93,19 @@ class Parameters(object):
         if current is None:
             current = {"Ibar": 1, "type": "constant"}
         self.current = current
+        #######################################################################
+        #######################################################################
+
+        #######################################################################
+        # Tests ###############################################################
+        if tests not in KNOWN_TESTS:
+            raise NotImplementedError(
+                """Tests '{}' are not implemented.
+                   Valid choices: one of '{}'.""".format(
+                    tests, KNOWN_TESTS
+                )
+            )
+        self.tests = tests
         #######################################################################
         #######################################################################
 
@@ -241,13 +268,17 @@ class Parameters(object):
             The mesh on which to evaluate the parameters.
 
         """
-        self.s = np.concatenate(
-            [
-                self.sn * np.ones_like(mesh.xcn),
-                np.zeros_like(mesh.xcs),
-                self.sp * np.ones_like(mesh.xcp),
-            ]
-        )
+        if self.tests == "":
+            self.s = np.concatenate(
+                [
+                    self.sn * np.ones_like(mesh.xcn),
+                    np.zeros_like(mesh.xcs),
+                    self.sp * np.ones_like(mesh.xcp),
+                ]
+            )
+        elif self.tests == "convergence":
+            # Set s=1 everywhere so we don't need to worry about source terms
+            self.s = np.ones_like(mesh.xc)
 
     def Icircuit(self, t):
         """The current in the external circuit.
@@ -259,19 +290,21 @@ class Parameters(object):
 
         Returns
         -------
-        float or array_like, shape (n,)
+        array_like, shape () or array_like, shape (n,)
             The current at time(s) t, in Amps.
 
         """
         if self.current["type"] == "constant":
-            return 0 * t + self.current["Ibar"]
+            return self.current["Ibar"] * np.ones_like(t)
 
     def icell(self, t):
         """The dimensionless current function (could be some data)"""
         # This is a function of dimensionless time; Icircuit is a function of
         # time in *hours*
         return (
-            self.Icircuit(t * self.scales.time) / (8 * self.A_cc) / self.ibar
+            self.Icircuit(t * self.scales.time)
+            / (self.n_electrodes_parallel * self.A_cc)
+            / self.ibar
         )
 
     def D_hat(self, c):

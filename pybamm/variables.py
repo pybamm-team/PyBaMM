@@ -62,20 +62,18 @@ class Variables(object):
             if attr in ["c"]:
                 avg = np.dot(self.__dict__[attr].T, mesh.dx)
                 self.__dict__[attr + "_avg"] = avg
+
             elif attr[-1] == "n":
                 # Negative
-                var_n = self.__dict__[attr[:-1]][: mesh.nn - 1]
-                avg_n = np.sum(var_n) * mesh.dxn / param.ln
-                self.__dict__[attr[:-1] + "n_avg"] = avg_n
+                avg = np.sum(self.__dict__[attr], axis=0) * mesh.dxn / param.ln
+                self.__dict__[attr + "_avg"] = avg
 
+            elif attr[-1] == "s":
                 # Separator
-                var_s = self.__dict__[attr[:-1]][
-                    mesh.nn - 1 : mesh.nn + mesh.ns
-                ]
-                avg_s = np.sum(var_s) * mesh.dxs / param.ls
-                self.__dict__[attr[:-1] + "s_avg"] = avg_s
+                avg = np.sum(self.__dict__[attr], axis=0) * mesh.dxs / param.ls
+                self.__dict__[attr + "_avg"] = avg
 
+            elif attr[-1] == "p":
                 # Positive
-                var_p = self.__dict__[attr[:-1]][mesh.nn + mesh.ns :]
-                avg_p = np.sum(var_p) * mesh.dxp / param.lp
-                self.__dict__[attr[:-1] + "p_avg"] = avg_p
+                avg = np.sum(self.__dict__[attr], axis=0) * mesh.dxp / param.lp
+                self.__dict__[attr + "_avg"] = avg

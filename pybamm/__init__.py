@@ -86,6 +86,7 @@ from .variables import Variables
 #
 from .models.core import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
+from .models.electrolyte_current import ElectrolyteCurrentModel
 
 #
 # Component classes

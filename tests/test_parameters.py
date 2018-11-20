@@ -26,6 +26,10 @@ class TestParameters(unittest.TestCase):
         param = pybamm.Parameters(optional_parameters="optional_test.csv")
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
 
+    def test_parameters_tests(self):
+        with self.assertRaises(NotImplementedError):
+            pybamm.Parameters(tests="not a test")
+
     def test_mesh_dependent_parameters(self):
         param = pybamm.Parameters()
         mesh = pybamm.Mesh(param, 10)
