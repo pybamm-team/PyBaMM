@@ -28,7 +28,7 @@ class Operators(object):
         if domain not in KNOWN_DOMAINS:
             raise NotImplementedError(
                 """Domain '{}' is not implemented.
-                                      Valid choices: one of '{}'.""".format(
+                   Valid choices: one of '{}'.""".format(
                     domain, KNOWN_DOMAINS
                 )
             )

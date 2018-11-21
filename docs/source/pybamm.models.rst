@@ -19,6 +19,14 @@ pybamm.models.core module
     :undoc-members:
     :show-inheritance:
 
+pybamm.models.electrolyte\_current module
+-----------------------------------------
+
+.. automodule:: pybamm.models.electrolyte_current
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pybamm.models.reaction\_diffusion module
 ----------------------------------------
 

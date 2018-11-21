@@ -1,13 +1,15 @@
 #
-# Reaction-diffusion model
+# Electrolyte current model
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import numpy as np
 
-class ReactionDiffusionModel(pybamm.BaseModel):
-    """Reaction-diffusion model.
+
+class ElectrolyteCurrentModel(pybamm.BaseModel):
+    """Electrolyte current model.
 
     Parameters
     ----------
@@ -22,7 +24,7 @@ class ReactionDiffusionModel(pybamm.BaseModel):
 
     def __init__(self, tests={}):
         super()
-        self.name = "Reaction Diffusion"
+        self.name = "Electrolyte Current"
         # Assign tests as an attribute
         if tests:
             assert set(tests.keys()) == {
@@ -33,7 +35,7 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         self.tests = tests
 
         # Set variables
-        self.variables = [("c", "xc")]
+        self.variables = [("en", "xcn"), ("ep", "xcp")]
 
         # Initialise the class(es) that will be called upon for equations
         self.electrolyte = pybamm.Electrolyte()
@@ -64,19 +66,32 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         """See :meth:`pybamm.BaseModel.initial_conditions`"""
         if not self.tests:
             electrolyte_inits = self.electrolyte.initial_conditions()
-            y0 = electrolyte_inits["c"]
+            y0 = np.concatenate(
+                [electrolyte_inits["en"], electrolyte_inits["ep"]]
+            )
             return y0
         else:
             return self.tests["inits"]
 
     def pdes_rhs(self, vars):
         """See :meth:`pybamm.BaseModel.pdes_rhs`"""
+        cn = np.ones_like(self.mesh.xcn)
+        cp = np.ones_like(self.mesh.xcp)
         if not self.tests:
-            flux_bcs = self.electrolyte.bcs_cation_flux()
-            j = self.interface.uniform_current_density("xc", vars.t)
+            current_bcs_n = self.electrolyte.bcs_current("xcn", vars.t)
+            current_bcs_p = self.electrolyte.bcs_current("xcp", vars.t)
+            jn = self.interface.butler_volmer("xcn", cn, vars.en)
+            jp = self.interface.butler_volmer("xcp", cp, vars.ep)
         else:
-            flux_bcs = self.tests["bcs"](vars.t)["concentration"]
-            j = self.tests["sources"](vars.t)["concentration"]
-        dcdt = self.electrolyte.cation_conservation(vars.c, j, flux_bcs)
+            current_bcs_n = self.tests["bcs"](vars.t)["current n"]
+            current_bcs_p = self.tests["bcs"](vars.t)["current p"]
+            jn = self.tests["sources"](vars.t)["current n"]
+            jp = self.tests["sources"](vars.t)["current p"]
+        dendt = self.electrolyte.current_conservation(
+            "xcn", cn, vars.en, jn, current_bcs_n
+        )
+        depdt = self.electrolyte.current_conservation(
+            "xcp", cp, vars.ep, jp, current_bcs_p
+        )
 
-        return dcdt
+        return np.concatenate([dendt, depdt])

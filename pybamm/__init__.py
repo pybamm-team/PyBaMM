@@ -86,11 +86,13 @@ from .variables import Variables
 #
 from .models.core import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
+from .models.electrolyte_current import ElectrolyteCurrentModel
 
 #
 # Component classes
 #
 from .models.components.electrolyte import Electrolyte
+from .models.components.interface import Interface
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

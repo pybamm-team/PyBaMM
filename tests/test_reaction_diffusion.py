@@ -14,8 +14,8 @@ class TestReactionDiffusion(unittest.TestCase):
     def setUp(self):
         self.model = pybamm.ReactionDiffusionModel()
         self.param = pybamm.Parameters()
-        target_npts = 100
-        tsteps = 100
+        target_npts = 10
+        tsteps = 10
         tend = 1
         self.mesh = pybamm.Mesh(
             self.param, target_npts, tsteps=tsteps, tend=tend
@@ -40,31 +40,27 @@ class TestReactionDiffusion(unittest.TestCase):
             self.assertEqual(y.shape, dydt.shape)
 
     def test_model_physics(self):
-        simulation = pybamm.Simulation(
-            self.model, self.param, self.mesh, name="Reaction diffusion"
-        )
+        """Check that the average concentration is as expected"""
+        sim = pybamm.Simulation(self.model, self.param, self.mesh)
         solver = pybamm.Solver(
             integrator="BDF", spatial_discretisation="Finite Volumes"
         )
 
-        simulation.run(solver)
+        sim.run(solver)
 
-        simulation.average()
-        # integral of c is known
-        c_avg_expected = 1 + (self.param.sn - self.param.sp) * it.cumtrapz(
-            self.param.icell(simulation.vars.t), simulation.vars.t, initial=0.0
-        )
+        sim.average()
+
+        c_avg_expected = self.param.c0 + (
+            self.param.sn - self.param.sp
+        ) * it.cumtrapz(self.param.icell(sim.vars.t), sim.vars.t, initial=0.0)
 
         self.assertTrue(
-            np.allclose(simulation.vars.c_avg, c_avg_expected, atol=4e-16)
+            np.allclose(sim.vars.c_avg, c_avg_expected, atol=4e-16)
         )
-        # integral of j is known
-        # check convergence to steady state when current is zero
-        # concentration and porosity limits
 
     def test_model_convergence(self):
         """
-        Exact solution: c = exp(-4*pi**2*t * cos(2*pi*x))
+        Exact solution: c = exp(-4*pi**2*t) * cos(2*pi*x)
         Initial conditions: c0 = cos(2*pi*x)
         Boundary conditions: Zero flux
         Source terms: 0
@@ -72,6 +68,8 @@ class TestReactionDiffusion(unittest.TestCase):
         Can achieve "convergence" in time by changing the integrator tolerance
         Can't get h**2 convergence in space
         """
+        param = pybamm.Parameters(tests="convergence")
+        param.set_mesh_dependent_parameters(self.mesh)
 
         def c_exact(t):
             return np.exp(-4 * np.pi ** 2 * t) * np.cos(
@@ -89,7 +87,7 @@ class TestReactionDiffusion(unittest.TestCase):
         tests = {"inits": inits, "bcs": bcs, "sources": sources}
 
         model = pybamm.ReactionDiffusionModel(tests=tests)
-        simulation = pybamm.Simulation(model, self.param, self.mesh)
+        simulation = pybamm.Simulation(model, param, self.mesh)
 
         ns = [1, 2, 3]
         errs = [0] * len(ns)

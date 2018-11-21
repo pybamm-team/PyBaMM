@@ -5,6 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import numpy as np
 import scipy.integrate as it
 
 KNOWN_INTEGRATORS = ["BDF", "analytical"]
@@ -105,6 +106,7 @@ class Solver(object):
 
         # Solve ODEs
         def derivs(t, y):
+            print(t)
             vars.update(t, y)
             dydt = sim.model.pdes_rhs(vars)
             return dydt
@@ -129,6 +131,7 @@ class Solver(object):
         vars.update(sol.t, sol.y)
 
         # Post-process (get potentials)
+        vars.dt = np.concatenate([np.array([0]), np.diff(vars.t)])
         # TODO: write post-processing function
 
         return vars

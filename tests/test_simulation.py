@@ -4,7 +4,6 @@
 import pybamm
 
 import numpy as np
-from numpy.linalg import norm
 
 import unittest
 
