@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 
 
-class TestReactionDiffusion(unittest.TestCase):
+class TestElectrolyteCurrent(unittest.TestCase):
     def setUp(self):
         self.model = pybamm.ElectrolyteCurrentModel()
         self.param = pybamm.Parameters()

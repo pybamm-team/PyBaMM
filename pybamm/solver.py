@@ -106,6 +106,7 @@ class Solver(object):
 
         # Solve ODEs
         def derivs(t, y):
+            print(t)
             vars.update(t, y)
             dydt = sim.model.pdes_rhs(vars)
             return dydt
