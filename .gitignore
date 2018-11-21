@@ -25,12 +25,14 @@ build/
 # inputs except parameters
 input/*
 !input/parameters
+!input/lithium-ion
 
 # simulation outputs
 out/
 
 # ideas
 ideas/
+.idea/
 
 # setup.py files
 *.egg-info
@@ -42,3 +44,6 @@ coverage.xml
 
 # black setup file seems to make Travis CI fail
 pyproject.toml
+
+# virtual enviroment
+venv/
