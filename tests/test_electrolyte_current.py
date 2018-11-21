@@ -12,8 +12,8 @@ class TestElectrolyteCurrent(unittest.TestCase):
     def setUp(self):
         self.model = pybamm.ElectrolyteCurrentModel()
         self.param = pybamm.Parameters()
-        target_npts = 100
-        tsteps = 100
+        target_npts = 3
+        tsteps = 10
         tend = 1
         self.mesh = pybamm.Mesh(
             self.param, target_npts, tsteps=tsteps, tend=tend
