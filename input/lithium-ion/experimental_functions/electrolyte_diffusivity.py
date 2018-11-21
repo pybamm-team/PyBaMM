@@ -12,4 +12,4 @@ def lfp_diff(c):
                 lithium-ion concentration
 
            """
-    return 5.34e-10 * np.exp(- 0.65 * c / 1000)
+    return 5.34e-10 * np.exp(-0.65 * c / 1000)

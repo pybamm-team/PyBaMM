@@ -1,10 +1,10 @@
 import numpy as np
 
 
-# TODO: make a more general Particle class within which Spherical particle also sits.
+# TODO: make general Particle class within which Spherical particle also sits.
 class SphericalParticle:
-    """The general spherical particle class that contains the elements that are common to all of
-    subclasses of spherical particles.
+    """The general spherical particle class that contains the elements that are
+    common to all of subclasses of spherical particles.
     Parameters
     ----------
     name : string
@@ -17,23 +17,26 @@ class SphericalParticle:
     """
 
     def __init__(self):
-        self.u = []  # going to call this u in every SubModel class so that it is easy to pull out
+        self.u = []  # going to call this u in every SubModel class
+        # so that it is easy to pull out
 
     def initial_conditions(self, name, param, mesh):
-        if name == 'negative particle':
+        if name == "negative particle":
             self.u = param.cn0 * np.ones_like(mesh.r)
-        elif name == 'positive particle':
+        elif name == "positive particle":
             self.u = param.cp0 * np.ones_like(mesh.r)
 
     def update(self, u):
         self.u = u
 
 
-# only entering the PDE and BCs here (enter bcs in subclass because will be effected by deformation, for example)
+# only entering the PDE and BCs here (enter bcs in subclass because will
+# be effected by deformation, for example)
 class StandardParticle(SphericalParticle):
     """The standard particle class: spherically symmetric, standard diffusion,
     no deformation, no stress assisted diffusion
     """
+
     def boundary_conditions(self, param):
         flux_bcs = 1
         return flux_bcs

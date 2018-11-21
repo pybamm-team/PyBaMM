@@ -138,12 +138,7 @@ def butler_volmer(param, cn, cs, cp, en, ep):
     """
     jn = param.iota_ref_n * cn * np.sinh(en - param.U_Pb(cn))
     js = 0 * cs
-    jp = (
-        param.iota_ref_p
-        * cp ** 2
-        * param.cw(cp)
-        * np.sinh(ep - param.U_PbO2(cp))
-    )
+    jp = param.iota_ref_p * cp ** 2 * param.cw(cp) * np.sinh(ep - param.U_PbO2(cp))
 
     j = np.concatenate([jn, js, jp])
     return j, jn, jp
