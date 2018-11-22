@@ -29,10 +29,7 @@ class Solver(object):
     """
 
     def __init__(
-        self,
-        integrator="BDF",
-        spatial_discretisation="Finite Volumes",
-        tol=1e-8,
+        self, integrator="BDF", spatial_discretisation="Finite Volumes", tol=1e-8
     ):
 
         if integrator not in KNOWN_INTEGRATORS:
@@ -106,7 +103,6 @@ class Solver(object):
 
         # Solve ODEs
         def derivs(t, y):
-            print(t)
             vars.update(t, y)
             dydt = sim.model.pdes_rhs(vars)
             return dydt
