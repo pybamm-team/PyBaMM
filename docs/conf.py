@@ -139,13 +139,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (
-        master_doc,
-        "PyBaMM.tex",
-        "PyBaMM Documentation",
-        "Valentin Sulzer",
-        "manual",
-    )
+    (master_doc, "PyBaMM.tex", "PyBaMM Documentation", "Valentin Sulzer", "manual")
 ]
 
 

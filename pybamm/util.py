@@ -47,12 +47,7 @@ class Timer(object):
             return str(round(time, 2)) + " seconds"
         output = []
         time = int(round(time))
-        units = [
-            (604800, "week"),
-            (86400, "day"),
-            (3600, "hour"),
-            (60, "minute"),
-        ]
+        units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]
         for k, name in units:
             f = time // k
             if f > 0 or output:

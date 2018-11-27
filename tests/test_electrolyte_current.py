@@ -15,9 +15,7 @@ class TestElectrolyteCurrent(unittest.TestCase):
         target_npts = 3
         tsteps = 10
         tend = 1
-        self.mesh = pybamm.Mesh(
-            self.param, target_npts, tsteps=tsteps, tend=tend
-        )
+        self.mesh = pybamm.Mesh(self.param, target_npts, tsteps=tsteps, tend=tend)
         self.param.set_mesh_dependent_parameters(self.mesh)
 
     def tearDown(self):
@@ -28,9 +26,7 @@ class TestElectrolyteCurrent(unittest.TestCase):
     def test_model_shape(self):
         for spatial_discretisation in pybamm.KNOWN_SPATIAL_DISCRETISATIONS:
             operators = {
-                domain: pybamm.Operators(
-                    spatial_discretisation, domain, self.mesh
-                )
+                domain: pybamm.Operators(spatial_discretisation, domain, self.mesh)
                 for domain in self.model.domains()
             }
             self.model.set_simulation(self.param, operators, self.mesh)

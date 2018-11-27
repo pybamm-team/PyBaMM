@@ -15,10 +15,7 @@ class TestMesh(unittest.TestCase):
         self.assertEqual(mesh.x[-1], 1)
         self.assertEqual(len(mesh.x), len(mesh.xc) + 1)
         self.assertAlmostEqual(
-            np.linalg.norm(
-                mesh.xc - np.concatenate([mesh.xcn, mesh.xcs, mesh.xcp])
-            ),
-            0,
+            np.linalg.norm(mesh.xc - np.concatenate([mesh.xcn, mesh.xcs, mesh.xcp])), 0
         )
 
 

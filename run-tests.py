@@ -120,9 +120,7 @@ def run_notebook_tests(skip_slow_books=False, executable="python"):
     print("\nOK")
 
 
-def scan_for_notebooks(
-    root, recursive=True, executable="python", ignore_list=[]
-):
+def scan_for_notebooks(root, recursive=True, executable="python", ignore_list=[]):
     """
     Scans for, and tests, all notebooks in a directory.
     """

@@ -17,9 +17,7 @@ class TestReactionDiffusion(unittest.TestCase):
         target_npts = 10
         tsteps = 10
         tend = 1
-        self.mesh = pybamm.Mesh(
-            self.param, target_npts, tsteps=tsteps, tend=tend
-        )
+        self.mesh = pybamm.Mesh(self.param, target_npts, tsteps=tsteps, tend=tend)
         self.param.set_mesh_dependent_parameters(self.mesh)
 
     def tearDown(self):
@@ -30,9 +28,7 @@ class TestReactionDiffusion(unittest.TestCase):
     def test_model_shape(self):
         for spatial_discretisation in pybamm.KNOWN_SPATIAL_DISCRETISATIONS:
             operators = {
-                domain: pybamm.Operators(
-                    spatial_discretisation, domain, self.mesh
-                )
+                domain: pybamm.Operators(spatial_discretisation, domain, self.mesh)
                 for domain in self.model.domains()
             }
             self.model.set_simulation(self.param, operators, self.mesh)
@@ -50,13 +46,11 @@ class TestReactionDiffusion(unittest.TestCase):
 
         sim.average()
 
-        c_avg_expected = self.param.c0 + (
-            self.param.sn - self.param.sp
-        ) * it.cumtrapz(self.param.icell(sim.vars.t), sim.vars.t, initial=0.0)
-
-        self.assertTrue(
-            np.allclose(sim.vars.c_avg, c_avg_expected, atol=4e-16)
+        c_avg_expected = self.param.c0 + (self.param.sn - self.param.sp) * it.cumtrapz(
+            self.param.icell(sim.vars.t), sim.vars.t, initial=0.0
         )
+
+        self.assertTrue(np.allclose(sim.vars.c_avg, c_avg_expected, atol=4e-16))
 
     def test_model_convergence(self):
         """
@@ -72,9 +66,7 @@ class TestReactionDiffusion(unittest.TestCase):
         param.set_mesh_dependent_parameters(self.mesh)
 
         def c_exact(t):
-            return np.exp(-4 * np.pi ** 2 * t) * np.cos(
-                2 * np.pi * self.mesh.xc
-            )
+            return np.exp(-4 * np.pi ** 2 * t) * np.cos(2 * np.pi * self.mesh.xc)
 
         inits = c_exact(0)
 
@@ -101,10 +93,7 @@ class TestReactionDiffusion(unittest.TestCase):
             errs[i] = norm(
                 simulation.vars.c.T - c_exact(self.mesh.time[:, np.newaxis])
             ) / norm(c_exact(self.mesh.time[:, np.newaxis]))
-        [
-            self.assertLess(errs[i + 1] / errs[i], 0.14)
-            for i in range(len(errs) - 1)
-        ]
+        [self.assertLess(errs[i + 1] / errs[i], 0.14) for i in range(len(errs) - 1)]
 
 
 if __name__ == "__main__":

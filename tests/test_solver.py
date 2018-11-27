@@ -10,9 +10,7 @@ class TestSolver(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             pybamm.Solver(integrator="not an integrator")
         with self.assertRaises(NotImplementedError):
-            pybamm.Solver(
-                spatial_discretisation="not a spatial discretisation"
-            )
+            pybamm.Solver(spatial_discretisation="not a spatial discretisation")
 
 
 if __name__ == "__main__":

@@ -66,9 +66,7 @@ class ElectrolyteCurrentModel(pybamm.BaseModel):
         """See :meth:`pybamm.BaseModel.initial_conditions`"""
         if not self.tests:
             electrolyte_inits = self.electrolyte.initial_conditions()
-            y0 = np.concatenate(
-                [electrolyte_inits["en"], electrolyte_inits["ep"]]
-            )
+            y0 = np.concatenate([electrolyte_inits["en"], electrolyte_inits["ep"]])
             return y0
         else:
             return self.tests["inits"]

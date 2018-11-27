@@ -28,9 +28,7 @@ def read_parameters_csv(filename):
 
     """
     # Hack to access input/parameters from any working directory
-    filename = os.path.join(
-        pybamm.ABSOLUTE_PATH, "input", "parameters", filename
-    )
+    filename = os.path.join(pybamm.ABSOLUTE_PATH, "input", "parameters", filename)
 
     #
     df = pd.read_csv(filename, comment="#", skip_blank_lines=True)
@@ -121,9 +119,7 @@ class Parameters(object):
 
         # Electrical
         # Reference current density [A.m-2]
-        self.ibar = abs(
-            self.current["Ibar"] / (self.n_electrodes_parallel * self.A_cc)
-        )
+        self.ibar = abs(self.current["Ibar"] / (self.n_electrodes_parallel * self.A_cc))
         # C-rate [-]
         self.Crate = self.current["Ibar"] / self.Q
 
@@ -176,13 +172,9 @@ class Parameters(object):
 
         # Electrode properties
         # Dimensionless lead conductivity
-        self.iota_s_n = (
-            self.sigma_eff_n * self.scales.pot / (self.L * self.ibar)
-        )
+        self.iota_s_n = self.sigma_eff_n * self.scales.pot / (self.L * self.ibar)
         # Dimensionless lead dioxide conductivity
-        self.iota_s_p = (
-            self.sigma_eff_p * self.scales.pot / (self.L * self.ibar)
-        )
+        self.iota_s_p = self.sigma_eff_p * self.scales.pot / (self.L * self.ibar)
         # Electrode capacity (neg)
         self.Qnmax = self.Qnmax_hat / (self.cmax * self.F)
         # Electrode capacity (pos)
@@ -199,17 +191,11 @@ class Parameters(object):
         self.beta_surf_p = self.cmax * self.DeltaVsurfP / 2
         # Dimensionless double-layer capacity (neg)
         self.gamma_dl_n = (
-            self.Cdl
-            * self.scales.pot
-            / self.scales.jn
-            / (self.scales.time * 3600)
+            self.Cdl * self.scales.pot / self.scales.jn / (self.scales.time * 3600)
         )
         # Dimensionless double-layer capacity (pos)
         self.gamma_dl_p = (
-            self.Cdl
-            * self.scales.pot
-            / self.scales.jp
-            / (self.scales.time * 3600)
+            self.Cdl * self.scales.pot / self.scales.jp / (self.scales.time * 3600)
         )
 
         # Other
@@ -235,11 +221,7 @@ class Parameters(object):
         self.c0 = self.q0
         # Dimensionless max capacity
         self.qmax = (
-            (
-                self.Ln * self.epsnmax
-                + self.Ls * self.epssmax
-                + self.Lp * self.epspmax
-            )
+            (self.Ln * self.epsnmax + self.Ls * self.epssmax + self.Lp * self.epspmax)
             / self.L
             / (self.sp - self.sn)
         )
@@ -330,9 +312,7 @@ class Parameters(object):
         in the electrolyte.
         """
         return (
-            self.DO2_hat(cO2 * self.cO2ref)
-            / self.DO2_hat(self.cO2ref)
-            * (eps ** 1.5)
+            self.DO2_hat(cO2 * self.cO2ref) / self.DO2_hat(self.cO2ref) * (eps ** 1.5)
         )
 
     def kappa_hat(self, c):
@@ -342,10 +322,7 @@ class Parameters(object):
     def kappa_eff(self, c, eps):
         """Dimensionless molar conductivity in the electrolyte"""
         kappa_scale = (
-            self.F ** 2
-            * self.cmax
-            * self.D_hat(self.cmax)
-            / (self.R * self.T_ref)
+            self.F ** 2 * self.cmax * self.D_hat(self.cmax) / (self.R * self.T_ref)
         )
         return self.kappa_hat(c * self.cmax) / kappa_scale * (eps ** 1.5)
 
@@ -376,11 +353,7 @@ class Parameters(object):
 
     def rho_hat(self, c):
         """Dimensional density of electrolyte [kg.m-3]"""
-        return (
-            self.Mw
-            / self.Vw
-            * (1 + (self.Me * self.Vw / self.Mw - self.Ve) * c)
-        )
+        return self.Mw / self.Vw * (1 + (self.Me * self.Vw / self.Mw - self.Ve) * c)
 
     def rho(self, c):
         """Dimensionless density of electrolyte"""
@@ -423,9 +396,7 @@ class Parameters(object):
 
     def U_Pb_hat(self, c):
         """Dimensional OCP in the negative electrode [V]"""
-        return self.U_Pb_ref + self.R * self.T_ref / self.F * self.U_Pb(
-            c / self.cmax
-        )
+        return self.U_Pb_ref + self.R * self.T_ref / self.F * self.U_Pb(c / self.cmax)
 
     def dUPbdc(self, c):
         """Dimensionless derivative of U_Pb with respect to c"""

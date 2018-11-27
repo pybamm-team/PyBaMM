@@ -39,10 +39,7 @@ class TestElectrolyte(unittest.TestCase):
             errs[i] = norm(dcdt - dcdt_exact) / norm(dcdt_exact)
 
         # Expect h**2 convergence
-        [
-            self.assertLess(errs[i + 1] / errs[i], 0.26)
-            for i in range(len(errs) - 1)
-        ]
+        [self.assertLess(errs[i + 1] / errs[i], 0.26) for i in range(len(errs) - 1)]
 
     def test_macinnes_finite_volumes_convergence(self):
         electrolyte = pybamm.Electrolyte()
@@ -125,18 +122,10 @@ class TestElectrolyte(unittest.TestCase):
 
             # Calculate solution and errors
             electrolyte.set_simulation(param, operators, mesh)
-            dendt = electrolyte.current_conservation(
-                "xcn", cn, en, 0, current_bcs_n
-            )
-            depdt = electrolyte.current_conservation(
-                "xcp", cp, ep, 0, current_bcs_p
-            )
-            errn[i] = norm((dendt - dendt_exact)[1:-1]) / norm(
-                dendt_exact[1:-1]
-            )
-            errp[i] = norm((depdt - depdt_exact)[1:-1]) / norm(
-                depdt_exact[1:-1]
-            )
+            dendt = electrolyte.current_conservation("xcn", cn, en, 0, current_bcs_n)
+            depdt = electrolyte.current_conservation("xcp", cp, ep, 0, current_bcs_p)
+            errn[i] = norm((dendt - dendt_exact)[1:-1]) / norm(dendt_exact[1:-1])
+            errp[i] = norm((depdt - depdt_exact)[1:-1]) / norm(depdt_exact[1:-1])
         # Expect h**2 convergence
         for i in range(len(errn) - 1):
             self.assertLess(errn[i + 1] / errn[i], 0.26)
