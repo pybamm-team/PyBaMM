@@ -10,7 +10,7 @@ import unittest
 
 class TestParameters(unittest.TestCase):
     def test_read_parameters_csv(self):
-        data = pybamm.read_parameters_csv("default.csv")
+        data = pybamm.read_parameters_csv("lead-acid", "default.csv")
         self.assertEqual(data["R"], 8.314)
 
     def test_parameters_defaults(self):
@@ -20,10 +20,14 @@ class TestParameters(unittest.TestCase):
 
     def test_parameters_options(self):
         param = pybamm.Parameters(
-            optional_parameters={"Ln": 1 / 3, "Ls": 1 / 3, "Lp": 1 / 3}
+            optional_parameters={"Ln": 1 / 3, "Ls": 0.25, "Lp": 0.25}
         )
+        self.assertEqual(param.Ln, 1 / 3)
+        self.assertEqual(param.R, 8.314)
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
         param = pybamm.Parameters(optional_parameters="optional_test.csv")
+        self.assertEqual(param.Ln, 0.5)
+        self.assertEqual(param.R, 8.314)
         self.assertAlmostEqual(param.ln + param.ls + param.lp, 1, places=10)
 
     def test_parameters_tests(self):

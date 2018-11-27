@@ -12,11 +12,13 @@ import os
 KNOWN_TESTS = ["", "convergence"]
 
 
-def read_parameters_csv(filename):
+def read_parameters_csv(chemistry, filename):
     """Reads parameters from csv file into dict.
 
     Parameters
     ----------
+    chemistry : string
+        The chemistry to read parameters for (name of folder)
     filename : string
         The name of the csv file containing the parameters.
         Must be a file in `input/parameters/`
@@ -28,7 +30,9 @@ def read_parameters_csv(filename):
 
     """
     # Hack to access input/parameters from any working directory
-    filename = os.path.join(pybamm.ABSOLUTE_PATH, "input", "parameters", filename)
+    filename = os.path.join(
+        pybamm.ABSOLUTE_PATH, "input", "parameters", chemistry, filename
+    )
 
     #
     df = pd.read_csv(filename, comment="#", skip_blank_lines=True)
@@ -43,6 +47,8 @@ class Parameters(object):
 
     Parameters
     ----------
+    chemistry : string
+        The chemistry to define parameters for
     current : dict, optional
         {"Ibar": float or int, "type": string}, defines the external current
     optional_parameters : dict or string, optional
@@ -54,20 +60,22 @@ class Parameters(object):
             * 'convergence' : convergence tests, simplify parameters
     """
 
-    def __init__(self, current=None, optional_parameters={}, tests=""):
+    def __init__(
+        self, chemistry="lead-acid", current=None, optional_parameters={}, tests=""
+    ):
 
-        #######################################################################
-        # Defaults ############################################################
+        ################################################################################
+        # Defaults #####################################################################
         # Load default parameters from csv file
-        default_parameters = read_parameters_csv("default.csv")
-        #######################################################################
-        #######################################################################
+        default_parameters = read_parameters_csv(chemistry, "default.csv")
+        ################################################################################
+        ################################################################################
 
-        #######################################################################
-        # Optional parameters #################################################
+        ################################################################################
+        # Optional parameters ##########################################################
         # If optional_parameters is a filename, load from that filename
         if isinstance(optional_parameters, str):
-            optional_parameters = read_parameters_csv(optional_parameters)
+            optional_parameters = read_parameters_csv(chemistry, optional_parameters)
         else:
             # Otherwise, optional_parameters should be a dict
             assert isinstance(
@@ -76,26 +84,24 @@ class Parameters(object):
                 but it is a '{}'""".format(
                 type(optional_parameters)
             )
-        # Assign either default or optional values
-        for param, default in default_parameters.items():
-            try:
-                self.__dict__[param] = optional_parameters[param]
-            except KeyError:
-                self.__dict__[param] = default
-        #######################################################################
-        #######################################################################
+        # Assign either default values
+        self.__dict__.update(default_parameters)
+        # Overwrite with optional values where given
+        self.__dict__.update(optional_parameters)
+        ################################################################################
+        ################################################################################
 
-        #######################################################################
-        # Input current #######################################################
+        ################################################################################
+        # Input current ################################################################
         # Set default
         if current is None:
             current = {"Ibar": 1, "type": "constant"}
         self.current = current
-        #######################################################################
-        #######################################################################
+        ################################################################################
+        ################################################################################
 
-        #######################################################################
-        # Tests ###############################################################
+        ################################################################################
+        # Tests ########################################################################
         if tests not in KNOWN_TESTS:
             raise NotImplementedError(
                 """Tests '{}' are not implemented.
@@ -104,11 +110,11 @@ class Parameters(object):
                 )
             )
         self.tests = tests
-        #######################################################################
-        #######################################################################
+        ################################################################################
+        ################################################################################
 
-        #######################################################################
-        # Derived Parameters ##################################################
+        ################################################################################
+        # Derived Parameters ###########################################################
         # Geometric
         # Total width [m]
         self.L = self.Ln + self.Ls + self.Lp
@@ -144,11 +150,11 @@ class Parameters(object):
         # Temperature
         # External temperature [K]
         self.T_inf = self.T_ref
-        #######################################################################
-        #######################################################################
+        ################################################################################
+        ################################################################################
 
-        #######################################################################
-        # Dimensionless Parameters ############################################
+        ################################################################################
+        # Dimensionless Parameters #####################################################
         self.scales = pybamm.Scales(self)
 
         # Geometric
@@ -212,11 +218,11 @@ class Parameters(object):
             * self.L
             / (self.d ** 2 * self.R * self.T_ref * self.cmax)
         )
-        #######################################################################
-        #######################################################################
+        ################################################################################
+        ################################################################################
 
-        #######################################################################
-        # Initial conditions (dimensionless) ##################################
+        ################################################################################
+        # Initial conditions (dimensionless) ###########################################
         # Concentration
         self.c0 = self.q0
         # Dimensionless max capacity
@@ -237,8 +243,8 @@ class Parameters(object):
         self.epsls0 = self.epssmax
         # Positive electrode [-]
         self.epslp0 = self.epspmax - self.epsDeltap * (1 - self.q0)
-        #######################################################################
-        #######################################################################
+        ################################################################################
+        ################################################################################
 
     def set_mesh_dependent_parameters(self, mesh):
         """Create parameters that depend on the mesh
