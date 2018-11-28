@@ -51,13 +51,8 @@ from .mesh import Mesh
 #
 # Parameters class and methods
 #
-from .parameters import read_parameters_csv
-from .parameters import Parameters
-
-#
-# Scales class
-#
-from .scales import Scales
+from .parameters.parameters import read_parameters_csv
+from .parameters.parameters import Parameters
 
 #
 # Simulation class
