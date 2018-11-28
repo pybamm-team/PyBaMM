@@ -18,7 +18,7 @@ class Operators(object):
         The spatial discretisation scheme (see pybamm.solver).
     domain : string
         The domain in which the operators should be calculated.
-    mesh : pybamm.mesh.Mesh() instance
+    mesh : :class:`pybamm.mesh.Mesh' instance
         The mesh used for the spatial discretisation.
 
     """

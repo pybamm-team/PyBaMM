@@ -13,7 +13,7 @@ class Mesh(object):
 
     Parameters
     ----------
-    param : pybamm.parameters.Parameters() instance
+    param : :class:`pybamm.parameters.Parameters' instance
         The parameters defining the subdomain sizes.
     target_npts : int
         The target number of points in each domain. The mesh will be created
@@ -26,7 +26,7 @@ class Mesh(object):
 
     """
 
-    def __init__(self, param, target_npts, tsteps=100, tend=1):
+    def __init__(self, param, target_npts=10, tsteps=100, tend=1):
         # Space
         ln, ls, lp = param.geometric["ln"], param.geometric["ls"], param.geometric["lp"]
         # We aim to create the grid as uniformly as possible

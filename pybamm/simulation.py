@@ -17,22 +17,26 @@ class Simulation(object):
     model : pybamm.models.(modelname).(ModelName)() instance
         The model to be used for the simulation. (modelname) and (ModelName)
         refer to a module and class to be chosen.
-
-    parameters : pybamm.parameters.Parameters() instance
+    param : :class:`pybamm.parameters.Parameters' instance
         The parameters to be used for the simulation.
-
-    mesh : pybamm.mesh.Mesh() instance
+    mesh : :class:`pybamm.mesh.Mesh' instance
         The mesh to be used for the simulation.
-
     name : string, optional
         The simulation name.
 
     """
 
-    def __init__(self, model, param, mesh, name="unnamed"):
-        model.mesh.update()
-        model.param.update()
+    def __init__(self, model, param=None, mesh=None, name="unnamed"):
+        # Defaults
+        if param is None:
+            param = pybamm.Parameters()
+        if mesh is None:
+            mesh = pybamm.Mesh(param)
+
+        # Assign attributes
         self.model = model
+        self.param = param
+        self.mesh = mesh
         self.name = name
 
     def __str__(self):
