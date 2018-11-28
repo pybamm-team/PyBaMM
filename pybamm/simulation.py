@@ -74,7 +74,7 @@ class Simulation(object):
     def filename_io(self):
         path = os.path.join("out", "simulations")
         filename = "model_{}_solver_{}".format(
-            pickle.dumps(self.model), pickle.dumps(solver)
+            pickle.dumps(self.model), pickle.dumps(self.solver)
         )
         return os.path.join(path, filename)
 

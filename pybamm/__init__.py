@@ -53,6 +53,7 @@ from .mesh import Mesh
 #
 from .parameters.parameters import read_parameters_csv
 from .parameters.parameters import Parameters
+from .parameters import functions_lead_acid
 
 #
 # Simulation class
