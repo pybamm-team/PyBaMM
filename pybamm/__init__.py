@@ -85,10 +85,9 @@ from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.electrolyte_current import ElectrolyteCurrentModel
 
 #
-# Component classes
+# Submodel classes
 #
-from .models.components.electrolyte import Electrolyte
-from .models.components.interface import Interface
+from .models.submodels.electrolyte import ElectrolyteTransport
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

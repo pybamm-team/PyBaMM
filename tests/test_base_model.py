@@ -16,11 +16,15 @@ class TestBaseModel(unittest.TestCase):
         model.variables = [("c", "xc"), ("en", "xcn"), ("epsn", "xcn")]
         self.assertEqual(model.domains(), set(["xc", "xcn"]))
 
+        # set simulation
+        model.set_simulation(1, 2, 3)
+        self.assertEqual(model.param, 1)
+        self.assertEqual(model.operators, 2)
+        self.assertEqual(model.mesh, 3)
+
         # NotImplementedErrors
         with self.assertRaises(NotImplementedError):
-            model.initial_conditions()
-        with self.assertRaises(NotImplementedError):
-            model.pdes_rhs(None)
+            model.submodels
 
 
 if __name__ == "__main__":

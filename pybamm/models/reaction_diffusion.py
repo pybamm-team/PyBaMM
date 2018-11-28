@@ -21,62 +21,18 @@ class ReactionDiffusionModel(pybamm.BaseModel):
     """
 
     def __init__(self, tests={}):
-        super()
+        super().__init__(tests)
         self.name = "Reaction Diffusion"
-        # Assign tests as an attribute
-        if tests:
-            assert set(tests.keys()) == {
-                "inits",
-                "bcs",
-                "sources",
-            }, "tests.keys() must include, 'inits', 'bcs' and 'sources'"
-        self.tests = tests
 
-        # Set variables
-        self.variables = [("c", "xc")]
-
-        # Initialise the class(es) that will be called upon for equations
-        self.electrolyte = pybamm.Electrolyte()
-        self.interface = pybamm.Interface()
-
-    def set_simulation(self, param, operators, mesh):
-        """
-        Assign simulation-specific objects as attributes.
-
-        Parameters
-        ----------
-        param : :class:`pybamm.Parameters` instance
-            The parameters of the simulation
-        operators : :class:`pybamm.Operators` instance
-            The spatial operators.
-        mesh : :class:`pybamm.Mesh` instance
-            The spatial and temporal discretisation.
-        """
-        self.param = param
-        self.operators = operators
-        self.mesh = mesh
-
-        # Set simulation for the components
-        self.electrolyte.set_simulation(param, operators, mesh)
-        self.interface.set_simulation(param, mesh)
-
-    def initial_conditions(self):
-        """See :meth:`pybamm.BaseModel.initial_conditions`"""
-        if not self.tests:
-            electrolyte_inits = self.electrolyte.initial_conditions()
-            y0 = electrolyte_inits["c"]
-            return y0
-        else:
-            return self.tests["inits"]
-
-    def pdes_rhs(self, vars):
-        """See :meth:`pybamm.BaseModel.pdes_rhs`"""
-        if not self.tests:
-            flux_bcs = self.electrolyte.bcs_cation_flux()
-            j = self.interface.uniform_current_density("xc", vars.t)
-        else:
-            flux_bcs = self.tests["bcs"](vars.t)["concentration"]
-            j = self.tests["sources"](vars.t)["concentration"]
-        dcdt = self.electrolyte.cation_conservation(vars.c, j, flux_bcs)
-
-        return dcdt
+    @property
+    def submodels(self):
+        if not self.simulation_set:
+            raise ValueError("Simulation is not set")
+        return [
+            pybamm.submodels.ElectrolyteTransport(
+                self.param.electrolyte,
+                self.operators["xc"],
+                self.mesh.whole,
+                self.tests,
+            )
+        ]
