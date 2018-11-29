@@ -53,7 +53,7 @@ class ButlerVolmer(Interface):
         """
         See :meth:`Interface.reaction`
         """
-        c, e = vars["c"], vars["e"]
+        c, e = vars.c, vars.e
 
         assert c.shape == e.shape
         assert e.shape[0] == self.mesh.npts
@@ -72,6 +72,6 @@ class HomogeneousReaction(Interface):
         """
         See :meth:`Interface.reaction`
         """
-        j = self.param.j_avg(vars.t) * np.ones_like(self.mesh.x.centres)
+        j = self.param.j_avg(vars.t) * np.ones_like(self.mesh.centres)
 
         return j
