@@ -22,53 +22,57 @@ class Simulation(object):
         The parameters to be used for the simulation.
     mesh : :class:`pybamm.mesh.Mesh' instance
         The mesh to be used for the simulation.
+    solver : :class:`pybamm.solver.Solver` instance
+        The algorithm for solving the model.
     name : string, optional
         The simulation name.
 
     """
 
-    def __init__(self, model, param=None, mesh=None, name="unnamed"):
+    def __init__(self, model, param=None, mesh=None, solver=None, name="unnamed"):
         # Defaults
         if param is None:
             param = pybamm.Parameters()
         if mesh is None:
             mesh = pybamm.Mesh(param)
+        if solver is None:
+            solver = pybamm.Solver()
 
         # Assign attributes
         self.model = model
         self.param = param
         self.mesh = mesh
+        self.solver = solver
         self.name = name
 
-    def __str__(self):
-        return self.name
-
-    def initialise(self):
-        """Initialise simulation to prepare for solving."""
+        # Initialise simulation to prepare for solving
         # Set mesh dependent parameters
         self.param.set_mesh(self.mesh)
 
         # Create operators from solver
-        self.operators = self.solver.operators(self.model.domains(), self.mesh)
+        self.operators = self.solver.operators(self.mesh)
 
         # Assign param, operators and mesh as model attributes
         self.model.set_simulation(self.param, self.operators, self.mesh)
 
-    def run(self, solver, use_force=False):
+    def __str__(self):
+        return self.name
+
+    def run(self, use_force=False):
         """
         Run the simulation.
 
         Parameters
         ----------
-        solver : :class:`pybamm.solver.Solver` instance
-            The algorithm for solving the model defined in self.model.
+        use_force : boolean, optional
+            If False (default), use a stored solution (if it exists). Otherwise, run the
+            model.
         """
-        self.solver = solver
         self.initialise()
         if not use_force and os.path.isfile(self.filename):
             self.load()
         else:
-            self.vars = solver.get_simulation_vars(self)
+            self.vars = self.solver.get_simulation_vars(self)
             self.save()
 
     def average(self):
