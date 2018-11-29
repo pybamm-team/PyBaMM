@@ -27,52 +27,38 @@ class Mesh(object):
     """
 
     def __init__(self, param, target_npts=10, tsteps=100, tend=1):
-        # Space
+
+        # Time
+        self.time = np.linspace(0, tend, tsteps)
+
+        # Space (macro)
         ln, ls, lp = param.geometric["ln"], param.geometric["ls"], param.geometric["lp"]
         # We aim to create the grid as uniformly as possible
         targetmeshsize = min(ln, ls, lp) / target_npts
 
         # Negative electrode
         self.nn = round(ln / targetmeshsize) + 1
-        self.dxn = ln / (self.nn - 1)
+        self.xn = SubMesh(np.linspace(0.0, ln, self.nn))
         # Separator
-        self.ns = round(ls / targetmeshsize) - 1
-        self.dxs = ls / (self.ns + 1)
+        self.ns = round(ls / targetmeshsize) + 1
+        self.xs = SubMesh(np.linspace(ln, ln + ls, self.ns))
         # Positive electrode
         self.np = round(lp / targetmeshsize) + 1
-        self.dxp = lp / (self.np - 1)
+        self.xp = SubMesh(np.linspace(ln + ls, 1.0, self.np))
         # Totals
-        self.n = self.nn + self.ns + self.np
+        self.n = self.nn + (self.ns - 2) + self.np
+        self.x = SubMesh(
+            np.concatenate([self.xn.edges, self.xs.edges[1:-1], self.xp.edges])
+        )
 
-        # Grid: edges
-        self.xn = np.linspace(0.0, ln, self.nn)
-        self.xs = np.linspace(ln + self.dxs, ln + ls - self.dxs, self.ns)
-        self.xp = np.linspace(ln + ls, 1.0, self.np)
-        self.x = np.concatenate([self.xn, self.xs, self.xp])
-        self.dx = np.diff(self.x)
+        # Space (micro)
+        # TODO: write this
 
-        # Grid: centres
-        self.xcn = (self.xn[1:] + self.xn[:-1]) / 2
-        self.xcs = np.linspace(ln + self.dxs / 2, ln + ls - self.dxs / 2, self.ns + 1)
-        self.xcp = (self.xp[1:] + self.xp[:-1]) / 2
-        self.xc = (self.x[1:] + self.x[:-1]) / 2
-        self.dxc = np.diff(self.xc)
 
-        # Time
-        self.time = np.linspace(0, tend, tsteps)
-
-    @property
-    def whole(self):
-        return {"x": self.x, "dx": self.dx, "xc": self.xc, "npts": self.n}
-
-    @property
-    def neg(self):
-        return {"x": self.xn, "dx": self.dxn, "xc": self.xcn, "npts": self.nn}
-
-    @property
-    def sep(self):
-        return {"x": self.xs, "dx": self.dxs, "xc": self.xcs, "npts": self.ns}
-
-    @property
-    def pos(self):
-        return {"x": self.xp, "dx": self.dxp, "xc": self.xcp, "npts": self.np}
+class SubMesh:
+    def __init__(self, edges):
+        self.edges = edges
+        self.centres = (self.edges[1:] + self.edges[:-1]) / 2
+        self.d_edges = np.diff(self.edges)
+        self.d_centres = np.diff(self.centres)
+        self.npts = self.centres.size
