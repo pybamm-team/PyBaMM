@@ -32,7 +32,7 @@ class Mesh(object):
         self.time = np.linspace(0, tend, tsteps)
 
         # Space (macro)
-        ln, ls, lp = param.geometric["ln"], param.geometric["ls"], param.geometric["lp"]
+        ln, ls, lp = param.geometric.ln, param.geometric.ls, param.geometric.lp
         # We aim to create the grid as uniformly as possible
         targetmeshsize = min(ln, ls, lp) / target_npts
 
