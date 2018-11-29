@@ -13,15 +13,15 @@ class Interface(object):
 
     Parameters
     ----------
-    param : dict
+    subparam : :class:`pybamm.parameters.Parameters` subclass instance
         The parameters of the simulation for reactions in the electrode.
-    mesh : dict
+    submesh : :class:`pybamm.mesh.Mesh` subclass instance
         The mesh in the electrode.
     """
 
-    def __init__(self, param, mesh):
-        self.param = param
-        self.mesh = mesh
+    def __init__(self, subparam, submesh):
+        self.subparam = subparam
+        self.submesh = submesh
 
     def reaction(self, vars):
         """
@@ -46,8 +46,8 @@ class ButlerVolmer(Interface):
     Butler-Volmer kinetics.
     """
 
-    def __init__(self, param, mesh):
-        super().__init__(param, mesh)
+    def __init__(self, subparam, submesh):
+        super().__init__(subparam, submesh)
 
     def reaction(self, vars):
         """
@@ -56,8 +56,8 @@ class ButlerVolmer(Interface):
         c, e = vars.c, vars.e
 
         assert c.shape == e.shape
-        assert e.shape[0] == self.mesh.npts
-        return self.param.j0(c) * np.sinh(e - self.param.U(c))
+        assert e.shape[0] == self.submesh.npts
+        return self.subparam.j0(c) * np.sinh(e - self.subparam.U(c))
 
 
 class HomogeneousReaction(Interface):
@@ -65,13 +65,13 @@ class HomogeneousReaction(Interface):
     Spatially homogeneous reaction in each electrode.
     """
 
-    def __init__(self, param, mesh):
-        super().__init__(param, mesh)
+    def __init__(self, subparam, submesh):
+        super().__init__(subparam, submesh)
 
     def reaction(self, vars):
         """
         See :meth:`Interface.reaction`
         """
-        j = self.param.j_avg(vars.t) * np.ones_like(self.mesh.centres)
+        j = self.subparam.j_avg(vars.t) * np.ones_like(self.submesh.centres)
 
         return j

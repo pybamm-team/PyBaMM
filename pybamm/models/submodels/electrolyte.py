@@ -10,17 +10,17 @@ import numpy as np
 class StefanMaxwellDiffusion(object):
     """Equations for the electrolyte."""
 
-    def __init__(self, param, operators, mesh, tests):
+    def __init__(self, subparam, suboperators, submesh, tests):
         """
         Assign simulation-specific objects as attributes.
 
         Parameters
         ----------
-        param : :class:`pybamm.parameters.ElectrolyteParameters` instance
+        subparam : :class:`pybamm.parameters.Parameters` subclass instance
             The parameters of the simulation
-        operators : :class:`pybamm.operators.Operators` instance
+        suboperators : :class:`pybamm.operators.Operators` subclass instance
             The spatial operators.
-        mesh : :class:`pybamm.mesh.SubMesh` instance
+        submesh : :class:`pybamm.mesh.Mesh` subclass instance
             The spatial and temporal discretisation.
         tests : dict
             A dictionary for testing the convergence of the numerical solution:
@@ -31,9 +31,9 @@ class StefanMaxwellDiffusion(object):
                    }: To be used for testing convergence to an exact solution.
         """
         # Apply attributes
-        self.param = param
-        self.operators = operators
-        self.mesh = mesh
+        self.subparam = subparam
+        self.suboperators = suboperators
+        self.submesh = submesh
         self.tests = tests
 
     def initial_conditions(self):
@@ -45,7 +45,7 @@ class StefanMaxwellDiffusion(object):
             The initial conditions
         """
         if not self.tests:
-            return self.param.inits.c0 * np.ones_like(self.mesh.centres)
+            return self.subparam.inits.c0 * np.ones_like(self.submesh.centres)
         else:
             return self.tests["inits"]["c"]
 
@@ -73,14 +73,14 @@ class StefanMaxwellDiffusion(object):
             j = self.tests["sources"](vars.t)["concentration"]
 
         # Calculate internal flux
-        N_internal = -self.operators.grad(vars.c)
+        N_internal = -self.suboperators.grad(vars.c)
 
         # Add boundary conditions (Neumann)
         flux_bc_left, flux_bc_right = flux_bcs
         N = np.concatenate([flux_bc_left, N_internal, flux_bc_right])
 
         # Calculate time derivative
-        dcdt = -self.operators.div(N) + self.param.s * j
+        dcdt = -self.suboperators.div(N) + self.subparam.s * j
 
         return dcdt
 
@@ -102,7 +102,7 @@ class StefanMaxwellDiffusion(object):
     #
     #     Parameters
     #     ----------
-    #     param : pybamm.parameters.Parameter() instance
+    #     subparam : pybamm.parameters.Parameter() instance
     #         The parameters of the simulation
     #     variables : 2-tuple (c, e) of array_like, shape (n,)
     #         The concentration, and potential difference.
@@ -124,9 +124,9 @@ class StefanMaxwellDiffusion(object):
     #
     #     # Calculate time derivative
     #     if domain == "xcn":
-    #         gamma_dl = self.param.gamma_dl_n
+    #         gamma_dl = self.subparam.gamma_dl_n
     #     elif domain == "xcp":
-    #         gamma_dl = self.param.gamma_dl_p
+    #         gamma_dl = self.subparam.gamma_dl_p
     #
     #     dedt = 1 / gamma_dl * (self.operators[domain].div(i) - j)
     #
@@ -175,8 +175,8 @@ class StefanMaxwellDiffusion(object):
     #     """
     #     if domain == "xcn":
     #         current_bc_left = np.array([0])
-    #         current_bc_right = np.array([self.param.icell(t)])
+    #         current_bc_right = np.array([self.subparam.icell(t)])
     #     elif domain == "xcp":
-    #         current_bc_left = np.array([self.param.icell(t)])
+    #         current_bc_left = np.array([self.subparam.icell(t)])
     #         current_bc_right = np.array([0])
     #     return (current_bc_left, current_bc_right)
