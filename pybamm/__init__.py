@@ -70,7 +70,7 @@ from .solver import KNOWN_SPATIAL_DISCRETISATIONS
 #
 # Operators class
 #
-from .operators import Operators
+from .operators import AllOperators
 
 #
 # Variables class
@@ -87,9 +87,7 @@ from .models.electrolyte_current import ElectrolyteCurrentModel
 #
 # Submodel classes
 #
-# from .models.submodels import SubModel
-# from .models.submodels.electrolyte import ElectrolyteTransport
-from .models import submodels
+from .models.submodels import electrolyte, interface
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
