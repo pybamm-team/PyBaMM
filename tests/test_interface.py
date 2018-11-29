@@ -7,33 +7,34 @@ import numpy as np
 import unittest
 
 
+class VarsForTesting(object):
+    def __init__(self, t, cn, cp, en, ep):
+        self.neg = {"t": t, "c": cn, "e": en}
+        self.pos = {"t": t, "c": cp, "e": ep}
+
+
 class TestInterface(unittest.TestCase):
     def setUp(self):
         self.param = pybamm.Parameters()
-        self.mesh = pybamm.Mesh(self.param, 50)
-        self.interface = pybamm.submodels.Interface()
-        self.interface.set_simulation(self.param, self.mesh)
+        self.mesh = pybamm.Mesh(self.param, target_npts=50)
 
     def test_butler_volmer(self):
+        param_n = self.param.neg_reactions
+        param_p = self.param.pos_reactions
+        bv_neg = pybamm.interface.ButlerVolmer(param_n, self.mesh.xn)
+        bv_pos = pybamm.interface.ButlerVolmer(param_p, self.mesh.xp)
         I = self.param.icell(1)
-        cn = 0.4 * np.ones_like(self.mesh.xcn)
-        cs = 0.5 * np.ones_like(self.mesh.xcs)
-        cp = 0.56 * np.ones_like(self.mesh.xcp)
-        c = np.concatenate([cn, cs, cp])
-        en = np.arcsinh(I / (self.param.iota_ref_n * cn)) + self.param.U_Pb(cn)
-        ep = np.arcsinh(
-            -I / (self.param.iota_ref_p * cp ** 2 * self.param.cw(cp))
-        ) + self.param.U_PbO2(cp)
-        e = np.concatenate([en, ep])
-        jn = self.interface.butler_volmer("xcn", cn, en)
-        js = self.interface.butler_volmer("xcs")
-        jp = self.interface.butler_volmer("xcp", cp, ep)
-        self.assertTrue(np.allclose(jn, I))
-        self.assertTrue(np.all(js == 0))
-        self.assertTrue(np.allclose(jp, -I))
-        j = self.interface.butler_volmer("xc", c, e)
-        self.assertTrue(np.allclose(j, np.concatenate([jn, js, jp])))
+        cn = 0.4 * np.ones_like(self.mesh.xn.centres)
+        cp = 0.56 * np.ones_like(self.mesh.xp.centres)
+        en = np.arcsinh(I / (param_n.j0(cn))) + param_n.U(cn)
+        ep = np.arcsinh(-I / (param_p.j0(cp))) + param_p.U(cp)
+        vars = VarsForTesting(0, cn, cp, en, ep)
+        jn = bv_neg.reaction(vars.neg)
+        jp = bv_pos.reaction(vars.pos)
+        np.testing.assert_allclose(jn, I)
+        np.testing.assert_allclose(jp, -I)
 
+    @unittest.skip("not yet implemented")
     def test_uniform_current_density(self):
         t = 1
         I = self.param.icell(t)
