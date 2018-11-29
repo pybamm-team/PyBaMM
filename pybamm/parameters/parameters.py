@@ -254,6 +254,9 @@ class Parameters(object):
                     )
                 )
 
+                # Initial conditions
+                self.c0 = param._raw["q0"]
+
             # Dimensionless functions
             def D_eff(self, c, eps):
                 return self.param._func.D_eff(self.param, c, eps)

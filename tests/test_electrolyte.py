@@ -11,7 +11,25 @@ import unittest
 
 
 class TestStefanMaxwellDiffusion(unittest.TestCase):
-    def test_stefan_maxwell_diffusion_finite_volumes_convergence(self):
+    def test_model_shape(self):
+        for spatial_discretisation in pybamm.KNOWN_SPATIAL_DISCRETISATIONS:
+            # Set up
+            param = pybamm.Parameters()
+            mesh = pybamm.Mesh(param)
+            param.set_mesh(mesh)
+            operators = pybamm.Operators(spatial_discretisation, mesh)
+            electrolyte = pybamm.electrolyte.StefanMaxwellDiffusion(
+                param.electrolyte, operators.x, mesh.x, {}
+            )
+
+            # Test
+            c0 = electrolyte.initial_conditions()
+            vars = VarsForTesting(c=c0, j=c0)
+            dcdt = electrolyte.pdes_rhs(vars)
+
+            self.assertEqual(c0.shape, dcdt.shape)
+
+    def test_finite_volumes_convergence(self):
         # Finite volume only has h**2 convergence if the mesh is uniform?
         uniform_lengths = {"Ln": 1e-3, "Ls": 1e-3, "Lp": 1e-3}
         param = pybamm.Parameters(
