@@ -2,6 +2,7 @@
 # Tests for the electrolyte class
 #
 import pybamm
+from tests.shared import VarsForTesting
 
 import numpy as np
 from numpy.linalg import norm
@@ -9,9 +10,8 @@ from numpy.linalg import norm
 import unittest
 
 
-@unittest.skip("not yet implemented")
-class TestElectrolyteTransport(unittest.TestCase):
-    def test_electrolyte_transport_finite_volumes_convergence(self):
+class TestStefanMaxwellDiffusion(unittest.TestCase):
+    def test_stefan_maxwell_diffusion_finite_volumes_convergence(self):
         # Finite volume only has h**2 convergence if the mesh is uniform?
         uniform_lengths = {"Ln": 1e-3, "Ls": 1e-3, "Lp": 1e-3}
         param = pybamm.Parameters(
@@ -25,10 +25,10 @@ class TestElectrolyteTransport(unittest.TestCase):
             # Set up
             mesh = pybamm.Mesh(param, target_npts=n)
             param.set_mesh(mesh)
-            operators = pybamm.Operators("Finite Volumes", "xc", mesh)
+            operators = pybamm.Operators("Finite Volumes", mesh)
 
             # Exact solution
-            c = np.cos(2 * np.pi * mesh.xc)
+            c = np.cos(2 * np.pi * mesh.x.centres)
             dcdt_exact = -4 * np.pi ** 2 * c
 
             def bcs(t):
@@ -37,17 +37,13 @@ class TestElectrolyteTransport(unittest.TestCase):
             def sources(t):
                 return {"concentration": 0}
 
-            # Finish set-up
-            vars = pybamm.Variables(None, None)
-            vars.t = 0
-            vars.c = c
-
             tests = {"bcs": bcs, "sources": sources}
-            electrolyte = pybamm.submodels.ElectrolyteTransport(
-                param.electrolyte, operators, mesh.whole, tests
+            electrolyte = pybamm.electrolyte.StefanMaxwellDiffusion(
+                param.electrolyte, operators.x, mesh.x, tests
             )
 
             # Calculate solution and errors
+            vars = VarsForTesting(c=c)
             dcdt = electrolyte.pdes_rhs(vars)
             errs[i] = norm(dcdt - dcdt_exact) / norm(dcdt_exact)
 
