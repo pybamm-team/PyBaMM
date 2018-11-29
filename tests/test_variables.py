@@ -41,8 +41,8 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(self.vars.cp.shape, self.mesh.xp.centres.shape)
 
     def test_variables_neg_pos(self):
-        np.testing.assert_array_equal(self.vars.cn, self.vars.neg["c"])
-        np.testing.assert_array_equal(self.vars.cp, self.vars.pos["c"])
+        np.testing.assert_array_equal(self.vars.cn, self.vars.neg.c)
+        np.testing.assert_array_equal(self.vars.cp, self.vars.pos.c)
 
     def test_variables_average_basic(self):
         self.vars.average()

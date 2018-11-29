@@ -56,20 +56,28 @@ class Variables(object):
     @property
     def neg(self):
         """Variables in the negative electrode."""
-        neg_vars = {}
-        for attr, value in self.__dict__.items():
-            if attr[-1] == "n":
-                neg_vars[attr[:-1]] = value
-        return neg_vars
+
+        class NegVars(object):
+            def __init__(self, all_vars):
+                self.t = all_vars.t
+                for attr, value in all_vars.__dict__.items():
+                    if attr[-1] == "n":
+                        self.__dict__[attr[:-1]] = value
+
+        return NegVars(self)
 
     @property
     def pos(self):
         """Variables for the positive electrode."""
-        pos_vars = {}
-        for attr, value in self.__dict__.items():
-            if attr[-1] == "p":
-                pos_vars[attr[:-1]] = value
-        return pos_vars
+
+        class PosVars(object):
+            def __init__(self, all_vars):
+                self.t = all_vars.t
+                for attr, value in all_vars.__dict__.items():
+                    if attr[-1] == "p":
+                        self.__dict__[attr[:-1]] = value
+
+        return PosVars(self)
 
     def set_reaction_vars(self, reaction_vars):
         for name, value in reaction_vars.items():
