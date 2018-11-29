@@ -7,7 +7,7 @@ from __future__ import print_function, unicode_literals
 import numpy as np
 
 
-class AllOperators(object):
+class Operators(object):
     """Contains functions that calculate the spatial derivatives.
 
     Parameters

@@ -20,23 +20,23 @@ class TestOperators(unittest.TestCase):
         Np = np.ones_like(mesh.xp.edges)
 
         # Get all operators
-        all_operators = pybamm.AllOperators("Finite Volumes", mesh)
+        operators = pybamm.Operators("Finite Volumes", mesh)
 
         # Check output shape
-        self.assertEqual(all_operators.x.grad(y).shape[0], y.shape[0] - 1)
-        self.assertEqual(all_operators.x.div(N).shape[0], N.shape[0] - 1)
-        self.assertEqual(all_operators.xn.grad(yn).shape[0], yn.shape[0] - 1)
-        self.assertEqual(all_operators.xn.div(Nn).shape[0], Nn.shape[0] - 1)
-        self.assertEqual(all_operators.xp.grad(yp).shape[0], yp.shape[0] - 1)
-        self.assertEqual(all_operators.xp.div(Np).shape[0], Np.shape[0] - 1)
+        self.assertEqual(operators.x.grad(y).shape[0], y.shape[0] - 1)
+        self.assertEqual(operators.x.div(N).shape[0], N.shape[0] - 1)
+        self.assertEqual(operators.xn.grad(yn).shape[0], yn.shape[0] - 1)
+        self.assertEqual(operators.xn.div(Nn).shape[0], Nn.shape[0] - 1)
+        self.assertEqual(operators.xp.grad(yp).shape[0], yp.shape[0] - 1)
+        self.assertEqual(operators.xp.div(Np).shape[0], Np.shape[0] - 1)
 
         # Check grad and div are both zero
-        self.assertEqual(np.linalg.norm(all_operators.x.grad(y)), 0)
-        self.assertEqual(np.linalg.norm(all_operators.x.div(N)), 0)
-        self.assertEqual(np.linalg.norm(all_operators.xn.grad(yn)), 0)
-        self.assertEqual(np.linalg.norm(all_operators.xn.div(Nn)), 0)
-        self.assertEqual(np.linalg.norm(all_operators.xp.grad(yp)), 0)
-        self.assertEqual(np.linalg.norm(all_operators.xp.div(Np)), 0)
+        self.assertEqual(np.linalg.norm(operators.x.grad(y)), 0)
+        self.assertEqual(np.linalg.norm(operators.x.div(N)), 0)
+        self.assertEqual(np.linalg.norm(operators.xn.grad(yn)), 0)
+        self.assertEqual(np.linalg.norm(operators.xn.div(Nn)), 0)
+        self.assertEqual(np.linalg.norm(operators.xp.grad(yp)), 0)
+        self.assertEqual(np.linalg.norm(operators.xp.div(Np)), 0)
 
     def test_grad_div_1D_FV_convergence(self):
         # Convergence

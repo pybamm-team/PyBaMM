@@ -66,11 +66,11 @@ class Solver(object):
 
         Returns
         -------
-        :class: `pybamm.operators.AllOperators`
+        :class: `pybamm.operators.Operators`
             A class of all the operators.
 
         """
-        return pybamm.AllOperators(self.spatial_discretisation, mesh)
+        return pybamm.Operators(self.spatial_discretisation, mesh)
 
     def get_simulation_vars(self, sim):
         """Run a simulation.

@@ -70,7 +70,7 @@ from .solver import KNOWN_SPATIAL_DISCRETISATIONS
 #
 # Operators class
 #
-from .operators import AllOperators
+from .operators import Operators
 
 #
 # Variables class
