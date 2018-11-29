@@ -24,19 +24,30 @@ class TestElectrolyteTransport(unittest.TestCase):
             # Set up
             mesh = pybamm.Mesh(param, target_npts=n)
             param.set_mesh(mesh)
-            operators = {"xc": pybamm.Operators("Finite Volumes", "xc", mesh)}
+            operators = pybamm.Operators("Finite Volumes", "xc", mesh)
 
-            # Calculate solution and errors
-            electrolyte = pybamm.submodels.ElectrolyteTransport(
-                param, operators, mesh, tests
-            )
-
+            # Exact solution
             c = np.cos(2 * np.pi * mesh.xc)
-            lbc = np.array([0])
-            rbc = np.array([0])
             dcdt_exact = -4 * np.pi ** 2 * c
 
-            dcdt = electrolyte.pdes_rhs(vars, (lbc, rbc))
+            def bcs(t):
+                return {"concentration": (np.array([0]), np.array([0]))}
+
+            def sources(t):
+                return {"concentration": 0}
+
+            # Finish set-up
+            vars = pybamm.Variables(None, None)
+            vars.t = 0
+            vars.c = c
+
+            tests = {"bcs": bcs, "sources": sources}
+            electrolyte = pybamm.submodels.ElectrolyteTransport(
+                param.electrolyte, operators, mesh.whole, tests
+            )
+
+            # Calculate solution and errors
+            dcdt = electrolyte.pdes_rhs(vars)
             errs[i] = norm(dcdt - dcdt_exact) / norm(dcdt_exact)
 
         # Expect h**2 convergence

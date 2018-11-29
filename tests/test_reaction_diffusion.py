@@ -18,7 +18,7 @@ class TestReactionDiffusion(unittest.TestCase):
         tsteps = 10
         tend = 1
         self.mesh = pybamm.Mesh(self.param, target_npts, tsteps=tsteps, tend=tend)
-        self.param.set_mesh_dependent_parameters(self.mesh)
+        self.param.set_mesh(self.mesh)
 
     def tearDown(self):
         del self.model
@@ -63,7 +63,7 @@ class TestReactionDiffusion(unittest.TestCase):
         Can't get h**2 convergence in space
         """
         param = pybamm.Parameters(tests="convergence")
-        param.set_mesh_dependent_parameters(self.mesh)
+        param.set_mesh(self.mesh)
 
         def c_exact(t):
             return np.exp(-4 * np.pi ** 2 * t) * np.cos(2 * np.pi * self.mesh.xc)

@@ -1,5 +1,5 @@
 #
-# Equations for the electrolyte
+# Equation classes for the electrolyte
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -8,7 +8,7 @@ import pybamm
 import numpy as np
 
 
-class ElectrolyteTransport(pybamm.submodels.SubModel):
+class ElectrolyteTransport(object):
     """Equations for the electrolyte."""
 
     def __init__(self, param, operators, mesh, tests):
@@ -70,7 +70,7 @@ class ElectrolyteTransport(pybamm.submodels.SubModel):
 
         """
         if not self.tests:
-            flux_bcs = self.bcs_cation_flux()
+            flux_bcs = self.bcs()
             j = pybamm.submodels.interface.uniform_current_density("xc", vars.t)
         else:
             flux_bcs = self.tests["bcs"](vars.t)["concentration"]
@@ -84,11 +84,11 @@ class ElectrolyteTransport(pybamm.submodels.SubModel):
         N = np.concatenate([flux_bc_left, N_internal, flux_bc_right])
 
         # Calculate time derivative
-        dcdt = -self.operators.div(N) + self.param.s * j
+        dcdt = -self.operators.div(N) + self.param["s"] * j
 
         return dcdt
 
-    def bcs_cation_flux(self):
+    def bcs(self):
         """Flux boundary conditions for the cation conservation equation.
 
         Returns

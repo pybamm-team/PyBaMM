@@ -21,7 +21,8 @@ class TestSimulation(unittest.TestCase):
         mesh = pybamm.Mesh(param, 50)
         solver = pybamm.Solver()
         sim = pybamm.Simulation(model, param, mesh)
-        sim.initialise(solver)
+        sim.solver = solver
+        sim.initialise()
         self.assertEqual(sim.param.s.shape, mesh.xc.shape)
         self.assertTrue(
             np.all(sim.operators["xc"].div(mesh.x) == np.ones_like(mesh.xc))

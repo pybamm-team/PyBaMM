@@ -3,6 +3,7 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
+import pybamm
 
 import pickle
 import os
@@ -45,7 +46,7 @@ class Simulation(object):
     def initialise(self):
         """Initialise simulation to prepare for solving."""
         # Set mesh dependent parameters
-        self.param.set_mesh_dependent_parameters(self.mesh)
+        self.param.set_mesh(self.mesh)
 
         # Create operators from solver
         self.operators = self.solver.operators(self.model.domains(), self.mesh)

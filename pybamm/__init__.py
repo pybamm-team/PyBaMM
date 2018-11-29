@@ -87,7 +87,9 @@ from .models.electrolyte_current import ElectrolyteCurrentModel
 #
 # Submodel classes
 #
-from .models.submodels.electrolyte import ElectrolyteTransport
+# from .models.submodels import SubModel
+# from .models.submodels.electrolyte import ElectrolyteTransport
+from .models import submodels
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

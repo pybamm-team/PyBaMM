@@ -6,7 +6,7 @@ Subpackages
 
 .. toctree::
 
-    pybamm.models.components
+    pybamm.models.submodels
 
 Submodules
 ----------

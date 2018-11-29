@@ -320,6 +320,11 @@ class Parameters(object):
             / (self.scales["time"] * 3600)
         )
 
+        # Exchange-current density as function of concentration
+        def j0(c):
+            if self._chemistry == "lead-acid":
+                return iota_ref * c
+
         # Dimensionless OCP
         def U(c):
             if self._chemistry == "lead-acid":
@@ -345,6 +350,11 @@ class Parameters(object):
             / self.scales["jp"]
             / (self.scales["time"] * 3600)
         )
+
+        # Exchange-current density as function of concentration
+        def j0(c):
+            if self._chemistry == "lead-acid":
+                return iota_ref * c ** 2 * self._func.cw(self, c)
 
         # Dimensionless OCP
         def U(c):
@@ -426,9 +436,6 @@ class Parameters(object):
         # Dimensionless functions
         def chi(c):
             return self._func.chi(self, c)
-
-        def cw(c):
-            return self._func.cw(self, c)
 
         # Return dict of all locally defined variables except self
         return {key: value for key, value in locals().items() if key != "self"}

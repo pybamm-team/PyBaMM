@@ -20,6 +20,9 @@ class BaseModel(object):
             }, "tests.keys() must include, 'inits', 'bcs' and 'sources'"
         self.tests = tests
 
+        # Simulation not set initially
+        self.simulation_set = False
+
     def __str__(self):
         return self.name
 
@@ -49,6 +52,8 @@ class BaseModel(object):
         self.param = param
         self.operators = operators
         self.mesh = mesh
+
+        self.simulation_set = True
 
     def initial_conditions(self):
         """

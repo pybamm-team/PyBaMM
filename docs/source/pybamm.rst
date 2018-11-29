@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     pybamm.models
+    pybamm.parameters
 
 Submodules
 ----------
@@ -23,14 +24,6 @@ pybamm.operators module
 -----------------------
 
 .. automodule:: pybamm.operators
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-pybamm.parameters module
-------------------------
-
-.. automodule:: pybamm.parameters
     :members:
     :undoc-members:
     :show-inheritance:

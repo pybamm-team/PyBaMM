@@ -94,7 +94,6 @@ class TestParameters(unittest.TestCase):
         param.set_mesh(mesh)
         # Known values for dimensionless functions
         self.assertEqual(param.electrolyte["D_eff"](1, 1), 1)
-        self.assertEqual(param.lead_acid_misc["cw"](1), 1)
         # Known monotonicity for dimensionless functions
         self.assertGreater(
             param.lead_acid_misc["chi"](1), param.lead_acid_misc["chi"](0.5)

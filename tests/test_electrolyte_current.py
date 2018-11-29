@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 
 
+@unittest.skip("not yet implemented")
 class TestElectrolyteCurrent(unittest.TestCase):
     def setUp(self):
         self.model = pybamm.ElectrolyteCurrentModel()
@@ -16,7 +17,7 @@ class TestElectrolyteCurrent(unittest.TestCase):
         tsteps = 10
         tend = 1
         self.mesh = pybamm.Mesh(self.param, target_npts, tsteps=tsteps, tend=tend)
-        self.param.set_mesh_dependent_parameters(self.mesh)
+        self.param.set_mesh(self.mesh)
 
     def tearDown(self):
         del self.model

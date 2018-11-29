@@ -1,21 +1,21 @@
-pybamm.models.components package
-================================
+pybamm.models.submodels package
+===============================
 
 Submodules
 ----------
 
-pybamm.models.components.electrolyte module
--------------------------------------------
+pybamm.models.submodels.electrolyte module
+------------------------------------------
 
-.. automodule:: pybamm.models.components.electrolyte
+.. automodule:: pybamm.models.submodels.electrolyte
     :members:
     :undoc-members:
     :show-inheritance:
 
-pybamm.models.components.interface module
------------------------------------------
+pybamm.models.submodels.interface module
+----------------------------------------
 
-.. automodule:: pybamm.models.components.interface
+.. automodule:: pybamm.models.submodels.interface
     :members:
     :undoc-members:
     :show-inheritance:

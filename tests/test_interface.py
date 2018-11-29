@@ -4,7 +4,6 @@
 import pybamm
 
 import numpy as np
-
 import unittest
 
 
@@ -12,7 +11,7 @@ class TestInterface(unittest.TestCase):
     def setUp(self):
         self.param = pybamm.Parameters()
         self.mesh = pybamm.Mesh(self.param, 50)
-        self.interface = pybamm.Interface()
+        self.interface = pybamm.submodels.Interface()
         self.interface.set_simulation(self.param, self.mesh)
 
     def test_butler_volmer(self):

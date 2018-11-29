@@ -12,10 +12,6 @@ class TestBaseModel(unittest.TestCase):
         # __str__
         self.assertEqual(str(model), "Base Model")
 
-        # domains
-        model.variables = [("c", "xc"), ("en", "xcn"), ("epsn", "xcn")]
-        self.assertEqual(model.domains(), set(["xc", "xcn"]))
-
         # set simulation
         model.set_simulation(1, 2, 3)
         self.assertEqual(model.param, 1)

@@ -15,6 +15,7 @@ class TestVariables(unittest.TestCase):
     def setUp(self):
         self.param = pybamm.Parameters()
         self.mesh = pybamm.Mesh(self.param, 50)
+        self.param.set_mesh(self.mesh)
         self.model = pybamm.ReactionDiffusionModel()
         self.model.set_simulation(self.param, None, None)
         self.vars = pybamm.Variables(self.model, self.mesh)
