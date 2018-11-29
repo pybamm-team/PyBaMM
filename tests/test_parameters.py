@@ -53,6 +53,11 @@ class TestParameters(unittest.TestCase):
             param.geometric.ln + param.geometric.ls + param.geometric.lp, 1, places=10
         )
 
+    def test_bad_initialisation(self):
+        param = pybamm.Parameters()
+        with self.assertRaises(ValueError):
+            param.electrolyte
+
     def test_parameters_defaults_lead_acid(self):
         # Tests on how the parameters interact
         param = pybamm.Parameters(chemistry="lead-acid")
@@ -86,7 +91,13 @@ class TestParameters(unittest.TestCase):
         param.set_mesh(mesh)
         # Known values for dimensionless functions
         self.assertEqual(param.electrolyte.D_eff(1, 1), 1)
-        # # Known monotonicity for dimensionless functions
+        self.assertEqual(param.electrolyte.kappa_eff(0, 1), 0)
+        self.assertEqual(param.electrolyte.kappa_eff(1, 0), 0)
+        self.assertEqual(param.neg_reactions.j0(0), 0)
+        self.assertEqual(param.pos_reactions.j0(0), 0)
+        # Known monotonicity for dimensionless functions
+        self.assertLess(param.neg_reactions.j0(1), param.neg_reactions.j0(2))
+        self.assertLess(param.pos_reactions.j0(1), param.pos_reactions.j0(2))
         self.assertGreater(param.lead_acid_misc.chi(1), param.lead_acid_misc.chi(0.5))
         self.assertLess(param.neg_reactions.U(1), param.neg_reactions.U(0.5))
         self.assertGreater(param.pos_reactions.U(1), param.pos_reactions.U(0.5))

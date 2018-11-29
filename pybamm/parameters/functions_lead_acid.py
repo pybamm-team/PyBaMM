@@ -32,7 +32,7 @@ def kappa_eff(param, c, eps):
         * D_hat(param._raw["cmax"])
         / (param._raw["R"] * param._raw["T_ref"])
     )
-    return kappa_hat(c * param._raw["cmax"]) / kappa_scale * (eps ** 1.5)
+    return kappa_hat(param, c * param._raw["cmax"]) / kappa_scale * (eps ** 1.5)
 
 
 def chi_hat(c):
