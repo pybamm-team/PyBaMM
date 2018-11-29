@@ -33,13 +33,21 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         }
 
         reactions = {
-            "neg": pybamm.interface.HomogeneousReaction(self.param.neg_reactions),
-            "pos": pybamm.interface.HomogeneousReaction(self.param.pos_reactions),
+            "neg": pybamm.interface.HomogeneousReaction(
+                self.param.neg_reactions, self.mesh.xn
+            ),
+            "pos": pybamm.interface.HomogeneousReaction(
+                self.param.pos_reactions, self.mesh.xp
+            ),
         }
 
         # {
-        #     "neg": pybamm.interface.ButlerVolmer(self.param.neg_reactions),
-        #     "pos": pybamm.interface.ButlerVolmer(self.param.pos_reactions),
+        #     "neg": pybamm.interface.ButlerVolmer(
+        #         self.param.neg_reactions, self.mesh.xn
+        #     ),
+        #     "pos": pybamm.interface.ButlerVolmer(
+        #         self.param.pos_reactions, self.mesh.xp
+        #     ),
         # }
 
         return {"pdes": pdes, "reactions": reactions}

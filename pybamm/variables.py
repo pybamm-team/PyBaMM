@@ -87,7 +87,7 @@ class Variables(object):
                 self.__dict__[name + "s"],
                 self.__dict__[name + "p"],
             ) = np.split(
-                self.__dict__[name], np.cumsum([self.mesh.nn - 1, self.mesh.ns + 1])
+                self.__dict__[name], np.cumsum([self.mesh.xn.npts, self.mesh.xs.npts])
             )
 
     def average(self):

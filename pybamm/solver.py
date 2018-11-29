@@ -88,7 +88,7 @@ class Solver(object):
         """
 
         # Initialise variables
-        vars = pybamm.Variables(sim.model, sim.mesh)
+        vars = pybamm.Variables(sim.model)
 
         # Initialise y for PDE solver
         yinit = sim.model.initial_conditions()

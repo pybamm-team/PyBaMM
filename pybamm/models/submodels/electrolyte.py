@@ -47,7 +47,7 @@ class StefanMaxwellDiffusion(object):
         if not self.tests:
             return self.subparam.c0 * np.ones_like(self.submesh.centres)
         else:
-            return self.tests["inits"]["c"]
+            return self.tests["inits"]["concentration"]
 
     def pdes_rhs(self, vars):
         """Conservation of cations.

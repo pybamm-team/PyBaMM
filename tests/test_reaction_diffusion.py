@@ -10,7 +10,6 @@ from numpy.linalg import norm
 import scipy.integrate as it
 
 
-@unittest.skip("not yet implemented")
 class TestReactionDiffusion(unittest.TestCase):
     def setUp(self):
         self.model = pybamm.ReactionDiffusionModel()
@@ -28,30 +27,22 @@ class TestReactionDiffusion(unittest.TestCase):
 
     def test_model_shape(self):
         for spatial_discretisation in pybamm.KNOWN_SPATIAL_DISCRETISATIONS:
-            operators = {
-                domain: pybamm.Operators(spatial_discretisation, domain, self.mesh)
-                for domain in self.model.domains()
-            }
-            self.model.set_simulation(self.param, operators, self.mesh)
-            y, dydt = pdes_io(self.model)
+            solver = pybamm.Solver(spatial_discretisation=spatial_discretisation)
+            sim = pybamm.Simulation(self.model, solver=solver)
+            y, dydt = pdes_io(sim.model)
             self.assertEqual(y.shape, dydt.shape)
 
     def test_model_physics(self):
         """Check that the average concentration is as expected"""
-        sim = pybamm.Simulation(self.model, self.param, self.mesh)
-        solver = pybamm.Solver(
-            integrator="BDF", spatial_discretisation="Finite Volumes"
-        )
-
-        sim.run(solver)
-
+        sim = pybamm.Simulation(self.model)
+        sim.run()
         sim.average()
 
-        c_avg_expected = self.param.c0 + (self.param.sn - self.param.sp) * it.cumtrapz(
-            self.param.icell(sim.vars.t), sim.vars.t, initial=0.0
-        )
+        c_avg_expected = self.param.electrolyte.c0 + (
+            self.param.electrolyte.sn - self.param.electrolyte.sp
+        ) * it.cumtrapz(self.param.icell(sim.vars.t), sim.vars.t, initial=0.0)
 
-        self.assertTrue(np.allclose(sim.vars.c_avg, c_avg_expected, atol=4e-16))
+        np.testing.assert_allclose(sim.vars.c_avg, c_avg_expected, atol=4e-16)
 
     def test_model_convergence(self):
         """
@@ -67,9 +58,9 @@ class TestReactionDiffusion(unittest.TestCase):
         param.set_mesh(self.mesh)
 
         def c_exact(t):
-            return np.exp(-4 * np.pi ** 2 * t) * np.cos(2 * np.pi * self.mesh.xc)
+            return np.exp(-4 * np.pi ** 2 * t) * np.cos(2 * np.pi * self.mesh.x.centres)
 
-        inits = c_exact(0)
+        inits = {"concentration": c_exact(0)}
 
         def bcs(t):
             return {"concentration": (np.array([0]), np.array([0]))}
@@ -80,7 +71,6 @@ class TestReactionDiffusion(unittest.TestCase):
         tests = {"inits": inits, "bcs": bcs, "sources": sources}
 
         model = pybamm.ReactionDiffusionModel(tests=tests)
-        simulation = pybamm.Simulation(model, param, self.mesh)
 
         ns = [1, 2, 3]
         errs = [0] * len(ns)
@@ -90,9 +80,10 @@ class TestReactionDiffusion(unittest.TestCase):
                 spatial_discretisation="Finite Volumes",
                 tol=10 ** (-n),
             )
-            simulation.run(solver)
+            sim = pybamm.Simulation(model, param=param, mesh=self.mesh, solver=solver)
+            sim.run()
             errs[i] = norm(
-                simulation.vars.c.T - c_exact(self.mesh.time[:, np.newaxis])
+                sim.vars.c.T - c_exact(self.mesh.time[:, np.newaxis])
             ) / norm(c_exact(self.mesh.time[:, np.newaxis]))
         [self.assertLess(errs[i + 1] / errs[i], 0.14) for i in range(len(errs) - 1)]
 

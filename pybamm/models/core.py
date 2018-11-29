@@ -32,9 +32,6 @@ class BaseModel(object):
             }, "tests.keys() must include, 'inits', 'bcs' and 'sources'"
         self.tests = tests
 
-        # Simulation not set initially
-        self.simulation_set = False
-
     def __str__(self):
         return self.name
 
@@ -42,7 +39,7 @@ class BaseModel(object):
     def pde_variables(self):
         """The variables of the model, as defined by submodels."""
         return [
-            (variable, submodel.mesh)
+            (variable, submodel.submesh)
             for variable, submodel in self.submodels["pdes"].items()
         ]
 
@@ -82,7 +79,7 @@ class BaseModel(object):
         """
         return np.concatenate(
             [
-                submodel.initial_conditions(vars)
+                submodel.initial_conditions()
                 for submodel in self.submodels["pdes"].values()
             ]
         )
@@ -130,7 +127,7 @@ class BaseModel(object):
         jn = self.submodels["reactions"]["neg"].reaction(vars.neg)
         jp = self.submodels["reactions"]["pos"].reaction(vars.pos)
 
-        return np.concatenate([jn, np.zeros_like(self.mesh.xcs), jp])
+        return np.concatenate([jn, np.zeros_like(self.mesh.xs.centres), jp])
 
     @property
     def submodels(self):

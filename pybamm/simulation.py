@@ -68,12 +68,11 @@ class Simulation(object):
             If False (default), use a stored solution (if it exists). Otherwise, run the
             model.
         """
-        self.initialise()
-        if not use_force and os.path.isfile(self.filename):
-            self.load()
-        else:
-            self.vars = self.solver.get_simulation_vars(self)
-            self.save()
+        # if not use_force and os.path.isfile(self.filename):
+        #     self.load()
+        # else:
+        self.vars = self.solver.get_simulation_vars(self)
+        # self.save()
 
     def average(self):
         """Average simulation variable attributes over the relevant (sub)domain."""
