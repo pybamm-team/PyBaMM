@@ -56,29 +56,21 @@ class Solver(object):
     def __str__(self):
         return "{}_{}".format(self.integrator, self.spatial_discretisation)
 
-    def operators(self, domains, mesh):
+    def operators(self, mesh):
         """Define the operators in each domain.
 
         Parameters
         ----------
-        domains : list
-            The domain(s) in which the operators are defined.
         mesh : :class:`pybamm.mesh.Mesh` instance
             The mesh on which the operators are defined.
 
         Returns
         -------
-        dict
-            {domain: operators}:
-                * domain (string): the domain for the operators
-                * operator (:class:`pybamm.operators.Operators` instance):
-                    The operators in that domain.
+        :class: `pybamm.operators.AllOperators`
+            A class of all the operators.
 
         """
-        return {
-            domain: pybamm.Operators(self.spatial_discretisation, domain, mesh)
-            for domain in domains
-        }
+        return pybamm.AllOperators(self.spatial_discretisation, mesh)
 
     def get_simulation_vars(self, sim):
         """Run a simulation.

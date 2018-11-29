@@ -3,11 +3,23 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
-import pybamm
+
+import numpy as np
 
 
 class BaseModel(object):
-    """Base model class for other models to extend."""
+    """Base model class for other models to extend.
+
+    Parameters
+    ----------
+    tests : dict, optional
+        A dictionary for testing the convergence of the numerical solution:
+            * {} (default): We are not running in test mode, use built-ins.
+            * {'inits': dict of initial conditions,
+               'bcs': dict of boundary conditions,
+               'sources': dict of source terms
+               }: To be used for testing convergence to an exact solution.
+    """
 
     def __init__(self, tests={}):
         self.name = "Base Model"
@@ -27,14 +39,17 @@ class BaseModel(object):
         return self.name
 
     @property
-    def variables(self):
+    def pde_variables(self):
         """The variables of the model, as defined by submodels."""
-        return [submodel.variables for submodel in self.submodels]
+        return [
+            (variable, submodel.mesh)
+            for variable, submodel in self.submodels["pdes"].items()
+        ]
 
-    @property
-    def domains(self):
-        """The domain(s) in which the model holds."""
-        return set([domain for variable, domain in self.variables])
+    # @property
+    # def domains(self):
+    #     """The domain(s) in which the model holds."""
+    #     return set([domain for self.domain in self.variables])
 
     def set_simulation(self, param, operators, mesh):
         """
@@ -66,7 +81,10 @@ class BaseModel(object):
 
         """
         return np.concatenate(
-            [submodel.initial_conditions(vars) for submodel in self.submodels]
+            [
+                submodel.initial_conditions(vars)
+                for submodel in self.submodels["pdes"].values()
+            ]
         )
 
     def pdes_rhs(self, vars):
@@ -81,11 +99,38 @@ class BaseModel(object):
 
         Returns
         -------
-        array_like
+        dydt : array_like
             A concatenated vector of all the derivatives.
 
         """
-        return np.concatenate([submodel.pdes_rhs(vars) for submodel in self.submodels])
+        j = self.reactions(vars)
+        vars.set_reaction_vars({"j": j})
+        dydt = np.concatenate(
+            [submodel.pdes_rhs(vars) for submodel in self.submodels["pdes"].values()]
+        )
+
+        return dydt
+
+    def reactions(self, vars):
+        """
+        Calculate the interfacial current density using the reactions defined in
+        self.submodels.
+
+        Parameters
+        ----------
+        vars : pybamm.variables.Variables() instance
+            The variables of the model.
+
+        Returns
+        -------
+        array_like
+            The interfacial current density.
+
+        """
+        jn = self.submodels["reactions"]["neg"].reaction(vars.neg)
+        jp = self.submodels["reactions"]["pos"].reaction(vars.pos)
+
+        return np.concatenate([jn, np.zeros_like(self.mesh.xcs), jp])
 
     @property
     def submodels(self):

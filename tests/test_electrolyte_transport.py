@@ -9,6 +9,7 @@ from numpy.linalg import norm
 import unittest
 
 
+@unittest.skip("not yet implemented")
 class TestElectrolyteTransport(unittest.TestCase):
     def test_electrolyte_transport_finite_volumes_convergence(self):
         # Finite volume only has h**2 convergence if the mesh is uniform?

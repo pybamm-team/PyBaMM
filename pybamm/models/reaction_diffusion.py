@@ -26,13 +26,20 @@ class ReactionDiffusionModel(pybamm.BaseModel):
 
     @property
     def submodels(self):
-        if not self.simulation_set:
-            raise ValueError("Simulation is not set")
-        return [
-            pybamm.submodels.ElectrolyteTransport(
-                self.param.electrolyte,
-                self.operators["xc"],
-                self.mesh.whole,
-                self.tests,
+        pdes = {
+            "c": pybamm.electrolyte.StefanMaxwellDiffusion(
+                self.param.electrolyte, self.operators.x, self.mesh.x, self.tests
             )
-        ]
+        }
+
+        reactions = {
+            "neg": pybamm.interface.HomogeneousReaction(self.param.neg_reactions),
+            "pos": pybamm.interface.HomogeneousReaction(self.param.pos_reactions),
+        }
+
+        # {
+        #     "neg": pybamm.interface.ButlerVolmer(self.param.neg_reactions),
+        #     "pos": pybamm.interface.ButlerVolmer(self.param.pos_reactions),
+        # }
+
+        return {"pdes": pdes, "reactions": reactions}

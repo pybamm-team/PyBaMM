@@ -3,12 +3,11 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
-import pybamm
 
 import numpy as np
 
 
-class ElectrolyteTransport(object):
+class StefanMaxwellDiffusion(object):
     """Equations for the electrolyte."""
 
     def __init__(self, param, operators, mesh, tests):
@@ -17,11 +16,11 @@ class ElectrolyteTransport(object):
 
         Parameters
         ----------
-        param : dict
+        param : :class:`pybamm.parameters.ElectrolyteParameters` instance
             The parameters of the simulation
         operators : :class:`pybamm.operators.Operators` instance
             The spatial operators.
-        mesh : dict
+        mesh : :class:`pybamm.mesh.SubMesh` instance
             The spatial and temporal discretisation.
         tests : dict
             A dictionary for testing the convergence of the numerical solution:
@@ -37,9 +36,6 @@ class ElectrolyteTransport(object):
         self.mesh = mesh
         self.tests = tests
 
-        # Define variables
-        self.variables = [("c", "xc")]
-
     def initial_conditions(self):
         """Calculates initial conditions for variables in the electrolyte.
 
@@ -49,7 +45,7 @@ class ElectrolyteTransport(object):
             The initial conditions
         """
         if not self.tests:
-            return self.param["c0"] * np.ones_like(self.mesh["xc"])
+            return self.param.inits.c0 * np.ones_like(self.mesh.centres)
         else:
             return self.tests["inits"]["c"]
 
@@ -71,7 +67,7 @@ class ElectrolyteTransport(object):
         """
         if not self.tests:
             flux_bcs = self.bcs()
-            j = pybamm.submodels.interface.uniform_current_density("xc", vars.t)
+            j = vars.j
         else:
             flux_bcs = self.tests["bcs"](vars.t)["concentration"]
             j = self.tests["sources"](vars.t)["concentration"]
@@ -84,7 +80,7 @@ class ElectrolyteTransport(object):
         N = np.concatenate([flux_bc_left, N_internal, flux_bc_right])
 
         # Calculate time derivative
-        dcdt = -self.operators.div(N) + self.param["s"] * j
+        dcdt = -self.operators.div(N) + self.param.s * j
 
         return dcdt
 

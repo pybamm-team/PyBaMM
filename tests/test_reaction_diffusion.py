@@ -10,6 +10,7 @@ from numpy.linalg import norm
 import scipy.integrate as it
 
 
+@unittest.skip("not yet implemented")
 class TestReactionDiffusion(unittest.TestCase):
     def setUp(self):
         self.model = pybamm.ReactionDiffusionModel()

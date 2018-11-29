@@ -349,6 +349,10 @@ class Parameters(object):
                 if self.param._chemistry == "lead-acid":
                     return self.param._func.U_Pb(self.param, c)
 
+            # Average interfacial current density
+            def j_avg(self, t):
+                return self.param.icell(t) / self.l
+
         return NegReactionParameters(self)
 
     @property
@@ -382,6 +386,10 @@ class Parameters(object):
             def U(self, c):
                 if self.param._chemistry == "lead-acid":
                     return self.param._func.U_PbO2(self.param, c)
+
+            # Average interfacial current density
+            def j_avg(self, t):
+                return -self.param.icell(t) / self.l
 
         return PosReactionParameters(self)
 
