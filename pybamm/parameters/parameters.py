@@ -376,7 +376,7 @@ class Parameters(object):
             # Exchange-current density as function of concentration
             def j0(self, c):
                 if self.param._chemistry == "lead-acid":
-                    return self.iota_ref * c ** 2 * self.param._func.cw(param, c)
+                    return self.iota_ref * c ** 2 * self.param._func.cw(self.param, c)
 
             # Dimensionless OCP
             def U(self, c):
@@ -519,7 +519,7 @@ class Parameters(object):
         # time in *hours*
         return (
             self.Icircuit(t * self.scales["time"])
-            / (param._raw["n_electrodes_parallel"] * self.geometric["A_cc"])
+            / (self._raw["n_electrodes_parallel"] * self.geometric.A_cc)
             / self.electrical.ibar
         )
 
@@ -548,13 +548,15 @@ class Parameters(object):
         # Interfacial area scale (pos) [m2.m-3]
         Ap = self._raw["Apmax"]
         # Interfacial area times current density [A.m-3]
-        Aj = self.electrical.ibar / (self.geometric.L)
+        Aj = self.electrical.ibar / (self.geometric.L)  # noqa: F841
         # Voltage scale (thermal voltage) [V]
         pot = self._raw["R"] * self._raw["T_ref"] / self._raw["F"]
         # Porosity, SOC scale [-]
         one = 1
         # Reaction velocity [m.s-1]
-        U_rxn = self.electrical.ibar / (self._raw["cmax"] * self._raw["F"])
+        U_rxn = self.electrical.ibar / (  # noqa:F841
+            self._raw["cmax"] * self._raw["F"]
+        )  # noqa: F841
         # Temperature scale [K]
         # temp = self._raw["T_max"] - self._raw["T_inf"]
 
@@ -562,7 +564,7 @@ class Parameters(object):
         It = current * time
 
         # Dictionary matching solution attributes to re-dimensionalisation scales
-        match = {
+        match = {  # noqa: F841
             "t": time,
             "x": length,
             "icell": current,

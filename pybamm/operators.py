@@ -38,15 +38,15 @@ class AllOperators(object):
         if self.spatial_discretisation == "Finite Volumes":
             return CartesianFiniteVolumes(self.mesh.x)
 
-    @property
-    def rn(self):
-        if self.spatial_discretisation == "Finite Volumes":
-            return SphericalFiniteVolumes(self.mesh.rn)
-
-    @property
-    def rp(self):
-        if self.spatial_discretisation == "Finite Volumes":
-            return SphericalFiniteVolumes(self.mesh.rp)
+    # @property
+    # def rn(self):
+    #     if self.spatial_discretisation == "Finite Volumes":
+    #         return SphericalFiniteVolumes(self.mesh.rn)
+    #
+    # @property
+    # def rp(self):
+    #     if self.spatial_discretisation == "Finite Volumes":
+    #         return SphericalFiniteVolumes(self.mesh.rp)
 
 
 class CartesianFiniteVolumes(object):
