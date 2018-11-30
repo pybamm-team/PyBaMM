@@ -77,5 +77,4 @@ def profile(code, sort="cumulative", num=30):
     cProfile.run(code)
     stats = pstats.Stats()
     stats.sort_stats(sort)
-    stats.print_stats(num)
     return stats

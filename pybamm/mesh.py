@@ -38,24 +38,45 @@ class Mesh(object):
 
         # Negative electrode
         self.nn = round(ln / targetmeshsize) + 1
-        self.xn = SubMesh(np.linspace(0.0, ln, self.nn))
+        self.set_submesh("xn", np.linspace(0.0, ln, self.nn))
+
         # Separator
         self.ns = round(ls / targetmeshsize) + 1
-        self.xs = SubMesh(np.linspace(ln, ln + ls, self.ns))
+        self.set_submesh("xs", np.linspace(ln, ln + ls, self.ns))
         # Positive electrode
         self.np = round(lp / targetmeshsize) + 1
-        self.xp = SubMesh(np.linspace(ln + ls, 1.0, self.np))
+        self.set_submesh("xp", np.linspace(ln + ls, 1.0, self.np))
+
         # Totals
         self.n = self.nn + (self.ns - 2) + self.np
-        self.x = SubMesh(
-            np.concatenate([self.xn.edges, self.xs.edges[1:-1], self.xp.edges])
+        self.set_submesh(
+            "x", np.concatenate([self.xn.edges, self.xs.edges[1:-1], self.xp.edges])
         )
 
         # Space (micro)
         # TODO: write this
 
+    @property
+    def xn(self):
+        return self._xn
 
-class SubMesh:
+    @property
+    def xs(self):
+        return self._xs
+
+    @property
+    def xp(self):
+        return self._xp
+
+    @property
+    def x(self):
+        return self._x
+
+    def set_submesh(self, submesh, edges):
+        self.__dict__["_" + submesh] = _SubMesh(edges)
+
+
+class _SubMesh:
     def __init__(self, edges):
         self.edges = edges
         self.centres = (self.edges[1:] + self.edges[:-1]) / 2

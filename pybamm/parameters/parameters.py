@@ -11,6 +11,21 @@ import os
 
 KNOWN_TESTS = ["", "convergence"]
 KNOWN_CHEMISTRIES = ["lithium-ion", "lead-acid"]
+CHEMISTRY_PROPERTIES = {
+    "lead-acid": (
+        "geometric",
+        "electrical",
+        "electrolyte",
+        "neg_electrode",
+        "pos_electrode",
+        "neg_reactions",
+        "pos_reactions",
+        "neg_volume_changes",
+        "pos_volume_changes",
+        "temperature",
+        "lead_acid_misc",
+    )
+}
 
 
 def read_parameters_csv(chemistry, filename):
@@ -51,12 +66,12 @@ class Parameters(object):
         overlap but have some differences.
     - Write parameters in a way that submodels only access the parameters they need to.
 
-    We achieve this by defining properties that return dictionaries of specific
+    We achieve this by defining properties that return subclasses of specific
     parameters. For each chemistry, submodels will only ever call properties specific to
     themselves, and so never see parameters that aren't defined for their chemistry.
     Further, submodels that can be applied to either the negative electrode or the
     positive electrode will receive parameters in the same format in either case, which
-    avoid clunky if statements
+    avoid clunky if statements in the submodel statements
 
     Parameters
     ----------
@@ -90,10 +105,10 @@ class Parameters(object):
     def __init__(
         self,
         chemistry="lead-acid",
-        base_parameters_file="default.csv",
-        optional_parameters={},
         current=None,
         tests="",
+        base_parameters_file="default.csv",
+        optional_parameters={},
     ):
         # Chemistry
         if chemistry not in KNOWN_CHEMISTRIES:
@@ -103,7 +118,24 @@ class Parameters(object):
                     chemistry, KNOWN_CHEMISTRIES
                 )
             )
+        assert isinstance(CHEMISTRY_PROPERTIES[chemistry], tuple)
         self._chemistry = chemistry
+
+        # Input current
+        # Set default
+        if current is None:
+            current = {"Ibar": 1, "type": "constant"}
+        self.current = current
+
+        # Tests
+        if tests not in KNOWN_TESTS:
+            raise NotImplementedError(
+                """Tests '{}' are not implemented.
+                   Valid choices: one of '{}'.""".format(
+                    tests, KNOWN_TESTS
+                )
+            )
+        self.tests = tests
 
         # Functions from the correct module
         self._func = pybamm.__dict__["functions_" + chemistry.replace("-", "_")]
@@ -124,27 +156,21 @@ class Parameters(object):
                 but it is a '{}'""".format(
                 type(optional_parameters)
             )
-        # Overwrite raw parameters with optional values where given
-        self._raw.update(optional_parameters)
-
-        # Input current
-        # Set default
-        if current is None:
-            current = {"Ibar": 1, "type": "constant"}
-        self.current = current
-
-        # Tests
-        if tests not in KNOWN_TESTS:
-            raise NotImplementedError(
-                """Tests '{}' are not implemented.
-                   Valid choices: one of '{}'.""".format(
-                    tests, KNOWN_TESTS
-                )
-            )
-        self.tests = tests
 
         # Initial with empty mesh
         self._mesh = None
+
+        # Overwrite raw parameters with optional values where given
+        # Simultaneously set properties
+        self.update_raw(optional_parameters)
+
+    def set_properties(self):
+        # Unset properties (to avoid cross-calling with old properties)
+        for property in CHEMISTRY_PROPERTIES[self._chemistry]:
+            self.__dict__["_" + property] = None
+        # Set new properties - order matters
+        for property in CHEMISTRY_PROPERTIES[self._chemistry]:
+            self.set_property(property)
 
     def update_raw(self, new_parameters):
         """
@@ -156,7 +182,9 @@ class Parameters(object):
             dict of optional parameters to overwrite some of the default parameters
 
         """
+        # Update _raw dict
         self._raw.update(new_parameters)
+        self.set_properties()
 
     def set_mesh(self, mesh):
         """
@@ -169,6 +197,14 @@ class Parameters(object):
             The mesh for the parameters
         """
         self._mesh = mesh
+        self.set_properties()
+
+    def unset_property(self, property):
+        self.__dict__["_" + property] = None
+
+    def set_property(self, property):
+        property_class_name = name_string_to_class_string(property)
+        self.__dict__["_" + property] = globals()[property_class_name](self)
 
     @property
     def geometric(self):
@@ -176,26 +212,7 @@ class Parameters(object):
         Geometric parameters.
         *Chemistries*: lithium-ion, lead-acid
         """
-
-        class GeometricParameters(object):
-            def __init__(self, param):
-                # Total width [m]
-                self.L = param._raw["Ln"] + param._raw["Ls"] + param._raw["Lp"]
-                # Area of the current collectors [m2]
-                self.A_cc = param._raw["H"] * param._raw["W"]
-                # Volume of a cell [m3]
-                self.Vc = self.A_cc * self.L
-
-                # Dimensionless half-width of negative electrode
-                self.ln = param._raw["Ln"] / self.L
-                # Dimensionless width of separator
-                self.ls = param._raw["Ls"] / self.L
-                # Dimensionless half-width of positive electrode
-                self.lp = param._raw["Lp"] / self.L
-                # Aspect ratio
-                self.delta = self.L / param._raw["H"]
-
-        return GeometricParameters(self)
+        return self._geometric
 
     @property
     def electrical(self):
@@ -203,17 +220,7 @@ class Parameters(object):
         Parameters relating to the external electrical circuit
         *Chemistries*: lithium-ion, lead-acid
         """
-
-        class ElectricalParameters(object):
-            def __init__(self, param):
-                # Reference current density [A.m-2]
-                self.ibar = abs(param.current["Ibar"]) / (
-                    param._raw["n_electrodes_parallel"] * param.geometric.A_cc
-                )
-                # C-rate [-]
-                self.Crate = param.current["Ibar"] / param._raw["Q"]
-
-        return ElectricalParameters(self)
+        return self._electrical
 
     @property
     def electrolyte(self):
@@ -221,50 +228,7 @@ class Parameters(object):
         Parameters for the electrolyte
         *Chemistries*: lithium-ion, lead-acid
         """
-
-        class ElectrolyteParameters(object):
-            def __init__(self, param):
-                self.param = param
-                # Effective reaction rates
-                # Main reaction (neg) [-]
-                self.sn = -(param._raw["spn"] + 2 * param._raw["tpw"]) / 2
-                # Main reaction (pos) [-]
-                self.sp = -(param._raw["spp"] + 2 * param._raw["tpw"]) / 2
-
-                # Mesh-dependent parameters
-                if param._mesh is None:
-                    raise ValueError("Mesh is not set")
-                self.s = np.concatenate(
-                    [
-                        self.sn * np.ones_like(param._mesh.xn.centres),
-                        np.zeros_like(param._mesh.xs.centres),
-                        self.sp * np.ones_like(param._mesh.xp.centres),
-                    ]
-                )
-
-                # Diffusional C-rate: diffusion timescale/discharge timescale
-                self.Cd = (
-                    (param.geometric.L ** 2)
-                    / param._func.D_hat(param._raw["cmax"])
-                    / (
-                        param._raw["cmax"]
-                        * param._raw["F"]
-                        * param.geometric.L
-                        / param.electrical.ibar
-                    )
-                )
-
-                # Initial conditions
-                self.c0 = param._raw["q0"]
-
-            # Dimensionless functions
-            def D_eff(self, c, eps):
-                return self.param._func.D_eff(self.param, c, eps)
-
-            def kappa_eff(self, c, eps):
-                return self.param._func.kappa_eff(self.param, c, eps)
-
-        return ElectrolyteParameters(self)
+        return self._electrolyte
 
     @property
     def neg_electrode(self):
@@ -272,26 +236,7 @@ class Parameters(object):
         Negative electrode physical parameters
         *Chemistries*: lithium-ion, lead-acid
         """
-
-        class NegElectrodeParameters(object):
-            def __init__(self, param):
-                # Effective lead conductivity (Bruggeman) [S.m-1]
-                self.sigma_eff = (
-                    param._raw["sigma_n"] * (1 - param._raw["epsnmax"]) ** 1.5
-                )
-
-                # Dimensionless lead conductivity
-                self.iota_s = (
-                    self.sigma_eff
-                    * param.scales["pot"]
-                    / (param.geometric.L * param.electrical.ibar)
-                )
-                # Dimensionless electrode capacity (neg)
-                self.Qmax = param._raw["Qnmax_hat"] / (
-                    param._raw["cmax"] * param._raw["F"]
-                )
-
-        return NegElectrodeParameters(self)
+        return self._neg_electrode
 
     @property
     def pos_electrode(self):
@@ -299,26 +244,7 @@ class Parameters(object):
         Positive electrode physical parameters
         *Chemistries*: lithium-ion, lead-acid
         """
-
-        class PosElectrodeParameters(object):
-            def __init__(self, param):
-                # Effective lead dioxide conductivity (Bruggeman) [S.m-1]
-                self.sigma_eff = (
-                    param._raw["sigma_p"] * (1 - param._raw["epspmax"]) ** 1.5
-                )
-
-                # Dimensionless lead dioxide conductivity
-                self.iota_s = (
-                    self.sigma_eff
-                    * param.scales["pot"]
-                    / (param.geometric.L * param.electrical.ibar)
-                )
-                # Dimensionless electrode capacity (pos)
-                self.Qmax = param._raw["Qpmax_hat"] / (
-                    param._raw["cmax"] * param._raw["F"]
-                )
-
-        return PosElectrodeParameters(self)
+        return self._pos_electrode
 
     @property
     def neg_reactions(self):
@@ -326,37 +252,7 @@ class Parameters(object):
         Parameters for reactions in the negative electrode
         *Chemistries*: lithium-ion, lead-acid
         """
-
-        class NegReactionParameters(object):
-            def __init__(self, param):
-                self.param = param
-                # Length
-                self.l = param.geometric.ln
-                # Dimensionless exchange-current density
-                self.iota_ref = param._raw["jref_n"] / param.scales["jn"]
-                # Dimensionless double-layer capacity
-                self.gamma_dl = (
-                    param._raw["Cdl"]
-                    * param.scales["pot"]
-                    / param.scales["jn"]
-                    / (param.scales["time"] * 3600)
-                )
-
-            # Exchange-current density as function of concentration
-            def j0(self, c):
-                if self.param._chemistry == "lead-acid":
-                    return self.iota_ref * c
-
-            # Dimensionless OCP
-            def U(self, c):
-                if self.param._chemistry == "lead-acid":
-                    return self.param._func.U_Pb(self.param, c)
-
-            # Average interfacial current density
-            def j_avg(self, t):
-                return self.param.icell(t) / self.l
-
-        return NegReactionParameters(self)
+        return self._neg_reactions
 
     @property
     def pos_reactions(self):
@@ -364,37 +260,7 @@ class Parameters(object):
         Parameters for reactions in the positive electrode
         *Chemistries*: lithium-ion, lead-acid
         """
-
-        class PosReactionParameters(object):
-            def __init__(self, param):
-                self.param = param
-                # Length
-                self.l = param.geometric.lp
-                # Dimensionless exchange-current density
-                self.iota_ref = param._raw["jref_p"] / param.scales["jp"]
-                # Dimensionless double-layer capacity
-                self.gamma_dl = (
-                    param._raw["Cdl"]
-                    * param.scales["pot"]
-                    / param.scales["jp"]
-                    / (param.scales["time"] * 3600)
-                )
-
-            # Exchange-current density as function of concentration
-            def j0(self, c):
-                if self.param._chemistry == "lead-acid":
-                    return self.iota_ref * c ** 2 * self.param._func.cw(self.param, c)
-
-            # Dimensionless OCP
-            def U(self, c):
-                if self.param._chemistry == "lead-acid":
-                    return self.param._func.U_PbO2(self.param, c)
-
-            # Average interfacial current density
-            def j_avg(self, t):
-                return -self.param.icell(t) / self.l
-
-        return PosReactionParameters(self)
+        return self._pos_reactions
 
     @property
     def neg_volume_changes(self):
@@ -405,15 +271,7 @@ class Parameters(object):
         if self._chemistry != "lead-acid":
             raise NotImplementedError
 
-        class NegVolumeChangeParameters(object):
-            def __init__(self, param):
-                # Net Molar Volume consumed in neg electrode [m3.mol-1]
-                self.DeltaVsurf = param._raw["VPbSO4"] - param._raw["VPb"]
-
-                # Dimensionless molar volume change (lead)
-                self.beta_surf = param._raw["cmax"] * self.DeltaVsurf / 2
-
-        return NegVolumeChangeParameters(self)
+        return self._neg_volume_changes
 
     @property
     def pos_volume_changes(self):
@@ -424,15 +282,7 @@ class Parameters(object):
         if self._chemistry != "lead-acid":
             raise NotImplementedError
 
-        class PosVolumeChangeParameters(object):
-            def __init__(self, param):
-                # Net Molar Volume consumed in pos electrode [m3.mol-1]
-                self.DeltaVsurf = param._raw["VPbO2"] - param._raw["VPbSO4"]
-
-                # Dimensionless molar volume change (lead dioxide)
-                self.beta_surf = param._raw["cmax"] * self.DeltaVsurf / 2
-
-        return PosVolumeChangeParameters(self)
+        return self._pos_volume_changes
 
     @property
     def temperature(self):
@@ -440,13 +290,7 @@ class Parameters(object):
         Temperature parameters
         *Chemistries*: lithium-ion, lead-acid
         """
-
-        class TemperatureParameters(object):
-            def __init__(self, param):
-                # External temperature [K]
-                self.T_inf = param._raw["T_ref"]
-
-        return TemperatureParameters(self)
+        return self._temperature
 
     @property
     def lead_acid_misc(self):
@@ -454,32 +298,7 @@ class Parameters(object):
         if self._chemistry != "lead-acid":
             raise NotImplementedError
 
-        class LeadAcidMiscParameters(object):
-            def __init__(self, param):
-                self.param = param
-                # Ratio of viscous pressure scale to osmotic pressure scale
-                self.pi_os = (
-                    param._func.mu_hat(param._raw["cmax"])
-                    * param.scales["U_rxn"]
-                    * param.geometric.L
-                    / (
-                        param._raw["d"] ** 2
-                        * param._raw["R"]
-                        * param._raw["T_ref"]
-                        * param._raw["cmax"]
-                    )
-                )
-                # Dimensionless voltage cut-off
-                self.voltage_cutoff = param.scales["pot"] * (
-                    param._raw["voltage_cutoff_circuit"] / param._raw["n_cells_series"]
-                    - (param._raw["U_PbO2_ref"] - param._raw["U_Pb_ref"])
-                )
-
-            # Dimensionless functions
-            def chi(self, c):
-                return self.param._func.chi(self.param, c)
-
-        return LeadAcidMiscParameters(self)
+        return self._lead_acid_misc
 
     def initial_conditions(self):
         ################################################################################
@@ -642,3 +461,228 @@ class Parameters(object):
 
         # Return dict of all locally defined variables except self
         return {key: value for key, value in locals().items() if key != "self"}
+
+
+def name_string_to_class_string(name):
+    """Convert a property name to corresponding property class name."""
+    # Replace _ with spaces
+    name = name.replace("_", " ")
+    # Capitalise
+    name = name.title()
+    # Remove spaces
+    name = name.replace(" ", "")
+
+    return "_" + name + "Parameters"
+
+
+class _GeometricParameters(object):
+    def __init__(self, param):
+        # Total width [m]
+        self.L = param._raw["Ln"] + param._raw["Ls"] + param._raw["Lp"]
+        # Area of the current collectors [m2]
+        self.A_cc = param._raw["H"] * param._raw["W"]
+        # Volume of a cell [m3]
+        self.Vc = self.A_cc * self.L
+
+        # Dimensionless half-width of negative electrode
+        self.ln = param._raw["Ln"] / self.L
+        # Dimensionless width of separator
+        self.ls = param._raw["Ls"] / self.L
+        # Dimensionless half-width of positive electrode
+        self.lp = param._raw["Lp"] / self.L
+        # Aspect ratio
+        self.delta = self.L / param._raw["H"]
+
+
+class _ElectricalParameters(object):
+    def __init__(self, param):
+        # Reference current density [A.m-2]
+        self.ibar = abs(param.current["Ibar"]) / (
+            param._raw["n_electrodes_parallel"] * param.geometric.A_cc
+        )
+        # C-rate [-]
+        self.Crate = param.current["Ibar"] / param._raw["Q"]
+
+
+class _ElectrolyteParameters(object):
+    def __init__(self, param):
+        self.param = param
+        # Effective reaction rates
+        # Main reaction (neg) [-]
+        self.sn = -(param._raw["spn"] + 2 * param._raw["tpw"]) / 2
+        # Main reaction (pos) [-]
+        self.sp = -(param._raw["spp"] + 2 * param._raw["tpw"]) / 2
+
+        # Mesh-dependent parameters
+        if param._mesh:
+            self.s = np.concatenate(
+                [
+                    self.sn * np.ones_like(param._mesh.xn.centres),
+                    np.zeros_like(param._mesh.xs.centres),
+                    self.sp * np.ones_like(param._mesh.xp.centres),
+                ]
+            )
+        else:
+            self.s = "Mesh not set"
+
+        # Diffusional C-rate: diffusion timescale/discharge timescale
+        self.Cd = (
+            (param.geometric.L ** 2)
+            / param._func.D_hat(param._raw["cmax"])
+            / (
+                param._raw["cmax"]
+                * param._raw["F"]
+                * param.geometric.L
+                / param.electrical.ibar
+            )
+        )
+
+        # Initial conditions
+        self.c0 = param._raw["q0"]
+
+    # Dimensionless functions
+    def D_eff(self, c, eps):
+        return self.param._func.D_eff(self.param, c, eps)
+
+    def kappa_eff(self, c, eps):
+        return self.param._func.kappa_eff(self.param, c, eps)
+
+
+class _NegElectrodeParameters(object):
+    def __init__(self, param):
+        # Effective lead conductivity (Bruggeman) [S.m-1]
+        self.sigma_eff = param._raw["sigma_n"] * (1 - param._raw["epsnmax"]) ** 1.5
+
+        # Dimensionless lead conductivity
+        self.iota_s = (
+            self.sigma_eff
+            * param.scales["pot"]
+            / (param.geometric.L * param.electrical.ibar)
+        )
+        # Dimensionless electrode capacity (neg)
+        self.Qmax = param._raw["Qnmax_hat"] / (param._raw["cmax"] * param._raw["F"])
+
+
+class _PosElectrodeParameters(object):
+    def __init__(self, param):
+        # Effective lead dioxide conductivity (Bruggeman) [S.m-1]
+        self.sigma_eff = param._raw["sigma_p"] * (1 - param._raw["epspmax"]) ** 1.5
+
+        # Dimensionless lead dioxide conductivity
+        self.iota_s = (
+            self.sigma_eff
+            * param.scales["pot"]
+            / (param.geometric.L * param.electrical.ibar)
+        )
+        # Dimensionless electrode capacity (pos)
+        self.Qmax = param._raw["Qpmax_hat"] / (param._raw["cmax"] * param._raw["F"])
+
+
+class _NegReactionsParameters(object):
+    def __init__(self, param):
+        self.param = param
+        # Length
+        self.l = param.geometric.ln
+        # Dimensionless exchange-current density
+        self.iota_ref = param._raw["jref_n"] / param.scales["jn"]
+        # Dimensionless double-layer capacity
+        self.gamma_dl = (
+            param._raw["Cdl"]
+            * param.scales["pot"]
+            / param.scales["jn"]
+            / (param.scales["time"] * 3600)
+        )
+
+    # Exchange-current density as function of concentration
+    def j0(self, c):
+        if self.param._chemistry == "lead-acid":
+            return self.iota_ref * c
+
+    # Dimensionless OCP
+    def U(self, c):
+        if self.param._chemistry == "lead-acid":
+            return self.param._func.U_Pb(self.param, c)
+
+    # Average interfacial current density
+    def j_avg(self, t):
+        return self.param.icell(t) / self.l
+
+
+class _PosReactionsParameters(object):
+    def __init__(self, param):
+        self.param = param
+        # Length
+        self.l = param.geometric.lp
+        # Dimensionless exchange-current density
+        self.iota_ref = param._raw["jref_p"] / param.scales["jp"]
+        # Dimensionless double-layer capacity
+        self.gamma_dl = (
+            param._raw["Cdl"]
+            * param.scales["pot"]
+            / param.scales["jp"]
+            / (param.scales["time"] * 3600)
+        )
+
+    # Exchange-current density as function of concentration
+    def j0(self, c):
+        if self.param._chemistry == "lead-acid":
+            return self.iota_ref * c ** 2 * self.param._func.cw(self.param, c)
+
+    # Dimensionless OCP
+    def U(self, c):
+        if self.param._chemistry == "lead-acid":
+            return self.param._func.U_PbO2(self.param, c)
+
+    # Average interfacial current density
+    def j_avg(self, t):
+        return -self.param.icell(t) / self.l
+
+
+class _NegVolumeChangesParameters(object):
+    def __init__(self, param):
+        # Net Molar Volume consumed in neg electrode [m3.mol-1]
+        self.DeltaVsurf = param._raw["VPbSO4"] - param._raw["VPb"]
+
+        # Dimensionless molar volume change (lead)
+        self.beta_surf = param._raw["cmax"] * self.DeltaVsurf / 2
+
+
+class _PosVolumeChangesParameters(object):
+    def __init__(self, param):
+        # Net Molar Volume consumed in pos electrode [m3.mol-1]
+        self.DeltaVsurf = param._raw["VPbO2"] - param._raw["VPbSO4"]
+
+        # Dimensionless molar volume change (lead dioxide)
+        self.beta_surf = param._raw["cmax"] * self.DeltaVsurf / 2
+
+
+class _TemperatureParameters(object):
+    def __init__(self, param):
+        # External temperature [K]
+        self.T_inf = param._raw["T_ref"]
+
+
+class _LeadAcidMiscParameters(object):
+    def __init__(self, param):
+        self.param = param
+        # Ratio of viscous pressure scale to osmotic pressure scale
+        self.pi_os = (
+            param._func.mu_hat(param._raw["cmax"])
+            * param.scales["U_rxn"]
+            * param.geometric.L
+            / (
+                param._raw["d"] ** 2
+                * param._raw["R"]
+                * param._raw["T_ref"]
+                * param._raw["cmax"]
+            )
+        )
+        # Dimensionless voltage cut-off
+        self.voltage_cutoff = param.scales["pot"] * (
+            param._raw["voltage_cutoff_circuit"] / param._raw["n_cells_series"]
+            - (param._raw["U_PbO2_ref"] - param._raw["U_Pb_ref"])
+        )
+
+    # Dimensionless functions
+    def chi(self, c):
+        return self.param._func.chi(self.param, c)

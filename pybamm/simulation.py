@@ -58,7 +58,7 @@ class Simulation(object):
     def __str__(self):
         return self.name
 
-    def run(self, use_force=False, profile=False):
+    def run(self, use_force=False):
         """
         Run the simulation.
 
@@ -71,10 +71,7 @@ class Simulation(object):
         # if not use_force and os.path.isfile(self.filename):
         #     self.load()
         # else:
-        if profile:
-            pybamm.profile(self.solver.get_simulation_vars(self))
-        else:
-            self.vars = self.solver.get_simulation_vars(self)
+        self.vars = self.solver.get_simulation_vars(self)
         # self.save()
 
     def average(self):

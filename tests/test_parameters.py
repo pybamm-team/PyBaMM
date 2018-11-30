@@ -13,6 +13,12 @@ class TestParameters(unittest.TestCase):
         data = pybamm.read_parameters_csv("lead-acid", "default.csv")
         self.assertEqual(data["R"], 8.314)
 
+    def test_name_string_to_class_string(self):
+        ntc = pybamm.parameters.parameters.name_string_to_class_string
+        self.assertEqual(ntc("hello"), "_HelloParameters")
+        self.assertEqual(ntc("hello_world"), "_HelloWorldParameters")
+        self.assertEqual(ntc("helloworld"), "_HelloworldParameters")
+
     def test_parameters_init(self):
         with self.assertRaises(NotImplementedError):
             pybamm.Parameters(tests="not a test")
@@ -52,11 +58,6 @@ class TestParameters(unittest.TestCase):
         self.assertAlmostEqual(
             param.geometric.ln + param.geometric.ls + param.geometric.lp, 1, places=10
         )
-
-    def test_bad_initialisation(self):
-        param = pybamm.Parameters()
-        with self.assertRaises(ValueError):
-            param.electrolyte
 
     def test_parameters_defaults_lead_acid(self):
         # Tests on how the parameters interact
