@@ -66,8 +66,8 @@ class Parameters(object):
         overlap but have some differences.
     - Write parameters in a way that submodels only access the parameters they need to.
 
-    We achieve this by defining properties that return subclasses of specific
-    parameters. For each chemistry, submodels will only ever call properties specific to
+    We achieve this by defining subparams that return subclasses of specific
+    parameters. For each chemistry, submodels will only ever call subparams specific to
     themselves, and so never see parameters that aren't defined for their chemistry.
     Further, submodels that can be applied to either the negative electrode or the
     positive electrode will receive parameters in the same format in either case, which
@@ -161,16 +161,16 @@ class Parameters(object):
         self._mesh = None
 
         # Overwrite raw parameters with optional values where given
-        # Simultaneously set properties
+        # Simultaneously set subparams
         self.update_raw(optional_parameters)
 
-    def set_properties(self):
-        # Unset properties (to avoid cross-calling with old properties)
-        for property in CHEMISTRY_PROPERTIES[self._chemistry]:
-            self.__dict__["_" + property] = None
-        # Set new properties - order matters
-        for property in CHEMISTRY_PROPERTIES[self._chemistry]:
-            self.set_property(property)
+    def set_subparams(self):
+        # Unset subparams (to avoid cross-calling with old subparams)
+        for subparam in CHEMISTRY_PROPERTIES[self._chemistry]:
+            self.unset_subparam(subparam)
+        # Set new subparams - order matters
+        for subparam in CHEMISTRY_PROPERTIES[self._chemistry]:
+            self.set_subparam(subparam)
 
     def update_raw(self, new_parameters):
         """
@@ -184,7 +184,7 @@ class Parameters(object):
         """
         # Update _raw dict
         self._raw.update(new_parameters)
-        self.set_properties()
+        self.set_subparams()
 
     def set_mesh(self, mesh):
         """
@@ -197,134 +197,40 @@ class Parameters(object):
             The mesh for the parameters
         """
         self._mesh = mesh
-        self.set_properties()
+        self.set_subparams()
 
-    def unset_property(self, property):
-        self.__dict__["_" + property] = None
+    def unset_subparam(self, subparam):
+        self.__dict__[subparam] = None
 
-    def set_property(self, property):
-        property_class_name = name_string_to_class_string(property)
-        self.__dict__["_" + property] = globals()[property_class_name](self)
+    def set_subparam(self, subparam):
+        subparam_class_name = name_string_to_class_string(subparam)
+        self.__dict__[subparam] = globals()[subparam_class_name](self)
 
-    @property
-    def geometric(self):
-        """
-        Geometric parameters.
-        *Chemistries*: lithium-ion, lead-acid
-        """
-        return self._geometric
-
-    @property
-    def electrical(self):
-        """
-        Parameters relating to the external electrical circuit
-        *Chemistries*: lithium-ion, lead-acid
-        """
-        return self._electrical
-
-    @property
-    def electrolyte(self):
-        """
-        Parameters for the electrolyte
-        *Chemistries*: lithium-ion, lead-acid
-        """
-        return self._electrolyte
-
-    @property
-    def neg_electrode(self):
-        """
-        Negative electrode physical parameters
-        *Chemistries*: lithium-ion, lead-acid
-        """
-        return self._neg_electrode
-
-    @property
-    def pos_electrode(self):
-        """
-        Positive electrode physical parameters
-        *Chemistries*: lithium-ion, lead-acid
-        """
-        return self._pos_electrode
-
-    @property
-    def neg_reactions(self):
-        """
-        Parameters for reactions in the negative electrode
-        *Chemistries*: lithium-ion, lead-acid
-        """
-        return self._neg_reactions
-
-    @property
-    def pos_reactions(self):
-        """
-        Parameters for reactions in the positive electrode
-        *Chemistries*: lithium-ion, lead-acid
-        """
-        return self._pos_reactions
-
-    @property
-    def neg_volume_changes(self):
-        """
-        Parameters for volume changes in the negative electrode
-        *Chemistries*: lead-acid
-        """
-        if self._chemistry != "lead-acid":
-            raise NotImplementedError
-
-        return self._neg_volume_changes
-
-    @property
-    def pos_volume_changes(self):
-        """
-        Parameters for volume changes in the positive electrode
-        *Chemistries*: lead-acid
-        """
-        if self._chemistry != "lead-acid":
-            raise NotImplementedError
-
-        return self._pos_volume_changes
-
-    @property
-    def temperature(self):
-        """
-        Temperature parameters
-        *Chemistries*: lithium-ion, lead-acid
-        """
-        return self._temperature
-
-    @property
-    def lead_acid_misc(self):
-        """Miscellaneous parameters for lead-acid"""
-        if self._chemistry != "lead-acid":
-            raise NotImplementedError
-
-        return self._lead_acid_misc
-
-    def initial_conditions(self):
-        ################################################################################
-        # Initial conditions (dimensionless) ###########################################
-        # Concentration
-        self.c0 = self.q0
-        # Dimensionless max capacity
-        self.qmax = (
-            (self.Ln * self.epsnmax + self.Ls * self.epssmax + self.Lp * self.epspmax)
-            / self.L
-            / (self.sp - self.sn)
-        )
-        # Initial electrode states of charge
-        self.Un0 = self.qmax / (self.Qnmax * self.ln) * (1 - self.q0)
-        self.Up0 = self.qmax / (self.Qpmax * self.lp) * (1 - self.q0)
-        # Initial porosities
-        self.epsDeltan = self.beta_surf_n / self.ln * self.qmax
-        self.epsDeltap = self.beta_surf_p / self.lp * self.qmax
-        # Negative electrode [-]
-        self.epsln0 = self.epsnmax - self.epsDeltan * (1 - self.q0)
-        # Separator [-]
-        self.epsls0 = self.epssmax
-        # Positive electrode [-]
-        self.epslp0 = self.epspmax - self.epsDeltap * (1 - self.q0)
-        ################################################################################
-        ################################################################################
+    # def initial_conditions(self):
+    #     ##############################################################################
+    #     # Initial conditions (dimensionless) #########################################
+    #     # Concentration
+    #     self.c0 = self.q0
+    #     # Dimensionless max capacity
+    #     self.qmax = (
+    #         (self.Ln * self.epsnmax + self.Ls * self.epssmax + self.Lp * self.epspmax)
+    #         / self.L
+    #         / (self.sp - self.sn)
+    #     )
+    #     # Initial electrode states of charge
+    #     self.Un0 = self.qmax / (self.Qnmax * self.ln) * (1 - self.q0)
+    #     self.Up0 = self.qmax / (self.Qpmax * self.lp) * (1 - self.q0)
+    #     # Initial porosities
+    #     self.epsDeltan = self.beta_surf_n / self.ln * self.qmax
+    #     self.epsDeltap = self.beta_surf_p / self.lp * self.qmax
+    #     # Negative electrode [-]
+    #     self.epsln0 = self.epsnmax - self.epsDeltan * (1 - self.q0)
+    #     # Separator [-]
+    #     self.epsls0 = self.epssmax
+    #     # Positive electrode [-]
+    #     self.epslp0 = self.epspmax - self.epsDeltap * (1 - self.q0)
+    #     ##############################################################################
+    #     ##############################################################################
 
     def Icircuit(self, t):
         """The current in the external circuit.
@@ -464,7 +370,7 @@ class Parameters(object):
 
 
 def name_string_to_class_string(name):
-    """Convert a property name to corresponding property class name."""
+    """Convert a subparam name to corresponding subparam class name."""
     # Replace _ with spaces
     name = name.replace("_", " ")
     # Capitalise
@@ -474,8 +380,72 @@ def name_string_to_class_string(name):
 
     return "_" + name + "Parameters"
 
+    # def electrolyte(self):
+    """
+    Parameters for the electrolyte
+    *Chemistries*: lithium-ion, lead-acid
+    """
 
+
+#     return self._electrolyte
+#
+# @property
+# def neg_electrode(self):
+
+#     return self._neg_electrode
+#
+# @property
+# def pos_electrode(self):
+#
+#     return self._pos_electrode
+#
+# @property
+# def neg_reactions(self):
+
+#     return self._neg_reactions
+#
+# @property
+# def pos_reactions(self):
+
+#     return self._pos_reactions
+#
+# @property
+# def neg_volume_changes(self):
+
+#     if self._chemistry != "lead-acid":
+#         raise NotImplementedError
+#
+#     return self._neg_volume_changes
+#
+# @property
+# def pos_volume_changes(self):
+#     """
+#     Parameters for volume changes in the positive electrode
+#     *Chemistries*: lead-acid
+#     """
+#     if self._chemistry != "lead-acid":
+#         raise NotImplementedError
+#
+#     return self._pos_volume_changes
+#
+# @property
+# def temperature(self):
+
+#     return self._temperature
+#
+# @property
+# def lead_acid_misc(self):
+#
+#     if self._chemistry != "lead-acid":
+#         raise NotImplementedError
+#
+#     return self._lead_acid_misc
 class _GeometricParameters(object):
+    """
+     Geometric parameters.
+     *Chemistries*: lithium-ion, lead-acid
+     """
+
     def __init__(self, param):
         # Total width [m]
         self.L = param._raw["Ln"] + param._raw["Ls"] + param._raw["Lp"]
@@ -495,6 +465,11 @@ class _GeometricParameters(object):
 
 
 class _ElectricalParameters(object):
+    """
+    Parameters relating to the external electrical circuit.
+    *Chemistries*: lithium-ion, lead-acid
+    """
+
     def __init__(self, param):
         # Reference current density [A.m-2]
         self.ibar = abs(param.current["Ibar"]) / (
@@ -505,6 +480,11 @@ class _ElectricalParameters(object):
 
 
 class _ElectrolyteParameters(object):
+    """
+    Parameters for the electrolyte
+    *Chemistries*: lithium-ion, lead-acid
+    """
+
     def __init__(self, param):
         self.param = param
         # Effective reaction rates
@@ -549,6 +529,11 @@ class _ElectrolyteParameters(object):
 
 
 class _NegElectrodeParameters(object):
+    """
+    Negative electrode physical parameters.
+    *Chemistries*: lithium-ion, lead-acid
+    """
+
     def __init__(self, param):
         # Effective lead conductivity (Bruggeman) [S.m-1]
         self.sigma_eff = param._raw["sigma_n"] * (1 - param._raw["epsnmax"]) ** 1.5
@@ -564,6 +549,11 @@ class _NegElectrodeParameters(object):
 
 
 class _PosElectrodeParameters(object):
+    """
+    Positive electrode physical parameters.
+    *Chemistries*: lithium-ion, lead-acid
+    """
+
     def __init__(self, param):
         # Effective lead dioxide conductivity (Bruggeman) [S.m-1]
         self.sigma_eff = param._raw["sigma_p"] * (1 - param._raw["epspmax"]) ** 1.5
@@ -579,6 +569,11 @@ class _PosElectrodeParameters(object):
 
 
 class _NegReactionsParameters(object):
+    """
+    Parameters for reactions in the negative electrode.
+    *Chemistries*: lithium-ion, lead-acid
+    """
+
     def __init__(self, param):
         self.param = param
         # Length
@@ -609,6 +604,11 @@ class _NegReactionsParameters(object):
 
 
 class _PosReactionsParameters(object):
+    """
+    Parameters for reactions in the positive electrode.
+    *Chemistries*: lithium-ion, lead-acid
+    """
+
     def __init__(self, param):
         self.param = param
         # Length
@@ -639,6 +639,11 @@ class _PosReactionsParameters(object):
 
 
 class _NegVolumeChangesParameters(object):
+    """
+    Parameters for volume changes in the negative electrode.
+    *Chemistries*: lead-acid
+    """
+
     def __init__(self, param):
         # Net Molar Volume consumed in neg electrode [m3.mol-1]
         self.DeltaVsurf = param._raw["VPbSO4"] - param._raw["VPb"]
@@ -648,6 +653,11 @@ class _NegVolumeChangesParameters(object):
 
 
 class _PosVolumeChangesParameters(object):
+    """
+    Parameters for volume changes in the positive electrode.
+    *Chemistries*: lead-acid
+    """
+
     def __init__(self, param):
         # Net Molar Volume consumed in pos electrode [m3.mol-1]
         self.DeltaVsurf = param._raw["VPbO2"] - param._raw["VPbSO4"]
@@ -657,12 +667,19 @@ class _PosVolumeChangesParameters(object):
 
 
 class _TemperatureParameters(object):
+    """
+    Temperature parameters.
+    *Chemistries*: lithium-ion, lead-acid
+    """
+
     def __init__(self, param):
         # External temperature [K]
         self.T_inf = param._raw["T_ref"]
 
 
 class _LeadAcidMiscParameters(object):
+    """Miscellaneous parameters for lead-acid"""
+
     def __init__(self, param):
         self.param = param
         # Ratio of viscous pressure scale to osmotic pressure scale
