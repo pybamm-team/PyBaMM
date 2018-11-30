@@ -8,6 +8,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
 import timeit
+import cProfile
+import pstats
 
 
 class Timer(object):
@@ -68,3 +70,12 @@ class Timer(object):
         or since meth:`reset()` was last called.
         """
         return timeit.default_timer() - self._start
+
+
+def profile(code, sort="cumulative", num=30):
+    """Common-use for cProfile"""
+    cProfile.run(code)
+    stats = pstats.Stats()
+    stats.sort_stats(sort)
+    stats.print_stats(num)
+    return stats

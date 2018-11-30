@@ -8,6 +8,8 @@ import unittest
 import numpy as np
 from numpy.linalg import norm
 import scipy.integrate as it
+import cProfile
+import re
 
 
 class TestReactionDiffusion(unittest.TestCase):
@@ -35,7 +37,7 @@ class TestReactionDiffusion(unittest.TestCase):
     def test_model_physics(self):
         """Check that the average concentration is as expected"""
         sim = pybamm.Simulation(self.model)
-        sim.run()
+        cProfile.run("pybamm.Simulation(self.model).run()")
         sim.average()
 
         c_avg_expected = self.param.electrolyte.c0 + (

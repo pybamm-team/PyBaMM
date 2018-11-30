@@ -42,6 +42,7 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 # Utility classes and methods
 #
 from .util import Timer
+from .util import profile
 
 #
 # Mesh classes
@@ -78,7 +79,7 @@ from .operators import Operators
 from .variables import Variables
 
 #
-#  Model classes
+# Model classes
 #
 from .models.core import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
