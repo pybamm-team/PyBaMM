@@ -18,9 +18,9 @@ class Simulation(object):
     model : pybamm.models.(modelname).(ModelName)() instance
         The model to be used for the simulation. (modelname) and (ModelName)
         refer to a module and class to be chosen.
-    param : :class:`pybamm.parameters.Parameters' instance
+    param : :class:`pybamm.parameters.Parameters` instance
         The parameters to be used for the simulation.
-    mesh : :class:`pybamm.mesh.Mesh' instance
+    mesh : :class:`pybamm.mesh.Mesh` instance
         The mesh to be used for the simulation.
     solver : :class:`pybamm.solver.Solver` instance
         The algorithm for solving the model.

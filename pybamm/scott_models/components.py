@@ -113,7 +113,7 @@ def butler_volmer(param, cn, cs, cp, en, ep):
 
     Parameters
     ----------
-    param : :class:`pybamm.parameters.Parameters' instance
+    param : :class:`pybamm.parameters.Parameters` instance
         The parameters of the simulation.
     cn : array_like, shape (n,)
         The electrolyte concentration in the negative electrode.

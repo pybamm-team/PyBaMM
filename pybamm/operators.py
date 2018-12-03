@@ -14,7 +14,7 @@ class Operators(object):
     ----------
     spatial_discretisation : string
         The spatial discretisation scheme (see pybamm.solver).
-    mesh : :class:`pybamm.mesh.Mesh' instance
+    mesh : :class:`pybamm.mesh.Mesh` instance
         The mesh used for the spatial discretisation.
 
     """

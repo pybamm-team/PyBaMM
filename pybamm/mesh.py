@@ -8,12 +8,11 @@ import numpy as np
 
 
 class Mesh(object):
-    """
-    A 1D mesh for Finite Volumes.
+    """A 1D mesh for Finite Volumes.
 
     Parameters
     ----------
-    param : :class:`pybamm.parameters.Parameters' instance
+    param : :class:`pybamm.parameters.Parameters` instance
         The parameters defining the subdomain sizes.
     target_npts : int
         The target number of points in each domain. The mesh will be created

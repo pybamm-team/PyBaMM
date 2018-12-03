@@ -62,9 +62,10 @@ class Parameters(object):
     The parameters for the simulation.
 
     The aim of this class is to:
-    - Be flexible enough to contain parameters from different chemistries, which will
-        overlap but have some differences.
-    - Write parameters in a way that submodels only access the parameters they need to.
+        - Be flexible enough to contain parameters from different chemistries, which
+            will overlap but have some differences.
+        - Write parameters in a way that submodels only access the parameters they need
+            to.
 
     We achieve this by defining subparams that return subclasses of specific
     parameters. For each chemistry, submodels will only ever call subparams specific to

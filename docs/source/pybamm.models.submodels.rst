@@ -24,7 +24,7 @@ pybamm.models.submodels.interface module
 Module contents
 ---------------
 
-.. automodule:: pybamm.models
+.. automodule:: pybamm.models.submodels
     :members:
     :undoc-members:
     :show-inheritance:
