@@ -21,6 +21,26 @@ class BaseModel(object):
                }: To be used for testing convergence to an exact solution.
     """
 
+    def __init__(self):
+        self._rhs = {}
+        self._initial_conditions = {}
+        self._boundary_conditions = {}
+
+    @property
+    def rhs(self):
+        return self._rhs
+
+    @property
+    def initial_conditions(self):
+        return self._initial_conditions
+
+    @property
+    def boundary_conditions(self):
+        return self._boundary_conditions
+
+    def __getitem__(self, key):
+        return self.rhs[key]
+
     def __init__(self, tests={}):
         self.name = "Base Model"
         # Assign tests as an attribute
