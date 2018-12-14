@@ -12,6 +12,11 @@ class BinaryOperator(pybamm.Symbol):
         self._left = left
         self._right = right
 
+        # Set parents and children
+        self.children = (left, right)
+        left.parent = self
+        right.parent = self
+
     def __str__(self):
         return "{!s} {} {!s}".format(self._left, self._name, self._right)
 
