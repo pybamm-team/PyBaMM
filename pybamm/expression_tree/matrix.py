@@ -29,11 +29,3 @@ class Matrix(pybamm.Symbol):
             return pybamm.Multiplication(self, other)
         else:
             raise NotImplementedError
-
-
-class MatrixVectorMultiplication(pybamm.BinaryOperator):
-    def __init__(self, left, right, parent=None):
-        super().__init__("@", left, right, parent)
-
-    def evaluate(self, y):
-        return self.left.evaluate(y) @ self.right.evaluate(y)
