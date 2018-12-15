@@ -12,8 +12,15 @@ class Symbol(anytree.AnyNode):
         super(Symbol, self).__init__(id=name, parent=parent)
         self._name = name
 
+    @property
+    def name(self):
+        return self._name
+
     def __str__(self):
         return self._name
+
+    def __repr__(self):
+        return "Symbol(self._name, self.parent)"
 
     def __add__(self, other):
         if isinstance(other, Symbol):

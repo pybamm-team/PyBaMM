@@ -11,7 +11,7 @@ import unittest
 class TestScalar(unittest.TestCase):
     def test_scalar_eval(self):
         a = pybamm.Scalar(5)
-        self.assertEqual(a._value, 5)
+        self.assertEqual(a.value, 5)
         self.assertEqual(a.evaluate(None), 5)
 
     def test_scalar_operations(self):

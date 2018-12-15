@@ -11,7 +11,7 @@ import unittest
 class TestSymbol(unittest.TestCase):
     def test_symbol_init(self):
         sym = pybamm.Symbol("a symbol")
-        self.assertEqual(sym._name, "a symbol")
+        self.assertEqual(sym.name, "a symbol")
         self.assertEqual(str(sym), "a symbol")
 
     def test_symbol_methods(self):

@@ -13,7 +13,7 @@ class TestParameter(unittest.TestCase):
         a = pybamm.Parameter("a")
         self.assertEqual(a._name, "a")
         b = pybamm.Parameter("b", family="addams")
-        self.assertEqual(b._family, "addams")
+        self.assertEqual(b.family, "addams")
 
 
 if __name__ == "__main__":

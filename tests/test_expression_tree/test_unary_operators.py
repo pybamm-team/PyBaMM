@@ -12,16 +12,22 @@ class TestUnaryOperators(unittest.TestCase):
     def test_unary_operator(self):
         a = pybamm.Symbol("a")
         un = pybamm.UnaryOperator("unary test", a)
-        self.assertEqual(un._child, a)
+        self.assertEqual(un.child, a)
         self.assertEqual(a.parent, un)
         self.assertEqual(un.children, (a,))
 
     def test_gradient(self):
         a = pybamm.Symbol("a")
         grad = pybamm.Gradient(a)
-        self.assertEqual(grad._child, a)
+        self.assertEqual(grad.child, a)
         self.assertEqual(a.parent, grad)
         self.assertEqual(grad.children, (a,))
+
+    def test_gradient_printing(self):
+        a = pybamm.Symbol("a")
+        grad = pybamm.Gradient(a)
+        self.assertEqual(grad.name, "grad")
+        self.assertEqual(str(grad), "grad(a)")
 
 
 if __name__ == "__main__":

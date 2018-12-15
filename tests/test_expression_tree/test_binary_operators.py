@@ -14,7 +14,9 @@ class TestBinaryOperators(unittest.TestCase):
         b = pybamm.Symbol("b")
         bin = pybamm.BinaryOperator("binary test", a, b)
         self.assertEqual(bin._left, a)
+        self.assertEqual(bin.left, a)
         self.assertEqual(bin._right, b)
+        self.assertEqual(bin.right, b)
         self.assertEqual(a.parent, bin)
         self.assertEqual(b.parent, bin)
         self.assertEqual(bin.children, (a, b))
@@ -23,11 +25,18 @@ class TestBinaryOperators(unittest.TestCase):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
         sum = pybamm.Addition(a, b)
-        self.assertEqual(sum._left, a)
-        self.assertEqual(sum._right, b)
+        self.assertEqual(sum.left, a)
+        self.assertEqual(sum.right, b)
         self.assertEqual(a.parent, sum)
         self.assertEqual(b.parent, sum)
         self.assertEqual(sum.children, (a, b))
+
+    def test_addition_printing(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        sum = pybamm.Addition(a, b)
+        self.assertEqual(sum.name, "+")
+        self.assertEqual(str(sum), "a + b")
 
 
 if __name__ == "__main__":
