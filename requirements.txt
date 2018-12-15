@@ -1,3 +1,4 @@
 numpy>=1.13
 scipy>=1.0
 pandas>=0.23
+anytree>=2.4.3
