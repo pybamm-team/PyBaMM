@@ -14,7 +14,7 @@ class Matrix(pybamm.Symbol):
         Entries of the matrix
     """
 
-    def __init__(self, name, entries, parent=None):
+    def __init__(self, entries, name=None, parent=None):
         super().__init__(name, parent)
         self._entries = entries
         self.nrows, self.ncols = entries.shape

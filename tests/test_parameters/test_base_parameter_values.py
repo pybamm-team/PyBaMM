@@ -77,16 +77,26 @@ class TestBaseModel(unittest.TestCase):
         d = pybamm.Scalar(14)
         with self.assertRaises(TypeError):
             parameter_values.process_symbol(d)
-        e = pybamm.Vector(np.array(4))
+        e = pybamm.Vector(np.ones(4))
         with self.assertRaises(TypeError):
             parameter_values.process_symbol(e)
-        f = pybamm.Matrix(np.array((5, 6)))
+        f = pybamm.Matrix(np.ones((5, 6)))
         with self.assertRaises(TypeError):
             parameter_values.process_symbol(f)
 
     @unittest.skip("model not yet implemented")
     def test_process_model(self):
-        pass
+        model = pybamm.BaseModel()
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        c = pybamm.Variable("c")
+        model.rhs = {c: a * pybamm.grad(c)}
+        model.initial_conditions = {c: b}
+        model.boundary_conditions = {}
+        parameter_values = pybamm.BaseParameterValues({"a": 1, "b": 2})
+        parameter_values.process(model)
+        self.assertTrue(isinstance(model.rhs[c].left, pybamm.Scalar))
+        self.assertEqual(model.rhs[c].left.value, 1)
 
 
 if __name__ == "__main__":

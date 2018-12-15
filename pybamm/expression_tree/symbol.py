@@ -20,7 +20,7 @@ class Symbol(anytree.AnyNode):
         return self._name
 
     def __repr__(self):
-        return "Symbol(self._name, self.parent)"
+        return "Symbol({!s}, {!s})".format(self._name, self.parent)
 
     def __add__(self, other):
         if isinstance(other, Symbol):
