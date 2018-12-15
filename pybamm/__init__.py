@@ -45,6 +45,32 @@ from .util import Timer
 from .util import profile
 
 #
+# Classes for the Expression Tree
+#
+from .expression_tree.symbol import Symbol
+from .expression_tree.binary_operators import (
+    BinaryOperator,
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+    MatrixVectorMultiplication,
+)
+from .expression_tree.matrix import Matrix
+from .expression_tree.parameter import Parameter
+from .expression_tree.unary_operators import (
+    UnaryOperator,
+    SpatialOperator,
+    Gradient,
+    Divergence,
+    grad,
+    div,
+)
+from .expression_tree.scalar import Scalar
+from .expression_tree.variable import Variable
+from .expression_tree.vector import Vector
+
+#
 # Mesh classes
 #
 from .mesh import Mesh

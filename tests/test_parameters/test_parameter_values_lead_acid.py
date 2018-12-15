@@ -1,5 +1,5 @@
 #
-# Test for the parameter class
+# Test for the Lead Acid Parameter Values class
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -8,6 +8,7 @@ import pybamm
 import unittest
 
 
+@unittest.skip("lead acid parameters not yet implemented")
 class TestParameters(unittest.TestCase):
     def test_read_parameters_csv(self):
         data = pybamm.read_parameters_csv("lead-acid", "default.csv")
