@@ -14,8 +14,8 @@ class Vector(pybamm.Symbol):
         Entries of the vector
     """
 
-    def __init__(self, entries):
-        super().__init__(None)
+    def __init__(self, entries, name=None, parent=None):
+        super().__init__(name, parent)
         self._entries = entries
         self.n = entries.size
 
