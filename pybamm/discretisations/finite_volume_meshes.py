@@ -7,12 +7,12 @@ from __future__ import print_function, unicode_literals
 import numpy as np
 
 
-class Mesh(object):
-    """A 1D mesh for Finite Volumes.
+class FiniteVolumesMacroscaleMesh(object):
+    """A 1D macroscale mesh for Finite Volumes.
 
     Parameters
     ----------
-    param : :class:`pybamm.parameters.Parameters` instance
+    param : :class:`pybamm.parameters.ParameterValues` instance
         The parameters defining the subdomain sizes.
     target_npts : int
         The target number of points in each domain. The mesh will be created
@@ -36,43 +36,54 @@ class Mesh(object):
         targetmeshsize = min(ln, ls, lp) / target_npts
 
         # Negative electrode
-        self.nn = round(ln / targetmeshsize) + 1
-        self.set_submesh("xn", np.linspace(0.0, ln, self.nn))
-
-        # Separator
-        self.ns = round(ls / targetmeshsize) + 1
-        self.set_submesh("xs", np.linspace(ln, ln + ls, self.ns))
-        # Positive electrode
-        self.np = round(lp / targetmeshsize) + 1
-        self.set_submesh("xp", np.linspace(ln + ls, 1.0, self.np))
-
-        # Totals
-        self.n = self.nn + (self.ns - 2) + self.np
+        self.neg_mesh_points = round(ln / targetmeshsize) + 1
         self.set_submesh(
-            "x", np.concatenate([self.xn.edges, self.xs.edges[1:-1], self.xp.edges])
+            "negative_electrode", np.linspace(0.0, ln, self.neg_mesh_points)
         )
 
-        # Space (micro)
-        # TODO: write this
+        # Separator
+        self.sep_mesh_points = round(ls / targetmeshsize) + 1
+        self.set_submesh("separator", np.linspace(ln, ln + ls, self.sep_mesh_points))
+
+        # Positive electrode
+        self.pos_mesh_points = round(lp / targetmeshsize) + 1
+        self.set_submesh(
+            "positive_electrode", np.linspace(ln + ls, 1.0, self.pos_mesh_points)
+        )
+
+        # Whole cell
+        self.total_mesh_points = (
+            self.neg_mesh_points + (self.sep_mesh_points - 2) + self.pos_mesh_points
+        )
+        self.set_submesh(
+            "whole_cell",
+            np.concatenate(
+                [
+                    self.negative_electrode.edges,
+                    self.separator.edges[1:-1],
+                    self.positive_electrode.edges,
+                ]
+            ),
+        )
 
     @property
-    def xn(self):
-        return self._xn
+    def negative_electrode(self):
+        return self._negative_electrode
 
     @property
-    def xs(self):
-        return self._xs
+    def separator(self):
+        return self._separator
 
     @property
-    def xp(self):
-        return self._xp
+    def positive_electrode(self):
+        return self._positive_electrode
 
     @property
-    def x(self):
-        return self._x
+    def whole_cell(self):
+        return self._whole_cell
 
     def set_submesh(self, submesh, edges):
-        self.__dict__["_" + submesh] = _SubMesh(edges)
+        setattr(self, "_" + submesh, _SubMesh(edges))
 
 
 class _SubMesh:
