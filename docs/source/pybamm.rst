@@ -12,22 +12,6 @@ Subpackages
 Submodules
 ----------
 
-pybamm.mesh module
-------------------
-
-.. automodule:: pybamm.mesh
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-pybamm.operators module
------------------------
-
-.. automodule:: pybamm.operators
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 pybamm.simulation module
 ------------------------
 

@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import copy
+import numpy as np
 
 
 class BaseDiscretisation(object):
@@ -132,7 +133,6 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         super().__init__(mesh)
 
     def gradient(self, variable, y_slices):
-        variable = symbol.child
         gradient_matrix = self.gradient_matrix(variable.domain)
         variable_vector = pybamm.Vector(y_slice=y_slices[variable])
         return gradient_matrix * variable_vector
@@ -141,7 +141,6 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         raise NotImplementedError
 
     def divergence(self, variable, y_slices):
-        variable = symbol.child
         gradient_matrix = self.gradient_matrix(variable.domain)
         variable_vector = pybamm.Vector(y_slice=y_slices[variable])
         return gradient_matrix * variable_vector
