@@ -104,15 +104,16 @@ class BaseDiscretisation(object):
             return self.divergence(variable, y_slices)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            new_symbol = copy.copy(symbol)
-            new_symbol.left = self.discretise_symbol(symbol.left)
-            new_symbol.right = self.discretise_symbol(symbol.right)
-            return new_symbol
+            new_left = self.discretise_symbol(symbol.left)
+            new_right = self.discretise_symbol(symbol.right)
+            new_binary_operator = copy.copy(symbol)
+            new_binary_operator.set_left_right(new_left, new_right)
+            return new_binary_operator
 
         elif isinstance(symbol, pybamm.UnaryOperator):
-            new_symbol = copy.copy(symbol)
-            new_symbol.child = self.discretise_symbol(symbol.child)
-            return new_symbol
+            new_unary_operator = copy.copy(symbol)
+            new_unary_operator.child = self.discretise_symbol(symbol.child)
+            return new_unary_operator
 
         elif isinstance(symbol, pybamm.Variable) or isinstance(symbol, pybamm.Value):
             return copy.copy(symbol)

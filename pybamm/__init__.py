@@ -45,9 +45,37 @@ from .util import Timer
 from .util import profile
 
 #
-# Mesh classes
+# Classes for the Expression Tree
 #
-from .mesh import Mesh
+from .expression_tree.symbol import Symbol
+from .expression_tree.binary_operators import (
+    BinaryOperator,
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+    MatrixVectorMultiplication,
+)
+from .expression_tree.matrix import Matrix
+from .expression_tree.parameter import Parameter
+from .expression_tree.unary_operators import (
+    UnaryOperator,
+    SpatialOperator,
+    Gradient,
+    Divergence,
+    grad,
+    div,
+)
+from .expression_tree.scalar import Scalar
+from .expression_tree.variable import Variable
+from .expression_tree.vector import Vector
+
+#
+# Mesh and Discretisation classes
+#
+from .discretisations.core import BaseDiscretisation, MatrixVectorDiscretisation
+from .discretisations.finite_volume_discretisations import FiniteVolumeDiscretisation
+from .discretisations.finite_volume_meshes import FiniteVolumeMacroMesh
 
 #
 # Parameters class and methods
@@ -67,11 +95,6 @@ from .simulation import Simulation
 from .solver import Solver
 from .solver import KNOWN_INTEGRATORS
 from .solver import KNOWN_SPATIAL_DISCRETISATIONS
-
-#
-# Operators class
-#
-from .operators import Operators
 
 #
 # Variables class

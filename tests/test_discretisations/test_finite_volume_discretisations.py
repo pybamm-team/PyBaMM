@@ -7,7 +7,8 @@ import numpy as np
 import unittest
 
 
-class TestOperators(unittest.TestCase):
+@unittest.skip("Finite Volume tests not yet implemented")
+class TestFiniteVolumeDiscretisation(unittest.TestCase):
     def test_grad_div_1D_FV_basic(self):
         param = pybamm.Parameters()
         mesh = pybamm.Mesh(param, target_npts=50)

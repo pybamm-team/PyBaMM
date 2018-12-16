@@ -7,8 +7,8 @@ from __future__ import print_function, unicode_literals
 import numpy as np
 
 
-class FiniteVolumesMacroscaleMesh(object):
-    """A 1D macroscale mesh for Finite Volumes.
+class FiniteVolumeMacroMesh(object):
+    """A Finite Volumes mesh for the 1D macroscale.
 
     Parameters
     ----------
