@@ -9,7 +9,8 @@ import pybamm
 class BinaryOperator(pybamm.Symbol):
     def __init__(self, name, left, right, parent=None):
         super().__init__(name, parent)
-        self.set_left_right(left, right)
+        self.left = left
+        self.right = right
 
     def __str__(self):
         return "{!s} {} {!s}".format(self.left, self.name, self.right)
@@ -18,16 +19,19 @@ class BinaryOperator(pybamm.Symbol):
     def left(self):
         return self._left
 
+    @left.setter
+    def left(self, value):
+        self._left = value
+        value.parent = self
+
     @property
     def right(self):
         return self._right
 
-    def set_left_right(self, left, right):
-        self._left = left
-        self._right = right
-        left.parent = self
-        right.parent = self
-        self.children = (left, right)
+    @right.setter
+    def right(self, value):
+        self._right = value
+        value.parent = self
 
 
 class Addition(BinaryOperator):
