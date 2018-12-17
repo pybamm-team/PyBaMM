@@ -7,13 +7,13 @@ import pybamm
 
 
 class UnaryOperator(pybamm.Symbol):
-    def __init__(self, name, child, parent=None):
-        super().__init__(name, children=[child], parent=parent)
+    def __init__(self, name, child):
+        super().__init__(name, children=[child])
 
 
 class SpatialOperator(UnaryOperator):
-    def __init__(self, name, child, parent=None):
-        super().__init__(name, child, parent)
+    def __init__(self, name, child):
+        super().__init__(name, child)
         # self.domain = child.domain
 
     def __str__(self):
@@ -21,13 +21,13 @@ class SpatialOperator(UnaryOperator):
 
 
 class Gradient(SpatialOperator):
-    def __init__(self, child, parent=None):
-        super().__init__("grad", child, parent)
+    def __init__(self, child):
+        super().__init__("grad", child)
 
 
 class Divergence(SpatialOperator):
-    def __init__(self, child, parent=None):
-        super().__init__("div", child, parent)
+    def __init__(self, child):
+        super().__init__("div", child)
 
 
 def grad(variable):

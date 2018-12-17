@@ -14,10 +14,10 @@ class Array(pybamm.Symbol):
         Entries of the matrix
     """
 
-    def __init__(self, entries, name=None, parent=None):
+    def __init__(self, entries, name=None):
         if name is None:
             name = str(entries)
-        super().__init__(name, parent=parent)
+        super().__init__(name)
         self._entries = entries
 
     @property

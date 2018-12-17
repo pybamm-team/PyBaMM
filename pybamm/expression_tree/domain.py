@@ -7,8 +7,19 @@ import pybamm
 
 
 class Domain(object):
-    def __init__(self, name, parent=None, domain=[]):
-        super().__init__(name, parent=parent)
+    """list of applicable domains
+
+    Arguments:
+
+    ``name`` (str)
+        the name of the node
+    ``domain`` (iterable of str)
+        the list of domains
+
+    """
+
+    def __init__(self, name, domain=[]):
+        super().__init__(name)
         try:
             iterator = iter(domain)
         except TypeError:
@@ -18,6 +29,7 @@ class Domain(object):
 
     @property
     def domain(self):
+        """list of applicable domains (iterable of str)"""
         return self._domain
 
     @domain.setter

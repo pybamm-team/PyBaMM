@@ -7,5 +7,5 @@ import pybamm
 
 
 class Vector(pybamm.Array):
-    def __init__(self, entries, name=None, parent=None):
-        super().__init__(entries, name=name, parent=parent)
+    def __init__(self, entries, name=None):
+        super().__init__(entries, name=name)

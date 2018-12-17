@@ -84,7 +84,7 @@ class Division(BinaryOperator):
     *Extends:* :class:`BinaryOperator`
     """
 
-    def __init__(self, left, righte):
+    def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("/", left, right)
 

@@ -14,8 +14,8 @@ class Matrix(pybamm.Array):
         Entries of the matrix
     """
 
-    def __init__(self, entries, name=None, parent=None):
-        super().__init__(entries, name=name, parent=parent)
+    def __init__(self, entries, name=None):
+        super().__init__(entries, name=name)
 
     def __mul__(self, other):
         if isinstance(other, pybamm.Vector):

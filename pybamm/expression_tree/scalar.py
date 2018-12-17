@@ -20,7 +20,7 @@ class Scalar(pybamm.Symbol):
         if name is None:
             name = str(value)
 
-        super().__init__(name, parent=parent)
+        super().__init__(name)
         self.value = value
 
     @property
