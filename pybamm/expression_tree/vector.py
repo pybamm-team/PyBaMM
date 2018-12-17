@@ -7,12 +7,5 @@ import pybamm
 
 
 class Vector(pybamm.Array):
-    """
-    Parameters
-    ----------
-    entries : :class:`numpy.array`
-        Entries of the vector
-    """
-
     def __init__(self, entries, name=None, parent=None):
         super().__init__(entries, name=name, parent=parent)
