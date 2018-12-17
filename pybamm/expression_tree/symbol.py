@@ -32,7 +32,13 @@ class Symbol(anytree.NodeMixin):
         return self._name
 
     def __repr__(self):
-        return "Symbol({!s}, {!s})".format(self._name, self.parent)
+        return "{!s}({!s}, {!s}, {!s})".format(
+            self.__class__, self.name, self.children, self.parent
+        )
+
+    @property
+    def id(self):
+        return hash((self.__class__, self.name))
 
     def __add__(self, other):
         if isinstance(other, Symbol):
