@@ -6,15 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Variable(pybamm.Symbol):
-    def __init__(self, name, domain=None, parent=None):
-        super().__init__(name, parent)
-        self.domain = domain
-
-    @property
-    def domain(self):
-        return self._domain
-
-    @domain.setter
-    def domain(self, domain):
-        self._domain = domain
+class Variable(pybamm.Domain, pybamm.Symbol):
+    def __init__(self, name, domain=[], parent=None):
+        super().__init__(name, parent=parent, domain=domain)
