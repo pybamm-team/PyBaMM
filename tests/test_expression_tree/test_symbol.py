@@ -31,8 +31,14 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             a / 2
 
-        exp = a * b + a
-        exp.render()
+    def test_multiple_symbols(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        c = pybamm.Symbol("c")
+        exp = a*c*(a * b * c + a - c*a)
+        expected_preorder = ['*', '*', 'a', 'c', '-', '+', '*', '*', 'a', 'b', 'c', 'a', '*', 'c', 'a']
+        for node, expect in zip(exp.pre_order(), expected_preorder):
+            self.assertEqual(node.name, expect)
 
     def test_symbol_evaluation(self):
         a = pybamm.Symbol("a")

@@ -25,6 +25,9 @@ class Symbol(anytree.NodeMixin):
         for pre, _, node in anytree.RenderTree(self):
             print("%s%s" % (pre, node.name))
 
+    def pre_order(self):
+        return anytree.PreOrderIter(self)
+
     def __str__(self):
         return self._name
 
