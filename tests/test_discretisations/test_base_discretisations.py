@@ -32,6 +32,13 @@ class DiscretisationForTesting(pybamm.MatrixVectorDiscretisation):
         return pybamm.Matrix(np.eye(n))
 
 
+def ModelForTesting(object):
+    def __init__(self, rhs, initial_conditions, boundary_conditions):
+        self.rhs = rhs
+        self.initial_conditions = initial_conditions
+        self.boundary_conditions = boundary_conditions
+
+
 class TestDiscretise(unittest.TestCase):
     def test_discretise_slicing(self):
         # One variable
