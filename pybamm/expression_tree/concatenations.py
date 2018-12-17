@@ -10,8 +10,7 @@ import numpy as np
 
 class Concatenation(pybamm.Symbol):
     def __init__(self, *children, name=None, parent=None):
-        super().__init__(name, parent)
-        self.children = children
+        super().__init__(name, children, parent)
 
     def evaluate(self, y):
         raise NotImplementedError

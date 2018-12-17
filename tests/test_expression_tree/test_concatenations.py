@@ -13,8 +13,10 @@ class TestConcatenations(unittest.TestCase):
         c = pybamm.Symbol("c")
         conc = pybamm.Concatenation(a, b, c, name="conc")
         self.assertEqual(conc.name, "conc")
-        self.assertEqual(conc.children, (a, b, c))
-        self.assertEqual(a.parent, conc)
+        self.assertTrue(isinstance(conc.children[0], pybamm.Symbol))
+        self.assertEqual(conc.children[0].name, "a")
+        self.assertEqual(conc.children[1].name, "b")
+        self.assertEqual(conc.children[2].name, "c")
         with self.assertRaises(NotImplementedError):
             conc.evaluate(3)
 
@@ -27,9 +29,9 @@ class TestConcatenations(unittest.TestCase):
         conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(conc.evaluate(y), y)
         # with y_slice
-        a = pybamm.Vector(slice(0, 10))
-        b = pybamm.Vector(slice(10, 15))
-        c = pybamm.Vector(slice(15, 23))
+        a = pybamm.VariableVector(slice(0, 10))
+        b = pybamm.VariableVector(slice(10, 15))
+        c = pybamm.VariableVector(slice(15, 23))
         conc = pybamm.NumpyConcatenation(a, b, c)
         y = np.linspace(0, 1, 23)
         np.testing.assert_array_equal(conc.evaluate(y), y)
@@ -46,8 +48,17 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # with y_slice
-        a = pybamm.Vector(slice(0, 10))
+        a = pybamm.VariableVector(slice(0, 10))
         conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(
             conc.evaluate(y), np.concatenate([y, np.array([16]), np.array([3])])
         )
+
+
+if __name__ == "__main__":
+    print("Add -v for more debug output")
+    import sys
+
+    if "-v" in sys.argv:
+        debug = True
+    unittest.main()

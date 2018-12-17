@@ -10,12 +10,12 @@ class Variable(pybamm.Domain, pybamm.Symbol):
     def __init__(self, name, domain=[], parent=None):
         super().__init__(name, parent=parent, domain=domain)
 
-    def __eq__(self, other):
-        return (
-            self.__class__ == other.__class__
-            and self.name == other.name
-            and self.domain == other.domain
-        )
+    def id(self):
+        """
+        The immutable "identity" of a variable (for identitying y_slices).
 
-    def __hash__(self):
+        This is identical to what we'd put in a __hash__ function
+        However, implementing __hash__ requires also implementing __eq__,
+        which would then mess with loop-checking in anytree
+        """
         return hash((self.__class__, self.name, tuple(self.domain)))
