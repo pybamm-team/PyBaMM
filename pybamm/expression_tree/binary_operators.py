@@ -12,7 +12,6 @@ class BinaryOperator(pybamm.Symbol):
         super().__init__(name, children=[left, right], parent=parent)
 
     def __str__(self):
-        print('str: len child = ', len(self.children))
         return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
 
 

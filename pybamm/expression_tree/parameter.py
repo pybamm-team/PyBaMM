@@ -8,7 +8,7 @@ import pybamm
 
 class Parameter(pybamm.Symbol):
     def __init__(self, name, family=None, parent=None):
-        super().__init__(name, parent)
+        super().__init__(name, parent=parent)
         self.family = family
 
     @property
