@@ -17,11 +17,11 @@ class BaseDiscretisation(object):
     def mesh(self):
         return self._mesh
 
-    def gradient(self):
+    def gradient(self, symbol, domain, y_slices, boundary_conditions):
         """How to discretise gradient operators"""
         raise NotImplementedError
 
-    def divergence(self):
+    def divergence(self, symbol, domain, y_slices, boundary_conditions):
         """How to discretise divergence operators"""
         raise NotImplementedError
 
@@ -43,15 +43,17 @@ class BaseDiscretisation(object):
         # Set the y split for variables
         y_slices = self.get_variable_slices(model.keys())
 
-        # Discretise right-hand sides
+        # Discretise right-hand sides, passing domain from variable
         for variable, equation in model.rhs.items():
-            model.rhs[variable] = self.discretise_symbol(equation, y_slices)
+            model.rhs[variable] = self.discretise_symbol(
+                equation, variable.domain, y_slices, model.boundary_conditions
+            )
             # TODO: deal with boundary conditions
 
-        # Discretise and concatenate initial conditions
+        # Discretise and concatenate initial conditions, passing domain from variable
         for variable, equation in model.initial_conditions.items():
             model.initial_conditions[variable] = self.discretise_symbol(
-                equation, y_slices
+                equation, variable.domain, y_slices, model.boundary_conditions
             )
             ics_equations = [ic for ic in model.initial_conditions.values()]
             y0 = np.concatenate([ic.value for ic in ics_equations])
@@ -80,7 +82,7 @@ class BaseDiscretisation(object):
 
         return y_slices
 
-    def discretise_symbol(self, symbol, y_slices):
+    def discretise_symbol(self, symbol, domain, y_slices, boundary_conditions):
         """Discretise operators in model equations.
 
         Parameters
@@ -97,26 +99,32 @@ class BaseDiscretisation(object):
 
         """
         if isinstance(symbol, pybamm.Gradient):
-            variable = symbol.child
-            return self.gradient(variable, y_slices)
+            return self.gradient(symbol.child, domain, y_slices, boundary_conditions)
 
         if isinstance(symbol, pybamm.Divergence):
-            variable = symbol.child
-            return self.divergence(variable, y_slices)
+            return self.divergence(symbol.child, domain, y_slices, boundary_conditions)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            new_left = self.discretise_symbol(symbol.left)
-            new_right = self.discretise_symbol(symbol.right)
             new_binary_operator = copy.copy(symbol)
-            new_binary_operator.set_left_right(new_left, new_right)
+            new_binary_operator.left = self.discretise_symbol(
+                symbol.left, domain, y_slices, boundary_conditions
+            )
+            new_binary_operator.right = self.discretise_symbol(
+                symbol.right, domain, y_slices, boundary_conditions
+            )
             return new_binary_operator
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_unary_operator = copy.copy(symbol)
-            new_unary_operator.child = self.discretise_symbol(symbol.child)
+            new_unary_operator.child = self.discretise_symbol(
+                symbol.child, domain, y_slices, boundary_conditions
+            )
             return new_unary_operator
 
-        elif isinstance(symbol, pybamm.Variable) or isinstance(symbol, pybamm.Value):
+        elif isinstance(symbol, pybamm.Variable):
+            return pybamm.Vector(y_slices[symbol])
+
+        elif isinstance(symbol, pybamm.Value):
             return copy.copy(symbol)
 
         else:
@@ -132,18 +140,41 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
     def __init__(self, mesh):
         super().__init__(mesh)
 
-    def gradient(self, variable, y_slices):
-        gradient_matrix = self.gradient_matrix(variable.domain)
-        variable_vector = pybamm.Vector(y_slice=y_slices[variable])
-        return gradient_matrix * variable_vector
+    def gradient(self, symbol, domain, y_slices, boundary_conditions):
+        """
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
+            Not necessarily a Variable (e.g. N = -D(c) * grad(c) is a Multiplication)
+        """
+        gradient_matrix = self.gradient_matrix(domain)
+        discretised_symbol = self.discretise_symbol(
+            symbol, domain, y_slices, boundary_conditions
+        )
+        # Add boundary conditions if defined
+        if symbol in boundary_conditions:
+            lbc, rbc = boundary_conditions[symbol]
+            discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
+        return gradient_matrix * discretised_symbol
 
     def gradient_matrix(self, domain):
         raise NotImplementedError
 
-    def divergence(self, variable, y_slices):
-        gradient_matrix = self.gradient_matrix(variable.domain)
-        variable_vector = pybamm.Vector(y_slice=y_slices[variable])
-        return gradient_matrix * variable_vector
+    def divergence(self, symbol, domain, y_slices, boundary_conditions):
+        gradient_matrix = self.gradient_matrix(domain)
+        discretised_symbol = self.discretise_symbol(
+            symbol, domain, y_slices, boundary_conditions
+        )
+        # Add boundary conditions if defined
+        if symbol in boundary_conditions:
+            lbc, rbc = boundary_conditions[symbol]
+            discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
+        return gradient_matrix * discretised_symbol
 
     def divergence_matrix(self, domain):
         raise NotImplementedError
+
+    def concatenate(self, *symbols):
+        # overwrite evaluation of the
+        return pybamm.NumpyConcatenation(*symbols)

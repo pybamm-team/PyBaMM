@@ -56,6 +56,7 @@ from .expression_tree.binary_operators import (
     Division,
     MatrixVectorMultiplication,
 )
+from .expression_tree.concatenations import Concatenation, NumpyConcatenation
 from .expression_tree.matrix import Matrix
 from .expression_tree.parameter import Parameter
 from .expression_tree.unary_operators import (

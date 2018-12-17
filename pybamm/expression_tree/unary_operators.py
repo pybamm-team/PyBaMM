@@ -19,7 +19,6 @@ class UnaryOperator(pybamm.Symbol):
     def child(self, child):
         self._child = child
         child.parent = self
-        self.children = (child,)
 
 
 class SpatialOperator(UnaryOperator):
