@@ -17,6 +17,7 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
+
         self.assertTrue(isinstance(a + b, pybamm.Symbol))
         self.assertTrue(isinstance(a - b, pybamm.Symbol))
         self.assertTrue(isinstance(a * b, pybamm.Symbol))
@@ -29,6 +30,9 @@ class TestSymbol(unittest.TestCase):
             a * 2
         with self.assertRaises(NotImplementedError):
             a / 2
+
+        exp = a * b + a
+        exp.render()
 
     def test_symbol_evaluation(self):
         a = pybamm.Symbol("a")

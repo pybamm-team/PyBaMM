@@ -4,34 +4,16 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import copy
 
 
 class BinaryOperator(pybamm.Symbol):
     def __init__(self, name, left, right, parent=None):
-        super().__init__(name, parent)
-        self.left = left
-        self.right = right
+        super().__init__(name, children=[left, right], parent=parent)
 
     def __str__(self):
-        return "{!s} {} {!s}".format(self.left, self.name, self.right)
-
-    @property
-    def left(self):
-        return self._left
-
-    @left.setter
-    def left(self, value):
-        self._left = value
-        value.parent = self
-
-    @property
-    def right(self):
-        return self._right
-
-    @right.setter
-    def right(self, value):
-        self._right = value
-        value.parent = self
+        print('str: len child = ', len(self.children))
+        return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
 
 
 class Addition(BinaryOperator):

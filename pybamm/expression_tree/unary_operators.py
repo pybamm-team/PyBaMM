@@ -8,17 +8,7 @@ import pybamm
 
 class UnaryOperator(pybamm.Symbol):
     def __init__(self, name, child, parent=None):
-        super().__init__(name, parent)
-        self.child = child
-
-    @property
-    def child(self):
-        return self._child
-
-    @child.setter
-    def child(self, child):
-        self._child = child
-        child.parent = self
+        super().__init__(name, parent, [child])
 
 
 class SpatialOperator(UnaryOperator):
