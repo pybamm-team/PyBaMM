@@ -17,21 +17,31 @@ class BinaryOperator(pybamm.Symbol):
 
     @property
     def left(self):
-        return self._left
+        try:
+            return self._left
+        except AttributeError:
+            return pybamm.Symbol(None)
 
     @left.setter
     def left(self, value):
-        self._left = value
         value.parent = self
+        self._left = value
+        # manually reset children to avoid corrupt tree
+        self.children = (self.left, self.right)
 
     @property
     def right(self):
-        return self._right
+        try:
+            return self._right
+        except AttributeError:
+            return pybamm.Symbol(None)
 
     @right.setter
     def right(self, value):
-        self._right = value
         value.parent = self
+        self._right = value
+        # manually reset children to avoid corrupt tree
+        self.children = (self.left, self.right)
 
 
 class Addition(BinaryOperator):

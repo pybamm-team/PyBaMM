@@ -43,10 +43,10 @@ class TestDiscretise(unittest.TestCase):
     def test_discretise_slicing(self):
         # One variable
         mesh = MeshForTesting()
-        discretisation = pybamm.BaseDiscretisation(mesh)
+        disc = pybamm.BaseDiscretisation(mesh)
         c = pybamm.Variable("c", domain="x")
         variables = [c]
-        y_slices = discretisation.get_variable_slices(variables)
+        y_slices = disc.get_variable_slices(variables)
         self.assertEqual(y_slices, {c: slice(0, 100)})
         c_true = mesh.x.points ** 2
         y = c_true
@@ -56,7 +56,7 @@ class TestDiscretise(unittest.TestCase):
         d = pybamm.Variable("d", domain="x")
         jn = pybamm.Variable("jn", domain="xn")
         variables = [c, d, jn]
-        y_slices = discretisation.get_variable_slices(variables)
+        y_slices = disc.get_variable_slices(variables)
         self.assertEqual(
             y_slices, {c: slice(0, 100), d: slice(100, 200), jn: slice(200, 240)}
         )
@@ -67,36 +67,71 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(y[y_slices[d]], d_true)
         np.testing.assert_array_equal(y[y_slices[jn]], jn_true)
 
-    @unittest.skip("")
-    def test_discretise_operators(self):
-        c = pybamm.Variable("c", domain="x")
-        mesh = MeshForTesting()
-        discretisation = DiscretisationForTesting(mesh)
-        discretised_equation = pybamm.discretise_operators(
-            pybamm.grad(c), discretisation
-        )
-        self.assertTrue(
-            isinstance(discretised_equation, pybamm.MatrixVariableMultiplication)
-        )
-        self.assertTrue(isinstance(discretised_equation.left, pybamm.Matrix))
-        self.assertTrue(isinstance(discretised_equation.right, pybamm.Variable))
+    def test_discretise_symbol_base(self):
+        disc = pybamm.BaseDiscretisation(None)
 
-        pybamm.set_variable_slices([c], mesh)
-        y = mesh.x.points ** 2
-        np.testing.assert_array_equal(discretised_equation.evaluate(y), c.evaluate(y))
+        # variable
+        var = pybamm.Variable("var")
+        y_slices = {var: slice(53)}
+        var_disc = disc.discretise_symbol(var, None, y_slices, None)
+        self.assertTrue(isinstance(var_disc, pybamm.Vector))
+        self.assertEqual(var_disc._y_slice, y_slices[var])
+        # scalar
+        sca = pybamm.Scalar(5)
+        sca_disc = disc.discretise_symbol(sca, None, None, None)
+        self.assertTrue(isinstance(sca_disc, pybamm.Scalar))
+        self.assertEqual(sca_disc.value, sca.value)
+
+        # parameter
+        par = pybamm.Parameter("par")
+        with self.assertRaises(TypeError):
+            disc.discretise_symbol(par, None, None, None)
+
+        # binary operator
+        bin = pybamm.BinaryOperator("bin", var, sca)
+        bin_disc = disc.discretise_symbol(bin, None, y_slices, None)
+        self.assertTrue(isinstance(bin_disc, pybamm.BinaryOperator))
+        self.assertTrue(isinstance(bin_disc.left, pybamm.Vector))
+        self.assertTrue(isinstance(bin_disc.right, pybamm.Scalar))
+
+        # non-spatial unary operator
+        un = pybamm.UnaryOperator("un", var)
+        un_disc = disc.discretise_symbol(un, None, y_slices, None)
+        self.assertTrue(isinstance(un_disc, pybamm.UnaryOperator))
+        self.assertTrue(isinstance(un_disc.child, pybamm.Vector))
+
+    def test_discretise_spatial_operator(self):
+        mesh = MeshForTesting()
+        disc = DiscretisationForTesting(mesh)
+        var = pybamm.Variable("var", domain="x")
+        y_slices = disc.get_variable_slices([var])
+        for eqn in [pybamm.grad(var), pybamm.div(var)]:
+            eqn_disc = disc.discretise_symbol(eqn, var.domain, y_slices, {})
+
+            self.assertTrue(isinstance(eqn_disc, pybamm.MatrixVectorMultiplication))
+            self.assertTrue(isinstance(eqn_disc.left, pybamm.Matrix))
+            self.assertTrue(isinstance(eqn_disc.right, pybamm.Vector))
+
+            y = mesh.x.points ** 2
+            var_disc = disc.discretise_symbol(var, None, y_slices, None)
+            # grad and var are identity operators here (for testing purposes)
+            np.testing.assert_array_equal(eqn_disc.evaluate(y), var_disc.evaluate(y))
 
     @unittest.skip("")
     def test_discretise(self):
         c = pybamm.Variable("c", domain="x")
         jn = pybamm.Variable("jn", domain="xn")
         mesh = MeshForTesting()
-        discretisation = DiscretisationForTesting(mesh)
+        disc = DiscretisationForTesting(mesh)
 
         model = {c: pybamm.grad(c), jn: pybamm.div(jn)}
         y = np.concatenate([mesh.x.points ** 2, mesh.xn.points * 3])
-        discretised_model = pybamm.discretise(model, discretisation)
+        discretised_model = pybamm.discretise(model, disc)
         np.testing.assert_array_equal(discretised_model[c].evaluate(y), c.evaluate(y))
         np.testing.assert_array_equal(discretised_model[jn].evaluate(y), jn.evaluate(y))
+
+    def test_concatenation(self):
+        pass
 
 
 if __name__ == "__main__":

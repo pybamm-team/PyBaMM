@@ -9,6 +9,8 @@ import anytree
 
 class Symbol(anytree.AnyNode):
     def __init__(self, name, parent=None):
+        if name is None:
+            name = str(None)
         super(Symbol, self).__init__(id=name, parent=parent)
         self._name = name
 

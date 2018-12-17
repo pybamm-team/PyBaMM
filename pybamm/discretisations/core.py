@@ -5,8 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import copy
-
 
 class BaseDiscretisation(object):
     def __init__(self, mesh):
@@ -110,27 +108,26 @@ class BaseDiscretisation(object):
             return self.divergence(symbol.child, domain, y_slices, boundary_conditions)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            new_binary_operator = copy.copy(symbol)
-            new_binary_operator.left = self.discretise_symbol(
+            new_left = self.discretise_symbol(
                 symbol.left, domain, y_slices, boundary_conditions
             )
-            new_binary_operator.right = self.discretise_symbol(
+            new_right = self.discretise_symbol(
                 symbol.right, domain, y_slices, boundary_conditions
             )
-            return new_binary_operator
+            return symbol.__class__(symbol.name, new_left, new_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
-            new_unary_operator = copy.copy(symbol)
-            new_unary_operator.child = self.discretise_symbol(
+            new_child = self.discretise_symbol(
                 symbol.child, domain, y_slices, boundary_conditions
             )
-            return new_unary_operator
+            return symbol.__class__(symbol.name, new_child)
 
         elif isinstance(symbol, pybamm.Variable):
+
             return pybamm.Vector(y_slices[symbol])
 
         elif isinstance(symbol, pybamm.Scalar):
-            return copy.copy(symbol)
+            return pybamm.Scalar(symbol.value)
 
         else:
             raise TypeError("""Cannot discretise {!r}""".format(symbol))
