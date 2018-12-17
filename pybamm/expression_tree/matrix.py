@@ -17,10 +17,8 @@ class Matrix(pybamm.Array):
     def __init__(self, entries, name=None, parent=None):
         super().__init__(entries, name=name, parent=parent)
 
-    def __mul__(self, other):
-        if isinstance(other, pybamm.Vector):
-            return pybamm.MatrixVectorMultiplication(self, other)
-        elif isinstance(other, pybamm.Symbol):
-            return pybamm.Multiplication(self, other)
+    def __matmul__(self, other):
+        if isinstance(other, pybamm.Array) or isinstace(other, pybamm.VariableVector):
+            return pybamm.MatrixMultiplication(self, other)
         else:
             raise NotImplementedError

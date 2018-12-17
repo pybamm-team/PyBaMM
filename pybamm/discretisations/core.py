@@ -126,10 +126,7 @@ class BaseDiscretisation(object):
             return symbol.__class__(symbol.name, new_child)
 
         elif isinstance(symbol, pybamm.Variable):
-            import ipdb
-
-            ipdb.set_trace()
-            return pybamm.Vector(y_slices[symbol])
+            return pybamm.VariableVector(y_slices[symbol])
 
         elif isinstance(symbol, pybamm.Scalar):
             return pybamm.Scalar(symbol.value)

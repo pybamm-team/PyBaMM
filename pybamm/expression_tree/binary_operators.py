@@ -57,7 +57,7 @@ class Division(BinaryOperator):
         return self.children[0].evaluate(y) / self.children[1].evaluate(y)
 
 
-class MatrixVectorMultiplication(BinaryOperator):
+class MatrixMultiplication(BinaryOperator):
     def __init__(self, left, right, parent=None):
         super().__init__("@", left, right, parent)
 

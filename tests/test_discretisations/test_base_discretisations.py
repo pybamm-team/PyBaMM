@@ -24,11 +24,11 @@ class DiscretisationForTesting(pybamm.MatrixVectorDiscretisation):
         super().__init__(mesh)
 
     def gradient_matrix(self, domain):
-        n = getattr(self.mesh, domain).npts
+        n = getattr(self.mesh, domain[0]).npts
         return pybamm.Matrix(np.eye(n))
 
     def divergence_matrix(self, domain):
-        n = getattr(self.mesh, domain).npts
+        n = getattr(self.mesh, domain[0]).npts
         return pybamm.Matrix(np.eye(n))
 
 
@@ -74,21 +74,20 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable("var")
         y_slices = {var: slice(53)}
         var_disc = disc.discretise_symbol(var, None, y_slices, None)
-        self.assertTrue(isinstance(var_disc, pybamm.Vector))
+        self.assertTrue(isinstance(var_disc, pybamm.VariableVector))
         self.assertEqual(var_disc._y_slice, y_slices[var])
         # scalar
-        sca = pybamm.Scalar(5)
-        sca_disc = disc.discretise_symbol(sca, None, None, None)
-        self.assertTrue(isinstance(sca_disc, pybamm.Scalar))
-        self.assertEqual(sca_disc.value, sca.value)
+        scal = pybamm.Scalar(5)
+        scal_disc = disc.discretise_symbol(scal, None, None, None)
+        self.assertTrue(isinstance(scal_disc, pybamm.Scalar))
+        self.assertEqual(scal_disc.value, scal.value)
 
         # parameter
         par = pybamm.Parameter("par")
-        with self.assertRaises(TypeError):
-            disc.discretise_symbol(par, None, None, None)
+        self.assertRaises(TypeError, disc.discretise_symbol(par, None, None, None))
 
         # binary operator
-        bin = pybamm.BinaryOperator("bin", var, sca)
+        bin = pybamm.BinaryOperator("bin", var, scal)
         bin_disc = disc.discretise_symbol(bin, None, y_slices, None)
         self.assertTrue(isinstance(bin_disc, pybamm.BinaryOperator))
         self.assertTrue(isinstance(bin_disc.left, pybamm.Vector))
@@ -109,11 +108,11 @@ class TestDiscretise(unittest.TestCase):
         for eqn in [pybamm.grad(var), pybamm.div(var)]:
             eqn_disc = disc.discretise_symbol(eqn, var.domain, y_slices, {})
 
-            self.assertTrue(isinstance(eqn_disc, pybamm.MatrixVectorMultiplication))
+            self.assertTrue(isinstance(eqn_disc, pybamm.MatrixMultiplication))
             self.assertTrue(isinstance(eqn_disc.left, pybamm.Matrix))
-            self.assertTrue(isinstance(eqn_disc.right, pybamm.Vector))
+            self.assertTrue(isinstance(eqn_disc.right, pybamm.VariableVector))
 
-            y = mesh.x.points ** 2
+            y = mesh.whole_cell.points ** 2
             var_disc = disc.discretise_symbol(var, None, y_slices, None)
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(eqn_disc.evaluate(y), var_disc.evaluate(y))
@@ -138,6 +137,16 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(dydt(y0)[0], np.array([0]))
         np.testing.assert_array_equal(dydt(y0)[-1], np.array([2]))
 
+        # two equations
+        T = pybamm.Variable("T", domain=["negative_electrode"])
+        q = pybamm.grad(T)
+        rhs[T] = pybamm.div(q)
+        initial_conditions[T] = pybamm.Scalar(5)
+        boundary_conditions[T] = (pybamm.Scalar(-3), pybamm.Scalar(12))
+
+        y0, dydt = disc.discretise_model(model)
+
+    @unittest.skip("")
     def test_concatenation(self):
         pass
 

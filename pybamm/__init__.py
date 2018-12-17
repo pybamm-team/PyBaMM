@@ -54,7 +54,7 @@ from .expression_tree.binary_operators import (
     Subtraction,
     Multiplication,
     Division,
-    MatrixVectorMultiplication,
+    MatrixMultiplication,
 )
 from .expression_tree.concatenations import Concatenation, NumpyConcatenation
 from .expression_tree.array import Array
@@ -71,7 +71,7 @@ from .expression_tree.unary_operators import (
 )
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
-from .expression_tree.vector import Vector
+from .expression_tree.vector import Vector, VariableVector
 
 #
 # Mesh and Discretisation classes

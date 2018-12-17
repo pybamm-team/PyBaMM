@@ -25,9 +25,11 @@ class TestMatrix(unittest.TestCase):
         self.assertTrue((self.mat.evaluate(None) == self.A).all(), self.A)
 
     def test_matrix_operations(self):
-        self.assertTrue(((self.mat + self.mat).evaluate(None) == 2*self.A).all())
-        self.assertTrue(((self.mat - self.mat).evaluate(None) == 0*self.A).all())
-        self.assertTrue(((self.mat * self.vect).evaluate(None) == np.array([5, 2, 3])).all())
+        self.assertTrue(((self.mat + self.mat).evaluate(None) == 2 * self.A).all())
+        self.assertTrue(((self.mat - self.mat).evaluate(None) == 0 * self.A).all())
+        self.assertTrue(
+            ((self.mat @ self.vect).evaluate(None) == np.array([5, 2, 3])).all()
+        )
 
     def test_matrix_modification(self):
         exp = self.mat * self.mat + self.mat
