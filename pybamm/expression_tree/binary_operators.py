@@ -21,7 +21,7 @@ class Addition(BinaryOperator):
         super().__init__("+", left, right, parent)
 
     def evaluate(self, y):
-        return self._left.evaluate(y) + self._right.evaluate(y)
+        return self.children[0].evaluate(y) + self.children[1].evaluate(y)
 
 
 class Subtraction(BinaryOperator):
@@ -29,7 +29,7 @@ class Subtraction(BinaryOperator):
         super().__init__("-", left, right, parent)
 
     def evaluate(self, y):
-        return self._left.evaluate(y) - self._right.evaluate(y)
+        return self.children[0].evaluate(y) - self.children[1].evaluate(y)
 
 
 class Multiplication(BinaryOperator):
@@ -37,7 +37,7 @@ class Multiplication(BinaryOperator):
         super().__init__("*", left, right, parent)
 
     def evaluate(self, y):
-        return self._left.evaluate(y) * self._right.evaluate(y)
+        return self.children[0].evaluate(y) * self.children[1].evaluate(y)
 
 
 class Division(BinaryOperator):
@@ -45,7 +45,7 @@ class Division(BinaryOperator):
         super().__init__("/", left, right, parent)
 
     def evaluate(self, y):
-        return self._left.evaluate(y) / self._right.evaluate(y)
+        return self.children[0].evaluate(y) / self.children[1].evaluate(y)
 
 
 class MatrixVectorMultiplication(BinaryOperator):
@@ -53,4 +53,4 @@ class MatrixVectorMultiplication(BinaryOperator):
         super().__init__("@", left, right, parent)
 
     def evaluate(self, y):
-        return self.left.evaluate(y) @ self.right.evaluate(y)
+        return self.children[0].evaluate(y) @ self.children[1].evaluate(y)

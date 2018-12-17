@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Matrix(pybamm.Symbol):
+class Matrix(pybamm.Array):
     """
     Parameters
     ----------
@@ -15,12 +15,7 @@ class Matrix(pybamm.Symbol):
     """
 
     def __init__(self, entries, name=None, parent=None):
-        super().__init__(name, parent)
-        self._entries = entries
-        self.nrows, self.ncols = entries.shape
-
-    def evaluate(self, y):
-        return self._entries
+        super().__init__(entries, name=name, parent=parent)
 
     def __mul__(self, other):
         if isinstance(other, pybamm.Vector):

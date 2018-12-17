@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Vector(pybamm.Symbol):
+class Vector(pybamm.Array):
     """
     Parameters
     ----------
@@ -15,9 +15,4 @@ class Vector(pybamm.Symbol):
     """
 
     def __init__(self, entries, name=None, parent=None):
-        super().__init__(name, parent)
-        self._entries = entries
-        self.n = entries.size
-
-    def evaluate(self, y=None):
-        return self._entries
+        super().__init__(entries, name=name, parent=parent)
