@@ -123,7 +123,6 @@ class BaseDiscretisation(object):
             return symbol.__class__(symbol.name, new_child)
 
         elif isinstance(symbol, pybamm.Variable):
-
             return pybamm.Vector(y_slices[symbol])
 
         elif isinstance(symbol, pybamm.Scalar):
@@ -153,7 +152,6 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         symbol : :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
             Not necessarily a Variable (e.g. N = -D(c) * grad(c) is a Multiplication)
         """
-        gradient_matrix = self.gradient_matrix(domain)
         discretised_symbol = self.discretise_symbol(
             symbol, domain, y_slices, boundary_conditions
         )
@@ -161,13 +159,13 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         if symbol in boundary_conditions:
             lbc, rbc = boundary_conditions[symbol]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
+        gradient_matrix = self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
 
     def gradient_matrix(self, domain):
         raise NotImplementedError
 
     def divergence(self, symbol, domain, y_slices, boundary_conditions):
-        divergence_matrix = self.gradient_matrix(domain)
         discretised_symbol = self.discretise_symbol(
             symbol, domain, y_slices, boundary_conditions
         )
@@ -175,6 +173,7 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         if symbol in boundary_conditions:
             lbc, rbc = boundary_conditions[symbol]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
+        divergence_matrix = self.gradient_matrix(domain)
         return divergence_matrix * discretised_symbol
 
     def divergence_matrix(self, domain):

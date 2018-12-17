@@ -101,6 +101,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertTrue(isinstance(un_disc.child, pybamm.Vector))
 
     def test_discretise_spatial_operator(self):
+        # no boundary conditions
         mesh = MeshForTesting()
         disc = DiscretisationForTesting(mesh)
         var = pybamm.Variable("var", domain="x")
@@ -117,18 +118,24 @@ class TestDiscretise(unittest.TestCase):
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(eqn_disc.evaluate(y), var_disc.evaluate(y))
 
-    @unittest.skip("")
-    def test_discretise(self):
+        # with boundary conditions
+
+    def test_discretise_model(self):
+        # one equation
         c = pybamm.Variable("c", domain="x")
-        jn = pybamm.Variable("jn", domain="xn")
+        N = -pybamm.grad(c)
+        rhs = {c: -pybamm.div(N)}
+        initial_conditions = {c: pybamm.Scalar(1)}
+        boundary_conditions = {N: (pybamm.Scalar(0), pybamm.Scalar(2))}
+        model = ModelForTesting(rhs, initial_conditions, boundary_conditions)
         mesh = MeshForTesting()
         disc = DiscretisationForTesting(mesh)
 
-        model = {c: pybamm.grad(c), jn: pybamm.div(jn)}
-        y = np.concatenate([mesh.x.points ** 2, mesh.xn.points * 3])
-        discretised_model = pybamm.discretise(model, disc)
-        np.testing.assert_array_equal(discretised_model[c].evaluate(y), c.evaluate(y))
-        np.testing.assert_array_equal(discretised_model[jn].evaluate(y), jn.evaluate(y))
+        y0, dydt = disc.discretise_model(model)
+        np.testing.assert_array_equal(y0, np.ones_like(mesh.x.points))
+        np.testing.assert_array_equal(y0[1:-1], dydt(y0)[1:-1])
+        np.testing.assert_array_equal(dydt(y0)[0], np.array([0]))
+        np.testing.assert_array_equal(dydt(y0)[-1], np.array([2]))
 
     def test_concatenation(self):
         pass
