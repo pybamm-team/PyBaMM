@@ -36,10 +36,6 @@ class Symbol(anytree.NodeMixin):
             self.__class__, self.name, self.children, self.parent
         )
 
-    @property
-    def id(self):
-        return hash((self.__class__, self.name))
-
     def __add__(self, other):
         if isinstance(other, Symbol):
             return pybamm.Addition(self, other)
