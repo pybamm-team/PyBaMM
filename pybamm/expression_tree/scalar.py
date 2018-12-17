@@ -8,6 +8,10 @@ import pybamm
 
 class Scalar(pybamm.Symbol):
     def __init__(self, value, name=None, parent=None):
+        # set default name if not provided
+        if name is None:
+            name = str(value)
+
         super().__init__(name, parent)
         self.value = value
 
