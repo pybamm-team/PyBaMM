@@ -11,15 +11,19 @@ class BinaryOperator(pybamm.Symbol):
     """A node in the expression tree representing a binary operator (e.g. +, *)
 
     Derived classes will specify the particular operator
+
+    Arguments:
+
+    ``name`` (str)
+        name of the node
+    ``left`` (node)
+        lhs child node
+    ``right`` (node)
+        rhs child node
     """
 
     def __init__(self, name, left, right):
-        """
-        Args:
-            name (str): name of the node
-            left (node): lhs child node
-            right (node): rhs child node
-        """
+
         super().__init__(name, children=[left, right])
 
     def __str__(self):
@@ -45,7 +49,7 @@ class Addition(BinaryOperator):
 class Subtraction(BinaryOperator):
     """A node in the expression tree representing a subtraction operator
 
-    *Extends: *: class: `BinaryOperator`
+    *Extends:* :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -61,7 +65,7 @@ class Subtraction(BinaryOperator):
 class Multiplication(BinaryOperator):
     """A node in the expression tree representing a multiplication operator
 
-    *Extends: *: class: `BinaryOperator`
+    *Extends:* :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -77,7 +81,7 @@ class Multiplication(BinaryOperator):
 class Division(BinaryOperator):
     """A node in the expression tree representing a division operator
 
-    *Extends: *: class: `BinaryOperator`
+    *Extends:* :class:`BinaryOperator`
     """
 
     def __init__(self, left, righte):
@@ -92,7 +96,7 @@ class Division(BinaryOperator):
 class MatrixVectorMultiplication(BinaryOperator):
     """A node in the expression tree representing a matrix vector multiplication operator
 
-    *Extends: *: class: `BinaryOperator`
+    *Extends:* :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):

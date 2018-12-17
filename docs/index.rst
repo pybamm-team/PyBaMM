@@ -1,21 +1,25 @@
-.. PyBaMM documentation master file, created by
-   sphinx-quickstart on Wed Nov  7 21:30:15 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Root of all pybamm docs
+
+.. _GitHub: https://github.com/tinosulzer/PyBaMM
 
 Welcome to PyBaMM's documentation!
 ==================================
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+Python Battery Mathematical Modelling (**PyBAMM**) solves continuum models for
+batteries, using both numerical methods and asymptotic analysis.
 
-   source/modules
-
-
-Indices and tables
-==================
+PyBAMM is hosted on GitHub_. *This* page provides the *API*, or *developer
+documentation* for ``pybamm``.
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+Contents
+========
+
+.. module:: pybamm
+
+.. toctree::
+
+    source/expression_tree/index
