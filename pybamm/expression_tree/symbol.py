@@ -59,6 +59,11 @@ class Symbol(anytree.NodeMixin):
             raise NotImplementedError
 
     def evaluate(self, y):
+        """evaluate expression tree
+        Args:
+            y(numpy.array): an expression can depend on a vector
+
+        """
         raise NotImplementedError(
             """method self.evaluate(y) not implemented
                for symbol {!s} of type {}""".format(
