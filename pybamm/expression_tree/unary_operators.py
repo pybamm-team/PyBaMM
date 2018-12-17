@@ -8,17 +8,12 @@ import pybamm
 
 class UnaryOperator(pybamm.Symbol):
     def __init__(self, name, child, parent=None):
-        super().__init__(name, parent)
-        self.child = child
+        super().__init__(name, children=[child], parent=parent)
 
     @property
     def child(self):
-        return self._child
-
-    @child.setter
-    def child(self, child):
-        self._child = child
-        child.parent = self
+        assert len(self.children) == 1
+        return self.children[0]
 
 
 class SpatialOperator(UnaryOperator):
@@ -27,7 +22,7 @@ class SpatialOperator(UnaryOperator):
         # self.domain = child.domain
 
     def __str__(self):
-        return "{}({!s})".format(self.name, self.child)
+        return "{}({!s})".format(self.name, self.children[0])
 
 
 class Gradient(SpatialOperator):

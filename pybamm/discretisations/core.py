@@ -78,8 +78,11 @@ class BaseDiscretisation(object):
         """
         y_slices = {variable: None for variable in variables}
         start = 0
+        end = 0
         for variable in variables:
-            end = start + getattr(self.mesh, variable.domain).npts
+            # Add up the size of all the domains in variable.domain
+            for dom in variable.domain:
+                end += getattr(self.mesh, dom).npts
             y_slices[variable] = slice(start, end)
             start = end
 
@@ -123,6 +126,9 @@ class BaseDiscretisation(object):
             return symbol.__class__(symbol.name, new_child)
 
         elif isinstance(symbol, pybamm.Variable):
+            import ipdb
+
+            ipdb.set_trace()
             return pybamm.Vector(y_slices[symbol])
 
         elif isinstance(symbol, pybamm.Scalar):

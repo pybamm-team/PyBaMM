@@ -5,18 +5,28 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 import anytree
+import copy
 
 
-class Symbol(anytree.AnyNode):
-    def __init__(self, name, parent=None):
-        if name is None:
-            name = str(None)
-        super(Symbol, self).__init__(id=name, parent=parent)
+class Symbol(anytree.NodeMixin):
+    def __init__(self, name, children=[], parent=None):
+        super(Symbol, self).__init__()
         self._name = name
+
+        for child in children:
+            # copy child before adding
+            copy.copy(child).parent = self
 
     @property
     def name(self):
         return self._name
+
+    def render(self):
+        for pre, _, node in anytree.RenderTree(self):
+            print("%s%s" % (pre, node.name))
+
+    def pre_order(self):
+        return anytree.PreOrderIter(self)
 
     def __str__(self):
         return self._name

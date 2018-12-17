@@ -6,9 +6,9 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Parameter(pybamm.Symbol):
-    def __init__(self, name, family=None, parent=None):
-        super().__init__(name, parent)
+class Parameter(pybamm.Domain, pybamm.Symbol):
+    def __init__(self, name, family=None, domain=[], parent=None):
+        super().__init__(name, parent=parent, domain=domain)
         self.family = family
 
     @property
