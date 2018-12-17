@@ -47,10 +47,10 @@ class TestDiscretise(unittest.TestCase):
         c = pybamm.Variable("c", domain=["whole_cell"])
         variables = [c]
         y_slices = disc.get_variable_slices(variables)
-        self.assertEqual(y_slices, {c: slice(0, 100)})
+        self.assertEqual(y_slices, {c.id: slice(0, 100)})
         c_true = mesh.whole_cell.points ** 2
         y = c_true
-        np.testing.assert_array_equal(y[y_slices[c]], c_true)
+        np.testing.assert_array_equal(y[y_slices[c.id]], c_true)
 
         # Several variables
         d = pybamm.Variable("d", domain=["whole_cell"])
@@ -58,24 +58,25 @@ class TestDiscretise(unittest.TestCase):
         variables = [c, d, jn]
         y_slices = disc.get_variable_slices(variables)
         self.assertEqual(
-            y_slices, {c: slice(0, 100), d: slice(100, 200), jn: slice(200, 240)}
+            y_slices,
+            {c.id: slice(0, 100), d.id: slice(100, 200), jn.id: slice(200, 240)},
         )
         d_true = 4 * mesh.whole_cell.points
         jn_true = mesh.negative_electrode.points ** 3
         y = np.concatenate([c_true, d_true, jn_true])
-        np.testing.assert_array_equal(y[y_slices[c]], c_true)
-        np.testing.assert_array_equal(y[y_slices[d]], d_true)
-        np.testing.assert_array_equal(y[y_slices[jn]], jn_true)
+        np.testing.assert_array_equal(y[y_slices[c.id]], c_true)
+        np.testing.assert_array_equal(y[y_slices[d.id]], d_true)
+        np.testing.assert_array_equal(y[y_slices[jn.id]], jn_true)
 
     def test_discretise_symbol_base(self):
         disc = pybamm.BaseDiscretisation(None)
 
         # variable
         var = pybamm.Variable("var")
-        y_slices = {var: slice(53)}
+        y_slices = {var.id: slice(53)}
         var_disc = disc.discretise_symbol(var, None, y_slices, None)
         self.assertTrue(isinstance(var_disc, pybamm.VariableVector))
-        self.assertEqual(var_disc._y_slice, y_slices[var])
+        self.assertEqual(var_disc._y_slice, y_slices[var.id])
         # scalar
         scal = pybamm.Scalar(5)
         scal_disc = disc.discretise_symbol(scal, None, None, None)
@@ -84,20 +85,21 @@ class TestDiscretise(unittest.TestCase):
 
         # parameter
         par = pybamm.Parameter("par")
-        self.assertRaises(TypeError, disc.discretise_symbol(par, None, None, None))
+        with self.assertRaises(TypeError):
+            disc.discretise_symbol(par, None, None, None)
 
         # binary operator
         bin = pybamm.BinaryOperator("bin", var, scal)
         bin_disc = disc.discretise_symbol(bin, None, y_slices, None)
         self.assertTrue(isinstance(bin_disc, pybamm.BinaryOperator))
-        self.assertTrue(isinstance(bin_disc.left, pybamm.Vector))
+        self.assertTrue(isinstance(bin_disc.left, pybamm.VariableVector))
         self.assertTrue(isinstance(bin_disc.right, pybamm.Scalar))
 
         # non-spatial unary operator
         un = pybamm.UnaryOperator("un", var)
         un_disc = disc.discretise_symbol(un, None, y_slices, None)
         self.assertTrue(isinstance(un_disc, pybamm.UnaryOperator))
-        self.assertTrue(isinstance(un_disc.child, pybamm.Vector))
+        self.assertTrue(isinstance(un_disc.child, pybamm.VariableVector))
 
     def test_discretise_spatial_operator(self):
         # no boundary conditions

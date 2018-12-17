@@ -76,14 +76,14 @@ class BaseDiscretisation(object):
         y_slices : dict of {Variable: slice}
             The slices to take when solving (assigning chunks of y to each vector)
         """
-        y_slices = {variable: None for variable in variables}
+        y_slices = {variable.id: None for variable in variables}
         start = 0
         end = 0
         for variable in variables:
             # Add up the size of all the domains in variable.domain
             for dom in variable.domain:
                 end += getattr(self.mesh, dom).npts
-            y_slices[variable] = slice(start, end)
+            y_slices[variable.id] = slice(start, end)
             start = end
 
         return y_slices
@@ -126,7 +126,7 @@ class BaseDiscretisation(object):
             return symbol.__class__(symbol.name, new_child)
 
         elif isinstance(symbol, pybamm.Variable):
-            return pybamm.VariableVector(y_slices[symbol])
+            return pybamm.VariableVector(y_slices[symbol.id])
 
         elif isinstance(symbol, pybamm.Scalar):
             return pybamm.Scalar(symbol.value)
@@ -163,7 +163,7 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
             lbc, rbc = boundary_conditions[symbol]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
         gradient_matrix = self.gradient_matrix(domain)
-        return gradient_matrix * discretised_symbol
+        return gradient_matrix @ discretised_symbol
 
     def gradient_matrix(self, domain):
         raise NotImplementedError
@@ -177,7 +177,7 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
             lbc, rbc = boundary_conditions[symbol]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
         divergence_matrix = self.gradient_matrix(domain)
-        return divergence_matrix * discretised_symbol
+        return divergence_matrix @ discretised_symbol
 
     def divergence_matrix(self, domain):
         raise NotImplementedError

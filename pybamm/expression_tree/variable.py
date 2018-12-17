@@ -10,6 +10,7 @@ class Variable(pybamm.Domain, pybamm.Symbol):
     def __init__(self, name, domain=[], parent=None):
         super().__init__(name, parent=parent, domain=domain)
 
+    @property
     def id(self):
         """
         The immutable "identity" of a variable (for identitying y_slices).
