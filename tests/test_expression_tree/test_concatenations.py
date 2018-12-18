@@ -18,7 +18,7 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[1].name, "b")
         self.assertEqual(conc.children[2].name, "c")
         with self.assertRaises(NotImplementedError):
-            conc.evaluate(3)
+            conc.evaluate(None, 3)
 
     def test_numpy_concatenation_vectors(self):
         # with entries
@@ -27,14 +27,14 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Vector(y[5:9])
         c = pybamm.Vector(y[9:])
         conc = pybamm.NumpyConcatenation(a, b, c)
-        np.testing.assert_array_equal(conc.evaluate(y), y)
+        np.testing.assert_array_equal(conc.evaluate(None, y), y)
         # with y_slice
         a = pybamm.VariableVector(slice(0, 10))
         b = pybamm.VariableVector(slice(10, 15))
         c = pybamm.VariableVector(slice(15, 23))
         conc = pybamm.NumpyConcatenation(a, b, c)
         y = np.linspace(0, 1, 23)
-        np.testing.assert_array_equal(conc.evaluate(y), y)
+        np.testing.assert_array_equal(conc.evaluate(None, y), y)
 
     def test_numpy_concatenation_vector_scalar(self):
         # with entries
@@ -44,14 +44,14 @@ class TestConcatenations(unittest.TestCase):
         c = pybamm.Scalar(3)
         conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(
-            conc.evaluate(y), np.concatenate([y, np.array([16]), np.array([3])])
+            conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
         )
 
         # with y_slice
         a = pybamm.VariableVector(slice(0, 10))
         conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(
-            conc.evaluate(y), np.concatenate([y, np.array([16]), np.array([3])])
+            conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
         )
 
 

@@ -37,10 +37,10 @@ class VariableVector(pybamm.Symbol):
     *Extends:* :class:`Array`
     """
 
-    def __init__(self, y_slice, name=None, parent=None):
+    def __init__(self, y_slice, name=None):
         if name is None:
             name = str(y_slice)
-        super().__init__(name=name, parent=parent)
+        super().__init__(name=name)
         self._y_slice = y_slice
 
     @property
