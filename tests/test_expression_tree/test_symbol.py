@@ -35,8 +35,9 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
         c = pybamm.Symbol("c")
-        exp = a*c*(a * b * c + a - c*a)
-        expected_preorder = ['*', '*', 'a', 'c', '-', '+', '*', '*', 'a', 'b', 'c', 'a', '*', 'c', 'a']
+        exp = a * c * (a * b * c + a - c * a)
+        expected_preorder = ['*', '*', 'a', 'c', '-', '+', '*', '*',
+                             'a', 'b', 'c', 'a', '*', 'c', 'a']
         for node, expect in zip(exp.pre_order(), expected_preorder):
             self.assertEqual(node.name, expect)
 

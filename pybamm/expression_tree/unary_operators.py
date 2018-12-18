@@ -83,7 +83,7 @@ def grad(expression):
         the gradient will be performed on this sub-expression
     """
 
-    return Gradient(variable)
+    return Gradient(expression)
 
 
 def div(expression):
@@ -95,4 +95,4 @@ def div(expression):
         the gradient will be performed on this sub-expression
     """
 
-    return Divergence(variable)
+    return Divergence(expression)
