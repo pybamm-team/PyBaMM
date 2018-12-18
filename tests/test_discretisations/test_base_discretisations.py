@@ -20,6 +20,8 @@ class SubMeshForTesting(object):
 
 
 class DiscretisationForTesting(pybamm.MatrixVectorDiscretisation):
+    """Interpolating operators."""
+
     def __init__(self, mesh):
         super().__init__(mesh)
 
@@ -102,7 +104,6 @@ class TestDiscretise(unittest.TestCase):
         self.assertTrue(isinstance(un_disc.child, pybamm.VariableVector))
 
     def test_discretise_spatial_operator(self):
-        # no boundary conditions
         mesh = MeshForTesting()
         disc = DiscretisationForTesting(mesh)
         var = pybamm.Variable("var", domain=["whole_cell"])
@@ -118,8 +119,6 @@ class TestDiscretise(unittest.TestCase):
             var_disc = disc.process_symbol(var, None, y_slices, None)
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(eqn_disc.evaluate(y), var_disc.evaluate(y))
-
-        # with boundary conditions
 
     def test_process_initial_conditions(self):
         # one equation
@@ -149,56 +148,64 @@ class TestDiscretise(unittest.TestCase):
         c = pybamm.Variable("c", domain=["whole_cell"])
         N = pybamm.grad(c)
         rhs = {c: pybamm.div(N)}
-        boundary_conditions = {N: (pybamm.Scalar(0), pybamm.Scalar(2))}
+        # can't process boundary conditions with DiscretisationForTesting
+        boundary_conditions = {}
         mesh = MeshForTesting()
         disc = DiscretisationForTesting(mesh)
 
         y = mesh.whole_cell.centres ** 2
         y_slices = disc.get_variable_slices(rhs.keys())
         dydt = disc.process_rhs(rhs, boundary_conditions, y_slices)
-        np.testing.assert_array_equal(y[1:-1], dydt(y)[1:-1])
-        self.assertEqual(dydt(y)[0], 0)
-        self.assertEqual(dydt(y)[-1], 2)
+        np.testing.assert_array_equal(y, dydt(y))
 
         # two equations
-        # T = pybamm.Variable("T", domain=["negative_electrode"])
-        # q = pybamm.grad(T)
-        # rhs = {c: pybamm.div(N), T: pybamm.div(q)}
-        # boundary_conditions = {
-        #     N: (pybamm.Scalar(0), pybamm.Scalar(2)),
-        #     q: (pybamm.Scalar(-3), pybamm.Scalar(12)),
-        # }
-        # model = ModelForTesting(rhs, initial_conditions, boundary_conditions)
+        T = pybamm.Variable("T", domain=["negative_electrode"])
+        q = pybamm.grad(T)
+        rhs = {c: pybamm.div(N), T: pybamm.div(q)}
+        boundary_conditions = {}
 
-        # y0, dydt = disc.process_model(model)
+        y = np.concatenate(
+            [mesh.whole_cell.centres ** 2, mesh.negative_electrode.centres ** 4]
+        )
+        y_slices = disc.get_variable_slices(rhs.keys())
+        dydt = disc.process_rhs(rhs, boundary_conditions, y_slices)
+        np.testing.assert_array_equal(y[y_slices[c.id]], dydt(y)[y_slices[c.id]])
+        np.testing.assert_array_equal(y[y_slices[T.id]], dydt(y)[y_slices[T.id]])
 
-    @unittest.skip("")
     def test_process_model(self):
         # one equation
         c = pybamm.Variable("c", domain=["whole_cell"])
         N = pybamm.grad(c)
         rhs = {c: pybamm.div(N)}
-        initial_conditions = {c: pybamm.Scalar(1)}
-        boundary_conditions = {N: (pybamm.Scalar(0), pybamm.Scalar(2))}
+        initial_conditions = {c: pybamm.Scalar(3)}
+        boundary_conditions = {}
         model = ModelForTesting(rhs, initial_conditions, boundary_conditions)
         mesh = MeshForTesting()
         disc = DiscretisationForTesting(mesh)
 
         y0, dydt = disc.process_model(model)
-        np.testing.assert_array_equal(y0, np.ones_like(mesh.whole_cell.centres))
-        np.testing.assert_array_equal(y0[1:-1], dydt(y0)[1:-1])
-        np.testing.assert_array_equal(dydt(y0)[0], 0)
-        np.testing.assert_array_equal(dydt(y0)[-1], 2)
+        np.testing.assert_array_equal(y0, 3 * np.ones_like(mesh.whole_cell.centres))
+        np.testing.assert_array_equal(y0, dydt(y0))
 
         # two equations
         T = pybamm.Variable("T", domain=["negative_electrode"])
         q = pybamm.grad(T)
-        rhs[T] = pybamm.div(q)
-        initial_conditions[T] = pybamm.Scalar(5)
-        boundary_conditions[q] = (pybamm.Scalar(-3), pybamm.Scalar(12))
+        rhs = {c: pybamm.div(N), T: pybamm.div(q)}
+        initial_conditions = {c: pybamm.Scalar(2), T: pybamm.Scalar(5)}
+        boundary_conditions = {}
         model = ModelForTesting(rhs, initial_conditions, boundary_conditions)
 
-        # y0, dydt = disc.process_model(model)
+        y0, dydt = disc.process_model(model)
+        np.testing.assert_array_equal(
+            y0,
+            np.concatenate(
+                [
+                    2 * np.ones_like(mesh.whole_cell.centres),
+                    5 * np.ones_like(mesh.negative_electrode.centres),
+                ]
+            ),
+        )
+        np.testing.assert_array_equal(y0, dydt(y0))
 
     @unittest.skip("")
     def test_concatenation(self):
