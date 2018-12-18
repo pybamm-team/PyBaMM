@@ -84,7 +84,7 @@ class BaseDiscretisation(object):
             initial_conditions[variable] = discretised_ic
 
         # Concatenate and evaluate initial conditions
-        return pybamm.NumpyConcatenation(*initial_conditions.values()).evaluate(None)
+        return pybamm.NumpyConcatenation(*initial_conditions.values()).evaluate(0, None)
 
     def process_rhs(self, rhs, boundary_conditions, y_slices):
         boundary_conditions = {
@@ -98,8 +98,8 @@ class BaseDiscretisation(object):
         # Concatenate and evaluate right-hand sides
         self._concatenated_rhs = pybamm.NumpyConcatenation(*rhs.values())
 
-        def dydt(y):
-            return self._concatenated_rhs.evaluate(y)
+        def dydt(t, y):
+            return self._concatenated_rhs.evaluate(t, y)
 
         return dydt
 
@@ -120,23 +120,27 @@ class BaseDiscretisation(object):
 
         """
         if isinstance(symbol, pybamm.Gradient):
-            return self.gradient(symbol.child, domain, y_slices, boundary_conditions)
+            return self.gradient(
+                symbol.children[0], domain, y_slices, boundary_conditions
+            )
 
         if isinstance(symbol, pybamm.Divergence):
-            return self.divergence(symbol.child, domain, y_slices, boundary_conditions)
+            return self.divergence(
+                symbol.children[0], domain, y_slices, boundary_conditions
+            )
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             new_left = self.process_symbol(
-                symbol.left, domain, y_slices, boundary_conditions
+                symbol.children[0], domain, y_slices, boundary_conditions
             )
             new_right = self.process_symbol(
-                symbol.right, domain, y_slices, boundary_conditions
+                symbol.children[1], domain, y_slices, boundary_conditions
             )
             return symbol.__class__(symbol.name, new_left, new_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(
-                symbol.child, domain, y_slices, boundary_conditions
+                symbol.children[0], domain, y_slices, boundary_conditions
             )
             return symbol.__class__(symbol.name, new_child)
 
@@ -188,7 +192,7 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
             lbc, rbc = boundary_conditions[symbol.id]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
         gradient_matrix = self.gradient_matrix(domain)
-        return gradient_matrix @ discretised_symbol
+        return gradient_matrix * discretised_symbol
 
     def gradient_matrix(self, domain):
         raise NotImplementedError
@@ -202,7 +206,7 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
             lbc, rbc = boundary_conditions[symbol.id]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
         divergence_matrix = self.gradient_matrix(domain)
-        return divergence_matrix @ discretised_symbol
+        return divergence_matrix * discretised_symbol
 
     def divergence_matrix(self, domain):
         raise NotImplementedError

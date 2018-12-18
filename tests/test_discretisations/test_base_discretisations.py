@@ -94,14 +94,14 @@ class TestDiscretise(unittest.TestCase):
         bin = pybamm.BinaryOperator("bin", var, scal)
         bin_disc = disc.process_symbol(bin, None, y_slices, None)
         self.assertTrue(isinstance(bin_disc, pybamm.BinaryOperator))
-        self.assertTrue(isinstance(bin_disc.left, pybamm.VariableVector))
-        self.assertTrue(isinstance(bin_disc.right, pybamm.Scalar))
+        self.assertTrue(isinstance(bin_disc.children[0], pybamm.VariableVector))
+        self.assertTrue(isinstance(bin_disc.children[1], pybamm.Scalar))
 
         # non-spatial unary operator
         un = pybamm.UnaryOperator("un", var)
         un_disc = disc.process_symbol(un, None, y_slices, None)
         self.assertTrue(isinstance(un_disc, pybamm.UnaryOperator))
-        self.assertTrue(isinstance(un_disc.child, pybamm.VariableVector))
+        self.assertTrue(isinstance(un_disc.children[0], pybamm.VariableVector))
 
     def test_discretise_spatial_operator(self):
         mesh = MeshForTesting()
@@ -111,14 +111,16 @@ class TestDiscretise(unittest.TestCase):
         for eqn in [pybamm.grad(var), pybamm.div(var)]:
             eqn_disc = disc.process_symbol(eqn, var.domain, y_slices, {})
 
-            self.assertTrue(isinstance(eqn_disc, pybamm.MatrixMultiplication))
-            self.assertTrue(isinstance(eqn_disc.left, pybamm.Matrix))
-            self.assertTrue(isinstance(eqn_disc.right, pybamm.VariableVector))
+            self.assertTrue(isinstance(eqn_disc, pybamm.Multiplication))
+            self.assertTrue(isinstance(eqn_disc.children[0], pybamm.Matrix))
+            self.assertTrue(isinstance(eqn_disc.children[1], pybamm.VariableVector))
 
             y = mesh.whole_cell.centres ** 2
             var_disc = disc.process_symbol(var, None, y_slices, None)
             # grad and var are identity operators here (for testing purposes)
-            np.testing.assert_array_equal(eqn_disc.evaluate(y), var_disc.evaluate(y))
+            np.testing.assert_array_equal(
+                eqn_disc.evaluate(None, y), var_disc.evaluate(None, y)
+            )
 
     def test_process_initial_conditions(self):
         # one equation
@@ -156,7 +158,7 @@ class TestDiscretise(unittest.TestCase):
         y = mesh.whole_cell.centres ** 2
         y_slices = disc.get_variable_slices(rhs.keys())
         dydt = disc.process_rhs(rhs, boundary_conditions, y_slices)
-        np.testing.assert_array_equal(y, dydt(y))
+        np.testing.assert_array_equal(y, dydt(None, y))
 
         # two equations
         T = pybamm.Variable("T", domain=["negative_electrode"])
@@ -169,8 +171,8 @@ class TestDiscretise(unittest.TestCase):
         )
         y_slices = disc.get_variable_slices(rhs.keys())
         dydt = disc.process_rhs(rhs, boundary_conditions, y_slices)
-        np.testing.assert_array_equal(y[y_slices[c.id]], dydt(y)[y_slices[c.id]])
-        np.testing.assert_array_equal(y[y_slices[T.id]], dydt(y)[y_slices[T.id]])
+        np.testing.assert_array_equal(y[y_slices[c.id]], dydt(None, y)[y_slices[c.id]])
+        np.testing.assert_array_equal(y[y_slices[T.id]], dydt(None, y)[y_slices[T.id]])
 
     def test_process_model(self):
         # one equation
@@ -185,7 +187,7 @@ class TestDiscretise(unittest.TestCase):
 
         y0, dydt = disc.process_model(model)
         np.testing.assert_array_equal(y0, 3 * np.ones_like(mesh.whole_cell.centres))
-        np.testing.assert_array_equal(y0, dydt(y0))
+        np.testing.assert_array_equal(y0, dydt(None, y0))
 
         # two equations
         T = pybamm.Variable("T", domain=["negative_electrode"])
@@ -205,7 +207,7 @@ class TestDiscretise(unittest.TestCase):
                 ]
             ),
         )
-        np.testing.assert_array_equal(y0, dydt(y0))
+        np.testing.assert_array_equal(y0, dydt(None, y0))
 
     def test_concatenation(self):
         a = pybamm.Symbol("a")
