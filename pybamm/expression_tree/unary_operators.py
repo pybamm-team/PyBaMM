@@ -7,40 +7,92 @@ import pybamm
 
 
 class UnaryOperator(pybamm.Symbol):
-    def __init__(self, name, child, parent=None):
-        super().__init__(name, children=[child], parent=parent)
+    """A node in the expression tree representing a unary operator
+    (e.g. '-', grad, div)
 
-    @property
-    def child(self):
-        assert len(self.children) == 1
-        return self.children[0]
+    Derived classes will specify the particular operator
+
+    Arguments:
+
+    ``name`` (str)
+        name of the node
+    ``child`` (:class:`Symbol`)
+        child node
+
+    *Extends:* :class:`Symbol`
+    """
+
+    def __init__(self, name, child):
+        super().__init__(name, children=[child])
 
 
 class SpatialOperator(UnaryOperator):
-    def __init__(self, name, child, parent=None):
-        super().__init__(name, child, parent)
+    """A node in the expression tree representing a unary spatial operator
+    (e.g. grad, div)
+
+    Derived classes will specify the particular operator
+
+    This type of node will be replaced by the :class:`BaseDiscretisation`
+    class with a :class:`Matrix`
+
+    Arguments:
+
+    ``name`` (str)
+        name of the node
+    ``child`` (:class:`Symbol`)
+        child node
+
+    *Extends:* :class:`UnaryOperator`
+    """
+
+    def __init__(self, name, child):
+        super().__init__(name, child)
+        # self.domain = child.domain
 
     def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}({!s})".format(self.name, self.children[0])
-
-    @property
-    def id(self):
-        return hash((self.__class__, self.name, self.child.id))
 
 
 class Gradient(SpatialOperator):
-    def __init__(self, child, parent=None):
-        super().__init__("grad", child, parent)
+    """A node in the expression tree representing an grad operator
+
+    *Extends:* :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("grad", child)
 
 
 class Divergence(SpatialOperator):
-    def __init__(self, child, parent=None):
-        super().__init__("div", child, parent)
+    """A node in the expression tree representing an div operator
+
+    *Extends:* :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("div", child)
 
 
-def grad(variable):
-    return Gradient(variable)
+def grad(expression):
+    """convenience function for creating a :class:`Gradient`
+
+    Arguments:
+
+    ``expression`` (:class:`Symbol`)
+        the gradient will be performed on this sub-expression
+    """
+
+    return Gradient(expression)
 
 
-def div(variable):
-    return Divergence(variable)
+def div(expression):
+    """convenience function for creating a :class:`Divergence`
+
+    Arguments:
+
+    ``expression`` (:class:`Symbol`)
+        the gradient will be performed on this sub-expression
+    """
+
+    return Divergence(expression)

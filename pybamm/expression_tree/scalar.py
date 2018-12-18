@@ -7,31 +7,39 @@ import pybamm
 
 
 class Scalar(pybamm.Symbol):
-    """A node in the expression tree representing a scalar value"""
+    """A node in the expression tree representing a scalar value
 
-    def __init__(self, value, name=None, parent=None):
+    Arguments:
+
+    ``value`` (numeric type)
+        the value returned by the node when evaluated
+    ``name`` (str)
+        the name of the node. Optional, defaulted to ``str(value)``
+        if not provided
+
+    *Extends:* :class:`Symbol`
+    """
+
+    def __init__(self, value, name=None):
         """
-        Args:
-            value (numeric type): the value returned by the node when evaluated
-            name (str): the name of the node. Optional, defaulted to
-                        `str(value)` if not provided
+
         """
         # set default name if not provided
         if name is None:
             name = str(value)
 
-        super().__init__(name, parent=parent)
+        super().__init__(name)
         self.value = value
 
     @property
     def value(self):
-        """numeric: the value returned by the node when evaluated"""
+        """the value returned by the node when evaluated"""
         return self._value
 
     @value.setter
     def value(self, value):
         self._value = value
 
-    def evaluate(self, y):
-        """return the value of the Scalar node"""
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self._value

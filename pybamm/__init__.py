@@ -21,6 +21,8 @@ if sys.version_info[0] < 3:
 #
 # Expose pints version
 #
+
+
 def version(formatted=False):
     if formatted:
         return "PyBaMM " + VERSION
@@ -54,7 +56,6 @@ from .expression_tree.binary_operators import (
     Subtraction,
     Multiplication,
     Division,
-    MatrixMultiplication,
 )
 from .expression_tree.concatenations import Concatenation, NumpyConcatenation
 from .expression_tree.array import Array

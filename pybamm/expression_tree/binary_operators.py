@@ -4,62 +4,94 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-import copy
 
 
 class BinaryOperator(pybamm.Symbol):
-    def __init__(self, name, left, right, parent=None):
-        super().__init__(name, children=[left, right], parent=parent)
+    """A node in the expression tree representing a binary operator (e.g. `+`, `*`)
 
-    @property
-    def left(self):
-        assert len(self.children) == 2
-        return self.children[0]
+    Derived classes will specify the particular operator
 
-    @property
-    def right(self):
-        assert len(self.children) == 2
-        return self.children[1]
+    Arguments:
+
+    ``name`` (str)
+        name of the node
+    ``left`` (:class:`Symbol`)
+        lhs child node
+    ``right`` (:class:`Symbol`)
+        rhs child node
+
+    *Extends:* :class:`Symbol`
+    """
+
+    def __init__(self, name, left, right):
+
+        super().__init__(name, children=[left, right])
 
     def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
 
 
 class Addition(BinaryOperator):
-    def __init__(self, left, right, parent=None):
-        super().__init__("+", left, right, parent)
+    """A node in the expression tree representing an addition operator
 
-    def evaluate(self, y):
-        return self.children[0].evaluate(y) + self.children[1].evaluate(y)
+    *Extends:* :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        super().__init__("+", left, right)
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return self.children[0].evaluate() + self.children[1].evaluate()
 
 
 class Subtraction(BinaryOperator):
-    def __init__(self, left, right, parent=None):
-        super().__init__("-", left, right, parent)
+    """A node in the expression tree representing a subtraction operator
 
-    def evaluate(self, y):
-        return self.children[0].evaluate(y) - self.children[1].evaluate(y)
+    *Extends:* :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+
+        super().__init__("-", left, right)
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return self.children[0].evaluate() - self.children[1].evaluate()
 
 
 class Multiplication(BinaryOperator):
-    def __init__(self, left, right, parent=None):
-        super().__init__("*", left, right, parent)
+    """A node in the expression tree representing a multiplication operator
 
-    def evaluate(self, y):
-        return self.children[0].evaluate(y) * self.children[1].evaluate(y)
+    *Extends:* :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+
+        super().__init__("*", left, right)
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        if isinstance(self.children[0], pybamm.Matrix):
+            return self.children[0].evaluate() @ self.children[1].evaluate()
+        else:
+            return self.children[0].evaluate() * self.children[1].evaluate()
 
 
 class Division(BinaryOperator):
-    def __init__(self, left, right, parent=None):
-        super().__init__("/", left, right, parent)
+    """A node in the expression tree representing a division operator
 
-    def evaluate(self, y):
-        return self.children[0].evaluate(y) / self.children[1].evaluate(y)
+    *Extends:* :class:`BinaryOperator`
+    """
 
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        super().__init__("/", left, right)
 
-class MatrixMultiplication(BinaryOperator):
-    def __init__(self, left, right, parent=None):
-        super().__init__("@", left, right, parent)
-
-    def evaluate(self, y):
-        return self.children[0].evaluate(y) @ self.children[1].evaluate(y)
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return self.children[0].evaluate() / self.children[1].evaluate()

@@ -7,14 +7,21 @@ import pybamm
 
 
 class Parameter(pybamm.Domain, pybamm.Symbol):
-    def __init__(self, name, family=None, domain=[], parent=None):
-        super().__init__(name, parent=parent, domain=domain)
-        self.family = family
+    """A node in the expression tree representing a parameter
 
-    @property
-    def family(self):
-        return self._family
+    This node will be replaced by a :class:`.Scalar` node by :class`.Parameter`
 
-    @family.setter
-    def family(self, family):
-        self._family = family
+    A variable has a list of domains (text) that it is valid over
+    (inherits from :class:`.Domain`)
+
+    Arguments:
+
+    ``name`` (str)
+        name of the node
+    ``domain`` (iterable of str)
+        list of domains the parameter is valid over
+
+    """
+
+    def __init__(self, name, domain=[]):
+        super().__init__(name, domain=domain)
