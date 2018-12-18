@@ -15,8 +15,3 @@ Binary Operators
 
 .. autoclass:: pybamm.Division
   :members:
-
-.. autoclass:: pybamm.MatrixVectorMultiplication
-  :members:
-
-

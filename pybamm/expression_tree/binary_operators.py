@@ -76,7 +76,10 @@ class Multiplication(BinaryOperator):
 
     def evaluate(self):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate() * self.children[1].evaluate()
+        if isinstance(self.children[0], pybamm.Matrix):
+            return self.children[0].evaluate() @ self.children[1].evaluate()
+        else:
+            return self.children[0].evaluate() * self.children[1].evaluate()
 
 
 class Division(BinaryOperator):
@@ -92,19 +95,3 @@ class Division(BinaryOperator):
     def evaluate(self):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate() / self.children[1].evaluate()
-
-
-class MatrixVectorMultiplication(BinaryOperator):
-    """A node in the expression tree representing a matrix vector multiplication operator
-
-    *Extends:* :class:`BinaryOperator`
-    """
-
-    def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-
-        super().__init__("@", left, right)
-
-    def evaluate(self):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate() @ self.children[1].evaluate()

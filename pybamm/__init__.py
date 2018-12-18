@@ -56,7 +56,6 @@ from .expression_tree.binary_operators import (
     Subtraction,
     Multiplication,
     Division,
-    MatrixVectorMultiplication,
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
