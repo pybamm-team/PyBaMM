@@ -23,14 +23,5 @@ class Parameter(pybamm.Domain, pybamm.Symbol):
 
     """
 
-    def __init__(self, name, family=None, domain=[]):
+    def __init__(self, name, domain=[]):
         super().__init__(name, domain=domain)
-        self.family = family
-
-    @property
-    def family(self):
-        return self._family
-
-    @family.setter
-    def family(self, family):
-        self._family = family
