@@ -21,6 +21,8 @@ if sys.version_info[0] < 3:
 #
 # Expose pints version
 #
+
+
 def version(formatted=False):
     if formatted:
         return "PyBaMM " + VERSION
@@ -43,6 +45,33 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 from .util import Timer
 from .util import profile
+
+#
+# Classes for the Expression Tree
+#
+from .expression_tree.symbol import Symbol
+from .expression_tree.binary_operators import (
+    BinaryOperator,
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+)
+from .expression_tree.array import Array
+from .expression_tree.matrix import Matrix
+from .expression_tree.domain import Domain
+from .expression_tree.parameter import Parameter
+from .expression_tree.unary_operators import (
+    UnaryOperator,
+    SpatialOperator,
+    Gradient,
+    Divergence,
+    grad,
+    div,
+)
+from .expression_tree.scalar import Scalar
+from .expression_tree.variable import Variable
+from .expression_tree.vector import Vector
 
 #
 # Mesh classes
