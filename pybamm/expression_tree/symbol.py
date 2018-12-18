@@ -97,6 +97,15 @@ class Symbol(anytree.NodeMixin):
         will raise a ``NotImplementedError`` if this member function has not
         been defined for the node. For example, :class:`Scalar` returns its
         scalar value, but :class:`Variable` will raise ``NotImplementedError``
+
+        Arguments:
+
+        ``t`` (float or numeric type, optional)
+            time at which to evaluate (default None)
+
+        ``y`` (numeric type, optional)
+            array to evaluate when solving (default None)
+
         """
         raise NotImplementedError(
             """method self.evaluate() not implemented
