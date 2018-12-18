@@ -122,6 +122,18 @@ class TestDiscretise(unittest.TestCase):
                 eqn_disc.evaluate(None, y), var_disc.evaluate(None, y)
             )
 
+    def test_core_NotImplementedErrors(self):
+        disc = pybamm.BaseDiscretisation(None)
+        with self.assertRaises(NotImplementedError):
+            disc.gradient(None, None, None, None)
+        with self.assertRaises(NotImplementedError):
+            disc.divergence(None, None, None, None)
+        disc = pybamm.MatrixVectorDiscretisation(None)
+        with self.assertRaises(NotImplementedError):
+            disc.gradient_matrix(None)
+        with self.assertRaises(NotImplementedError):
+            disc.divergence_matrix(None)
+
     def test_process_initial_conditions(self):
         # one equation
         c = pybamm.Variable("c", domain=["whole_cell"])
