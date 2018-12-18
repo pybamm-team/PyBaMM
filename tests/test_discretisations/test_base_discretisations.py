@@ -207,9 +207,13 @@ class TestDiscretise(unittest.TestCase):
         )
         np.testing.assert_array_equal(y0, dydt(y0))
 
-    @unittest.skip("")
     def test_concatenation(self):
-        pass
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        c = pybamm.Symbol("c")
+        disc = pybamm.BaseDiscretisation(None)
+        conc = disc.concatenate(a, b, c)
+        self.assertTrue(isinstance(conc, pybamm.Concatenation))
 
 
 if __name__ == "__main__":
