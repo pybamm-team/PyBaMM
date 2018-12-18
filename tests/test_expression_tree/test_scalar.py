@@ -22,6 +22,13 @@ class TestScalar(unittest.TestCase):
         self.assertEqual((a * b).evaluate(), 30)
         self.assertEqual((a / b).evaluate(), 5 / 6)
 
+    def test_scalar_id(self):
+        a1 = pybamm.Scalar(4)
+        a2 = pybamm.Scalar(4)
+        self.assertEqual(a1.id, a2.id)
+        a3 = pybamm.Scalar(5)
+        self.assertNotEqual(a1.id, a3.id)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

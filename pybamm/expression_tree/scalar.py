@@ -32,6 +32,18 @@ class Scalar(pybamm.Symbol):
         self.value = value
 
     @property
+    def id(self):
+        """
+        The immutable "identity" of a variable (for identifying y_slices).
+
+        This is identical to what we'd put in a __hash__ function
+        However, implementing __hash__ requires also implementing __eq__,
+        which would then mess with loop-checking in the anytree module
+        """
+
+        return hash((self.__class__, self.name, self.value))
+
+    @property
     def value(self):
         """the value returned by the node when evaluated"""
         return self._value
