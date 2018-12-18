@@ -56,11 +56,11 @@ class Symbol(anytree.NodeMixin):
         return anytree.PreOrderIter(self)
 
     def __str__(self):
-        """returns the name of the node"""
+        """return a string representation of the node and its children"""
         return self._name
 
     def __repr__(self):
-        """returns the string `Symbol(name, parent)`"""
+        """returns the string `Symbol(name, parent expression)`"""
         return "Symbol({!s}, {!s})".format(self._name, self.parent)
 
     def __add__(self, other):
@@ -91,14 +91,12 @@ class Symbol(anytree.NodeMixin):
         else:
             raise NotImplementedError
 
-    def evaluate(self, y):
+    def evaluate(self):
         """evaluate expression tree
 
-        Arguments:
-
-        ``y`` (numpy.array)
-            an expression can depend on a vector
-
+        will raise a ``NotImplementedError` if this member function has not
+        been defined for the node. For example, :class:`Scalar` returns its
+        scalar value, but :class:`Variable` will raise ``NotImplementedError``
         """
         raise NotImplementedError(
             """method self.evaluate(y) not implemented

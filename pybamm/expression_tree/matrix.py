@@ -7,11 +7,15 @@ import pybamm
 
 
 class Matrix(pybamm.Array):
-    """
-    Parameters
-    ----------
-    entries : :class:`numpy.array`
-        Entries of the matrix
+    """node in the expression tree that holds a matrix type (e.g. :class:`numpy.array`)
+
+    Arguements:
+    ``entries``
+        the array associated with the node
+    ``name``
+        the name of the node
+
+    *Extends:* :class:`Array`
     """
 
     def __init__(self, entries, name=None):

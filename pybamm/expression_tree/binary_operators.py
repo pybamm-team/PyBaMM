@@ -16,9 +16,9 @@ class BinaryOperator(pybamm.Symbol):
 
     ``name`` (str)
         name of the node
-    ``left`` (node)
+    ``left`` (:class:`Symbol`)
         lhs child node
-    ``right`` (node)
+    ``right`` (:class:`Symbol`)
         rhs child node
     """
 
@@ -27,7 +27,7 @@ class BinaryOperator(pybamm.Symbol):
         super().__init__(name, children=[left, right])
 
     def __str__(self):
-        """return a string representation of the node and its children"""
+        """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
 
 
