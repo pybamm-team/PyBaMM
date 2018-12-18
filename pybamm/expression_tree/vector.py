@@ -23,7 +23,7 @@ class Vector(pybamm.Array):
         super().__init__(entries, name=name)
 
 
-class VariableVector(pybamm.Symbol):
+class StateVector(pybamm.Symbol):
     """
     node in the expression tree that holds a slice to read from an external vector type
 

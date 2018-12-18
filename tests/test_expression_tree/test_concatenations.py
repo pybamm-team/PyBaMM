@@ -29,9 +29,9 @@ class TestConcatenations(unittest.TestCase):
         conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(conc.evaluate(None, y), y)
         # with y_slice
-        a = pybamm.VariableVector(slice(0, 10))
-        b = pybamm.VariableVector(slice(10, 15))
-        c = pybamm.VariableVector(slice(15, 23))
+        a = pybamm.StateVector(slice(0, 10))
+        b = pybamm.StateVector(slice(10, 15))
+        c = pybamm.StateVector(slice(15, 23))
         conc = pybamm.NumpyConcatenation(a, b, c)
         y = np.linspace(0, 1, 23)
         np.testing.assert_array_equal(conc.evaluate(None, y), y)
@@ -48,7 +48,7 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # with y_slice
-        a = pybamm.VariableVector(slice(0, 10))
+        a = pybamm.StateVector(slice(0, 10))
         conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(
             conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])

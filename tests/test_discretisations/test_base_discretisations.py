@@ -77,7 +77,7 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable("var")
         y_slices = {var.id: slice(53)}
         var_disc = disc.process_symbol(var, None, y_slices, None)
-        self.assertTrue(isinstance(var_disc, pybamm.VariableVector))
+        self.assertTrue(isinstance(var_disc, pybamm.StateVector))
         self.assertEqual(var_disc._y_slice, y_slices[var.id])
         # scalar
         scal = pybamm.Scalar(5)
@@ -94,14 +94,14 @@ class TestDiscretise(unittest.TestCase):
         bin = pybamm.BinaryOperator("bin", var, scal)
         bin_disc = disc.process_symbol(bin, None, y_slices, None)
         self.assertTrue(isinstance(bin_disc, pybamm.BinaryOperator))
-        self.assertTrue(isinstance(bin_disc.children[0], pybamm.VariableVector))
+        self.assertTrue(isinstance(bin_disc.children[0], pybamm.StateVector))
         self.assertTrue(isinstance(bin_disc.children[1], pybamm.Scalar))
 
         # non-spatial unary operator
         un = pybamm.UnaryOperator("un", var)
         un_disc = disc.process_symbol(un, None, y_slices, None)
         self.assertTrue(isinstance(un_disc, pybamm.UnaryOperator))
-        self.assertTrue(isinstance(un_disc.children[0], pybamm.VariableVector))
+        self.assertTrue(isinstance(un_disc.children[0], pybamm.StateVector))
 
     def test_discretise_spatial_operator(self):
         mesh = MeshForTesting()
@@ -113,7 +113,7 @@ class TestDiscretise(unittest.TestCase):
 
             self.assertTrue(isinstance(eqn_disc, pybamm.Multiplication))
             self.assertTrue(isinstance(eqn_disc.children[0], pybamm.Matrix))
-            self.assertTrue(isinstance(eqn_disc.children[1], pybamm.VariableVector))
+            self.assertTrue(isinstance(eqn_disc.children[1], pybamm.StateVector))
 
             y = mesh.whole_cell.centres ** 2
             var_disc = disc.process_symbol(var, None, y_slices, None)

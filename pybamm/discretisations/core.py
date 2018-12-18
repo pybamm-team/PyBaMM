@@ -145,7 +145,7 @@ class BaseDiscretisation(object):
             return symbol.__class__(symbol.name, new_child)
 
         elif isinstance(symbol, pybamm.Variable):
-            return pybamm.VariableVector(y_slices[symbol.id])
+            return pybamm.StateVector(y_slices[symbol.id])
 
         elif isinstance(symbol, pybamm.Scalar):
             return pybamm.Scalar(symbol.value)
