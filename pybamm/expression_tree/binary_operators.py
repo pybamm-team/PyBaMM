@@ -8,7 +8,7 @@ import copy
 
 
 class BinaryOperator(pybamm.Symbol):
-    """A node in the expression tree representing a binary operator (e.g. +, *)
+    """A node in the expression tree representing a binary operator (e.g. `+`, `*`)
 
     Derived classes will specify the particular operator
 
@@ -20,6 +20,8 @@ class BinaryOperator(pybamm.Symbol):
         lhs child node
     ``right`` (:class:`Symbol`)
         rhs child node
+
+    *Extends:* :class:`Symbol`
     """
 
     def __init__(self, name, left, right):

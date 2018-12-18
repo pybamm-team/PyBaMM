@@ -18,6 +18,8 @@ class UnaryOperator(pybamm.Symbol):
         name of the node
     ``child`` (:class:`Symbol`)
         child node
+
+    *Extends:* :class:`Symbol`
     """
 
     def __init__(self, name, child):
@@ -76,6 +78,7 @@ def grad(expression):
     """convenience function for creating a :class:`Gradient`
 
     Arguments:
+
     ``expression`` (:class:`Symbol`)
         the gradient will be performed on this sub-expression
     """
@@ -83,10 +86,11 @@ def grad(expression):
     return Gradient(variable)
 
 
-def div(variable):
+def div(expression):
     """convenience function for creating a :class:`Divergence`
 
     Arguments:
+
     ``expression`` (:class:`Symbol`)
         the gradient will be performed on this sub-expression
     """

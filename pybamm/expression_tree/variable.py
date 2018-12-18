@@ -22,6 +22,8 @@ class Variable(pybamm.Domain, pybamm.Symbol):
     ``domain`` (iterable of str)
         list of domains that this variable is valid over
 
+
+    *Extends:* :class:`Domain` and :class:`Symbol`
     """
 
     def __init__(self, name, domain=[]):

@@ -8,7 +8,7 @@ Welcome to PyBaMM's documentation!
 Python Battery Mathematical Modelling (**PyBAMM**) solves continuum models for
 batteries, using both numerical methods and asymptotic analysis.
 
-PyBAMM is hosted on GitHub_. *This* page provides the *API*, or *developer
+PyBAMM is hosted on GitHub_. This page provides the *API*, or *developer
 documentation* for ``pybamm``.
 
 * :ref:`genindex`

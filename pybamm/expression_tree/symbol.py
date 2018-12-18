@@ -11,7 +11,7 @@ import copy
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
 
-    Arguements:
+    Arguments:
 
     ``name`` (str)
         name for the node
@@ -94,7 +94,7 @@ class Symbol(anytree.NodeMixin):
     def evaluate(self):
         """evaluate expression tree
 
-        will raise a ``NotImplementedError` if this member function has not
+        will raise a ``NotImplementedError`` if this member function has not
         been defined for the node. For example, :class:`Scalar` returns its
         scalar value, but :class:`Variable` will raise ``NotImplementedError``
         """

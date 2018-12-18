@@ -9,7 +9,8 @@ import pybamm
 class Matrix(pybamm.Array):
     """node in the expression tree that holds a matrix type (e.g. :class:`numpy.array`)
 
-    Arguements:
+    Arguments:
+
     ``entries``
         the array associated with the node
     ``name``

@@ -9,7 +9,8 @@ import pybamm
 class Vector(pybamm.Array):
     """node in the expression tree that holds a vector type (e.g. :class:`numpy.array`)
 
-    Arguements:
+    Arguments:
+
     ``entries``
         the array associated with the node
     ``name``
