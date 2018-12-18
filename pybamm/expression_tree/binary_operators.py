@@ -42,7 +42,7 @@ class Addition(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("+", left, right)
 
-    def evaluate(self):
+    def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate() + self.children[1].evaluate()
 
@@ -58,7 +58,7 @@ class Subtraction(BinaryOperator):
 
         super().__init__("-", left, right)
 
-    def evaluate(self):
+    def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate() - self.children[1].evaluate()
 
@@ -74,7 +74,7 @@ class Multiplication(BinaryOperator):
 
         super().__init__("*", left, right)
 
-    def evaluate(self):
+    def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if isinstance(self.children[0], pybamm.Matrix):
             return self.children[0].evaluate() @ self.children[1].evaluate()
@@ -92,6 +92,6 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("/", left, right)
 
-    def evaluate(self):
+    def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate() / self.children[1].evaluate()

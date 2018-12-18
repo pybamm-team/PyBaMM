@@ -91,7 +91,7 @@ class Symbol(anytree.NodeMixin):
         else:
             raise NotImplementedError
 
-    def evaluate(self):
+    def evaluate(self, t=None, y=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not

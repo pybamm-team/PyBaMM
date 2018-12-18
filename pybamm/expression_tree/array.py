@@ -40,6 +40,6 @@ class Array(pybamm.Symbol):
         """ returns the total number of entries in the tensor"""
         return self._entries.size
 
-    def evaluate(self):
+    def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self._entries
