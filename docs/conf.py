@@ -14,9 +14,9 @@
 #
 import os
 import sys
+import guzzle_sphinx_theme
 
 sys.path.insert(0, os.path.abspath("../"))
-import guzzle_sphinx_theme
 
 
 # -- Project information -----------------------------------------------------
