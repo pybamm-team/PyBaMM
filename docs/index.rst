@@ -24,3 +24,4 @@ Contents
 
     source/expression_tree/index
     source/models/index
+    source/discretisations/index
