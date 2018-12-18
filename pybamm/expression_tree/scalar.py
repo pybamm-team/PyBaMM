@@ -36,6 +36,6 @@ class Scalar(pybamm.Symbol):
     def value(self, value):
         self._value = value
 
-    def evaluate(self, y):
+    def evaluate(self):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self._value

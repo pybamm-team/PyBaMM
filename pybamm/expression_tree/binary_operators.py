@@ -41,9 +41,9 @@ class Addition(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("+", left, right)
 
-    def evaluate(self, y):
+    def evaluate(self):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(y) + self.children[1].evaluate(y)
+        return self.children[0].evaluate() + self.children[1].evaluate()
 
 
 class Subtraction(BinaryOperator):
@@ -57,9 +57,9 @@ class Subtraction(BinaryOperator):
 
         super().__init__("-", left, right)
 
-    def evaluate(self, y):
+    def evaluate(self):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(y) - self.children[1].evaluate(y)
+        return self.children[0].evaluate() - self.children[1].evaluate()
 
 
 class Multiplication(BinaryOperator):
@@ -73,9 +73,9 @@ class Multiplication(BinaryOperator):
 
         super().__init__("*", left, right)
 
-    def evaluate(self, y):
+    def evaluate(self):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(y) * self.children[1].evaluate(y)
+        return self.children[0].evaluate() * self.children[1].evaluate()
 
 
 class Division(BinaryOperator):
@@ -88,9 +88,9 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("/", left, right)
 
-    def evaluate(self, y):
+    def evaluate(self):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(y) / self.children[1].evaluate(y)
+        return self.children[0].evaluate() / self.children[1].evaluate()
 
 
 class MatrixVectorMultiplication(BinaryOperator):
@@ -104,6 +104,6 @@ class MatrixVectorMultiplication(BinaryOperator):
 
         super().__init__("@", left, right)
 
-    def evaluate(self, y):
+    def evaluate(self):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(y) @ self.children[1].evaluate(y)
+        return self.children[0].evaluate() @ self.children[1].evaluate()

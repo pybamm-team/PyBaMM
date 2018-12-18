@@ -43,7 +43,7 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_evaluation(self):
         a = pybamm.Symbol("a")
         with self.assertRaises(NotImplementedError):
-            a.evaluate(1)
+            a.evaluate()
 
 
 if __name__ == "__main__":

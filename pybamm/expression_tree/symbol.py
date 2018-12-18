@@ -99,7 +99,7 @@ class Symbol(anytree.NodeMixin):
         scalar value, but :class:`Variable` will raise ``NotImplementedError``
         """
         raise NotImplementedError(
-            """method self.evaluate(y) not implemented
+            """method self.evaluate() not implemented
                for symbol {!s} of type {}""".format(
                 self, type(self)
             )

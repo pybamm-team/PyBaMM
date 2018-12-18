@@ -13,7 +13,7 @@ class Array(pybamm.Symbol):
     ``entries``
         the array associated with the node
     ``name``
-        the name of the node
+        the name of the node. Optional, defaults to ``str(entries)`` if not provided
 
     *Extends:* :class:`Symbol`
     """
@@ -39,6 +39,6 @@ class Array(pybamm.Symbol):
         """ returns the total number of entries in the tensor"""
         return self._entries.size
 
-    def evaluate(self, y):
+    def evaluate(self):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self._entries

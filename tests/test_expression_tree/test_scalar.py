@@ -12,15 +12,15 @@ class TestScalar(unittest.TestCase):
     def test_scalar_eval(self):
         a = pybamm.Scalar(5)
         self.assertEqual(a.value, 5)
-        self.assertEqual(a.evaluate(None), 5)
+        self.assertEqual(a.evaluate(), 5)
 
     def test_scalar_operations(self):
         a = pybamm.Scalar(5)
         b = pybamm.Scalar(6)
-        self.assertEqual((a + b).evaluate(None), 11)
-        self.assertEqual((a - b).evaluate(None), -1)
-        self.assertEqual((a * b).evaluate(None), 30)
-        self.assertEqual((a / b).evaluate(None), 5 / 6)
+        self.assertEqual((a + b).evaluate(), 11)
+        self.assertEqual((a - b).evaluate(), -1)
+        self.assertEqual((a * b).evaluate(), 30)
+        self.assertEqual((a / b).evaluate(), 5 / 6)
 
 
 if __name__ == "__main__":
