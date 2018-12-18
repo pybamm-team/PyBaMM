@@ -19,10 +19,13 @@ class UnaryOperator(pybamm.Symbol):
 class SpatialOperator(UnaryOperator):
     def __init__(self, name, child, parent=None):
         super().__init__(name, child, parent)
-        # self.domain = child.domain
 
     def __str__(self):
         return "{}({!s})".format(self.name, self.children[0])
+
+    @property
+    def id(self):
+        return hash((self.__class__, self.name, self.child.id))
 
 
 class Gradient(SpatialOperator):
