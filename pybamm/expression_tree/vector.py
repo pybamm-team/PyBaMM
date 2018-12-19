@@ -9,14 +9,16 @@ import pybamm
 class Vector(pybamm.Array):
     """node in the expression tree that holds a vector type (e.g. :class:`numpy.array`)
 
-    Arguments:
+    **Extends:** :class:`Array`
 
-    ``entries``
+    Parameters
+    ----------
+
+    entries : numpy.array
         the array associated with the node
-    ``name``
+    name : str, optional
         the name of the node
 
-    *Extends:* :class:`Array`
     """
 
     def __init__(self, entries, name=None):

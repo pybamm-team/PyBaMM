@@ -9,15 +9,17 @@ import pybamm
 class Scalar(pybamm.Symbol):
     """A node in the expression tree representing a scalar value
 
-    Arguments:
+    **Extends:** :class:`Symbol`
 
-    ``value`` (numeric type)
+    Parameters
+    ----------
+
+    value : numeric
         the value returned by the node when evaluated
-    ``name`` (str)
-        the name of the node. Optional, defaulted to ``str(value)``
+    name : str, optional
+        the name of the node. Defaulted to ``str(value)``
         if not provided
 
-    *Extends:* :class:`Symbol`
     """
 
     def __init__(self, value, name=None):

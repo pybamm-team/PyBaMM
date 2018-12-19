@@ -11,16 +11,18 @@ class BinaryOperator(pybamm.Symbol):
 
     Derived classes will specify the particular operator
 
-    Arguments:
+    **Extends**: :class:`Symbol`
 
-    ``name`` (str)
+    Parameters
+    ----------
+
+    name : str
         name of the node
-    ``left`` (:class:`Symbol`)
+    left : :class:`Symbol`
         lhs child node
-    ``right`` (:class:`Symbol`)
+    right : :class:`Symbol`
         rhs child node
 
-    *Extends:* :class:`Symbol`
     """
 
     def __init__(self, name, left, right):
@@ -47,7 +49,7 @@ class BinaryOperator(pybamm.Symbol):
 class Addition(BinaryOperator):
     """A node in the expression tree representing an addition operator
 
-    *Extends:* :class:`BinaryOperator`
+    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -62,7 +64,7 @@ class Addition(BinaryOperator):
 class Subtraction(BinaryOperator):
     """A node in the expression tree representing a subtraction operator
 
-    *Extends:* :class:`BinaryOperator`
+    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -78,7 +80,7 @@ class Subtraction(BinaryOperator):
 class Multiplication(BinaryOperator):
     """A node in the expression tree representing a multiplication operator
 
-    *Extends:* :class:`BinaryOperator`
+    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -97,7 +99,7 @@ class Multiplication(BinaryOperator):
 class Division(BinaryOperator):
     """A node in the expression tree representing a division operator
 
-    *Extends:* :class:`BinaryOperator`
+    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):

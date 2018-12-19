@@ -8,11 +8,12 @@ from __future__ import print_function, unicode_literals
 class Domain(object):
     """list of applicable domains
 
-    Arguments:
+    Parameters
+    ----------
 
-    ``name`` (str)
+    name: str
         the name of the node
-    ``domain`` (iterable of str)
+    domain : iterable of str
         the list of domains
 
     """
@@ -28,7 +29,12 @@ class Domain(object):
 
     @property
     def domain(self):
-        """list of applicable domains (iterable of str)"""
+        """list of applicable domains
+
+        Returns
+        -------
+            iterable of str
+        """
         return self._domain
 
     @domain.setter

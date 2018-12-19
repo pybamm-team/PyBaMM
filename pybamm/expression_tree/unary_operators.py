@@ -12,14 +12,16 @@ class UnaryOperator(pybamm.Symbol):
 
     Derived classes will specify the particular operator
 
-    Arguments:
+    **Extends:** :class:`Symbol`
 
-    ``name`` (str)
+    Parameters
+    ----------
+
+    name : str
         name of the node
-    ``child`` (:class:`Symbol`)
+    child : :class:`Symbol`
         child node
 
-    *Extends:* :class:`Symbol`
     """
 
     def __init__(self, name, child):
@@ -47,14 +49,16 @@ class SpatialOperator(UnaryOperator):
     This type of node will be replaced by the :class:`BaseDiscretisation`
     class with a :class:`Matrix`
 
-    Arguments:
+    **Extends:** :class:`UnaryOperator`
 
-    ``name`` (str)
+    Parameters
+    ----------
+
+    name : str
         name of the node
-    ``child`` (:class:`Symbol`)
+    child : :class:`Symbol`
         child node
 
-    *Extends:* :class:`UnaryOperator`
     """
 
     def __init__(self, name, child):
@@ -69,7 +73,7 @@ class SpatialOperator(UnaryOperator):
 class Gradient(SpatialOperator):
     """A node in the expression tree representing an grad operator
 
-    *Extends:* :class:`SpatialOperator`
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
@@ -79,7 +83,7 @@ class Gradient(SpatialOperator):
 class Divergence(SpatialOperator):
     """A node in the expression tree representing an div operator
 
-    *Extends:* :class:`SpatialOperator`
+    **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
@@ -89,10 +93,17 @@ class Divergence(SpatialOperator):
 def grad(expression):
     """convenience function for creating a :class:`Gradient`
 
-    Arguments:
+    Parameters
+    ----------
 
-    ``expression`` (:class:`Symbol`)
+    expression : :class:`Symbol`
         the gradient will be performed on this sub-expression
+
+    Returns
+    -------
+
+    :class:`Gradient`
+        the gradient of ``expression``
     """
 
     return Gradient(expression)
@@ -101,10 +112,17 @@ def grad(expression):
 def div(expression):
     """convenience function for creating a :class:`Divergence`
 
-    Arguments:
+    Parameters
+    ----------
 
-    ``expression`` (:class:`Symbol`)
-        the gradient will be performed on this sub-expression
+    expression : :class:`Symbol`
+        the divergence will be performed on this sub-expression
+
+    Returns
+    -------
+
+    :class:`Divergence`
+        the divergence of ``expression``
     """
 
     return Divergence(expression)
