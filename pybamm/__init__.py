@@ -84,6 +84,7 @@ from .discretisations.base_discretisation import (
     MatrixVectorDiscretisation,
 )
 from .discretisations.finite_volume_discretisations import FiniteVolumeDiscretisation
+from .discretisations.base_mesh import KNOWN_DOMAINS
 from .discretisations.base_mesh import BaseMesh, BaseSubmesh
 from .discretisations.finite_volume_meshes import (
     FiniteVolumeMacroMesh,

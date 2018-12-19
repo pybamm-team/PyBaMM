@@ -13,9 +13,10 @@ class TestIndependentVariable(unittest.TestCase):
         a = pybamm.IndependentVariable("a")
         self.assertEqual(a.name, "a")
         self.assertEqual(a.domain, [])
-        a = pybamm.IndependentVariable("a", domain=['test'])
-        self.assertEqual(a.domain[0], 'test')
-        self.assertRaises(TypeError, pybamm.IndependentVariable("a", domain='test'))
+        a = pybamm.IndependentVariable("a", domain=["test"])
+        self.assertEqual(a.domain[0], "test")
+        with self.assertRaises(TypeError):
+            pybamm.IndependentVariable("a", domain=1)
 
 
 if __name__ == "__main__":

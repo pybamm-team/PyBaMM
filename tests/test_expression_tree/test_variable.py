@@ -18,11 +18,11 @@ class TestVariable(unittest.TestCase):
         self.assertRaises(TypeError, pybamm.Variable("a", domain="test"))
 
     def test_variable_id(self):
-        a1 = pybamm.Variable("a", domain=[1, 2])
-        a2 = pybamm.Variable("a", domain=[1, 2])
+        a1 = pybamm.Variable("a", domain=["negative_electrode"])
+        a2 = pybamm.Variable("a", domain=["negative_electrode"])
         self.assertEqual(a1.id, a2.id)
-        a3 = pybamm.Variable("b", domain=[1, 2])
-        a4 = pybamm.Variable("a", domain=[1, 2, 3])
+        a3 = pybamm.Variable("b", domain=["negative_electrode"])
+        a4 = pybamm.Variable("a", domain=["positive_electrode"])
         self.assertNotEqual(a1.id, a3.id)
         self.assertNotEqual(a1.id, a4.id)
 

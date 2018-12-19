@@ -6,9 +6,19 @@ from __future__ import print_function, unicode_literals
 
 import numpy as np
 
+KNOWN_DOMAINS = [
+    "negative_electrode",
+    "separator",
+    "positive_electrode",
+    "whole_cell",
+    "test",
+]
+
 
 class BaseMesh(object):
     """A base mesh class.
+    Key attributes of a mesh are time, and submeshes corresponding to the domains of
+    parameters and variables.
 
     Parameters
     ----------
@@ -54,6 +64,9 @@ class BaseMesh(object):
 
 
 class BaseSubmesh(object):
+    """Base submesh class.
+    """
+
     def __init__(self, nodes):
         self.nodes = nodes
         self.npts = nodes.size
