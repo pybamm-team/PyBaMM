@@ -15,11 +15,12 @@ class Variable(pybamm.Domain, pybamm.Symbol):
     A variable has a list of domains (text) that it is valid over
     (inherits from :class:`.Domain`)
 
-    Arguments:
+    Parameters
+    ----------
 
-    ``name`` (str)
+    name : str
         name of the node
-    ``domain`` (iterable of str)
+    domain : iterable of str
         list of domains that this variable is valid over
 
 
