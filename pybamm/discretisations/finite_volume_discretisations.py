@@ -21,6 +21,11 @@ class FiniteVolumeDiscretisation(pybamm.MatrixVectorDiscretisation):
         super().__init__(mesh)
 
     def gradient_matrix(self, domain):
+        """
+        Gradient matrix for finite volumes in the appropriate domain.
+        Equivalent to grad(y) = (y[1:] - y[:-1])/dx
+        See :meth:`pybamm.MatrixVectorDiscretisation.gradient_matrix()`
+        """
         assert len(domain) == 1
         # TODO: implement for when there are several domains
 
@@ -36,6 +41,11 @@ class FiniteVolumeDiscretisation(pybamm.MatrixVectorDiscretisation):
         return pybamm.Matrix(matrix)
 
     def divergence_matrix(self, domain):
+        """
+        Divergence matrix for finite volumes in the appropriate domain.
+        Equivalent to div(N) = (N[1:] - N[:-1])/dx
+        See :meth:`pybamm.MatrixVectorDiscretisation.divergence_matrix()`
+        """
         assert len(domain) == 1
         # TODO: implement for when there are several domains
 
