@@ -205,7 +205,7 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         if symbol.id in boundary_conditions:
             lbc, rbc = boundary_conditions[symbol.id]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
-        divergence_matrix = self.gradient_matrix(domain)
+        divergence_matrix = self.divergence_matrix(domain)
         return divergence_matrix * discretised_symbol
 
     def divergence_matrix(self, domain):
