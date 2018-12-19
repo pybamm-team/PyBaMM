@@ -9,20 +9,22 @@ import numpy as np
 
 
 class BaseDiscretisation(object):
+    """The base discretisation class, with methods to process a model and replace
+    Spatial Operators with Matrices and Variables with StateVectors
+
+    Parameters
+    ----------
+    mesh : :class:`BaseMesh` (or subclass)
+        The underlying mesh for discretisation
+
+    """
+
     def __init__(self, mesh):
         self._mesh = mesh
 
     @property
     def mesh(self):
         return self._mesh
-
-    def gradient(self, symbol, domain, y_slices, boundary_conditions):
-        """How to discretise gradient operators"""
-        raise NotImplementedError
-
-    def divergence(self, symbol, domain, y_slices, boundary_conditions):
-        """How to discretise divergence operators"""
-        raise NotImplementedError
 
     def process_model(self, model):
         """Discretise a model.
@@ -37,6 +39,9 @@ class BaseDiscretisation(object):
         -------
         y0 : :class:`numpy.array`
             Vector of initial conditions
+        dydt : method
+            A method that takes a time t and array y and returns the an array of
+            concatenated time-derivatives.
 
         """
         # Set the y split for variables
@@ -76,6 +81,19 @@ class BaseDiscretisation(object):
         return y_slices
 
     def process_initial_conditions(self, initial_conditions):
+        """Discretise initial conditions.
+
+        Parameters
+        ----------
+        initial_conditions : dict
+            Initial conditions ({variable: equation} dict) to dicretise
+
+        Returns
+        -------
+        :class:`numpy.array`
+            Vector of initial conditions
+
+        """
         for variable, equation in initial_conditions.items():
             discretised_ic = self.process_symbol(equation, variable.domain)
             # Turn any scalars into vectors
@@ -87,6 +105,25 @@ class BaseDiscretisation(object):
         return pybamm.NumpyConcatenation(*initial_conditions.values()).evaluate(0, None)
 
     def process_rhs(self, rhs, boundary_conditions, y_slices):
+        """Discretise initial conditions.
+
+        Parameters
+        ----------
+        rhs : dict
+            Equations ({variable: equation} dict) to dicretise
+        boundary_conditions : dict
+            Boundary conditions ({symbol.id: (left bc, right bc)} dict) associated with
+            rhs to dicretise
+        y_slices : dict of {variable id: slice}
+            The slices to assign to StateVectors when discretising a variable
+
+        Returns
+        -------
+        dydt : method
+            A method that takes a time t and array y and returns the concatenated
+            time-derivatives.
+
+        """
         boundary_conditions = {
             key.id: value for key, value in boundary_conditions.items()
         }
@@ -103,7 +140,7 @@ class BaseDiscretisation(object):
 
         return dydt
 
-    def process_symbol(self, symbol, domain, y_slices=None, boundary_conditions=None):
+    def process_symbol(self, symbol, domain, y_slices=None, boundary_conditions={}):
         """Discretise operators in model equations.
 
         Parameters
@@ -111,7 +148,7 @@ class BaseDiscretisation(object):
         symbol : :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
             Symbol to discretise
         y_slices : dict of {Variable: slice}
-            The slices to take when solving (assigning chunks of y to each vector)
+            The slices to assign to StateVectors when discretising a variable
 
         Returns
         -------
@@ -153,6 +190,50 @@ class BaseDiscretisation(object):
         else:
             raise TypeError("""Cannot discretise {!r}""".format(symbol))
 
+    def gradient(self, symbol, domain, y_slices, boundary_conditions):
+        """How to discretise gradient operators.
+
+        Parameters
+        ----------
+        symbol : :class:`Symbol` (or subclass)
+            The symbol (typically a variable) of which to take the gradient
+        domain : list
+            The domain(s) in which to take the gradient
+        y_slices : slice
+            The slice to assign to StateVector when discretising a variable
+        boundary_conditions : dict
+            The boundary conditions of the model ({symbol.id: (left bc, right bc)})
+
+        """
+        # Check that boundary condition keys are hashes (ids)
+        for key in boundary_conditions.keys():
+            assert isinstance(key, int), TypeError(
+                "boundary condition keys should be hashes, not {}".format(type(key))
+            )
+        raise NotImplementedError
+
+    def divergence(self, symbol, domain, y_slices, boundary_conditions):
+        """How to discretise divergence operators.
+
+        Parameters
+        ----------
+        symbol : :class:`Symbol` (or subclass)
+            The symbol (typically a variable) of which to take the divergence
+        domain : list
+            The domain(s) in which to take the divergence
+        y_slices : slice
+            The slice to assign to StateVector when discretising a variable
+        boundary_conditions : dict
+            The boundary conditions of the model
+
+        """
+        # Check that boundary condition keys are hashes (ids)
+        for key in boundary_conditions.keys():
+            assert isinstance(key, int), TypeError(
+                "boundary condition keys should be hashes, not {}".format(type(key))
+            )
+        raise NotImplementedError
+
     def scalar_to_vector(self, scalar, domain):
         """
         Convert a Scalar to a uniform Vector of size given by mesh,
@@ -177,12 +258,8 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         super().__init__(mesh)
 
     def gradient(self, symbol, domain, y_slices, boundary_conditions):
-        """
-
-        Parameters
-        ----------
-        symbol : :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
-            Not necessarily a Variable (e.g. N = -D(c) * grad(c) is a Multiplication)
+        """Matrix-vector multiplication to implement the gradient operator.
+        See :meth:`pybamm.BaseDiscretisation.gradient`
         """
         discretised_symbol = self.process_symbol(
             symbol, domain, y_slices, boundary_conditions
@@ -195,9 +272,19 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         return gradient_matrix * discretised_symbol
 
     def gradient_matrix(self, domain):
+        """The gradient matrix
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) in which to compute the gradient matrix
+        """
         raise NotImplementedError
 
     def divergence(self, symbol, domain, y_slices, boundary_conditions):
+        """Matrix-vector multiplication to implement the divergence operator.
+        See :meth:`pybamm.BaseDiscretisation.gradient`
+        """
         discretised_symbol = self.process_symbol(
             symbol, domain, y_slices, boundary_conditions
         )
@@ -209,4 +296,11 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         return divergence_matrix * discretised_symbol
 
     def divergence_matrix(self, domain):
+        """The divergence matrix
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) in which to compute the divergence matrix
+        """
         raise NotImplementedError

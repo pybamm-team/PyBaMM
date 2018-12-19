@@ -10,6 +10,16 @@ from scipy.sparse import spdiags
 
 
 class FiniteVolumeDiscretisation(pybamm.MatrixVectorDiscretisation):
+    """Discretisation using Finite Volumes.
+    Inherits from :class:`pybamm.MatrixVectorDiscretisation`, so we only need to
+    implement the gradient and divergence matrices
+
+    **Extends:** :class:`pybamm.MatrixVectorDiscretisation`
+    """
+
+    def __init__(self, mesh):
+        super().__init__(mesh)
+
     def gradient_matrix(self, domain):
         assert len(domain) == 1
         # TODO: implement for when there are several domains

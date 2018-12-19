@@ -120,9 +120,9 @@ class TestDiscretise(unittest.TestCase):
     def test_core_NotImplementedErrors(self):
         disc = pybamm.BaseDiscretisation(None)
         with self.assertRaises(NotImplementedError):
-            disc.gradient(None, None, None, None)
+            disc.gradient(None, None, None, {})
         with self.assertRaises(NotImplementedError):
-            disc.divergence(None, None, None, None)
+            disc.divergence(None, None, None, {})
         disc = pybamm.MatrixVectorDiscretisation(None)
         with self.assertRaises(NotImplementedError):
             disc.gradient_matrix(None)
