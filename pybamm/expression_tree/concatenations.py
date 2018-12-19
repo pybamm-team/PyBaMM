@@ -10,6 +10,8 @@ import numpy as np
 
 class Concatenation(pybamm.Symbol):
     def __init__(self, *children, name=None):
+        if name is None:
+            name = "concatenation"
         super().__init__(name, children)
 
     def evaluate(self, t, y):
@@ -17,14 +19,14 @@ class Concatenation(pybamm.Symbol):
 
 
 class NumpyConcatenation(Concatenation):
-    def __init__(self, *children, name=None):
+    def __init__(self, *children):
         # Convert any Scalar symbols in children to Vector for concatenation
         children = list(children)
         for i, child in enumerate(children):
             if isinstance(child, pybamm.Scalar):
                 children[i] = pybamm.Vector(np.array([child.value]))
 
-        super().__init__(*children, name=name)
+        super().__init__(*children, name="numpy concatenation")
 
     def evaluate(self, t, y):
         return np.concatenate([child.evaluate(t, y) for child in self.children])
