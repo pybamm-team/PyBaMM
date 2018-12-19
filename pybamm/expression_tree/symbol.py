@@ -49,10 +49,11 @@ class Symbol(anytree.NodeMixin):
         Examples
         --------
 
-        >>> a = Symbol('a')
-        >>> b = Symbol('b')
+        >>> import pybamm
+        >>> a = pybamm.Symbol('a')
+        >>> b = pybamm.Symbol('b')
         >>> for node in (a*b).pre_order():
-        >>>     print node.name
+        ...     print(node.name)
         *
         a
         b
