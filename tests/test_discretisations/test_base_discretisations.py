@@ -9,14 +9,9 @@ import unittest
 
 class MeshForTesting(pybamm.BaseMesh):
     def __init__(self):
-        self._whole_cell = SubMeshForTesting(np.linspace(0, 1, 100))
-        self._negative_electrode = SubMeshForTesting(self.whole_cell.nodes[:40])
-
-
-class SubMeshForTesting(object):
-    def __init__(self, nodes):
-        self.nodes = nodes
-        self.npts = nodes.size
+        super().__init__(None)
+        self.set_submesh("whole_cell", np.linspace(0, 1, 100))
+        self.set_submesh("negative_electrode", self.whole_cell.nodes[:40])
 
 
 class DiscretisationForTesting(pybamm.MatrixVectorDiscretisation):

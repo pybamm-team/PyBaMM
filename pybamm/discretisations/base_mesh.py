@@ -30,6 +30,9 @@ class BaseMesh(object):
         # Time
         self.time = np.linspace(0, tend, tsteps)
 
+        # submesh class
+        self.submeshclass = BaseSubmesh
+
     @property
     def negative_electrode(self):
         return self._negative_electrode
@@ -45,3 +48,12 @@ class BaseMesh(object):
     @property
     def whole_cell(self):
         return self._whole_cell
+
+    def set_submesh(self, submesh, entries):
+        setattr(self, "_" + submesh, self.submeshclass(entries))
+
+
+class BaseSubmesh(object):
+    def __init__(self, nodes):
+        self.nodes = nodes
+        self.npts = nodes.size
