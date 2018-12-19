@@ -73,7 +73,7 @@ class FiniteVolumeMacroMesh(pybamm.BaseMesh):
 class _SubMesh:
     def __init__(self, edges):
         self.edges = edges
-        self.centres = (self.edges[1:] + self.edges[:-1]) / 2
+        self.nodes = (self.edges[1:] + self.edges[:-1]) / 2
         self.d_edges = np.diff(self.edges)
-        self.d_centres = np.diff(self.centres)
-        self.npts = self.centres.size
+        self.d_nodes = np.diff(self.nodes)
+        self.npts = self.nodes.size

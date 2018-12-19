@@ -12,15 +12,15 @@ class TestFiniteVolumeMesh(unittest.TestCase):
         param = pybamm.Parameters()
         mesh = pybamm.FiniteVolumeMacroMesh(param, 50)
         self.assertEqual(mesh.whole_cell.edges[-1], 1)
-        self.assertEqual(len(mesh.whole_cell.edges), len(mesh.whole_cell.centres) + 1)
+        self.assertEqual(len(mesh.whole_cell.edges), len(mesh.whole_cell.nodes) + 1)
         self.assertAlmostEqual(
             np.linalg.norm(
-                mesh.whole_cell.centres
+                mesh.whole_cell.nodes
                 - np.concatenate(
                     [
-                        mesh.negative_electrode.centres,
-                        mesh.separator.centres,
-                        mesh.positive_electrode.centres,
+                        mesh.negative_electrode.nodes,
+                        mesh.separator.nodes,
+                        mesh.positive_electrode.nodes,
                     ]
                 )
             ),

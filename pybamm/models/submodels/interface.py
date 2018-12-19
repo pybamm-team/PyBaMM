@@ -72,6 +72,6 @@ class HomogeneousReaction(Interface):
         """
         See :meth:`Interface.reaction`
         """
-        j = self.subparam.j_avg(vars.t) * np.ones_like(self.submesh.centres)
+        j = self.subparam.j_avg(vars.t) * np.ones_like(self.submesh.nodes)
 
         return j

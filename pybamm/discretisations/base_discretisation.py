@@ -160,7 +160,7 @@ class BaseDiscretisation(object):
         """
         mesh_points = np.array([])
         for dom in domain:
-            mesh_points = np.concatenate([mesh_points, getattr(self.mesh, dom).centres])
+            mesh_points = np.concatenate([mesh_points, getattr(self.mesh, dom).nodes])
         return pybamm.Vector(scalar.value * np.ones_like(mesh_points))
 
     def concatenate(self, *symbols):

@@ -498,9 +498,9 @@ class _ElectrolyteParameters(object):
         if param._mesh:
             self.s = np.concatenate(
                 [
-                    self.sn * np.ones_like(param._mesh.xn.centres),
-                    np.zeros_like(param._mesh.xs.centres),
-                    self.sp * np.ones_like(param._mesh.xp.centres),
+                    self.sn * np.ones_like(param._mesh.xn.nodes),
+                    np.zeros_like(param._mesh.xs.nodes),
+                    self.sp * np.ones_like(param._mesh.xp.nodes),
                 ]
             )
         else:
