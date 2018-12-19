@@ -60,11 +60,27 @@ class BaseMesh(object):
         return self._whole_cell
 
     def set_submesh(self, submesh, entries):
+        """Set a submesh.
+
+        Parameters
+        ----------
+        submesh : str
+            The name of the submesh
+        entries :
+            The argument to pass to the submesh class
+
+        """
         setattr(self, "_" + submesh, self.submeshclass(entries))
 
 
 class BaseSubmesh(object):
     """Base submesh class.
+    Contains the position of the nodes and the number of mesh points.
+
+    Parameters
+    ----------
+    nodes : array type
+        The positions of the nodes of the submesh
     """
 
     def __init__(self, nodes):

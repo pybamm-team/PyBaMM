@@ -11,18 +11,7 @@ import numpy as np
 class FiniteVolumeMacroMesh(pybamm.BaseMesh):
     """A Finite Volumes mesh for the 1D macroscale.
 
-    Parameters
-    ----------
-    param : :class:`pybamm.parameters.ParameterValues` instance
-        The parameters defining the subdomain sizes.
-    target_npts : int
-        The target number of points in each domain. The mesh will be created
-        in such a way that the cell sizes are as similar as possible between
-        domains.
-    tsteps : int
-        The number of time steps to take
-    tend : float
-        The finishing time for the simulation
+    **Extends**: :class:`BaseMesh`
 
     """
 
@@ -71,6 +60,18 @@ class FiniteVolumeMacroMesh(pybamm.BaseMesh):
 
 
 class FiniteVolumeSubmesh:
+    """A submesh for finite volumes.
+
+    The mesh is defined by its edges; then node positions, diffs and mesh size are
+    calculated from the edge positions.
+
+    Parameters
+    ----------
+    edges : :class:`numpy.array`
+        The position of the edges of the cells
+
+    """
+
     def __init__(self, edges):
         self.edges = edges
         self.nodes = (self.edges[1:] + self.edges[:-1]) / 2
