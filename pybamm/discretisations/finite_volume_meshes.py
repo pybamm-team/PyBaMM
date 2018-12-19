@@ -3,11 +3,12 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
+import pybamm
 
 import numpy as np
 
 
-class FiniteVolumeMacroMesh(object):
+class FiniteVolumeMacroMesh(pybamm.BaseMesh):
     """A Finite Volumes mesh for the 1D macroscale.
 
     Parameters
@@ -27,8 +28,7 @@ class FiniteVolumeMacroMesh(object):
 
     def __init__(self, param, target_npts=10, tsteps=100, tend=1):
 
-        # Time
-        self.time = np.linspace(0, tend, tsteps)
+        super().__init__(param, target_npts, tsteps, tend)
 
         # Space (macro)
         ln, ls, lp = param.geometric.ln, param.geometric.ls, param.geometric.lp
@@ -65,22 +65,6 @@ class FiniteVolumeMacroMesh(object):
                 ]
             ),
         )
-
-    @property
-    def negative_electrode(self):
-        return self._negative_electrode
-
-    @property
-    def separator(self):
-        return self._separator
-
-    @property
-    def positive_electrode(self):
-        return self._positive_electrode
-
-    @property
-    def whole_cell(self):
-        return self._whole_cell
 
     def set_submesh(self, submesh, edges):
         setattr(self, "_" + submesh, _SubMesh(edges))

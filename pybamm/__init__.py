@@ -79,8 +79,12 @@ from .expression_tree.vector import Vector, StateVector
 #
 # Mesh and Discretisation classes
 #
-from .discretisations.core import BaseDiscretisation, MatrixVectorDiscretisation
+from .discretisations.base_discretisation import (
+    BaseDiscretisation,
+    MatrixVectorDiscretisation,
+)
 from .discretisations.finite_volume_discretisations import FiniteVolumeDiscretisation
+from .discretisations.base_mesh import BaseMesh
 from .discretisations.finite_volume_meshes import FiniteVolumeMacroMesh
 
 #
