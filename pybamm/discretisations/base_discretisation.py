@@ -173,13 +173,13 @@ class BaseDiscretisation(object):
             new_right = self.process_symbol(
                 symbol.children[1], domain, y_slices, boundary_conditions
             )
-            return symbol.__class__(symbol.name, new_left, new_right)
+            return symbol.__class__(new_left, new_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(
                 symbol.children[0], domain, y_slices, boundary_conditions
             )
-            return symbol.__class__(symbol.name, new_child)
+            return symbol.__class__(new_child)
 
         elif isinstance(symbol, pybamm.Variable):
             return pybamm.StateVector(y_slices[symbol.id])

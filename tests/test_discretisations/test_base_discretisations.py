@@ -86,17 +86,14 @@ class TestDiscretise(unittest.TestCase):
             disc.process_symbol(par, None, None, None)
 
         # binary operator
-        bin = pybamm.BinaryOperator("bin", var, scal)
+        bin = var + scal
         bin_disc = disc.process_symbol(bin, None, y_slices, None)
-        self.assertTrue(isinstance(bin_disc, pybamm.BinaryOperator))
+        self.assertTrue(isinstance(bin_disc, pybamm.Addition))
         self.assertTrue(isinstance(bin_disc.children[0], pybamm.StateVector))
         self.assertTrue(isinstance(bin_disc.children[1], pybamm.Scalar))
 
         # non-spatial unary operator
-        un = pybamm.UnaryOperator("un", var)
-        un_disc = disc.process_symbol(un, None, y_slices, None)
-        self.assertTrue(isinstance(un_disc, pybamm.UnaryOperator))
-        self.assertTrue(isinstance(un_disc.children[0], pybamm.StateVector))
+        # TODO: none of these implemented yet
 
     def test_discretise_spatial_operator(self):
         mesh = MeshForTesting()
