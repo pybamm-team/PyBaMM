@@ -21,6 +21,8 @@ if sys.version_info[0] < 3:
 #
 # Expose pints version
 #
+
+
 def version(formatted=False):
     if formatted:
         return "PyBaMM " + VERSION
@@ -54,9 +56,10 @@ from .expression_tree.binary_operators import (
     Subtraction,
     Multiplication,
     Division,
-    MatrixVectorMultiplication,
 )
+from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
+from .expression_tree.domain import Domain
 from .expression_tree.parameter import Parameter
 from .expression_tree.unary_operators import (
     UnaryOperator,
@@ -68,6 +71,8 @@ from .expression_tree.unary_operators import (
 )
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
+from .expression_tree.independent_variable import IndependentVariable
+from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
 
 #

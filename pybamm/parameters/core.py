@@ -143,16 +143,13 @@ class BaseParameterValues(object):
             return pybamm.Scalar(value)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            new_left = self.process_symbol(symbol.left)
-            new_right = self.process_symbol(symbol.right)
-            new_symbol = copy.copy(symbol)
-            new_symbol.set_left_right(new_left, new_right)
-            return new_symbol
+            new_left = self.process_symbol(symbol.children[0])
+            new_right = self.process_symbol(symbol.children[1])
+            return symbol.__class__(new_left, new_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
-            new_symbol = copy.copy(symbol)
-            new_symbol.child = self.process_symbol(symbol.child)
-            return new_symbol
+            new_child = self.process_symbol(symbol.children[0])
+            return symbol.__class__(new_child)
 
         elif isinstance(symbol, pybamm.Variable):
             return copy.copy(symbol)

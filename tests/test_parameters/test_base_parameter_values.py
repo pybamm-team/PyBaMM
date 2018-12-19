@@ -55,17 +55,17 @@ class TestBaseModel(unittest.TestCase):
         sum = a + b
         processed_sum = parameter_values.process_symbol(sum)
         self.assertTrue(isinstance(processed_sum, pybamm.Addition))
-        self.assertTrue(isinstance(processed_sum.left, pybamm.Scalar))
-        self.assertTrue(isinstance(processed_sum.right, pybamm.Scalar))
-        self.assertEqual(processed_sum.left.value, 1)
-        self.assertEqual(processed_sum.right.value, 2)
+        self.assertTrue(isinstance(processed_sum.children[0], pybamm.Scalar))
+        self.assertTrue(isinstance(processed_sum.children[1], pybamm.Scalar))
+        self.assertEqual(processed_sum.children[0].value, 1)
+        self.assertEqual(processed_sum.children[1].value, 2)
 
         # process unary operation
         grad = pybamm.Gradient(a)
         processed_grad = parameter_values.process_symbol(grad)
         self.assertTrue(isinstance(processed_grad, pybamm.Gradient))
-        self.assertTrue(isinstance(processed_grad.child, pybamm.Scalar))
-        self.assertEqual(processed_grad.child.value, 1)
+        self.assertTrue(isinstance(processed_grad.children[0], pybamm.Scalar))
+        self.assertEqual(processed_grad.children[0].value, 1)
 
         # process variable
         c = pybamm.Variable("c")
@@ -95,8 +95,8 @@ class TestBaseModel(unittest.TestCase):
         model.boundary_conditions = {}
         parameter_values = pybamm.BaseParameterValues({"a": 1, "b": 2})
         parameter_values.process(model)
-        self.assertTrue(isinstance(model.rhs[c].left, pybamm.Scalar))
-        self.assertEqual(model.rhs[c].left.value, 1)
+        self.assertTrue(isinstance(model.rhs[c].children[0], pybamm.Scalar))
+        self.assertEqual(model.rhs[c].children[0].value, 1)
 
 
 if __name__ == "__main__":

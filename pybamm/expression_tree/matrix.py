@@ -6,26 +6,20 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Matrix(pybamm.Symbol):
-    """
+class Matrix(pybamm.Array):
+    """node in the expression tree that holds a matrix type (e.g. :class:`numpy.array`)
+
+    **Extends:** :class:`Array`
+
     Parameters
     ----------
-    entries : :class:`numpy.array`
-        Entries of the matrix
+
+    entries : numpy.array
+        the array associated with the node
+    name : str, optional
+        the name of the node
+
     """
 
-    def __init__(self, entries, name=None, parent=None):
-        super().__init__(name, parent)
-        self._entries = entries
-        self.nrows, self.ncols = entries.shape
-
-    def evaluate(self, y):
-        return self._entries
-
-    def __mul__(self, other):
-        if isinstance(other, pybamm.Vector):
-            return pybamm.MatrixVectorMultiplication(self, other)
-        elif isinstance(other, pybamm.Symbol):
-            return pybamm.Multiplication(self, other)
-        else:
-            raise NotImplementedError
+    def __init__(self, entries, name=None):
+        super().__init__(entries, name=name)

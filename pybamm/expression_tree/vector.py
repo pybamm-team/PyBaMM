@@ -6,18 +6,20 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Vector(pybamm.Symbol):
-    """
+class Vector(pybamm.Array):
+    """node in the expression tree that holds a vector type (e.g. :class:`numpy.array`)
+
+    **Extends:** :class:`Array`
+
     Parameters
     ----------
-    entries : :class:`numpy.array`
-        Entries of the vector
+
+    entries : numpy.array
+        the array associated with the node
+    name : str, optional
+        the name of the node
+
     """
 
-    def __init__(self, entries, name=None, parent=None):
-        super().__init__(name, parent)
-        self._entries = entries
-        self.n = entries.size
-
-    def evaluate(self, y=None):
-        return self._entries
+    def __init__(self, entries, name=None):
+        super().__init__(entries, name=name)

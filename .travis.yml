@@ -9,23 +9,23 @@ matrix:
         # Unit testing on all supported Python versions on Ubuntu
         # - python: "2.7"
         #   env:
-        #     - PINTS_UNIT=true
+        #     - PYBAMM_UNIT=true
         #   if: type != cron
         # - python: "2.7.6"
         #   env:
-        #     - PINTS_UNIT=true
+        #     - PYBAMM_UNIT=true
         #   if: type != cron
         # - python: "3.4"
         #   env:
-        #     - PINTS_UNIT=true
+        #     - PYBAMM_UNIT=true
         #   if: type != cron
         # - python: "3.5"
         #   env:
-        #     - PINTS_UNIT=true
+        #     - PYBAMM_UNIT=true
         #   if: type != cron
         - python: "3.6"
           env:
-            - PINTS_UNIT=true
+            - PYBAMM_UNIT=true
           if: type != cron
         #- python: "3.7"
         #  env:
@@ -35,20 +35,20 @@ matrix:
         # - os: osx
         #   language: generic
         #   env:
-        #     - PINTS_UNIT=true
+        #     - PYBAMM_UNIT=true
         #   if: type != cron
         # Docs, style and cover checking, latest Python version only
         - python: "3.6"
           env:
-            - PINTS_DOCS=true
+            - PYBAMM_DOCS=true
           if: type != cron
         - python: "3.6"
           env:
-            - PINTS_STYLE=true
+            - PYBAMM_STYLE=true
           if: type != cron
         - python: "3.6"
           env:
-            - PINTS_COVER=true
+            - PYBAMM_COVER=true
           if: type != cron
           # Cron jobs
         - python: "3.6"
@@ -62,10 +62,10 @@ install:
   - pip install --upgrade pip
   - pip install .
   - pip install -r requirements.txt
-  - if [[ $PINTS_DOCS == true ]]; then pip install -r requirements-docs.txt; fi;
-  - if [[ $PINTS_STYLE == true ]]; then pip install -r requirements-dev.txt; fi;
+  - if [[ $PYBAMM_DOCS == true ]]; then pip install -r requirements-docs.txt; fi;
+  - if [[ $PYBAMM_STYLE == true ]]; then pip install -r requirements-dev.txt; fi;
   - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then pip install -r requirements-dev.txt; fi;
-  - if [[ $PINTS_COVER == true ]]; then pip install coverage codecov; fi;
+  - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
 
 before_script:
 - python --version
@@ -75,14 +75,14 @@ before_script:
 # issues with debug output:
 # https://github.com/travis-ci/travis-ci/issues/5716
 script:
-  - if [[ $PINTS_UNIT == true ]]; then python run-tests.py --unit; fi;
-  - if [[ $PINTS_DOCS == true ]]; then python run-tests.py --doctest; fi;
-  - if [[ $PINTS_STYLE == true ]]; then python -m flake8; fi;
-  - if [[ $PINTS_COVER == true ]]; then coverage run run-tests.py --nosub; fi;
+  - if [[ $PYBAMM_UNIT == true ]]; then python run-tests.py --unit; fi;
+  - if [[ $PYBAMM_DOCS == true ]]; then python run-tests.py --doctest; fi;
+  - if [[ $PYBAMM_STYLE == true ]]; then python -m flake8; fi;
+  - if [[ $PYBAMM_COVER == true ]]; then coverage run run-tests.py --nosub; fi;
   - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then travis_wait 120 python run-tests.py --books; fi;
 
 after_success:
-  - if [[ $PINTS_COVER == true ]]; then codecov; fi;
+  - if [[ $PYBAMM_COVER == true ]]; then codecov; fi;
 
 #
 # sudo: required
@@ -97,19 +97,19 @@ after_success:
 #         # Unit, docs, style and cover testing on latest version of Python on Ubuntu
 #         - python: "3.6"
 #           env:
-#             - PINTS_UNIT=true
+#             - PYBAMM_UNIT=true
 #           if: type != cron
 #         - python: "3.6"
 #           env:
-#             - PINTS_DOCS=true
+#             - PYBAMM_DOCS=true
 #           if: type != cron
 #         - python: "3.6"
 #           env:
-#             - PINTS_STYLE=true
+#             - PYBAMM_STYLE=true
 #           if: type != cron
 #         - python: "3.6"
 #           env:
-#             - PINTS_COVER=true
+#             - PYBAMM_COVER=true
 #           if: type != cron
 #           # Cron jobs
 #         - python: "3.6"
@@ -133,14 +133,14 @@ after_success:
 # # issues with debug output:
 # # https://github.com/travis-ci/travis-ci/issues/5716
 # script:
-#   - if [[ $PINTS_UNIT == true ]];
+#   - if [[ $PYBAMM_UNIT == true ]];
 #     then docker exec pybamm-container python3 run-tests.py --unit3;
 #     fi;
-#   # - if [[ $PINTS_DOCS == true ]]; then python run-tests.py --doctest; fi;
-#   - if [[ $PINTS_STYLE == true ]];
+#   # - if [[ $PYBAMM_DOCS == true ]]; then python run-tests.py --doctest; fi;
+#   - if [[ $PYBAMM_STYLE == true ]];
 #     then docker exec pybamm-container python3 -m flake8;
 #     fi;
-#   - if [[ $PINTS_COVER == true ]];
+#   - if [[ $PYBAMM_COVER == true ]];
 #     then docker exec pybamm-container coverage run run-tests.py --nosub;
 #     fi;
 #   - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]];
@@ -148,7 +148,7 @@ after_success:
 #     fi;
 #
 # after_success:
-#   - if [[ $PINTS_COVER == true ]]; then
+#   - if [[ $PYBAMM_COVER == true ]]; then
 #     docker exec pybamm-container codecov;
 #     bash <(curl -s https://codecov.io/bash);
 #     fi;

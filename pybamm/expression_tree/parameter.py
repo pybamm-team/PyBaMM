@@ -6,15 +6,23 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Parameter(pybamm.Symbol):
-    def __init__(self, name, family=None, parent=None):
-        super().__init__(name, parent)
-        self.family = family
+class Parameter(pybamm.Domain, pybamm.Symbol):
+    """A node in the expression tree representing a parameter
 
-    @property
-    def family(self):
-        return self._family
+    This node will be replaced by a :class:`.Scalar` node by :class`.Parameter`
 
-    @family.setter
-    def family(self, family):
-        self._family = family
+    A variable has a list of domains (text) that it is valid over
+    (inherits from :class:`.Domain`)
+
+    Parameters
+    ----------
+
+    name : str
+        name of the node
+    domain : iterable of str, optional
+        list of domains the parameter is valid over, defaults to empty list
+
+    """
+
+    def __init__(self, name, domain=[]):
+        super().__init__(name, domain=domain)
