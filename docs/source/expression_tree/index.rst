@@ -7,6 +7,7 @@ Expression Tree
   domain
   parameter
   variable
+  independent_variable
   binary_operator
   unary_operator
   scalar
