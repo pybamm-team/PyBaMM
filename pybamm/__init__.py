@@ -83,7 +83,7 @@ from .mesh import Mesh
 #
 # Parameters class and methods
 #
-from .parameters.core import BaseParameterValues
+from .parameters.base_parameter_values import BaseParameterValues
 from .parameters import functions_lead_acid
 
 #

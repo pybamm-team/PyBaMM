@@ -23,4 +23,5 @@ Contents
 .. toctree::
 
     source/expression_tree/index
+    source/parameters/index
     source/models/index
