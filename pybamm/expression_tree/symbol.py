@@ -11,13 +11,14 @@ import copy
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
 
-    Arguments:
+    Parameters
+    ----------
 
-    ``name`` (str)
+    name : str
         name for the node
 
-    ``children`` (iterable of :class:`Symbol`)
-        children to attach to this node
+    children : iterable :class:`Symbol`, optional
+        children to attach to this node, default to an empty list
 
     """
 
@@ -45,12 +46,17 @@ class Symbol(anytree.NodeMixin):
         """returns an iterable that steps through the tree in pre-order
         fashion
 
-        Example:
+        Examples
+        --------
 
-        .. code-block:: python
-
-            for node in tree.pre_order():
-                print node.name
+        >>> import pybamm
+        >>> a = pybamm.Symbol('a')
+        >>> b = pybamm.Symbol('b')
+        >>> for node in (a*b).pre_order():
+        ...     print(node.name)
+        *
+        a
+        b
 
         """
         return anytree.PreOrderIter(self)
@@ -98,12 +104,13 @@ class Symbol(anytree.NodeMixin):
         been defined for the node. For example, :class:`Scalar` returns its
         scalar value, but :class:`Variable` will raise ``NotImplementedError``
 
-        Arguments:
+        Parameters
+        ----------
 
-        ``t`` (float or numeric type, optional)
+        t : float or numeric type, optional
             time at which to evaluate (default None)
 
-        ``y`` (numeric type, optional)
+        y : numpy.array, optional
             array to evaluate when solving (default None)
 
         """

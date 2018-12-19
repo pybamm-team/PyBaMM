@@ -14,12 +14,13 @@ class Parameter(pybamm.Domain, pybamm.Symbol):
     A variable has a list of domains (text) that it is valid over
     (inherits from :class:`.Domain`)
 
-    Arguments:
+    Parameters
+    ----------
 
-    ``name`` (str)
+    name : str
         name of the node
-    ``domain`` (iterable of str)
-        list of domains the parameter is valid over
+    domain : iterable of str, optional
+        list of domains the parameter is valid over, defaults to empty list
 
     """
 
