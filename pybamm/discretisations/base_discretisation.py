@@ -15,7 +15,7 @@ class BaseDiscretisation(object):
 
     Parameters
     ----------
-    mesh : :class:`BaseMesh` (or subclass)
+    mesh : :class:`pybamm.BaseMesh` (or subclass)
         The underlying mesh for discretisation
 
     """
@@ -33,16 +33,14 @@ class BaseDiscretisation(object):
 
         Parameters
         ----------
-        model : dict
-            Model ({variable: equation} dict) to dicretise
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
 
         Returns
         -------
         y0 : :class:`numpy.array`
             Vector of initial conditions
-        dydt : method
-            A method that takes a time t and array y and returns the an array of
-            concatenated time-derivatives.
 
         """
         # Set the y split for variables
@@ -52,9 +50,9 @@ class BaseDiscretisation(object):
         y0 = self.process_initial_conditions(model.initial_conditions)
 
         # Discretise right-hand sides, passing domain from variable
-        dydt = self.process_rhs(model.rhs, model.boundary_conditions, y_slices)
+        model.rhs = self.process_rhs(model.rhs, model.boundary_conditions, y_slices)
 
-        return y0, dydt
+        return y0
 
     def get_variable_slices(self, variables):
         """Set the slicing for variables.
@@ -120,9 +118,8 @@ class BaseDiscretisation(object):
 
         Returns
         -------
-        dydt : method
-            A method that takes a time t and array y and returns the concatenated
-            time-derivatives.
+        concatenated_rhs : :class:`pybamm.Concatenation`
+            Concatenation of the discretised right-hand side equations
 
         """
         boundary_conditions = {
@@ -133,13 +130,10 @@ class BaseDiscretisation(object):
                 equation, variable.domain, y_slices, boundary_conditions
             )
 
-        # Concatenate and evaluate right-hand sides
-        self._concatenated_rhs = self.concatenate(*rhs.values())
+        # Concatenate right-hand sides
+        concatenated_rhs = self.concatenate(*rhs.values())
 
-        def dydt(t, y):
-            return self._concatenated_rhs.evaluate(t, y)
-
-        return dydt
+        return concatenated_rhs
 
     def process_symbol(self, symbol, domain, y_slices=None, boundary_conditions={}):
         """Discretise operators in model equations.

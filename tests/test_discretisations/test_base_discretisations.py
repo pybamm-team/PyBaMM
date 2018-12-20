@@ -166,8 +166,8 @@ class TestDiscretise(unittest.TestCase):
 
         y = mesh.submeshes["whole_cell"].nodes ** 2
         y_slices = disc.get_variable_slices(rhs.keys())
-        dydt = disc.process_rhs(rhs, boundary_conditions, y_slices)
-        np.testing.assert_array_equal(y, dydt(None, y))
+        concatenated_rhs = disc.process_rhs(rhs, boundary_conditions, y_slices)
+        np.testing.assert_array_equal(y, concatenated_rhs.evaluate(None, y))
 
         # two equations
         T = pybamm.Variable("T", domain=["negative_electrode"])
@@ -182,9 +182,13 @@ class TestDiscretise(unittest.TestCase):
             ]
         )
         y_slices = disc.get_variable_slices(rhs.keys())
-        dydt = disc.process_rhs(rhs, boundary_conditions, y_slices)
-        np.testing.assert_array_equal(y[y_slices[c.id]], dydt(None, y)[y_slices[c.id]])
-        np.testing.assert_array_equal(y[y_slices[T.id]], dydt(None, y)[y_slices[T.id]])
+        concatenated_rhs = disc.process_rhs(rhs, boundary_conditions, y_slices)
+        np.testing.assert_array_equal(
+            y[y_slices[c.id]], concatenated_rhs.evaluate(None, y)[y_slices[c.id]]
+        )
+        np.testing.assert_array_equal(
+            y[y_slices[T.id]], concatenated_rhs.evaluate(None, y)[y_slices[T.id]]
+        )
 
     def test_process_model(self):
         # one equation
@@ -197,11 +201,11 @@ class TestDiscretise(unittest.TestCase):
         mesh = MeshForTesting()
         disc = DiscretisationForTesting(mesh)
 
-        y0, dydt = disc.process_model(model)
+        y0 = disc.process_model(model)
         np.testing.assert_array_equal(
             y0, 3 * np.ones_like(mesh.submeshes["whole_cell"].nodes)
         )
-        np.testing.assert_array_equal(y0, dydt(None, y0))
+        np.testing.assert_array_equal(y0, model.rhs.evaluate(None, y0))
 
         # two equations
         T = pybamm.Variable("T", domain=["negative_electrode"])
@@ -211,7 +215,7 @@ class TestDiscretise(unittest.TestCase):
         boundary_conditions = {}
         model = ModelForTesting(rhs, initial_conditions, boundary_conditions)
 
-        y0, dydt = disc.process_model(model)
+        y0 = disc.process_model(model)
         np.testing.assert_array_equal(
             y0,
             np.concatenate(
@@ -221,7 +225,7 @@ class TestDiscretise(unittest.TestCase):
                 ]
             ),
         )
-        np.testing.assert_array_equal(y0, dydt(None, y0))
+        np.testing.assert_array_equal(y0, model.rhs.evaluate(None, y0))
 
     def test_scalar_to_vector(self):
         a = pybamm.Scalar(5)
