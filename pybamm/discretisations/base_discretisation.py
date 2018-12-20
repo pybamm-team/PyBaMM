@@ -102,7 +102,7 @@ class BaseDiscretisation(object):
             initial_conditions[variable] = discretised_ic
 
         # Concatenate and evaluate initial conditions
-        return pybamm.NumpyConcatenation(*initial_conditions.values()).evaluate(0, None)
+        return self.concatenate(*initial_conditions.values()).evaluate(0, None)
 
     def process_rhs(self, rhs, boundary_conditions, y_slices):
         """Discretise initial conditions.
@@ -133,7 +133,7 @@ class BaseDiscretisation(object):
             )
 
         # Concatenate and evaluate right-hand sides
-        self._concatenated_rhs = pybamm.NumpyConcatenation(*rhs.values())
+        self._concatenated_rhs = self.concatenate(*rhs.values())
 
         def dydt(t, y):
             return self._concatenated_rhs.evaluate(t, y)
