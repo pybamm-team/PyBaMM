@@ -62,6 +62,15 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(processed_sum.children[0].value, 1)
         self.assertEqual(processed_sum.children[1].value, 2)
 
+        scal = pybamm.Scalar(34)
+        mul = a * scal
+        processed_mul = parameter_values.process_symbol(mul)
+        self.assertTrue(isinstance(processed_mul, pybamm.Multiplication))
+        self.assertTrue(isinstance(processed_mul.children[0], pybamm.Scalar))
+        self.assertTrue(isinstance(processed_mul.children[1], pybamm.Scalar))
+        self.assertEqual(processed_mul.children[0].value, 1)
+        self.assertEqual(processed_mul.children[1].value, 34)
+
         # process unary operation
         grad = pybamm.Gradient(a)
         processed_grad = parameter_values.process_symbol(grad)
