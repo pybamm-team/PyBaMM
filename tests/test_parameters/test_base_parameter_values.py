@@ -17,27 +17,27 @@ class TestBaseModel(unittest.TestCase):
     def test_init(self):
         # from dict
         param = pybamm.BaseParameterValues({"a": 1})
-        self.assertEqual(param.raw["a"], 1)
+        self.assertEqual(param["a"], 1)
         # from file
         param = pybamm.BaseParameterValues("input/parameters/lead-acid/default.csv")
-        self.assertEqual(param.raw["R"], 8.314)
+        self.assertEqual(param["R"], 8.314)
 
     def test_overwrite(self):
         # from dicts
         param = pybamm.BaseParameterValues(
             base_parameters={"a": 1, "b": 2}, optional_parameters={"b": 3}
         )
-        self.assertEqual(param.raw["a"], 1)
-        self.assertEqual(param.raw["b"], 3)
-        param.update_raw({"a": 4})
-        self.assertEqual(param.raw["a"], 4)
+        self.assertEqual(param["a"], 1)
+        self.assertEqual(param["b"], 3)
+        param.update({"a": 4})
+        self.assertEqual(param["a"], 4)
         # from files
         param = pybamm.BaseParameterValues(
             base_parameters="input/parameters/lead-acid/default.csv",
             optional_parameters="input/parameters/lead-acid/optional_test.csv",
         )
-        self.assertEqual(param.raw["R"], 8.314)
-        self.assertEqual(param.raw["Ln"], 0.5)
+        self.assertEqual(param["R"], 8.314)
+        self.assertEqual(param["Ln"], 0.5)
 
     def test_get_parameter_value(self):
         parameter_values = pybamm.BaseParameterValues({"a": 1})
