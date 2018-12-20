@@ -148,8 +148,5 @@ class BaseParameterValues(object):
             new_child = self.process_symbol(symbol.children[0])
             return symbol.__class__(new_child)
 
-        elif isinstance(symbol, pybamm.Variable):
-            return copy.copy(symbol)
-
         else:
-            raise TypeError("""Cannot set parameters for symbol {!r}""".format(symbol))
+            return copy.copy(symbol)

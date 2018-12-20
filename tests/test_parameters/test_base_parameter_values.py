@@ -75,16 +75,22 @@ class TestBaseModel(unittest.TestCase):
         self.assertTrue(isinstance(processed_c, pybamm.Variable))
         self.assertEqual(processed_c.name, "c")
 
-        # check type error raised
+        # process scalar
         d = pybamm.Scalar(14)
-        with self.assertRaises(TypeError):
-            parameter_values.process_symbol(d)
+        processed_d = parameter_values.process_symbol(d)
+        self.assertTrue(isinstance(processed_d, pybamm.Scalar))
+        self.assertEqual(processed_d.value, 14)
+
+        # process array types
         e = pybamm.Vector(np.ones(4))
-        with self.assertRaises(TypeError):
-            parameter_values.process_symbol(e)
+        processed_e = parameter_values.process_symbol(e)
+        self.assertTrue(isinstance(processed_e, pybamm.Vector))
+        np.testing.assert_array_equal(processed_e.evaluate(), np.ones(4))
+
         f = pybamm.Matrix(np.ones((5, 6)))
-        with self.assertRaises(TypeError):
-            parameter_values.process_symbol(f)
+        processed_f = parameter_values.process_symbol(f)
+        self.assertTrue(isinstance(processed_f, pybamm.Matrix))
+        np.testing.assert_array_equal(processed_f.evaluate(), np.ones((5, 6)))
 
     @unittest.skip("model not yet implemented")
     def test_process_model(self):
