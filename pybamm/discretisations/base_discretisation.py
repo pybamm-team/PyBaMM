@@ -210,11 +210,6 @@ class BaseDiscretisation(object):
             The boundary conditions of the model ({symbol.id: (left bc, right bc)})
 
         """
-        # Check that boundary condition keys are hashes (ids)
-        for key in boundary_conditions.keys():
-            assert isinstance(key, int), TypeError(
-                "boundary condition keys should be hashes, not {}".format(type(key))
-            )
         raise NotImplementedError
 
     def divergence(self, symbol, domain, y_slices, boundary_conditions):
@@ -232,11 +227,6 @@ class BaseDiscretisation(object):
             The boundary conditions of the model
 
         """
-        # Check that boundary condition keys are hashes (ids)
-        for key in boundary_conditions.keys():
-            assert isinstance(key, int), TypeError(
-                "boundary condition keys should be hashes, not {}".format(type(key))
-            )
         raise NotImplementedError
 
     def scalar_to_vector(self, scalar, domain):
@@ -273,6 +263,12 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         """Matrix-vector multiplication to implement the gradient operator.
         See :meth:`pybamm.BaseDiscretisation.gradient`
         """
+        # Check that boundary condition keys are hashes (ids)
+        for key in boundary_conditions.keys():
+            assert isinstance(key, int), TypeError(
+                "boundary condition keys should be hashes, not {}".format(type(key))
+            )
+        # Discretise symbol
         discretised_symbol = self.process_symbol(
             symbol, domain, y_slices, boundary_conditions
         )
@@ -297,6 +293,12 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.BaseDiscretisation.gradient`
         """
+        # Check that boundary condition keys are hashes (ids)
+        for key in boundary_conditions.keys():
+            assert isinstance(key, int), TypeError(
+                "boundary condition keys should be hashes, not {}".format(type(key))
+            )
+        # Discretise symbol
         discretised_symbol = self.process_symbol(
             symbol, domain, y_slices, boundary_conditions
         )
