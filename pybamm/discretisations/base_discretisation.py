@@ -252,6 +252,13 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
     """
     A base class for discretisations where the gradient and divergence operators are
     always matrix-vector multiplications.
+
+    Parameters
+    ----------
+     mesh : :class:`pybamm.BaseMesh` (or subclass)
+            The underlying mesh for discretisation
+
+    **Extends:** :class:`pybamm.BaseDiscretisation`
     """
 
     def __init__(self, mesh):

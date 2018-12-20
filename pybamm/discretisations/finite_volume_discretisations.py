@@ -13,11 +13,12 @@ class FiniteVolumeDiscretisation(pybamm.MatrixVectorDiscretisation):
     """Discretisation using Finite Volumes.
     Inherits from :class:`pybamm.MatrixVectorDiscretisation`, so we only need to
     implement the gradient and divergence matrices
-Parmeters
---------------
 
- mesh : :class:`BaseMesh` (or subclass)
-        The underlying mesh for discretisation
+    Parameters
+    ----------
+     mesh : :class:`BaseMesh` (or subclass)
+            The underlying mesh for discretisation
+
     **Extends:** :class:`pybamm.MatrixVectorDiscretisation`
     """
 
