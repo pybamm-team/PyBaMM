@@ -15,10 +15,10 @@ KNOWN_DOMAINS = [
 ]
 
 
-class BaseMesh(object):
+class BaseMesh(dict):
     """A base mesh class.
-    Key attributes of a mesh are time, and submeshes corresponding to the domains of
-    parameters and variables.
+    Mesh inherits from dict, with entries in the dictionary being submeshes (time and
+    space)
 
     Parameters
     ----------
@@ -38,11 +38,10 @@ class BaseMesh(object):
     def __init__(self, param, target_npts=10, tsteps=100, tend=1):
 
         # Time
-        self.time = np.linspace(0, tend, tsteps)
+        self["time"] = np.linspace(0, tend, tsteps)
 
-        # submesh class and empty submeshes
+        # submesh class
         self.submeshclass = BaseSubmesh
-        self.submeshes = {}
 
 
 class BaseSubmesh(object):

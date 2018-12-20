@@ -11,19 +11,18 @@ class TestFiniteVolumeMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = pybamm.Parameters()
         mesh = pybamm.FiniteVolumeMacroMesh(param, 50)
-        self.assertEqual(mesh.submeshes["whole_cell"].edges[-1], 1)
+        self.assertEqual(mesh["whole_cell"].edges[-1], 1)
         self.assertEqual(
-            len(mesh.submeshes["whole_cell"].edges),
-            len(mesh.submeshes["whole_cell"].nodes) + 1,
+            len(mesh["whole_cell"].edges), len(mesh["whole_cell"].nodes) + 1
         )
         self.assertAlmostEqual(
             np.linalg.norm(
-                mesh.submeshes["whole_cell"].nodes
+                mesh["whole_cell"].nodes
                 - np.concatenate(
                     [
-                        mesh.submeshes["negative_electrode"].nodes,
-                        mesh.submeshes["separator"].nodes,
-                        mesh.submeshes["positive_electrode"].nodes,
+                        mesh["negative_electrode"].nodes,
+                        mesh["separator"].nodes,
+                        mesh["positive_electrode"].nodes,
                     ]
                 )
             ),
@@ -37,25 +36,15 @@ class TestFiniteVolumeMesh(unittest.TestCase):
             mesh.neg_mesh_points + (mesh.sep_mesh_points - 2) + mesh.pos_mesh_points,
             mesh.total_mesh_points,
         )
-        self.assertEqual(
-            mesh.submeshes["negative_electrode"].npts, mesh.neg_mesh_points - 1
-        )
-        self.assertEqual(mesh.submeshes["separator"].npts, mesh.sep_mesh_points - 1)
-        self.assertEqual(
-            mesh.submeshes["positive_electrode"].npts, mesh.pos_mesh_points - 1
-        )
-        self.assertEqual(mesh.submeshes["whole_cell"].npts, mesh.total_mesh_points - 1)
+        self.assertEqual(mesh["negative_electrode"].npts, mesh.neg_mesh_points - 1)
+        self.assertEqual(mesh["separator"].npts, mesh.sep_mesh_points - 1)
+        self.assertEqual(mesh["positive_electrode"].npts, mesh.pos_mesh_points - 1)
+        self.assertEqual(mesh["whole_cell"].npts, mesh.total_mesh_points - 1)
 
-        self.assertEqual(
-            len(mesh.submeshes["negative_electrode"].edges), mesh.neg_mesh_points
-        )
-        self.assertEqual(len(mesh.submeshes["separator"].edges), mesh.sep_mesh_points)
-        self.assertEqual(
-            len(mesh.submeshes["positive_electrode"].edges), mesh.pos_mesh_points
-        )
-        self.assertEqual(
-            len(mesh.submeshes["whole_cell"].edges), mesh.total_mesh_points
-        )
+        self.assertEqual(len(mesh["negative_electrode"].edges), mesh.neg_mesh_points)
+        self.assertEqual(len(mesh["separator"].edges), mesh.sep_mesh_points)
+        self.assertEqual(len(mesh["positive_electrode"].edges), mesh.pos_mesh_points)
+        self.assertEqual(len(mesh["whole_cell"].edges), mesh.total_mesh_points)
 
 
 if __name__ == "__main__":
