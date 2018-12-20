@@ -93,11 +93,10 @@ from .parameters import functions_lead_acid
 from .simulation import Simulation
 
 #
-# Solver class and lists of known methods
+# Solver classes
 #
-from .solver import Solver
-from .solver import KNOWN_INTEGRATORS
-from .solver import KNOWN_SPATIAL_DISCRETISATIONS
+from .solvers.base_solver import BaseSolver
+from .solvers.scipy_solver import ScipySolver
 
 #
 # Operators class

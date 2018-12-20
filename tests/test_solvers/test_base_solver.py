@@ -1,3 +1,6 @@
+#
+# Tests for the Base Solver class
+#
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
@@ -5,12 +8,14 @@ import pybamm
 import unittest
 
 
-class TestSolver(unittest.TestCase):
-    def test_solver_basic(self):
+class TestBaseSolver(unittest.TestCase):
+    def test_base_solver_init(self):
+        solver = pybamm.BaseSolver(tol=1e-4)
+        self.assertEqual(solver.tol, 1e-4)
+        self.assertEqual(solver.t, None)
+        self.assertEqual(solver.y, None)
         with self.assertRaises(NotImplementedError):
-            pybamm.Solver(integrator="not an integrator")
-        with self.assertRaises(NotImplementedError):
-            pybamm.Solver(spatial_discretisation="not a spatial discretisation")
+            solver.integrate(None, None, None)
 
 
 if __name__ == "__main__":
