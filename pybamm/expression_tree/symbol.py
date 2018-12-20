@@ -35,6 +35,19 @@ class Symbol(anytree.NodeMixin):
         """name of the node"""
         return self._name
 
+    @property
+    def id(self):
+        """
+        The immutable "identity" of a variable (for identifying y_slices).
+
+        This is identical to what we'd put in a __hash__ function
+        However, implementing __hash__ requires also implementing __eq__,
+        which would then mess with loop-checking in the anytree module
+        """
+        return hash(
+            (self.__class__, self.name) + tuple([child.id for child in self.children])
+        )
+
     def render(self):
         """print out a visual representation of the tree (this node and its
         children)

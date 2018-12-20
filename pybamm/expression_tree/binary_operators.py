@@ -28,19 +28,6 @@ class BinaryOperator(pybamm.Symbol):
     def __init__(self, name, left, right):
         super().__init__(name, children=[left, right])
 
-    @property
-    def id(self):
-        """
-        The immutable "identity" of a variable (for identifying y_slices).
-
-        This is identical to what we'd put in a __hash__ function
-        However, implementing __hash__ requires also implementing __eq__,
-        which would then mess with loop-checking in the anytree module
-        """
-        return hash(
-            (self.__class__, self.name, self.children[0].id, self.children[1].id)
-        )
-
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
