@@ -9,7 +9,9 @@ import numpy as np
 
 class TestBaseModel(unittest.TestCase):
     def test_read_parameters_csv(self):
-        data = pybamm.BaseParameterValues().read_parameters_csv("lead-acid/default.csv")
+        data = pybamm.BaseParameterValues().read_parameters_csv(
+            "input/parameters/lead-acid/default.csv"
+        )
         self.assertEqual(data["R"], 8.314)
 
     def test_init(self):
@@ -17,7 +19,7 @@ class TestBaseModel(unittest.TestCase):
         param = pybamm.BaseParameterValues({"a": 1})
         self.assertEqual(param.raw["a"], 1)
         # from file
-        param = pybamm.BaseParameterValues("lead-acid/default.csv")
+        param = pybamm.BaseParameterValues("input/parameters/lead-acid/default.csv")
         self.assertEqual(param.raw["R"], 8.314)
 
     def test_overwrite(self):
@@ -31,8 +33,8 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(param.raw["a"], 4)
         # from files
         param = pybamm.BaseParameterValues(
-            base_parameters="lead-acid/default.csv",
-            optional_parameters="lead-acid/optional_test.csv",
+            base_parameters="input/parameters/lead-acid/default.csv",
+            optional_parameters="input/parameters/lead-acid/optional_test.csv",
         )
         self.assertEqual(param.raw["R"], 8.314)
         self.assertEqual(param.raw["Ln"], 0.5)

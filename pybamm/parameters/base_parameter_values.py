@@ -50,7 +50,6 @@ class BaseParameterValues(object):
         ----------
         filename : string
             The name of the csv file containing the parameters.
-            Must be a file (or path/to/file) in `input/parameters/`
 
         Returns
         -------
@@ -58,8 +57,6 @@ class BaseParameterValues(object):
             {name: value} pairs for the parameters.
 
         """
-        # Hack to access input/parameters from any working directory
-        filename = os.path.join(pybamm.ABSOLUTE_PATH, "input", "parameters", filename)
 
         #
         df = pd.read_csv(filename, comment="#", skip_blank_lines=True)
