@@ -74,7 +74,7 @@ class BaseDiscretisation(object):
         for variable in variables:
             # Add up the size of all the domains in variable.domain
             for dom in variable.domain:
-                end += getattr(self.mesh, dom).npts
+                end += self.mesh.submeshes[dom].npts
             y_slices[variable.id] = slice(start, end)
             start = end
 
@@ -241,7 +241,7 @@ class BaseDiscretisation(object):
         """
         mesh_points = np.array([])
         for dom in domain:
-            mesh_points = np.concatenate([mesh_points, getattr(self.mesh, dom).nodes])
+            mesh_points = np.concatenate([mesh_points, self.mesh.submeshes[dom].nodes])
         return pybamm.Vector(scalar.value * np.ones_like(mesh_points))
 
     def concatenate(self, *symbols):

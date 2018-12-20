@@ -40,37 +40,9 @@ class BaseMesh(object):
         # Time
         self.time = np.linspace(0, tend, tsteps)
 
-        # submesh class
+        # submesh class and empty submeshes
         self.submeshclass = BaseSubmesh
-
-    @property
-    def negative_electrode(self):
-        return self._negative_electrode
-
-    @property
-    def separator(self):
-        return self._separator
-
-    @property
-    def positive_electrode(self):
-        return self._positive_electrode
-
-    @property
-    def whole_cell(self):
-        return self._whole_cell
-
-    def set_submesh(self, submesh, entries):
-        """Set a submesh.
-
-        Parameters
-        ----------
-        submesh : str
-            The name of the submesh
-        entries :
-            The argument to pass to the submesh class
-
-        """
-        setattr(self, "_" + submesh, self.submeshclass(entries))
+        self.submeshes = {}
 
 
 class BaseSubmesh(object):

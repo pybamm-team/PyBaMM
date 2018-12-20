@@ -35,7 +35,7 @@ class FiniteVolumeDiscretisation(pybamm.MatrixVectorDiscretisation):
         # TODO: implement for when there are several domains
 
         # implementation for a single domain
-        submesh = getattr(self.mesh, domain[0])
+        submesh = self.mesh.submeshes[domain[0]]
         n = submesh.npts
         e = 1 / submesh.d_nodes
         data = np.vstack(
@@ -55,7 +55,7 @@ class FiniteVolumeDiscretisation(pybamm.MatrixVectorDiscretisation):
         # TODO: implement for when there are several domains
 
         # implementation for a single domain
-        submesh = getattr(self.mesh, domain[0])
+        submesh = self.mesh.submeshes[domain[0]]
         n = submesh.npts + 1
         e = 1 / submesh.d_edges
         data = np.vstack(
