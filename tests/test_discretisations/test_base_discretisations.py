@@ -84,8 +84,9 @@ class TestDiscretise(unittest.TestCase):
 
         # parameter
         par = pybamm.Parameter("par")
-        with self.assertRaises(TypeError):
-            disc.process_symbol(par, None, None, None)
+        par_disc = disc.process_symbol(par, None, None, None)
+        self.assertTrue(isinstance(par_disc, pybamm.Parameter))
+        self.assertEqual(par_disc.name, par.name)
 
         # binary operator
         bin = var + scal

@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
+import copy
 
 
 class BaseDiscretisation(object):
@@ -184,11 +185,15 @@ class BaseDiscretisation(object):
         elif isinstance(symbol, pybamm.Variable):
             return pybamm.StateVector(y_slices[symbol.id])
 
-        elif isinstance(symbol, pybamm.Scalar):
-            return pybamm.Scalar(symbol.value)
-
         else:
-            raise TypeError("""Cannot discretise {!r}""".format(symbol))
+            # hack to copy the symbol but without a parent
+            # (building tree from bottom up)
+            # simply setting new_symbol.parent = None, after copying, raises a TreeError
+            parent = symbol.parent
+            symbol.parent = None
+            new_symbol = copy.copy(symbol)
+            symbol.parent = parent
+            return new_symbol
 
     def gradient(self, symbol, domain, y_slices, boundary_conditions):
         """How to discretise gradient operators.

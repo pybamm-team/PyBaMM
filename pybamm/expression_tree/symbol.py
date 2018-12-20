@@ -28,6 +28,7 @@ class Symbol(anytree.NodeMixin):
 
         for child in children:
             # copy child before adding
+            # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
 
     @property
