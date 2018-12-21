@@ -81,7 +81,8 @@ class Symbol(anytree.NodeMixin):
 
     def __repr__(self):
         """returns the string `__class__(id, name, parent expression)`"""
-        return "{!s}({}, {!s}, {!s})".format(self.__class__.__name__, hex(self.id), self._name, self.parent)
+        return "{!s}({}, {!s}, {!s})".format(self.__class__.__name__,
+                                             hex(self.id), self._name, self.parent)
 
     def __add__(self, other):
         """return an :class:`Addition` object"""
