@@ -53,6 +53,7 @@ from .expression_tree.symbol import Symbol
 from .expression_tree.binary_operators import (
     BinaryOperator,
     Addition,
+    Power,
     Subtraction,
     Multiplication,
     Division,
@@ -64,6 +65,8 @@ from .expression_tree.domain import Domain
 from .expression_tree.parameter import Parameter
 from .expression_tree.unary_operators import (
     UnaryOperator,
+    Negate,
+    AbsoluteValue,
     SpatialOperator,
     Gradient,
     Divergence,

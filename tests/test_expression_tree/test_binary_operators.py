@@ -23,6 +23,19 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(sum.children[0].name, a.name)
         self.assertEqual(sum.children[1].name, b.name)
 
+    def test_power(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        pow = pybamm.Power(a, b)
+        self.assertEqual(pow.name, "**")
+        self.assertEqual(pow.children[0].name, a.name)
+        self.assertEqual(pow.children[1].name, b.name)
+
+        a = pybamm.Scalar(4)
+        b = pybamm.Scalar(2)
+        pow = pybamm.Power(a, b)
+        self.assertEqual(pow.evaluate(), 16)
+
     def test_addition_printing(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

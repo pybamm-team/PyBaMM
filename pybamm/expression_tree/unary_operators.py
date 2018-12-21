@@ -4,6 +4,8 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import numbers
+import numpy as np
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -26,6 +28,44 @@ class UnaryOperator(pybamm.Symbol):
 
     def __init__(self, name, child):
         super().__init__(name, children=[child])
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{}({!s})".format(self.name, self.children[0])
+
+
+class Negate(UnaryOperator):
+    """A node in the expression tree representing a `-` negation operator
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("-", child)
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return -self.children[0].evaluate(t, y)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{}{!s}".format(self.name, self.children[0])
+
+
+class AbsoluteValue(UnaryOperator):
+    """A node in the expression tree representing an `abs` operator
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("abs", child)
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return np.abs(self.children[0].evaluate(t, y))
 
 
 class SpatialOperator(UnaryOperator):
@@ -52,10 +92,6 @@ class SpatialOperator(UnaryOperator):
     def __init__(self, name, child):
         super().__init__(name, child)
         # self.domain = child.domain
-
-    def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{}({!s})".format(self.name, self.children[0])
 
 
 class Gradient(SpatialOperator):
