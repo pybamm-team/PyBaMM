@@ -41,7 +41,7 @@ class TestScipySolver(unittest.TestCase):
         model.rhs = {var: pybamm.Scalar(0.1) * var}
         model.initial_conditions = {var: pybamm.Scalar(1)}
         # No need to set parameters; can use base discretisation (no spatial operators)
-        param = pybamm.BaseParameterValues(
+        param = pybamm.ParameterValues(
             base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
         )
         mesh = pybamm.FiniteVolumeMacroMesh(param)
