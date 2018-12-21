@@ -19,7 +19,7 @@ class ScipySolver(pybamm.BaseSolver):
 
     @method.setter
     def method(self, value):
-        self._method = method
+        self._method = value
 
     def integrate(self, derivs, y0, t_eval):
         return it.solve_ivp(

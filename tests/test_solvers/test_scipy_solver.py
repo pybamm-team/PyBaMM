@@ -38,14 +38,13 @@ class TestScipySolver(unittest.TestCase):
         # Create model
         model = pybamm.BaseModel()
         var = pybamm.Variable("var", domain=["whole cell"])
-        model.rhs = {var: -pybamm.Scalar(0.1) * var}
+        model.rhs = {var: pybamm.Scalar(0.1) * var}
         model.initial_conditions = {var: pybamm.Scalar(1)}
-
         # No need to set parameters; can use base discretisation (no spatial operators)
         param = pybamm.BaseParameterValues(
             base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
         )
-        mesh = pybamm.FiniteVolumeMesh(param)
+        mesh = pybamm.FiniteVolumeMacroMesh(param)
         disc = pybamm.BaseDiscretisation(mesh)
         disc.process_model(model)
 
@@ -54,7 +53,7 @@ class TestScipySolver(unittest.TestCase):
         t_eval = mesh["time"]
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)
-        np.testing.assert_allclose(solver.y[0], np.exp(-0.1 * solver.t))
+        np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
 
 
 if __name__ == "__main__":

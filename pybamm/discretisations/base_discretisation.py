@@ -157,11 +157,10 @@ class BaseDiscretisation(object):
             )
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            new_left = self.process_symbol(
-                symbol.children[0], domain, y_slices, boundary_conditions
-            )
+            left, right = symbol.children
+            new_left = self.process_symbol(left, domain, y_slices, boundary_conditions)
             new_right = self.process_symbol(
-                symbol.children[1], domain, y_slices, boundary_conditions
+                right, domain, y_slices, boundary_conditions
             )
             return symbol.__class__(new_left, new_right)
 
