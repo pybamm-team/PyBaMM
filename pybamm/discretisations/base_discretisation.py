@@ -37,22 +37,17 @@ class BaseDiscretisation(object):
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
 
-        Returns
-        -------
-        y0 : :class:`numpy.array`
-            Vector of initial conditions
-
         """
         # Set the y split for variables
         y_slices = self.get_variable_slices(model.rhs.keys())
 
         # Discretise and concatenate initial conditions, passing domain from variable
-        y0 = self.process_initial_conditions(model.initial_conditions)
+        model.initial_conditions = self.process_initial_conditions(
+            model.initial_conditions
+        )
 
         # Discretise right-hand sides, passing domain from variable
         model.rhs = self.process_rhs(model.rhs, model.boundary_conditions, y_slices)
-
-        return y0
 
     def get_variable_slices(self, variables):
         """Set the slicing for variables.
