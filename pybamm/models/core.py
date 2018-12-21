@@ -54,7 +54,7 @@ class BaseModel(object):
 
         Parameters
         ----------
-        param : :class:`pybamm.Parameters` instance
+        param : :class:`pybamm.BaseParameterValues` instance
             The parameters of the simulation
         operators : :class:`pybamm.Operators` instance
             The spatial operators.
@@ -127,7 +127,7 @@ class BaseModel(object):
         jn = self.submodels["reactions"]["neg"].reaction(vars.neg)
         jp = self.submodels["reactions"]["pos"].reaction(vars.pos)
 
-        return np.concatenate([jn, np.zeros_like(self.mesh.xs.centres), jp])
+        return np.concatenate([jn, np.zeros_like(self.mesh.xs.nodes), jp])
 
     @property
     def submodels(self):

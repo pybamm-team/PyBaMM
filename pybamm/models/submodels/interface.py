@@ -13,7 +13,7 @@ class Interface(object):
 
     Parameters
     ----------
-    subparam : :class:`pybamm.parameters.Parameters` subclass instance
+    subparam : :class:`pybamm.BaseParameterValues.Parameters` subclass instance
         The parameters of the simulation for reactions in the electrode.
     submesh : :class:`pybamm.mesh.Mesh` subclass instance
         The mesh in the electrode.
@@ -72,6 +72,6 @@ class HomogeneousReaction(Interface):
         """
         See :meth:`Interface.reaction`
         """
-        j = self.subparam.j_avg(vars.t) * np.ones_like(self.submesh.centres)
+        j = self.subparam.j_avg(vars.t) * np.ones_like(self.submesh.nodes)
 
         return j

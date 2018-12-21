@@ -23,5 +23,6 @@ Contents
 .. toctree::
 
     source/expression_tree/index
-    source/parameters/index
     source/models/index
+    source/parameters/index
+    source/discretisations/index

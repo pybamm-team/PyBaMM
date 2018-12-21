@@ -15,24 +15,24 @@ class TestParameters(unittest.TestCase):
         self.assertEqual(data["R"], 8.314)
 
     def test_name_string_to_class_string(self):
-        ntc = pybamm.parameters.parameters.name_string_to_class_string
+        ntc = pybamm.BaseParameterValues.parameters.name_string_to_class_string
         self.assertEqual(ntc("hello"), "_HelloParameters")
         self.assertEqual(ntc("hello_world"), "_HelloWorldParameters")
         self.assertEqual(ntc("helloworld"), "_HelloworldParameters")
 
     def test_parameters_init(self):
         with self.assertRaises(NotImplementedError):
-            pybamm.Parameters(tests="not a test")
+            pybamm.BaseParameterValues(tests="not a test")
         with self.assertRaises(NotImplementedError):
-            param = pybamm.Parameters(chemistry="not a chemistry")
+            param = pybamm.BaseParameterValues(chemistry="not a chemistry")
         for chemistry in ["lead-acid"]:  # pybamm.KNOWN_CHEMISTRIES:
-            param = pybamm.Parameters(chemistry=chemistry)
+            param = pybamm.BaseParameterValues(chemistry=chemistry)
             self.assertEqual(param._raw["R"], 8.314)
             self.assertEqual(param._func.D_eff(param, 1, 1), 1)
 
     def test_parameters_options(self):
         # test dictionary input
-        param = pybamm.Parameters(
+        param = pybamm.BaseParameterValues(
             chemistry="lead-acid",
             optional_parameters={"Ln": 1 / 3, "Ls": 0.25, "Lp": 0.25},
         )
@@ -43,7 +43,7 @@ class TestParameters(unittest.TestCase):
         )
 
         # Test file input
-        param = pybamm.Parameters(
+        param = pybamm.BaseParameterValues(
             chemistry="lead-acid", optional_parameters="optional_test.csv"
         )
         self.assertEqual(param._raw["Ln"], 0.5)
@@ -53,7 +53,7 @@ class TestParameters(unittest.TestCase):
         )
 
     def test_parameters_update_raw(self):
-        param = pybamm.Parameters(chemistry="lead-acid")
+        param = pybamm.BaseParameterValues(chemistry="lead-acid")
         param.update_raw({"Ln": 0.5})
         self.assertEqual(param._raw["Ln"], 0.5)
         self.assertAlmostEqual(
@@ -62,7 +62,7 @@ class TestParameters(unittest.TestCase):
 
     def test_parameters_defaults_lead_acid(self):
         # Tests on how the parameters interact
-        param = pybamm.Parameters(chemistry="lead-acid")
+        param = pybamm.BaseParameterValues(chemistry="lead-acid")
         mesh = pybamm.Mesh(param, 10)
         param.set_mesh(mesh)
 
@@ -88,7 +88,7 @@ class TestParameters(unittest.TestCase):
 
     def test_functions_lead_acid(self):
         # Tests on how the parameters interact
-        param = pybamm.Parameters(chemistry="lead-acid")
+        param = pybamm.BaseParameterValues(chemistry="lead-acid")
         mesh = pybamm.Mesh(param, 10)
         param.set_mesh(mesh)
         # Known values for dimensionless functions
@@ -105,7 +105,7 @@ class TestParameters(unittest.TestCase):
         self.assertGreater(param.pos_reactions.U(1), param.pos_reactions.U(0.5))
 
     def test_mesh_dependent_parameters(self):
-        param = pybamm.Parameters(chemistry="lead-acid")
+        param = pybamm.BaseParameterValues(chemistry="lead-acid")
         mesh = pybamm.Mesh(param, 10)
         param.set_mesh(mesh)
 
