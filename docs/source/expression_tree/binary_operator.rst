@@ -7,6 +7,9 @@ Binary Operators
 .. autoclass:: pybamm.Addition
   :members:
 
+.. autoclass:: pybamm.Power
+  :members:
+
 .. autoclass:: pybamm.Subtraction
   :members:
 
