@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 
 
-class TestBaseModel(unittest.TestCase):
+class TestBaseParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
         data = pybamm.BaseParameterValues().read_parameters_csv(
             "input/parameters/lead-acid/default.csv"

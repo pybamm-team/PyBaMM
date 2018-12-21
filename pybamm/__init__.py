@@ -81,6 +81,7 @@ from .expression_tree.vector import Vector, StateVector
 #
 from .parameters.base_parameter_values import BaseParameterValues
 from .parameters import functions_lead_acid
+from .parameters import standard_parameters
 
 #
 # Mesh and Discretisation classes
