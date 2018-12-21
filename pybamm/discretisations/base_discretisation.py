@@ -172,6 +172,9 @@ class BaseDiscretisation(object):
             return symbol.__class__(new_child)
 
         elif isinstance(symbol, pybamm.Variable):
+            assert isinstance(y_slices, dict), ValueError(
+                """y_slices should be dict, not {}""".format(type(y_slices))
+            )
             return pybamm.StateVector(y_slices[symbol.id])
 
         else:
