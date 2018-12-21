@@ -61,6 +61,42 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             a.evaluate()
 
+    def test_symbol_repr(self):
+        """
+        test that __repr___ returns the string
+        `__class__(id, name, parent expression)`
+        """
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        hex_regex = r"\-?0x[0-9,a-f]+"
+        self.assertRegex(a.__repr__(), r"Symbol\(" + hex_regex + r", a, None\)")
+        self.assertRegex(b.__repr__(), r"Symbol\(" + hex_regex + r", b, None\)")
+        self.assertRegex(
+            (a + b).__repr__(), r"Addition\(" + hex_regex + r", \+, None\)"
+        )
+        self.assertRegex(
+            (a + b).children[0].__repr__(), r"Symbol\(" + hex_regex + r", a, a \+ b\)"
+        )
+        self.assertRegex(
+            (a + b).children[1].__repr__(), r"Symbol\(" + hex_regex + r", b, a \+ b\)"
+        )
+        self.assertRegex(
+            (a * b).__repr__(), r"Multiplication\(" + hex_regex + r", \*, None\)"
+        )
+        self.assertRegex(
+            (a * b).children[0].__repr__(), r"Symbol\(" + hex_regex + r", a, a \* b\)"
+        )
+        self.assertRegex(
+            (a * b).children[1].__repr__(), r"Symbol\(" + hex_regex + ", b, a \* b\)"
+        )
+        self.assertRegex(
+            pybamm.grad(a).__repr__(), r"Gradient\(" + hex_regex + ", grad, None\)"
+        )
+        self.assertRegex(
+            pybamm.grad(a).children[0].__repr__(),
+            r"Symbol\(" + hex_regex + ", a, grad\(a\)\)",
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
