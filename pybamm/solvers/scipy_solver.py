@@ -52,7 +52,7 @@ class ScipySolver(pybamm.BaseSolver):
             An object containing the times and values of the solution, as well as
             various diagnostic messages.
         """
-        return it.solve_ivp(
+        sol = it.solve_ivp(
             derivs,
             (t_eval[0], t_eval[-1]),
             y0,
@@ -62,3 +62,4 @@ class ScipySolver(pybamm.BaseSolver):
             atol=self.tol,
         )
         # TODO: implement concentration cut-off event
+        return sol.t, sol.y

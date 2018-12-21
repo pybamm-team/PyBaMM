@@ -46,7 +46,7 @@ class BaseSolver(object):
         self._y = value
 
     def solve(self, model, t_eval):
-        """Calculate the solution of the model at specified timesself.
+        """Calculate the solution of the model at specified times.
 
         Parameters
         ----------
@@ -62,10 +62,7 @@ class BaseSolver(object):
             return model.rhs.evaluate(t, y)
 
         y0 = model.initial_conditions
-        sol = self.integrate(dydt, y0, t_eval)
-
-        self.t = sol.t
-        self.y = sol.y
+        self.t, self.y = self.integrate(dydt, y0, t_eval)
 
     def integrate(self, derivs, y0, t_eval):
         """

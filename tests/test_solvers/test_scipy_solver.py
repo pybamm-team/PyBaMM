@@ -19,9 +19,9 @@ class TestScipySolver(unittest.TestCase):
 
         y0 = np.array([0])
         t_eval = np.linspace(0, 1, 100)
-        sol = solver.integrate(constant_growth, y0, t_eval)
-        np.testing.assert_array_equal(sol.t, t_eval)
-        np.testing.assert_allclose(0.5 * sol.t, sol.y[0])
+        t_sol, y_sol = solver.integrate(constant_growth, y0, t_eval)
+        np.testing.assert_array_equal(t_sol, t_eval)
+        np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
 
         # Exponential decay
         solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
@@ -31,8 +31,8 @@ class TestScipySolver(unittest.TestCase):
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 1, 100)
-        sol = solver.integrate(exponential_decay, y0, t_eval)
-        np.testing.assert_allclose(sol.y[0], np.exp(-0.1 * sol.t))
+        t_sol, y_sol = solver.integrate(exponential_decay, y0, t_eval)
+        np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
 
     def test_model_solver(self):
         # Create model
