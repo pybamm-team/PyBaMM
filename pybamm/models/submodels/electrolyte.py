@@ -24,6 +24,9 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions
+    variables: dict
+        A dictionary that maps strings to expressions that represent
+        the useful variables
 
     *Extends:* :class:`BaseModel`
     """
@@ -41,8 +44,6 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
 
         c_e = pybamm.Variable("c_e", domain=electrolyte_domain)
 
-        # Should these also be variables?
-        N_e = pybamm.Variable("N_e", domain=electrolyte_domain)
         G = pybamm.Variable("G", domain=electrode_domain)
 
         delta = pybamm.Parameter("delta")
@@ -55,6 +56,8 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
         c_e0 = pybamm.Parameter("c_e0")  # Should this be a parameter?
 
         # Change expression once Binary operations can cope with None input
+        N_e = pybamm.Scalar(0) - pybamm.Gradient(c_e)
+
         self.rhs = {
             c_e: pybamm.Scalar(0)
             - pybamm.Divergence(N_e) / delta / epsilon
@@ -62,3 +65,4 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
         }
         self.initial_conditions = {c_e: c_e0}
         self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
+        self.variables = {"c_e": c_e, "N_e": N_e}
