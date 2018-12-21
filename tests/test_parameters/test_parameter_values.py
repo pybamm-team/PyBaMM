@@ -7,24 +7,24 @@ import unittest
 import numpy as np
 
 
-class TestBaseModel(unittest.TestCase):
+class TestParameterValues(unittest.TestCase):
     def test_read_parameters_csv(self):
-        data = pybamm.BaseParameterValues().read_parameters_csv(
+        data = pybamm.ParameterValues().read_parameters_csv(
             "input/parameters/lead-acid/default.csv"
         )
         self.assertEqual(data["R"], 8.314)
 
     def test_init(self):
         # from dict
-        param = pybamm.BaseParameterValues({"a": 1})
+        param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
         # from file
-        param = pybamm.BaseParameterValues("input/parameters/lead-acid/default.csv")
+        param = pybamm.ParameterValues("input/parameters/lead-acid/default.csv")
         self.assertEqual(param["R"], 8.314)
 
     def test_overwrite(self):
         # from dicts
-        param = pybamm.BaseParameterValues(
+        param = pybamm.ParameterValues(
             base_parameters={"a": 1, "b": 2}, optional_parameters={"b": 3}
         )
         self.assertEqual(param["a"], 1)
@@ -32,7 +32,7 @@ class TestBaseModel(unittest.TestCase):
         param.update({"a": 4})
         self.assertEqual(param["a"], 4)
         # from files
-        param = pybamm.BaseParameterValues(
+        param = pybamm.ParameterValues(
             base_parameters="input/parameters/lead-acid/default.csv",
             optional_parameters="input/parameters/lead-acid/optional_test.csv",
         )
@@ -40,12 +40,12 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(param["Ln"], 0.5)
 
     def test_get_parameter_value(self):
-        parameter_values = pybamm.BaseParameterValues({"a": 1})
+        parameter_values = pybamm.ParameterValues({"a": 1})
         param = pybamm.Parameter("a")
         self.assertEqual(parameter_values.get_parameter_value(param), 1)
 
     def test_process_symbol(self):
-        parameter_values = pybamm.BaseParameterValues({"a": 1, "b": 2})
+        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2})
         # process parameter
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
@@ -110,7 +110,7 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: a * pybamm.grad(c)}
         model.initial_conditions = {c: b}
         model.boundary_conditions = {}
-        parameter_values = pybamm.BaseParameterValues({"a": 1, "b": 2})
+        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2})
         parameter_values.process(model)
         self.assertTrue(isinstance(model.rhs[c].children[0], pybamm.Scalar))
         self.assertEqual(model.rhs[c].children[0].value, 1)
