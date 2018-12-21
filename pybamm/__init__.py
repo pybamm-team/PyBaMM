@@ -80,6 +80,18 @@ from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
 #
+# Model classes
+#
+from .models.core import BaseModel
+from .models.reaction_diffusion import ReactionDiffusionModel
+from .models.electrolyte_current import ElectrolyteCurrentModel
+
+#
+# Submodel classes
+#
+from .models.submodels import electrolyte, interface
+
+#
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
@@ -107,28 +119,10 @@ from .discretisations.finite_volume_meshes import (
 from .simulation import Simulation
 
 #
-# Solver class and lists of known methods
+# Solver classes
 #
-from .solver import Solver
-from .solver import KNOWN_INTEGRATORS
-from .solver import KNOWN_SPATIAL_DISCRETISATIONS
-
-#
-# Variables class
-#
-from .variables import Variables
-
-#
-# Model classes
-#
-from .models.core import BaseModel
-from .models.reaction_diffusion import ReactionDiffusionModel
-from .models.electrolyte_current import ElectrolyteCurrentModel
-
-#
-# Submodel classes
-#
-from .models.submodels import electrolyte, interface
+from .solvers.base_solver import BaseSolver
+from .solvers.scipy_solver import ScipySolver
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

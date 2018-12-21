@@ -26,3 +26,4 @@ Contents
     source/models/index
     source/parameters/index
     source/discretisations/index
+    source/solvers/index
