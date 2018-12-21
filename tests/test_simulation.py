@@ -8,6 +8,7 @@ import numpy as np
 import unittest
 
 
+@unittest.skip("not yet implemented")
 class TestSimulation(unittest.TestCase):
     """Test the simulation class."""
 
