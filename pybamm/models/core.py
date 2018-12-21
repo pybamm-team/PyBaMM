@@ -127,7 +127,7 @@ class BaseModel(object):
         jn = self.submodels["reactions"]["neg"].reaction(vars.neg)
         jp = self.submodels["reactions"]["pos"].reaction(vars.pos)
 
-        return np.concatenate([jn, np.zeros_like(self.mesh.xs.centres), jp])
+        return np.concatenate([jn, np.zeros_like(self.mesh.xs.nodes), jp])
 
     @property
     def submodels(self):

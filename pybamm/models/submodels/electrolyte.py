@@ -45,7 +45,7 @@ class StefanMaxwellDiffusion(object):
             The initial conditions
         """
         if not self.tests:
-            return self.subparam.c0 * np.ones_like(self.submesh.centres)
+            return self.subparam.c0 * np.ones_like(self.submesh.nodes)
         else:
             return self.tests["inits"]["concentration"]
 

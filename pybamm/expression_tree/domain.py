@@ -3,6 +3,7 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
+import pybamm
 
 
 class Domain(object):
@@ -27,6 +28,12 @@ class Domain(object):
         except TypeError:
             raise TypeError("Domain: argument domain is not iterable")
         else:
+            for d in domain:
+                assert d in pybamm.KNOWN_DOMAINS, ValueError(
+                    """domain "{}" is not in known domains ({})""".format(
+                        d, str(pybamm.KNOWN_DOMAINS)
+                    )
+                )
             self.domain = domain
 
     @property

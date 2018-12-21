@@ -57,6 +57,7 @@ from .expression_tree.binary_operators import (
     Multiplication,
     Division,
 )
+from .expression_tree.concatenations import Concatenation, NumpyConcatenation
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
 from .expression_tree.domain import Domain
@@ -73,12 +74,22 @@ from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import IndependentVariable
 from .expression_tree.independent_variable import t
-from .expression_tree.vector import Vector
+from .expression_tree.vector import Vector, StateVector
 
 #
-# Mesh classes
+# Mesh and Discretisation classes
 #
-from .mesh import Mesh
+from .discretisations.base_discretisation import (
+    BaseDiscretisation,
+    MatrixVectorDiscretisation,
+)
+from .discretisations.finite_volume_discretisations import FiniteVolumeDiscretisation
+from .discretisations.base_mesh import KNOWN_DOMAINS
+from .discretisations.base_mesh import BaseMesh, BaseSubmesh
+from .discretisations.finite_volume_meshes import (
+    FiniteVolumeMacroMesh,
+    FiniteVolumeSubmesh,
+)
 
 #
 # Parameters class and methods
@@ -98,11 +109,6 @@ from .simulation import Simulation
 from .solver import Solver
 from .solver import KNOWN_INTEGRATORS
 from .solver import KNOWN_SPATIAL_DISCRETISATIONS
-
-#
-# Operators class
-#
-from .operators import Operators
 
 #
 # Variables class
