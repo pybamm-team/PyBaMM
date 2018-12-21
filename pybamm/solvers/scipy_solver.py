@@ -13,6 +13,14 @@ class ScipySolver(pybamm.BaseSolver):
         super().__init__(tol)
         self.method = method
 
+    @property
+    def method(self):
+        return self._method
+
+    @method.setter
+    def method(self, value):
+        self._method = method
+
     def integrate(self, derivs, y0, t_eval):
         return it.solve_ivp(
             derivs,

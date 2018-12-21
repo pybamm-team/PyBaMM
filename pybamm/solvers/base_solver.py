@@ -45,10 +45,11 @@ class BaseSolver(object):
     def y(self, value):
         self._y = value
 
-    def solve(self, model, y0, t_eval):
+    def solve(self, model, t_eval):
         def dydt(t, y):
             return model.rhs.evaluate(t, y)
 
+        y0 = model.initial_conditions
         sol = self.integrate(dydt, y0, t_eval)
 
         self.t = sol.t
