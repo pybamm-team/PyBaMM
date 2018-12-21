@@ -80,6 +80,18 @@ from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
 #
+# Model classes
+#
+from .models.core import BaseModel
+from .models.reaction_diffusion import ReactionDiffusionModel
+from .models.electrolyte_current import ElectrolyteCurrentModel
+
+#
+# Submodel classes
+#
+from .models.submodels import electrolyte, interface
+
+#
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
@@ -111,23 +123,6 @@ from .simulation import Simulation
 #
 from .solvers.base_solver import BaseSolver
 from .solvers.scipy_solver import ScipySolver
-
-#
-# Variables class
-#
-from .variables import Variables
-
-#
-# Model classes
-#
-from .models.core import BaseModel
-from .models.reaction_diffusion import ReactionDiffusionModel
-from .models.electrolyte_current import ElectrolyteCurrentModel
-
-#
-# Submodel classes
-#
-from .models.submodels import electrolyte, interface
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
