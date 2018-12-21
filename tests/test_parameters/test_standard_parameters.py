@@ -4,7 +4,6 @@
 import pybamm
 
 import unittest
-import numpy as np
 
 
 class TestStandardParameters(unittest.TestCase):
