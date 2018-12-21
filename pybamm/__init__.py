@@ -79,7 +79,7 @@ from .expression_tree.vector import Vector, StateVector
 #
 # Parameters class and methods
 #
-from .parameters.base_parameter_values import BaseParameterValues
+from .parameters.parameter_values import ParameterValues
 from .parameters import functions_lead_acid
 from .parameters import standard_parameters
 

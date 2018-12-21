@@ -3,5 +3,5 @@ Parameters
 
 .. toctree::
 
-  base_parameter_values
+  parameter_values
   standard_parameters

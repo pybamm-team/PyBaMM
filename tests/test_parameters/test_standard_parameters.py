@@ -16,7 +16,7 @@ class TestStandardParameters(unittest.TestCase):
         ls = pybamm.standard_parameters.ls
         lp = pybamm.standard_parameters.lp
 
-        parameter_values = pybamm.BaseParameterValues(
+        parameter_values = pybamm.ParameterValues(
             base_parameters={"Ln": 0.05, "Ls": 0.02, "Lp": 0.21}
         )
         Ln_eval = parameter_values.process_symbol(Ln)

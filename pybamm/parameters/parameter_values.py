@@ -9,7 +9,7 @@ import pandas as pd
 import copy
 
 
-class BaseParameterValues(dict):
+class ParameterValues(dict):
     """
     The parameter values for a simulation.
 

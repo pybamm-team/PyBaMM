@@ -54,7 +54,7 @@ class BaseModel(object):
 
         Parameters
         ----------
-        param : :class:`pybamm.BaseParameterValues` instance
+        param : :class:`pybamm.ParameterValues` instance
             The parameters of the simulation
         operators : :class:`pybamm.Operators` instance
             The spatial operators.

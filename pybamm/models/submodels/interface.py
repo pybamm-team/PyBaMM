@@ -13,7 +13,7 @@ class Interface(object):
 
     Parameters
     ----------
-    subparam : :class:`pybamm.BaseParameterValues.Parameters` subclass instance
+    subparam : :class:`pybamm.ParameterValues.Parameters` subclass instance
         The parameters of the simulation for reactions in the electrode.
     submesh : :class:`pybamm.mesh.Mesh` subclass instance
         The mesh in the electrode.

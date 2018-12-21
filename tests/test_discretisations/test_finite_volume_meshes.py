@@ -9,7 +9,7 @@ import unittest
 
 class TestFiniteVolumeMesh(unittest.TestCase):
     def test_mesh_creation(self):
-        param = pybamm.BaseParameterValues(
+        param = pybamm.ParameterValues(
             base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
         )
         mesh = pybamm.FiniteVolumeMacroMesh(param, 50)
@@ -32,7 +32,7 @@ class TestFiniteVolumeMesh(unittest.TestCase):
         )
 
     def test_mesh_sizes(self):
-        param = pybamm.BaseParameterValues(
+        param = pybamm.ParameterValues(
             base_parameters={"Ln": 0.01, "Ls": 0.5, "Lp": 0.12}
         )
         mesh = pybamm.FiniteVolumeMacroMesh(param, 50)
