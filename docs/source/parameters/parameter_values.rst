@@ -1,5 +1,5 @@
 Base Parameter Values
 =====================
 
-.. autoclass:: pybamm.BaseParameterValues
+.. autoclass:: pybamm.ParameterValues
   :members:
