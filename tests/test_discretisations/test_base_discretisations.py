@@ -194,7 +194,8 @@ class TestDiscretise(unittest.TestCase):
         mesh = MeshForTesting()
         disc = DiscretisationForTesting(mesh)
 
-        y0 = disc.process_model(model)
+        disc.process_model(model)
+        y0 = model.initial_conditions
         np.testing.assert_array_equal(y0, 3 * np.ones_like(mesh["whole cell"].nodes))
         np.testing.assert_array_equal(y0, model.rhs.evaluate(None, y0))
 
@@ -206,7 +207,8 @@ class TestDiscretise(unittest.TestCase):
         boundary_conditions = {}
         model = ModelForTesting(rhs, initial_conditions, boundary_conditions)
 
-        y0 = disc.process_model(model)
+        disc.process_model(model)
+        y0 = model.initial_conditions
         np.testing.assert_array_equal(
             y0,
             np.concatenate(
