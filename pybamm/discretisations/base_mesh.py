@@ -7,10 +7,10 @@ from __future__ import print_function, unicode_literals
 import numpy as np
 
 KNOWN_DOMAINS = [
-    "negative_electrode",
+    "negative electrode",
     "separator",
-    "positive_electrode",
-    "whole_cell",
+    "positive electrode",
+    "whole cell",
     "test",
 ]
 

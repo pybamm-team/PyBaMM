@@ -14,15 +14,15 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         disc = pybamm.FiniteVolumeDiscretisation(mesh)
 
         # grad
-        var = pybamm.Variable("var", domain=["whole_cell"])
+        var = pybamm.Variable("var", domain=["whole cell"])
         grad_eqn = pybamm.grad(var)
         y_slices = disc.get_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn, var.domain, y_slices, {})
 
-        constant_y = np.ones_like(mesh["whole_cell"].nodes)
+        constant_y = np.ones_like(mesh["whole cell"].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(mesh["whole_cell"].edges[1:-1]),
+            np.zeros_like(mesh["whole cell"].edges[1:-1]),
         )
 
         # div
@@ -34,20 +34,20 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         )
 
         # Linear y should have laplacian zero
-        linear_y = mesh["whole_cell"].nodes
+        linear_y = mesh["whole cell"].nodes
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y),
-            np.ones_like(mesh["whole_cell"].edges[1:-1]),
+            np.ones_like(mesh["whole cell"].edges[1:-1]),
         )
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, linear_y),
-            np.zeros_like(mesh["whole_cell"].nodes),
+            np.zeros_like(mesh["whole cell"].nodes),
         )
 
     def test_grad_convergence(self):
         # Convergence
         param = pybamm.Parameters()
-        var = pybamm.Variable("var", domain=["whole_cell"])
+        var = pybamm.Variable("var", domain=["whole cell"])
         grad_eqn = pybamm.grad(var)
 
         # Prepare convergence testing
@@ -59,8 +59,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             disc = pybamm.FiniteVolumeDiscretisation(mesh)
 
             # Define exact solutions
-            y = np.sin(mesh["whole_cell"].nodes)
-            grad_exact = np.cos(mesh["whole_cell"].edges[1:-1])
+            y = np.sin(mesh["whole cell"].nodes)
+            grad_exact = np.cos(mesh["whole cell"].edges[1:-1])
 
             # Discretise and evaluate
             y_slices = disc.get_variable_slices([var])
@@ -79,7 +79,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
     def test_div_convergence(self):
         # Convergence
         param = pybamm.Parameters()
-        var = pybamm.Variable("var", domain=["whole_cell"])
+        var = pybamm.Variable("var", domain=["whole cell"])
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -95,8 +95,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             disc = pybamm.FiniteVolumeDiscretisation(mesh)
 
             # Define exact solutions
-            y = np.sin(mesh["whole_cell"].nodes)
-            div_exact = -np.sin(mesh["whole_cell"].nodes)
+            y = np.sin(mesh["whole cell"].nodes)
+            div_exact = -np.sin(mesh["whole cell"].nodes)
 
             # Discretise and evaluate
             y_slices = disc.get_variable_slices([var])

@@ -29,7 +29,7 @@ class FiniteVolumeMacroMesh(pybamm.BaseMesh):
 
         # Negative electrode
         self.neg_mesh_points = round(ln / targetmeshsize) + 1
-        self["negative_electrode"] = self.submeshclass(
+        self["negative electrode"] = self.submeshclass(
             np.linspace(0.0, ln, self.neg_mesh_points)
         )
 
@@ -41,7 +41,7 @@ class FiniteVolumeMacroMesh(pybamm.BaseMesh):
 
         # Positive electrode
         self.pos_mesh_points = round(lp / targetmeshsize) + 1
-        self["positive_electrode"] = self.submeshclass(
+        self["positive electrode"] = self.submeshclass(
             np.linspace(ln + ls, 1.0, self.pos_mesh_points)
         )
 
@@ -49,12 +49,12 @@ class FiniteVolumeMacroMesh(pybamm.BaseMesh):
         self.total_mesh_points = (
             self.neg_mesh_points + (self.sep_mesh_points - 2) + self.pos_mesh_points
         )
-        self["whole_cell"] = self.submeshclass(
+        self["whole cell"] = self.submeshclass(
             np.concatenate(
                 [
-                    self["negative_electrode"].edges,
+                    self["negative electrode"].edges,
                     self["separator"].edges[1:-1],
-                    self["positive_electrode"].edges,
+                    self["positive electrode"].edges,
                 ]
             )
         )
