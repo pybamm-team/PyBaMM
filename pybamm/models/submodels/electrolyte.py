@@ -16,7 +16,7 @@ class StefanMaxwellDiffusion(object):
 
         Parameters
         ----------
-        subparam : :class:`pybamm.parameters.Parameters` subclass instance
+        subparam : :class:`pybamm.BaseParameterValues.Parameters` subclass instance
             The parameters of the simulation
         suboperators : :class:`pybamm.operators.Operators` subclass instance
             The spatial operators.
@@ -45,7 +45,7 @@ class StefanMaxwellDiffusion(object):
             The initial conditions
         """
         if not self.tests:
-            return self.subparam.c0 * np.ones_like(self.submesh.centres)
+            return self.subparam.c0 * np.ones_like(self.submesh.nodes)
         else:
             return self.tests["inits"]["concentration"]
 
@@ -102,7 +102,7 @@ class StefanMaxwellDiffusion(object):
     #
     #     Parameters
     #     ----------
-    #     subparam : pybamm.parameters.Parameter() instance
+    #     subparam : pybamm.BaseParameterValues.Parameter() instance
     #         The parameters of the simulation
     #     variables : 2-tuple (c, e) of array_like, shape (n,)
     #         The concentration, and potential difference.

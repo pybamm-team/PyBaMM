@@ -14,6 +14,26 @@ class TestUnaryOperators(unittest.TestCase):
         un = pybamm.UnaryOperator("unary test", a)
         self.assertEqual(un.children[0].name, a.name)
 
+    def test_negation(self):
+        a = pybamm.Symbol("a")
+        nega = pybamm.Negate(a)
+        self.assertEqual(nega.name, "-")
+        self.assertEqual(nega.children[0].name, a.name)
+
+        b = pybamm.Scalar(4)
+        negb = pybamm.Negate(b)
+        self.assertEqual(negb.evaluate(), -4)
+
+    def test_absolute(self):
+        a = pybamm.Symbol("a")
+        nega = pybamm.AbsoluteValue(a)
+        self.assertEqual(nega.name, "abs")
+        self.assertEqual(nega.children[0].name, a.name)
+
+        b = pybamm.Scalar(-4)
+        negb = pybamm.AbsoluteValue(b)
+        self.assertEqual(negb.evaluate(), 4)
+
     def test_gradient(self):
         a = pybamm.Symbol("a")
         grad = pybamm.Gradient(a)
@@ -24,6 +44,20 @@ class TestUnaryOperators(unittest.TestCase):
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.name, "grad")
         self.assertEqual(str(grad), "grad(a)")
+
+    def test_id(self):
+        a = pybamm.Scalar(4)
+        un1 = pybamm.UnaryOperator("test", a)
+        un2 = pybamm.UnaryOperator("test", a)
+        un3 = pybamm.UnaryOperator("new test", a)
+        self.assertEqual(un1.id, un2.id)
+        self.assertNotEqual(un1.id, un3.id)
+        a = pybamm.Scalar(4)
+        un4 = pybamm.UnaryOperator("test", a)
+        self.assertEqual(un1.id, un4.id)
+        d = pybamm.Scalar(42)
+        un5 = pybamm.UnaryOperator("test", d)
+        self.assertNotEqual(un1.id, un5.id)
 
 
 if __name__ == "__main__":

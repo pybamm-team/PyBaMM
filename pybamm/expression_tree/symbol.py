@@ -28,12 +28,26 @@ class Symbol(anytree.NodeMixin):
 
         for child in children:
             # copy child before adding
+            # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
 
     @property
     def name(self):
         """name of the node"""
         return self._name
+
+    @property
+    def id(self):
+        """
+        The immutable "identity" of a variable (for identifying y_slices).
+
+        This is identical to what we'd put in a __hash__ function
+        However, implementing __hash__ requires also implementing __eq__,
+        which would then mess with loop-checking in the anytree module
+        """
+        return hash(
+            (self.__class__, self.name) + tuple([child.id for child in self.children])
+        )
 
     def render(self):
         """print out a visual representation of the tree (this node and its
@@ -66,8 +80,9 @@ class Symbol(anytree.NodeMixin):
         return self._name
 
     def __repr__(self):
-        """returns the string `Symbol(name, parent expression)`"""
-        return "Symbol({!s}, {!s})".format(self._name, self.parent)
+        """returns the string `__class__(id, name, parent expression)`"""
+        return "{!s}({}, {!s}, {!s})".format(self.__class__.__name__,
+                                             hex(self.id), self._name, self.parent)
 
     def __add__(self, other):
         """return an :class:`Addition` object"""

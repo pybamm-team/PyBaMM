@@ -4,6 +4,12 @@ Unary Operators
 .. autoclass:: pybamm.UnaryOperator
   :members:
 
+.. autoclass:: pybamm.Negate
+  :members:
+
+.. autoclass:: pybamm.AbsoluteValue
+  :members:
+
 .. autoclass:: pybamm.SpatialOperator
   :members:
 
@@ -11,6 +17,7 @@ Unary Operators
   :members:
 
 .. autoclass:: pybamm.Divergence
+  :members:
 
 .. autofunction:: pybamm.grad
 

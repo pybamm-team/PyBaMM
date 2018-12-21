@@ -4,131 +4,52 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
-import numpy as np
-
 
 class BaseModel(object):
     """Base model class for other models to extend.
 
-    Parameters
+    Attributes
     ----------
-    tests : dict, optional
-        A dictionary for testing the convergence of the numerical solution:
-            * {} (default): We are not running in test mode, use built-ins.
-            * {'inits': dict of initial conditions,
-               'bcs': dict of boundary conditions,
-               'sources': dict of source terms
-               }: To be used for testing convergence to an exact solution.
+
+    _rhs: dict
+        A dictionary that maps expressions (variables) to expressions that represent
+        the rhs
+    _initial_conditions: dict
+        A dictionary that maps expressions (variables) to expressions that represent
+        the initial conditions
+    _boundary_conditions: dict
+        A dictionary that maps expressions (variables) to expressions that represent
+        the boundary conditions
     """
 
-    def __init__(self, tests={}):
-        self.name = "Base Model"
-        # Assign tests as an attribute
-        if tests:
-            assert set(tests.keys()) == {
-                "inits",
-                "bcs",
-                "sources",
-            }, "tests.keys() must include, 'inits', 'bcs' and 'sources'"
-        self.tests = tests
-
-    def __str__(self):
-        return self.name
+    def __init__(self):
+        self._rhs = {}
+        self._initial_conditions = {}
+        self._boundary_conditions = {}
 
     @property
-    def pde_variables(self):
-        """The variables of the model, as defined by submodels."""
-        return [
-            (variable, submodel.submesh)
-            for variable, submodel in self.submodels["pdes"].items()
-        ]
+    def rhs(self):
+        return self._rhs
 
-    # @property
-    # def domains(self):
-    #     """The domain(s) in which the model holds."""
-    #     return set([domain for self.domain in self.variables])
+    @rhs.setter
+    def rhs(self, rhs):
+        self._rhs = rhs
 
-    def set_simulation(self, param, operators, mesh):
-        """
-        Assign simulation-specific objects as attributes.
-
-        Parameters
-        ----------
-        param : :class:`pybamm.Parameters` instance
-            The parameters of the simulation
-        operators : :class:`pybamm.Operators` instance
-            The spatial operators.
-        mesh : :class:`pybamm.Mesh` instance
-            The spatial and temporal discretisation.
-        """
-        self.param = param
-        self.operators = operators
-        self.mesh = mesh
-
-        self.simulation_set = True
-
+    @property
     def initial_conditions(self):
-        """
-        Calculate the initial conditions for the simulation.
+        return self._initial_conditions
 
-        Returns
-        -------
-        array_like
-            A concatenated vector of all the initial conditions.
-
-        """
-        return np.concatenate(
-            [
-                submodel.initial_conditions()
-                for submodel in self.submodels["pdes"].values()
-            ]
-        )
-
-    def pdes_rhs(self, vars):
-        """
-        Calculate the spatial derivates of the spatial terms in the PDEs and returns
-        the right-hand side to be used by the ODE solver (Method of Lines).
-
-        Parameters
-        ----------
-        vars : pybamm.variables.Variables() instance
-            The variables of the model.
-
-        Returns
-        -------
-        dydt : array_like
-            A concatenated vector of all the derivatives.
-
-        """
-        j = self.reactions(vars)
-        vars.set_reaction_vars({"j": j})
-        dydt = np.concatenate(
-            [submodel.pdes_rhs(vars) for submodel in self.submodels["pdes"].values()]
-        )
-
-        return dydt
-
-    def reactions(self, vars):
-        """
-        Calculate the interfacial current density using the reactions defined in
-        self.submodels.
-
-        Parameters
-        ----------
-        vars : pybamm.variables.Variables() instance
-            The variables of the model.
-
-        Returns
-        -------
-        array_like
-            The interfacial current density.
-
-        """
-        jn = self.submodels["reactions"]["neg"].reaction(vars.neg)
-        jp = self.submodels["reactions"]["pos"].reaction(vars.pos)
-
-        return np.concatenate([jn, np.zeros_like(self.mesh.xs.centres), jp])
+    @initial_conditions.setter
+    def initial_conditions(self, initial_conditions):
+        self._initial_conditions = initial_conditions
 
     @property
-    def submodels(self):
-        raise NotImplementedError
+    def boundary_conditions(self):
+        return self._boundary_conditions
+
+    @boundary_conditions.setter
+    def boundary_conditions(self, boundary_conditions):
+        self._boundary_conditions = boundary_conditions
+
+    def __getitem__(self, key):
+        return self.rhs[key]
