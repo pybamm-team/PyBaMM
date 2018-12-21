@@ -9,7 +9,9 @@ import unittest
 
 class TestFiniteVolumeMesh(unittest.TestCase):
     def test_mesh_creation(self):
-        param = pybamm.Parameters()
+        param = pybamm.BaseParameterValues(
+            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+        )
         mesh = pybamm.FiniteVolumeMacroMesh(param, 50)
         self.assertEqual(mesh["whole cell"].edges[-1], 1)
         self.assertEqual(
@@ -30,7 +32,9 @@ class TestFiniteVolumeMesh(unittest.TestCase):
         )
 
     def test_mesh_sizes(self):
-        param = pybamm.Parameters()
+        param = pybamm.BaseParameterValues(
+            base_parameters={"Ln": 0.01, "Ls": 0.5, "Lp": 0.12}
+        )
         mesh = pybamm.FiniteVolumeMacroMesh(param, 50)
         self.assertEqual(
             mesh.neg_mesh_points + (mesh.sep_mesh_points - 2) + mesh.pos_mesh_points,

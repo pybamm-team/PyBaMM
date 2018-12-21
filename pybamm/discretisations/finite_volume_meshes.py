@@ -23,7 +23,9 @@ class FiniteVolumeMacroMesh(pybamm.BaseMesh):
         self.submeshclass = FiniteVolumeSubmesh
 
         # Space (macro)
-        ln, ls, lp = param.geometric.ln, param.geometric.ls, param.geometric.lp
+        Ln, Ls, Lp = param["Ln"], param["Ls"], param["Lp"]
+        L = Ln + Ls + Lp
+        ln, ls, lp = Ln / L, Ls / L, Lp / L
         # We aim to create the grid as uniformly as possible
         targetmeshsize = min(ln, ls, lp) / target_npts
 

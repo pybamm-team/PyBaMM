@@ -9,7 +9,9 @@ import unittest
 
 class TestFiniteVolumeDiscretisation(unittest.TestCase):
     def test_grad_div_shapes(self):
-        param = pybamm.Parameters()
+        param = pybamm.BaseParameterValues(
+            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+        )
         mesh = pybamm.FiniteVolumeMacroMesh(param, 2)
         disc = pybamm.FiniteVolumeDiscretisation(mesh)
 
@@ -46,7 +48,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
     def test_grad_convergence(self):
         # Convergence
-        param = pybamm.Parameters()
+        param = pybamm.BaseParameterValues(
+            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+        )
         var = pybamm.Variable("var", domain=["whole cell"])
         grad_eqn = pybamm.grad(var)
 
@@ -78,7 +82,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
     @unittest.skip("div errors do not converge as expected")
     def test_div_convergence(self):
         # Convergence
-        param = pybamm.Parameters()
+        param = pybamm.BaseParameterValues(
+            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+        )
         var = pybamm.Variable("var", domain=["whole cell"])
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)

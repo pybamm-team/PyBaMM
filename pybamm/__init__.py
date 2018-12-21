@@ -77,6 +77,12 @@ from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
 #
+# Parameters class and methods
+#
+from .parameters.base_parameter_values import BaseParameterValues
+from .parameters import functions_lead_acid
+
+#
 # Mesh and Discretisation classes
 #
 from .discretisations.base_discretisation import (
@@ -90,13 +96,6 @@ from .discretisations.finite_volume_meshes import (
     FiniteVolumeMacroMesh,
     FiniteVolumeSubmesh,
 )
-
-#
-# Parameters class and methods
-#
-from .parameters.parameters import read_parameters_csv
-from .parameters.parameters import Parameters
-from .parameters import functions_lead_acid
 
 #
 # Simulation class

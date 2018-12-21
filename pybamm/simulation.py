@@ -18,7 +18,7 @@ class Simulation(object):
     model : pybamm.models.(modelname).(ModelName)() instance
         The model to be used for the simulation. (modelname) and (ModelName)
         refer to a module and class to be chosen.
-    param : :class:`pybamm.parameters.Parameters` instance
+    param : :class:`pybamm.BaseParameterValues.Parameters` instance
         The parameters to be used for the simulation.
     mesh : :class:`pybamm.mesh.Mesh` instance
         The mesh to be used for the simulation.
@@ -32,7 +32,7 @@ class Simulation(object):
     def __init__(self, model, param=None, mesh=None, solver=None, name="unnamed"):
         # Defaults
         if param is None:
-            param = pybamm.Parameters()
+            param = pybamm.BaseParameterValues()
         if mesh is None:
             mesh = pybamm.Mesh(param)
         if solver is None:
