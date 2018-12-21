@@ -31,7 +31,7 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
     *Extends:* :class:`BaseModel`
     """
 
-    def __init__(self):
+    def __init__(self, G):
         super().__init__()
 
         electrolyte_domain = [
@@ -40,11 +40,7 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
             "positive " "electrode",
         ]
 
-        electrode_domain = ["negative electrode", "positive electrode"]
-
         c_e = pybamm.Variable("c_e", domain=electrolyte_domain)
-
-        G = pybamm.Variable("G", domain=electrode_domain)
 
         delta = pybamm.Parameter("delta")
         epsilon = pybamm.Parameter("epsilon", domain=electrolyte_domain)
