@@ -71,30 +71,38 @@ class TestDiscretise(unittest.TestCase):
         # variable
         var = pybamm.Variable("var")
         y_slices = {var.id: slice(53)}
-        var_disc = disc.process_symbol(var, None, y_slices, None)
+        var_disc = disc.process_symbol(var, None, y_slices)
         self.assertTrue(isinstance(var_disc, pybamm.StateVector))
         self.assertEqual(var_disc._y_slice, y_slices[var.id])
         # scalar
         scal = pybamm.Scalar(5)
-        scal_disc = disc.process_symbol(scal, None, None, None)
+        scal_disc = disc.process_symbol(scal, None)
         self.assertTrue(isinstance(scal_disc, pybamm.Scalar))
         self.assertEqual(scal_disc.value, scal.value)
 
         # parameter
         par = pybamm.Parameter("par")
-        par_disc = disc.process_symbol(par, None, None, None)
+        par_disc = disc.process_symbol(par, None)
         self.assertTrue(isinstance(par_disc, pybamm.Parameter))
         self.assertEqual(par_disc.name, par.name)
 
         # binary operator
         bin = var + scal
-        bin_disc = disc.process_symbol(bin, None, y_slices, None)
+        bin_disc = disc.process_symbol(bin, None, y_slices)
         self.assertTrue(isinstance(bin_disc, pybamm.Addition))
         self.assertTrue(isinstance(bin_disc.children[0], pybamm.StateVector))
         self.assertTrue(isinstance(bin_disc.children[1], pybamm.Scalar))
 
         # non-spatial unary operator
-        # TODO: none of these implemented yet
+        un1 = -var
+        un1_disc = disc.process_symbol(un1, None, y_slices)
+        self.assertTrue(isinstance(un1_disc, pybamm.Negate))
+        self.assertTrue(isinstance(un1_disc.children[0], pybamm.StateVector))
+
+        un2 = abs(scal)
+        un2_disc = disc.process_symbol(un2, None)
+        self.assertTrue(isinstance(un2_disc, pybamm.AbsoluteValue))
+        self.assertTrue(isinstance(un2_disc.children[0], pybamm.Scalar))
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
@@ -151,7 +159,7 @@ class TestDiscretise(unittest.TestCase):
             self.assertTrue(isinstance(eqn_disc.children[1], pybamm.StateVector))
 
             y = mesh["whole cell"].nodes ** 2
-            var_disc = disc.process_symbol(var, None, y_slices, None)
+            var_disc = disc.process_symbol(var, None, y_slices)
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(
                 eqn_disc.evaluate(None, y), var_disc.evaluate(None, y)
