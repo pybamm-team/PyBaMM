@@ -90,7 +90,6 @@ class SpatialOperator(UnaryOperator):
 
     def __init__(self, name, child):
         super().__init__(name, child)
-        # self.domain = child.domain
 
 
 class Gradient(SpatialOperator):
