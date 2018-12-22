@@ -18,18 +18,17 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
 
+        # binary - two symbols
         self.assertTrue(isinstance(a + b, pybamm.Symbol))
         self.assertTrue(isinstance(a - b, pybamm.Symbol))
         self.assertTrue(isinstance(a * b, pybamm.Symbol))
         self.assertTrue(isinstance(a / b, pybamm.Symbol))
-        with self.assertRaises(NotImplementedError):
-            a + 2
-        with self.assertRaises(NotImplementedError):
-            a - 2
-        with self.assertRaises(NotImplementedError):
-            a * 2
-        with self.assertRaises(NotImplementedError):
-            a / 2
+
+        # binary - symbol and number
+        self.assertTrue(isinstance(a + 2, pybamm.Symbol))
+        self.assertTrue(isinstance(a - 2, pybamm.Symbol))
+        self.assertTrue(isinstance(a * 2, pybamm.Symbol))
+        self.assertTrue(isinstance(a / 2, pybamm.Symbol))
 
     def test_multiple_symbols(self):
         a = pybamm.Symbol("a")

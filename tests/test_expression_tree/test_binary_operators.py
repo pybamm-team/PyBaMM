@@ -58,6 +58,12 @@ class TestBinaryOperators(unittest.TestCase):
         bin5 = pybamm.BinaryOperator("test", a, d)
         self.assertNotEqual(bin1.id, bin5.id)
 
+    def test_number_overloading(self):
+        a = pybamm.Scalar(4)
+        prod = a * 3
+        self.assertTrue(isinstance(prod.children[1], pybamm.Scalar))
+        self.assertEqual(prod.evaluate(), 12)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

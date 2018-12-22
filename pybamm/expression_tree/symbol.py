@@ -4,7 +4,9 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+
 import anytree
+import numbers
 import copy
 
 
@@ -81,33 +83,34 @@ class Symbol(anytree.NodeMixin):
 
     def __repr__(self):
         """returns the string `__class__(id, name, parent expression)`"""
-        return "{!s}({}, {!s}, {!s})".format(self.__class__.__name__,
-                                             hex(self.id), self._name, self.parent)
+        return "{!s}({}, {!s}, {!s})".format(
+            self.__class__.__name__, hex(self.id), self._name, self.parent
+        )
 
     def __add__(self, other):
         """return an :class:`Addition` object"""
-        if isinstance(other, Symbol):
+        if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Addition(self, other)
         else:
             raise NotImplementedError
 
     def __sub__(self, other):
         """return an :class:`Subtraction` object"""
-        if isinstance(other, Symbol):
+        if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Subtraction(self, other)
         else:
             raise NotImplementedError
 
     def __mul__(self, other):
         """return an :class:`Multiplication` object"""
-        if isinstance(other, Symbol):
+        if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Multiplication(self, other)
         else:
             raise NotImplementedError
 
     def __truediv__(self, other):
         """return an :class:`Division` object"""
-        if isinstance(other, Symbol):
+        if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Division(self, other)
         else:
             raise NotImplementedError
