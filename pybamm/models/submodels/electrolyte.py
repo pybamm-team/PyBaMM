@@ -5,8 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
-
 
 class StefanMaxwellDiffusion(pybamm.BaseModel):
     """A class that generates the expression tree for Stefan-Maxwell Diffusion in the
@@ -52,7 +50,8 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
         c_e0 = pybamm.Parameter("c_e0")  # Should this be a parameter?
 
         # Change expression once Binary operations can cope with None input
-        N_e = pybamm.Scalar(0) - pybamm.Gradient(c_e)
+        N_e = pybamm.Scalar(0) - D_e * (epsilon * b) * pybamm.Gradient(c_e)
+        # power operator is apparently not defined for class parameters
 
         self.rhs = {
             c_e: pybamm.Scalar(0)
