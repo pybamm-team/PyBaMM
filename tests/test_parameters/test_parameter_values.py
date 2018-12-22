@@ -101,6 +101,43 @@ class TestParameterValues(unittest.TestCase):
         self.assertTrue(isinstance(processed_f, pybamm.Matrix))
         np.testing.assert_array_equal(processed_f.evaluate(), np.ones((5, 6)))
 
+    def test_process_complex_expression(self):
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        par1 = pybamm.Parameter("par1")
+        par2 = pybamm.Parameter("par2")
+        scal1 = pybamm.Scalar("scal1")
+        scal2 = pybamm.Scalar("scal2")
+        expression = (scal1 * (par1 + var2)) / ((var1 - par2) + scal2)
+
+        param = pybamm.ParameterValues(base_parameters={"par1": 1, "par2": 2})
+        exp_param = param.process_symbol(expression)
+        self.assertTrue(isinstance(exp_param, pybamm.Division))
+        # left side
+        self.assertTrue(isinstance(exp_param.children[0], pybamm.Multiplication))
+        self.assertTrue(isinstance(exp_param.children[0].children[0], pybamm.Scalar))
+        self.assertTrue(isinstance(exp_param.children[0].children[1], pybamm.Addition))
+        self.assertTrue(
+            isinstance(exp_param.children[0].children[1].children[0], pybamm.Scalar)
+        )
+        self.assertEqual(exp_param.children[0].children[1].children[0].value, 1)
+        self.assertTrue(
+            isinstance(exp_param.children[0].children[1].children[1], pybamm.Variable)
+        )
+        # right side
+        self.assertTrue(isinstance(exp_param.children[1], pybamm.Addition))
+        self.assertTrue(
+            isinstance(exp_param.children[1].children[0], pybamm.Subtraction)
+        )
+        self.assertTrue(
+            isinstance(exp_param.children[1].children[0].children[0], pybamm.Variable)
+        )
+        self.assertTrue(
+            isinstance(exp_param.children[1].children[0].children[1], pybamm.Scalar)
+        )
+        self.assertEqual(exp_param.children[1].children[0].children[1].value, 2)
+        self.assertTrue(isinstance(exp_param.children[1].children[1], pybamm.Scalar))
+
     @unittest.skip("model not yet implemented")
     def test_process_model(self):
         model = pybamm.BaseModel()
