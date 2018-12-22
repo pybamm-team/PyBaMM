@@ -157,11 +157,10 @@ class BaseDiscretisation(object):
             )
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            new_left = self.process_symbol(
-                symbol.children[0], domain, y_slices, boundary_conditions
-            )
+            left, right = symbol.children
+            new_left = self.process_symbol(left, domain, y_slices, boundary_conditions)
             new_right = self.process_symbol(
-                symbol.children[1], domain, y_slices, boundary_conditions
+                right, domain, y_slices, boundary_conditions
             )
             return symbol.__class__(new_left, new_right)
 
@@ -172,6 +171,9 @@ class BaseDiscretisation(object):
             return symbol.__class__(new_child)
 
         elif isinstance(symbol, pybamm.Variable):
+            assert isinstance(y_slices, dict), ValueError(
+                """y_slices should be dict, not {}""".format(type(y_slices))
+            )
             return pybamm.StateVector(y_slices[symbol.id])
 
         else:

@@ -22,7 +22,7 @@ class BaseMesh(dict):
 
     Parameters
     ----------
-    param : :class:`pybamm.BaseParameterValues.ParameterValues` instance
+    param : :class:`pybamm.ParameterValues.ParameterValues` instance
         The parameters defining the subdomain sizes.
     target_npts : int
         The target number of points in each domain. The mesh will be created

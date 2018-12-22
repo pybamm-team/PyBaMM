@@ -96,6 +96,48 @@ class TestDiscretise(unittest.TestCase):
         # non-spatial unary operator
         # TODO: none of these implemented yet
 
+    def test_process_complex_expression(self):
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        par1 = pybamm.Parameter("par1")
+        par2 = pybamm.Parameter("par2")
+        scal1 = pybamm.Scalar("scal1")
+        scal2 = pybamm.Scalar("scal2")
+        expression = (scal1 * (par1 + var2)) / ((var1 - par2) + scal2)
+
+        disc = pybamm.BaseDiscretisation(None)
+        y_slices = {var1.id: slice(53), var2.id: slice(53, 59)}
+        exp_disc = disc.process_symbol(expression, None, y_slices)
+        self.assertTrue(isinstance(exp_disc, pybamm.Division))
+        # left side
+        self.assertTrue(isinstance(exp_disc.children[0], pybamm.Multiplication))
+        self.assertTrue(isinstance(exp_disc.children[0].children[0], pybamm.Scalar))
+        self.assertTrue(isinstance(exp_disc.children[0].children[1], pybamm.Addition))
+        self.assertTrue(
+            isinstance(exp_disc.children[0].children[1].children[0], pybamm.Parameter)
+        )
+        self.assertTrue(
+            isinstance(exp_disc.children[0].children[1].children[1], pybamm.StateVector)
+        )
+        self.assertEqual(
+            exp_disc.children[0].children[1].children[1].y_slice, y_slices[var2.id]
+        )
+        # right side
+        self.assertTrue(isinstance(exp_disc.children[1], pybamm.Addition))
+        self.assertTrue(
+            isinstance(exp_disc.children[1].children[0], pybamm.Subtraction)
+        )
+        self.assertTrue(
+            isinstance(exp_disc.children[1].children[0].children[0], pybamm.StateVector)
+        )
+        self.assertEqual(
+            exp_disc.children[1].children[0].children[0].y_slice, y_slices[var1.id]
+        )
+        self.assertTrue(
+            isinstance(exp_disc.children[1].children[0].children[1], pybamm.Parameter)
+        )
+        self.assertTrue(isinstance(exp_disc.children[1].children[1], pybamm.Scalar))
+
     def test_discretise_spatial_operator(self):
         mesh = MeshForTesting()
         disc = DiscretisationForTesting(mesh)
