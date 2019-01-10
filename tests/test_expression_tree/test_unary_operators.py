@@ -39,8 +39,9 @@ class TestUnaryOperators(unittest.TestCase):
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.children[0].name, a.name)
 
-    def test_gradient_printing(self):
+    def test_printing(self):
         a = pybamm.Symbol("a")
+        self.assertEqual(str(-a), "-a")
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.name, "grad")
         self.assertEqual(str(grad), "grad(a)")
