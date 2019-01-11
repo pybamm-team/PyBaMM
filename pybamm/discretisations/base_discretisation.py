@@ -106,8 +106,8 @@ class BaseDiscretisation(object):
         rhs : dict
             Equations ({variable: equation} dict) to dicretise
         boundary_conditions : dict
-            Boundary conditions ({symbol.id: (left bc, right bc)} dict) associated with
-            rhs to dicretise
+            Boundary conditions ({symbol.id: {"left": left bc, "right": right bc}} dict)
+            associated with rhs to dicretise
         y_slices : dict of {variable id: slice}
             The slices to assign to StateVectors when discretising a variable
 
@@ -198,7 +198,8 @@ class BaseDiscretisation(object):
         y_slices : slice
             The slice to assign to StateVector when discretising a variable
         boundary_conditions : dict
-            The boundary conditions of the model ({symbol.id: (left bc, right bc)})
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
 
         """
         raise NotImplementedError
@@ -265,7 +266,8 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         )
         # Add boundary conditions if defined
         if symbol.id in boundary_conditions:
-            lbc, rbc = boundary_conditions[symbol.id]
+            lbc = boundary_conditions[symbol.id]["left"]
+            rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
         gradient_matrix = self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
@@ -295,7 +297,8 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         )
         # Add boundary conditions if defined
         if symbol.id in boundary_conditions:
-            lbc, rbc = boundary_conditions[symbol.id]
+            lbc = boundary_conditions[symbol.id]["left"]
+            rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
         divergence_matrix = self.divergence_matrix(domain)
         return divergence_matrix * discretised_symbol

@@ -30,7 +30,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         # div
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
-        boundary_conditions = {N.id: (pybamm.Scalar(1), pybamm.Scalar(1))}
+        boundary_conditions = {
+            N.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(1)}
+        }
         div_eqn_disc = disc.process_symbol(
             div_eqn, var.domain, y_slices, boundary_conditions
         )
@@ -89,7 +91,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            N.id: (pybamm.Scalar(np.cos(0)), pybamm.Scalar(np.cos(1)))
+            N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
         }
 
         # Prepare convergence testing
