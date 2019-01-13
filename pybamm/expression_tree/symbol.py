@@ -4,7 +4,9 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+
 import anytree
+import numbers
 import copy
 
 
@@ -81,36 +83,87 @@ class Symbol(anytree.NodeMixin):
 
     def __repr__(self):
         """returns the string `__class__(id, name, parent expression)`"""
-        return "{!s}({}, {!s}, {!s})".format(self.__class__.__name__,
-                                             hex(self.id), self._name, self.parent)
+        return "{!s}({}, {!s}, {!s})".format(
+            self.__class__.__name__, hex(self.id), self._name, self.parent
+        )
 
     def __add__(self, other):
         """return an :class:`Addition` object"""
-        if isinstance(other, Symbol):
+        if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Addition(self, other)
         else:
             raise NotImplementedError
 
+    def __radd__(self, other):
+        """return an :class:`Addition` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.Addition(other, self)
+        else:
+            raise NotImplementedError
+
     def __sub__(self, other):
-        """return an :class:`Subtraction` object"""
-        if isinstance(other, Symbol):
+        """return a :class:`Subtraction` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Subtraction(self, other)
         else:
             raise NotImplementedError
 
+    def __rsub__(self, other):
+        """return a :class:`Subtraction` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.Subtraction(other, self)
+        else:
+            raise NotImplementedError
+
     def __mul__(self, other):
-        """return an :class:`Multiplication` object"""
-        if isinstance(other, Symbol):
+        """return a :class:`Multiplication` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Multiplication(self, other)
         else:
             raise NotImplementedError
 
+    def __rmul__(self, other):
+        """return a :class:`Multiplication` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.Multiplication(other, self)
+        else:
+            raise NotImplementedError
+
     def __truediv__(self, other):
-        """return an :class:`Division` object"""
-        if isinstance(other, Symbol):
+        """return a :class:`Division` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Division(self, other)
         else:
             raise NotImplementedError
+
+    def __rtruediv__(self, other):
+        """return a :class:`Division` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.Division(other, self)
+        else:
+            raise NotImplementedError
+
+    def __pow__(self, other):
+        """return a :class:`Power` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.Power(self, other)
+        else:
+            raise NotImplementedError
+
+    def __rpow__(self, other):
+        """return a :class:`Power` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.Power(other, self)
+        else:
+            raise NotImplementedError
+
+    def __neg__(self):
+        """return a :class:`Negate` object"""
+        return pybamm.Negate(self)
+
+    def __abs__(self):
+        """return an :class:`AbsoluteValue` object"""
+        return pybamm.AbsoluteValue(self)
 
     def evaluate(self, t=None, y=None):
         """evaluate expression tree

@@ -116,8 +116,9 @@ class ParameterValues(dict):
             return pybamm.Scalar(value)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            new_left = self.process_symbol(symbol.children[0])
-            new_right = self.process_symbol(symbol.children[1])
+            left, right = symbol.children
+            new_left = self.process_symbol(left)
+            new_right = self.process_symbol(right)
             return symbol.__class__(new_left, new_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
