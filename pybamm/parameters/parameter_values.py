@@ -94,8 +94,12 @@ class ParameterValues(dict):
         for variable, equation in model.initial_conditions.items():
             model.initial_conditions[variable] = self.process_symbol(equation)
 
-        for variable, equation in model.boundary_conditions.items():
-            model.boundary_conditions[variable] = self.process_symbol(equation)
+        # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
+        for variable, bcs in model.boundary_conditions.items():
+            for side in ["left", "right"]:
+                model.boundary_conditions[variable][side] = self.process_symbol(
+                    bcs[side]
+                )
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
