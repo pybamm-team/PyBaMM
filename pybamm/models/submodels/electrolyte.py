@@ -32,32 +32,23 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
     def __init__(self, G):
         super().__init__()
 
-        electrolyte_domain = [
-            "negative electrode",
-            "separator",
-            "positive " "electrode",
-        ]
+        epsilon = pybamm.standard_parameters.epsilon_s  # make issue for spatially
+        # dependent parameters
+        b = pybamm.standard_parameters.b
+        delta = pybamm.standard_parameters.delta
+        nu = pybamm.standard_parameters.nu
+        t_plus = pybamm.standard_parameters.t_plus
+        ce0 = pybamm.standard_parameters.ce0
+
+        electrolyte_domain = ["whole cell"]
 
         c_e = pybamm.Variable("c_e", domain=electrolyte_domain)
 
-        delta = pybamm.Parameter("delta")
-        epsilon = pybamm.Parameter("epsilon", domain=electrolyte_domain)
-        b = pybamm.Parameter("b")
-        D_e = pybamm.Parameter("D_e")
-        nu = pybamm.Parameter("nu")
-        t_plus = pybamm.Parameter("t_plus")
-
-        c_e0 = pybamm.Parameter("c_e0")  # Should this be a parameter?
-
-        # Change expression once Binary operations can cope with None input
-        N_e = pybamm.Scalar(0) - D_e * (epsilon * b) * pybamm.Gradient(c_e)
-        # power operator is apparently not defined for class parameters
+        N_e = -(epsilon ** b) * pybamm.Gradient(c_e)
 
         self.rhs = {
-            c_e: pybamm.Scalar(0)
-            - pybamm.Divergence(N_e) / delta / epsilon
-            + nu * (pybamm.Scalar(1) - t_plus) * G
+            c_e: -pybamm.Divergence(N_e) / delta / epsilon + nu * (1 - t_plus) * G
         }
-        self.initial_conditions = {c_e: c_e0}
+        self.initial_conditions = {c_e: ce0}
         self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
         self.variables = {"c_e": c_e, "N_e": N_e}
