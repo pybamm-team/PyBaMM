@@ -15,9 +15,9 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
 
     def test_processing_parameters(self):
         G = pybamm.Scalar(1)
-        model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        pybamm.electrolyte.StefanMaxwellDiffusion(G)
 
-        param = pybamm.ParameterValues(
+        pybamm.ParameterValues(
             base_parameters={
                 "epsilon_s": 0.01,
                 "F": 0.02,
