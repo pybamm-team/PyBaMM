@@ -20,7 +20,6 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        self.assertEqual(param["R"], 8.314)
 
         param.process_model(model)
 
@@ -31,12 +30,11 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        self.assertEqual(param["R"], 8.314)
 
         param.process_model(model)
 
         print(model.initial_conditions)
 
-        # mesh = pybamm.FiniteVolumeMacroMesh(param, 2)
-        # disc = pybamm.FiniteVolumeDiscretisation(mesh)
-        # disc.process_model(model)
+        mesh = pybamm.FiniteVolumeMacroMesh(param, 2)
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
+        disc.process_model(model)
