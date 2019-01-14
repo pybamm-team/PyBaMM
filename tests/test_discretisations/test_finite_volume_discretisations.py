@@ -8,6 +8,45 @@ import unittest
 
 
 class TestFiniteVolumeDiscretisation(unittest.TestCase):
+    def test_add_ghost_nodes(self):
+        # Set up
+        param = pybamm.ParameterValues(
+            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+        )
+        mesh = pybamm.FiniteVolumeMacroMesh(param, 2)
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
+
+        # Add ghost nodes
+        var = pybamm.Variable("var", domain=["whole cell"])
+        y_slices = disc.get_variable_slices([var])
+        discretised_symbol = pybamm.StateVector(y_slices[var.id])
+        lbc = pybamm.Scalar(0)
+        rbc = pybamm.Scalar(3)
+        symbol_plus_ghost = disc.add_ghost_nodes(discretised_symbol, lbc, rbc)
+
+        # Test
+        y_test = np.ones_like(mesh["whole cell"].nodes)
+        np.testing.assert_array_equal(
+            symbol_plus_ghost.evaluate(None, y_test)[1:-1],
+            discretised_symbol.evaluate(None, y_test),
+        )
+        self.assertEqual(
+            (
+                symbol_plus_ghost.evaluate(None, y_test)[0]
+                + symbol_plus_ghost.evaluate(None, y_test)[1]
+            )
+            / 2,
+            0,
+        )
+        self.assertEqual(
+            (
+                symbol_plus_ghost.evaluate(None, y_test)[-2]
+                + symbol_plus_ghost.evaluate(None, y_test)[-1]
+            )
+            / 2,
+            3,
+        )
+
     def test_grad_div_shapes(self):
         param = pybamm.ParameterValues(
             base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}

@@ -41,6 +41,11 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = self.add_ghost_nodes(discretised_symbol, lbc, rbc)
+            domain_ = (
+                [domain[0] + "_left_ghost_cell"]
+                + domain
+                + [domain[-1] + "_right_ghost_cell"]
+            )
         gradient_matrix = self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
 
@@ -58,10 +63,10 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         Currently, Dirichlet boundary conditions can only be applied on state
         variables (e.g. concentration, temperature), and not on expressions.
         To access the value of the first node (y1), we create a "first_node" object
-        which is a StateVector whose y_slice is an integer, the start of the y_slice
-        of discretised_symbol.
-        Similarly, the last node is a StateVector whose y_slice is an integer, the end
-        of the y_slice of discretised_symbol
+        which is a StateVector whose y_slice is the start of the y_slice of
+        discretised_symbol.
+        Similarly, the last node is a StateVector whose y_slice is the end of the
+        y_slice of discretised_symbol
 
         Parameters
         ----------
@@ -84,10 +89,12 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
             )
         )
         # left ghost cell
-        first_node = pybamm.StateVector(discretised_symbol.y_slice.start)
+        y_slice_start = discretised_symbol.y_slice.start
+        first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
         left_ghost_cell = 2 * lbc - first_node
         # right ghost cell
-        last_node = pybamm.StateVector(discretised_symbol.y_slice.stop - 1)
+        y_slice_stop = discretised_symbol.y_slice.stop
+        last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
         right_ghost_cell = 2 * rbc - last_node
         # concatenate
         return self.concatenate(left_ghost_cell, discretised_symbol, right_ghost_cell)
