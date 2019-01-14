@@ -36,43 +36,61 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         discretised_symbol = self.process_symbol(
             symbol, domain, y_slices, boundary_conditions
         )
-        # Add Dirichlet boundary conditions if defined, via ghost nodes:
-        # For a boundary condition
-        #   y = a at x=0 ("left" boundary),
-        # we concatenate a ghost node to the start of the vector y with value
-        #   2*a - y1
-        # where y1 is the value of the first node.
-        # Similarly for the right-hand boundary condition.
-        #
-        # Currently, Dirichlet boundary conditions can only be applied on state
-        # variables (e.g. concentration, temperature), and not on expressions.
-        # To access the value of the first node (y1), we create a "first_node" object
-        # which is a StateVector whose y_slice is an integer, the start of the y_slice
-        # of discretised_symbol.
-        # Similarly, the last node is a StateVector whose y_slice is an integer, the end
-        # of the y_slice of discretised_symbol
+        # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
-            assert isinstance(
-                discretised_symbol, pybamm.StateVector
-            ), NotImplementedError(
-                """discretised_symbol must be a StateVector, not {}""".format(
-                    type(discretised_symbol)
-                )
-            )
-            # left ghost cell
             lbc = boundary_conditions[symbol.id]["left"]
-            first_node = pybamm.StateVector(discretised_symbol.y_slice.start)
-            left_ghost_cell = 2 * lbc - first_node
-            # right ghost cell
             rbc = boundary_conditions[symbol.id]["right"]
-            last_node = pybamm.StateVector(discretised_symbol.y_slice.stop - 1)
-            right_ghost_cell = 2 * rbc - last_node
-            # concatenate
-            discretised_symbol = self.concatenate(
-                left_ghost_cell, discretised_symbol, right_ghost_cell
-            )
+            discretised_symbol = self.add_ghost_nodes(discretised_symbol, lbc, rbc)
         gradient_matrix = self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
+
+    def add_ghost_nodes(self, discretised_symbol, lbc, rbc):
+        """
+        Add Dirichlet boundary conditions via ghost nodes.
+
+        For a boundary condition
+          y = a at x=0 ("left" boundary),
+        we concatenate a ghost node to the start of the vector y with value
+          2*a - y1
+        where y1 is the value of the first node.
+        Similarly for the right-hand boundary condition.
+
+        Currently, Dirichlet boundary conditions can only be applied on state
+        variables (e.g. concentration, temperature), and not on expressions.
+        To access the value of the first node (y1), we create a "first_node" object
+        which is a StateVector whose y_slice is an integer, the start of the y_slice
+        of discretised_symbol.
+        Similarly, the last node is a StateVector whose y_slice is an integer, the end
+        of the y_slice of discretised_symbol
+
+        Parameters
+        ----------
+        discretised_symbol : :class:`pybamm.StateVector` (size n)
+            The discretised variable (a state vector) to which to add ghost nodes
+        lbc : :class:`pybamm.Scalar`
+            Dirichlet bouncary condition on the left-hand side
+        rbc : :class:`pybamm.Scalar`
+            Dirichlet bouncary condition on the right-hand side
+
+        Returns
+        -------
+        :class:`pybamm.Concatenation` (size n+2)
+            Concatenation of the variable (a state vector) and ghost nodes
+
+        """
+        assert isinstance(discretised_symbol, pybamm.StateVector), NotImplementedError(
+            """discretised_symbol must be a StateVector, not {}""".format(
+                type(discretised_symbol)
+            )
+        )
+        # left ghost cell
+        first_node = pybamm.StateVector(discretised_symbol.y_slice.start)
+        left_ghost_cell = 2 * lbc - first_node
+        # right ghost cell
+        last_node = pybamm.StateVector(discretised_symbol.y_slice.stop - 1)
+        right_ghost_cell = 2 * rbc - last_node
+        # concatenate
+        return self.concatenate(left_ghost_cell, discretised_symbol, right_ghost_cell)
 
     def gradient_matrix(self, domain):
         """
