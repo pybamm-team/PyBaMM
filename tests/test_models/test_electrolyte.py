@@ -15,11 +15,28 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
 
     def test_processing_parameters(self):
         G = pybamm.Scalar(1)
-        pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
 
-        param = pybamm.ParameterValues("input/parameters/lead-acid/default.csv")
+        param = pybamm.ParameterValues(
+            "input/parameters/lithium-ion/parameters/LCO.csv"
+        )
         self.assertEqual(param["R"], 8.314)
 
-        print(param["R"])
-        # just going to skip for now.
-        # param.process_model(model)
+        param.process_model(model)
+
+    def test_processing_disc(self):
+        G = pybamm.Scalar(1)
+        model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
+
+        param = pybamm.ParameterValues(
+            "input/parameters/lithium-ion/parameters/LCO.csv"
+        )
+        self.assertEqual(param["R"], 8.314)
+
+        param.process_model(model)
+
+        print(model.initial_conditions)
+
+        # mesh = pybamm.FiniteVolumeMacroMesh(param, 2)
+        # disc = pybamm.FiniteVolumeDiscretisation(mesh)
+        # disc.process_model(model)
