@@ -270,13 +270,12 @@ class TestDiscretise(unittest.TestCase):
         )
         np.testing.assert_array_equal(y0, model.rhs.evaluate(None, y0))
 
-    def test_scalar_to_vector(self):
-        a = pybamm.Scalar(5)
+    def test_vector_of_ones(self):
         mesh = MeshForTesting()
         disc = pybamm.BaseDiscretisation(mesh)
-        a_vec = disc.scalar_to_vector(a, ["whole cell"])
-        self.assertEqual(a_vec.evaluate(None)[0], a.value)
-        self.assertEqual(a_vec.shape, mesh["whole cell"].nodes.shape)
+        vec = disc.vector_of_ones(["whole cell"])
+        self.assertEqual(vec.evaluate(None)[0], 1)
+        self.assertEqual(vec.shape, mesh["whole cell"].nodes.shape)
 
     def test_concatenation(self):
         a = pybamm.Symbol("a")
