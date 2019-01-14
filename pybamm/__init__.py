@@ -101,10 +101,7 @@ from .parameters import standard_parameters
 #
 # Mesh and Discretisation classes
 #
-from .discretisations.base_discretisation import (
-    BaseDiscretisation,
-    MatrixVectorDiscretisation,
-)
+from .discretisations.base_discretisation import BaseDiscretisation
 from .discretisations.finite_volume_discretisations import FiniteVolumeDiscretisation
 from .discretisations.base_mesh import KNOWN_DOMAINS
 from .discretisations.base_mesh import BaseMesh, BaseSubmesh
