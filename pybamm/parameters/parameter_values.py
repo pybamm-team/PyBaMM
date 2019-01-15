@@ -120,7 +120,7 @@ class ParameterValues(dict):
         """
         if isinstance(symbol, pybamm.Parameter):
             value = self.get_parameter_value(symbol)
-            return pybamm.Scalar(value)
+            return pybamm.Scalar(value, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children

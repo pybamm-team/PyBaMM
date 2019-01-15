@@ -48,7 +48,8 @@ class BaseDiscretisation(object):
         )
 
         # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_rhs(model.rhs, model.boundary_conditions, y_slices)
+        model.rhs = self.process_rhs(
+            model.rhs, model.boundary_conditions, y_slices)
 
         for variable, equation in model.variables.items():
             model.variables[variable] = self.process_symbol(
@@ -95,10 +96,12 @@ class BaseDiscretisation(object):
 
         """
         for variable, equation in initial_conditions.items():
-            discretised_ic = self.process_symbol(equation, variable.domain).evaluate()
+            discretised_ic = self.process_symbol(
+                equation, variable.domain).evaluate()
 
             if isinstance(discretised_ic, numbers.Number):
-                discretised_ic = discretised_ic * self.vector_of_ones(variable.domain)
+                discretised_ic = discretised_ic * \
+                    self.vector_of_ones(variable.domain)
             else:
                 raise NotImplementedError(
                     "Currently only accepts scalar initial conditions"
@@ -169,7 +172,8 @@ class BaseDiscretisation(object):
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
-            new_left = self.process_symbol(left, domain, y_slices, boundary_conditions)
+            new_left = self.process_symbol(
+                left, domain, y_slices, boundary_conditions)
             new_right = self.process_symbol(
                 right, domain, y_slices, boundary_conditions
             )
@@ -186,6 +190,15 @@ class BaseDiscretisation(object):
                 """y_slices should be dict, not {}""".format(type(y_slices))
             )
             return pybamm.StateVector(y_slices[symbol.id])
+
+        elif isinstance(symbol, pybamm.Concatenation):
+            # only know how to discretise a concatenation of scalars...
+            all_scalars = all(isinstance(child, pybamm.Scalar)
+                              for child in symbol.children)
+            if all_scalars:
+                return self.scalar_to_vector(symbol.children)
+            else:
+                raise NotImplementedError
 
         else:
             # hack to copy the symbol but without a parent
@@ -232,6 +245,49 @@ class BaseDiscretisation(object):
         """
         raise NotImplementedError
 
+    def scalar_to_vector(self, scalars, domain=None):
+        """
+        Convert a :class:`Scalar` (or a list of :class:`Scalar`) to a uniform
+        Vector of size given by mesh. The size of the Vector is based on the
+        domains associated with the Scalar, and the size of the mesh.
+
+        Parameters
+        ----------
+        scalar: :class:`Scalar` or list of :class:`Scalar`
+            The scalar values to assign to the vector. A list can be given for
+            different values for different domains
+
+        domain : list, optional
+            If given, overrides the domains given in scalar.domain
+
+        """
+        # convert scalar to list if a single one
+        if isinstance(scalars, pybamm.Scalar):
+            scalars = [scalars]
+
+        # work out total size of vector
+        subvector_sizes = []
+        for s in scalars:
+            if domain is None:
+                this_domain = s.domain
+            else:
+                this_domain = domain
+            subvector_size = sum([self.mesh[dom].npts for dom in this_domain])
+            subvector_sizes.append(subvector_size)
+
+        # allocate vector
+        vector = np.empty(sum(subvector_sizes), dtype=float)
+
+        # assign slices of vector associated with concatenated scalars
+        start = 0
+        end = 0
+        for s, size in zip(scalars, subvector_sizes):
+            end += size
+            vector[start:end] = s.value
+            start = end
+
+        return pybamm.Vector(vector)
+
     def vector_of_ones(self, domain):
         """
         Returns a Vector of ones of the size given by the mesh.
@@ -270,7 +326,8 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
             assert isinstance(key, int), TypeError(
-                "boundary condition keys should be hashes, not {}".format(type(key))
+                "boundary condition keys should be hashes, not {}".format(
+                    type(key))
             )
         # Discretise symbol
         discretised_symbol = self.process_symbol(
@@ -301,7 +358,8 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
             assert isinstance(key, int), TypeError(
-                "boundary condition keys should be hashes, not {}".format(type(key))
+                "boundary condition keys should be hashes, not {}".format(
+                    type(key))
             )
         # Discretise symbol
         discretised_symbol = self.process_symbol(
