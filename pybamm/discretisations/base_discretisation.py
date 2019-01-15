@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
+import numbers
 import copy
 
 
@@ -90,11 +91,17 @@ class BaseDiscretisation(object):
 
         """
         for variable, equation in initial_conditions.items():
-            discretised_ic = self.process_symbol(equation, variable.domain)
-            # Turn any scalars into vectors
-            if isinstance(discretised_ic, pybamm.Scalar):
-                discretised_ic = self.scalar_to_vector(
-                    discretised_ic, variable.domain)
+            discretised_ic = self.process_symbol(
+                equation, variable.domain).evaluate()
+
+            if isinstance(discretised_ic, numbers.Number):
+                discretised_ic = discretised_ic * \
+                    self.vector_of_ones(variable.domain)
+            else:
+                raise NotImplementedError(
+                    "Currently only accepts scalar initial conditions"
+                )
+
             initial_conditions[variable] = discretised_ic
 
         # Concatenate and evaluate initial conditions
@@ -275,6 +282,17 @@ class BaseDiscretisation(object):
             start = end
 
         return pybamm.Vector(vector)
+
+    def vector_of_ones(self, domain):
+        """
+        Returns a Vector of ones of the size given by the mesh.
+        """
+
+        mesh_points = np.array([])
+
+        for dom in domain:
+            mesh_points = np.concatenate([mesh_points, self.mesh[dom].nodes])
+        return pybamm.Vector(np.ones_like(mesh_points))
 
     def concatenate(self, *symbols):
         return pybamm.NumpyConcatenation(*symbols)

@@ -138,19 +138,32 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(exp_param.children[1].children[0].children[1].value, 2)
         self.assertTrue(isinstance(exp_param.children[1].children[1], pybamm.Scalar))
 
-    @unittest.skip("model not yet implemented")
     def test_process_model(self):
         model = pybamm.BaseModel()
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")
-        c = pybamm.Variable("c")
-        model.rhs = {c: a * pybamm.grad(c)}
-        model.initial_conditions = {c: b}
-        model.boundary_conditions = {}
-        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2})
-        parameter_values.process(model)
-        self.assertTrue(isinstance(model.rhs[c].children[0], pybamm.Scalar))
-        self.assertEqual(model.rhs[c].children[0].value, 1)
+        c = pybamm.Parameter("c")
+        d = pybamm.Parameter("d")
+        var = pybamm.Variable("var")
+        model.rhs = {var: a * pybamm.grad(var)}
+        model.initial_conditions = {var: b}
+        model.boundary_conditions = {var: {"left": c, "right": d}}
+        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
+        parameter_values.process_model(model)
+        self.assertTrue(isinstance(model.rhs[var], pybamm.Multiplication))
+        self.assertTrue(isinstance(model.rhs[var].children[0], pybamm.Scalar))
+        self.assertTrue(isinstance(model.rhs[var].children[1], pybamm.Gradient))
+        self.assertEqual(model.rhs[var].children[0].value, 1)
+        self.assertTrue(isinstance(model.initial_conditions[var], pybamm.Scalar))
+        self.assertEqual(model.initial_conditions[var].value, 2)
+        self.assertTrue(
+            isinstance(model.boundary_conditions[var]["left"], pybamm.Scalar)
+        )
+        self.assertEqual(model.boundary_conditions[var]["left"].value, 3)
+        self.assertTrue(
+            isinstance(model.boundary_conditions[var]["right"], pybamm.Scalar)
+        )
+        self.assertEqual(model.boundary_conditions[var]["right"].value, 42)
 
 
 if __name__ == "__main__":

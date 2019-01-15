@@ -318,6 +318,13 @@ class TestDiscretise(unittest.TestCase):
         ])
         self.assertTrue(np.allclose(a_vec.evaluate(None), expected_vector))
 
+    def test_vector_of_ones(self):
+        mesh = MeshForTesting()
+        disc = pybamm.BaseDiscretisation(mesh)
+        vec = disc.vector_of_ones(["whole cell"])
+        self.assertEqual(vec.evaluate(None)[0], 1)
+        self.assertEqual(vec.shape, mesh["whole cell"].nodes.shape)
+
     def test_concatenation(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

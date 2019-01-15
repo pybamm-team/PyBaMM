@@ -11,7 +11,7 @@ class TestStandardParameters(unittest.TestCase):
         Ln = pybamm.standard_parameters.Ln
         Ls = pybamm.standard_parameters.Ls
         Lp = pybamm.standard_parameters.Lp
-        L = pybamm.standard_parameters.L
+        Lx = pybamm.standard_parameters.Lx
         ln = pybamm.standard_parameters.ln
         ls = pybamm.standard_parameters.ls
         lp = pybamm.standard_parameters.lp
@@ -22,9 +22,9 @@ class TestStandardParameters(unittest.TestCase):
         Ln_eval = parameter_values.process_symbol(Ln)
         Ls_eval = parameter_values.process_symbol(Ls)
         Lp_eval = parameter_values.process_symbol(Lp)
-        L_eval = parameter_values.process_symbol(L)
-        self.assertEqual((Ln_eval + Ls_eval + Lp_eval).evaluate(), L_eval.evaluate())
-        self.assertEqual((Ln_eval + Ls_eval + Lp_eval).id, L_eval.id)
+        Lx_eval = parameter_values.process_symbol(Lx)
+        self.assertEqual((Ln_eval + Ls_eval + Lp_eval).evaluate(), Lx_eval.evaluate())
+        self.assertEqual((Ln_eval + Ls_eval + Lp_eval).id, Lx_eval.id)
         ln_eval = parameter_values.process_symbol(ln)
         ls_eval = parameter_values.process_symbol(ls)
         lp_eval = parameter_values.process_symbol(lp)
