@@ -268,6 +268,7 @@ class TestDiscretise(unittest.TestCase):
                 ]
             ),
         )
+        print(model.rhs.evaluate(None, y0))
         np.testing.assert_array_equal(y0, model.rhs.evaluate(None, y0))
 
     def test_vector_of_ones(self):
