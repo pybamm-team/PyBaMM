@@ -50,6 +50,11 @@ class BaseDiscretisation(object):
         # Discretise right-hand sides, passing domain from variable
         model.rhs = self.process_rhs(model.rhs, model.boundary_conditions, y_slices)
 
+        for variable, equation in model.variables.items():
+            model.variables[variable] = self.process_symbol(
+                equation, domain, y_slices, model.boundary_conditions
+            )
+
     def get_variable_slices(self, variables):
         """Set the slicing for variables.
 

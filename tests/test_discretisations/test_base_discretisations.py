@@ -29,13 +29,6 @@ class DiscretisationForTesting(pybamm.MatrixVectorDiscretisation):
         return pybamm.Matrix(np.eye(n))
 
 
-class ModelForTesting(object):
-    def __init__(self, rhs, initial_conditions, boundary_conditions):
-        self.rhs = rhs
-        self.initial_conditions = initial_conditions
-        self.boundary_conditions = boundary_conditions
-
-
 class TestDiscretise(unittest.TestCase):
     def test_discretise_slicing(self):
         # One variable
@@ -237,25 +230,30 @@ class TestDiscretise(unittest.TestCase):
         # one equation
         c = pybamm.Variable("c", domain=["whole cell"])
         N = pybamm.grad(c)
-        rhs = {c: pybamm.div(N)}
-        initial_conditions = {c: pybamm.Scalar(3)}
-        boundary_conditions = {}
-        model = ModelForTesting(rhs, initial_conditions, boundary_conditions)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+        model.boundary_conditions = {}
+        model.variables = {"c": c, "N": N}
         mesh = MeshForTesting()
         disc = DiscretisationForTesting(mesh)
 
         disc.process_model(model)
         y0 = model.initial_conditions
         np.testing.assert_array_equal(y0, 3 * np.ones_like(mesh["whole cell"].nodes))
+        # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.rhs.evaluate(None, y0))
+        np.testing.assert_array_equal(y0, model.variables["c"].evaluate(None, y0))
+        np.testing.assert_array_equal(y0, model.variables["N"].evaluate(None, y0))
 
         # two equations
         T = pybamm.Variable("T", domain=["negative electrode"])
         q = pybamm.grad(T)
-        rhs = {c: pybamm.div(N), T: pybamm.div(q)}
-        initial_conditions = {c: pybamm.Scalar(2), T: pybamm.Scalar(5)}
-        boundary_conditions = {}
-        model = ModelForTesting(rhs, initial_conditions, boundary_conditions)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N), T: pybamm.div(q)}
+        model.initial_conditions = {c: pybamm.Scalar(2), T: pybamm.Scalar(5)}
+        model.boundary_conditions = {}
+        model.variables = {"cT": c * T}
 
         disc.process_model(model)
         y0 = model.initial_conditions
@@ -268,7 +266,10 @@ class TestDiscretise(unittest.TestCase):
                 ]
             ),
         )
+        # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.rhs.evaluate(None, y0))
+        c0, T0 = np.split(y0, mesh["whole cell"].npts)
+        np.testing.assert_array_equal(c0 * T0, model.variables["cT"].evaluate(None, y0))
 
     def test_vector_of_ones(self):
         mesh = MeshForTesting()
