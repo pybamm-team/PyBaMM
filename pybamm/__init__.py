@@ -61,7 +61,6 @@ from .expression_tree.binary_operators import (
 from .expression_tree.concatenations import Concatenation, NumpyConcatenation
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
-from .expression_tree.domain import Domain
 from .expression_tree.parameter import Parameter
 from .expression_tree.unary_operators import (
     UnaryOperator,

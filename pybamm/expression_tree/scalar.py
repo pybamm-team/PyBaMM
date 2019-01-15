@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Scalar(pybamm.Domain, pybamm.Symbol):
+class Scalar(pybamm.Symbol):
     """A node in the expression tree representing a scalar value
 
     **Extends:** :class:`Symbol`
