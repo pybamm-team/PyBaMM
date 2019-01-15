@@ -42,14 +42,19 @@ class BaseDiscretisation(object):
         # Set the y split for variables
         y_slices = self.get_variable_slices(model.rhs.keys())
 
-        # Discretise and concatenate initial conditions, passing domain from variable
+        # Discretise initial conditions
         model.initial_conditions = self.process_initial_conditions(
             model.initial_conditions
         )
+        # Concatenate initial conditions into a single vector
+        model.concatenated_initial_conditions = self.concatenate(
+            *model.initial_conditions.values()
+        ).evaluate(0, None)
 
         # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_rhs(
-            model.rhs, model.boundary_conditions, y_slices)
+        model.rhs = self.process_rhs(model.rhs, model.boundary_conditions, y_slices)
+        # Concatenate rhs into a single state vector
+        model.concatenated_rhs = self.concatenate(*model.rhs.values())
 
     def get_variable_slices(self, variables):
         """Set the slicing for variables.
@@ -86,17 +91,15 @@ class BaseDiscretisation(object):
 
         Returns
         -------
-        :class:`numpy.array`
-            Vector of initial conditions
+        initial_conditions : dict
+            Discretised initial conditions
 
         """
         for variable, equation in initial_conditions.items():
-            discretised_ic = self.process_symbol(
-                equation, variable.domain).evaluate()
+            discretised_ic = self.process_symbol(equation, variable.domain).evaluate()
 
             if isinstance(discretised_ic, numbers.Number):
-                discretised_ic = discretised_ic * \
-                    self.vector_of_ones(variable.domain)
+                discretised_ic = discretised_ic * self.vector_of_ones(variable.domain)
             else:
                 raise NotImplementedError(
                     "Currently only accepts scalar initial conditions"
@@ -104,8 +107,7 @@ class BaseDiscretisation(object):
 
             initial_conditions[variable] = discretised_ic
 
-        # Concatenate and evaluate initial conditions
-        return self.concatenate(*initial_conditions.values()).evaluate(0, None)
+        return initial_conditions
 
     def process_rhs(self, rhs, boundary_conditions, y_slices):
         """Discretise initial conditions.
@@ -122,8 +124,8 @@ class BaseDiscretisation(object):
 
         Returns
         -------
-        concatenated_rhs : :class:`pybamm.Concatenation`
-            Concatenation of the discretised right-hand side equations
+        rhs : dict
+            Discretised right-hand side equations
 
         """
         boundary_conditions = {
@@ -134,10 +136,7 @@ class BaseDiscretisation(object):
                 equation, variable.domain, y_slices, boundary_conditions
             )
 
-        # Concatenate right-hand sides
-        concatenated_rhs = self.concatenate(*rhs.values())
-
-        return concatenated_rhs
+        return rhs
 
     def process_symbol(self, symbol, domain, y_slices=None, boundary_conditions={}):
         """Discretise operators in model equations.
@@ -167,8 +166,7 @@ class BaseDiscretisation(object):
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
-            new_left = self.process_symbol(
-                left, domain, y_slices, boundary_conditions)
+            new_left = self.process_symbol(left, domain, y_slices, boundary_conditions)
             new_right = self.process_symbol(
                 right, domain, y_slices, boundary_conditions
             )
@@ -188,8 +186,9 @@ class BaseDiscretisation(object):
 
         elif isinstance(symbol, pybamm.Concatenation):
             # only know how to discretise a concatenation of scalars...
-            all_scalars = all(isinstance(child, pybamm.Scalar)
-                              for child in symbol.children)
+            all_scalars = all(
+                isinstance(child, pybamm.Scalar) for child in symbol.children
+            )
             if all_scalars:
                 return self.scalar_to_vector(symbol.children)
             else:
@@ -321,8 +320,7 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
             assert isinstance(key, int), TypeError(
-                "boundary condition keys should be hashes, not {}".format(
-                    type(key))
+                "boundary condition keys should be hashes, not {}".format(type(key))
             )
         # Discretise symbol
         discretised_symbol = self.process_symbol(
@@ -353,8 +351,7 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
             assert isinstance(key, int), TypeError(
-                "boundary condition keys should be hashes, not {}".format(
-                    type(key))
+                "boundary condition keys should be hashes, not {}".format(type(key))
             )
         # Discretise symbol
         discretised_symbol = self.process_symbol(

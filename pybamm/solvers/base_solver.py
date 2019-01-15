@@ -59,9 +59,9 @@ class BaseSolver(object):
         """
 
         def dydt(t, y):
-            return model.rhs.evaluate(t, y)
+            return model.concatenated_rhs.evaluate(t, y)
 
-        y0 = model.initial_conditions
+        y0 = model.concatenated_initial_conditions
         self.t, self.y = self.integrate(dydt, y0, t_eval)
 
     def integrate(self, derivs, y0, t_eval):
