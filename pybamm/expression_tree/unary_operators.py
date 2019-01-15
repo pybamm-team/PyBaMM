@@ -26,7 +26,7 @@ class UnaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, child):
-        super().__init__(name, children=[child])
+        super().__init__(name, children=[child], domain=child.domain)
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
