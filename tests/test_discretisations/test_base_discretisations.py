@@ -292,22 +292,22 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.BaseDiscretisation(mesh)
         a_vec = disc.scalar_to_vector(a, ["whole cell"])
         expected_vector = 5 * np.ones_like(mesh["whole cell"].nodes)
-        self.assertTrue(np.allclose(a_vec.evaluate(None), expected_vector))
+        np.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a = pybamm.Scalar(5, domain=["whole cell"])
         a_vec = disc.scalar_to_vector(a)
-        self.assertTrue(np.allclose(a_vec.evaluate(None), expected_vector))
+        np.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a_vec = disc.scalar_to_vector(a, ["whole cell", "negative electrode"])
         expected_vector = np.concatenate([
             5 * np.ones_like(mesh["whole cell"].nodes),
             5 * np.ones_like(mesh["negative electrode"].nodes),
         ])
-        self.assertTrue(np.allclose(a_vec.evaluate(None), expected_vector))
+        np.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a = pybamm.Scalar(5, domain=["whole cell", "negative electrode"])
         a_vec = disc.scalar_to_vector(a)
-        self.assertTrue(np.allclose(a_vec.evaluate(None), expected_vector))
+        np.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a = pybamm.Scalar(5, domain=["whole cell"])
         b = pybamm.Scalar(4, domain=["negative electrode"])
@@ -316,13 +316,13 @@ class TestDiscretise(unittest.TestCase):
             5 * np.ones_like(mesh["whole cell"].nodes),
             4 * np.ones_like(mesh["negative electrode"].nodes),
         ])
-        self.assertTrue(np.allclose(a_vec.evaluate(None), expected_vector))
+        np.assert_allclose(a_vec.evaluate(), expected_vector)
 
     def test_vector_of_ones(self):
         mesh = MeshForTesting()
         disc = pybamm.BaseDiscretisation(mesh)
         vec = disc.vector_of_ones(["whole cell"])
-        self.assertEqual(vec.evaluate(None)[0], 1)
+        self.assertEqual(vec.evaluate()[0], 1)
         self.assertEqual(vec.shape, mesh["whole cell"].nodes.shape)
 
     def test_concatenation(self):
@@ -348,7 +348,7 @@ class TestDiscretise(unittest.TestCase):
             5 * np.ones_like(mesh["negative electrode"].nodes),
             4 * np.ones_like(mesh["positive electrode"].nodes),
         ])
-        self.assertTrue(np.allclose(eqn_disc.evaluate(None), expected_vector))
+        np.assert_allclose(a_vec.evaluate(), expected_vector)
 
         # should only be able to concatentate scalars
         eqn = pybamm.Concatenation(a, var)
