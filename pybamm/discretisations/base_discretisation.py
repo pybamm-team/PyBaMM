@@ -7,7 +7,6 @@ import pybamm
 
 import numpy as np
 import copy
-import numbers
 
 
 class BaseDiscretisation(object):
