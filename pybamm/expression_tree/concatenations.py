@@ -39,6 +39,9 @@ class Concatenation(pybamm.Symbol):
                 domain += child_domain
             else:
                 raise pybamm.DomainError("""domain of children must be disjoint""")
+        # Simplify domain if concatenation spans the whole cell
+        if domain == ["negative electrode", "separator", "positive electrode"]:
+            domain = ["whole cell"]
         return domain
 
 
