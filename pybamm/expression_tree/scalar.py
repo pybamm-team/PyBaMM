@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Scalar(pybamm.Symbol):
+class Scalar(pybamm.Domain, pybamm.Symbol):
     """A node in the expression tree representing a scalar value
 
     **Extends:** :class:`Symbol`
@@ -19,10 +19,12 @@ class Scalar(pybamm.Symbol):
     name : str, optional
         the name of the node. Defaulted to ``str(value)``
         if not provided
+    domain : iterable of str, optional
+        list of domains the parameter is valid over, defaults to empty list
 
     """
 
-    def __init__(self, value, name=None):
+    def __init__(self, value, name=None, domain=[]):
         """
 
         """
@@ -30,7 +32,7 @@ class Scalar(pybamm.Symbol):
         if name is None:
             name = str(value)
 
-        super().__init__(name)
+        super().__init__(name, domain=domain)
         self.value = value
 
     @property

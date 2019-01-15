@@ -47,7 +47,8 @@ class BaseDiscretisation(object):
         )
 
         # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_rhs(model.rhs, model.boundary_conditions, y_slices)
+        model.rhs = self.process_rhs(
+            model.rhs, model.boundary_conditions, y_slices)
 
     def get_variable_slices(self, variables):
         """Set the slicing for variables.
@@ -92,7 +93,8 @@ class BaseDiscretisation(object):
             discretised_ic = self.process_symbol(equation, variable.domain)
             # Turn any scalars into vectors
             if isinstance(discretised_ic, pybamm.Scalar):
-                discretised_ic = self.scalar_to_vector(discretised_ic, variable.domain)
+                discretised_ic = self.scalar_to_vector(
+                    discretised_ic, variable.domain)
             initial_conditions[variable] = discretised_ic
 
         # Concatenate and evaluate initial conditions
@@ -158,7 +160,8 @@ class BaseDiscretisation(object):
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
-            new_left = self.process_symbol(left, domain, y_slices, boundary_conditions)
+            new_left = self.process_symbol(
+                left, domain, y_slices, boundary_conditions)
             new_right = self.process_symbol(
                 right, domain, y_slices, boundary_conditions
             )
@@ -175,6 +178,17 @@ class BaseDiscretisation(object):
                 """y_slices should be dict, not {}""".format(type(y_slices))
             )
             return pybamm.StateVector(y_slices[symbol.id])
+
+        elif isinstance(symbol, pybamm.Concatenation):
+            # only know how to discretise a concatenation of scalars...
+            all_scalars = all(isinstance(child, pybamm.Scalar)
+                                for child in symbol.children):
+            if all_scalars:
+                return self.concatenate_scalars(
+                    symbol, domain, y_slices, boundary_conditions
+                )
+            else:
+                raise NotImplementedError
 
         else:
             # hack to copy the symbol but without a parent
@@ -234,6 +248,46 @@ class BaseDiscretisation(object):
     def concatenate(self, *symbols):
         return pybamm.NumpyConcatenation(*symbols)
 
+    def concatenate_scalars(self, symbol, domain, y_slices, boundary_conditions):
+        """How to discretise a concatenation of scalars.
+
+        Parameters
+        ----------
+        symbol : :class:`Concatenation` with all :class:`Scalar` children
+            The symbol (variable) of which to discretise
+        domain : list
+            The domain(s) in which to take the gradient
+        y_slices : slice
+            The slice to assign to StateVector when discretising a variable
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        """
+
+        # check that the children domains match the variable domain
+        child_domain = [child.domain for child in symbol.children]
+        domain_match = all(dom in domain for dom in child_domain)
+        assert domain_match, ValueError("The Scalars domain in a
+            Concatenation {} must match the variable domain
+            {}".format(child_domains, domain)
+
+
+        # assume that slice has stride 1, create vector with given size
+        vector_slice=y_slices[symbol.id]
+        vector=np.empty(vector_slice.stop-vector_slice.start, dtype=float)
+
+        # assign slices of vector associated with concatenated scalars
+        start=0
+        end=0
+        for dom in domain:
+            end += self.mesh[dom].npts
+            child_value=symbol.children[child_domain.index(dom)].value
+            vector[start:end]=child_value
+            start=end
+
+        return pybamm.Vector(vector)
+
 
 class MatrixVectorDiscretisation(BaseDiscretisation):
     """
@@ -258,18 +312,19 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
             assert isinstance(key, int), TypeError(
-                "boundary condition keys should be hashes, not {}".format(type(key))
+                "boundary condition keys should be hashes, not {}".format(
+                    type(key))
             )
         # Discretise symbol
-        discretised_symbol = self.process_symbol(
+        discretised_symbol=self.process_symbol(
             symbol, domain, y_slices, boundary_conditions
         )
         # Add boundary conditions if defined
         if symbol.id in boundary_conditions:
-            lbc = boundary_conditions[symbol.id]["left"]
-            rbc = boundary_conditions[symbol.id]["right"]
-            discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
-        gradient_matrix = self.gradient_matrix(domain)
+            lbc=boundary_conditions[symbol.id]["left"]
+            rbc=boundary_conditions[symbol.id]["right"]
+            discretised_symbol=self.concatenate(lbc, discretised_symbol, rbc)
+        gradient_matrix=self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
 
     def gradient_matrix(self, domain):
@@ -289,18 +344,19 @@ class MatrixVectorDiscretisation(BaseDiscretisation):
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
             assert isinstance(key, int), TypeError(
-                "boundary condition keys should be hashes, not {}".format(type(key))
+                "boundary condition keys should be hashes, not {}".format(
+                    type(key))
             )
         # Discretise symbol
-        discretised_symbol = self.process_symbol(
+        discretised_symbol=self.process_symbol(
             symbol, domain, y_slices, boundary_conditions
         )
         # Add boundary conditions if defined
         if symbol.id in boundary_conditions:
-            lbc = boundary_conditions[symbol.id]["left"]
-            rbc = boundary_conditions[symbol.id]["right"]
-            discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
-        divergence_matrix = self.divergence_matrix(domain)
+            lbc=boundary_conditions[symbol.id]["left"]
+            rbc=boundary_conditions[symbol.id]["right"]
+            discretised_symbol=self.concatenate(lbc, discretised_symbol, rbc)
+        divergence_matrix=self.divergence_matrix(domain)
         return divergence_matrix * discretised_symbol
 
     def divergence_matrix(self, domain):
