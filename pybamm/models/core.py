@@ -26,6 +26,7 @@ class BaseModel(object):
         self._rhs = {}
         self._initial_conditions = {}
         self._boundary_conditions = {}
+        self._variables = {}
 
     @property
     def rhs(self):
@@ -50,6 +51,14 @@ class BaseModel(object):
     @boundary_conditions.setter
     def boundary_conditions(self, boundary_conditions):
         self._boundary_conditions = boundary_conditions
+
+    @property
+    def variables(self):
+        return self._variables
+
+    @variables.setter
+    def variables(self, variables):
+        self._variables = variables
 
     def __getitem__(self, key):
         return self.rhs[key]
