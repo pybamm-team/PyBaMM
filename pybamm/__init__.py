@@ -78,6 +78,8 @@ from .expression_tree.independent_variable import IndependentVariable
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
+from .expression_tree.exceptions import DomainError
+
 #
 # Model classes
 #

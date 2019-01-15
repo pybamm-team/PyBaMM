@@ -23,11 +23,23 @@ class Concatenation(pybamm.Symbol):
     def __init__(self, *children, name=None):
         if name is None:
             name = "concatenation"
-        super().__init__(name, children)
+
+        domain = self.get_children_domains(children)
+        super().__init__(name, children, domain=domain)
 
     def evaluate(self, t, y):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         raise NotImplementedError
+
+    def get_children_domains(self, children):
+        domain = []
+        for child in children:
+            child_domain = child.domain
+            if set(domain).isdisjoint(child_domain):
+                domain += child_domain
+            else:
+                raise pybamm.DomainError("""domain of children must be disjoint""")
+        return domain
 
 
 class NumpyConcatenation(Concatenation):
