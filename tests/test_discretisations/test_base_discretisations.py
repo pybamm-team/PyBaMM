@@ -292,22 +292,22 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.BaseDiscretisation(mesh)
         a_vec = disc.scalar_to_vector(a, ["whole cell"])
         expected_vector = 5 * np.ones_like(mesh["whole cell"].nodes)
-        np.assert_allclose(a_vec.evaluate(), expected_vector)
+        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a = pybamm.Scalar(5, domain=["whole cell"])
         a_vec = disc.scalar_to_vector(a)
-        np.assert_allclose(a_vec.evaluate(), expected_vector)
+        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a_vec = disc.scalar_to_vector(a, ["whole cell", "negative electrode"])
         expected_vector = np.concatenate([
             5 * np.ones_like(mesh["whole cell"].nodes),
             5 * np.ones_like(mesh["negative electrode"].nodes),
         ])
-        np.assert_allclose(a_vec.evaluate(), expected_vector)
+        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a = pybamm.Scalar(5, domain=["whole cell", "negative electrode"])
         a_vec = disc.scalar_to_vector(a)
-        np.assert_allclose(a_vec.evaluate(), expected_vector)
+        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a = pybamm.Scalar(5, domain=["whole cell"])
         b = pybamm.Scalar(4, domain=["negative electrode"])
@@ -316,7 +316,7 @@ class TestDiscretise(unittest.TestCase):
             5 * np.ones_like(mesh["whole cell"].nodes),
             4 * np.ones_like(mesh["negative electrode"].nodes),
         ])
-        np.assert_allclose(a_vec.evaluate(), expected_vector)
+        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
     def test_vector_of_ones(self):
         mesh = MeshForTesting()
@@ -348,7 +348,7 @@ class TestDiscretise(unittest.TestCase):
             5 * np.ones_like(mesh["negative electrode"].nodes),
             4 * np.ones_like(mesh["positive electrode"].nodes),
         ])
-        np.assert_allclose(a_vec.evaluate(), expected_vector)
+        np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
 
         # should only be able to concatentate scalars
         eqn = pybamm.Concatenation(a, var)
