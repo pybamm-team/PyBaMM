@@ -9,6 +9,8 @@ import anytree
 import numbers
 import copy
 
+from anytree.exporter import DotExporter
+
 
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
@@ -57,6 +59,56 @@ class Symbol(anytree.NodeMixin):
         """
         for pre, _, node in anytree.RenderTree(self):
             print("%s%s" % (pre, str(node)))
+
+    def visualise(self, filename):
+        """Produces a .png file of the tree (this node and its children) with the
+        name filename"""
+
+        new_node, counter = self.relabel_tree(self, 0)
+
+        # check that filename ends in .png.
+        filename = "view_tree/" + filename + ".svg"
+
+        DotExporter(
+            new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
+        ).to_picture(filename)
+
+    def relabel_tree(self, symbol, counter):
+        """ Finds all children of a symbol and assigns them a new id so that they can be
+                visualised properly using the graphviz output
+        """
+        name = symbol.name
+        if name == "div":
+            name = "&nabla;&sdot;"
+        elif name == "grad":
+            name = "&nabla;"
+        elif name == "/":
+            name = "&divide;"
+        elif name == "*":
+            name = "&times;"
+        elif name == "-":
+            name = "&minus;"
+        elif name == "+":
+            name = "&#43;"
+        elif name == "**":
+            name = "^"
+        elif name == "epsilon_s":
+            name = "&#603;"
+
+        new_node = anytree.Node(str(counter), label=name)
+        counter += 1
+
+        if isinstance(symbol, pybamm.BinaryOperator):
+            left, right = symbol.children
+            new_left, counter = self.relabel_tree(left, counter)
+            new_right, counter = self.relabel_tree(right, counter)
+            new_node.children = [new_left, new_right]
+
+        elif isinstance(symbol, pybamm.UnaryOperator):
+            new_child, counter = self.relabel_tree(symbol.children[0], counter)
+            new_node.children = [new_child]
+
+        return new_node, counter
 
     def pre_order(self):
         """returns an iterable that steps through the tree in pre-order

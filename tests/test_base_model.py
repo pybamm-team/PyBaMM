@@ -7,7 +7,6 @@ import unittest
 
 
 class TestBaseModel(unittest.TestCase):
-
     def test_rhs_set_get(self):
         model = pybamm.BaseModel()
         rhs = {"c": "alpha", "d": "beta"}
