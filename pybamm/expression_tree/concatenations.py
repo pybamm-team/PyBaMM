@@ -32,6 +32,7 @@ class Concatenation(pybamm.Symbol):
         raise NotImplementedError
 
     def get_children_domains(self, children):
+        # combine domains from children
         domain = []
         for child in children:
             child_domain = child.domain
@@ -39,6 +40,11 @@ class Concatenation(pybamm.Symbol):
                 domain += child_domain
             else:
                 raise pybamm.DomainError("""domain of children must be disjoint""")
+
+        # ensure domain is sorted according to KNOWN_DOMAINS
+        domain_dict = {d: pybamm.KNOWN_DOMAINS.index(d) for d in domain}
+        domain = sorted(domain_dict, key=domain_dict.__getitem__)
+
         # Simplify domain if concatenation spans the whole cell
         if domain == ["negative electrode", "separator", "positive electrode"]:
             domain = ["whole cell"]
