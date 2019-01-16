@@ -149,6 +149,13 @@ class TestSymbol(unittest.TestCase):
             r"Symbol\(" + hex_regex + ", a, grad\(a\)\)",
         )
 
+    def test_symbol_visualise(self):
+        G = pybamm.Symbol("G")
+        model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        c_e = list(model.rhs.keys())[0]
+        rhs = model.rhs[c_e]
+        rhs.visualise("StefanMaxwell_test", test=True)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
