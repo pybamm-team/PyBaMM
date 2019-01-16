@@ -52,10 +52,8 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         """
         Add Dirichlet boundary conditions via ghost nodes.
 
-        For a boundary condition
-          y = a at the left-hand boundary,
-        we concatenate a ghost node to the start of the vector y with value
-          2*a - y1
+        For a boundary condition "y = a at the left-hand boundary",
+        we concatenate a ghost node to the start of the vector y with value "2*a - y1"
         where y1 is the value of the first node.
         Similarly for the right-hand boundary condition.
 
