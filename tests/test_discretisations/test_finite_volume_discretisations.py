@@ -139,10 +139,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         var = pybamm.Variable("var", domain=["whole cell"])
         grad_eqn = pybamm.grad(var)
 
-        # Prepare convergence testing
-        ns = [50, 100, 200]
-        errs = [0] * len(ns)
-        for i, n in enumerate(ns):
+        # Function for convergence testing
+        def get_l2_error(n):
             # Set up discretisation
             mesh = pybamm.FiniteVolumeMacroMesh(param, target_npts=n)
             disc = pybamm.FiniteVolumeDiscretisation(mesh)
@@ -157,14 +155,16 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             grad_approx = grad_eqn_disc.evaluate(None, y)
 
             # Calculate errors
-            errs[i] = np.linalg.norm(grad_approx - grad_exact) / np.linalg.norm(
-                grad_exact
-            )
+            return np.linalg.norm(grad_approx - grad_exact) / np.linalg.norm(grad_exact)
 
-        # Expect h**2 convergence
-        [self.assertLess(errs[i + 1] / errs[i], 0.26) for i in range(len(errs) - 1)]
+        # Get errors
+        ns = 100 * (2 ** np.arange(1, 7))
+        errs = np.array([get_l2_error(int(n)) for n in ns])
 
-    @unittest.skip("")
+        # Get rates: expect h**2 convergence
+        rates = np.log2(errs[:-1] / errs[1:])
+        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
+
     def test_grad_convergence_with_bcs(self):
         # Convergence
         param = pybamm.ParameterValues(
@@ -179,10 +179,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             }
         }
 
-        # Prepare convergence testing
-        ns = [50, 100, 200]
-        errs = [0] * len(ns)
-        for i, n in enumerate(ns):
+        # Function for convergence testing
+        def get_l2_error(n):
             # Set up discretisation
             mesh = pybamm.FiniteVolumeMacroMesh(param, target_npts=n)
             disc = pybamm.FiniteVolumeDiscretisation(mesh)
@@ -197,12 +195,15 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             grad_approx = grad_eqn_disc.evaluate(None, y)
 
             # Calculate errors
-            errs[i] = np.linalg.norm(grad_approx - grad_exact) / np.linalg.norm(
-                grad_exact
-            )
+            return np.linalg.norm(grad_approx - grad_exact) / np.linalg.norm(grad_exact)
 
-        # Expect h**2 convergence
-        [self.assertLess(errs[i + 1] / errs[i], 0.26) for i in range(len(errs) - 1)]
+        # Get errors
+        ns = 100 * (2 ** np.arange(1, 7))
+        errs = np.array([get_l2_error(int(n)) for n in ns])
+
+        # Get rates: expect h**1.5 convergence
+        rates = np.log2(errs[:-1] / errs[1:])
+        np.testing.assert_array_less(1.49 * np.ones_like(rates), rates)
 
     def test_div_convergence_internal(self):
         # Convergence
@@ -216,17 +217,15 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
         }
 
-        # Prepare convergence testing
-        ns = [50, 100, 200]
-        errs = [0] * len(ns)
-        for i, n in enumerate(ns):
+        # Function for convergence testing
+        def get_l2_error(n):
             # Set up discretisation
             mesh = pybamm.FiniteVolumeMacroMesh(param, target_npts=n)
             disc = pybamm.FiniteVolumeDiscretisation(mesh)
 
             # Define exact solutions
             y = np.sin(mesh["whole cell"].nodes)
-            div_exact_internal = -np.sin(mesh["whole cell"].nodes)[1:-1]
+            div_exact_internal = -np.sin(mesh["whole cell"].nodes[1:-1])
 
             # Discretise and evaluate
             y_slices = disc.get_variable_slices([var])
@@ -234,14 +233,18 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             div_approx_internal = div_eqn_disc.evaluate(None, y)[1:-1]
 
             # Calculate errors
-            errs[i] = np.linalg.norm(
+            return np.linalg.norm(
                 div_approx_internal - div_exact_internal
             ) / np.linalg.norm(div_exact_internal)
 
-        # Expect h**2 convergence
-        [self.assertLess(errs[i + 1] / errs[i], 0.26) for i in range(len(errs) - 1)]
+        # Get errors
+        ns = 10 * (2 ** np.arange(1, 6))
+        errs = np.array([get_l2_error(int(n)) for n in ns])
 
-    @unittest.skip("div errors do not converge as expected")
+        # Get rates: expect h**2 convergence
+        rates = np.log2(errs[:-1] / errs[1:])
+        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
+
     def test_div_convergence(self):
         # Convergence
         param = pybamm.ParameterValues(
@@ -254,28 +257,33 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
         }
 
-        # Prepare convergence testing
-        ns = [50, 100, 200]
-        errs = [0] * len(ns)
-        for i, n in enumerate(ns):
+        # Function for convergence testing
+        def get_l2_error(n):
             # Set up discretisation
             mesh = pybamm.FiniteVolumeMacroMesh(param, target_npts=n)
             disc = pybamm.FiniteVolumeDiscretisation(mesh)
 
             # Define exact solutions
             y = np.sin(mesh["whole cell"].nodes)
-            div_exact = -np.sin(mesh["whole cell"].nodes)
+            div_exact_internal = -np.sin(mesh["whole cell"].nodes[1:-1])
 
             # Discretise and evaluate
             y_slices = disc.get_variable_slices([var])
             div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
-            div_approx = div_eqn_disc.evaluate(None, y)
+            div_approx_internal = div_eqn_disc.evaluate(None, y)[1:-1]
 
             # Calculate errors
-            errs[i] = np.linalg.norm(div_approx - div_exact) / np.linalg.norm(div_exact)
+            return np.linalg.norm(
+                div_approx_internal - div_exact_internal
+            ) / np.linalg.norm(div_exact_internal)
 
-        # Expect h**2 convergence
-        [self.assertLess(errs[i + 1] / errs[i], 0.26) for i in range(len(errs) - 1)]
+        # Get errors
+        ns = 10 * (2 ** np.arange(1, 6))
+        errs = np.array([get_l2_error(int(n)) for n in ns])
+
+        # Get rates: expect h**1.5 convergence because of boundary conditions
+        rates = np.log2(errs[:-1] / errs[1:])
+        np.testing.assert_array_less(1.49 * np.ones_like(rates), rates)
 
 
 if __name__ == "__main__":
