@@ -101,6 +101,9 @@ class ParameterValues(dict):
                     bcs[side]
                 )
 
+        for variable, equation in model.variables.items():
+            model.variables[variable] = self.process_symbol(equation)
+
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
 
