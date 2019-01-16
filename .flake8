@@ -5,6 +5,12 @@ exclude=
     problems,
     __init__.py,
     venv,
+    bin,
+    etc,
+    lib,
+    lib64,
+    share,
+    pyvenv.cfg
 ignore=
     # False positive for white space before ':' on list slice
     # black should format these correctly
