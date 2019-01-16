@@ -91,7 +91,7 @@ class Symbol(anytree.NodeMixin):
         for pre, _, node in anytree.RenderTree(self):
             print("%s%s" % (pre, str(node)))
 
-    def visualise(self, filename):
+    def visualise(self, filename, test=False):
         """Produces a .png file of the tree (this node and its children) with the
         name filename"""
 
@@ -100,9 +100,10 @@ class Symbol(anytree.NodeMixin):
         # check that filename ends in .png.
         filename = "view_tree/" + filename + ".png"
 
-        DotExporter(
-            new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
-        ).to_picture(filename)
+        if test is False:
+            DotExporter(
+                new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
+            ).to_picture(filename)
 
     def relabel_tree(self, symbol, counter):
         """ Finds all children of a symbol and assigns them a new id so that they can be
