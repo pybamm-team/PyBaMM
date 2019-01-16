@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
+import numbers
 import copy
 
 
@@ -41,13 +42,19 @@ class BaseDiscretisation(object):
         # Set the y split for variables
         y_slices = self.get_variable_slices(model.rhs.keys())
 
-        # Discretise and concatenate initial conditions, passing domain from variable
+        # Discretise initial conditions
         model.initial_conditions = self.process_initial_conditions(
             model.initial_conditions
         )
+        # Concatenate initial conditions into a single vector
+        model.concatenated_initial_conditions = self.concatenate(
+            *model.initial_conditions.values()
+        ).evaluate(0, None)
 
         # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_rhs(model.rhs, model.boundary_conditions, y_slices)
+        model.rhs = self.process_rhs(model.rhs, y_slices, model.boundary_conditions)
+        # Concatenate rhs into a single state vector
+        model.concatenated_rhs = self.concatenate(*model.rhs.values())
 
     def get_variable_slices(self, variables):
         """Set the slicing for variables.
@@ -84,21 +91,25 @@ class BaseDiscretisation(object):
 
         Returns
         -------
-        :class:`numpy.array`
-            Vector of initial conditions
+        initial_conditions : dict
+            Discretised initial conditions
 
         """
         for variable, equation in initial_conditions.items():
-            discretised_ic = self.process_symbol(equation, variable.domain)
-            # Turn any scalars into vectors
-            if isinstance(discretised_ic, pybamm.Scalar):
-                discretised_ic = self.scalar_to_vector(discretised_ic, variable.domain)
+            discretised_ic = self.process_symbol(equation).evaluate()
+
+            if isinstance(discretised_ic, numbers.Number):
+                discretised_ic = discretised_ic * self.vector_of_ones(variable.domain)
+            else:
+                raise NotImplementedError(
+                    "Currently only accepts scalar initial conditions"
+                )
+
             initial_conditions[variable] = discretised_ic
 
-        # Concatenate and evaluate initial conditions
-        return self.concatenate(*initial_conditions.values()).evaluate(0, None)
+        return initial_conditions
 
-    def process_rhs(self, rhs, boundary_conditions, y_slices):
+    def process_rhs(self, rhs, y_slices, boundary_conditions):
         """Discretise initial conditions.
 
         Parameters
@@ -113,32 +124,30 @@ class BaseDiscretisation(object):
 
         Returns
         -------
-        concatenated_rhs : :class:`pybamm.Concatenation`
-            Concatenation of the discretised right-hand side equations
+        rhs : dict
+            Discretised right-hand side equations
 
         """
         boundary_conditions = {
             key.id: value for key, value in boundary_conditions.items()
         }
         for variable, equation in rhs.items():
-            rhs[variable] = self.process_symbol(
-                equation, variable.domain, y_slices, boundary_conditions
-            )
+            rhs[variable] = self.process_symbol(equation, y_slices, boundary_conditions)
 
-        # Concatenate right-hand sides
-        concatenated_rhs = self.concatenate(*rhs.values())
+        return rhs
 
-        return concatenated_rhs
-
-    def process_symbol(self, symbol, domain, y_slices=None, boundary_conditions={}):
+    def process_symbol(self, symbol, y_slices=None, boundary_conditions={}):
         """Discretise operators in model equations.
 
         Parameters
         ----------
         symbol : :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
             Symbol to discretise
-        y_slices : dict of {Variable: slice}
+        y_slices : dict of {variable: slice}
             The slices to assign to StateVectors when discretising a variable
+            (default None).
+        boundary_conditions : dict of {variable: boundary conditions}
+            Boundary conditions of the model
 
         Returns
         -------
@@ -147,26 +156,20 @@ class BaseDiscretisation(object):
 
         """
         if isinstance(symbol, pybamm.Gradient):
-            return self.gradient(
-                symbol.children[0], domain, y_slices, boundary_conditions
-            )
+            return self.gradient(symbol.children[0], y_slices, boundary_conditions)
 
         if isinstance(symbol, pybamm.Divergence):
-            return self.divergence(
-                symbol.children[0], domain, y_slices, boundary_conditions
-            )
+            return self.divergence(symbol.children[0], y_slices, boundary_conditions)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
-            new_left = self.process_symbol(left, domain, y_slices, boundary_conditions)
-            new_right = self.process_symbol(
-                right, domain, y_slices, boundary_conditions
-            )
+            new_left = self.process_symbol(left, y_slices, boundary_conditions)
+            new_right = self.process_symbol(right, y_slices, boundary_conditions)
             return symbol.__class__(new_left, new_right)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(
-                symbol.children[0], domain, y_slices, boundary_conditions
+                symbol.children[0], y_slices, boundary_conditions
             )
             return symbol.__class__(new_child)
 
@@ -175,6 +178,16 @@ class BaseDiscretisation(object):
                 """y_slices should be dict, not {}""".format(type(y_slices))
             )
             return pybamm.StateVector(y_slices[symbol.id])
+
+        elif isinstance(symbol, pybamm.Concatenation):
+            # only know how to discretise a concatenation of scalars...
+            all_scalars = all(
+                isinstance(child, pybamm.Scalar) for child in symbol.children
+            )
+            if all_scalars:
+                return self.scalar_to_vector(symbol.children)
+            else:
+                raise NotImplementedError
 
         else:
             # hack to copy the symbol but without a parent
@@ -186,15 +199,13 @@ class BaseDiscretisation(object):
             symbol.parent = parent
             return new_symbol
 
-    def gradient(self, symbol, domain, y_slices, boundary_conditions):
+    def gradient(self, symbol, y_slices, boundary_conditions):
         """How to discretise gradient operators.
 
         Parameters
         ----------
         symbol : :class:`Symbol` (or subclass)
             The symbol (typically a variable) of which to take the gradient
-        domain : list
-            The domain(s) in which to take the gradient
         y_slices : slice
             The slice to assign to StateVector when discretising a variable
         boundary_conditions : dict
@@ -204,15 +215,13 @@ class BaseDiscretisation(object):
         """
         raise NotImplementedError
 
-    def divergence(self, symbol, domain, y_slices, boundary_conditions):
+    def divergence(self, symbol, y_slices, boundary_conditions):
         """How to discretise divergence operators.
 
         Parameters
         ----------
         symbol : :class:`Symbol` (or subclass)
             The symbol (typically a variable) of which to take the divergence
-        domain : list
-            The domain(s) in which to take the divergence
         y_slices : slice
             The slice to assign to StateVector when discretising a variable
         boundary_conditions : dict
@@ -221,15 +230,59 @@ class BaseDiscretisation(object):
         """
         raise NotImplementedError
 
-    def scalar_to_vector(self, scalar, domain):
+    def scalar_to_vector(self, scalars, domain=None):
         """
-        Convert a Scalar to a uniform Vector of size given by mesh,
-        with same value as Scalar.
+        Convert a :class:`Scalar` (or a list of :class:`Scalar`) to a uniform
+        Vector of size given by mesh. The size of the Vector is based on the
+        domains associated with the Scalar, and the size of the mesh.
+
+        Parameters
+        ----------
+        scalar: :class:`Scalar` or list of :class:`Scalar`
+            The scalar values to assign to the vector. A list can be given for
+            different values for different domains
+
+        domain : list, optional
+            If given, overrides the domains given in scalar.domain
+
         """
+        # convert scalar to list if a single one
+        if isinstance(scalars, pybamm.Scalar):
+            scalars = [scalars]
+
+        # work out total size of vector
+        subvector_sizes = []
+        for s in scalars:
+            if domain is None:
+                this_domain = s.domain
+            else:
+                this_domain = domain
+            subvector_size = sum([self.mesh[dom].npts for dom in this_domain])
+            subvector_sizes.append(subvector_size)
+
+        # allocate vector
+        vector = np.empty(sum(subvector_sizes), dtype=float)
+
+        # assign slices of vector associated with concatenated scalars
+        start = 0
+        end = 0
+        for s, size in zip(scalars, subvector_sizes):
+            end += size
+            vector[start:end] = s.value
+            start = end
+
+        return pybamm.Vector(vector)
+
+    def vector_of_ones(self, domain):
+        """
+        Returns a Vector of ones of the size given by the mesh.
+        """
+
         mesh_points = np.array([])
+
         for dom in domain:
             mesh_points = np.concatenate([mesh_points, self.mesh[dom].nodes])
-        return pybamm.Vector(scalar.value * np.ones_like(mesh_points))
+        return pybamm.Vector(np.ones_like(mesh_points))
 
     def concatenate(self, *symbols):
         return pybamm.NumpyConcatenation(*symbols)

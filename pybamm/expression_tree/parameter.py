@@ -6,13 +6,10 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Parameter(pybamm.Domain, pybamm.Symbol):
+class Parameter(pybamm.Symbol):
     """A node in the expression tree representing a parameter
 
     This node will be replaced by a :class:`.Scalar` node by :class`.Parameter`
-
-    A variable has a list of domains (text) that it is valid over
-    (inherits from :class:`.Domain`)
 
     Parameters
     ----------

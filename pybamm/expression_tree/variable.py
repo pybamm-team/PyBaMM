@@ -6,14 +6,11 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class Variable(pybamm.Domain, pybamm.Symbol):
+class Variable(pybamm.Symbol):
     """A node in the expression tree represending a dependent variable
 
     This node will be discretised by :class:`.BaseDiscretisation` and converted
     to a :class:`.Vector` node.
-
-    A variable has a list of domains (text) that it is valid over
-    (inherits from :class:`.Domain`)
 
     Parameters
     ----------
@@ -24,7 +21,7 @@ class Variable(pybamm.Domain, pybamm.Symbol):
         list of domains that this variable is valid over
 
 
-    *Extends:* :class:`Domain` and :class:`Symbol`
+    *Extends:* :class:`Symbol`
     """
 
     def __init__(self, name, domain=[]):

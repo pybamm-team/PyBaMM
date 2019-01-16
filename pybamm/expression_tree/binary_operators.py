@@ -41,11 +41,18 @@ class BinaryOperator(pybamm.Symbol):
         if isinstance(right, numbers.Number):
             right = pybamm.Scalar(right)
 
-        super().__init__(name, children=[left, right])
+        domain = self.get_children_domains(left.domain, right.domain)
+        super().__init__(name, children=[left, right], domain=domain)
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
+
+    def get_children_domains(self, ldomain, rdomain):
+        if ldomain == rdomain or ldomain == [] or rdomain == []:
+            return list(set(ldomain + rdomain))
+        else:
+            raise pybamm.DomainError("""children must have same (or empty) domains""")
 
 
 class Power(BinaryOperator):

@@ -23,7 +23,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
     def __init__(self, mesh):
         super().__init__(mesh)
 
-    def gradient(self, symbol, domain, y_slices, boundary_conditions):
+    def gradient(self, symbol, y_slices, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
         See :meth:`pybamm.BaseDiscretisation.gradient`
         """
@@ -33,9 +33,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
                 "boundary condition keys should be hashes, not {}".format(type(key))
             )
         # Discretise symbol
-        discretised_symbol = self.process_symbol(
-            symbol, domain, y_slices, boundary_conditions
-        )
+        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
             lbc = boundary_conditions[symbol.id]["left"]
@@ -46,7 +44,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
                 + domain
                 + [domain[-1] + "_right_ghost_cell"]
             )
-        gradient_matrix = self.gradient_matrix(domain)
+        gradient_matrix = self.gradient_matrix(symbol.domain)
         return gradient_matrix * discretised_symbol
 
     def add_ghost_nodes(self, discretised_symbol, lbc, rbc):
@@ -123,7 +121,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         matrix = spdiags(data, diags, n - 1, n)
         return pybamm.Matrix(matrix)
 
-    def divergence(self, symbol, domain, y_slices, boundary_conditions):
+    def divergence(self, symbol, y_slices, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.BaseDiscretisation.gradient`
         """
@@ -133,15 +131,13 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
                 "boundary condition keys should be hashes, not {}".format(type(key))
             )
         # Discretise symbol
-        discretised_symbol = self.process_symbol(
-            symbol, domain, y_slices, boundary_conditions
-        )
+        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
-        divergence_matrix = self.divergence_matrix(domain)
+        divergence_matrix = self.divergence_matrix(symbol.domain)
         return divergence_matrix * discretised_symbol
 
     def divergence_matrix(self, domain):
