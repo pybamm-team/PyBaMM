@@ -95,11 +95,15 @@ class ParameterValues(dict):
             model.initial_conditions[variable] = self.process_symbol(equation)
 
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
+        new_boundary_conditions = {}
         for variable, bcs in model.boundary_conditions.items():
+            processed_variable = self.process_symbol(variable)
+            new_boundary_conditions[processed_variable] = {}
             for side in ["left", "right"]:
-                model.boundary_conditions[variable][side] = self.process_symbol(
+                new_boundary_conditions[processed_variable][side] = self.process_symbol(
                     bcs[side]
                 )
+        model.boundary_conditions = new_boundary_conditions
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.

@@ -44,9 +44,8 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
 
         c_e = pybamm.Variable("c_e", electrolyte_domain)
 
-        # N_e = -(epsilon ** b) * pybamm.grad(c_e)
+        N_e = -(epsilon ** b) * pybamm.grad(c_e)
 
-        N_e = -pybamm.grad(c_e)
         self.rhs = {
             c_e: -pybamm.div(N_e) / delta / epsilon + nu * (1 - t_plus) * G
         }  # / delta / epsilon + nu * (1 - t_plus) * G

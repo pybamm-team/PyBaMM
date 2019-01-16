@@ -150,20 +150,22 @@ class TestParameterValues(unittest.TestCase):
         model.boundary_conditions = {var: {"left": c, "right": d}}
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
         parameter_values.process_model(model)
+        # rhs
         self.assertTrue(isinstance(model.rhs[var], pybamm.Multiplication))
         self.assertTrue(isinstance(model.rhs[var].children[0], pybamm.Scalar))
         self.assertTrue(isinstance(model.rhs[var].children[1], pybamm.Gradient))
         self.assertEqual(model.rhs[var].children[0].value, 1)
+        # initial conditions
         self.assertTrue(isinstance(model.initial_conditions[var], pybamm.Scalar))
         self.assertEqual(model.initial_conditions[var].value, 2)
-        self.assertTrue(
-            isinstance(model.boundary_conditions[var]["left"], pybamm.Scalar)
-        )
-        self.assertEqual(model.boundary_conditions[var]["left"].value, 3)
-        self.assertTrue(
-            isinstance(model.boundary_conditions[var]["right"], pybamm.Scalar)
-        )
-        self.assertEqual(model.boundary_conditions[var]["right"].value, 42)
+        # boundary conditions
+        bc_key = list(model.boundary_conditions.keys())[0]
+        self.assertTrue(isinstance(bc_key, pybamm.Variable))
+        bc_value = list(model.boundary_conditions.values())[0]
+        self.assertTrue(isinstance(bc_value["left"], pybamm.Scalar))
+        self.assertEqual(bc_value["left"].value, 3)
+        self.assertTrue(isinstance(bc_value["right"], pybamm.Scalar))
+        self.assertEqual(bc_value["right"].value, 42)
 
 
 if __name__ == "__main__":
