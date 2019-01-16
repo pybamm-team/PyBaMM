@@ -27,6 +27,7 @@ class BaseModel(object):
         self._rhs = {}
         self._initial_conditions = {}
         self._boundary_conditions = {}
+        self._variables = {}
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
 
@@ -74,6 +75,14 @@ class BaseModel(object):
     @boundary_conditions.setter
     def boundary_conditions(self, boundary_conditions):
         self._boundary_conditions = boundary_conditions
+
+    @property
+    def variables(self):
+        return self._variables
+
+    @variables.setter
+    def variables(self, variables):
+        self._variables = variables
 
     @property
     def concatenated_rhs(self):
