@@ -49,6 +49,12 @@ class TestBaseModel(unittest.TestCase):
         model.boundary_conditions = boundary_conditions
         self.assertEqual(boundary_conditions, model.boundary_conditions)
 
+    def test_variables_set_get(self):
+        model = pybamm.BaseModel()
+        variables = {"c": "alpha", "d": "beta"}
+        model.variables = variables
+        self.assertEqual(variables, model.variables)
+
     def test_model_dict_behaviour(self):
         model = pybamm.BaseModel()
         key = pybamm.Symbol("c")

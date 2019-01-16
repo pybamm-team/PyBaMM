@@ -52,9 +52,14 @@ class BaseDiscretisation(object):
         ).evaluate(0, None)
 
         # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_rhs(model.rhs, model.boundary_conditions, y_slices)
+        model.rhs = self.process_dict(model.rhs, y_slices, model.boundary_conditions)
         # Concatenate rhs into a single state vector
         model.concatenated_rhs = self.concatenate(*model.rhs.values())
+
+        # Discretise variables (applying boundary conditions)
+        model.variables = self.process_dict(
+            model.variables, y_slices, model.boundary_conditions
+        )
 
     def get_variable_slices(self, variables):
         """Set the slicing for variables.
@@ -109,32 +114,35 @@ class BaseDiscretisation(object):
 
         return initial_conditions
 
-    def process_rhs(self, rhs, boundary_conditions, y_slices):
-        """Discretise initial conditions.
+    def process_dict(self, var_eqn_dict, y_slices, boundary_conditions):
+        """Discretise a dictionary of {variable: equation}
+        (can be model.rhs or model.variables).
 
         Parameters
         ----------
-        rhs : dict
+        var_eqn_dict : dict
             Equations ({variable: equation} dict) to dicretise
+        y_slices : dict of {variable id: slice}
+            The slices to assign to StateVectors when discretising
         boundary_conditions : dict
             Boundary conditions ({symbol.id: {"left": left bc, "right": right bc}} dict)
-            associated with rhs to dicretise
-        y_slices : dict of {variable id: slice}
-            The slices to assign to StateVectors when discretising a variable
+            associated with var_eqn_dict to dicretise
 
         Returns
         -------
-        rhs : dict
+        var_eqn_dict : dict
             Discretised right-hand side equations
 
         """
         boundary_conditions = {
             key.id: value for key, value in boundary_conditions.items()
         }
-        for variable, equation in rhs.items():
-            rhs[variable] = self.process_symbol(equation, y_slices, boundary_conditions)
+        for variable, equation in var_eqn_dict.items():
+            var_eqn_dict[variable] = self.process_symbol(
+                equation, y_slices, boundary_conditions
+            )
 
-        return rhs
+        return var_eqn_dict
 
     def process_symbol(self, symbol, y_slices=None, boundary_conditions={}):
         """Discretise operators in model equations.
