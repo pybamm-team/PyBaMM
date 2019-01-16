@@ -131,6 +131,53 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             np.zeros_like(mesh["whole cell"].nodes),
         )
 
+    def test_grad_div_shapes_mixed_domain(self):
+        """
+        Test grad and div with Dirichlet boundary conditions (applied by grad on var)
+        """
+        param = pybamm.ParameterValues(
+            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+        )
+        mesh = pybamm.FiniteVolumeMacroMesh(param, 2)
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
+
+        # grad
+        var = pybamm.Variable("var", domain=["negative electrode", "separator"])
+        grad_eqn = pybamm.grad(var)
+        boundary_conditions = {
+            var.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(1)}
+        }
+        y_slices = disc.get_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+
+        combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
+        constant_y = np.ones_like(combined_submesh.nodes)
+        np.testing.assert_array_equal(
+            grad_eqn_disc.evaluate(None, constant_y),
+            np.zeros_like(combined_submesh.edges),
+        )
+
+        # div: test on linear y (should have laplacian zero) so change bcs
+        linear_y = combined_submesh.nodes
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var.id: {
+                "left": pybamm.Scalar(0),
+                "right": pybamm.Scalar(combined_submesh.edges[-1]),
+            }
+        }
+
+        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.evaluate(None, linear_y), np.ones_like(combined_submesh.edges)
+        )
+
+        div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
+        )
+
     def test_grad_convergence_without_bcs(self):
         # Convergence
         param = pybamm.ParameterValues(
