@@ -101,6 +101,9 @@ class ParameterValues(dict):
                     bcs[side]
                 )
 
+        for variable, equation in model.variables.items():
+            model.variables[variable] = self.process_symbol(equation)
+
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
 
@@ -117,7 +120,7 @@ class ParameterValues(dict):
         """
         if isinstance(symbol, pybamm.Parameter):
             value = self.get_parameter_value(symbol)
-            return pybamm.Scalar(value)
+            return pybamm.Scalar(value, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children

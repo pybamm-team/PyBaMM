@@ -148,14 +148,18 @@ class TestParameterValues(unittest.TestCase):
         model.rhs = {var: a * pybamm.grad(var)}
         model.initial_conditions = {var: b}
         model.boundary_conditions = {var: {"left": c, "right": d}}
+        model.variables = {"var": var, "grad_var": pybamm.grad(var), "d_var": d * var}
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
         parameter_values.process_model(model)
+        # rhs
         self.assertTrue(isinstance(model.rhs[var], pybamm.Multiplication))
         self.assertTrue(isinstance(model.rhs[var].children[0], pybamm.Scalar))
         self.assertTrue(isinstance(model.rhs[var].children[1], pybamm.Gradient))
         self.assertEqual(model.rhs[var].children[0].value, 1)
+        # initial_conditions
         self.assertTrue(isinstance(model.initial_conditions[var], pybamm.Scalar))
         self.assertEqual(model.initial_conditions[var].value, 2)
+        # boundary_conditions
         self.assertTrue(
             isinstance(model.boundary_conditions[var]["left"], pybamm.Scalar)
         )
@@ -164,6 +168,17 @@ class TestParameterValues(unittest.TestCase):
             isinstance(model.boundary_conditions[var]["right"], pybamm.Scalar)
         )
         self.assertEqual(model.boundary_conditions[var]["right"].value, 42)
+        # variables
+        self.assertEqual(model.variables["var"].id, var.id)
+        self.assertTrue(isinstance(model.variables["grad_var"], pybamm.Gradient))
+        self.assertTrue(
+            isinstance(model.variables["grad_var"].children[0], pybamm.Variable)
+        )
+        self.assertEqual(model.variables["d_var"].id, (42 * var).id)
+        self.assertTrue(isinstance(model.variables["d_var"].children[0], pybamm.Scalar))
+        self.assertTrue(
+            isinstance(model.variables["d_var"].children[1], pybamm.Variable)
+        )
 
 
 if __name__ == "__main__":

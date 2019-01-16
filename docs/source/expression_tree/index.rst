@@ -4,7 +4,6 @@ Expression Tree
 .. toctree::
 
   symbol
-  domain
   parameter
   variable
   independent_variable
@@ -13,4 +12,3 @@ Expression Tree
   scalar
   matrix
   vector
-

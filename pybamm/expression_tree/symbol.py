@@ -20,13 +20,15 @@ class Symbol(anytree.NodeMixin):
 
     name : str
         name for the node
-
     children : iterable :class:`Symbol`, optional
         children to attach to this node, default to an empty list
+    domain : iterable of str, or str
+        list of domains over which the node is valid (empty list indicates the symbol
+        is valid over all domains)
 
     """
 
-    def __init__(self, name, children=[]):
+    def __init__(self, name, children=[], domain=[]):
         super(Symbol, self).__init__()
         self._name = name
 
@@ -35,10 +37,39 @@ class Symbol(anytree.NodeMixin):
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
 
+        self.domain = domain
+
     @property
     def name(self):
         """name of the node"""
         return self._name
+
+    @property
+    def domain(self):
+        """list of applicable domains
+
+        Returns
+        -------
+            iterable of str
+        """
+        return self._domain
+
+    @domain.setter
+    def domain(self, domain):
+        if isinstance(domain, str):
+            domain = [domain]
+        try:
+            iter(domain)
+        except TypeError:
+            raise TypeError("Domain: argument domain is not iterable")
+        else:
+            for d in domain:
+                assert d in pybamm.KNOWN_DOMAINS, ValueError(
+                    """domain "{}" is not in known domains ({})""".format(
+                        d, str(pybamm.KNOWN_DOMAINS)
+                    )
+                )
+            self._domain = domain
 
     @property
     def id(self):

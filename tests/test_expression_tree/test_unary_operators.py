@@ -10,9 +10,10 @@ import unittest
 
 class TestUnaryOperators(unittest.TestCase):
     def test_unary_operator(self):
-        a = pybamm.Symbol("a")
+        a = pybamm.Symbol("a", domain=["test"])
         un = pybamm.UnaryOperator("unary test", a)
         self.assertEqual(un.children[0].name, a.name)
+        self.assertEqual(un.domain, a.domain)
 
     def test_negation(self):
         a = pybamm.Symbol("a")

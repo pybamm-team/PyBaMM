@@ -19,7 +19,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         var = pybamm.Variable("var", domain=["whole cell"])
         grad_eqn = pybamm.grad(var)
         y_slices = disc.get_variable_slices([var])
-        grad_eqn_disc = disc.process_symbol(grad_eqn, var.domain, y_slices, {})
+        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, {})
 
         constant_y = np.ones_like(mesh["whole cell"].nodes)
         np.testing.assert_array_equal(
@@ -33,9 +33,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         boundary_conditions = {
             N.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(1)}
         }
-        div_eqn_disc = disc.process_symbol(
-            div_eqn, var.domain, y_slices, boundary_conditions
-        )
+        div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
 
         # Linear y should have laplacian zero
         linear_y = mesh["whole cell"].nodes
@@ -70,7 +68,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
             # Discretise and evaluate
             y_slices = disc.get_variable_slices([var])
-            grad_eqn_disc = disc.process_symbol(grad_eqn, var.domain, y_slices, {})
+            grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, {})
             grad_approx = grad_eqn_disc.evaluate(None, y)
 
             # Calculate errors
@@ -108,9 +106,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
             # Discretise and evaluate
             y_slices = disc.get_variable_slices([var])
-            div_eqn_disc = disc.process_symbol(
-                div_eqn, var.domain, y_slices, boundary_conditions
-            )
+            div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
             div_approx = div_eqn_disc.evaluate(None, y)
 
             # Calculate errors
