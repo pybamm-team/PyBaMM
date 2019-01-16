@@ -98,7 +98,7 @@ class Symbol(anytree.NodeMixin):
         new_node, counter = self.relabel_tree(self, 0)
 
         # check that filename ends in .png.
-        filename = "view_tree/" + filename + ".svg"
+        filename = "view_tree/" + filename + ".png"
 
         DotExporter(
             new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)

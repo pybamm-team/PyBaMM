@@ -3,6 +3,7 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
+import os
 import pybamm
 
 import unittest
@@ -135,6 +136,14 @@ class TestSymbol(unittest.TestCase):
             pybamm.grad(a).children[0].__repr__(),
             r"Symbol\(" + hex_regex + ", a, grad\(a\)\)",
         )
+
+    def test_symbol_visualise(self):
+        G = pybamm.Symbol("G")
+        model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        c_e = list(model.rhs.keys())[0]
+        rhs = model.rhs[c_e]
+        rhs.visualise("StefanMaxwell_test")
+        os.remove("view_tree/StefanMaxwell_test.png")
 
 
 if __name__ == "__main__":
