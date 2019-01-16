@@ -11,10 +11,8 @@ class MeshForTesting(pybamm.BaseMesh):
     def __init__(self):
         super().__init__(None)
         self["whole cell"] = self.submeshclass(np.linspace(0, 1, 100))
-        self["negative electrode"] = self.submeshclass(
-            self["whole cell"].nodes[:40])
-        self["positive electrode"] = self.submeshclass(
-            self["whole cell"].nodes[40:])
+        self["negative electrode"] = self.submeshclass(self["whole cell"].nodes[:40])
+        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[40:])
 
 
 class DiscretisationForTesting(pybamm.MatrixVectorDiscretisation):
@@ -59,8 +57,7 @@ class TestDiscretise(unittest.TestCase):
         y_slices = disc.get_variable_slices(variables)
         self.assertEqual(
             y_slices,
-            {c.id: slice(0, 100), d.id: slice(
-                100, 200), jn.id: slice(200, 240)},
+            {c.id: slice(0, 100), d.id: slice(100, 200), jn.id: slice(200, 240)},
         )
         d_true = 4 * mesh["whole cell"].nodes
         jn_true = mesh["negative electrode"].nodes ** 3
@@ -75,36 +72,36 @@ class TestDiscretise(unittest.TestCase):
         # variable
         var = pybamm.Variable("var")
         y_slices = {var.id: slice(53)}
-        var_disc = disc.process_symbol(var, None, y_slices)
+        var_disc = disc.process_symbol(var, y_slices)
         self.assertTrue(isinstance(var_disc, pybamm.StateVector))
         self.assertEqual(var_disc._y_slice, y_slices[var.id])
         # scalar
         scal = pybamm.Scalar(5)
-        scal_disc = disc.process_symbol(scal, None)
+        scal_disc = disc.process_symbol(scal)
         self.assertTrue(isinstance(scal_disc, pybamm.Scalar))
         self.assertEqual(scal_disc.value, scal.value)
 
         # parameter
         par = pybamm.Parameter("par")
-        par_disc = disc.process_symbol(par, None)
+        par_disc = disc.process_symbol(par)
         self.assertTrue(isinstance(par_disc, pybamm.Parameter))
         self.assertEqual(par_disc.name, par.name)
 
         # binary operator
         bin = var + scal
-        bin_disc = disc.process_symbol(bin, None, y_slices)
+        bin_disc = disc.process_symbol(bin, y_slices)
         self.assertTrue(isinstance(bin_disc, pybamm.Addition))
         self.assertTrue(isinstance(bin_disc.children[0], pybamm.StateVector))
         self.assertTrue(isinstance(bin_disc.children[1], pybamm.Scalar))
 
         # non-spatial unary operator
         un1 = -var
-        un1_disc = disc.process_symbol(un1, None, y_slices)
+        un1_disc = disc.process_symbol(un1, y_slices)
         self.assertTrue(isinstance(un1_disc, pybamm.Negate))
         self.assertTrue(isinstance(un1_disc.children[0], pybamm.StateVector))
 
         un2 = abs(scal)
-        un2_disc = disc.process_symbol(un2, None)
+        un2_disc = disc.process_symbol(un2)
         self.assertTrue(isinstance(un2_disc, pybamm.AbsoluteValue))
         self.assertTrue(isinstance(un2_disc.children[0], pybamm.Scalar))
 
@@ -119,21 +116,17 @@ class TestDiscretise(unittest.TestCase):
 
         disc = pybamm.BaseDiscretisation(None)
         y_slices = {var1.id: slice(53), var2.id: slice(53, 59)}
-        exp_disc = disc.process_symbol(expression, None, y_slices)
+        exp_disc = disc.process_symbol(expression, y_slices)
         self.assertTrue(isinstance(exp_disc, pybamm.Division))
         # left side
         self.assertTrue(isinstance(exp_disc.children[0], pybamm.Multiplication))
-        self.assertTrue(isinstance(
-            exp_disc.children[0].children[0], pybamm.Scalar))
-        self.assertTrue(isinstance(
-            exp_disc.children[0].children[1], pybamm.Addition))
+        self.assertTrue(isinstance(exp_disc.children[0].children[0], pybamm.Scalar))
+        self.assertTrue(isinstance(exp_disc.children[0].children[1], pybamm.Addition))
         self.assertTrue(
-            isinstance(
-                exp_disc.children[0].children[1].children[0], pybamm.Parameter)
+            isinstance(exp_disc.children[0].children[1].children[0], pybamm.Parameter)
         )
         self.assertTrue(
-            isinstance(
-                exp_disc.children[0].children[1].children[1], pybamm.StateVector)
+            isinstance(exp_disc.children[0].children[1].children[1], pybamm.StateVector)
         )
         self.assertEqual(
             exp_disc.children[0].children[1].children[1].y_slice, y_slices[var2.id]
@@ -144,18 +137,15 @@ class TestDiscretise(unittest.TestCase):
             isinstance(exp_disc.children[1].children[0], pybamm.Subtraction)
         )
         self.assertTrue(
-            isinstance(
-                exp_disc.children[1].children[0].children[0], pybamm.StateVector)
+            isinstance(exp_disc.children[1].children[0].children[0], pybamm.StateVector)
         )
         self.assertEqual(
             exp_disc.children[1].children[0].children[0].y_slice, y_slices[var1.id]
         )
         self.assertTrue(
-            isinstance(
-                exp_disc.children[1].children[0].children[1], pybamm.Parameter)
+            isinstance(exp_disc.children[1].children[0].children[1], pybamm.Parameter)
         )
-        self.assertTrue(isinstance(
-            exp_disc.children[1].children[1], pybamm.Scalar))
+        self.assertTrue(isinstance(exp_disc.children[1].children[1], pybamm.Scalar))
 
     def test_discretise_spatial_operator(self):
         mesh = MeshForTesting()
@@ -163,15 +153,14 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable("var", domain=["whole cell"])
         y_slices = disc.get_variable_slices([var])
         for eqn in [pybamm.grad(var), pybamm.div(var)]:
-            eqn_disc = disc.process_symbol(eqn, var.domain, y_slices, {})
+            eqn_disc = disc.process_symbol(eqn, y_slices, {})
 
             self.assertTrue(isinstance(eqn_disc, pybamm.Multiplication))
             self.assertTrue(isinstance(eqn_disc.children[0], pybamm.Matrix))
-            self.assertTrue(isinstance(
-                eqn_disc.children[1], pybamm.StateVector))
+            self.assertTrue(isinstance(eqn_disc.children[1], pybamm.StateVector))
 
             y = mesh["whole cell"].nodes ** 2
-            var_disc = disc.process_symbol(var, None, y_slices)
+            var_disc = disc.process_symbol(var, y_slices)
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(
                 eqn_disc.evaluate(None, y), var_disc.evaluate(None, y)
@@ -180,9 +169,9 @@ class TestDiscretise(unittest.TestCase):
     def test_core_NotImplementedErrors(self):
         disc = pybamm.BaseDiscretisation(None)
         with self.assertRaises(NotImplementedError):
-            disc.gradient(None, None, None, {})
+            disc.gradient(None, None, {})
         with self.assertRaises(NotImplementedError):
-            disc.divergence(None, None, None, {})
+            disc.divergence(None, None, {})
         disc = pybamm.MatrixVectorDiscretisation(None)
         with self.assertRaises(NotImplementedError):
             disc.gradient_matrix(None)
@@ -197,20 +186,18 @@ class TestDiscretise(unittest.TestCase):
         disc = DiscretisationForTesting(mesh)
         y0 = disc.process_initial_conditions(initial_conditions)
         np.testing.assert_array_equal(
-            y0, 3 * np.ones_like(mesh["whole cell"].nodes))
+            y0[c].evaluate(0, None), 3 * np.ones_like(mesh["whole cell"].nodes)
+        )
 
         # two equations
         T = pybamm.Variable("T", domain=["negative electrode"])
         initial_conditions = {c: pybamm.Scalar(3), T: pybamm.Scalar(5)}
         y0 = disc.process_initial_conditions(initial_conditions)
         np.testing.assert_array_equal(
-            y0,
-            np.concatenate(
-                [
-                    3 * np.ones_like(mesh["whole cell"].nodes),
-                    5 * np.ones_like(mesh["negative electrode"].nodes),
-                ]
-            ),
+            y0[c].evaluate(0, None), 3 * np.ones_like(mesh["whole cell"].nodes)
+        )
+        np.testing.assert_array_equal(
+            y0[T].evaluate(0, None), 5 * np.ones_like(mesh["negative electrode"].nodes)
         )
 
     def test_process_rhs(self):
@@ -225,8 +212,8 @@ class TestDiscretise(unittest.TestCase):
 
         y = mesh["whole cell"].nodes ** 2
         y_slices = disc.get_variable_slices(rhs.keys())
-        concatenated_rhs = disc.process_rhs(rhs, boundary_conditions, y_slices)
-        np.testing.assert_array_equal(y, concatenated_rhs.evaluate(None, y))
+        processed_rhs = disc.process_rhs(rhs, boundary_conditions, y_slices)
+        np.testing.assert_array_equal(y, processed_rhs[c].evaluate(None, y))
 
         # two equations
         T = pybamm.Variable("T", domain=["negative electrode"])
@@ -238,14 +225,12 @@ class TestDiscretise(unittest.TestCase):
             [mesh["whole cell"].nodes ** 2, mesh["negative electrode"].nodes ** 4]
         )
         y_slices = disc.get_variable_slices(rhs.keys())
-        concatenated_rhs = disc.process_rhs(rhs, boundary_conditions, y_slices)
+        processed_rhs = disc.process_rhs(rhs, boundary_conditions, y_slices)
         np.testing.assert_array_equal(
-            y[y_slices[c.id]], concatenated_rhs.evaluate(None, y)[
-                y_slices[c.id]]
+            y[y_slices[c.id]], processed_rhs[c].evaluate(None, y)
         )
         np.testing.assert_array_equal(
-            y[y_slices[T.id]], concatenated_rhs.evaluate(None, y)[
-                y_slices[T.id]]
+            y[y_slices[T.id]], processed_rhs[T].evaluate(None, y)
         )
 
     def test_process_model(self):
@@ -260,10 +245,9 @@ class TestDiscretise(unittest.TestCase):
         disc = DiscretisationForTesting(mesh)
 
         disc.process_model(model)
-        y0 = model.initial_conditions
-        np.testing.assert_array_equal(
-            y0, 3 * np.ones_like(mesh["whole cell"].nodes))
-        np.testing.assert_array_equal(y0, model.rhs.evaluate(None, y0))
+        y0 = model.concatenated_initial_conditions
+        np.testing.assert_array_equal(y0, 3 * np.ones_like(mesh["whole cell"].nodes))
+        np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
 
         # two equations
         T = pybamm.Variable("T", domain=["negative electrode"])
@@ -274,7 +258,7 @@ class TestDiscretise(unittest.TestCase):
         model = ModelForTesting(rhs, initial_conditions, boundary_conditions)
 
         disc.process_model(model)
-        y0 = model.initial_conditions
+        y0 = model.concatenated_initial_conditions
         np.testing.assert_array_equal(
             y0,
             np.concatenate(
@@ -284,7 +268,7 @@ class TestDiscretise(unittest.TestCase):
                 ]
             ),
         )
-        np.testing.assert_array_equal(y0, model.rhs.evaluate(None, y0))
+        np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
 
     def test_scalar_to_vector(self):
         a = pybamm.Scalar(5)
@@ -299,10 +283,12 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a_vec = disc.scalar_to_vector(a, ["whole cell", "negative electrode"])
-        expected_vector = np.concatenate([
-            5 * np.ones_like(mesh["whole cell"].nodes),
-            5 * np.ones_like(mesh["negative electrode"].nodes),
-        ])
+        expected_vector = np.concatenate(
+            [
+                5 * np.ones_like(mesh["whole cell"].nodes),
+                5 * np.ones_like(mesh["negative electrode"].nodes),
+            ]
+        )
         np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
         a = pybamm.Scalar(5, domain=["whole cell", "negative electrode"])
@@ -312,10 +298,12 @@ class TestDiscretise(unittest.TestCase):
         a = pybamm.Scalar(5, domain=["whole cell"])
         b = pybamm.Scalar(4, domain=["negative electrode"])
         a_vec = disc.scalar_to_vector([a, b])
-        expected_vector = np.concatenate([
-            5 * np.ones_like(mesh["whole cell"].nodes),
-            4 * np.ones_like(mesh["negative electrode"].nodes),
-        ])
+        expected_vector = np.concatenate(
+            [
+                5 * np.ones_like(mesh["whole cell"].nodes),
+                4 * np.ones_like(mesh["negative electrode"].nodes),
+            ]
+        )
         np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
     def test_vector_of_ones(self):
@@ -342,18 +330,20 @@ class TestDiscretise(unittest.TestCase):
         y_slices = disc.get_variable_slices([var])
 
         eqn = pybamm.Concatenation(a, b)
-        eqn_disc = disc.process_symbol(eqn, var.domain, y_slices, {})
+        eqn_disc = disc.process_symbol(eqn, y_slices, {})
         self.assertTrue(isinstance(eqn_disc, pybamm.Vector))
-        expected_vector = np.concatenate([
-            5 * np.ones_like(mesh["negative electrode"].nodes),
-            4 * np.ones_like(mesh["positive electrode"].nodes),
-        ])
+        expected_vector = np.concatenate(
+            [
+                5 * np.ones_like(mesh["negative electrode"].nodes),
+                4 * np.ones_like(mesh["positive electrode"].nodes),
+            ]
+        )
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
 
         # should only be able to concatentate scalars
         eqn = pybamm.Concatenation(a, var)
         with self.assertRaises(NotImplementedError):
-            eqn_disc = disc.process_symbol(eqn, var.domain, y_slices, {})
+            eqn_disc = disc.process_symbol(eqn, y_slices, {})
 
 
 if __name__ == "__main__":
