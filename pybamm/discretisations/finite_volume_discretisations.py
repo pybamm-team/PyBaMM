@@ -34,17 +34,18 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
             )
         # Discretise symbol
         discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
+        domain = symbol.domain
         # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = self.add_ghost_nodes(discretised_symbol, lbc, rbc)
-            domain_ = (
-                [domain[0] + "_left_ghost_cell"]
+            domain = (
+                [domain[0] + "_left ghost cell"]
                 + domain
-                + [domain[-1] + "_right_ghost_cell"]
+                + [domain[-1] + "_right ghost cell"]
             )
-        gradient_matrix = self.gradient_matrix(symbol.domain)
+        gradient_matrix = self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
 
     def add_ghost_nodes(self, discretised_symbol, lbc, rbc):
@@ -52,7 +53,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         Add Dirichlet boundary conditions via ghost nodes.
 
         For a boundary condition
-          y = a at x=0 ("left" boundary),
+          y = a at the left-hand boundary,
         we concatenate a ghost node to the start of the vector y with value
           2*a - y1
         where y1 is the value of the first node.
@@ -106,12 +107,16 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         ----------
         domain : list
             The domain(s) in which to compute the gradient matrix
-        """
-        assert len(domain) == 1
-        # TODO: implement for when there are several domains
 
-        # implementation for a single domain
-        submesh = self.mesh[domain[0]]
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite volume gradient matrix for the domain
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*domain)
+
+        # Create matrix using submesh
         n = submesh.npts
         e = 1 / submesh.d_nodes
         data = np.vstack(
@@ -149,12 +154,16 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         ----------
         domain : list
             The domain(s) in which to compute the divergence matrix
-        """
-        assert len(domain) == 1
-        # TODO: implement for when there are several domains
 
-        # implementation for a single domain
-        submesh = self.mesh[domain[0]]
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite volume divergence matrix for the domain
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*domain)
+
+        # Create matrix using submesh
         n = submesh.npts + 1
         e = 1 / submesh.d_edges
         data = np.vstack(
