@@ -46,9 +46,7 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
 
         N_e = -(epsilon ** b) * pybamm.grad(c_e)
 
-        self.rhs = {
-            c_e: -pybamm.div(N_e) / delta / epsilon + nu * (1 - t_plus) * G
-        }  # / delta / epsilon + nu * (1 - t_plus) * G
+        self.rhs = {c_e: -pybamm.div(N_e) / delta / epsilon + nu * (1 - t_plus) * G}
         self.initial_conditions = {c_e: ce0}
         self.boundary_conditions = {
             N_e: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
