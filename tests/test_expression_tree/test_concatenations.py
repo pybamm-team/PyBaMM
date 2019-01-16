@@ -20,6 +20,23 @@ class TestConcatenations(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             conc.evaluate(None, 3)
 
+    def test_concatenation_domains(self):
+        a = pybamm.Symbol("a", domain=["negative electrode"])
+        b = pybamm.Symbol("b", domain=["separator", "positive electrode"])
+        c = pybamm.Symbol("c", domain=["test"])
+        conc = pybamm.Concatenation(a, b, c)
+        self.assertEqual(
+            conc.domain,
+            ["negative electrode", "separator", "positive electrode", "test"],
+        )
+        # Whole cell concatenations should simplify
+        conc = pybamm.Concatenation(a, b)
+        self.assertEqual(conc.domain, ["whole cell"])
+        # Can't concatenate nodes with overlapping domains
+        d = pybamm.Symbol("d", domain=["separator"])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.Concatenation(a, b, d)
+
     def test_numpy_concatenation_vectors(self):
         # with entries
         y = np.linspace(0, 1, 15)

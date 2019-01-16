@@ -16,6 +16,23 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(bin.children[0].name, a.name)
         self.assertEqual(bin.children[1].name, b.name)
 
+    def test_binary_operator_domains(self):
+        # same domain
+        a = pybamm.Symbol("a", domain=["negative electrode"])
+        b = pybamm.Symbol("b", domain=["negative electrode"])
+        bin1 = pybamm.BinaryOperator("binary test", a, b)
+        self.assertEqual(bin1.domain, ["negative electrode"])
+        # one empty domain
+        c = pybamm.Symbol("c", domain=[])
+        bin2 = pybamm.BinaryOperator("binary test", a, c)
+        self.assertEqual(bin2.domain, ["negative electrode"])
+        bin3 = pybamm.BinaryOperator("binary test", c, b)
+        self.assertEqual(bin3.domain, ["negative electrode"])
+        # mismatched domains
+        d = pybamm.Symbol("d", domain=["positive electrode"])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.BinaryOperator("binary test", a, d)
+
     def test_addition(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

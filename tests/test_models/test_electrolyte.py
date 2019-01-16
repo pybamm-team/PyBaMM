@@ -58,9 +58,9 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         # print("model initial conditions: ", model.initial_conditions)
         # print("model boundary conditions: ", model.boundary_conditions)
 
-        y0 = model.initial_conditions
+        y0 = model.concatenated_initial_conditions
         np.testing.assert_array_equal(y0, np.ones_like(mesh["whole cell"].nodes))
-        print("model rhs is: ", model.rhs.evaluate(None, y0))
+        print("model rhs is: ", model.concatenated_rhs.evaluate(None, y0))
 
         # Solve
         # solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
