@@ -52,19 +52,10 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         disc = pybamm.FiniteVolumeDiscretisation(mesh)
         disc.process_model(model)
 
-        # c_e, rhs = model.rhs.items()
-        # print("\nmodel rhs: ", model.rhs)
-        # print("model rhs type: ", type(model.rhs))
-        # print("model initial conditions: ", model.initial_conditions)
-        # print("model boundary conditions: ", model.boundary_conditions)
-
         y0 = model.concatenated_initial_conditions
         np.testing.assert_array_equal(y0, np.ones_like(mesh["whole cell"].nodes))
-        print("model rhs is: ", model.concatenated_rhs.evaluate(None, y0))
 
         # Solve
-        # solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
-        # t_eval = mesh["time"]
-        # print("This is the solver: ", solver)
-        # print("This is t_eval: ", t_eval)
-        # solver.solve(model, t_eval)
+        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+        t_eval = mesh["time"]
+        solver.solve(model, t_eval)
