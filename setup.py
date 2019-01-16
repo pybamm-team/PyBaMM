@@ -19,6 +19,7 @@ setup(
         "numpy>=1.13",
         "scipy>=1.0",
         "pandas>=0.23",
+        "anytree>=2.4.3",
         # Note: Matplotlib is loaded for debug plots, but to ensure pints runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
@@ -26,7 +27,10 @@ setup(
         "matplotlib>=2.0",
     ],
     extras_require={
-        "docs": ["sphinx>=1.5"],  # For doc generation
+        "docs": [
+            "sphinx>=1.5",
+            "guzzle-sphinx-theme",
+        ],  # For doc generation
         "dev": [
             "flake8>=3",  # For code style checking
             "jupyter",  # For documentation and testing

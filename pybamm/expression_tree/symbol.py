@@ -61,12 +61,23 @@ class Symbol(anytree.NodeMixin):
         except TypeError:
             raise TypeError("Domain: argument domain is not iterable")
         else:
-            for d in domain:
-                assert d in pybamm.KNOWN_DOMAINS, ValueError(
+            # check that domains are all known domains
+            try:
+                indicies = [pybamm.KNOWN_DOMAINS.index(d) for d in domain]
+            except ValueError:
+                raise ValueError(
                     """domain "{}" is not in known domains ({})""".format(
-                        d, str(pybamm.KNOWN_DOMAINS)
-                    )
+                        domain, str(pybamm.KNOWN_DOMAINS))
                 )
+
+            # check that domains are sorted correctly
+            is_sorted = all(a <= b for a, b in zip(indicies, indicies[1:]))
+            if not is_sorted:
+                raise ValueError(
+                    """domain "{}" is not sorted according to known domains ({})"""
+                    .format(domain, str(pybamm.KNOWN_DOMAINS))
+                )
+
             self._domain = domain
 
     @property
@@ -79,7 +90,8 @@ class Symbol(anytree.NodeMixin):
         which would then mess with loop-checking in the anytree module
         """
         return hash(
-            (self.__class__, self.name) + tuple([child.id for child in self.children])
+            (self.__class__, self.name) +
+            tuple([child.id for child in self.children])
         )
 
     def render(self):

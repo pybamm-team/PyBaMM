@@ -298,16 +298,16 @@ class TestDiscretise(unittest.TestCase):
         a_vec = disc.scalar_to_vector(a)
         np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
-        a_vec = disc.scalar_to_vector(a, ["whole cell", "negative electrode"])
+        a_vec = disc.scalar_to_vector(a, ["negative electrode", "whole cell"])
         expected_vector = np.concatenate(
             [
-                5 * np.ones_like(mesh["whole cell"].nodes),
                 5 * np.ones_like(mesh["negative electrode"].nodes),
+                5 * np.ones_like(mesh["whole cell"].nodes),
             ]
         )
         np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
-        a = pybamm.Scalar(5, domain=["whole cell", "negative electrode"])
+        a = pybamm.Scalar(5, domain=["negative electrode", "whole cell"])
         a_vec = disc.scalar_to_vector(a)
         np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
 
