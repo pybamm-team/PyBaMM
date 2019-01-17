@@ -42,7 +42,7 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
 
         electrolyte_domain = ["whole cell"]
 
-        c_e = pybamm.Variable("c_e", domain=electrolyte_domain)
+        c_e = pybamm.Variable("c_e", electrolyte_domain)
 
         N_e = -(epsilon ** b) * pybamm.grad(c_e)
 
