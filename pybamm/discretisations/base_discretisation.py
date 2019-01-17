@@ -23,6 +23,7 @@ class BaseDiscretisation(object):
 
     def __init__(self, mesh):
         self._mesh = mesh
+        self._domain_npts = {dom: self.mesh[dom].npts for dom in domain}
 
     @property
     def mesh(self):
@@ -188,19 +189,12 @@ class BaseDiscretisation(object):
             return pybamm.StateVector(y_slices[symbol.id])
 
         elif isinstance(symbol, pybamm.Concatenation):
-            # replace any constant sub-expressions  with a pybamm.Vector
-            new_children = [
-                self.process_node_for_concantate(child) for child in symbol.children
-            ]
+            new_symbol = pybamm.NumpyDomainConcatenation(symbol.children, mesh)
 
-            # if all the children are now vectors, replace by a single Vector, otherwise
-            # replace with a NumpyConcatenation
-            if all([isinstance(child, pybamm.Vector) for child in new_children]):
-                return pybamm.Vector(
-                    np.concatenate([child.evaluate() for child in new_children])
-                )
-            else:
-                return pybamm.NumpyConcatenation(new_children)
+            if new_symbol.is_constant():
+                return pybamm.Vector(new_symbol.evalute())
+
+            return new_symbol
 
         else:
             # hack to copy the symbol but without a parent
@@ -242,41 +236,6 @@ class BaseDiscretisation(object):
 
         """
         raise NotImplementedError
-
-    def process_node_for_concantate(self, node):
-        """
-        if the node is constant in time, then this function replaces it with a single
-        Vector node with the correct length vector (according to its domain)
-
-        if the node is not constant in time, it is returned unchanged
-
-        Parameters
-        ----------
-        node: derived from :class:`Symbol`
-            the sub-expression to process
-
-        """
-        if not node.is_constant():
-            return node
-
-        # node must be constant
-        value = node.evaluate()
-
-        # correct size of vector should be number of points in the domains
-        subvector_size = sum([self.mesh[dom].npts for dom in node.domain])
-
-        # check if its a scalar, if so convert to vector
-        if isinstance(value, numbers.Number):
-            value = np.full(subvector_size, value)
-
-        # check it is the right size
-        if value.size != subvector_size:
-            raise ValueError(
-                "Error: expression evaluated to a vector of incorrect length"
-            )
-
-        # convert to a Vector node
-        return pybamm.Vector(value)
 
     def vector_of_ones(self, domain):
         """

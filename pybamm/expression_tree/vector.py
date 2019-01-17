@@ -18,31 +18,36 @@ class Vector(pybamm.Array):
         the array associated with the node
     name : str, optional
         the name of the node
+    domain : iterable of str, optional
+        list of domains the parameter is valid over, defaults to empty list
 
     """
 
-    def __init__(self, entries, name=None):
-        super().__init__(entries, name=name)
+    def __init__(self, entries, name=None, domain=[]):
+        super().__init__(entries, name=name, domain=domain)
 
 
 class StateVector(pybamm.Symbol):
     """
     node in the expression tree that holds a slice to read from an external vector type
 
-    Arguments:
+    Parameters
+    ----------
 
-    ``y_slice``
+    y_slice: slice
         the slice of an external y to read
-    ``name``
+    name: str, optional
         the name of the node
+    domain : iterable of str, optional
+        list of domains the parameter is valid over, defaults to empty list
 
     *Extends:* :class:`Array`
     """
 
-    def __init__(self, y_slice, name=None):
+    def __init__(self, y_slice, name=None, domain=[]):
         if name is None:
             name = str(y_slice)
-        super().__init__(name=name)
+        super().__init__(name=name, domain=domain)
         self._y_slice = y_slice
 
     @property
