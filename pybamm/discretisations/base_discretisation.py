@@ -188,14 +188,19 @@ class BaseDiscretisation(object):
             return pybamm.StateVector(y_slices[symbol.id])
 
         elif isinstance(symbol, pybamm.Concatenation):
-            # only know how to discretise a concatenation of scalars...
-            all_scalars = all(
-                isinstance(child, pybamm.Scalar) for child in symbol.children
-            )
-            if all_scalars:
-                return self.scalar_to_vector(symbol.children)
+            # replace any constant sub-expressions  with a pybamm.Vector
+            new_children = [
+                self.process_node_for_concantate(child) for child in symbol.children
+            ]
+
+            # if all the children are now vectors, replace by a single Vector, otherwise
+            # replace with a NumpyConcatenation
+            if all([isinstance(child, pybamm.Vector) for child in new_children]):
+                return pybamm.Vector(
+                    np.concatenate([child.evaluate() for child in new_children])
+                )
             else:
-                raise NotImplementedError
+                return pybamm.NumpyConcatenation(new_children)
 
         else:
             # hack to copy the symbol but without a parent
@@ -238,48 +243,40 @@ class BaseDiscretisation(object):
         """
         raise NotImplementedError
 
-    def scalar_to_vector(self, scalars, domain=None):
+    def process_node_for_concantate(self, node):
         """
-        Convert a :class:`Scalar` (or a list of :class:`Scalar`) to a uniform
-        Vector of size given by mesh. The size of the Vector is based on the
-        domains associated with the Scalar, and the size of the mesh.
+        if the node is constant in time, then this function replaces it with a single
+        Vector node with the correct length vector (according to its domain)
+
+        if the node is not constant in time, it is returned unchanged
 
         Parameters
         ----------
-        scalar: :class:`Scalar` or list of :class:`Scalar`
-            The scalar values to assign to the vector. A list can be given for
-            different values for different domains
-
-        domain : list, optional
-            If given, overrides the domains given in scalar.domain
+        node: derived from :class:`Symbol`
+            the sub-expression to process
 
         """
-        # convert scalar to list if a single one
-        if isinstance(scalars, pybamm.Scalar):
-            scalars = [scalars]
+        if not node.is_constant():
+            return node
 
-        # work out total size of vector
-        subvector_sizes = []
-        for s in scalars:
-            if domain is None:
-                this_domain = s.domain
-            else:
-                this_domain = domain
-            subvector_size = sum([self.mesh[dom].npts for dom in this_domain])
-            subvector_sizes.append(subvector_size)
+        # node must be constant
+        value = node.evaluate()
 
-        # allocate vector
-        vector = np.empty(sum(subvector_sizes), dtype=float)
+        # correct size of vector should be number of points in the domains
+        subvector_size = sum([self.mesh[dom].npts for dom in node.domain])
 
-        # assign slices of vector associated with concatenated scalars
-        start = 0
-        end = 0
-        for s, size in zip(scalars, subvector_sizes):
-            end += size
-            vector[start:end] = s.value
-            start = end
+        # check if its a scalar, if so convert to vector
+        if isinstance(value, numbers.Number):
+            value = np.full(subvector_size, value)
 
-        return pybamm.Vector(vector)
+        # check it is the right size
+        if value.size != subvector_size:
+            raise ValueError(
+                "Error: expression evaluated to a vector of incorrect length"
+            )
+
+        # convert to a Vector node
+        return pybamm.Vector(value)
 
     def vector_of_ones(self, domain):
         """
