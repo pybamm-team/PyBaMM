@@ -50,6 +50,52 @@ class TestFiniteVolumeMesh(unittest.TestCase):
         self.assertEqual(len(mesh["positive electrode"].edges), mesh.pos_mesh_points)
         self.assertEqual(len(mesh["whole cell"].edges), mesh.total_mesh_points)
 
+    def test_combine_submeshes(self):
+        param = pybamm.ParameterValues(
+            base_parameters={"Ln": 0.01, "Ls": 0.5, "Lp": 0.12}
+        )
+        mesh = pybamm.FiniteVolumeMacroMesh(param, 50)
+        submesh = mesh.combine_submeshes("negative electrode", "separator")
+        self.assertEqual(submesh.edges[0], 0)
+        self.assertEqual(submesh.edges[-1], mesh["separator"].edges[-1])
+        self.assertAlmostEqual(
+            np.linalg.norm(
+                submesh.nodes
+                - np.concatenate(
+                    [mesh["negative electrode"].nodes, mesh["separator"].nodes]
+                )
+            ),
+            0,
+        )
+        with self.assertRaises(pybamm.DomainError):
+            submesh = mesh.combine_submeshes("negative electrode", "positive electrode")
+
+    def test_ghost_cells(self):
+        param = pybamm.ParameterValues(
+            base_parameters={"Ln": 0.01, "Ls": 0.5, "Lp": 0.12}
+        )
+        mesh = pybamm.FiniteVolumeMacroMesh(param, 50)
+        np.testing.assert_array_equal(
+            mesh["negative electrode_left ghost cell"].edges,
+            mesh["whole cell_left ghost cell"].edges,
+        )
+        np.testing.assert_array_equal(
+            mesh["negative electrode_left ghost cell"].edges[1],
+            mesh["negative electrode"].edges[0],
+        )
+        np.testing.assert_array_equal(
+            mesh["negative electrode_left ghost cell"].edges[0],
+            -mesh["negative electrode"].edges[1],
+        )
+        np.testing.assert_array_equal(
+            mesh["positive electrode_right ghost cell"].edges,
+            mesh["whole cell_right ghost cell"].edges,
+        )
+        np.testing.assert_array_equal(
+            mesh["positive electrode_right ghost cell"].edges[0],
+            mesh["positive electrode"].edges[-1],
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

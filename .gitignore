@@ -46,3 +46,9 @@ pyproject.toml
 
 # virtual enviroment
 venv/
+bin/
+etc/
+lib/
+lib64
+share/
+pyvenv.cfg

@@ -15,19 +15,23 @@ class MeshForTesting(pybamm.BaseMesh):
         self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[40:])
 
 
-class DiscretisationForTesting(pybamm.MatrixVectorDiscretisation):
-    """Interpolating operators."""
+class DiscretisationForTesting(pybamm.BaseDiscretisation):
+    """Identity operators, no boundary conditions."""
 
     def __init__(self, mesh):
         super().__init__(mesh)
 
-    def gradient_matrix(self, domain):
-        n = self.mesh[domain[0]].npts
-        return pybamm.Matrix(np.eye(n))
+    def gradient(self, symbol, y_slices, boundary_conditions):
+        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
+        n = self.mesh[symbol.domain[0]].npts
+        gradient_matrix = pybamm.Matrix(np.eye(n))
+        return gradient_matrix * discretised_symbol
 
-    def divergence_matrix(self, domain):
-        n = self.mesh[domain[0]].npts
-        return pybamm.Matrix(np.eye(n))
+    def divergence(self, symbol, y_slices, boundary_conditions):
+        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
+        n = self.mesh[symbol.domain[0]].npts
+        divergence_matrix = pybamm.Matrix(np.eye(n))
+        return divergence_matrix * discretised_symbol
 
 
 class TestDiscretise(unittest.TestCase):
@@ -165,18 +169,13 @@ class TestDiscretise(unittest.TestCase):
             disc.gradient(None, None, {})
         with self.assertRaises(NotImplementedError):
             disc.divergence(None, None, {})
-        disc = pybamm.MatrixVectorDiscretisation(None)
-        with self.assertRaises(NotImplementedError):
-            disc.gradient_matrix(None)
-        with self.assertRaises(NotImplementedError):
-            disc.divergence_matrix(None)
 
     def test_process_initial_conditions(self):
         # one equation
         c = pybamm.Variable("c", domain=["whole cell"])
         initial_conditions = {c: pybamm.Scalar(3)}
         mesh = MeshForTesting()
-        disc = DiscretisationForTesting(mesh)
+        disc = pybamm.BaseDiscretisation(mesh)
         y0 = disc.process_initial_conditions(initial_conditions)
         np.testing.assert_array_equal(
             y0[c].evaluate(0, None), 3 * np.ones_like(mesh["whole cell"].nodes)
