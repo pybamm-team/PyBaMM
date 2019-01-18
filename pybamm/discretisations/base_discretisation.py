@@ -23,7 +23,6 @@ class BaseDiscretisation(object):
 
     def __init__(self, mesh):
         self._mesh = mesh
-        self._domain_npts = {dom: self.mesh[dom].npts for dom in domain}
 
     @property
     def mesh(self):
@@ -189,7 +188,7 @@ class BaseDiscretisation(object):
             return pybamm.StateVector(y_slices[symbol.id])
 
         elif isinstance(symbol, pybamm.Concatenation):
-            new_symbol = pybamm.NumpyDomainConcatenation(symbol.children, mesh)
+            new_symbol = pybamm.NumpyDomainConcatenation(symbol.children, self.mesh)
 
             if new_symbol.is_constant():
                 return pybamm.Vector(new_symbol.evalute())

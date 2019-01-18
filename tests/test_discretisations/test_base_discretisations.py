@@ -285,42 +285,6 @@ class TestDiscretise(unittest.TestCase):
         )
         np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
 
-    def test_scalar_to_vector(self):
-        a = pybamm.Scalar(5)
-        mesh = MeshForTesting()
-        disc = pybamm.BaseDiscretisation(mesh)
-        a_vec = disc.scalar_to_vector(a, ["whole cell"])
-        expected_vector = 5 * np.ones_like(mesh["whole cell"].nodes)
-        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
-
-        a = pybamm.Scalar(5, domain=["whole cell"])
-        a_vec = disc.scalar_to_vector(a)
-        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
-
-        a_vec = disc.scalar_to_vector(a, ["negative electrode", "whole cell"])
-        expected_vector = np.concatenate(
-            [
-                5 * np.ones_like(mesh["negative electrode"].nodes),
-                5 * np.ones_like(mesh["whole cell"].nodes),
-            ]
-        )
-        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
-
-        a = pybamm.Scalar(5, domain=["negative electrode", "whole cell"])
-        a_vec = disc.scalar_to_vector(a)
-        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
-
-        a = pybamm.Scalar(5, domain=["whole cell"])
-        b = pybamm.Scalar(4, domain=["negative electrode"])
-        a_vec = disc.scalar_to_vector([a, b])
-        expected_vector = np.concatenate(
-            [
-                5 * np.ones_like(mesh["whole cell"].nodes),
-                4 * np.ones_like(mesh["negative electrode"].nodes),
-            ]
-        )
-        np.testing.assert_allclose(a_vec.evaluate(), expected_vector)
-
     def test_vector_of_ones(self):
         mesh = MeshForTesting()
         disc = pybamm.BaseDiscretisation(mesh)
