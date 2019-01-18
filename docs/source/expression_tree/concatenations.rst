@@ -7,7 +7,7 @@ Concatenations
 .. autoclass:: pybamm.NumpyConcatenation
   :members:
 
-.. autoclass:: pybamm.NumpyDomainConcatenation
+.. autoclass:: pybamm.DomainConcatenation
   :members:
 
 .

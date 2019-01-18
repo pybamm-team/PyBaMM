@@ -97,7 +97,7 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
 
         # concatenate them the "wrong" way round to check they get reordered correctly
-        conc = pybamm.NumpyDomainConcatenation([b, a], mesh)
+        conc = pybamm.DomainConcatenation([b, a], mesh)
         np.testing.assert_array_equal(
             conc.evaluate(),
             np.concatenate([
@@ -109,7 +109,7 @@ class TestConcatenations(unittest.TestCase):
         # vector child of wrong size will throw
         b = pybamm.Vector(np.full(mesh[b_dom[0]].npts - 5, 1), domain=b_dom)
         with self.assertRaises(ValueError):
-            conc = pybamm.NumpyDomainConcatenation([b, a], mesh)
+            conc = pybamm.DomainConcatenation([b, a], mesh)
 
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
@@ -121,7 +121,7 @@ class TestConcatenations(unittest.TestCase):
             domain=b_dom
         )
 
-        conc = pybamm.NumpyDomainConcatenation([a, b], mesh)
+        conc = pybamm.DomainConcatenation([a, b], mesh)
         np.testing.assert_array_equal(
             conc.evaluate(),
             np.concatenate([

@@ -78,7 +78,7 @@ class NumpyConcatenation(Concatenation):
         return np.concatenate([child.evaluate(t, y) for child in self.children])
 
 
-class NumpyDomainConcatenation(Concatenation):
+class DomainConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of symbols.
 
     It is assumed that each child has a domain, and the final concatenated vector will

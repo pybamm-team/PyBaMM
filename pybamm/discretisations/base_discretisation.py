@@ -192,7 +192,7 @@ class BaseDiscretisation(object):
                 self.process_symbol(child, y_slices, boundary_conditions)
                 for child in symbol.children
             ]
-            new_symbol = pybamm.NumpyDomainConcatenation(new_children, self.mesh)
+            new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
 
             if new_symbol.is_constant():
                 return pybamm.Vector(new_symbol.evaluate())
