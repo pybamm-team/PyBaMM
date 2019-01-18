@@ -121,16 +121,16 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Parameter("a")
         self.assertTrue(a.is_constant())
 
-        a = pybamm.Scalar(1)*pybamm.Variable("a")
+        a = pybamm.Scalar(1) * pybamm.Variable("a")
         self.assertFalse(a.is_constant())
 
-        a = pybamm.Scalar(1)*pybamm.Parameter("a")
+        a = pybamm.Scalar(1) * pybamm.Parameter("a")
         self.assertTrue(a.is_constant())
 
-        a = pybamm.Scalar(1)*pybamm.StateVector(slice(10))
+        a = pybamm.Scalar(1) * pybamm.StateVector(slice(10))
         self.assertFalse(a.is_constant())
 
-        a = pybamm.Scalar(1)*pybamm.Vector(np.zeros(10))
+        a = pybamm.Scalar(1) * pybamm.Vector(np.zeros(10))
         self.assertTrue(a.is_constant())
 
     def test_symbol_repr(self):

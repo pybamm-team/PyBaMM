@@ -142,8 +142,8 @@ class NumpyDomainConcatenation(Concatenation):
 
     def process_node_for_concantate(self, node, mesh):
         """
-        the node is assumed to be constant in time. this function replaces it with a single
-        Vector node with the correct length vector (according to its domain)
+        the node is assumed to be constant in time. this function replaces it with a
+        single Vector node with the correct length vector (according to its domain)
 
         Parameters
         ----------

@@ -107,7 +107,7 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # vector child of wrong size will throw
-        b = pybamm.Vector(np.full(mesh[b_dom[0]].npts-5, 1), domain=b_dom)
+        b = pybamm.Vector(np.full(mesh[b_dom[0]].npts - 5, 1), domain=b_dom)
         with self.assertRaises(ValueError):
             conc = pybamm.NumpyDomainConcatenation([b, a], mesh)
 
