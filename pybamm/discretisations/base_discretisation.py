@@ -188,10 +188,14 @@ class BaseDiscretisation(object):
             return pybamm.StateVector(y_slices[symbol.id])
 
         elif isinstance(symbol, pybamm.Concatenation):
-            new_symbol = pybamm.NumpyDomainConcatenation(symbol.children, self.mesh)
+            new_children = [
+                self.process_symbol(child, y_slices, boundary_conditions)
+                for child in symbol.children
+            ]
+            new_symbol = pybamm.NumpyDomainConcatenation(new_children, self.mesh)
 
             if new_symbol.is_constant():
-                return pybamm.Vector(new_symbol.evalute())
+                return pybamm.Vector(new_symbol.evaluate())
 
             return new_symbol
 

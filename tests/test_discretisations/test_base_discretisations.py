@@ -319,11 +319,6 @@ class TestDiscretise(unittest.TestCase):
         )
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
 
-        # should only be able to concatentate scalars
-        eqn = pybamm.Concatenation(a, var)
-        with self.assertRaises(NotImplementedError):
-            eqn_disc = disc.process_symbol(eqn, y_slices, {})
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

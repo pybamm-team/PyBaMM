@@ -101,6 +101,9 @@ class NumpyDomainConcatenation(Concatenation):
     def __init__(self, children, mesh):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
+
+        children = list(children)
+
         for i, child in enumerate(children):
             if child.is_constant():
                 children[i] = self.process_node_for_concantate(child, mesh)
