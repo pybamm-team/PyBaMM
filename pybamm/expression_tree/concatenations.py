@@ -106,7 +106,7 @@ class DomainConcatenation(Concatenation):
 
         for i, child in enumerate(children):
             if child.is_constant():
-                children[i] = self.process_node_for_concantate(child, mesh)
+                children[i] = self.process_node_for_concatenate(child, mesh)
 
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="numpy concatenation")
