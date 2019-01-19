@@ -6,6 +6,15 @@ import numpy as np
 import unittest
 
 
+class MeshForTesting(pybamm.BaseMesh):
+    def __init__(self):
+        super().__init__(None)
+        self["whole cell"] = self.submeshclass(np.linspace(0, 1, 100))
+        self["negative electrode"] = self.submeshclass(self["whole cell"].nodes[:30])
+        self["separator"] = self.submeshclass(self["whole cell"].nodes[30:40])
+        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[40:])
+
+
 class TestConcatenations(unittest.TestCase):
     def test_base_concatenation(self):
         a = pybamm.Symbol("a")
@@ -79,6 +88,51 @@ class TestConcatenations(unittest.TestCase):
         np.testing.assert_array_equal(
             conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
         )
+
+    def test_numpy_domain_concatenation(self):
+        mesh = MeshForTesting()
+        a_dom = ["negative electrode"]
+        b_dom = ["positive electrode"]
+        a = pybamm.Scalar(2, domain=a_dom)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
+
+        # concatenate them the "wrong" way round to check they get reordered correctly
+        conc = pybamm.DomainConcatenation([b, a], mesh)
+        np.testing.assert_array_equal(
+            conc.evaluate(),
+            np.concatenate([
+                np.full(mesh[a_dom[0]].npts, 2),
+                np.full(mesh[b_dom[0]].npts, 1)
+            ])
+        )
+
+        # vector child of wrong size will throw
+        b = pybamm.Vector(np.full(mesh[b_dom[0]].npts - 5, 1), domain=b_dom)
+        with self.assertRaises(ValueError):
+            conc = pybamm.DomainConcatenation([b, a], mesh)
+
+        # check the reordering in case a child vector has to be split up
+        a_dom = ["separator"]
+        b_dom = ["negative electrode", "positive electrode"]
+        a = pybamm.Scalar(2, domain=a_dom)
+        b = pybamm.Vector(
+            np.concatenate([np.full(mesh[b_dom[0]].npts, 1),
+                            np.full(mesh[b_dom[1]].npts, 3)]),
+            domain=b_dom
+        )
+
+        conc = pybamm.DomainConcatenation([a, b], mesh)
+        np.testing.assert_array_equal(
+            conc.evaluate(),
+            np.concatenate([
+                np.full(mesh[b_dom[0]].npts, 1),
+                np.full(mesh[a_dom[0]].npts, 2),
+                np.full(mesh[b_dom[1]].npts, 3),
+            ])
+        )
+
+        # check special case: final domain is still ["whole cell"]
+        self.assertEqual(conc.domain, ["whole cell"])
 
 
 if __name__ == "__main__":

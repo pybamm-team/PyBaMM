@@ -284,3 +284,21 @@ class Symbol(anytree.NodeMixin):
                 self, type(self)
             )
         )
+
+    def is_constant(self):
+        """returns true if evaluating the expression is not dependent on `t` or `y`
+
+        See Also
+        --------
+        evaluate : evaluate the expression
+
+        """
+
+        # if any of the nodes are instances of any of these types, then the whole
+        # expression depends on either t or y
+        search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
+
+        # do the search, return true if no relevent nodes are found
+        return all([
+            not isinstance(n, search_types) for n in self.pre_order()
+        ])

@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import unittest
+import numpy as np
 
 
 class TestSymbol(unittest.TestCase):
@@ -112,6 +113,25 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Symbol("a")
         with self.assertRaises(NotImplementedError):
             a.evaluate()
+
+    def test_symbol_is_constant(self):
+        a = pybamm.Variable("a")
+        self.assertFalse(a.is_constant())
+
+        a = pybamm.Parameter("a")
+        self.assertTrue(a.is_constant())
+
+        a = pybamm.Scalar(1) * pybamm.Variable("a")
+        self.assertFalse(a.is_constant())
+
+        a = pybamm.Scalar(1) * pybamm.Parameter("a")
+        self.assertTrue(a.is_constant())
+
+        a = pybamm.Scalar(1) * pybamm.StateVector(slice(10))
+        self.assertFalse(a.is_constant())
+
+        a = pybamm.Scalar(1) * pybamm.Vector(np.zeros(10))
+        self.assertTrue(a.is_constant())
 
     def test_symbol_repr(self):
         """

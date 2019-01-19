@@ -12,3 +12,4 @@ Expression Tree
   scalar
   matrix
   vector
+  concatenations

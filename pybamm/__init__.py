@@ -58,7 +58,11 @@ from .expression_tree.binary_operators import (
     Multiplication,
     Division,
 )
-from .expression_tree.concatenations import Concatenation, NumpyConcatenation
+from .expression_tree.concatenations import (
+    Concatenation,
+    NumpyConcatenation,
+    DomainConcatenation,
+)
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
 from .expression_tree.parameter import Parameter

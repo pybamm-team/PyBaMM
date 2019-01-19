@@ -10,19 +10,23 @@ class Array(pybamm.Symbol):
     """node in the expression tree that holds an tensor type variable
     (e.g. :class:`numpy.array`)
 
-    Arguements:
-    ``entries``
+    Parameters
+    ----------
+
+    entries : numpy.array
         the array associated with the node
-    ``name``
-        the name of the node. Optional, defaults to ``str(entries)`` if not provided
+    name : str, optional
+        the name of the node
+    domain : iterable of str, optional
+        list of domains the parameter is valid over, defaults to empty list
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, entries, name=None):
+    def __init__(self, entries, name=None, domain=[]):
         if name is None:
             name = str(entries)
-        super().__init__(name)
+        super().__init__(name, domain=domain)
         self._entries = entries
 
     @property
