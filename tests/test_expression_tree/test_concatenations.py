@@ -131,6 +131,9 @@ class TestConcatenations(unittest.TestCase):
             ])
         )
 
+        # check special case: final domain is still ["whole cell"]
+        self.assertEqual(conc.domain, ["whole cell"])
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

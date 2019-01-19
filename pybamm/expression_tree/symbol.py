@@ -296,7 +296,7 @@ class Symbol(anytree.NodeMixin):
 
         # if any of the nodes are instances of any of these types, then the whole
         # expression depends on either t or y
-        search_types = (pybamm.Variable, pybamm.StateVector)
+        search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
 
         # do the search, return true if no relevent nodes are found
         return all([

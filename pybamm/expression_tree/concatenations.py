@@ -111,7 +111,9 @@ class DomainConcatenation(Concatenation):
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="numpy concatenation")
 
-        # deal with "whole cell" special case
+        # deal with "whole cell" special case.
+        # need to split the "whole cell" domain up when we calculate slices, then
+        # recombine again afterwards (see below)
         if self.domain == ["whole cell"]:
             self.domain = ["negative electrode", "separator", "positive electrode"]
 
@@ -122,8 +124,8 @@ class DomainConcatenation(Concatenation):
         self._size = self._slices[self.domain[-1]].stop
 
         # deal with "whole cell" special case
-        if self.domain == ["whole cell"]:
-            self.domain = ["negative electrode", "separator", "positive electrode"]
+        if self.domain == ["negative electrode", "separator", "positive electrode"]:
+            self.domain = ["whole cell"]
 
         # create disc of domain => slice for each child
         self._children_slices = []
