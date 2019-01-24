@@ -33,33 +33,33 @@ class TestSymbol(unittest.TestCase):
         b = pybamm.Symbol("b")
 
         # unary
-        self.assertTrue(isinstance(-a, pybamm.Negate))
-        self.assertTrue(isinstance(abs(a), pybamm.AbsoluteValue))
+        self.assertIsInstance(-a, pybamm.Negate)
+        self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
 
         # binary - two symbols
-        self.assertTrue(isinstance(a + b, pybamm.Addition))
-        self.assertTrue(isinstance(a - b, pybamm.Subtraction))
-        self.assertTrue(isinstance(a * b, pybamm.Multiplication))
-        self.assertTrue(isinstance(a / b, pybamm.Division))
-        self.assertTrue(isinstance(a ** b, pybamm.Power))
+        self.assertIsInstance(a + b, pybamm.Addition)
+        self.assertIsInstance(a - b, pybamm.Subtraction)
+        self.assertIsInstance(a * b, pybamm.Multiplication)
+        self.assertIsInstance(a / b, pybamm.Division)
+        self.assertIsInstance(a ** b, pybamm.Power)
 
         # binary - symbol and number
-        self.assertTrue(isinstance(a + 2, pybamm.Addition))
-        self.assertTrue(isinstance(a - 2, pybamm.Subtraction))
-        self.assertTrue(isinstance(a * 2, pybamm.Multiplication))
-        self.assertTrue(isinstance(a / 2, pybamm.Division))
-        self.assertTrue(isinstance(a ** 2, pybamm.Power))
+        self.assertIsInstance(a + 2, pybamm.Addition)
+        self.assertIsInstance(a - 2, pybamm.Subtraction)
+        self.assertIsInstance(a * 2, pybamm.Multiplication)
+        self.assertIsInstance(a / 2, pybamm.Division)
+        self.assertIsInstance(a ** 2, pybamm.Power)
 
         # binary - number and symbol
-        self.assertTrue(isinstance(3 + b, pybamm.Addition))
+        self.assertIsInstance(3 + b, pybamm.Addition)
         self.assertEqual((3 + b).children[1].id, b.id)
-        self.assertTrue(isinstance(3 - b, pybamm.Subtraction))
+        self.assertIsInstance(3 - b, pybamm.Subtraction)
         self.assertEqual((3 - b).children[1].id, b.id)
-        self.assertTrue(isinstance(3 * b, pybamm.Multiplication))
+        self.assertIsInstance(3 * b, pybamm.Multiplication)
         self.assertEqual((3 * b).children[1].id, b.id)
-        self.assertTrue(isinstance(3 / b, pybamm.Division))
+        self.assertIsInstance(3 / b, pybamm.Division)
         self.assertEqual((3 / b).children[1].id, b.id)
-        self.assertTrue(isinstance(3 ** b, pybamm.Power))
+        self.assertIsInstance(3 ** b, pybamm.Power)
         self.assertEqual((3 ** b).children[1].id, b.id)
 
         # error raising
