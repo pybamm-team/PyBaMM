@@ -138,9 +138,18 @@ class BaseModel(object):
         # Boundary conditions
         for var, eqn in self.rhs.items():
             if self.has_spatial_derivatives(eqn):
-                assert var in self.boundary_conditions.keys(), pybamm.ModelError(
-                    """no boundary condition given for variable '{}'
-                       with equation '{}'""".format(
+                # Variable must be in at least one expression in the boundary condition
+                # keys (to account for both Dirichlet and Neumann boundary conditions)
+                assert any(
+                    [
+                        any([var.id == symbol.id for symbol in key.pre_order()])
+                        for key in self.boundary_conditions.keys()
+                    ]
+                ), pybamm.ModelError(
+                    """
+                    no boundary condition given for variable '{}'
+                    with equation '{}'
+                    """.format(
                         var, eqn
                     )
                 )
