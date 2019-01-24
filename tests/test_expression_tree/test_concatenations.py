@@ -22,7 +22,7 @@ class TestConcatenations(unittest.TestCase):
         c = pybamm.Symbol("c")
         conc = pybamm.Concatenation(a, b, c)
         self.assertEqual(conc.name, "concatenation")
-        self.assertTrue(isinstance(conc.children[0], pybamm.Symbol))
+        self.assertIsInstance(conc.children[0], pybamm.Symbol)
         self.assertEqual(conc.children[0].name, "a")
         self.assertEqual(conc.children[1].name, "b")
         self.assertEqual(conc.children[2].name, "c")
