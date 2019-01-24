@@ -78,7 +78,7 @@ class TestBinaryOperators(unittest.TestCase):
     def test_number_overloading(self):
         a = pybamm.Scalar(4)
         prod = a * 3
-        self.assertTrue(isinstance(prod.children[1], pybamm.Scalar))
+        self.assertIsInstance(prod.children[1], pybamm.Scalar)
         self.assertEqual(prod.evaluate(), 12)
 
 

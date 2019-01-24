@@ -70,37 +70,37 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable("var")
         y_slices = {var.id: slice(53)}
         var_disc = disc.process_symbol(var, y_slices)
-        self.assertTrue(isinstance(var_disc, pybamm.StateVector))
+        self.assertIsInstance(var_disc, pybamm.StateVector)
         self.assertEqual(var_disc._y_slice, y_slices[var.id])
         # scalar
         scal = pybamm.Scalar(5)
         scal_disc = disc.process_symbol(scal)
-        self.assertTrue(isinstance(scal_disc, pybamm.Scalar))
+        self.assertIsInstance(scal_disc, pybamm.Scalar)
         self.assertEqual(scal_disc.value, scal.value)
 
         # parameter
         par = pybamm.Parameter("par")
         par_disc = disc.process_symbol(par)
-        self.assertTrue(isinstance(par_disc, pybamm.Parameter))
+        self.assertIsInstance(par_disc, pybamm.Parameter)
         self.assertEqual(par_disc.name, par.name)
 
         # binary operator
         bin = var + scal
         bin_disc = disc.process_symbol(bin, y_slices)
-        self.assertTrue(isinstance(bin_disc, pybamm.Addition))
-        self.assertTrue(isinstance(bin_disc.children[0], pybamm.StateVector))
-        self.assertTrue(isinstance(bin_disc.children[1], pybamm.Scalar))
+        self.assertIsInstance(bin_disc, pybamm.Addition)
+        self.assertIsInstance(bin_disc.children[0], pybamm.StateVector)
+        self.assertIsInstance(bin_disc.children[1], pybamm.Scalar)
 
         # non-spatial unary operator
         un1 = -var
         un1_disc = disc.process_symbol(un1, y_slices)
-        self.assertTrue(isinstance(un1_disc, pybamm.Negate))
-        self.assertTrue(isinstance(un1_disc.children[0], pybamm.StateVector))
+        self.assertIsInstance(un1_disc, pybamm.Negate)
+        self.assertIsInstance(un1_disc.children[0], pybamm.StateVector)
 
         un2 = abs(scal)
         un2_disc = disc.process_symbol(un2)
-        self.assertTrue(isinstance(un2_disc, pybamm.AbsoluteValue))
-        self.assertTrue(isinstance(un2_disc.children[0], pybamm.Scalar))
+        self.assertIsInstance(un2_disc, pybamm.AbsoluteValue)
+        self.assertIsInstance(un2_disc.children[0], pybamm.Scalar)
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
@@ -114,11 +114,11 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.BaseDiscretisation(None)
         y_slices = {var1.id: slice(53), var2.id: slice(53, 59)}
         exp_disc = disc.process_symbol(expression, y_slices)
-        self.assertTrue(isinstance(exp_disc, pybamm.Division))
+        self.assertIsInstance(exp_disc, pybamm.Division)
         # left side
-        self.assertTrue(isinstance(exp_disc.children[0], pybamm.Multiplication))
-        self.assertTrue(isinstance(exp_disc.children[0].children[0], pybamm.Scalar))
-        self.assertTrue(isinstance(exp_disc.children[0].children[1], pybamm.Addition))
+        self.assertIsInstance(exp_disc.children[0], pybamm.Multiplication)
+        self.assertIsInstance(exp_disc.children[0].children[0], pybamm.Scalar)
+        self.assertIsInstance(exp_disc.children[0].children[1], pybamm.Addition)
         self.assertTrue(
             isinstance(exp_disc.children[0].children[1].children[0], pybamm.Parameter)
         )
@@ -129,7 +129,7 @@ class TestDiscretise(unittest.TestCase):
             exp_disc.children[0].children[1].children[1].y_slice, y_slices[var2.id]
         )
         # right side
-        self.assertTrue(isinstance(exp_disc.children[1], pybamm.Addition))
+        self.assertIsInstance(exp_disc.children[1], pybamm.Addition)
         self.assertTrue(
             isinstance(exp_disc.children[1].children[0], pybamm.Subtraction)
         )
@@ -142,7 +142,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertTrue(
             isinstance(exp_disc.children[1].children[0].children[1], pybamm.Parameter)
         )
-        self.assertTrue(isinstance(exp_disc.children[1].children[1], pybamm.Scalar))
+        self.assertIsInstance(exp_disc.children[1].children[1], pybamm.Scalar)
 
     def test_discretise_spatial_operator(self):
         mesh = MeshForTesting()
@@ -152,9 +152,9 @@ class TestDiscretise(unittest.TestCase):
         for eqn in [pybamm.grad(var), pybamm.div(var)]:
             eqn_disc = disc.process_symbol(eqn, y_slices, {})
 
-            self.assertTrue(isinstance(eqn_disc, pybamm.Multiplication))
-            self.assertTrue(isinstance(eqn_disc.children[0], pybamm.Matrix))
-            self.assertTrue(isinstance(eqn_disc.children[1], pybamm.StateVector))
+            self.assertIsInstance(eqn_disc, pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc.children[0], pybamm.Matrix)
+            self.assertIsInstance(eqn_disc.children[1], pybamm.StateVector)
 
             y = mesh["whole cell"].nodes ** 2
             var_disc = disc.process_symbol(var, y_slices)
@@ -298,7 +298,7 @@ class TestDiscretise(unittest.TestCase):
         c = pybamm.Symbol("c")
         disc = pybamm.BaseDiscretisation(None)
         conc = disc.concatenate(a, b, c)
-        self.assertTrue(isinstance(conc, pybamm.Concatenation))
+        self.assertIsInstance(conc, pybamm.Concatenation)
 
     def test_concatenation_of_scalars(self):
         a = pybamm.Scalar(5, domain=["negative electrode"])
@@ -310,7 +310,7 @@ class TestDiscretise(unittest.TestCase):
 
         eqn = pybamm.Concatenation(a, b)
         eqn_disc = disc.process_symbol(eqn, y_slices, {})
-        self.assertTrue(isinstance(eqn_disc, pybamm.Vector))
+        self.assertIsInstance(eqn_disc, pybamm.Vector)
         expected_vector = np.concatenate(
             [
                 5 * np.ones_like(mesh["negative electrode"].nodes),
