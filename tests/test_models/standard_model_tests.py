@@ -17,12 +17,16 @@ class StandardModelTest(object):
             )
 
         self.param.process_model(self.model)
+        # Model should still be well-posed after processing
+        # self.model.check_well_posedness()
 
     def test_processing_disc(self, disc_str="Finite Volume"):
         if disc_str == "Finite Volume":
             self.mesh = pybamm.FiniteVolumeMacroMesh(self.param, 2)
             disc = pybamm.FiniteVolumeDiscretisation(self.mesh)
         disc.process_model(self.model)
+        # Model should still be well-posed after processing
+        # self.model.check_well_posedness()
 
     def test_solving(self):
         solver = pybamm.ScipySolver(tol=1e-8, method="RK45")

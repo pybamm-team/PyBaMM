@@ -82,12 +82,12 @@ from .expression_tree.independent_variable import IndependentVariable
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
-from .expression_tree.exceptions import DomainError
+from .expression_tree.exceptions import DomainError, ModelError
 
 #
 # Model classes
 #
-from .models.core import BaseModel
+from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.electrolyte_current import ElectrolyteCurrentModel
 

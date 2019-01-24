@@ -1,9 +1,11 @@
 #
-# Core model class
+# Base model class
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+
+import numbers
 
 
 class BaseModel(object):
@@ -24,6 +26,7 @@ class BaseModel(object):
     """
 
     def __init__(self):
+        # Initialise empty model
         self._rhs = {}
         self._initial_conditions = {}
         self._boundary_conditions = {}
@@ -55,6 +58,15 @@ class BaseModel(object):
 
     @initial_conditions.setter
     def initial_conditions(self, initial_conditions):
+        """
+        Set initial conditions, converting any scalar conditions to 'pybamm.Scalar'
+        and checking that domains are consistent
+        """
+        # Convert any numbers to a pybamm.Scalar
+        for var, eqn in initial_conditions.items():
+            if isinstance(eqn, numbers.Number):
+                initial_conditions[var] = pybamm.Scalar(eqn)
+
         if all(
             [
                 variable.domain == equation.domain or equation.domain == []
@@ -74,6 +86,12 @@ class BaseModel(object):
 
     @boundary_conditions.setter
     def boundary_conditions(self, boundary_conditions):
+        # Convert any numbers to a pybamm.Scalar
+        for var, bcs in boundary_conditions.items():
+            for side, eqn in bcs.items():
+                if isinstance(eqn, numbers.Number):
+                    boundary_conditions[var][side] = pybamm.Scalar(eqn)
+
         self._boundary_conditions = boundary_conditions
 
     @property
@@ -102,3 +120,47 @@ class BaseModel(object):
 
     def __getitem__(self, key):
         return self.rhs[key]
+
+    def check_well_posedness(self):
+        """
+        Check that the model is well-posed by executing the following tests:
+        - There is an initial condition in self.initial_conditions for each
+        variable/equation pair in self.rhs
+        - There are appropriate boundary conditions in self.boundary_conditions for each
+        variable/equation pair in self.rhs
+        """
+        # Initial conditions
+        for var in self.rhs.keys():
+            assert var in self.initial_conditions.keys(), pybamm.ModelError(
+                """no initial condition given for variable '{}'""".format(var)
+            )
+
+        # Boundary conditions
+        for var, eqn in self.rhs.items():
+            if self.has_spatial_derivatives(eqn):
+                assert var in self.boundary_conditions.keys(), pybamm.ModelError(
+                    """no boundary condition given for variable '{}'
+                       with equation '{}'""".format(
+                        var, eqn
+                    )
+                )
+
+    def has_spatial_derivatives(self, eqn):
+        """Returns True if equation has spatial derivatives (grad or div).
+
+        Parameters
+        ----------
+        eqn : :class:`pybamm.Symbol`
+            An equation (expression tree consisting of symbols)
+
+        Returns
+        -------
+        bool
+            Whether the equation has spatial derivatives
+        """
+        return any(
+            [
+                isinstance(symbol, (pybamm.Gradient, pybamm.Divergence))
+                for symbol in eqn.pre_order()
+            ]
+        )

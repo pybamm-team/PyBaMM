@@ -4,6 +4,7 @@
 import pybamm
 
 import unittest
+import numpy as np
 
 
 class TestBaseModel(unittest.TestCase):
@@ -43,11 +44,38 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = initial_conditions
         self.assertEqual(initial_conditions, model.initial_conditions)
 
+        # Test number input
+        c0 = pybamm.Symbol("c0")
+        1
+        model.initial_conditions = {c0: 34}
+        self.assertTrue(isinstance(model.initial_conditions[c0], pybamm.Scalar))
+        self.assertEqual(model.initial_conditions[c0].value, 34)
+
+        # non-matching domains should fail
+        with self.assertRaises(pybamm.DomainError):
+            model.initial_conditions = {
+                pybamm.Symbol("c", domain=["positive electrode"]): pybamm.Symbol(
+                    "alpha", domain=["negative electrode"]
+                )
+            }
+
     def test_boundary_conditions_set_get(self):
         model = pybamm.BaseModel()
-        boundary_conditions = {"c_left": "epsilon", "c_right": "eta"}
+        boundary_conditions = {"c": {"left": "epsilon", "right": "eta"}}
         model.boundary_conditions = boundary_conditions
         self.assertEqual(boundary_conditions, model.boundary_conditions)
+
+        # Test number input
+        c0 = pybamm.Symbol("c0")
+        model.boundary_conditions = {c0: {"left": -2, "right": 4}}
+        self.assertTrue(
+            isinstance(model.boundary_conditions[c0]["left"], pybamm.Scalar)
+        )
+        self.assertTrue(
+            isinstance(model.boundary_conditions[c0]["right"], pybamm.Scalar)
+        )
+        self.assertEqual(model.boundary_conditions[c0]["left"].value, -2)
+        self.assertEqual(model.boundary_conditions[c0]["right"].value, 4)
 
     def test_variables_set_get(self):
         model = pybamm.BaseModel()
@@ -62,6 +90,36 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = rhs
         self.assertEqual(model[key], rhs[key])
         self.assertEqual(model[key], model.rhs[key])
+
+    def test_has_spatial_derivatives(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        grad_eqn = pybamm.grad(var)
+        div_eqn = pybamm.div(var)
+        grad_div_eqn = pybamm.div(grad_eqn)
+        algebraic_eqn = 2 * var + 3
+        self.assertTrue(model.has_spatial_derivatives(grad_eqn))
+        self.assertTrue(model.has_spatial_derivatives(div_eqn))
+        self.assertTrue(model.has_spatial_derivatives(grad_div_eqn))
+        self.assertFalse(model.has_spatial_derivatives(algebraic_eqn))
+
+    def test_well_posedness(self):
+        # Well-posed model - Dirichlet
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c", domain=["whole cell"])
+        model.rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
+        model.initial_conditions = {c: 1}
+        model.boundary_conditions = {c: {"left": 0, "right": 0}}
+        model.check_well_posedness()
+        # Well-posed model - Neumann
+        # Model with bad initial conditions (expect assertion errors)
+        d = pybamm.Variable("d", domain=["whole cell"])
+        model.initial_conditions = {d: 3}
+        with self.assertRaises(AssertionError):
+            model.check_well_posedness()
+
+        # Model with bad boundary conditions - Dirichlet (expect assertion errors)
+        # Model with bad boundary conditions - Neumann (expect assertion errors)
 
 
 if __name__ == "__main__":
