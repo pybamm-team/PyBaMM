@@ -262,7 +262,7 @@ class BaseDiscretisation(object):
         """ Perform some basic checks to make sure the discretised model makes sense."""
         # Check initial conditions are a numpy array
         # Individual
-        for eqn in model.initial_conditions.values():
+        for var, eqn in model.initial_conditions.items():
             assert type(eqn.evaluate(0, None)) is np.ndarray, pybamm.ModelError(
                 """
                 initial_conditions must be numpy array after discretisation but they are
