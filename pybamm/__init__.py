@@ -73,6 +73,7 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
+    SpatialAverage,
     grad,
     div,
 )
