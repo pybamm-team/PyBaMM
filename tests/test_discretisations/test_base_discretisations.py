@@ -149,6 +149,8 @@ class TestDiscretise(unittest.TestCase):
         disc = DiscretisationForTesting(mesh)
         var = pybamm.Variable("var", domain=["whole cell"])
         y_slices = disc.get_variable_slices([var])
+
+        # Simple expressions
         for eqn in [pybamm.grad(var), pybamm.div(var)]:
             eqn_disc = disc.process_symbol(eqn, y_slices, {})
 
@@ -161,6 +163,23 @@ class TestDiscretise(unittest.TestCase):
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(
                 eqn_disc.evaluate(None, y), var_disc.evaluate(None, y)
+            )
+
+        # More complex expressions
+        for eqn in [var * pybamm.grad(var), var * pybamm.div(var)]:
+            eqn_disc = disc.process_symbol(eqn, y_slices, {})
+
+            self.assertIsInstance(eqn_disc, pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc.children[0], pybamm.StateVector)
+            self.assertIsInstance(eqn_disc.children[1], pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc.children[1].children[0], pybamm.Matrix)
+            self.assertIsInstance(eqn_disc.children[1].children[1], pybamm.StateVector)
+
+            y = mesh["whole cell"].nodes ** 2
+            var_disc = disc.process_symbol(var, y_slices)
+            # grad and var are identity operators here (for testing purposes)
+            np.testing.assert_array_equal(
+                eqn_disc.evaluate(None, y), var_disc.evaluate(None, y) ** 2
             )
 
     def test_core_NotImplementedErrors(self):
