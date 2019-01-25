@@ -137,7 +137,7 @@ class BaseModel(object):
 
         # Boundary conditions
         for var, eqn in self.rhs.items():
-            if self.has_spatial_derivatives(eqn):
+            if eqn.has_spatial_derivatives():
                 # Variable must be in at least one expression in the boundary condition
                 # keys (to account for both Dirichlet and Neumann boundary conditions)
                 assert any(
@@ -153,23 +153,3 @@ class BaseModel(object):
                         var, eqn
                     )
                 )
-
-    def has_spatial_derivatives(self, eqn):
-        """Returns True if equation has spatial derivatives (grad or div).
-
-        Parameters
-        ----------
-        eqn : :class:`pybamm.Symbol`
-            An equation (expression tree consisting of symbols)
-
-        Returns
-        -------
-        bool
-            Whether the equation has spatial derivatives
-        """
-        return any(
-            [
-                isinstance(symbol, (pybamm.Gradient, pybamm.Divergence))
-                for symbol in eqn.pre_order()
-            ]
-        )

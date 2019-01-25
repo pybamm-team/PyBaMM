@@ -85,18 +85,6 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(model[key], rhs[key])
         self.assertEqual(model[key], model.rhs[key])
 
-    def test_has_spatial_derivatives(self):
-        model = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        grad_eqn = pybamm.grad(var)
-        div_eqn = pybamm.div(var)
-        grad_div_eqn = pybamm.div(grad_eqn)
-        algebraic_eqn = 2 * var + 3
-        self.assertTrue(model.has_spatial_derivatives(grad_eqn))
-        self.assertTrue(model.has_spatial_derivatives(div_eqn))
-        self.assertTrue(model.has_spatial_derivatives(grad_div_eqn))
-        self.assertFalse(model.has_spatial_derivatives(algebraic_eqn))
-
     def test_check_well_posedness(self):
         # Well-posed model - Dirichlet
         model = pybamm.BaseModel()

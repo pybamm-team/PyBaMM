@@ -25,8 +25,9 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaises(ValueError):
             a = pybamm.Symbol("a", domain=["unknown domain"])
         with self.assertRaises(ValueError):
-            a = pybamm.Symbol("a", domain=[pybamm.KNOWN_DOMAINS[1],
-                                           pybamm.KNOWN_DOMAINS[0]])
+            a = pybamm.Symbol(
+                "a", domain=[pybamm.KNOWN_DOMAINS[1], pybamm.KNOWN_DOMAINS[0]]
+            )
 
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")
@@ -175,6 +176,25 @@ class TestSymbol(unittest.TestCase):
         c_e = list(model.rhs.keys())[0]
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test", test=True)
+
+    def test_has_spatial_derivatives(self):
+        var = pybamm.Variable("var")
+        grad_eqn = pybamm.grad(var)
+        div_eqn = pybamm.div(var)
+        grad_div_eqn = pybamm.div(grad_eqn)
+        algebraic_eqn = 2 * var + 3
+        self.assertTrue(grad_eqn.has_spatial_derivatives())
+        self.assertTrue(grad_eqn.has_gradient())
+        self.assertFalse(grad_eqn.has_divergence())
+        self.assertTrue(div_eqn.has_spatial_derivatives())
+        self.assertFalse(div_eqn.has_gradient())
+        self.assertTrue(div_eqn.has_divergence())
+        self.assertTrue(grad_div_eqn.has_spatial_derivatives())
+        self.assertTrue(grad_div_eqn.has_gradient())
+        self.assertTrue(grad_div_eqn.has_divergence())
+        self.assertFalse(algebraic_eqn.has_spatial_derivatives())
+        self.assertFalse(algebraic_eqn.has_gradient())
+        self.assertFalse(algebraic_eqn.has_divergence())
 
 
 if __name__ == "__main__":
