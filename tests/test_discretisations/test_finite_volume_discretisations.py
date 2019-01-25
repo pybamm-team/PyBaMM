@@ -8,6 +8,32 @@ import unittest
 
 
 class TestFiniteVolumeDiscretisation(unittest.TestCase):
+    def test_discretise_diffusivity_times_spatial_operator(self):
+        # Set up
+        param = pybamm.ParameterValues(
+            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+        )
+        mesh = pybamm.FiniteVolumeMacroMesh(param, 2)
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
+
+        # Discretise some equations where averaging is needed
+        var = pybamm.Variable("var", domain=["whole cell"])
+        y_slices = disc.get_variable_slices([var])
+        y_test = np.ones_like(mesh["whole cell"].nodes)
+        for eqn in [
+            var * pybamm.grad(var),
+            var ** 2 * pybamm.grad(var),
+            var * pybamm.grad(var) ** 2,
+            var * (pybamm.grad(var) + 2),
+            (pybamm.grad(var) + 2) * (-var),
+            (pybamm.grad(var) + 2) * (2 * var),
+            pybamm.grad(var) * pybamm.grad(var),
+            (pybamm.grad(var) + 2) * pybamm.grad(var) ** 2,
+        ]:
+            eqn_disc = disc.process_symbol(eqn, y_slices, {})
+            # Check that the equation can be evaluated
+            eqn_disc.evaluate(None, y_test)
+
     def test_add_ghost_nodes(self):
         # Set up
         param = pybamm.ParameterValues(

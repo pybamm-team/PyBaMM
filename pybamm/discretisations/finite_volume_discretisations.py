@@ -23,6 +23,35 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
     def __init__(self, mesh):
         super().__init__(mesh)
 
+    def spatial_average(self, symbol):
+        """
+        Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
+        For now we just take the arithemtic mean, though it may be better to take the
+        harmonic mean based on [1].
+
+        [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
+        the diffusion equation." (2012).
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            Symbol to be averaged. When evaluated, this symbol returns either a scalar
+            or an array of shape (n,), where n is the number of points in the mesh for
+            the symbol's domain (n = self.mesh[symbol.domain].npts)
+
+        Returns
+        -------
+        :class:`pybamm.SpatialAverage`
+            Averaged symbol. When evaluated, this returns either a scalar or an array of
+            shape (n-1,) as appropriate.
+        """
+
+        def arithmetic_mean(array):
+            """Calculate the arithemetic mean of an array"""
+            return (array[1:] + array[:-1]) / 2
+
+        return pybamm.SpatialAverage(symbol, arithmetic_mean)
+
     def gradient(self, symbol, y_slices, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
         See :meth:`pybamm.BaseDiscretisation.gradient`
