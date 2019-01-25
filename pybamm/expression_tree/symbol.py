@@ -69,15 +69,19 @@ class Symbol(anytree.NodeMixin):
             except ValueError:
                 raise ValueError(
                     """domain "{}" is not in known domains ({})""".format(
-                        domain, str(pybamm.KNOWN_DOMAINS))
+                        domain, str(pybamm.KNOWN_DOMAINS)
+                    )
                 )
 
             # check that domains are sorted correctly
             is_sorted = all(a <= b for a, b in zip(indicies, indicies[1:]))
             if not is_sorted:
                 raise ValueError(
-                    """domain "{}" is not sorted according to known domains ({})"""
-                    .format(domain, str(pybamm.KNOWN_DOMAINS))
+                    """
+                    domain "{}" is not sorted according to known domains ({})
+                    """.format(
+                        domain, str(pybamm.KNOWN_DOMAINS)
+                    )
                 )
 
             self._domain = domain
@@ -92,8 +96,7 @@ class Symbol(anytree.NodeMixin):
         which would then mess with loop-checking in the anytree module
         """
         return hash(
-            (self.__class__, self.name) +
-            tuple([child.id for child in self.children])
+            (self.__class__, self.name) + tuple([child.id for child in self.children])
         )
 
     def render(self):
@@ -299,6 +302,18 @@ class Symbol(anytree.NodeMixin):
         search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
 
         # do the search, return true if no relevent nodes are found
-        return all([
-            not isinstance(n, search_types) for n in self.pre_order()
-        ])
+        return all([not isinstance(n, search_types) for n in self.pre_order()])
+
+    def has_spatial_derivatives(self):
+        """Returns True if equation has spatial derivatives (grad or div)."""
+        return self.has_gradient() or self.has_divergence()
+
+    def has_gradient(self):
+        """Returns True if equation has a Gradient."""
+        return any([isinstance(symbol, pybamm.Gradient) for symbol in self.pre_order()])
+
+    def has_divergence(self):
+        """Returns True if equation has a Divergence."""
+        return any(
+            [isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order()]
+        )
