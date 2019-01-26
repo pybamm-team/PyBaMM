@@ -5,8 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import pickle
-import os
+import argparse
 
 
 class Simulation(object):
@@ -16,84 +15,90 @@ class Simulation(object):
     Parameters
     ---------
     model : pybamm.models.(modelname).(ModelName)() instance
-        The model to be used for the simulation. (modelname) and (ModelName)
-        refer to a module and class to be chosen.
-    param : :class:`pybamm.ParameterValues.Parameters` instance
-        The parameters to be used for the simulation.
-    mesh : :class:`pybamm.mesh.Mesh` instance
-        The mesh to be used for the simulation.
+       The model to be used for the simulation. (modelname) and (ModelName)
+       refer to a module and class to be chosen.
+    parameter_values : :class:`pybamm.ParameterValues.Parameters` instance
+       The parameters to be used for the simulation.
+    discretisation : :class:`pybamm.discretisation.Mesh` instance
+       The discretisation to be used for the simulation.
     solver : :class:`pybamm.solver.Solver` instance
-        The algorithm for solving the model.
+       The algorithm for solving the model.
     name : string, optional
-        The simulation name.
+       The simulation name.
 
     """
 
-    def __init__(self, model, param=None, mesh=None, solver=None, name="unnamed"):
-        # Defaults
-        if param is None:
-            param = pybamm.ParameterValues()
-        if mesh is None:
-            mesh = pybamm.Mesh(param)
+    def __init__(
+        self,
+        model,
+        parameter_values=None,
+        discretisation=None,
+        solver=None,
+        name="unnamed",
+    ):
+        # Read defaults from model
+        if parameter_values is None:
+            parameter_values = model.default_parameter_values
+        if discretisation is None:
+            discretisation = model.default_discretisation
         if solver is None:
-            solver = pybamm.Solver()
+            solver = model.default_solver
 
         # Assign attributes
         self.model = model
-        self.param = param
-        self.mesh = mesh
+        self.parameter_values = parameter_values
+        self.discretisation = discretisation
         self.solver = solver
         self.name = name
-
-        # Initialise simulation to prepare for solving
-        # Set mesh dependent parameters
-        self.param.set_mesh(self.mesh)
-
-        # Create operators from solver
-        self.operators = self.solver.operators(self.mesh)
-
-        # Assign param, operators and mesh as model attributes
-        self.model.set_simulation(self.param, self.operators, self.mesh)
 
     def __str__(self):
         return self.name
 
-    def run(self, use_force=False):
-        """
-        Run the simulation.
+    def set_parameters(self):
+        self.parameter_values.process_model(self.model)
 
-        Parameters
-        ----------
-        use_force : boolean, optional
-            If False (default), use a stored solution (if it exists). Otherwise, run the
-            model.
-        """
-        # if not use_force and os.path.isfile(self.filename):
-        #     self.load()
-        # else:
-        self.vars = self.solver.get_simulation_vars(self)
-        # self.save()
+    def discretise(self):
+        self.discretisation.process_model(self.model)
 
-    def average(self):
-        """Average simulation variable attributes over the relevant (sub)domain."""
-        self.vars.average()
+    def solve(self):
+        self.solver.solve(self.model, self.discretisation.mesh["time"])
 
-    @property
-    def filename_io(self):
-        path = os.path.join("out", "simulations")
-        filename = "model_{}_solver_{}".format(
-            pickle.dumps(self.model), pickle.dumps(self.solver)
-        )
-        return os.path.join(path, filename)
+    def run(self):
+        self.set_parameters()
+        self.discretise()
+        self.solve()
 
     def load(self):
-        """Load saved simulation if it exists."""
-        with open(self.filename_io, "rb") as input:
-            return pickle.load(input)
+        raise NotImplementedError
 
     def save(self):
-        """Save simulation."""
         raise NotImplementedError
 
     def plot(self):
         raise NotImplementedError
+
+
+if __name__ == "__main_":
+    # Read inputs
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "model_name", nargs="?", default="DFN", help="the model to be run"
+    )
+    parser.add_argument(
+        "--current", type=float, nargs=1, help="the charge/discharge current"
+    )
+    parser.add_argument(
+        "--Crate", type=float, nargs=1, help="the charge/discharge C-rate"
+    )
+    # parser.add_argument("-s", "--save", action="store_true", help="save the output")
+    # parser.add_argument(
+    #     "-f",
+    #     "--force",
+    #     action="store_true",
+    #     help="overwrite saved output even if it is available",
+    # )
+    args = parser.parse_args()
+
+    model = getattr(pybamm, args.model_name)
+    sim = Simulation(model)
+    sim.run()

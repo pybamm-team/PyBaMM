@@ -34,6 +34,14 @@ class BaseModel(object):
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
 
+        # Defaults
+        self.default_parameter_values = pybamm.ParameterValues(
+            "input/parameters/lithium-ion/parameters/LCO.csv"
+        )
+        mesh = pybamm.FiniteVolumeMacroMesh(self.default_parameter_values, 2)
+        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(mesh)
+        self.default_solver = pybamm.ScipySolver(method="RK45")
+
     @property
     def rhs(self):
         return self._rhs
