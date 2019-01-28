@@ -20,6 +20,25 @@ class TestIndependentVariable(unittest.TestCase):
         with self.assertRaises(TypeError):
             pybamm.IndependentVariable("a", domain=1)
 
+    def test_time(self):
+        t = pybamm.Time()
+        self.assertEqual(t.name, "time")
+        self.assertEqual(t.evaluate(4), 4)
+        with self.assertRaises(ValueError):
+            t.evaluate(None)
+
+        t = pybamm.t
+        self.assertEqual(t.name, "time")
+        self.assertEqual(t.evaluate(4), 4)
+        with self.assertRaises(ValueError):
+            t.evaluate(None)
+
+    def test_space(self):
+        x = pybamm.Space(["negative electrode"])
+        self.assertEqual(x.name, "space (['negative electrode'])")
+        with self.assertRaises(NotImplementedError):
+            x.evaluate()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
