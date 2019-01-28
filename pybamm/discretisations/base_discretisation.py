@@ -57,9 +57,13 @@ class BaseDiscretisation(object):
         model.concatenated_rhs = self.concatenate(*model.rhs.values())
 
         # Discretise variables (applying boundary conditions)
+        # Note that we **do not** discretise the keys of model.rhs,
+        # model.initial_conditions and model.boundary_conditions
         model.variables = self.process_dict(
             model.variables, y_slices, model.boundary_conditions
         )
+
+        self.check_model(model)
 
     def get_variable_slices(self, variables):
         """Set the slicing for variables.
@@ -253,3 +257,74 @@ class BaseDiscretisation(object):
 
     def concatenate(self, *symbols):
         return pybamm.NumpyConcatenation(*symbols)
+
+    def check_model(self, model):
+        """ Perform some basic checks to make sure the discretised model makes sense."""
+        # Check initial conditions are a numpy array
+        # Individual
+        for var, eqn in model.initial_conditions.items():
+            assert type(eqn.evaluate(0, None)) is np.ndarray, pybamm.ModelError(
+                """
+                initial_conditions must be numpy array after discretisation but they are
+                {} for variable '{}'.
+                """.format(
+                    type(eqn.evaluate(0, None)), var
+                )
+            )
+        # Concatenated
+        assert (
+            type(model.concatenated_initial_conditions) is np.ndarray
+        ), pybamm.ModelError(
+            """
+            Concatenated initial_conditions must be numpy array after discretisation but
+            they are {}.
+            """.format(
+                type(model.concatenated_initial_conditions)
+            )
+        )
+
+        # Check initial conditions and rhs have the same shape
+        y0 = model.concatenated_initial_conditions
+        # Individual
+        for var in model.rhs.keys():
+            assert (
+                model.rhs[var].evaluate(0, y0).shape
+                == model.initial_conditions[var].evaluate(0, None).shape
+            ), pybamm.ModelError(
+                """
+                rhs and initial_conditions must have the same shape after discretisation
+                but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
+                """.format(
+                    model.rhs[var].evaluate(0, y0).shape,
+                    model.initial_conditions[var].evaluate(0, None).shape,
+                    var,
+                )
+            )
+        # Concatenated
+        assert (
+            model.concatenated_rhs.evaluate(0, y0).shape == y0.shape
+        ), pybamm.ModelError(
+            """
+            Concatenated rhs and initial_conditions must have the same shape after
+            discretisation but rhs.shape = {} and initial_conditions.shape = {}.
+            """.format(
+                model.concatenated_rhs.evaluate(0, y0).shape, y0.shape
+            )
+        )
+
+        # Check variables in variable list against rhs
+        for var in model.rhs.keys():
+            if var.name in model.variables.keys():
+                assert (
+                    model.rhs[var].evaluate(0, y0).shape
+                    == model.variables[var.name].evaluate(0, y0).shape
+                ), pybamm.ModelError(
+                    """
+                    variable and its eqn must have the same shape after discretisation
+                    but variable.shape = {} and rhs.shape = {} for variable '{}'.
+                    """.format(
+                        model.variables[var.name].evaluate(0, y0).shape,
+                        model.rhs[var].evaluate(0, y0).shape,
+                        var,
+                    )
+                )
