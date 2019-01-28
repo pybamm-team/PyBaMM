@@ -194,7 +194,7 @@ $ python run-tests.py --books
 If notebooks fail because of changes to pybamm, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
 
 ```
-$ python run-tests.py --debook examples/notebook-name.ipynb script.py
+$ python run-tests.py --debook examples/notebooks/notebook-name.ipynb script.py
 ```
 
 
@@ -225,9 +225,9 @@ Next, open a browser, and navigate to your local PyBaMM directory (by typing the
 
 ### Example notebooks
 
-Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [examples directory](examples). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
+Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [examples directory](examples/notebooks). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
 
-All example notebooks should be listed in [examples/README.md](https://github.com/tinosulzer/pybamm/examples/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
+All example notebooks should be listed in [examples/README.md](https://github.com/tinosulzer/pybamm/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
 
 Where possible, notebooks are tested daily. A list of slow notebooks (which time-out and fail tests) is maintained in `.slow-books`, these notebooks will be excluded from daily testing.
 

@@ -278,6 +278,10 @@ if __name__ == "__main__":
     )
     # Doctests
     parser.add_argument(
+        "--flake8", action="store_true", help="Run flake8 to check for style issues"
+    )
+    # Doctests
+    parser.add_argument(
         "--doctest",
         action="store_true",
         help="Run any doctests, check if docs can be built",
@@ -308,6 +312,10 @@ if __name__ == "__main__":
     if args.nosub:
         has_run = True
         run_unit_tests()
+    # Flake8
+    if args.flake8:
+        has_run = True
+        run_flake8()
     # Doctests
     if args.doctest:
         has_run = True
