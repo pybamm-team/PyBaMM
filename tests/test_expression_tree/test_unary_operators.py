@@ -6,7 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import unittest
-import numpy as np
 
 
 class TestUnaryOperators(unittest.TestCase):
@@ -35,29 +34,6 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.Scalar(-4)
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
-
-    def test_spatial_average(self):
-        a = pybamm.Symbol("a")
-
-        def arithmetic_mean(array):
-            return (array[1:] + array[:-1]) / 2
-
-        ava = pybamm.SpatialAverage(a, arithmetic_mean)
-        self.assertEqual(ava.name, "spatial average (arithmetic_mean)")
-        self.assertEqual(ava.children[0].name, a.name)
-
-        b = pybamm.Scalar(-4)
-        avb = pybamm.SpatialAverage(b, arithmetic_mean)
-        self.assertEqual(avb.evaluate(), -4)
-
-        c = pybamm.Vector(np.ones(10))
-        avc = pybamm.SpatialAverage(c, arithmetic_mean)
-        np.testing.assert_array_equal(avc.evaluate(), np.ones(9))
-
-        d = pybamm.StateVector(slice(0, 10))
-        y_test = np.ones(10)
-        avd = pybamm.SpatialAverage(d, arithmetic_mean)
-        np.testing.assert_array_equal(avd.evaluate(None, y_test), np.ones(9))
 
     def test_gradient(self):
         a = pybamm.Symbol("a")

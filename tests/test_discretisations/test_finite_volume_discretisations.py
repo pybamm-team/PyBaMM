@@ -8,6 +8,29 @@ import unittest
 
 
 class TestFiniteVolumeDiscretisation(unittest.TestCase):
+    def test_node_to_edge(self):
+        a = pybamm.Symbol("a")
+
+        def arithmetic_mean(array):
+            return (array[1:] + array[:-1]) / 2
+
+        ava = pybamm.NodeToEdge(a, arithmetic_mean)
+        self.assertEqual(ava.name, "node to edge (arithmetic_mean)")
+        self.assertEqual(ava.children[0].name, a.name)
+
+        b = pybamm.Scalar(-4)
+        avb = pybamm.NodeToEdge(b, arithmetic_mean)
+        self.assertEqual(avb.evaluate(), -4)
+
+        c = pybamm.Vector(np.ones(10))
+        avc = pybamm.NodeToEdge(c, arithmetic_mean)
+        np.testing.assert_array_equal(avc.evaluate(), np.ones(9))
+
+        d = pybamm.StateVector(slice(0, 10))
+        y_test = np.ones(10)
+        avd = pybamm.NodeToEdge(d, arithmetic_mean)
+        np.testing.assert_array_equal(avd.evaluate(None, y_test), np.ones(9))
+
     def test_discretise_diffusivity_times_spatial_operator(self):
         # Set up
         param = pybamm.ParameterValues(

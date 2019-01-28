@@ -215,7 +215,7 @@ class BaseDiscretisation(object):
         Performs appropriate averaging of diffusivities if one of the children is a
         gradient operator, so that discretised sizes match up.
         This is mainly an issue for the Finite Volume Discretisation:
-        see :meth:`pybamm.FiniteVolumeDiscretisation.averaging_function()`
+        see :meth:`pybamm.FiniteVolumeDiscretisation.compute_diffusivity()`
 
         Parameters
         ----------
@@ -243,17 +243,17 @@ class BaseDiscretisation(object):
         # no need to do any averaging
         if left.has_gradient() == right.has_gradient():
             pass
-        # If only left child has gradient, average right child
+        # If only left child has gradient, compute diffusivity for right child
         elif left.has_gradient() and not right.has_gradient():
-            new_right = self.spatial_average(new_right)
-        # If only right child has gradient, average left child
+            new_right = self.compute_diffusivity(new_right)
+        # If only right child has gradient, compute diffusivity for left child
         elif right.has_gradient() and not left.has_gradient():
-            new_left = self.spatial_average(new_left)
+            new_left = self.compute_diffusivity(new_left)
         # Return new binary operator with appropriate class
         return bin_op.__class__(new_left, new_right)
 
-    def spatial_average(self, symbol):
-        """Default behaviour for a discretisation: averaging does nothing"""
+    def compute_diffusivity(self, symbol):
+        """Compute diffusivity; default behaviour is identity operator"""
         return symbol
 
     def gradient(self, symbol, y_slices, boundary_conditions):
