@@ -36,6 +36,21 @@ class TestUnaryOperators(unittest.TestCase):
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
 
+    def test_function(self):
+        a = pybamm.Scalar(1)
+        sina = pybamm.Function(a, np.sin)
+        self.assertEqual(sina.evaluate(), np.sin(1))
+        self.assertEqual(sina.name, "function ({})".format(np.sin.__name__))
+
+        b = pybamm.Vector(np.linspace(0, 1))
+        cosb = pybamm.Function(b, np.cos)
+        np.testing.assert_array_equal(cosb.evaluate(), np.cos(b.evaluate()))
+
+        var = pybamm.StateVector(slice(0, 100))
+        y = np.linspace(0, 1, 100)
+        logvar = pybamm.Function(var, np.log)
+        np.testing.assert_array_equal(logvar.evaluate(y=y), np.log(y))
+
     def test_gradient(self):
         a = pybamm.Symbol("a")
         grad = pybamm.Gradient(a)
