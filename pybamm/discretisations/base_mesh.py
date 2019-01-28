@@ -43,6 +43,24 @@ class BaseMesh(dict):
         # submesh class
         self.submeshclass = BaseSubmesh
 
+    def combine_submeshes(self, *submeshnames):
+        """Combine submeshes into a new submesh, using self.submeshclass
+
+        Parameters
+        ----------
+        submeshnames: list of str
+            The names of the submeshes to be combined
+
+        Returns
+        -------
+        submesh: :class:`self.submeshclass`
+            A new submesh with the class defined by self.submeshclass
+        """
+        combined_submesh_nodes = np.concatenate(
+            [self[submeshname].nodes for submeshname in submeshnames]
+        )
+        return self.submeshclass(combined_submesh_nodes)
+
 
 class BaseSubmesh(object):
     """Base submesh class.
