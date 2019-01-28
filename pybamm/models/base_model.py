@@ -23,6 +23,10 @@ class BaseModel(object):
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions
+    variables: dict
+        A dictionary that maps strings to expressions that represent
+        the useful variables
+
     """
 
     def __init__(self):

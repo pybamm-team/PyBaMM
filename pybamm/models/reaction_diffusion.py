@@ -9,45 +9,27 @@ import pybamm
 class ReactionDiffusionModel(pybamm.BaseModel):
     """Reaction-diffusion model.
 
-    Parameters
+    Attributes
     ----------
-    tests : dict, optional
-        A dictionary for testing the convergence of the numerical solution:
-            * {} (default): We are not running in test mode, use built-ins.
-            * {'inits': dict of initial conditions,
-               'bcs': dict of boundary conditions,
-               'sources': dict of source terms
-               }: To be used for testing convergence to an exact solution.
+
+    rhs: dict
+        A dictionary that maps expressions (variables) to expressions that represent
+        the rhs
+    initial_conditions: dict
+        A dictionary that maps expressions (variables) to expressions that represent
+        the initial conditions
+    boundary_conditions: dict
+        A dictionary that maps expressions (variables) to expressions that represent
+        the boundary conditions
+    variables: dict
+        A dictionary that maps strings to expressions that represent
+        the useful variables
+
     """
 
-    def __init__(self, tests={}):
-        super().__init__(tests)
-        self.name = "Reaction Diffusion"
+    def __init__(self):
+        super().__init__()
+        G = pybamm.interface.HomogeneousReaction()
+        diffusion_model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
 
-    @property
-    def submodels(self):
-        pdes = {
-            "c": pybamm.electrolyte.StefanMaxwellDiffusion(
-                self.param.electrolyte, self.operators.x, self.mesh.x, self.tests
-            )
-        }
-
-        reactions = {
-            "neg": pybamm.interface.HomogeneousReaction(
-                self.param.neg_reactions, self.mesh.xn
-            ),
-            "pos": pybamm.interface.HomogeneousReaction(
-                self.param.pos_reactions, self.mesh.xp
-            ),
-        }
-
-        # {
-        #     "neg": pybamm.interface.ButlerVolmer(
-        #         self.param.neg_reactions, self.mesh.xn
-        #     ),
-        #     "pos": pybamm.interface.ButlerVolmer(
-        #         self.param.pos_reactions, self.mesh.xp
-        #     ),
-        # }
-
-        return {"pdes": pdes, "reactions": reactions}
+        self.create_from_submodels(diffusion_model)

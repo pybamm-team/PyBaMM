@@ -1,5 +1,5 @@
 #
-# Tests for the electrolyte submodels
+# Tests for the Reaction diffusion model
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -9,14 +9,9 @@ import tests
 import unittest
 
 
-class TestStefanMaxwellDiffusion(unittest.TestCase):
-    def test_make_tree(self):
-        G = pybamm.Scalar(1)
-        pybamm.electrolyte.StefanMaxwellDiffusion(G)
-
+class TestReactionDiffusionModel(unittest.TestCase):
     def test_basic_processing(self):
-        G = pybamm.Scalar(0.001)
-        model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        model = pybamm.ReactionDiffusionModel()
 
         modeltest = tests.StandardModelTest(model)
         # Either
