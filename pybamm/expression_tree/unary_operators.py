@@ -93,7 +93,7 @@ class SpatialOperator(UnaryOperator):
 
 
 class Gradient(SpatialOperator):
-    """A node in the expression tree representing an grad operator
+    """A node in the expression tree representing a grad operator
 
     **Extends:** :class:`SpatialOperator`
     """
@@ -103,13 +103,18 @@ class Gradient(SpatialOperator):
 
 
 class Divergence(SpatialOperator):
-    """A node in the expression tree representing an div operator
+    """A node in the expression tree representing a div operator
 
     **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
         super().__init__("div", child)
+
+
+#
+# Methods to call Gradient and Divergence
+#
 
 
 def grad(expression):
