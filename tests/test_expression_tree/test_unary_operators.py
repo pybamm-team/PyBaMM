@@ -8,6 +8,10 @@ import pybamm
 import unittest
 
 
+def test_function(arg):
+    return arg + arg
+
+
 class TestUnaryOperators(unittest.TestCase):
     def test_unary_operator(self):
         a = pybamm.Symbol("a", domain=["test"])
@@ -34,6 +38,15 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.Scalar(-4)
         negb = pybamm.AbsoluteValue(b)
         self.assertEqual(negb.evaluate(), 4)
+    def test_function(self):
+        a = pybamm.Symbol("a")
+        funca = pybamm.Function(a, test_function)
+        self.assertEqual(funca.name, "test_function")
+        self.assertEqual(funca.children[0].name, a.name)
+
+        b = pybamm.Scalar(123)
+        funcb = pybamm.Function(b, test_function)
+        self.assertEqual(funcb.evaluate(), 246)
 
     def test_gradient(self):
         a = pybamm.Symbol("a")
