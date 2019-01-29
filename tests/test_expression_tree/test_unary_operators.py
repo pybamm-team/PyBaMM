@@ -9,6 +9,10 @@ import unittest
 import numpy as np
 
 
+def test_function(arg):
+    return arg + arg
+
+
 class TestUnaryOperators(unittest.TestCase):
     def test_unary_operator(self):
         a = pybamm.Symbol("a", domain=["test"])

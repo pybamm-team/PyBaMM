@@ -70,6 +70,7 @@ from .expression_tree.unary_operators import (
     UnaryOperator,
     Negate,
     AbsoluteValue,
+    Function,
     SpatialOperator,
     Gradient,
     Divergence,

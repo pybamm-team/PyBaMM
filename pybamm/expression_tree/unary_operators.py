@@ -67,6 +67,22 @@ class AbsoluteValue(UnaryOperator):
         return np.abs(self.children[0].evaluate(t, y))
 
 
+class Function(UnaryOperator):
+    """A node in the expression tree representing an arbitrary function
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child, func):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__(func.__name__, child)
+        self.func = func
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return self.func(self.children[0].evaluate(t, y))
+
+
 class SpatialOperator(UnaryOperator):
     """A node in the expression tree representing a unary spatial operator
     (e.g. grad, div)
