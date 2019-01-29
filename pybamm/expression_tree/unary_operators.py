@@ -75,7 +75,7 @@ class Function(UnaryOperator):
 
     def __init__(self, child, func):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__(func.__name__, child)
+        super().__init__("function ({})".format(func.__name__), child)
         self.func = func
 
     def evaluate(self, t=None, y=None):

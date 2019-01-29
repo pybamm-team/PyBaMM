@@ -43,27 +43,22 @@ class TestUnaryOperators(unittest.TestCase):
     def test_function(self):
         a = pybamm.Symbol("a")
         funca = pybamm.Function(a, test_function)
-        self.assertEqual(funca.name, "test_function")
+        self.assertEqual(funca.name, "function (test_function)")
         self.assertEqual(funca.children[0].name, a.name)
 
-        b = pybamm.Scalar(123)
-        funcb = pybamm.Function(b, test_function)
-        self.assertEqual(funcb.evaluate(), 246)
-
-    def test_function(self):
-        a = pybamm.Scalar(1)
-        sina = pybamm.Function(a, np.sin)
+        b = pybamm.Scalar(1)
+        sina = pybamm.Function(b, np.sin)
         self.assertEqual(sina.evaluate(), np.sin(1))
         self.assertEqual(sina.name, "function ({})".format(np.sin.__name__))
 
-        b = pybamm.Vector(np.linspace(0, 1))
-        cosb = pybamm.Function(b, np.cos)
-        np.testing.assert_array_equal(cosb.evaluate(), np.cos(b.evaluate()))
+        c = pybamm.Vector(np.linspace(0, 1))
+        cosb = pybamm.Function(c, np.cos)
+        np.testing.assert_array_equal(cosb.evaluate(), np.cos(c.evaluate()))
 
         var = pybamm.StateVector(slice(0, 100))
         y = np.linspace(0, 1, 100)
-        logvar = pybamm.Function(var, np.log)
-        np.testing.assert_array_equal(logvar.evaluate(y=y), np.log(y))
+        logvar = pybamm.Function(var, np.log1p)
+        np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
 
     def test_gradient(self):
         a = pybamm.Symbol("a")
