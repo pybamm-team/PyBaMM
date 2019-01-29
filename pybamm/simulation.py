@@ -78,7 +78,7 @@ class Simulation(object):
         raise NotImplementedError
 
 
-if __name__ == "__main_":
+if __name__ == "__main__":
     # Read inputs
     parser = argparse.ArgumentParser()
     parser.add_argument(

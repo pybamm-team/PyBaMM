@@ -41,7 +41,7 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(str(sim), "test name")
 
     def test_simulation_run(self):
-        G = pybamm.Scalar(1)
+        G = pybamm.Scalar(0.1)
         model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
 
         sim = pybamm.Simulation(model)
