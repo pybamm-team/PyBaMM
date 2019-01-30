@@ -21,5 +21,5 @@ class Matrix(pybamm.Array):
 
     """
 
-    def __init__(self, entries, name=None):
-        super().__init__(entries, name=name)
+    def __init__(self, entries, name=None, domain=[]):
+        super().__init__(entries, name=name, domain=domain)

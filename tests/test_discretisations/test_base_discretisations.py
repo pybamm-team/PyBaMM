@@ -77,6 +77,16 @@ class TestDiscretise(unittest.TestCase):
         scal_disc = disc.process_symbol(scal)
         self.assertIsInstance(scal_disc, pybamm.Scalar)
         self.assertEqual(scal_disc.value, scal.value)
+        # vector
+        vec = pybamm.Vector(np.array([1, 2, 3, 4]))
+        vec_disc = disc.process_symbol(vec)
+        self.assertIsInstance(vec_disc, pybamm.Vector)
+        np.testing.assert_array_equal(vec_disc.entries, vec.entries)
+        # matrix
+        mat = pybamm.Matrix(np.array([[1, 2, 3, 4], [5, 6, 7, 8]]))
+        mat_disc = disc.process_symbol(mat)
+        self.assertIsInstance(mat_disc, pybamm.Matrix)
+        np.testing.assert_array_equal(mat_disc.entries, mat.entries)
 
         # binary operator
         bin = var + scal
@@ -101,6 +111,10 @@ class TestDiscretise(unittest.TestCase):
         un2_disc = disc.process_symbol(un2)
         self.assertIsInstance(un2_disc, pybamm.AbsoluteValue)
         self.assertIsInstance(un2_disc.children[0], pybamm.Scalar)
+
+        # parameter should fail
+        with self.assertRaises(NotImplementedError):
+            disc.process_symbol(pybamm.Parameter("par"))
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
