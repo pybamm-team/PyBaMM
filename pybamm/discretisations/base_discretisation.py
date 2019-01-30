@@ -200,6 +200,12 @@ class BaseDiscretisation(object):
 
             return new_symbol
 
+        elif isinstance(symbol, pybamm.Scalar):
+            return pybamm.Scalar(symbol.value, domain=symbol.domain)
+
+        elif isinstance(symbol, pybamm.Array):
+            return symbol.__class__(symbol.entries, domain=symbol.domain)
+
         else:
             # hack to copy the symbol but without a parent
             # (building tree from bottom up)
@@ -237,17 +243,25 @@ class BaseDiscretisation(object):
         left, right = bin_op.children
         new_left = self.process_symbol(left, y_slices, boundary_conditions)
         new_right = self.process_symbol(right, y_slices, boundary_conditions)
-
         # Post-processing to make sure discretised dimensions match
         # If neither child has gradients, or both children have gradients
         # no need to do any averaging
-        if left.has_gradient() == right.has_gradient():
+        if (
+            left.has_gradient_and_not_divergence()
+            == right.has_gradient_and_not_divergence()
+        ):
             pass
         # If only left child has gradient, compute diffusivity for right child
-        elif left.has_gradient() and not right.has_gradient():
+        elif (
+            left.has_gradient_and_not_divergence()
+            and not right.has_gradient_and_not_divergence()
+        ):
             new_right = self.compute_diffusivity(new_right)
         # If only right child has gradient, compute diffusivity for left child
-        elif right.has_gradient() and not left.has_gradient():
+        elif (
+            right.has_gradient_and_not_divergence()
+            and not left.has_gradient_and_not_divergence()
+        ):
             new_left = self.compute_diffusivity(new_left)
         # Return new binary operator with appropriate class
         return bin_op.__class__(new_left, new_right)
