@@ -207,14 +207,15 @@ class BaseDiscretisation(object):
             return symbol.__class__(symbol.entries, domain=symbol.domain)
 
         else:
+            raise NotImplementedError
             # hack to copy the symbol but without a parent
             # (building tree from bottom up)
             # simply setting new_symbol.parent = None, after copying, raises a TreeError
-            parent = symbol.parent
-            symbol.parent = None
-            new_symbol = copy.copy(symbol)
-            symbol.parent = parent
-            return new_symbol
+            # parent = symbol.parent
+            # symbol.parent = None
+            # new_symbol = copy.copy(symbol)
+            # symbol.parent = parent
+            # return new_symbol
 
     def process_binary_operators(self, bin_op, y_slices, boundary_conditions):
         """Discretise binary operators in model equations.
