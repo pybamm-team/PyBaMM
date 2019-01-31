@@ -127,7 +127,10 @@ from .simulation import Simulation
 # Solver classes
 #
 from .solvers.base_solver import BaseSolver
+from .solvers.ode_solver import OdeSolver
+from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
+from .solvers.odes_solver import OdesSolver
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
