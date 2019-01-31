@@ -14,14 +14,6 @@ class TestReactionDiffusionModel(unittest.TestCase):
         model = pybamm.ReactionDiffusionModel()
 
         modeltest = tests.StandardModelTest(model)
-        # Either
-        # 1. run the tests individually (can pass options to individual tests)
-        # modeltest.test_processing_parameters()
-        # modeltest.test_processing_disc()
-        # modeltest.test_solving()
-
-        # Or
-        # 2. run all the tests in one go
         modeltest.test_all()
 
 
