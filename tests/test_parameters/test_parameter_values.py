@@ -78,6 +78,14 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_grad.children[0], pybamm.Scalar)
         self.assertEqual(processed_grad.children[0].value, 1)
 
+        # process concatenation
+        conc = pybamm.Concatenation(a, b)
+        processed_conc = parameter_values.process_symbol(conc)
+        self.assertIsInstance(processed_conc.children[0], pybamm.Scalar)
+        self.assertIsInstance(processed_conc.children[1], pybamm.Scalar)
+        self.assertEqual(processed_conc.children[0].value, 1)
+        self.assertEqual(processed_conc.children[1].value, 2)
+
         # process variable
         c = pybamm.Variable("c")
         processed_c = parameter_values.process_symbol(c)
