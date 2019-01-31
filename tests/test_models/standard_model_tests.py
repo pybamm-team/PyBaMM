@@ -1,7 +1,8 @@
 #
 # Standard basic tests for any model
 #
-import pybamm
+from __future__ import absolute_import, division
+from __future__ import print_function, unicode_literals
 
 
 class StandardModelTest(object):
