@@ -136,6 +136,13 @@ class ParameterValues(dict):
             new_child = self.process_symbol(symbol.children[0])
             return symbol.__class__(new_child)
 
+        elif isinstance(symbol, pybamm.Concatenation):
+            new_children = []
+            for child in symbol.children:
+                new_child = self.process_symbol(child)
+                new_children.append(new_child)
+            return pybamm.Concatenation(*new_children)
+
         else:
             # hack to copy the symbol but without a parent
             # (building tree from bottom up)
