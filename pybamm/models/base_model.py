@@ -17,6 +17,8 @@ class BaseModel(object):
     rhs: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the rhs
+    algebraic: dict
+        A list of algebraic expressions that are assumed to equate to zero
     initial_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the initial conditions
@@ -28,6 +30,7 @@ class BaseModel(object):
     def __init__(self):
         # Initialise empty model
         self._rhs = {}
+        self._algebraic = []
         self._initial_conditions = {}
         self._boundary_conditions = {}
         self._variables = {}
