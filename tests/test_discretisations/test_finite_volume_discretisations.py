@@ -57,6 +57,33 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             # Check that the equation can be evaluated
             eqn_disc.evaluate(None, y_test)
 
+        # more testing, with boundary conditions
+        for flux, eqn in zip(
+            [
+                pybamm.grad(var),
+                pybamm.grad(var),
+                pybamm.grad(var),
+                2 * pybamm.grad(var),
+                2 * pybamm.grad(var),
+                var * pybamm.grad(var) + 2 * pybamm.grad(var),
+            ],
+            [
+                pybamm.div(pybamm.grad(var)),
+                pybamm.div(pybamm.grad(var)) + 2,
+                pybamm.div(pybamm.grad(var)) + var,
+                pybamm.div(2 * pybamm.grad(var)),
+                pybamm.div(2 * pybamm.grad(var)) + 3 * var,
+                -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
+            ],
+        ):
+            eqn_disc = disc.process_symbol(
+                eqn,
+                y_slices,
+                {flux.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}},
+            )
+            # Check that the equation can be evaluated
+            eqn_disc.evaluate(None, y_test)
+
     def test_add_ghost_nodes(self):
         # Set up
         param = pybamm.ParameterValues(
