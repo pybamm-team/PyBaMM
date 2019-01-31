@@ -130,7 +130,8 @@ from .solvers.base_solver import BaseSolver
 from .solvers.ode_solver import OdeSolver
 from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
-from .solvers.odes_solver import OdesSolver
+from .solvers.odes_dae_solver import OdesDaeSolver
+from .solvers.odes_ode_solver import OdesOdeSolver
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

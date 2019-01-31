@@ -5,10 +5,10 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import scipy.integrate as it
+from scikits.odes.ode import ode
 
 
-class OdesSolver(pybamm.DaeSolver):
+class OdesOdeSolver(pybamm.OdeSolver):
     """Solve a discretised model, using scikits.odes.
 
     Parameters
@@ -20,9 +20,9 @@ class OdesSolver(pybamm.DaeSolver):
         abstol in solve_ivp.
     """
 
-    def __init__(self, method="BDF", tol=1e-8):
+    def __init__(self, tol=1e-8):
         super().__init__(tol)
-        self.method = method
+    self.method = method
 
     @property
     def method(self):
@@ -39,27 +39,23 @@ class OdesSolver(pybamm.DaeSolver):
         Parameters
         ----------
         derivs : method
-            A function that takes in t (size (1,)), y (size (n,))
-            and returns the time-derivative dydt (size (n,))
-        y0 : :class:`numpy.array`, size (n,)
+            A function that takes in t and y and returns the time-derivative dydt
+        y0 : numeric type
             The initial conditions
-        t_eval : :class:`numpy.array`, size (k,)
+        t_eval : numeric type
             The times at which to compute the solution
 
-        Returns
-        -------
-        object
-            An object containing the times and values of the solution, as well as
-            various diagnostic messages.
         """
-        sol = it.solve_ivp(
-            derivs,
-            (t_eval[0], t_eval[-1]),
-            y0,
-            t_eval=t_eval,
-            method=self.method,
-            rtol=self.tol,
-            atol=self.tol,
-        )
-        # TODO: implement concentration cut-off event
-        return sol.t, sol.y
+
+        def eqsydot(t, y, return_ydot):
+            return_ydot = derivs(t, y)
+
+        extra_options = {
+            'old_api': False,
+            'rtol': self.tol,
+            'atol': self.tol,
+        }
+
+        ode_solver = ode(self.method, y0, **extra_options)
+        sol = dae_solver.solve(t_eval, y0)
+        return sol.values.t, sol.values.y
