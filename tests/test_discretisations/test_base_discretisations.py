@@ -12,7 +12,8 @@ class MeshForTesting(pybamm.BaseMesh):
         super().__init__(None)
         self["whole cell"] = self.submeshclass(np.linspace(0, 1, 100))
         self["negative electrode"] = self.submeshclass(self["whole cell"].nodes[:40])
-        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[40:])
+        self["separator"] = self.submeshclass(self["whole cell"].nodes[40:65])
+        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[65:])
 
 
 class DiscretisationForTesting(pybamm.BaseDiscretisation):
@@ -337,6 +338,33 @@ class TestDiscretise(unittest.TestCase):
             ]
         )
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
+
+    def test_discretise_space(self):
+        mesh = MeshForTesting()
+        disc = pybamm.BaseDiscretisation(mesh)
+
+        # space
+        x1 = pybamm.Space(["negative electrode"])
+        x1_disc = disc.process_symbol(x1)
+        self.assertIsInstance(x1_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            x1_disc.evaluate(), disc.mesh["negative electrode"].nodes
+        )
+
+        x2 = pybamm.Space(["negative electrode", "separator"])
+        x2_disc = disc.process_symbol(x2)
+        self.assertIsInstance(x2_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            x2_disc.evaluate(),
+            disc.mesh.combine_submeshes("negative electrode", "separator").nodes,
+        )
+
+        x3 = 3 * pybamm.Space(["negative electrode"])
+        x3_disc = disc.process_symbol(x3)
+        self.assertIsInstance(x3_disc.children[1], pybamm.Vector)
+        np.testing.assert_array_equal(
+            x3_disc.evaluate(), 3 * disc.mesh["negative electrode"].nodes
+        )
 
 
 if __name__ == "__main__":
