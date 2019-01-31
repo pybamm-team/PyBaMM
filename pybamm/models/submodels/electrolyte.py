@@ -10,6 +10,12 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
     """A class that generates the expression tree for Stefan-Maxwell Diffusion in the
     electrolyte.
 
+    Parameters
+    ----------
+    G : :class:`pybamm.Symbol`
+        An expression tree that represents the cation flux at the electrode-electrolyte
+        interface
+
     Attributes
     ----------
 
