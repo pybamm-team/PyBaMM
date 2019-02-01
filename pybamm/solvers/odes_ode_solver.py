@@ -5,6 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import numpy as np
 import importlib
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:
@@ -68,4 +69,6 @@ class OdesOdeSolver(pybamm.OdeSolver):
 
         ode_solver = scikits_odes.ode(self.method, eqsydot, **extra_options)
         sol = ode_solver.solve(t_eval, y0)
-        return sol.values.t, sol.values.y
+
+        # return solution, we need to tranpose y to match scipy's ivp interface
+        return sol.values.t, np.transpose(sol.values.y)

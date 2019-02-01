@@ -49,8 +49,8 @@ class TestOdesSolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(constant_growth_dae, y0, ydot0, t_eval)
         np.testing.assert_array_equal(t_sol, t_eval)
-        np.testing.assert_allclose(0.5 * t_sol, y_sol[:, 0])
-        np.testing.assert_allclose(1.0 * t_sol, y_sol[:, 1])
+        np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
+        np.testing.assert_allclose(1.0 * t_sol, y_sol[1])
 
         # Exponential decay
         solver = pybamm.OdesDaeSolver(tol=1e-8)
@@ -65,8 +65,8 @@ class TestOdesSolver(unittest.TestCase):
         ydot0 = np.array([-0.1, -0.2])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(exponential_decay_dae, y0, ydot0, t_eval)
-        np.testing.assert_allclose(y_sol[:, 0], np.exp(-0.1 * t_sol))
-        np.testing.assert_allclose(y_sol[:, 1], 2*np.exp(-0.1 * t_sol))
+        np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
+        np.testing.assert_allclose(y_sol[1], 2*np.exp(-0.1 * t_sol))
 
     def test_model_solver_ode(self):
         # Create model
