@@ -64,6 +64,8 @@ class BaseDiscretisation(object):
                 self._concatenate_init(
                     model.initial_conditions_ydot, y_slices
                 ).evaluate(0, None)
+        else:
+            model.concatenated_initial_conditions_ydot = np.array([])
 
         # Discretise right-hand sides, passing domain from variable
         model.rhs = self.process_dict(

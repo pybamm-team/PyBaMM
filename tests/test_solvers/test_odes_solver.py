@@ -73,8 +73,8 @@ class TestOdesSolver(unittest.TestCase):
         # Create model
         model = pybamm.BaseModel()
         var = pybamm.Variable("var", domain=["whole cell"])
-        model.rhs = {var: pybamm.Scalar(0.1) * var}
-        model.initial_conditions = {var: pybamm.Scalar(1)}
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
         # No need to set parameters; can use base discretisation (no spatial operators)
         param = pybamm.ParameterValues(
             base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
@@ -95,10 +95,12 @@ class TestOdesSolver(unittest.TestCase):
         model = pybamm.BaseModel()
         var1 = pybamm.Variable("var1", domain=["whole cell"])
         var2 = pybamm.Variable("var2", domain=["whole cell"])
-        model.rhs = {var1: pybamm.Scalar(0.1) * var1}
+        model.rhs = {var1: 0.1 * var1}
         model.algebraic = [2*var1 - var2]
         model.initial_conditions = {
-            var1: pybamm.Scalar(1), var2: pybamm.Scalar(1)}
+            var1: 1, var2: 2}
+        model.initial_conditions_ydot = {
+            var1: 0.1, var2: 0.2}
         # No need to set parameters; can use base discretisation (no spatial operators)
         param = pybamm.ParameterValues(
             base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
@@ -113,6 +115,7 @@ class TestOdesSolver(unittest.TestCase):
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)
         np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
+        np.testing.assert_allclose(solver.y[-1], 2*np.exp(0.1 * solver.t))
 
 
 if __name__ == "__main__":
