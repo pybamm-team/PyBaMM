@@ -403,7 +403,8 @@ class BaseDiscretisation(object):
 
     def _concatenate_init(self, var_eqn_dict, y_slices):
         """
-        Concatenate a dictionary of {variable: equation} initial conditions using y_slices
+        Concatenate a dictionary of {variable: equation} initial conditions using
+        y_slices
 
         The keys/variables in `var_eqn_dict` must be the same as the ids in `y_slices`
         The resultant concatenation is ordered according to the ordering of the slice
@@ -485,8 +486,9 @@ class BaseDiscretisation(object):
             y0.shape[0]
         ), pybamm.ModelError(
             """
-            Concatenated rhs, algebraic and initial_conditions must have the same shape after
-            discretisation but rhs.shape = {}, algebraic.shape = {}, and initial_conditions.shape = {}.
+            Concatenated rhs, algebraic and initial_conditions must have the same shape
+            after discretisation but rhs.shape = {}, algebraic.shape = {}, and
+            initial_conditions.shape = {}.
             """.format(
                 model.concatenated_rhs.evaluate(0, y0).shape, y0.shape
             )
