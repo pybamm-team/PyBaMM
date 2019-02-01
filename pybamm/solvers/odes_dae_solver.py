@@ -6,9 +6,12 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import importlib
-scikits_odes = importlib.util.find_spec("scikits")
-if scikits_odes is not None:
-    scikits_odes = importlib.util.find_spec("scikits.odes")
+scikits_odes_spec = importlib.util.find_spec("scikits")
+if scikits_odes_spec is not None:
+    scikits_odes_spec = importlib.util.find_spec("scikits.odes")
+    if scikits_odes_spec is not None:
+        scikits_odes = importlib.util.module_from_spec(scikits_odes_spec)
+        scikits_odes_spec.loader.exec_module(scikits_odes)
 
 
 class OdesDaeSolver(pybamm.DaeSolver):
@@ -23,12 +26,12 @@ class OdesDaeSolver(pybamm.DaeSolver):
         abstol in solve_ivp.
     """
 
-    def __init__(self, tol=1e-8):
-        if scikits_odes is None:
-            raise ImportError("Error: scikits.odes is not installed, "
+    def __init__(self, method="ida", tol=1e-8):
+        if scikits_odes_spec is None:
+            raise ImportError("scikits.odes is not installed, "
                               "please install via \"pip install scikits.odes\"")
         super().__init__(tol)
-        self.method = method
+        self._method = method
 
     @property
     def method(self):
@@ -54,7 +57,7 @@ class OdesDaeSolver(pybamm.DaeSolver):
 
         """
         def eqsres(t, y, ydot, return_residuals):
-            return_residuals = residuals(t, y, ydot)
+            return_residuals[:] = residuals(t, y, ydot)
 
         extra_options = {
             'old_api': False,
@@ -62,6 +65,6 @@ class OdesDaeSolver(pybamm.DaeSolver):
             'atol': self.tol,
         }
 
-        dae_solver = scikits_odes.dae(self.method, y0, **extra_options)
+        dae_solver = scikits_odes.dae(self.method, eqsres, **extra_options)
         sol = dae_solver.solve(t_eval, y0, ydot0)
-        return sol.t, sol.y
+        return sol.values.t, sol.values.y

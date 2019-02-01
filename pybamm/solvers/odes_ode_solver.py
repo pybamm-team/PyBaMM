@@ -6,9 +6,12 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import importlib
-scikits_odes = importlib.util.find_spec("scikits")
-if scikits_odes is not None:
-    scikits_odes = importlib.util.find_spec("scikits.odes")
+scikits_odes_spec = importlib.util.find_spec("scikits")
+if scikits_odes_spec is not None:
+    scikits_odes_spec = importlib.util.find_spec("scikits.odes")
+    if scikits_odes_spec is not None:
+        scikits_odes = importlib.util.module_from_spec(scikits_odes_spec)
+        scikits_odes_spec.loader.exec_module(scikits_odes)
 
 
 class OdesOdeSolver(pybamm.OdeSolver):
@@ -23,13 +26,13 @@ class OdesOdeSolver(pybamm.OdeSolver):
         abstol in solve_ivp.
     """
 
-    def __init__(self, tol=1e-8):
-        if scikits_odes is None:
-            raise ImportError("Error: scikits.odes is not installed, "
+    def __init__(self, method="cvode", tol=1e-8):
+        if scikits_odes_spec is None:
+            raise ImportError("scikits.odes is not installed, "
                               "please install via \"pip install scikits.odes\"")
 
         super().__init__(tol)
-        self.method = method
+        self._method = method
 
     @property
     def method(self):
@@ -55,7 +58,7 @@ class OdesOdeSolver(pybamm.OdeSolver):
         """
 
         def eqsydot(t, y, return_ydot):
-            return_ydot = derivs(t, y)
+            return_ydot[:] = derivs(t, y)
 
         extra_options = {
             'old_api': False,
@@ -63,6 +66,6 @@ class OdesOdeSolver(pybamm.OdeSolver):
             'atol': self.tol,
         }
 
-        ode_solver = scikits_odes.ode(self.method, y0, **extra_options)
-        sol = dae_solver.solve(t_eval, y0)
+        ode_solver = scikits_odes.ode(self.method, eqsydot, **extra_options)
+        sol = ode_solver.solve(t_eval, y0)
         return sol.values.t, sol.values.y
