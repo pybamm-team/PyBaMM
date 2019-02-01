@@ -5,7 +5,10 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-from scikits.odes.ode import ode
+import importlib
+scikits_odes = importlib.util.find_spec("scikits")
+if scikits_odes is not None:
+    scikits_odes = importlib.util.find_spec("scikits.odes")
 
 
 class OdesOdeSolver(pybamm.OdeSolver):
@@ -21,8 +24,12 @@ class OdesOdeSolver(pybamm.OdeSolver):
     """
 
     def __init__(self, tol=1e-8):
+        if scikits_odes is None:
+            raise ImportError("Error: scikits.odes is not installed, "
+                              "please install via \"pip install scikits.odes\"")
+
         super().__init__(tol)
-    self.method = method
+        self.method = method
 
     @property
     def method(self):
@@ -56,6 +63,6 @@ class OdesOdeSolver(pybamm.OdeSolver):
             'atol': self.tol,
         }
 
-        ode_solver = ode(self.method, y0, **extra_options)
+        ode_solver = scikits_odes.ode(self.method, y0, **extra_options)
         sol = dae_solver.solve(t_eval, y0)
         return sol.values.t, sol.values.y

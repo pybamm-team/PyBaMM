@@ -12,7 +12,7 @@ import numpy as np
 class TestOdesSolver(unittest.TestCase):
     def test_ode_integrate(self):
         # Constant
-        solver = pybamm.OdesOdeSolver(tol=1e-8, method="RK45")
+        solver = pybamm.OdesOdeSolver(tol=1e-8)
 
         def constant_growth(t, y):
             return 0.5 * np.ones_like(y)
@@ -24,7 +24,7 @@ class TestOdesSolver(unittest.TestCase):
         np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
 
         # Exponential decay
-        solver = pybamm.OdesOdeSolver(tol=1e-8, method="BDF")
+        solver = pybamm.OdesOdeSolver(tol=1e-8)
 
         def exponential_decay(t, y):
             return -0.1 * y
@@ -36,7 +36,7 @@ class TestOdesSolver(unittest.TestCase):
 
     def test_dae_integrate(self):
         # Constant
-        solver = pybamm.OdesDaeSolver(tol=1e-8, method="BDF")
+        solver = pybamm.OdesDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
             return [
@@ -52,7 +52,7 @@ class TestOdesSolver(unittest.TestCase):
         np.testing.assert_allclose(1.0 * t_sol, y_sol[1])
 
         # Exponential decay
-        solver = pybamm.OdesDaeSolver(tol=1e-8, method="BDF")
+        solver = pybamm.OdesDaeSolver(tol=1e-8)
 
         def exponential_decay_dae(t, y, ydot):
             return [
@@ -81,7 +81,7 @@ class TestOdesSolver(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.OdesOdeSolver(tol=1e-8, method="RK45")
+        solver = pybamm.OdesOdeSolver(tol=1e-8)
         t_eval = mesh["time"]
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)
@@ -104,7 +104,7 @@ class TestOdesSolver(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.OdesDaeSolver(tol=1e-8, method="RK45")
+        solver = pybamm.OdesDaeSolver(tol=1e-8)
         t_eval = mesh["time"]
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)

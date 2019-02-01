@@ -4,8 +4,10 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
+import pybamm
 
-class DaeSolver(BaseSolver):
+
+class DaeSolver(pybamm.BaseSolver):
     """Solve a discretised model.
 
     Parameters
@@ -37,11 +39,12 @@ class DaeSolver(BaseSolver):
             )
 
         y0 = model.concatenated_initial_conditions
-        self.t, self.y = self.integrate(residuals, y0, t_eval)
+        ydot0 = np.zeros_like(y0)
+        self.t, self.y = self.integrate(residuals, y0, ydot0, t_eval)
 
-    def integrate(self, residuals, y0, t_eval):
+    def integrate(self, residuals, y0, ydot0, t_eval):
         """
-        Solve a DAE model defined by residuals with initial conditions y0.
+        Solve a DAE model defined by residuals with initial conditions y0 and ydot0.
 
         Parameters
         ----------

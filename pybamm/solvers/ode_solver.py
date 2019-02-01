@@ -4,8 +4,10 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
+import pybamm
 
-class OdeSolver(BaseSolver):
+
+class OdeSolver(pybamm.BaseSolver):
     """Solve a discretised model.
 
     Parameters
