@@ -64,7 +64,8 @@ class TestOdesSolver(unittest.TestCase):
         y0 = np.array([1, 2])
         ydot0 = np.array([-0.1, -0.2])
         t_eval = np.linspace(0, 1, 100)
-        t_sol, y_sol = solver.integrate(exponential_decay_dae, y0, ydot0, t_eval)
+        t_sol, y_sol = solver.integrate(
+            exponential_decay_dae, y0, ydot0, t_eval)
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
         np.testing.assert_allclose(y_sol[1], 2*np.exp(-0.1 * t_sol))
 
@@ -83,7 +84,7 @@ class TestOdesSolver(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.OdesOdeSolver(tol=1e-8)
+        solver = pybamm.OdesOdeSolver(tol=1e-9)
         t_eval = mesh["time"]
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)
@@ -96,7 +97,8 @@ class TestOdesSolver(unittest.TestCase):
         var2 = pybamm.Variable("var2", domain=["whole cell"])
         model.rhs = {var1: pybamm.Scalar(0.1) * var1}
         model.algebraic = [2*var1 - var2]
-        model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(1)}
+        model.initial_conditions = {
+            var1: pybamm.Scalar(1), var2: pybamm.Scalar(1)}
         # No need to set parameters; can use base discretisation (no spatial operators)
         param = pybamm.ParameterValues(
             base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}

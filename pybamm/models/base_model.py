@@ -56,6 +56,14 @@ class BaseModel(object):
             )
 
     @property
+    def algebraic(self):
+        return self._algebraic
+
+    @algebraic.setter
+    def algebraic(self, algebraic):
+        self._algebraic = algebraic
+
+    @property
     def initial_conditions(self):
         return self._initial_conditions
 

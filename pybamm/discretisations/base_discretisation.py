@@ -40,7 +40,8 @@ class BaseDiscretisation(object):
 
         """
         # Set the y split for variables
-        y_slices = self.get_variable_slices(model.rhs.keys())
+        variables = self.get_all_variables(model)
+        y_slices = self.get_variable_slices(variables)
 
         # Discretise initial conditions
         model.initial_conditions = self.process_initial_conditions(
@@ -52,9 +53,19 @@ class BaseDiscretisation(object):
         ).evaluate(0, None)
 
         # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_dict(model.rhs, y_slices, model.boundary_conditions)
+        model.rhs = self.process_dict(
+            model.rhs, y_slices, model.boundary_conditions)
         # Concatenate rhs into a single state vector
         model.concatenated_rhs = self.concatenate(*model.rhs.values())
+
+        # Discretise and concatenate algebraic equations
+        model.algebraic = [
+            self.process_symbol(
+                equation, y_slices, boundary_conditions
+            )
+            for equation in model.algebraic
+        ]
+        model.concatenated_algebraic = self.concatenate(*model.algebraic)
 
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
@@ -65,12 +76,54 @@ class BaseDiscretisation(object):
 
         self.check_model(model)
 
+    def get_all_variables(self, model):
+        """get all variables in a model
+
+        This returns all the variables in the model in a list. Given a model
+        with n differential equations in model.rhs, the returned list will have
+        the corresponding variables for these equations (in order) in the first
+        n elements. The remaining elements of the list will have the remaining
+        algebraic variables in no specific order
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise.
+
+
+        Returns
+        -------
+        variables: list of :class:`pybamm.Variable`
+            All the variables in the model
+        """
+        variables = list(model.rhs.keys())
+        algebraic_variables = {}
+        for equation in model.algebraic:
+            # find all variables in the expression
+            eq_variables = {
+                variable.id: variable for variable in equation.pre_order()
+                if isinstance(variable, pybamm.Variable)
+            }
+            # remove their parents
+            for key in eq_variables.keys():
+                eq_variables[key].parent = None
+
+            # add to the total set
+            algebraic_variables.update(eq_variables)
+
+        # remove rhs variables from algebraic variables (if they exist)
+        for variable in variables:
+            algebraic_variables.pop(variable.id, None)
+
+        # return both rhs and algebraic variables
+        return variables + list(algebraic_variables.values())
+
     def get_variable_slices(self, variables):
         """Set the slicing for variables.
 
         Parameters
         ----------
-        variables : dict_keys object containing Variable instances
+        variables : set of Variables
             Variables for which to set the slices
 
         Returns
@@ -78,6 +131,7 @@ class BaseDiscretisation(object):
         y_slices : dict of {variable id: slice}
             The slices to take when solving (assigning chunks of y to each vector)
         """
+
         y_slices = {variable.id: None for variable in variables}
         start = 0
         end = 0
@@ -108,7 +162,8 @@ class BaseDiscretisation(object):
             discretised_ic = self.process_symbol(equation).evaluate()
 
             if isinstance(discretised_ic, numbers.Number):
-                discretised_ic = discretised_ic * self.vector_of_ones(variable.domain)
+                discretised_ic = discretised_ic * \
+                    self.vector_of_ones(variable.domain)
             else:
                 raise NotImplementedError(
                     "Currently only accepts scalar initial conditions"
