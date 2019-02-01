@@ -75,7 +75,10 @@ class NumpyConcatenation(Concatenation):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return np.concatenate([child.evaluate(t, y) for child in self.children])
+        if len(self.children) == 0:
+            return np.array([])
+        else:
+            return np.concatenate([child.evaluate(t, y) for child in self.children])
 
 
 class DomainConcatenation(Concatenation):

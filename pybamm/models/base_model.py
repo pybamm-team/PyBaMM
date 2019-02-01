@@ -96,8 +96,9 @@ class BaseModel(object):
 
     @initial_conditions.setter
     def initial_conditions(self, initial_conditions):
-        self._initial_conditions =
-            self._set_initial_conditions(initial_conditions)
+        self._initial_conditions = self._set_initial_conditions(
+            initial_conditions
+        )
 
     @property
     def initial_conditions_ydot(self):
@@ -105,8 +106,9 @@ class BaseModel(object):
 
     @initial_conditions_ydot.setter
     def initial_conditions_ydot(self, initial_conditions):
-        self._initial_conditions_ydot =
-            self._set_initial_conditions(initial_conditions)
+        self._initial_conditions_ydot = self._set_initial_conditions(
+            initial_conditions
+        )
 
     @property
     def boundary_conditions(self):

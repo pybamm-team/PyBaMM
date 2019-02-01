@@ -40,6 +40,37 @@ class DiscretisationForTesting(pybamm.BaseDiscretisation):
 
 
 class TestDiscretise(unittest.TestCase):
+
+    def test_concatenate_init(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        y_slices = {
+            c.id: slice(0, 1),
+            a.id: slice(2, 3),
+            b.id: slice(3, 4),
+        }
+        initial_conditions = {
+            c: pybamm.Scalar(1),
+            a: pybamm.Scalar(2),
+            b: pybamm.Scalar(3),
+        }
+        mesh = MeshForTesting()
+        disc = pybamm.BaseDiscretisation(mesh)
+        result = disc._concatenate_init(initial_conditions, y_slices)
+
+        self.assertIsInstance(result, pybamm.NumpyConcatenation)
+        self.assertEqual(result.children[0].evaluate(), 1)
+        self.assertEqual(result.children[1].evaluate(), 2)
+        self.assertEqual(result.children[2].evaluate(), 3)
+
+        initial_conditions = {
+            a: pybamm.Scalar(2),
+            b: pybamm.Scalar(3),
+        }
+        with self.assertRaises(pybamm.ModelError):
+            result = disc._concatenate_init(initial_conditions, y_slices)
+
     def test_find_all_variables(self):
 
         mesh = MeshForTesting()
@@ -313,7 +344,7 @@ class TestDiscretise(unittest.TestCase):
             y[y_slices[T.id]], processed_rhs[T].evaluate(None, y)
         )
 
-    def test_process_model(self):
+    def test_process_model_ode(self):
         # one equation
         c = pybamm.Variable("c", domain=["whole cell"])
         N = pybamm.grad(c)
@@ -373,6 +404,91 @@ class TestDiscretise(unittest.TestCase):
         )
         np.testing.assert_array_equal(
             S0 * T0, model.variables["ST"].evaluate(None, y0))
+
+        # test that not enough initial conditions raises an error
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N), T: pybamm.div(q), S: pybamm.div(p)}
+        model.initial_conditions = {
+            T: pybamm.Scalar(5),
+            S: pybamm.Scalar(8),
+        }
+        model.boundary_conditions = {}
+        model.variables = {"ST": S * T}
+        with self.assertRaises(pybamm.ModelError):
+            disc.process_model(model)
+
+    def test_process_model_dae(self):
+        # one rhs equation and one algebraic
+        c = pybamm.Variable("c", domain=["whole cell"])
+        d = pybamm.Variable("d", domain=["whole cell"])
+        N = pybamm.grad(c)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.algebraic = [d - 2*c]
+        model.initial_conditions = {
+            d: pybamm.Scalar(6),
+            c: pybamm.Scalar(3),
+        }
+        model.initial_conditions_ydot = {
+            d: pybamm.Scalar(2),
+            c: pybamm.Scalar(1),
+        }
+
+        model.boundary_conditions = {}
+        model.variables = {"c": c, "N": N, "d": d}
+        mesh = MeshForTesting()
+        disc = DiscretisationForTesting(mesh)
+
+        disc.process_model(model)
+        y0 = model.concatenated_initial_conditions
+        np.testing.assert_array_equal(
+            y0,
+            np.concatenate(
+                [
+                    3 * np.ones_like(mesh["whole cell"].nodes),
+                    6 * np.ones_like(mesh["whole cell"].nodes),
+                ]
+            ),
+        )
+        ydot0 = model.concatenated_initial_conditions_ydot
+        np.testing.assert_array_equal(
+            ydot0,
+            np.concatenate(
+                [
+                    1 * np.ones_like(mesh["whole cell"].nodes),
+                    2 * np.ones_like(mesh["whole cell"].nodes),
+                ]
+            ),
+        )
+
+        # grad and div are identity operators here
+        np.testing.assert_array_equal(
+            y0[:mesh["whole cell"].npts],
+            model.concatenated_rhs.evaluate(None, y0)
+        )
+
+        np.testing.assert_array_equal(
+            model.concatenated_algebraic.evaluate(None, y0),
+            np.zeros_like(mesh["whole cell"].nodes),
+        )
+
+        # test that not enough initial conditions for ydot raises an error
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.algebraic = [d - 2*c]
+        model.initial_conditions = {
+            d: pybamm.Scalar(6),
+            c: pybamm.Scalar(3),
+        }
+        model.initial_conditions_ydot = {
+            c: pybamm.Scalar(1),
+        }
+
+        model.boundary_conditions = {}
+        model.variables = {"c": c, "N": N, "d": d}
+
+        with self.assertRaises(pybamm.ModelError):
+            disc.process_model(model)
 
     def test_vector_of_ones(self):
         mesh = MeshForTesting()
