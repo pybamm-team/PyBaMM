@@ -135,7 +135,7 @@ class BaseDiscretisation(object):
 
         Parameters
         ----------
-        variables : set of Variables
+        variables : list of Variables
             Variables for which to set the slices
 
         Returns
@@ -174,8 +174,7 @@ class BaseDiscretisation(object):
             discretised_ic = self.process_symbol(equation).evaluate()
 
             if isinstance(discretised_ic, numbers.Number):
-                discretised_ic = discretised_ic * \
-                    self.vector_of_ones(variable.domain)
+                discretised_ic = discretised_ic * self.vector_of_ones(variable.domain)
             else:
                 raise NotImplementedError(
                     "Currently only accepts scalar initial conditions"
