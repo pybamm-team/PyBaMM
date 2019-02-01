@@ -34,6 +34,14 @@ class TestBaseModel(unittest.TestCase):
                 )
             }
 
+    def test_algebraic_set_get(self):
+        model = pybamm.BaseModel()
+        algebraic = [
+            pybamm.Symbol("c") - pybamm.Symbol("a"),
+        }
+        model.algebraic = algebraic
+        self.assertEqual(algebraic, model.algebraic)
+
     def test_initial_conditions_set_get(self):
         model = pybamm.BaseModel()
         initial_conditions = {
@@ -42,6 +50,8 @@ class TestBaseModel(unittest.TestCase):
         }
         model.initial_conditions = initial_conditions
         self.assertEqual(initial_conditions, model.initial_conditions)
+        model.initial_conditions_ydot = initial_conditions
+        self.assertEqual(initial_conditions, model.initial_conditions_ydot)
 
         # Test number input
         c0 = pybamm.Symbol("c0")
@@ -66,8 +76,10 @@ class TestBaseModel(unittest.TestCase):
         # Test number input
         c0 = pybamm.Symbol("c0")
         model.boundary_conditions = {c0: {"left": -2, "right": 4}}
-        self.assertIsInstance(model.boundary_conditions[c0]["left"], pybamm.Scalar)
-        self.assertIsInstance(model.boundary_conditions[c0]["right"], pybamm.Scalar)
+        self.assertIsInstance(
+            model.boundary_conditions[c0]["left"], pybamm.Scalar)
+        self.assertIsInstance(
+            model.boundary_conditions[c0]["right"], pybamm.Scalar)
         self.assertEqual(model.boundary_conditions[c0]["left"].value, -2)
         self.assertEqual(model.boundary_conditions[c0]["right"].value, 4)
 
@@ -95,7 +107,8 @@ class TestBaseModel(unittest.TestCase):
         model.check_well_posedness()
 
         # Well-posed model - Neumann
-        model.boundary_conditions = {3 * pybamm.grad(c) + 2: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            3 * pybamm.grad(c) + 2: {"left": 0, "right": 0}}
         model.check_well_posedness()
 
         # Model with bad initial conditions (expect assertion error)
@@ -118,7 +131,8 @@ class TestBaseModel(unittest.TestCase):
         # Model with bad boundary conditions - Neumann (expect assertion error)
         d = pybamm.Variable("d", domain=["whole cell"])
         model.initial_conditions = {c: 3}
-        model.boundary_conditions = {4 * pybamm.grad(d): {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            4 * pybamm.grad(d): {"left": 0, "right": 0}}
         with self.assertRaises(AssertionError) as error:
             model.check_well_posedness()
         self.assertIsInstance(error.exception.args[0], pybamm.ModelError)
