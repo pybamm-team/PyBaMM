@@ -1,6 +1,8 @@
 #
 # Tests for the base model class
 #
+from __future__ import absolute_import, division
+from __future__ import print_function, unicode_literals
 import pybamm
 
 import unittest
@@ -84,6 +86,72 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = rhs
         self.assertEqual(model[key], rhs[key])
         self.assertEqual(model[key], model.rhs[key])
+
+    def test_update(self):
+        # model
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c", domain=["whole cell"])
+        rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
+        initial_conditions = {c: 1}
+        boundary_conditions = {c: {"left": 0, "right": 0}}
+        variables = {"c": c}
+        model.rhs = rhs
+        model.initial_conditions = initial_conditions
+        model.boundary_conditions = boundary_conditions
+        model.variables = variables
+
+        # update with submodel
+        submodel = pybamm.BaseModel()
+        d = pybamm.Variable("d", domain=["whole cell"])
+        submodel.rhs = {
+            d: 5 * pybamm.div(pybamm.grad(c)) + pybamm.div(pybamm.grad(d)) - 1
+        }
+        submodel.initial_conditions = {d: 3}
+        submodel.boundary_conditions = {d: {"left": 4, "right": 7}}
+        submodel.variables = {"d": d}
+        model.update(submodel)
+
+        # check
+        self.assertEqual(model.rhs[d], submodel.rhs[d])
+        self.assertEqual(model.initial_conditions[d], submodel.initial_conditions[d])
+        self.assertEqual(model.boundary_conditions[d], submodel.boundary_conditions[d])
+        self.assertEqual(model.variables["d"], submodel.variables["d"])
+        self.assertEqual(model.rhs[c], rhs[c])
+        self.assertEqual(model.initial_conditions[c], initial_conditions[c])
+        self.assertEqual(model.boundary_conditions[c], boundary_conditions[c])
+        self.assertEqual(model.variables["c"], variables["c"])
+
+        # update with conflicting submodel
+        submodel2 = pybamm.BaseModel()
+        submodel2.rhs = {d: pybamm.div(pybamm.grad(d)) - 1}
+        with self.assertRaises(AssertionError) as error:
+            model.update(submodel2)
+        self.assertIsInstance(error.exception.args[0], pybamm.ModelError)
+
+    def test_create_from_submodels(self):
+        submodel1 = pybamm.BaseModel()
+        c = pybamm.Variable("c", domain=["whole cell"])
+        submodel1.rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
+        submodel1.initial_conditions = {c: 1}
+        submodel1.boundary_conditions = {c: {"left": 0, "right": 0}}
+
+        submodel2 = pybamm.BaseModel()
+        d = pybamm.Variable("d", domain=["whole cell"])
+        submodel2.rhs = {
+            d: 5 * pybamm.div(pybamm.grad(c)) + pybamm.div(pybamm.grad(d)) - 1
+        }
+        submodel2.initial_conditions = {d: 3}
+        submodel2.boundary_conditions = {d: {"left": 4, "right": 7}}
+
+        model = pybamm.BaseModel()
+        model.create_from_submodels(submodel1, submodel2)
+
+        self.assertEqual(model.rhs[c], submodel1.rhs[c])
+        self.assertEqual(model.initial_conditions[c], submodel1.initial_conditions[c])
+        self.assertEqual(model.boundary_conditions[c], submodel1.boundary_conditions[c])
+        self.assertEqual(model.rhs[d], submodel2.rhs[d])
+        self.assertEqual(model.initial_conditions[d], submodel2.initial_conditions[d])
+        self.assertEqual(model.boundary_conditions[d], submodel2.boundary_conditions[d])
 
     def test_check_well_posedness(self):
         # Well-posed model - Dirichlet

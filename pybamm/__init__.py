@@ -78,7 +78,7 @@ from .expression_tree.unary_operators import (
 )
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
-from .expression_tree.independent_variable import IndependentVariable
+from .expression_tree.independent_variable import IndependentVariable, Time, Space
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
@@ -89,7 +89,6 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
-from .models.electrolyte_current import ElectrolyteCurrentModel
 
 #
 # Submodel classes
@@ -107,7 +106,10 @@ from .parameters import standard_parameters
 # Mesh and Discretisation classes
 #
 from .discretisations.base_discretisation import BaseDiscretisation
-from .discretisations.finite_volume_discretisations import FiniteVolumeDiscretisation
+from .discretisations.finite_volume_discretisations import (
+    FiniteVolumeDiscretisation,
+    NodeToEdge,
+)
 from .discretisations.base_mesh import KNOWN_DOMAINS
 from .discretisations.base_mesh import BaseMesh, BaseSubmesh
 from .discretisations.finite_volume_meshes import (

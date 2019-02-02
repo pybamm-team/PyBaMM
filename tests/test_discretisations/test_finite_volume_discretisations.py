@@ -8,6 +8,82 @@ import unittest
 
 
 class TestFiniteVolumeDiscretisation(unittest.TestCase):
+    def test_node_to_edge(self):
+        a = pybamm.Symbol("a")
+
+        def arithmetic_mean(array):
+            return (array[1:] + array[:-1]) / 2
+
+        ava = pybamm.NodeToEdge(a, arithmetic_mean)
+        self.assertEqual(ava.name, "node to edge (arithmetic_mean)")
+        self.assertEqual(ava.children[0].name, a.name)
+
+        b = pybamm.Scalar(-4)
+        avb = pybamm.NodeToEdge(b, arithmetic_mean)
+        self.assertEqual(avb.evaluate(), -4)
+
+        c = pybamm.Vector(np.ones(10))
+        avc = pybamm.NodeToEdge(c, arithmetic_mean)
+        np.testing.assert_array_equal(avc.evaluate(), np.ones(9))
+
+        d = pybamm.StateVector(slice(0, 10))
+        y_test = np.ones(10)
+        avd = pybamm.NodeToEdge(d, arithmetic_mean)
+        np.testing.assert_array_equal(avd.evaluate(None, y_test), np.ones(9))
+
+    def test_discretise_diffusivity_times_spatial_operator(self):
+        # Set up
+        param = pybamm.ParameterValues(
+            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+        )
+        mesh = pybamm.FiniteVolumeMacroMesh(param, 2)
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
+
+        # Discretise some equations where averaging is needed
+        var = pybamm.Variable("var", domain=["whole cell"])
+        y_slices = disc.get_variable_slices([var])
+        y_test = np.ones_like(mesh["whole cell"].nodes)
+        for eqn in [
+            var * pybamm.grad(var),
+            var ** 2 * pybamm.grad(var),
+            var * pybamm.grad(var) ** 2,
+            var * (pybamm.grad(var) + 2),
+            (pybamm.grad(var) + 2) * (-var),
+            (pybamm.grad(var) + 2) * (2 * var),
+            pybamm.grad(var) * pybamm.grad(var),
+            (pybamm.grad(var) + 2) * pybamm.grad(var) ** 2,
+        ]:
+            eqn_disc = disc.process_symbol(eqn, y_slices, {})
+            # Check that the equation can be evaluated
+            eqn_disc.evaluate(None, y_test)
+
+        # more testing, with boundary conditions
+        for flux, eqn in zip(
+            [
+                pybamm.grad(var),
+                pybamm.grad(var),
+                pybamm.grad(var),
+                2 * pybamm.grad(var),
+                2 * pybamm.grad(var),
+                var * pybamm.grad(var) + 2 * pybamm.grad(var),
+            ],
+            [
+                pybamm.div(pybamm.grad(var)),
+                pybamm.div(pybamm.grad(var)) + 2,
+                pybamm.div(pybamm.grad(var)) + var,
+                pybamm.div(2 * pybamm.grad(var)),
+                pybamm.div(2 * pybamm.grad(var)) + 3 * var,
+                -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
+            ],
+        ):
+            eqn_disc = disc.process_symbol(
+                eqn,
+                y_slices,
+                {flux.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}},
+            )
+            # Check that the equation can be evaluated
+            eqn_disc.evaluate(None, y_test)
+
     def test_add_ghost_nodes(self):
         # Set up
         param = pybamm.ParameterValues(

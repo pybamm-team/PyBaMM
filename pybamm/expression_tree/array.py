@@ -30,6 +30,10 @@ class Array(pybamm.Symbol):
         self._entries = entries
 
     @property
+    def entries(self):
+        return self._entries
+
+    @property
     def ndim(self):
         """ returns the number of dimensions of the tensor"""
         return self._entries.ndim

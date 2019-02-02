@@ -27,13 +27,13 @@ class TestUnaryOperators(unittest.TestCase):
 
     def test_absolute(self):
         a = pybamm.Symbol("a")
-        nega = pybamm.AbsoluteValue(a)
-        self.assertEqual(nega.name, "abs")
-        self.assertEqual(nega.children[0].name, a.name)
+        absa = pybamm.AbsoluteValue(a)
+        self.assertEqual(absa.name, "abs")
+        self.assertEqual(absa.children[0].name, a.name)
 
         b = pybamm.Scalar(-4)
-        negb = pybamm.AbsoluteValue(b)
-        self.assertEqual(negb.evaluate(), 4)
+        absb = pybamm.AbsoluteValue(b)
+        self.assertEqual(absb.evaluate(), 4)
 
     def test_gradient(self):
         a = pybamm.Symbol("a")

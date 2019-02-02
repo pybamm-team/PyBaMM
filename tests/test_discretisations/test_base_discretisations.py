@@ -12,7 +12,8 @@ class MeshForTesting(pybamm.BaseMesh):
         super().__init__(None)
         self["whole cell"] = self.submeshclass(np.linspace(0, 1, 100))
         self["negative electrode"] = self.submeshclass(self["whole cell"].nodes[:40])
-        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[40:])
+        self["separator"] = self.submeshclass(self["whole cell"].nodes[40:65])
+        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[65:])
 
 
 class DiscretisationForTesting(pybamm.BaseDiscretisation):
@@ -77,12 +78,16 @@ class TestDiscretise(unittest.TestCase):
         scal_disc = disc.process_symbol(scal)
         self.assertIsInstance(scal_disc, pybamm.Scalar)
         self.assertEqual(scal_disc.value, scal.value)
-
-        # parameter
-        par = pybamm.Parameter("par")
-        par_disc = disc.process_symbol(par)
-        self.assertIsInstance(par_disc, pybamm.Parameter)
-        self.assertEqual(par_disc.name, par.name)
+        # vector
+        vec = pybamm.Vector(np.array([1, 2, 3, 4]))
+        vec_disc = disc.process_symbol(vec)
+        self.assertIsInstance(vec_disc, pybamm.Vector)
+        np.testing.assert_array_equal(vec_disc.entries, vec.entries)
+        # matrix
+        mat = pybamm.Matrix(np.array([[1, 2, 3, 4], [5, 6, 7, 8]]))
+        mat_disc = disc.process_symbol(mat)
+        self.assertIsInstance(mat_disc, pybamm.Matrix)
+        np.testing.assert_array_equal(mat_disc.entries, mat.entries)
 
         # binary operator
         bin = var + scal
@@ -90,6 +95,12 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(bin_disc, pybamm.Addition)
         self.assertIsInstance(bin_disc.children[0], pybamm.StateVector)
         self.assertIsInstance(bin_disc.children[1], pybamm.Scalar)
+
+        bin2 = scal + var
+        bin2_disc = disc.process_symbol(bin2, y_slices)
+        self.assertIsInstance(bin2_disc, pybamm.Addition)
+        self.assertIsInstance(bin2_disc.children[0], pybamm.Scalar)
+        self.assertIsInstance(bin2_disc.children[1], pybamm.StateVector)
 
         # non-spatial unary operator
         un1 = -var
@@ -102,14 +113,18 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(un2_disc, pybamm.AbsoluteValue)
         self.assertIsInstance(un2_disc.children[0], pybamm.Scalar)
 
+        # parameter should fail
+        with self.assertRaises(NotImplementedError):
+            disc.process_symbol(pybamm.Parameter("par"))
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
-        par1 = pybamm.Parameter("par1")
-        par2 = pybamm.Parameter("par2")
         scal1 = pybamm.Scalar("scal1")
         scal2 = pybamm.Scalar("scal2")
-        expression = (scal1 * (par1 + var2)) / ((var1 - par2) + scal2)
+        scal3 = pybamm.Scalar("scal3")
+        scal4 = pybamm.Scalar("scal4")
+        expression = (scal1 * (scal3 + var2)) / ((var1 - scal4) + scal2)
 
         disc = pybamm.BaseDiscretisation(None)
         y_slices = {var1.id: slice(53), var2.id: slice(53, 59)}
@@ -120,7 +135,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(exp_disc.children[0].children[0], pybamm.Scalar)
         self.assertIsInstance(exp_disc.children[0].children[1], pybamm.Addition)
         self.assertTrue(
-            isinstance(exp_disc.children[0].children[1].children[0], pybamm.Parameter)
+            isinstance(exp_disc.children[0].children[1].children[0], pybamm.Scalar)
         )
         self.assertTrue(
             isinstance(exp_disc.children[0].children[1].children[1], pybamm.StateVector)
@@ -140,7 +155,7 @@ class TestDiscretise(unittest.TestCase):
             exp_disc.children[1].children[0].children[0].y_slice, y_slices[var1.id]
         )
         self.assertTrue(
-            isinstance(exp_disc.children[1].children[0].children[1], pybamm.Parameter)
+            isinstance(exp_disc.children[1].children[0].children[1], pybamm.Scalar)
         )
         self.assertIsInstance(exp_disc.children[1].children[1], pybamm.Scalar)
 
@@ -149,6 +164,8 @@ class TestDiscretise(unittest.TestCase):
         disc = DiscretisationForTesting(mesh)
         var = pybamm.Variable("var", domain=["whole cell"])
         y_slices = disc.get_variable_slices([var])
+
+        # Simple expressions
         for eqn in [pybamm.grad(var), pybamm.div(var)]:
             eqn_disc = disc.process_symbol(eqn, y_slices, {})
 
@@ -161,6 +178,23 @@ class TestDiscretise(unittest.TestCase):
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(
                 eqn_disc.evaluate(None, y), var_disc.evaluate(None, y)
+            )
+
+        # More complex expressions
+        for eqn in [var * pybamm.grad(var), var * pybamm.div(var)]:
+            eqn_disc = disc.process_symbol(eqn, y_slices, {})
+
+            self.assertIsInstance(eqn_disc, pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc.children[0], pybamm.StateVector)
+            self.assertIsInstance(eqn_disc.children[1], pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc.children[1].children[0], pybamm.Matrix)
+            self.assertIsInstance(eqn_disc.children[1].children[1], pybamm.StateVector)
+
+            y = mesh["whole cell"].nodes ** 2
+            var_disc = disc.process_symbol(var, y_slices)
+            # grad and var are identity operators here (for testing purposes)
+            np.testing.assert_array_equal(
+                eqn_disc.evaluate(None, y), var_disc.evaluate(None, y) ** 2
             )
 
     def test_core_NotImplementedErrors(self):
@@ -318,6 +352,33 @@ class TestDiscretise(unittest.TestCase):
             ]
         )
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
+
+    def test_discretise_space(self):
+        mesh = MeshForTesting()
+        disc = pybamm.BaseDiscretisation(mesh)
+
+        # space
+        x1 = pybamm.Space(["negative electrode"])
+        x1_disc = disc.process_symbol(x1)
+        self.assertIsInstance(x1_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            x1_disc.evaluate(), disc.mesh["negative electrode"].nodes
+        )
+
+        x2 = pybamm.Space(["negative electrode", "separator"])
+        x2_disc = disc.process_symbol(x2)
+        self.assertIsInstance(x2_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            x2_disc.evaluate(),
+            disc.mesh.combine_submeshes("negative electrode", "separator").nodes,
+        )
+
+        x3 = 3 * pybamm.Space(["negative electrode"])
+        x3_disc = disc.process_symbol(x3)
+        self.assertIsInstance(x3_disc.children[1], pybamm.Vector)
+        np.testing.assert_array_equal(
+            x3_disc.evaluate(), 3 * disc.mesh["negative electrode"].nodes
+        )
 
 
 if __name__ == "__main__":

@@ -1,40 +1,43 @@
 #
 # Standard basic tests for any model
 #
-import pybamm
+from __future__ import absolute_import, division
+from __future__ import print_function, unicode_literals
 
 
 class StandardModelTest(object):
     def __init__(self, model):
         self.model = model
-        self.param = None
-        self.mesh = None
+        # Set defaults
+        self.param = model.default_parameter_values
+        self.disc = model.default_discretisation
+        self.solver = model.default_solver
 
-    def test_processing_parameters(self, param_str="LCO"):
-        if param_str == "LCO":
-            self.param = pybamm.ParameterValues(
-                "input/parameters/lithium-ion/parameters/LCO.csv"
-            )
-
+    def test_processing_parameters(self, param=None):
+        # Overwrite parameters if given
+        if param is not None:
+            self.param = param
         self.param.process_model(self.model)
         # Model should still be well-posed after processing
         self.model.check_well_posedness()
 
-    def test_processing_disc(self, disc_str="Finite Volume"):
-        if disc_str == "Finite Volume":
-            self.mesh = pybamm.FiniteVolumeMacroMesh(self.param, 2)
-            disc = pybamm.FiniteVolumeDiscretisation(self.mesh)
-        disc.process_model(self.model)
+    def test_processing_disc(self, disc=None):
+        # Overwrite discretisation if given
+        if disc is not None:
+            self.disc = disc
+        self.disc.process_model(self.model)
         # Model should still be well-posed after processing
         self.model.check_well_posedness()
 
-    def test_solving(self):
-        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
-        t_eval = self.mesh["time"]
-        solver.solve(self.model, t_eval)
+    def test_solving(self, solver=None):
+        # Overwrite solver if given
+        if solver is not None:
+            self.solver = solver
+        t_eval = self.disc.mesh["time"]
+        self.solver.solve(self.model, t_eval)
 
-    def test_all(self):
+    def test_all(self, param=None, disc=None, solver=None):
         self.model.check_well_posedness()
-        self.test_processing_parameters()
-        self.test_processing_disc()
-        self.test_solving()
+        self.test_processing_parameters(param)
+        self.test_processing_disc(disc)
+        self.test_solving(solver)

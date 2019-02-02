@@ -23,6 +23,10 @@ class BaseModel(object):
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions
+    variables: dict
+        A dictionary that maps strings to expressions that represent
+        the useful variables
+
     """
 
     def __init__(self):
@@ -33,6 +37,14 @@ class BaseModel(object):
         self._variables = {}
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
+
+        # Default parameter values, discretisation and solver
+        self.default_parameter_values = pybamm.ParameterValues(
+            "input/parameters/lithium-ion/parameters/LCO.csv"
+        )
+        mesh = pybamm.FiniteVolumeMacroMesh(self.default_parameter_values, 2)
+        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(mesh)
+        self.default_solver = pybamm.ScipySolver(method="RK45")
 
     @property
     def rhs(self):
@@ -120,6 +132,39 @@ class BaseModel(object):
 
     def __getitem__(self, key):
         return self.rhs[key]
+
+    def update(self, submodel):
+        """
+        Update model to add new physics from a submodel
+
+        Parameters
+        ----------
+        submodel : subclass of :class:`pybamm.BaseModel`
+            The submodel from which to copy new physics
+        """
+        # check for duplicates in keys
+        vars = [var.id for var in submodel.rhs.keys()] + [
+            var.id for var in self.rhs.keys()
+        ]
+        assert len(vars) == len(set(vars)), pybamm.ModelError("duplicate variables")
+
+        # update dicts
+        self._rhs.update(submodel.rhs)
+        self._initial_conditions.update(submodel.initial_conditions)
+        self._boundary_conditions.update(submodel.boundary_conditions)
+        self._variables.update(submodel.variables)
+
+    def create_from_submodels(self, *submodels):
+        """
+        Create model by combining a list of submodels
+
+        Parameters
+        ----------
+        submodels : iterable of submodels (subclasses of :class:`pybamm.BaseModel`)
+            The submodels from which to create new model
+        """
+        for submodel in submodels:
+            self.update(submodel)
 
     def check_well_posedness(self):
         """

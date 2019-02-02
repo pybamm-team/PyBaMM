@@ -3,12 +3,11 @@ Models
 
 .. toctree::
 
-  electrolyte_current
   reaction_diffusion
-
+  submodels/index
+  
 Core
 ----
 
 .. autoclass:: pybamm.BaseModel
     :members:
-

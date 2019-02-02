@@ -7,7 +7,6 @@ import pybamm
 
 import numpy as np
 import numbers
-import copy
 
 
 class BaseDiscretisation(object):
@@ -174,10 +173,7 @@ class BaseDiscretisation(object):
             return self.divergence(symbol.children[0], y_slices, boundary_conditions)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            left, right = symbol.children
-            new_left = self.process_symbol(left, y_slices, boundary_conditions)
-            new_right = self.process_symbol(right, y_slices, boundary_conditions)
-            return symbol.__class__(new_left, new_right)
+            return self.process_binary_operators(symbol, y_slices, boundary_conditions)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(
@@ -191,6 +187,10 @@ class BaseDiscretisation(object):
             )
             return pybamm.StateVector(y_slices[symbol.id])
 
+        elif isinstance(symbol, pybamm.Space):
+            symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+            return pybamm.Vector(symbol_mesh.nodes)
+
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [
                 self.process_symbol(child, y_slices, boundary_conditions)
@@ -203,15 +203,76 @@ class BaseDiscretisation(object):
 
             return new_symbol
 
+        elif isinstance(symbol, pybamm.Scalar):
+            return pybamm.Scalar(symbol.value, domain=symbol.domain)
+
+        elif isinstance(symbol, pybamm.Array):
+            return symbol.__class__(symbol.entries, domain=symbol.domain)
+
         else:
+            raise NotImplementedError
             # hack to copy the symbol but without a parent
             # (building tree from bottom up)
             # simply setting new_symbol.parent = None, after copying, raises a TreeError
-            parent = symbol.parent
-            symbol.parent = None
-            new_symbol = copy.copy(symbol)
-            symbol.parent = parent
-            return new_symbol
+            # parent = symbol.parent
+            # symbol.parent = None
+            # new_symbol = copy.copy(symbol)
+            # symbol.parent = parent
+            # return new_symbol
+
+    def process_binary_operators(self, bin_op, y_slices, boundary_conditions):
+        """Discretise binary operators in model equations.
+        Performs appropriate averaging of diffusivities if one of the children is a
+        gradient operator, so that discretised sizes match up.
+        This is mainly an issue for the Finite Volume Discretisation:
+        see :meth:`pybamm.FiniteVolumeDiscretisation.compute_diffusivity()`
+
+        Parameters
+        ----------
+        bin_op : :class:`pybamm.BinaryOperator` (or subclass)
+            Binary operator to discretise
+        y_slices : dict of {variable: slice}
+            The slices to assign to StateVectors when discretising a variable
+            (default None).
+        boundary_conditions : dict of {variable: boundary conditions}
+            Boundary conditions of the model
+
+        Returns
+        -------
+        :class:`pybamm.BinaryOperator` (or subclass)
+            Discretised binary operator
+
+        """
+        # Pre-process children
+        left, right = bin_op.children
+        new_left = self.process_symbol(left, y_slices, boundary_conditions)
+        new_right = self.process_symbol(right, y_slices, boundary_conditions)
+        # Post-processing to make sure discretised dimensions match
+        # If neither child has gradients, or both children have gradients
+        # no need to do any averaging
+        if (
+            left.has_gradient_and_not_divergence()
+            == right.has_gradient_and_not_divergence()
+        ):
+            pass
+        # If only left child has gradient, compute diffusivity for right child
+        elif (
+            left.has_gradient_and_not_divergence()
+            and not right.has_gradient_and_not_divergence()
+        ):
+            new_right = self.compute_diffusivity(new_right)
+        # If only right child has gradient, compute diffusivity for left child
+        elif (
+            right.has_gradient_and_not_divergence()
+            and not left.has_gradient_and_not_divergence()
+        ):
+            new_left = self.compute_diffusivity(new_left)
+        # Return new binary operator with appropriate class
+        return bin_op.__class__(new_left, new_right)
+
+    def compute_diffusivity(self, symbol):
+        """Compute diffusivity; default behaviour is identity operator"""
+        return symbol
 
     def gradient(self, symbol, y_slices, boundary_conditions):
         """How to discretise gradient operators.
