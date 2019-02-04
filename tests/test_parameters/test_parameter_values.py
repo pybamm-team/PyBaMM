@@ -101,6 +101,13 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_f, pybamm.Matrix)
         np.testing.assert_array_equal(processed_f.evaluate(), np.ones((5, 6)))
 
+        # process function
+        scal = pybamm.Scalar(4)
+        func = pybamm.Function(scal, "example_function")
+        processed_func = parameter_values.process_symbol(func)
+        # example function is x*exp(x-1)
+        self.assertEqual(processed_func.evaluate(), 4 + np.exp(3))
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
