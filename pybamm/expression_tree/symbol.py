@@ -96,7 +96,9 @@ class Symbol(anytree.NodeMixin):
         which would then mess with loop-checking in the anytree module
         """
         return hash(
-            (self.__class__, self.name) + tuple([child.id for child in self.children])
+            (self.__class__, self.name)
+            + tuple([child.id for child in self.children])
+            + tuple(self.domain)
         )
 
     def render(self):
