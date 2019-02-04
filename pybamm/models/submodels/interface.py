@@ -7,6 +7,10 @@ import pybamm
 
 
 def homogeneous_reaction():
+    """
+    Homogeneous reaction at the electrode-electrolyte interface
+    """
+
     current_neg = (
         pybamm.Scalar(1, domain=["negative electrode"]) / pybamm.standard_parameters.ln
     )

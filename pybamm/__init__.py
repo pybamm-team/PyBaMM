@@ -89,7 +89,6 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
-from .models.electrolyte_current import ElectrolyteCurrentModel
 
 #
 # Submodel classes
