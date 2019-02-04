@@ -24,6 +24,8 @@ class Vector(pybamm.Array):
     """
 
     def __init__(self, entries, name=None, domain=[]):
+        if name is None:
+            name = "Vector of shape {!s}".format(entries.shape)
         super().__init__(entries, name=name, domain=domain)
 
 
@@ -46,7 +48,7 @@ class StateVector(pybamm.Symbol):
 
     def __init__(self, y_slice, name=None, domain=[]):
         if name is None:
-            name = str(y_slice)
+            name = "StateVector with slice '{!s}'".format(y_slice)
         super().__init__(name=name, domain=domain)
         self._y_slice = y_slice
 

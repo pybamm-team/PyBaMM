@@ -25,7 +25,7 @@ class Array(pybamm.Symbol):
 
     def __init__(self, entries, name=None, domain=[]):
         if name is None:
-            name = str(entries)
+            name = "Array of shape {!s}".format(entries.shape)
         super().__init__(name, domain=domain)
         self._entries = entries
 
