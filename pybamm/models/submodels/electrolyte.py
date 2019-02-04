@@ -13,8 +13,8 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
     Parameters
     ----------
     G : :class:`pybamm.Symbol`
-        An expression tree that represents the concentration flux at the electrode-electrolyte
-        interface
+        An expression tree that represents the concentration flux at the
+        electrode-electrolyte interface
 
     Attributes
     ----------

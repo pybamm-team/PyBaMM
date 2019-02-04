@@ -133,38 +133,27 @@ class BaseModel(object):
     def __getitem__(self, key):
         return self.rhs[key]
 
-    def update(self, submodel):
+    def update(self, *submodels):
         """
-        Update model to add new physics from a submodel
+        Update model to add new physics from submodels
 
         Parameters
         ----------
-        submodel : subclass of :class:`pybamm.BaseModel`
-            The submodel from which to copy new physics
-        """
-        # check for duplicates in keys
-        vars = [var.id for var in submodel.rhs.keys()] + [
-            var.id for var in self.rhs.keys()
-        ]
-        assert len(vars) == len(set(vars)), pybamm.ModelError("duplicate variables")
-
-        # update dicts
-        self._rhs.update(submodel.rhs)
-        self._initial_conditions.update(submodel.initial_conditions)
-        self._boundary_conditions.update(submodel.boundary_conditions)
-        self._variables.update(submodel.variables)
-
-    def create_from_submodels(self, *submodels):
-        """
-        Create model by combining a list of submodels
-
-        Parameters
-        ----------
-        submodels : iterable of submodels (subclasses of :class:`pybamm.BaseModel`)
+        submodel : iterable of submodels (subclasses of :class:`pybamm.BaseModel`)
             The submodels from which to create new model
         """
         for submodel in submodels:
-            self.update(submodel)
+            # check for duplicates in keys
+            vars = [var.id for var in submodel.rhs.keys()] + [
+                var.id for var in self.rhs.keys()
+            ]
+            assert len(vars) == len(set(vars)), pybamm.ModelError("duplicate variables")
+
+            # update dicts
+            self._rhs.update(submodel.rhs)
+            self._initial_conditions.update(submodel.initial_conditions)
+            self._boundary_conditions.update(submodel.boundary_conditions)
+            self._variables.update(submodel.variables)
 
     def check_well_posedness(self):
         """

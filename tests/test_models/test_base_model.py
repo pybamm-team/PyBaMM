@@ -128,30 +128,25 @@ class TestBaseModel(unittest.TestCase):
             model.update(submodel2)
         self.assertIsInstance(error.exception.args[0], pybamm.ModelError)
 
-    def test_create_from_submodels(self):
-        submodel1 = pybamm.BaseModel()
-        c = pybamm.Variable("c", domain=["whole cell"])
-        submodel1.rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
-        submodel1.initial_conditions = {c: 1}
-        submodel1.boundary_conditions = {c: {"left": 0, "right": 0}}
-
+        # update with multiple submodels
+        submodel1 = submodel  # copy submodel from previous test
         submodel2 = pybamm.BaseModel()
-        d = pybamm.Variable("d", domain=["whole cell"])
+        e = pybamm.Variable("e", domain=["whole cell"])
         submodel2.rhs = {
-            d: 5 * pybamm.div(pybamm.grad(c)) + pybamm.div(pybamm.grad(d)) - 1
+            e: 5 * pybamm.div(pybamm.grad(d)) + pybamm.div(pybamm.grad(e)) - 1
         }
-        submodel2.initial_conditions = {d: 3}
-        submodel2.boundary_conditions = {d: {"left": 4, "right": 7}}
+        submodel2.initial_conditions = {e: 3}
+        submodel2.boundary_conditions = {e: {"left": 4, "right": 7}}
 
         model = pybamm.BaseModel()
-        model.create_from_submodels(submodel1, submodel2)
+        model.update(submodel1, submodel2)
 
-        self.assertEqual(model.rhs[c], submodel1.rhs[c])
-        self.assertEqual(model.initial_conditions[c], submodel1.initial_conditions[c])
-        self.assertEqual(model.boundary_conditions[c], submodel1.boundary_conditions[c])
-        self.assertEqual(model.rhs[d], submodel2.rhs[d])
-        self.assertEqual(model.initial_conditions[d], submodel2.initial_conditions[d])
-        self.assertEqual(model.boundary_conditions[d], submodel2.boundary_conditions[d])
+        self.assertEqual(model.rhs[d], submodel1.rhs[d])
+        self.assertEqual(model.initial_conditions[d], submodel1.initial_conditions[d])
+        self.assertEqual(model.boundary_conditions[d], submodel1.boundary_conditions[d])
+        self.assertEqual(model.rhs[e], submodel2.rhs[e])
+        self.assertEqual(model.initial_conditions[e], submodel2.initial_conditions[e])
+        self.assertEqual(model.boundary_conditions[e], submodel2.boundary_conditions[e])
 
     def test_check_well_posedness(self):
         # Well-posed model - Dirichlet
