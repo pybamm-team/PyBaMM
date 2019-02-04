@@ -4,6 +4,13 @@ dist: trusty
 
 language: python
 
+addons:
+  apt:
+    packages:
+    - python3-dev
+    - gfortran
+    - gcc
+
 matrix:
     include:
         # Unit testing on all supported Python versions on Ubuntu
