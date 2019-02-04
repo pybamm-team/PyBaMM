@@ -183,9 +183,13 @@ class Symbol(anytree.NodeMixin):
         return self._name
 
     def __repr__(self):
-        """returns the string `__class__(id, name, parent expression)`"""
-        return "{!s}({}, {!s}, {!s})".format(
-            self.__class__.__name__, hex(self.id), self._name, self.parent
+        """returns the string `__class__(id, name, children, domain)`"""
+        return "{!s}({}, {!s}, children={!s}, domain={!s})".format(
+            self.__class__.__name__,
+            hex(self.id),
+            self._name,
+            [str(child) for child in self.children],
+            [str(subdomain) for subdomain in self.domain],
         )
 
     def __add__(self, other):
