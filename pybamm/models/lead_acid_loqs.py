@@ -44,8 +44,8 @@ class LeadAcidLOQS(pybamm.BaseModel):
         beta_surf_p = pybamm.standard_parameters_lead_acid.beta_surf_p
         iota_ref_n = pybamm.standard_parameters_lead_acid.iota_ref_n
         iota_ref_p = pybamm.standard_parameters_lead_acid.iota_ref_p
-        U_Pb = pybamm.standard_parameters_lead_acid.U_Pb_ref
-        U_PbO2 = pybamm.standard_parameters_lead_acid.U_PbO2_ref
+        U_Pb = pybamm.standard_parameters_lead_acid.U_Pb
+        U_PbO2 = pybamm.standard_parameters_lead_acid.U_PbO2
         # Initial conditions
         c_init = pybamm.standard_parameters_lead_acid.c_init
         epsn_init = pybamm.standard_parameters_lead_acid.epsn_init
@@ -74,8 +74,9 @@ class LeadAcidLOQS(pybamm.BaseModel):
         self.boundary_conditions = {}
 
         # Variables
-        eps = pybamm.concatenate(epsn, epss, epsp)
+        eps = pybamm.Concatenate(epsn, epss, epsp)
         Phisn = pybamm.Scalar(0)
-        Phi = -U_Pb_ref - jn / (2 * iota_ref_n * c)
-        V = -U_PbO2_ref - jp / (2 * iota_ref_p * c)
+        Phi = -U_Pb(c) - jn / (2 * iota_ref_n * c)
+        V = -U_PbO2(c) - jp / (2 * iota_ref_p * c)
+        Phi = pybamm.Concatenate(Phisn, pybamm.Scalar(np.nan), Phisp)
         self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
