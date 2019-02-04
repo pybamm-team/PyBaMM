@@ -66,6 +66,15 @@ install:
   - if [[ $PYBAMM_STYLE == true ]]; then pip install -r requirements-dev.txt; fi;
   - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then pip install -r requirements-dev.txt; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
+  - wget https://computation.llnl.gov/projects/sundials/download/sundials-3.1.1.tar.gz
+  - tar -xvf sundials-3.1.1.tar.gz
+  - mkdir build-sundials-3.1.1
+  - cd build-sundials-3.1.1/
+  - cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../sundials-3.1.1/
+  - make install
+  - export set LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/lib
+  - export set SUNDIALS_INST=$TRAVIS_BUILD_DIR
+  - pip install scikits.odes
 
 before_script:
 - python --version

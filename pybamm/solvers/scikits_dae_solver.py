@@ -15,7 +15,7 @@ if scikits_odes_spec is not None:
         scikits_odes_spec.loader.exec_module(scikits_odes)
 
 
-class OdesOdeSolver(pybamm.OdeSolver):
+class ScikitsDaeSolver(pybamm.DaeSolver):
     """Solve a discretised model, using scikits.odes.
 
     Parameters
@@ -27,10 +27,9 @@ class OdesOdeSolver(pybamm.OdeSolver):
         abstol in solve_ivp.
     """
 
-    def __init__(self, method="cvode", tol=1e-8):
+    def __init__(self, method="ida", tol=1e-8):
         if scikits_odes_spec is None:
-            raise ImportError("scikits.odes is not installed, "
-                              "please install via \"pip install scikits.odes\"")
+            raise ImportError("scikits.odes is not installed")
 
         super().__init__(tol)
         self._method = method
@@ -43,23 +42,23 @@ class OdesOdeSolver(pybamm.OdeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, derivs, y0, t_eval):
+    def integrate(self, residuals, y0, ydot0, t_eval):
         """
-        Solve a model defined by dydt with initial conditions y0.
+        Solve a DAE model defined by residuals with initial conditions y0 and ydot_0.
 
         Parameters
         ----------
-        derivs : method
-            A function that takes in t and y and returns the time-derivative dydt
+        residuals : method
+            A function that takes in t, y and ydot and returns the residuals of the
+            equations
         y0 : numeric type
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
 
         """
-
-        def eqsydot(t, y, return_ydot):
-            return_ydot[:] = derivs(t, y)
+        def eqsres(t, y, ydot, return_residuals):
+            return_residuals[:] = residuals(t, y, ydot)
 
         extra_options = {
             'old_api': False,
@@ -67,8 +66,8 @@ class OdesOdeSolver(pybamm.OdeSolver):
             'atol': self.tol,
         }
 
-        ode_solver = scikits_odes.ode(self.method, eqsydot, **extra_options)
-        sol = ode_solver.solve(t_eval, y0)
+        dae_solver = scikits_odes.dae(self.method, eqsres, **extra_options)
+        sol = dae_solver.solve(t_eval, y0, ydot0)
 
-        # return solution, we need to tranpose y to match scipy's ivp interface
+        # return solution, we need to tranpose y to match scipy's interface
         return sol.values.t, np.transpose(sol.values.y)
