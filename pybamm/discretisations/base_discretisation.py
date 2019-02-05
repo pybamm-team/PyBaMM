@@ -486,11 +486,13 @@ class BaseDiscretisation(object):
             y0.shape[0]
         ), pybamm.ModelError(
             """
-            Concatenated rhs, algebraic and initial_conditions must have the same shape
+            Concatenation of (rhs, algebraic) and initial_conditions must have the same shape
             after discretisation but rhs.shape = {}, algebraic.shape = {}, and
             initial_conditions.shape = {}.
             """.format(
-                model.concatenated_rhs.evaluate(0, y0).shape, y0.shape
+                model.concatenated_rhs.evaluate(0, y0).shape,
+                model.concatenated_algebraic.evaluate(0, y0).shape,
+                y0.shape
             )
         )
 
