@@ -69,7 +69,7 @@ class BaseModel(object):
 
     def _set_initial_conditions(self, initial_conditions):
         """
-        converte any scalar conditions to 'pybamm.Scalar'
+        Convert any scalar conditions to 'pybamm.Scalar'
         and checking that domains are consistent
         """
         # Convert any numbers to a pybamm.Scalar
