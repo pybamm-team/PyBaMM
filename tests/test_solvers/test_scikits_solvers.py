@@ -11,10 +11,9 @@ import unittest
 import numpy as np
 
 
+@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
 class TestScikitsSolver(unittest.TestCase):
 
-    @unittest.skipIf(scikits_odes_spec is None,
-                     "scikits.odes not installed")
     def test_ode_integrate(self):
         # Constant
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
@@ -39,8 +38,6 @@ class TestScikitsSolver(unittest.TestCase):
         t_sol, y_sol = solver.integrate(exponential_decay, y0, t_eval)
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
 
-    @unittest.skipIf(scikits_odes_spec is None,
-                     "scikits.odes not installed")
     def test_dae_integrate(self):
         # Constant
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
@@ -76,8 +73,6 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
         np.testing.assert_allclose(y_sol[1], 2 * np.exp(-0.1 * t_sol))
 
-    @unittest.skipIf(scikits_odes_spec is None,
-                     "scikits.odes not installed")
     def test_model_solver_ode(self):
         # Create model
         model = pybamm.BaseModel()
@@ -99,8 +94,6 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_array_equal(solver.t, t_eval)
         np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
 
-    @unittest.skipIf(scikits_odes_spec is None,
-                     "scikits.odes not installed")
     def test_model_solver_dae(self):
         # Create model
         model = pybamm.BaseModel()
