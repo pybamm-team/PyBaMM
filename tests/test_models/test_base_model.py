@@ -36,6 +36,14 @@ class TestBaseModel(unittest.TestCase):
                 )
             }
 
+    def test_algebraic_set_get(self):
+        model = pybamm.BaseModel()
+        algebraic = [
+            pybamm.Symbol("c") - pybamm.Symbol("a"),
+        ]
+        model.algebraic = algebraic
+        self.assertEqual(algebraic, model.algebraic)
+
     def test_initial_conditions_set_get(self):
         model = pybamm.BaseModel()
         initial_conditions = {
@@ -44,6 +52,8 @@ class TestBaseModel(unittest.TestCase):
         }
         model.initial_conditions = initial_conditions
         self.assertEqual(initial_conditions, model.initial_conditions)
+        model.initial_conditions_ydot = initial_conditions
+        self.assertEqual(initial_conditions, model.initial_conditions_ydot)
 
         # Test number input
         c0 = pybamm.Symbol("c0")

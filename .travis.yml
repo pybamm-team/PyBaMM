@@ -4,6 +4,15 @@ dist: trusty
 
 language: python
 
+addons:
+  apt:
+    packages:
+    - python3-dev
+    - gfortran
+    - gcc
+    - libopenblas-dev
+    - liblapack-dev
+
 matrix:
     include:
         # Unit testing on all supported Python versions on Ubuntu
@@ -59,13 +68,14 @@ matrix:
 # Note: Only install normal dependencies for unit tests; these should be tested
 #       without the packages from -dev and -doc!
 install:
-  - pip install --upgrade pip
+  - pip install pip==18
   - pip install .
   - pip install -r requirements.txt
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -r requirements-docs.txt; fi;
   - if [[ $PYBAMM_STYLE == true ]]; then pip install -r requirements-dev.txt; fi;
   - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then pip install -r requirements-dev.txt; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
+  - source scripts/install_scikits_odes.sh
 
 before_script:
 - python --version

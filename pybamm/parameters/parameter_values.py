@@ -94,6 +94,11 @@ class ParameterValues(dict):
         for variable, equation in model.initial_conditions.items():
             model.initial_conditions[variable] = self.process_symbol(equation)
 
+        for variable, equation in model.initial_conditions_ydot.items():
+            model.initial_conditions_ydot[variable] = self.process_symbol(
+                equation
+            )
+
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
         new_boundary_conditions = {}
         for variable, bcs in model.boundary_conditions.items():
