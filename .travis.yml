@@ -79,8 +79,9 @@ install:
   - tar -xvf sundials-3.1.1.tar.gz
   - mkdir build-sundials-3.1.1
   - cd build-sundials-3.1.1/
-  - cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../sundials-3.1.1/
+  - cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DBUILD_ARKODE:BOOL=OFF -DEXAMPLES_ENABLE:BOOL=OFF -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../sundials-3.1.1/
   - make install
+  - rm -rf sundials-3.1.1
   - cd ..
   - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/lib:$LD_LIBRARY_PATH
   - export SUNDIALS_INST=$TRAVIS_BUILD_DIR
