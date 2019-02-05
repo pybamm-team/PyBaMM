@@ -48,7 +48,7 @@ class TestScikitsSolver(unittest.TestCase):
         def constant_growth_dae(t, y, ydot):
             return [
                 0.5 * np.ones_like(y[0]) - ydot[0],
-                2*y[0] - y[1],
+                2 * y[0] - y[1],
             ]
 
         y0 = np.array([0, 0])
@@ -65,7 +65,7 @@ class TestScikitsSolver(unittest.TestCase):
         def exponential_decay_dae(t, y, ydot):
             return [
                 -0.1 * y[0] - ydot[0],
-                2*y[0] - y[1],
+                2 * y[0] - y[1],
             ]
 
         y0 = np.array([1, 2])
@@ -74,7 +74,7 @@ class TestScikitsSolver(unittest.TestCase):
         t_sol, y_sol = solver.integrate(
             exponential_decay_dae, y0, ydot0, t_eval)
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
-        np.testing.assert_allclose(y_sol[1], 2*np.exp(-0.1 * t_sol))
+        np.testing.assert_allclose(y_sol[1], 2 * np.exp(-0.1 * t_sol))
 
     @unittest.skipIf(scikits_odes_spec is None,
                      "scikits.odes not installed")
@@ -107,7 +107,7 @@ class TestScikitsSolver(unittest.TestCase):
         var1 = pybamm.Variable("var1", domain=["whole cell"])
         var2 = pybamm.Variable("var2", domain=["whole cell"])
         model.rhs = {var1: 0.1 * var1}
-        model.algebraic = [2*var1 - var2]
+        model.algebraic = [2 * var1 - var2]
         model.initial_conditions = {
             var1: 1, var2: 2}
         model.initial_conditions_ydot = {
@@ -126,7 +126,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)
         np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
-        np.testing.assert_allclose(solver.y[-1], 2*np.exp(0.1 * solver.t))
+        np.testing.assert_allclose(solver.y[-1], 2 * np.exp(0.1 * solver.t))
 
 
 if __name__ == "__main__":

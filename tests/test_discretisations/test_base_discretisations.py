@@ -405,7 +405,7 @@ class TestDiscretise(unittest.TestCase):
         N = pybamm.grad(c)
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
-        model.algebraic = [d - 2*c]
+        model.algebraic = [d - 2 * c]
         model.initial_conditions = {
             d: pybamm.Scalar(6),
             c: pybamm.Scalar(3),
@@ -456,7 +456,7 @@ class TestDiscretise(unittest.TestCase):
         # test that not enough initial conditions for ydot raises an error
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
-        model.algebraic = [d - 2*c]
+        model.algebraic = [d - 2 * c]
         model.initial_conditions = {
             d: pybamm.Scalar(6),
             c: pybamm.Scalar(3),
