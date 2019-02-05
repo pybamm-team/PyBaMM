@@ -82,8 +82,8 @@ install:
   - cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR ../sundials-3.1.1/
   - make install
   - cd ..
-  - export set LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/lib
-  - export set SUNDIALS_INST=$TRAVIS_BUILD_DIR
+  - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/lib:$LD_LIBRARY_PATH
+  - export SUNDIALS_INST=$TRAVIS_BUILD_DIR
   - pip install scikits.odes
 
 before_script:
@@ -94,6 +94,9 @@ before_script:
 # issues with debug output:
 # https://github.com/travis-ci/travis-ci/issues/5716
 script:
+  - echo $LD_LIBRARY_PATH
+  - pwd
+  - ls $TRAVIS_BUILD_DIR/lib
   - if [[ $PYBAMM_UNIT == true ]]; then python run-tests.py --unit; fi;
   - if [[ $PYBAMM_DOCS == true ]]; then python run-tests.py --doctest; fi;
   - if [[ $PYBAMM_STYLE == true ]]; then python -m flake8; fi;
