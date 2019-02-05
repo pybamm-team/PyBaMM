@@ -71,7 +71,6 @@ install:
   - pip install pip==18
   - pip install .
   - pip install -r requirements.txt
-  - pip install --upgrade numpy
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -r requirements-docs.txt; fi;
   - if [[ $PYBAMM_STYLE == true ]]; then pip install -r requirements-dev.txt; fi;
   - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then pip install -r requirements-dev.txt; fi;
