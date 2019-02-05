@@ -28,11 +28,13 @@ class LeadAcidLOQS(pybamm.BaseModel):
     """
 
     def __init__(self):
+        super().__init__()
+
         # Variables
-        c = pybamm.Variable("c", domain=["time only"])
-        epsn = pybamm.Variable("epsn", domain=["time only"])
-        epss = pybamm.Variable("epss", domain=["time only"])
-        epsp = pybamm.Variable("epsp", domain=["time only"])
+        c = pybamm.Variable("c", domain=[])
+        epsn = pybamm.Variable("epsn", domain=[])
+        epss = pybamm.Variable("epss", domain=[])
+        epsp = pybamm.Variable("epsp", domain=[])
 
         # Parameters
         ln = pybamm.standard_parameters.ln
@@ -44,8 +46,8 @@ class LeadAcidLOQS(pybamm.BaseModel):
         beta_surf_p = pybamm.standard_parameters_lead_acid.beta_surf_p
         iota_ref_n = pybamm.standard_parameters_lead_acid.iota_ref_n
         iota_ref_p = pybamm.standard_parameters_lead_acid.iota_ref_p
-        U_Pb = pybamm.standard_parameters_lead_acid.U_Pb
-        U_PbO2 = pybamm.standard_parameters_lead_acid.U_PbO2
+        U_Pb = pybamm.standard_parameters_lead_acid.U_Pb_ref
+        U_PbO2 = pybamm.standard_parameters_lead_acid.U_PbO2_ref
         # Initial conditions
         c_init = pybamm.standard_parameters_lead_acid.c_init
         epsn_init = pybamm.standard_parameters_lead_acid.epsn_init
@@ -74,9 +76,16 @@ class LeadAcidLOQS(pybamm.BaseModel):
         self.boundary_conditions = {}
 
         # Variables
-        eps = pybamm.Concatenate(epsn, epss, epsp)
+        Phi = -U_Pb - jn / (2 * iota_ref_n * c)
+        V = -U_PbO2 - jp / (2 * iota_ref_p * c)
         Phisn = pybamm.Scalar(0)
-        Phi = -U_Pb(c) - jn / (2 * iota_ref_n * c)
-        V = -U_PbO2(c) - jp / (2 * iota_ref_p * c)
-        Phi = pybamm.Concatenate(Phisn, pybamm.Scalar(np.nan), Phisp)
+        Phisp = V
+        # Concatenate variables
+        eps = pybamm.Concatenation(epsn, epss, epsp)
+        Phis = pybamm.Concatenation(Phisn, pybamm.Scalar(0), Phisp)
         self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
+
+        # Overwrite default parameter values
+        self.default_parameter_values = pybamm.ParameterValues(
+            "input/parameters/lead-acid/default.csv"
+        )
