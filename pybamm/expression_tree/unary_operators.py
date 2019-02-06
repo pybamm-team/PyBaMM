@@ -114,7 +114,7 @@ class Divergence(SpatialOperator):
 
 class Broadcast(SpatialOperator):
     """A node in the expression tree representing a broadcasting operator.
-    Broadcasts a child (which *must* have empty domain) to a specified domain. After 
+    Broadcasts a child (which *must* have empty domain) to a specified domain. After
     discretisation, this will evaluate to an array of the right shape for the specified
     domain.
 

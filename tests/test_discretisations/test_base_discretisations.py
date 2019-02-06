@@ -459,10 +459,10 @@ class TestDiscretise(unittest.TestCase):
         vec = pybamm.Vector(np.linspace(0, 1))
         broad = disc.broadcast(vec, ["whole cell"])
         # np.testing.assert_array_equal(
-        #     broad.evaluate(), np.linspace(0, 1) * np.ones_like(mesh["whole cell"].nodes)
+        #   broad.evaluate(), np.linspace(0, 1) * np.ones_like(mesh["whole cell"].nodes)
         # )
         self.assertEqual(broad.domain, ["whole cell"])
-        # TODO: allow vector vector multiplication in this specific case (right domains),
+        # TODO: allow vector vector multiplication in this specific case (right domains)
         # more tests , simplify into an array if
         # resulting node is constant
 
