@@ -59,24 +59,20 @@ class BaseDiscretisation(object):
 
         # evaluate initial conditions for ydot if they exist
         if len(model.initial_conditions_ydot) > 0:
-            model.concatenated_initial_conditions_ydot = \
-                self._concatenate_init(
-                    model.initial_conditions_ydot, y_slices
-                ).evaluate(0, None)
+            model.concatenated_initial_conditions_ydot = self._concatenate_init(
+                model.initial_conditions_ydot, y_slices
+            ).evaluate(0, None)
         else:
             model.concatenated_initial_conditions_ydot = np.array([])
 
         # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_dict(
-            model.rhs, y_slices, model.boundary_conditions)
+        model.rhs = self.process_dict(model.rhs, y_slices, model.boundary_conditions)
         # Concatenate rhs into a single state vector
         model.concatenated_rhs = self.concatenate(*model.rhs.values())
 
         # Discretise and concatenate algebraic equations
         model.algebraic = self.process_list(
-            model.algebraic,
-            y_slices,
-            model.boundary_conditions
+            model.algebraic, y_slices, model.boundary_conditions
         )
         model.concatenated_algebraic = self.concatenate(*model.algebraic)
 
@@ -170,14 +166,16 @@ class BaseDiscretisation(object):
 
         """
         for variable, equation in initial_conditions.items():
-            discretised_ic = self.process_symbol(equation).evaluate()
-
-            if isinstance(discretised_ic, numbers.Number):
-                discretised_ic = discretised_ic * self.vector_of_ones(variable.domain)
+            if isinstance(equation.evaluate(t=0), numbers.Number):
+                # Broadcast scalar initial condition to the domain specified by
+                # variable.domain
+                equation = self.broadcast(equation, variable.domain)
             else:
                 raise NotImplementedError(
                     "Currently only accepts scalar initial conditions"
                 )
+
+            discretised_ic = self.process_symbol(equation)
 
             initial_conditions[variable] = discretised_ic
 
@@ -265,8 +263,17 @@ class BaseDiscretisation(object):
         if isinstance(symbol, pybamm.Gradient):
             return self.gradient(symbol.children[0], y_slices, boundary_conditions)
 
-        if isinstance(symbol, pybamm.Divergence):
+        elif isinstance(symbol, pybamm.Divergence):
             return self.divergence(symbol.children[0], y_slices, boundary_conditions)
+
+        elif isinstance(symbol, pybamm.Broadcast):
+            # Process child first
+            new_child = self.process_symbol(
+                symbol.children[0], y_slices, boundary_conditions
+            )
+            # Broadcast new_child to the domain specified by symbol.domain
+            # Different discretisations may broadcast differently
+            return self.broadcast(new_child, symbol.domain)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             return self.process_binary_operators(symbol, y_slices, boundary_conditions)
@@ -401,19 +408,22 @@ class BaseDiscretisation(object):
         """
         raise NotImplementedError
 
-    def vector_of_ones(self, domain):
+    def broadcast(self, symbol, domain):
         """
-        Returns a Vector of ones of the size given by the mesh.
+        Broadcast symbol
         """
+        # create broadcasting vector (vector of ones with shape determined by the
+        # domain)
+        broadcasting_vector_size = sum([self.mesh[dom].npts for dom in domain])
+        broadcasting_vector = pybamm.Vector(
+            np.ones(broadcasting_vector_size), domain=domain
+        )
 
-        mesh_points = np.array([])
-
-        for dom in domain:
-            mesh_points = np.concatenate([mesh_points, self.mesh[dom].nodes])
-        return pybamm.Vector(np.ones_like(mesh_points))
+        # broadcast symbol
+        return symbol * broadcasting_vector
 
     def concatenate(self, *symbols):
-        return pybamm.NumpyConcatenation(*symbols)
+        return pybamm.NumpyModelConcatenation(*symbols)
 
     def _concatenate_init(self, var_eqn_dict, y_slices):
         """
@@ -440,8 +450,10 @@ class BaseDiscretisation(object):
         ids = {v.id for v in var_eqn_dict.keys()}
         if ids != y_slices.keys():
             given_variable_names = [v.name for v in var_eqn_dict.keys()]
-            raise pybamm.ModelError("Initial conditions are insufficient. Only "
-                                    "provided for {} ".format(given_variable_names))
+            raise pybamm.ModelError(
+                "Initial conditions are insufficient. Only "
+                "provided for {} ".format(given_variable_names)
+            )
 
         equations = list(var_eqn_dict.values())
         slices = [y_slices[var.id] for var in var_eqn_dict.keys()]
@@ -449,7 +461,7 @@ class BaseDiscretisation(object):
         # sort equations according to slices
         sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
 
-        return pybamm.NumpyConcatenation(*sorted_equations)
+        return self.concatenate(*sorted_equations)
 
     def check_model(self, model):
         """ Perform some basic checks to make sure the discretised model makes sense."""
@@ -495,9 +507,9 @@ class BaseDiscretisation(object):
             )
         # Concatenated
         assert (
-            model.concatenated_rhs.evaluate(0, y0).shape[0] +
-            model.concatenated_algebraic.evaluate(0, y0).shape[0] ==
-            y0.shape[0]
+            model.concatenated_rhs.evaluate(0, y0).shape[0]
+            + model.concatenated_algebraic.evaluate(0, y0).shape[0]
+            == y0.shape[0]
         ), pybamm.ModelError(
             """
             Concatenation of (rhs, algebraic) and initial_conditions must have the
@@ -506,7 +518,7 @@ class BaseDiscretisation(object):
             """.format(
                 model.concatenated_rhs.evaluate(0, y0).shape,
                 model.concatenated_algebraic.evaluate(0, y0).shape,
-                y0.shape
+                y0.shape,
             )
         )
 

@@ -60,7 +60,7 @@ from .expression_tree.binary_operators import (
 )
 from .expression_tree.concatenations import (
     Concatenation,
-    NumpyConcatenation,
+    NumpyModelConcatenation,
     DomainConcatenation,
 )
 from .expression_tree.array import Array

@@ -36,16 +36,11 @@ class DiscretisationForTesting(pybamm.BaseDiscretisation):
 
 
 class TestDiscretise(unittest.TestCase):
-
     def test_concatenate_init(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
         c = pybamm.Variable("c")
-        y_slices = {
-            c.id: slice(0, 1),
-            a.id: slice(2, 3),
-            b.id: slice(3, 4),
-        }
+        y_slices = {c.id: slice(0, 1), a.id: slice(2, 3), b.id: slice(3, 4)}
         initial_conditions = {
             c: pybamm.Scalar(1),
             a: pybamm.Scalar(2),
@@ -55,15 +50,12 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.BaseDiscretisation(mesh)
         result = disc._concatenate_init(initial_conditions, y_slices)
 
-        self.assertIsInstance(result, pybamm.NumpyConcatenation)
+        self.assertIsInstance(result, pybamm.NumpyModelConcatenation)
         self.assertEqual(result.children[0].evaluate(), 1)
         self.assertEqual(result.children[1].evaluate(), 2)
         self.assertEqual(result.children[2].evaluate(), 3)
 
-        initial_conditions = {
-            a: pybamm.Scalar(2),
-            b: pybamm.Scalar(3),
-        }
+        initial_conditions = {a: pybamm.Scalar(2), b: pybamm.Scalar(3)}
         with self.assertRaises(pybamm.ModelError):
             result = disc._concatenate_init(initial_conditions, y_slices)
 
@@ -79,42 +71,24 @@ class TestDiscretise(unittest.TestCase):
         model.rhs = {c: pybamm.Scalar(1)}
 
         variables = disc.get_all_variables(model)
-        self.assertListEqual(
-            [v.id for v in variables],
-            [v.id for v in [c]]
-        )
+        self.assertListEqual([v.id for v in variables], [v.id for v in [c]])
 
-        model.rhs = {
-            c: pybamm.Scalar(1),
-            b: pybamm.Scalar(1),
-        }
+        model.rhs = {c: pybamm.Scalar(1), b: pybamm.Scalar(1)}
 
         variables = disc.get_all_variables(model)
-        self.assertListEqual(
-            [v.id for v in variables],
-            [v.id for v in [c, b]]
-        )
+        self.assertListEqual([v.id for v in variables], [v.id for v in [c, b]])
 
-        model.rhs = {
-            c: pybamm.Scalar(1),
-            b: pybamm.Scalar(1),
-        }
+        model.rhs = {c: pybamm.Scalar(1), b: pybamm.Scalar(1)}
         model.algebraic = [a - c]
 
         variables = disc.get_all_variables(model)
-        self.assertListEqual(
-            [v.id for v in variables],
-            [v.id for v in [c, b, a]]
-        )
+        self.assertListEqual([v.id for v in variables], [v.id for v in [c, b, a]])
 
         model.rhs = {}
         model.algebraic = [a - c]
 
         variables = disc.get_all_variables(model)
-        self.assertSetEqual(
-            {v.id for v in variables},
-            {v.id for v in [a, c]}
-        )
+        self.assertSetEqual({v.id for v in variables}, {v.id for v in [a, c]})
 
     def test_discretise_slicing(self):
         # One variable
@@ -395,18 +369,14 @@ class TestDiscretise(unittest.TestCase):
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
         c0, T0, S0 = np.split(
-            y0, np.cumsum([mesh["whole cell"].npts,
-                           mesh["negative electrode"].npts])
+            y0, np.cumsum([mesh["whole cell"].npts, mesh["negative electrode"].npts])
         )
         np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
 
         # test that not enough initial conditions raises an error
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N), T: pybamm.div(q), S: pybamm.div(p)}
-        model.initial_conditions = {
-            T: pybamm.Scalar(5),
-            S: pybamm.Scalar(8),
-        }
+        model.initial_conditions = {T: pybamm.Scalar(5), S: pybamm.Scalar(8)}
         model.boundary_conditions = {}
         model.variables = {"ST": S * T}
         with self.assertRaises(pybamm.ModelError):
@@ -420,14 +390,8 @@ class TestDiscretise(unittest.TestCase):
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
         model.algebraic = [d - 2 * c]
-        model.initial_conditions = {
-            d: pybamm.Scalar(6),
-            c: pybamm.Scalar(3),
-        }
-        model.initial_conditions_ydot = {
-            d: pybamm.Scalar(2),
-            c: pybamm.Scalar(1),
-        }
+        model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
+        model.initial_conditions_ydot = {d: pybamm.Scalar(2), c: pybamm.Scalar(1)}
 
         model.boundary_conditions = {}
         model.variables = {"c": c, "N": N, "d": d}
@@ -458,8 +422,7 @@ class TestDiscretise(unittest.TestCase):
 
         # grad and div are identity operators here
         np.testing.assert_array_equal(
-            y0[:mesh["whole cell"].npts],
-            model.concatenated_rhs.evaluate(None, y0)
+            y0[: mesh["whole cell"].npts], model.concatenated_rhs.evaluate(None, y0)
         )
 
         np.testing.assert_array_equal(
@@ -471,13 +434,8 @@ class TestDiscretise(unittest.TestCase):
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
         model.algebraic = [d - 2 * c]
-        model.initial_conditions = {
-            d: pybamm.Scalar(6),
-            c: pybamm.Scalar(3),
-        }
-        model.initial_conditions_ydot = {
-            c: pybamm.Scalar(1),
-        }
+        model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
+        model.initial_conditions_ydot = {c: pybamm.Scalar(1)}
 
         model.boundary_conditions = {}
         model.variables = {"c": c, "N": N, "d": d}
@@ -485,12 +443,15 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
 
-    def test_vector_of_ones(self):
+    def test_broadcast(self):
         mesh = MeshForTesting()
         disc = pybamm.BaseDiscretisation(mesh)
-        vec = disc.vector_of_ones(["whole cell"])
-        self.assertEqual(vec.evaluate()[0], 1)
-        self.assertEqual(vec.shape, mesh["whole cell"].nodes.shape)
+        a = pybamm.Scalar(7)
+        broad = disc.broadcast(a, ["whole cell"])
+        np.testing.assert_array_equal(
+            broad.evaluate(), 7 * np.ones_like(mesh["whole cell"].nodes)
+        )
+        self.assertEqual(broad.domain, ["whole cell"])
 
     def test_concatenation(self):
         a = pybamm.Symbol("a")
@@ -498,7 +459,7 @@ class TestDiscretise(unittest.TestCase):
         c = pybamm.Symbol("c")
         disc = pybamm.BaseDiscretisation(None)
         conc = disc.concatenate(a, b, c)
-        self.assertIsInstance(conc, pybamm.Concatenation)
+        self.assertIsInstance(conc, pybamm.NumpyModelConcatenation)
 
     def test_concatenation_of_scalars(self):
         a = pybamm.Scalar(5, domain=["negative electrode"])
@@ -536,8 +497,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(x2_disc, pybamm.Vector)
         np.testing.assert_array_equal(
             x2_disc.evaluate(),
-            disc.mesh.combine_submeshes(
-                "negative electrode", "separator").nodes,
+            disc.mesh.combine_submeshes("negative electrode", "separator").nodes,
         )
 
         x3 = 3 * pybamm.Space(["negative electrode"])
