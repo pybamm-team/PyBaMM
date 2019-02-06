@@ -420,7 +420,13 @@ class BaseDiscretisation(object):
         )
 
         # broadcast symbol
-        return symbol * broadcasting_vector
+        broadcasted_symbol = symbol * broadcasting_vector
+
+        # if broadcasted_symbol.is_constant():
+        #     broadcasted_symbol = pybamm.Array(
+        #         broadcasted_symbol.evaluate(), broadcasted_symbol.domain
+        #     )
+        return broadcasted_symbol
 
     def concatenate(self, *symbols):
         return pybamm.NumpyModelConcatenation(*symbols)
