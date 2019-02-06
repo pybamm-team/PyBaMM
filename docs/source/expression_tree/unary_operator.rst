@@ -13,6 +13,9 @@ Unary Operators
 .. autoclass:: pybamm.SpatialOperator
   :members:
 
+.. autoclass:: pybamm.Broadcast
+  :members:
+
 .. autoclass:: pybamm.Gradient
   :members:
 
@@ -22,4 +25,3 @@ Unary Operators
 .. autofunction:: pybamm.grad
 
 .. autofunction:: pybamm.div
-
