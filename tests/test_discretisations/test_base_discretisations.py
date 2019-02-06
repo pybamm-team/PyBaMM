@@ -450,6 +450,7 @@ class TestDiscretise(unittest.TestCase):
         # scalar
         a = pybamm.Scalar(7)
         broad = disc.broadcast(a, ["whole cell"])
+        self.assertIsInstance(broad, pybamm.Array)
         np.testing.assert_array_equal(
             broad.evaluate(), 7 * np.ones_like(mesh["whole cell"].nodes)
         )
@@ -457,14 +458,27 @@ class TestDiscretise(unittest.TestCase):
 
         # vector
         vec = pybamm.Vector(np.linspace(0, 1))
-        broad = disc.broadcast(vec, ["whole cell"])
-        # np.testing.assert_array_equal(
-        #   broad.evaluate(), np.linspace(0, 1) * np.ones_like(mesh["whole cell"].nodes)
-        # )
-        self.assertEqual(broad.domain, ["whole cell"])
-        # TODO: allow vector vector multiplication in this specific case (right domains)
-        # more tests , simplify into an array if
-        # resulting node is constant
+        broad = disc.broadcast(vec, ["separator"])
+        self.assertIsInstance(broad, pybamm.Array)
+        np.testing.assert_array_equal(
+            broad.evaluate(),
+            np.linspace(0, 1)[:, np.newaxis] * np.ones_like(mesh["separator"].nodes),
+        )
+        self.assertEqual(broad.domain, ["separator"])
+
+        # process Broadcast symbol
+        var = pybamm.Variable("var")
+        y_slices = {var.id: slice(53)}
+        broad1 = pybamm.Broadcast(var, ["negative electrode"])
+        broad1_disc = disc.process_symbol(broad1, y_slices)
+        self.assertIsInstance(broad1_disc, pybamm.NumpyBroadcast)
+        self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
+
+        scal = pybamm.Scalar(3)
+        broad2 = pybamm.Broadcast(scal, ["negative electrode"])
+        broad2_disc = disc.process_symbol(broad2)
+        # type of broad2 will be array as broad2 is constant
+        self.assertIsInstance(broad2_disc, pybamm.Array)
 
     def test_concatenation(self):
         a = pybamm.Symbol("a")

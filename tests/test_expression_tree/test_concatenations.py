@@ -1,18 +1,10 @@
 # Tests for the Concatenation class and subclasses
 #
 import pybamm
+from tests.shared import MeshForTesting
 
 import numpy as np
 import unittest
-
-
-class MeshForTesting(pybamm.BaseMesh):
-    def __init__(self):
-        super().__init__(None)
-        self["whole cell"] = self.submeshclass(np.linspace(0, 1, 100))
-        self["negative electrode"] = self.submeshclass(self["whole cell"].nodes[:30])
-        self["separator"] = self.submeshclass(self["whole cell"].nodes[30:40])
-        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[40:])
 
 
 class TestConcatenations(unittest.TestCase):

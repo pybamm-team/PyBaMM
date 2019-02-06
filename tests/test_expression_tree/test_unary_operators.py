@@ -4,8 +4,10 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+from tests.shared import MeshForTesting
 
 import unittest
+import numpy as np
 
 
 class TestUnaryOperators(unittest.TestCase):
@@ -71,6 +73,26 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.Symbol("b", domain=["negative electrode"])
         with self.assertRaises(pybamm.DomainError):
             pybamm.Broadcast(b, ["separator"])
+
+    def test_numpy_broadcast(self):
+        mesh = MeshForTesting()
+
+        # scalar
+        a = pybamm.Scalar(7)
+        broad = pybamm.NumpyBroadcast(a, ["whole cell"], mesh)
+        np.testing.assert_array_equal(
+            broad.evaluate(), 7 * np.ones_like(mesh["whole cell"].nodes)
+        )
+        self.assertEqual(broad.domain, ["whole cell"])
+
+        # vector
+        vec = pybamm.Vector(np.linspace(0, 1))
+        broad = pybamm.NumpyBroadcast(vec, ["whole cell"], mesh)
+        np.testing.assert_array_equal(
+            broad.evaluate(),
+            np.linspace(0, 1)[:, np.newaxis] * np.ones_like(mesh["whole cell"].nodes),
+        )
+        self.assertEqual(broad.domain, ["whole cell"])
 
 
 if __name__ == "__main__":
