@@ -421,11 +421,13 @@ class BaseDiscretisation(object):
 
         # broadcast symbol
         broadcasted_symbol = symbol * broadcasting_vector
+        # set multiplication 'broadcast' flag to True for correct Vector multiplication
+        broadcasted_symbol.broadcast = True
 
-        # if broadcasted_symbol.is_constant():
-        #     broadcasted_symbol = pybamm.Array(
-        #         broadcasted_symbol.evaluate(), broadcasted_symbol.domain
-        #     )
+        if broadcasted_symbol.is_constant():
+            broadcasted_symbol = pybamm.Array(
+                broadcasted_symbol.evaluate(), domain=broadcasted_symbol.domain
+            )
         return broadcasted_symbol
 
     def concatenate(self, *symbols):

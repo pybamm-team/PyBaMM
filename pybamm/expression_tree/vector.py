@@ -24,8 +24,13 @@ class Vector(pybamm.Array):
     """
 
     def __init__(self, entries, name=None, domain=[]):
+        # make sure that entries are a vector
+        if entries.ndim != 1:
+            raise ValueError(
+                """Entries must have 1 dimension,  not {}""".format(entries.ndim)
+            )
         if name is None:
-            name = "Vector of shape {!s}".format(entries.shape)
+            name = "Vector of length {!s}".format(entries.shape[0])
         super().__init__(entries, name=name, domain=domain)
 
 

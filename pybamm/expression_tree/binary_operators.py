@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numbers
+import numpy as np
 
 
 class BinaryOperator(pybamm.Symbol):
@@ -111,10 +112,30 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
 
         super().__init__("*", left, right)
+        self._broadcast = False
+
+    @property
+    def broadcast(self):
+        return self._broadcast
+
+    @broadcast.setter
+    def broadcast(self, boolean):
+        self._broadcast = boolean
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        if isinstance(self.children[0], pybamm.Matrix):
+        if self.broadcast and isinstance(self.children[0], pybamm.Vector):
+            if (
+                isinstance(self.children[1], pybamm.Vector)
+                and self.children[0].domain == []
+                and self.children[1].domain != []
+            ):
+                return self.children[0].evaluate(t, y)[:, np.newaxis] * self.children[
+                    1
+                ].evaluate(t, y)
+            else:
+                raise ValueError("""broadcasting conditions not met""")
+        elif isinstance(self.children[0], pybamm.Matrix):
             return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
         else:
             return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
