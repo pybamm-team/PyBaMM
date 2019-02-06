@@ -28,18 +28,6 @@ class TestVector(unittest.TestCase):
         np.testing.assert_array_equal(
             (self.vect * self.vect).evaluate(), np.array([1, 4, 9])
         )
-        # test broadcasting
-        nodes = pybamm.Vector(np.linspace(0, 1, 10), domain=["whole cell"])
-        broadcast_vect = self.vect * nodes
-        broadcast_vect.broadcast = True
-        np.testing.assert_array_equal(
-            broadcast_vect.evaluate(), self.x[:, np.newaxis] * np.linspace(0, 1, 10)
-        )
-        # test error raising when nodes don't have a domain
-        # (broadcast is strict with when it is allowed)
-        broadcast_vect.children[1].domain = []
-        with self.assertRaises(ValueError):
-            broadcast_vect.evaluate()
 
     def test_vector_modification(self):
         exp = self.vect * self.vect + self.vect

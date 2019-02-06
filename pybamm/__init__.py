@@ -74,6 +74,7 @@ from .expression_tree.unary_operators import (
     Gradient,
     Divergence,
     Broadcast,
+    NumpyBroadcast,
     grad,
     div,
 )

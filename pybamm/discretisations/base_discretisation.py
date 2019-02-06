@@ -410,24 +410,26 @@ class BaseDiscretisation(object):
 
     def broadcast(self, symbol, domain):
         """
-        Broadcast symbol
+        Broadcast symbol to a specified domain. To do this, calls
+        :class:`pybamm.NumpyBroadcast`
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol to be broadcasted
+        domain : iterable of string
+            The domain to broadcast to
         """
-        # create broadcasting vector (vector of ones with shape determined by the
-        # domain)
-        broadcasting_vector_size = sum([self.mesh[dom].npts for dom in domain])
-        broadcasting_vector = pybamm.Vector(
-            np.ones(broadcasting_vector_size), domain=domain
-        )
+        # create broadcasted symbol
+        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
-        # broadcast symbol
-        broadcasted_symbol = symbol * broadcasting_vector
-        # set multiplication 'broadcast' flag to True for correct Vector multiplication
-        broadcasted_symbol.broadcast = True
-
+        # if the broadcasted symbol evaluates to a constant value, replace the
+        # symbol-Vector multiplication with a single array
         if broadcasted_symbol.is_constant():
             broadcasted_symbol = pybamm.Array(
                 broadcasted_symbol.evaluate(), domain=broadcasted_symbol.domain
             )
+
         return broadcasted_symbol
 
     def concatenate(self, *symbols):
