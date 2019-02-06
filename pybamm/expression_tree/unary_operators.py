@@ -112,6 +112,34 @@ class Divergence(SpatialOperator):
         super().__init__("div", child)
 
 
+class Broadcast(SpatialOperator):
+    """A node in the expression tree representing a broadcasting operator.
+    Broadcasts a child (which *must* have empty domain) to a specified domain. After 
+    discretisation, this will evaluate to an array of the right shape for the specified
+    domain.
+
+    Parameters
+    ----------
+    child : :class:`Symbol`
+        child node
+    domain : iterable of string
+        the domain to broadcast the child to
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, domain):
+        if child.domain != []:
+            raise pybamm.DomainError(
+                """Domain of a broadcasted child must be [] but is '{}'""".format(
+                    child.domain
+                )
+            )
+        super().__init__("broadcast", child)
+        # overwrite child domain ([]) with specified broadcasting domain
+        self.domain = domain
+
+
 #
 # Methods to call Gradient and Divergence
 #

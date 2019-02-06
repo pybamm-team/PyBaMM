@@ -61,6 +61,17 @@ class TestUnaryOperators(unittest.TestCase):
         un5 = pybamm.UnaryOperator("test", d)
         self.assertNotEqual(un1.id, un5.id)
 
+    def test_broadcast(self):
+        a = pybamm.Symbol("a")
+        broad_a = pybamm.Broadcast(a, ["negative electrode"])
+        self.assertEqual(broad_a.name, "broadcast")
+        self.assertEqual(broad_a.children[0].name, a.name)
+        self.assertEqual(broad_a.domain, ["negative electrode"])
+
+        b = pybamm.Symbol("b", domain=["negative electrode"])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.Broadcast(b, ["separator"])
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
