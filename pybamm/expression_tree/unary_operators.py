@@ -137,7 +137,7 @@ class Broadcast(SpatialOperator):
                     child.domain
                 )
             )
-        if name == None:
+        if name is None:
             name = "broadcast"
         super().__init__(name, child)
         # overwrite child domain ([]) with specified broadcasting domain

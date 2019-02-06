@@ -13,13 +13,16 @@ Unary Operators
 .. autoclass:: pybamm.SpatialOperator
   :members:
 
-.. autoclass:: pybamm.Broadcast
-  :members:
-
 .. autoclass:: pybamm.Gradient
   :members:
 
 .. autoclass:: pybamm.Divergence
+  :members:
+
+.. autoclass:: pybamm.Broadcast
+  :members:
+
+.. autoclass:: pybamm.NumpyBroadcast
   :members:
 
 .. autofunction:: pybamm.grad
