@@ -3,18 +3,13 @@
 #
 import pybamm
 
-
-class VarsForTesting(object):
-    def __init__(self, t=None, c=None, e=None, j=None):
-        self.t = t
-        self.c = c
-        self.e = e
-        self.j = j
+import numpy as np
 
 
-def pdes_io(model):
-    y = model.initial_conditions()
-    vars = pybamm.Variables(model)
-    vars.update(0, y)
-    dydt = model.pdes_rhs(vars)
-    return y, dydt
+class MeshForTesting(pybamm.BaseMesh):
+    def __init__(self):
+        super().__init__(None)
+        self["whole cell"] = self.submeshclass(np.linspace(0, 1, 100))
+        self["negative electrode"] = self.submeshclass(self["whole cell"].nodes[:30])
+        self["separator"] = self.submeshclass(self["whole cell"].nodes[30:40])
+        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[40:])
