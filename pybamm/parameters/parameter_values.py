@@ -111,6 +111,21 @@ class ParameterValues(dict):
         for variable, equation in model.variables.items():
             model.variables[variable] = self.process_symbol(equation)
 
+    def process_geometry(self, geometry):
+        """Assign parameter values to a geometry.
+            Currently inplace, could be changed to return a new model.
+
+            Parameters
+            ----------
+            geometry : :class:`pybamm.Geometry` (or subclass) instance
+                    Geometry specs to assign parameter values to
+            """
+
+        for domain in geometry:
+            for spatial_variable, spatial_limits in geometry[domain].items():
+                for lim, sym in spatial_limits.items():
+                    geometry[domain][spatial_variable][lim] = self.process_symbol(sym)
+
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
 
