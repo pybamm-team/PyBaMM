@@ -53,27 +53,29 @@ ne_p = pybamm.Parameter("ne_p")
 # Electrolyte physical properties
 cmax = pybamm.Parameter("cmax")  # Maximum electrolye concentration [mol.m-3]
 Vw = pybamm.Parameter("Vw")  # Partial molar volume of water [m3.mol-1]
-Vp = pybamm.Parameter("Vp")  # Partial molar volume of cations [m3.mol-1]
-Vn = pybamm.Parameter("Vn")  # Partial molar volume of anions [m3.mol-1]
-Ve = Vn + Vp  # Partial molar volume of electrolyte [m3.mol-1]
+V_plus = pybamm.Parameter("V_plus")  # Partial molar volume of cations [m3.mol-1]
+V_minus = pybamm.Parameter("V_minus")  # Partial molar volume of anions [m3.mol-1]
+Ve = V_minus + V_plus  # Partial molar volume of electrolyte [m3.mol-1]
 Mw = pybamm.Parameter("Mw")  # Molar mass of water [kg.mol-1]
 Mp = pybamm.Parameter("Mp")  # Molar mass of cations [kg.mol-1]
 Mn = pybamm.Parameter("Mn")  # Molar mass of anions [kg.mol-1]
 Me = Mn + Mp  # Molar mass of electrolyte [kg.mol-1]
-DeltaVliqN = Vn - Vp  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
-DeltaVliqP = (
-    2 * Vw - Vn - 3 * Vp
+DeltaVliq_n = (
+    V_minus - V_plus
+)  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
+DeltaVliq_p = (
+    2 * Vw - V_minus - 3 * V_plus
 )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
 nu_plus = pybamm.Parameter("nu_plus")
 nu_minus = pybamm.Parameter("nu_minus")
-nu = pybamm.Parameter("nu")
+nu = nu_plus + nu_minus
 
 # Electrode physical properties
 VPb = pybamm.Parameter("VPb")  # Molar volume of lead [m3.mol-1]
 VPbO2 = pybamm.Parameter("VPbO2")  # Molar volume of lead dioxide [m3.mol-1]
 VPbSO4 = pybamm.Parameter("VPbSO4")  # Molar volume of lead sulfate [m3.mol-1]
-DeltaVsurfN = VPb - VPbSO4  # Net Molar Volume consumed in neg electrode [m3.mol-1]
-DeltaVsurfP = VPbSO4 - VPbO2  # Net Molar Volume consumed in pos electrode [m3.mol-1]
+DeltaVsurf_n = VPb - VPbSO4  # Net Molar Volume consumed in neg electrode [m3.mol-1]
+DeltaVsurf_p = VPbSO4 - VPbO2  # Net Molar Volume consumed in pos electrode [m3.mol-1]
 sigma_eff_n = (
     pybamm.standard_parameters.sigma_n * (1 - epsn_max) ** 1.5
 )  # Effective lead conductivity [S/m-1]
@@ -129,10 +131,10 @@ iota_ref_n = jref_n / (
 iota_ref_p = jref_p / (
     ibar / (Ap * pybamm.standard_parameters.Lx)
 )  # Dimensionless exchange-current density (pos)
-beta_surf_n = -cmax * DeltaVsurfN / ne_n  # Molar volume change (lead)
-beta_surf_p = -cmax * DeltaVsurfP / ne_p  # Molar volume change (lead dioxide)
-beta_liq_n = -cmax * DeltaVliqN / ne_n  # Molar volume change (electrolyte, neg)
-beta_liq_p = -cmax * DeltaVliqP / ne_p  # Molar volume change (electrolyte, pos)
+beta_surf_n = -cmax * DeltaVsurf_n / ne_n  # Molar volume change (lead)
+beta_surf_p = -cmax * DeltaVsurf_p / ne_p  # Molar volume change (lead dioxide)
+beta_liq_n = -cmax * DeltaVliq_n / ne_n  # Molar volume change (electrolyte, neg)
+beta_liq_p = -cmax * DeltaVliq_p / ne_p  # Molar volume change (electrolyte, pos)
 beta_n = beta_surf_n + beta_liq_n  # Total molar volume change (neg)
 beta_p = beta_surf_p + beta_liq_p  # Total molar volume change (pos)
 omega_i = (
@@ -183,9 +185,9 @@ qmax = (
     / pybamm.standard_parameters.Lx
     / (sp - sn)
 )  # Dimensionless max capacity
-epsDeltan = beta_surf_n / pybamm.standard_parameters.Ln * qmax
-epsDeltap = beta_surf_p / pybamm.standard_parameters.Lp * qmax
+epsDelta_n = beta_surf_n / pybamm.standard_parameters.Ln * qmax
+epsDelta_p = beta_surf_p / pybamm.standard_parameters.Lp * qmax
 c_init = q_init
-epsn_init = epsn_max - epsDeltan * (1 - q_init)  # Initial pororsity (neg) [-]
+epsn_init = epsn_max - epsDelta_n * (1 - q_init)  # Initial pororsity (neg) [-]
 epss_init = epss_max  # Initial pororsity (sep) [-]
-epsp_init = epsp_max - epsDeltap * (1 - q_init)  # Initial pororsity (pos) [-]
+epsp_init = epsp_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
