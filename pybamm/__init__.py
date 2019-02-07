@@ -60,7 +60,7 @@ from .expression_tree.binary_operators import (
 )
 from .expression_tree.concatenations import (
     Concatenation,
-    NumpyConcatenation,
+    NumpyModelConcatenation,
     DomainConcatenation,
 )
 from .expression_tree.array import Array
@@ -73,6 +73,8 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
+    Broadcast,
+    NumpyBroadcast,
     grad,
     div,
 )
@@ -129,7 +131,11 @@ from .simulation import Simulation
 # Solver classes
 #
 from .solvers.base_solver import BaseSolver
+from .solvers.ode_solver import OdeSolver
+from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
+from .solvers.scikits_dae_solver import ScikitsDaeSolver
+from .solvers.scikits_ode_solver import ScikitsOdeSolver
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

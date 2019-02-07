@@ -17,9 +17,14 @@ class BaseModel(object):
     rhs: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the rhs
+    algebraic: dict
+        A list of algebraic expressions that are assumed to equate to zero
     initial_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions
+        the initial conditions for the state variables y
+    initial_conditions_ydot: dict
+        A dictionary that maps expressions (variables) to expressions that represent
+        the initial conditions for the time derivative of y
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions
@@ -32,7 +37,9 @@ class BaseModel(object):
     def __init__(self):
         # Initialise empty model
         self._rhs = {}
+        self._algebraic = []
         self._initial_conditions = {}
+        self._initial_conditions_ydot = {}
         self._boundary_conditions = {}
         self._variables = {}
         self._concatenated_rhs = None
@@ -65,13 +72,16 @@ class BaseModel(object):
             )
 
     @property
-    def initial_conditions(self):
-        return self._initial_conditions
+    def algebraic(self):
+        return self._algebraic
 
-    @initial_conditions.setter
-    def initial_conditions(self, initial_conditions):
+    @algebraic.setter
+    def algebraic(self, algebraic):
+        self._algebraic = algebraic
+
+    def _set_initial_conditions(self, initial_conditions):
         """
-        Set initial conditions, converting any scalar conditions to 'pybamm.Scalar'
+        Convert any scalar conditions to 'pybamm.Scalar'
         and checking that domains are consistent
         """
         # Convert any numbers to a pybamm.Scalar
@@ -79,18 +89,38 @@ class BaseModel(object):
             if isinstance(eqn, numbers.Number):
                 initial_conditions[var] = pybamm.Scalar(eqn)
 
-        if all(
+        if not all(
             [
                 variable.domain == equation.domain or equation.domain == []
                 for variable, equation in initial_conditions.items()
             ]
         ):
-            self._initial_conditions = initial_conditions
-        else:
             raise pybamm.DomainError(
                 """variable and equation in initial_conditions
                    must have the same domain"""
             )
+
+        return initial_conditions
+
+    @property
+    def initial_conditions(self):
+        return self._initial_conditions
+
+    @initial_conditions.setter
+    def initial_conditions(self, initial_conditions):
+        self._initial_conditions = self._set_initial_conditions(
+            initial_conditions
+        )
+
+    @property
+    def initial_conditions_ydot(self):
+        return self._initial_conditions_ydot
+
+    @initial_conditions_ydot.setter
+    def initial_conditions_ydot(self, initial_conditions):
+        self._initial_conditions_ydot = self._set_initial_conditions(
+            initial_conditions
+        )
 
     @property
     def boundary_conditions(self):
@@ -133,38 +163,27 @@ class BaseModel(object):
     def __getitem__(self, key):
         return self.rhs[key]
 
-    def update(self, submodel):
+    def update(self, *submodels):
         """
-        Update model to add new physics from a submodel
+        Update model to add new physics from submodels
 
         Parameters
         ----------
-        submodel : subclass of :class:`pybamm.BaseModel`
-            The submodel from which to copy new physics
-        """
-        # check for duplicates in keys
-        vars = [var.id for var in submodel.rhs.keys()] + [
-            var.id for var in self.rhs.keys()
-        ]
-        assert len(vars) == len(set(vars)), pybamm.ModelError("duplicate variables")
-
-        # update dicts
-        self._rhs.update(submodel.rhs)
-        self._initial_conditions.update(submodel.initial_conditions)
-        self._boundary_conditions.update(submodel.boundary_conditions)
-        self._variables.update(submodel.variables)
-
-    def create_from_submodels(self, *submodels):
-        """
-        Create model by combining a list of submodels
-
-        Parameters
-        ----------
-        submodels : iterable of submodels (subclasses of :class:`pybamm.BaseModel`)
+        submodel : iterable of submodels (subclasses of :class:`pybamm.BaseModel`)
             The submodels from which to create new model
         """
         for submodel in submodels:
-            self.update(submodel)
+            # check for duplicates in keys
+            vars = [var.id for var in submodel.rhs.keys()] + [
+                var.id for var in self.rhs.keys()
+            ]
+            assert len(vars) == len(set(vars)), pybamm.ModelError("duplicate variables")
+
+            # update dicts
+            self._rhs.update(submodel.rhs)
+            self._initial_conditions.update(submodel.initial_conditions)
+            self._boundary_conditions.update(submodel.boundary_conditions)
+            self._variables.update(submodel.variables)
 
     def check_well_posedness(self):
         """

@@ -141,33 +141,44 @@ class TestSymbol(unittest.TestCase):
         """
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
+        c = pybamm.Symbol("c", domain=["test"])
+        d = pybamm.Symbol("d", domain=["test"])
         hex_regex = r"\-?0x[0-9,a-f]+"
-        self.assertRegex(a.__repr__(), r"Symbol\(" + hex_regex + r", a, None\)")
-        self.assertRegex(b.__repr__(), r"Symbol\(" + hex_regex + r", b, None\)")
         self.assertRegex(
-            (a + b).__repr__(), r"Addition\(" + hex_regex + r", \+, None\)"
+            a.__repr__(),
+            r"Symbol\(" + hex_regex + r", a, children\=\[\], domain\=\[\]\)",
         )
         self.assertRegex(
-            (a + b).children[0].__repr__(), r"Symbol\(" + hex_regex + r", a, a \+ b\)"
+            b.__repr__(),
+            r"Symbol\(" + hex_regex + r", b, children\=\[\], domain\=\[\]\)",
         )
         self.assertRegex(
-            (a + b).children[1].__repr__(), r"Symbol\(" + hex_regex + r", b, a \+ b\)"
+            c.__repr__(),
+            r"Symbol\(" + hex_regex + r", c, children\=\[\], domain\=\['test'\]\)",
         )
         self.assertRegex(
-            (a * b).__repr__(), r"Multiplication\(" + hex_regex + r", \*, None\)"
+            d.__repr__(),
+            r"Symbol\(" + hex_regex + r", d, children\=\[\], domain\=\['test'\]\)",
         )
         self.assertRegex(
-            (a * b).children[0].__repr__(), r"Symbol\(" + hex_regex + r", a, a \* b\)"
+            (a + b).__repr__(),
+            r"Addition\(" + hex_regex + r", \+, children\=\['a', 'b'\], domain=\[\]\)",
         )
         self.assertRegex(
-            (a * b).children[1].__repr__(), r"Symbol\(" + hex_regex + ", b, a \* b\)"
+            (c * d).__repr__(),
+            r"Multiplication\("
+            + hex_regex
+            + r", \*, children\=\['c', 'd'\], domain=\['test'\]\)",
         )
         self.assertRegex(
-            pybamm.grad(a).__repr__(), r"Gradient\(" + hex_regex + ", grad, None\)"
+            pybamm.grad(a).__repr__(),
+            r"Gradient\(" + hex_regex + ", grad, children\=\['a'\], domain=\[\]\)",
         )
         self.assertRegex(
-            pybamm.grad(a).children[0].__repr__(),
-            r"Symbol\(" + hex_regex + ", a, grad\(a\)\)",
+            pybamm.grad(c).__repr__(),
+            r"Gradient\("
+            + hex_regex
+            + ", grad, children\=\['c'\], domain=\['test'\]\)",
         )
 
     def test_symbol_visualise(self):

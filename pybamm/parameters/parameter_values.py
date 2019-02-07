@@ -94,6 +94,9 @@ class ParameterValues(dict):
         for variable, equation in model.initial_conditions.items():
             model.initial_conditions[variable] = self.process_symbol(equation)
 
+        for variable, equation in model.initial_conditions_ydot.items():
+            model.initial_conditions_ydot[variable] = self.process_symbol(equation)
+
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
         new_boundary_conditions = {}
         for variable, bcs in model.boundary_conditions.items():
@@ -131,6 +134,10 @@ class ParameterValues(dict):
             new_left = self.process_symbol(left)
             new_right = self.process_symbol(right)
             return symbol.__class__(new_left, new_right)
+
+        elif isinstance(symbol, pybamm.Broadcast):
+            new_child = self.process_symbol(symbol.children[0])
+            return pybamm.Broadcast(new_child, symbol.domain)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])

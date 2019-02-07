@@ -35,7 +35,7 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         diffusion_model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
 
         # Create own model from diffusion model
-        self.create_from_submodels(diffusion_model)
+        self.update(diffusion_model)
 
         # Overwrite default solver for faster solution
         self.default_solver = pybamm.ScipySolver(method="BDF")

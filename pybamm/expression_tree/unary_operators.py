@@ -112,6 +112,76 @@ class Divergence(SpatialOperator):
         super().__init__("div", child)
 
 
+class Broadcast(SpatialOperator):
+    """A node in the expression tree representing a broadcasting operator.
+    Broadcasts a child (which *must* have empty domain) to a specified domain. After
+    discretisation, this will evaluate to an array of the right shape for the specified
+    domain.
+
+    Parameters
+    ----------
+    child : :class:`Symbol`
+        child node
+    domain : iterable of string
+        the domain to broadcast the child to
+    name : string
+        name of the node
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, domain, name=None):
+        if child.domain != []:
+            raise pybamm.DomainError(
+                """Domain of a broadcasted child must be [] but is '{}'""".format(
+                    child.domain
+                )
+            )
+        if name is None:
+            name = "broadcast"
+        super().__init__(name, child)
+        # overwrite child domain ([]) with specified broadcasting domain
+        self.domain = domain
+
+
+class NumpyBroadcast(Broadcast):
+    """A node in the expression tree implementing a broadcasting operator using numpy.
+    Broadcasts a child (which *must* have empty domain) to a specified domain. To do
+    this, creates a np array of ones of the same shape as the submesh domain, and then
+    multiplies the child by that array upon evaluation
+
+    Parameters
+    ----------
+    child : :class:`Symbol`
+        child node
+    domain : iterable of string
+        the domain to broadcast the child to
+    mesh : mesh class
+        the mesh used for discretisation
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, domain, mesh):
+        super().__init__(child, domain, name="numpy broadcast")
+        # create broadcasting vector (vector of ones with shape determined by the
+        # domain)
+        broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
+        self.broadcasting_vector = np.ones(broadcasting_vector_size)
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        # if child is a vector, add a dimension for broadcasting
+        if isinstance(self.children[0], pybamm.Vector):
+            return (
+                self.children[0].evaluate(t, y)[:, np.newaxis]
+                * self.broadcasting_vector
+            )
+        # otherwise just do normal multiplication
+        else:
+            return self.children[0].evaluate(t, y) * self.broadcasting_vector
+
+
 #
 # Methods to call Gradient and Divergence
 #

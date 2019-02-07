@@ -8,7 +8,7 @@ import pybamm
 import scipy.integrate as it
 
 
-class ScipySolver(pybamm.BaseSolver):
+class ScipySolver(pybamm.OdeSolver):
     """Solve a discretised model, using scipy.integrate.solve_ivp.
 
     Parameters
