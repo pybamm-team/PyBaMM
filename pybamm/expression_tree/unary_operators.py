@@ -164,9 +164,13 @@ class NumpyBroadcast(Broadcast):
 
     def __init__(self, child, domain, mesh):
         super().__init__(child, domain, name="numpy broadcast")
+        # determine broadcasting vector size (size 1 if the domain is empty)
+        if domain == []:
+            broadcasting_vector_size = 1
+        else:
+            broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
         # create broadcasting vector (vector of ones with shape determined by the
         # domain)
-        broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
         self.broadcasting_vector = np.ones(broadcasting_vector_size)
 
     def evaluate(self, t=None, y=None):
