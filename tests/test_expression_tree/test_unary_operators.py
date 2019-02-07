@@ -92,7 +92,21 @@ class TestUnaryOperators(unittest.TestCase):
             broad.evaluate(),
             np.linspace(0, 1)[:, np.newaxis] * np.ones_like(mesh["whole cell"].nodes),
         )
-        self.assertEqual(broad.domain, ["whole cell"])
+
+        # state vector
+        state_vec = pybamm.StateVector(slice(1, 2))
+        broad = pybamm.NumpyBroadcast(state_vec, ["whole cell"], mesh)
+        y = np.vstack([np.linspace(0, 1), np.linspace(0, 2)])
+        np.testing.assert_array_equal(
+            broad.evaluate(y=y), (y[1:2].T * np.ones_like(mesh["whole cell"].nodes)).T
+        )
+
+        # state vector - bad input
+        state_vec = pybamm.StateVector(slice(1, 5))
+        broad = pybamm.NumpyBroadcast(state_vec, ["whole cell"], mesh)
+        y = np.vstack([np.linspace(0, 1), np.linspace(0, 2)]).T
+        with self.assertRaises(AssertionError):
+            broad.evaluate(y=y)
 
 
 if __name__ == "__main__":

@@ -175,15 +175,21 @@ class NumpyBroadcast(Broadcast):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
+        child = self.children[0]
+        child_eval = child.evaluate(t, y)
         # if child is a vector, add a dimension for broadcasting
-        if isinstance(self.children[0], pybamm.Vector):
-            return (
-                self.children[0].evaluate(t, y)[:, np.newaxis]
-                * self.broadcasting_vector
+        if isinstance(child, pybamm.Vector):
+            return child_eval[:, np.newaxis] * self.broadcasting_vector
+        elif isinstance(child, pybamm.StateVector):
+            assert child_eval.shape[0] == 1, ValueError(
+                """child_eval should have shape (1,n), not {}""".format(
+                    child_eval.shape
+                )
             )
+            return (child_eval.T * self.broadcasting_vector).T
         # otherwise just do normal multiplication
         else:
-            return self.children[0].evaluate(t, y) * self.broadcasting_vector
+            return child_eval * self.broadcasting_vector
 
 
 #
