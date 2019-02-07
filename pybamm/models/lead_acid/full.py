@@ -1,5 +1,5 @@
 #
-# Reaction-diffusion model
+# Lead-acid full (1D) model
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals

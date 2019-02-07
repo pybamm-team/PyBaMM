@@ -1,12 +1,12 @@
 #
-# Reaction-diffusion model
+# Lead-acid LOQS model
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class LeadAcidLOQS(pybamm.BaseModel):
+class LOQS(pybamm.BaseModel):
     """Leading-Order Quasi-Static model for lead-acid.
 
     Attributes
