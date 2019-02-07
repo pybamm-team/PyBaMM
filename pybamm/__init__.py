@@ -112,11 +112,11 @@ from .discretisations.finite_volume_discretisations import (
     FiniteVolumeDiscretisation,
     NodeToEdge,
 )
-from .discretisations.base_mesh import KNOWN_DOMAINS
-from .discretisations.base_mesh import BaseMesh, BaseSubmesh
-from .discretisations.finite_volume_meshes import (
-    FiniteVolumeMacroMesh,
-    FiniteVolumeSubmesh,
+from .discretisations.meshes.pybamm_meshes import KNOWN_DOMAINS
+from .discretisations.meshes.pybamm_meshes import (
+    PybammMesh,
+    PybammSubMesh,
+    Pybamm1DUniformSubMesh,
 )
 
 #

@@ -15,19 +15,29 @@ class BaseDiscretisation(object):
 
     Parameters
     ----------
-    mesh : :class:`pybamm.BaseMesh` (or subclass)
-        The underlying mesh for discretisation
-
+    mesh_type: class name
+        the type of combined mesh being used (e.g. PybammMesh)
+    submesh_pts : dict
+        the number of points on each of the subdomains
+    submesh_types : dict
+        the types of submeshes being employed on each of the subdomains
+    spatial_methods : dict
+        the spatial methods being employed on each of the subdomains
     """
 
-    def __init__(self, mesh):
-        self._mesh = mesh
+    def __init__(self, mesh_type, submesh_pts, submesh_types, spatial_methods):
+        self.mesh_type = mesh_type
+        self.submesh_pts = submesh_pts
+        self.submesh_types = submesh_types
+        self.spatial_methods = spatial_methods
+
+        self.mesh = None  # will be of type mesh_type
 
     @property
     def mesh(self):
         return self._mesh
 
-    def process_model(self, model):
+    def process_model(self, model, geometry):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
 
@@ -38,6 +48,10 @@ class BaseDiscretisation(object):
             boundary_conditions (all dicts of {variable: equation})
 
         """
+
+        # Set the mesh
+        self.mesh = self.mesh_type(geometry, self.submesh_types, self.submesh_pts)
+
         # Set the y split for variables
         variables = self.get_all_variables(model)
         y_slices = self.get_variable_slices(variables)
