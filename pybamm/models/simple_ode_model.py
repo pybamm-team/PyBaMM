@@ -1,5 +1,5 @@
 #
-# A model consisting of only ODEs
+# Simple ODE Model
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -8,6 +8,8 @@ import pybamm
 
 class SimpleODEModel(pybamm.BaseModel):
     """A model consisting of only ODEs.
+    Useful for testing solution when variables have domain '[]', and for testing
+    broadcasting.
 
     Attributes
     ----------
@@ -48,8 +50,8 @@ class SimpleODEModel(pybamm.BaseModel):
         # Broadcast some of the variables
         self.variables = {
             "a": a,
-            "b": pybamm.Broadcast(b, ["whole cell"]),
-            "c": pybamm.Broadcast(c, ["negative electrode", "separator"]),
+            "b broadcasted": pybamm.Broadcast(b, ["whole cell"]),
+            "c broadcasted": pybamm.Broadcast(c, ["negative electrode", "separator"]),
         }
 
         # Overwrite default solver for faster solution
