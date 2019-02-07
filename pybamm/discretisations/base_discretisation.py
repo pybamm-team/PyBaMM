@@ -508,6 +508,7 @@ class BaseDiscretisation(object):
         )
 
         # Check variables in variable list against rhs
+        # Be lenient with size check if the variable in model.variables is broadcasted
         for var in model.rhs.keys():
             if var.name in model.variables.keys():
                 assert model.rhs[var].evaluate(0, y0).shape == model.variables[

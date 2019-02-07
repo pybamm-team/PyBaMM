@@ -51,7 +51,7 @@ ne_n = pybamm.Parameter("ne_n")
 ne_p = pybamm.Parameter("ne_p")
 
 # Electrolyte physical properties
-cmax = pybamm.Parameter("cmax") * 1e3  # Maximum electrolye concentration [mol.m-3]
+cmax = pybamm.Parameter("cmax")  # Maximum electrolye concentration [mol.m-3]
 Vw = pybamm.Parameter("Vw")  # Partial molar volume of water [m3.mol-1]
 Vp = pybamm.Parameter("Vp")  # Partial molar volume of cations [m3.mol-1]
 Vn = pybamm.Parameter("Vn")  # Partial molar volume of anions [m3.mol-1]

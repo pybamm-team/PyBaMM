@@ -88,6 +88,7 @@ class LeadAcidLOQS(pybamm.BaseModel):
             "c": pybamm.Broadcast(c, ["whole cell"]),
             "Phi": pybamm.Broadcast(Phi, ["whole cell"]),
             "V": V,
+            "int(epsilon_times_c)dx": (ln * epsn + ls * epss + lp * epsp) * c,
         }
 
         # Overwrite default parameter values

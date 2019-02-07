@@ -17,7 +17,6 @@ class TestLeadAcidLOQS(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skip("")
     def test_solution(self):
         model = pybamm.LeadAcidLOQS()
 
@@ -31,11 +30,15 @@ class TestLeadAcidLOQS(unittest.TestCase):
         T, Y = solver.t, solver.y
 
         # check output
-        import ipdb
-
-        ipdb.set_trace()
-        np.testing.assert_array_almost_equal(
-            model.variables["c"].evaluate(T, Y)[0], -T[np.newaxis, :]
+        # make sure concentration and voltage are monotonically decreasing
+        # for a discharge
+        np.testing.assert_array_less(
+            model.variables["c"].evaluate(T, Y)[:, 1:],
+            model.variables["c"].evaluate(T, Y)[:, :-1],
+        )
+        np.testing.assert_array_less(
+            model.variables["V"].evaluate(T, Y)[1:],
+            model.variables["V"].evaluate(T, Y)[:-1],
         )
 
 

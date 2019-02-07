@@ -44,8 +44,6 @@ Mw,0.01801,m3.mol-1,Molar mass of water,,
 nu_plus,1,-,Stoichiometry of hydrogen cations,,
 nu_minus,1,-,Stoichiometry of hydrogen sulfate anions,,
 ,,,,,
-,,,,,
-,,,,,
 # Electrode physical properties,,,,,
 VPb,1.82539682539683E-05,m3.mol-1,Molar volume of lead ,,Calculated as () divided by ()
 VPbO2,2.54797441364606E-05,m3.mol-1,Molar volume of lead-dioxide,,
