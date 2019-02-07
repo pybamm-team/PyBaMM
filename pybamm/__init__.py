@@ -89,6 +89,7 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
+from .models.simple_ode_model import SimpleODEModel
 from .models.lead_acid_loqs import LeadAcidLOQS
 
 #

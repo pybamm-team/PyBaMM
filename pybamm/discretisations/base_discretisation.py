@@ -81,9 +81,13 @@ class BaseDiscretisation(object):
         start = 0
         end = 0
         for variable in variables:
-            # Add up the size of all the domains in variable.domain
-            for dom in variable.domain:
-                end += self.mesh[dom].npts
+            # If domain is empty then variable has size 1
+            if variable.domain == []:
+                end += 1
+            # Otherwise, add up the size of all the domains in variable.domain
+            else:
+                for dom in variable.domain:
+                    end += self.mesh[dom].npts
             y_slices[variable.id] = slice(start, end)
             start = end
 
