@@ -106,14 +106,12 @@ m_p = Parameter("m_p")  # Reaction rate in positive electrode
 voltage_low_cut = Parameter("voltage_low_cut")  # Lower voltage cut-off
 voltage_high_cut = Parameter("voltage_high_cut")  # Upper voltage cut-off
 I_typ = Parameter("I_typ")  # Typical current density
-icell = I_typ
 
 # Initial Conditions
 ce0_dimensional = Parameter("ce0")  # Initial li ion concentration in electrolyte
 cn0_dimensional = Parameter("cn0")  # Initial li concentration in neg electrode
 cp0_dimensional = Parameter("cp0")  # Initial li concentration in pos electrode
 
-ne = Parameter("ne")
 # --------------------------------------------------------------------------------------
 """Dimensionless Parameters"""
 

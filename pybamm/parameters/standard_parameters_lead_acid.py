@@ -11,7 +11,12 @@ ce_typ
     Typical lithium ion concentration in electrolyte
 De_typ
     Typical lithium ion diffusivity in the electrolyte
-
+nu_plus
+    Stoichiometry of hydrogen anions
+nu_minus
+    Stoichiometry of hydrogen sulfate anions
+nu
+    Stoichiometry of sulfuric acid
 """
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -20,11 +25,7 @@ import pybamm
 # --------------------------------------------------------------------------------------
 """Dimensional Parameters"""
 
-# Electrolyte Properties
-s_plus_n = pybamm.Parameter("s_plus_n")
-s_plus_p = pybamm.Parameter("s_plus_p")
-
-# Current collectors
+# Current collectors / Electrical properties
 H = pybamm.Parameter("H")
 W = pybamm.Parameter("W")
 A_cs = H * W  # Area of the current collectors [m2]
@@ -32,19 +33,22 @@ Ibar = pybamm.Parameter("current scale")
 ibar = Ibar / (8 * A_cs)  # Specified scale for the current [A.m-2]
 Q = 17  # Capacity [Ah]
 Crate = Ibar / Q  # C-rate [-]
+icell = Ibar
 
 # Microstructure
 An = pybamm.Parameter(
-    "An"
+    "Anmax"
 )  # Negative electrode surface area density [m-1] (or 1e4 or 1e6?)
-Ap = pybamm.Parameter("Ap")  # Positive electrode surface area density [m-1]
+Ap = pybamm.Parameter("Apmax")  # Positive electrode surface area density [m-1]
 epsn_max = pybamm.Parameter("epsn_max")  # Max porosity of negative electrode [-]
 epss_max = pybamm.Parameter("epss_max")  # Max porosity of separator [-]
 epsp_max = pybamm.Parameter("epsp_max")  # Max porosity of positive electrode [-]
 
-# Stoichiometric coefficients
-spn = pybamm.Parameter("s_+")  # s_+ in the negative electrode [-]
-spp = pybamm.Parameter("s_+")  # s_+ in the positive electrode [-]
+# Reactions
+s_plus_n = pybamm.Parameter("s_plus_n")
+s_plus_p = pybamm.Parameter("s_plus_p")
+ne_n = pybamm.Parameter("ne_n")
+ne_p = pybamm.Parameter("ne_p")
 
 # Electrolyte physical properties
 cmax = pybamm.Parameter("cmax") * 1e3  # Maximum electrolye concentration [mol.m-3]
@@ -60,6 +64,9 @@ DeltaVliqN = Vn - Vp  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1
 DeltaVliqP = (
     2 * Vw - Vn - 3 * Vp
 )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
+nu_plus = pybamm.Parameter("nu_plus")
+nu_minus = pybamm.Parameter("nu_minus")
+nu = pybamm.Parameter("nu")
 
 # Electrode physical properties
 VPb = pybamm.Parameter("VPb")  # Molar volume of lead [m3.mol-1]
@@ -95,14 +102,12 @@ Cd = (
     / D_dim
     / (cmax * pybamm.standard_parameters.F * pybamm.standard_parameters.Lx / ibar)
 )  # Diffusional C-rate: diffusion timescale/discharge timescale
-alpha = (pybamm.standard_parameters.ne * Vw - Ve) * cmax  # Excluded volume fraction
+alpha = (nu * Vw - Ve) * cmax  # Excluded volume fraction
 sn = (
-    -(s_plus_n + pybamm.standard_parameters.ne * pybamm.standard_parameters.t_plus)
-    / pybamm.standard_parameters.ne
+    -(s_plus_n + ne_n * pybamm.standard_parameters.t_plus) / ne_n
 )  # Dimensionless rection rate (neg)
 sp = (
-    -(s_plus_p + pybamm.standard_parameters.ne * pybamm.standard_parameters.t_plus)
-    / pybamm.standard_parameters.ne
+    -(s_plus_p + ne_p * pybamm.standard_parameters.t_plus) / ne_p
 )  # Dimensionless rection rate (pos)
 iota_s_n = (
     sigma_eff_n
@@ -124,18 +129,10 @@ iota_ref_n = jref_n / (
 iota_ref_p = jref_p / (
     ibar / (Ap * pybamm.standard_parameters.Lx)
 )  # Dimensionless exchange-current density (pos)
-beta_surf_n = (
-    -cmax * DeltaVsurfN / pybamm.standard_parameters.ne
-)  # Molar volume change (lead)
-beta_surf_p = (
-    -cmax * DeltaVsurfP / pybamm.standard_parameters.ne
-)  # Molar volume change (lead dioxide)
-beta_liq_n = (
-    -cmax * DeltaVliqN / pybamm.standard_parameters.ne
-)  # Molar volume change (electrolyte, neg)
-beta_liq_p = (
-    -cmax * DeltaVliqP / pybamm.standard_parameters.ne
-)  # Molar volume change (electrolyte, pos)
+beta_surf_n = -cmax * DeltaVsurfN / ne_n  # Molar volume change (lead)
+beta_surf_p = -cmax * DeltaVsurfP / ne_p  # Molar volume change (lead dioxide)
+beta_liq_n = -cmax * DeltaVliqN / ne_n  # Molar volume change (electrolyte, neg)
+beta_liq_p = -cmax * DeltaVliqP / ne_p  # Molar volume change (electrolyte, pos)
 beta_n = beta_surf_n + beta_liq_n  # Total molar volume change (neg)
 beta_p = beta_surf_p + beta_liq_p  # Total molar volume change (pos)
 omega_i = (

@@ -55,8 +55,8 @@ class LeadAcidLOQS(pybamm.BaseModel):
         epsp_init = pybamm.standard_parameters_lead_acid.epsp_init
 
         # ODEs
-        jn = pybamm.standard_parameters.icell / ln
-        jp = -pybamm.standard_parameters.icell / lp
+        jn = pybamm.standard_parameters_lead_acid.icell / ln
+        jp = -pybamm.standard_parameters_lead_acid.icell / lp
         depsndt = -beta_surf_n * jn
         depspdt = -beta_surf_p * jp
         dcdt = (
@@ -87,5 +87,5 @@ class LeadAcidLOQS(pybamm.BaseModel):
 
         # Overwrite default parameter values
         self.default_parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv"
+            "input/parameters/lead-acid/default.csv", {"current scale": 1}
         )
