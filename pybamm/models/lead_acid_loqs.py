@@ -77,13 +77,18 @@ class LeadAcidLOQS(pybamm.BaseModel):
 
         # Variables
         Phi = -U_Pb - jn / (2 * iota_ref_n * c)
-        V = -U_PbO2 - jp / (2 * iota_ref_p * c)
-        Phisn = pybamm.Scalar(0)
-        Phisp = V
+        V = Phi + U_PbO2 - jp / (2 * iota_ref_p * c)
+        # Phisn = pybamm.Scalar(0)
+        # Phisp = V
         # Concatenate variables
-        eps = pybamm.Concatenation(epsn, epss, epsp)
-        Phis = pybamm.Concatenation(Phisn, pybamm.Scalar(0), Phisp)
-        self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
+        # eps = pybamm.Concatenation(epsn, epss, epsp)
+        # Phis = pybamm.Concatenation(Phisn, pybamm.Scalar(0), Phisp)
+        # self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
+        self.variables = {
+            "c": pybamm.Broadcast(c, ["whole cell"]),
+            "Phi": pybamm.Broadcast(Phi, ["whole cell"]),
+            "V": V,
+        }
 
         # Overwrite default parameter values
         self.default_parameter_values = pybamm.ParameterValues(

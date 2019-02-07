@@ -6,7 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-import numbers
 
 
 class BaseDiscretisation(object):
@@ -511,9 +510,10 @@ class BaseDiscretisation(object):
         # Check variables in variable list against rhs
         for var in model.rhs.keys():
             if var.name in model.variables.keys():
-                assert (
-                    model.rhs[var].evaluate(0, y0).shape
-                    == model.variables[var.name].evaluate(0, y0).shape
+                assert model.rhs[var].evaluate(0, y0).shape == model.variables[
+                    var.name
+                ].evaluate(0, y0).shape or isinstance(
+                    model.variables[var.name], pybamm.Broadcast
                 ), pybamm.ModelError(
                     """
                     variable and its eqn must have the same shape after discretisation

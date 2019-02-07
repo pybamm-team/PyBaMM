@@ -17,7 +17,7 @@ class TestSimpleODEModel(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_output(self):
+    def test_solution(self):
         model = pybamm.SimpleODEModel()
 
         # discretise and solve

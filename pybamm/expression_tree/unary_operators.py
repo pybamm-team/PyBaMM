@@ -180,6 +180,9 @@ class NumpyBroadcast(Broadcast):
         # if child is a vector, add a dimension for broadcasting
         if isinstance(child, pybamm.Vector):
             return child_eval[:, np.newaxis] * self.broadcasting_vector
+        # if child is a state vector, check that it has the right shape and then
+        # transpose, broadcast, transpose again
+        # QUESTION: is there a better way of doing this than transposing twice?
         elif isinstance(child, pybamm.StateVector):
             assert child_eval.shape[0] == 1, ValueError(
                 """child_eval should have shape (1,n), not {}""".format(
