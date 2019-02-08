@@ -10,14 +10,33 @@ import numpy as np
 
 class Composite(pybamm.BaseModel):
     """Composite model for lead-acid, from [1].
+    Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     .. math::
-        \\frac{\\partial \\tilde{c}}{\\partial t} =
-        \\frac{1}{\\varepsilon^{(0)}}
+        \\frac{\\partial \\tilde{c}}{\\partial t}
+        = \\frac{1}{\\varepsilon^{(0)}}\\left(
+            \\frac{D^{\\text{eff}, (0)}}{\\mathcal{C}_\\text{d}}
+            \\frac{\\partial^2 \\tilde{c}}{\\partial x^2}
+            + \\left(
+                s + \\beta^{\\text{surf}}c^{(0)}
+            \\right)j^{(0)}
+        \\right)
+
 
     [1] Paper reference
 
-    Notation for variables and parameters:
+    **Notation for variables and parameters:**
+
+    * f_xy means :math:`f^{(x)}_\\text{y}` (x is the power for the asymptotic \
+    expansion and y is the domain). For example c_1n means :math:`c^{(1)}_\\text{n}`, \
+    the first-order concentration in the negative electrode
+    * fbar_n means :math:`\\bar{f}_n`, the average value of f in that domain, e.g.
+
+    .. math::
+        \\text{cbar_n}
+        = \\bar{c}_\\text{n}
+        = \\frac{1}{\\ell_\\text{n}}
+        \\int_0^{\\ell_\\text{n}} \\! c_\\text{n} \\, \\mathrm{d}x
 
     **Extends:** :class:`pybamm.BaseModel`
 
