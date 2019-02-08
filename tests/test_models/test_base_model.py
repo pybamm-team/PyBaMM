@@ -38,9 +38,7 @@ class TestBaseModel(unittest.TestCase):
 
     def test_algebraic_set_get(self):
         model = pybamm.BaseModel()
-        algebraic = [
-            pybamm.Symbol("c") - pybamm.Symbol("a"),
-        ]
+        algebraic = [pybamm.Symbol("c") - pybamm.Symbol("a")]
         model.algebraic = algebraic
         self.assertEqual(algebraic, model.algebraic)
 

@@ -310,6 +310,24 @@ class Symbol(anytree.NodeMixin):
         # do the search, return true if no relevent nodes are found
         return all([not isinstance(n, search_types) for n in self.pre_order()])
 
+    def evaluates_to_number(self):
+        """Returns True if evaluating the expression returns a number.
+        Returns False otherwise, including if NotImplementedError is raised.
+        !Not to be confused with isinstance(self, pybamm.Scalar)!
+
+        See Also
+        --------
+        evaluate : evaluate the expression
+
+        """
+        try:
+            # return true if node evaluates to a number
+            return isinstance(self.evaluate(), numbers.Number)
+        except NotImplementedError:
+            # return false if NotImplementedError is raised
+            # (there is a e.g. Parameter, Variable, ... in the tree)
+            return False
+
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""
         return self.has_gradient() or self.has_divergence()

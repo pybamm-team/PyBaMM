@@ -27,7 +27,7 @@ class Concatenation(pybamm.Symbol):
         domain = self.get_children_domains(children)
         super().__init__(name, children, domain=domain)
 
-    def evaluate(self, t, y):
+    def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         raise NotImplementedError
 
@@ -113,7 +113,7 @@ class DomainConcatenation(Concatenation):
                 children[i] = self.process_node_for_concatenate(child, mesh)
 
         # Allow the base class to sort the domains into the correct order
-        super().__init__(*children, name="numpy concatenation")
+        super().__init__(*children, name="domain concatenation")
 
         # deal with "whole cell" special case.
         # need to split the "whole cell" domain up when we calculate slices, then

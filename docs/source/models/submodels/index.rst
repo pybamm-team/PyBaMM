@@ -1,5 +1,5 @@
-Models
-======
+Submodels
+=========
 
 .. toctree::
 

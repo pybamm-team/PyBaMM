@@ -258,33 +258,12 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             disc.divergence(None, None, {})
 
-    def test_process_initial_conditions(self):
-        # one equation
-        c = pybamm.Variable("c", domain=["whole cell"])
-        initial_conditions = {c: pybamm.Scalar(3)}
-        mesh = MeshForTesting()
-        disc = pybamm.BaseDiscretisation(mesh)
-        y0 = disc.process_initial_conditions(initial_conditions)
-        np.testing.assert_array_equal(
-            y0[c].evaluate(0, None), 3 * np.ones_like(mesh["whole cell"].nodes)
-        )
-
-        # two equations
-        T = pybamm.Variable("T", domain=["negative electrode"])
-        initial_conditions = {c: pybamm.Scalar(3), T: pybamm.Scalar(5)}
-        y0 = disc.process_initial_conditions(initial_conditions)
-        np.testing.assert_array_equal(
-            y0[c].evaluate(0, None), 3 * np.ones_like(mesh["whole cell"].nodes)
-        )
-        np.testing.assert_array_equal(
-            y0[T].evaluate(0, None), 5 * np.ones_like(mesh["negative electrode"].nodes)
-        )
-
     def test_process_dict(self):
         # one equation
         c = pybamm.Variable("c", domain=["whole cell"])
         N = pybamm.grad(c)
         rhs = {c: pybamm.div(N)}
+        initial_conditions = {c: pybamm.Scalar(3)}
         variables = {"c_squared": c ** 2}
         # can't process boundary conditions with DiscretisationForTesting
         boundary_conditions = {}
@@ -293,10 +272,16 @@ class TestDiscretise(unittest.TestCase):
 
         y = mesh["whole cell"].nodes ** 2
         y_slices = disc.get_variable_slices(rhs.keys())
+        # rhs - grad and div are identity operators here
         processed_rhs = disc.process_dict(rhs, y_slices, boundary_conditions)
-        processed_vars = disc.process_dict(variables, y_slices, boundary_conditions)
-        # grad and div are identity operators here
         np.testing.assert_array_equal(y, processed_rhs[c].evaluate(None, y))
+        # initial conditions
+        y0 = disc.process_dict(initial_conditions)
+        np.testing.assert_array_equal(
+            y0[c].evaluate(0, None), 3 * np.ones_like(mesh["whole cell"].nodes)
+        )
+        # vars
+        processed_vars = disc.process_dict(variables, y_slices, boundary_conditions)
         np.testing.assert_array_equal(
             y ** 2, processed_vars["c_squared"].evaluate(None, y)
         )
@@ -305,18 +290,27 @@ class TestDiscretise(unittest.TestCase):
         T = pybamm.Variable("T", domain=["negative electrode"])
         q = pybamm.grad(T)
         rhs = {c: pybamm.div(N), T: pybamm.div(q)}
+        initial_conditions = {c: pybamm.Scalar(3), T: pybamm.Scalar(5)}
         boundary_conditions = {}
-
         y = np.concatenate(
             [mesh["whole cell"].nodes ** 2, mesh["negative electrode"].nodes ** 4]
         )
         y_slices = disc.get_variable_slices(rhs.keys())
+        # rhs
         processed_rhs = disc.process_dict(rhs, y_slices, boundary_conditions)
         np.testing.assert_array_equal(
             y[y_slices[c.id]], processed_rhs[c].evaluate(None, y)
         )
         np.testing.assert_array_equal(
             y[y_slices[T.id]], processed_rhs[T].evaluate(None, y)
+        )
+        # initial conditions
+        y0 = disc.process_dict(initial_conditions)
+        np.testing.assert_array_equal(
+            y0[c].evaluate(0, None), 3 * np.ones_like(mesh["whole cell"].nodes)
+        )
+        np.testing.assert_array_equal(
+            y0[T].evaluate(0, None), 5 * np.ones_like(mesh["negative electrode"].nodes)
         )
 
     def test_process_model_ode(self):
