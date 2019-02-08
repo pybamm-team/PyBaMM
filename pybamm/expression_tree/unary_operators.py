@@ -166,12 +166,12 @@ class NumpyBroadcast(Broadcast):
         super().__init__(child, domain, name="numpy broadcast")
         # determine broadcasting vector size (size 1 if the domain is empty)
         if domain == []:
-            broadcasting_vector_size = 1
+            self.broadcasting_vector_size = 1
         else:
-            broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
+            self.broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
         # create broadcasting vector (vector of ones with shape determined by the
         # domain)
-        self.broadcasting_vector = np.ones(broadcasting_vector_size)
+        self.broadcasting_vector = np.ones(self.broadcasting_vector_size)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -181,15 +181,14 @@ class NumpyBroadcast(Broadcast):
         if isinstance(child, pybamm.Vector):
             return child_eval[:, np.newaxis] * self.broadcasting_vector
         # if child is a state vector, check that it has the right shape and then
-        # transpose, broadcast, transpose again
-        # QUESTION: is there a better way of doing this than transposing twice?
+        # broadcast
         elif isinstance(child, pybamm.StateVector):
             assert child_eval.shape[0] == 1, ValueError(
                 """child_eval should have shape (1,n), not {}""".format(
                     child_eval.shape
                 )
             )
-            return (child_eval.T * self.broadcasting_vector).T
+            return np.repeat(child_eval, self.broadcasting_vector_size, axis=0)
         # otherwise just do normal multiplication
         else:
             return child_eval * self.broadcasting_vector
