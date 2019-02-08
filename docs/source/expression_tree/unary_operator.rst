@@ -18,8 +18,8 @@ Unary Operators
 
 .. autoclass:: pybamm.Divergence
   :members:
-  
-  .. autoclass:: pybamm.Integral
+
+.. autoclass:: pybamm.Integral
   :members:
 
 .. autoclass:: pybamm.Broadcast
@@ -31,5 +31,3 @@ Unary Operators
 .. autofunction:: pybamm.grad
 
 .. autofunction:: pybamm.div
-
-.. autofunction:: pybamm.integral

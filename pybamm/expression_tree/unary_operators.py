@@ -17,7 +17,6 @@ class UnaryOperator(pybamm.Symbol):
 
     Parameters
     ----------
-
     name : str
         name of the node
     child : :class:`Symbol`
@@ -113,29 +112,39 @@ class Divergence(SpatialOperator):
 
 
 class Integral(SpatialOperator):
-    """A node in the expression tree representing a div operator
+    """A node in the expression tree representing an intgral operator
+    Can be integration with respect to time or space
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
 
     **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, function, integration_variable):
-        if integration_variable.name.startswith("space"):
-            if integration_variable.domain == []:
-                raise pybamm.DomainError(
-                    """integration_variable must have a non-empty domain"""
-                )
+        if isinstance(integration_variable, pybamm.Space):
             # Check that function and integration_variable domains agree
             if function.domain != integration_variable.domain:
                 raise pybamm.DomainError(
                     """function and integration_variable must have the same domain"""
                 )
+        elif not isinstance(integration_variable, pybamm.IndependentVariable):
+            raise ValueError(
+                """integration_variable must be of type pybamm.IndependentVariable,
+                   not {}""".format(
+                    type(integration_variable)
+                )
+            )
         super().__init__("integral d{}".format(integration_variable), function)
-        self._function = function
         self._integration_variable = integration_variable
 
     @property
     def function(self):
-        return self._function
+        return self.children[0]
 
     @property
     def integration_variable(self):

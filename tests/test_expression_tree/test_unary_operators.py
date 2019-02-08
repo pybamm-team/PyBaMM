@@ -42,6 +42,35 @@ class TestUnaryOperators(unittest.TestCase):
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.children[0].name, a.name)
 
+    def test_integral(self):
+        # time integral
+        a = pybamm.Symbol("a")
+        t = pybamm.t
+        inta = pybamm.Integral(a, t)
+        self.assertEqual(inta.name, "integral dtime")
+        self.assertEqual(inta.children[0].name, a.name)
+        self.assertEqual(inta.function.name, a.name)
+        self.assertEqual(inta.integration_variable, t)
+
+        # space integral
+        a = pybamm.Symbol("a", domain=["whole cell"])
+        x = pybamm.Space(["whole cell"])
+        inta = pybamm.Integral(a, x)
+        self.assertEqual(inta.name, "integral dspace (['whole cell'])")
+        self.assertEqual(inta.children[0].name, a.name)
+        self.assertEqual(inta.function.name, a.name)
+        self.assertEqual(inta.integration_variable, x)
+        self.assertEqual(inta.domain, ["whole cell"])
+
+        # expected errors
+        a = pybamm.Symbol("a", domain=["negative electrode"])
+        x = pybamm.Space(["whole cell"])
+        y = pybamm.Variable("y")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.Integral(a, x)
+        with self.assertRaises(ValueError):
+            pybamm.Integral(a, y)
+
     def test_printing(self):
         a = pybamm.Symbol("a")
         self.assertEqual(str(-a), "-a")
@@ -93,18 +122,6 @@ class TestUnaryOperators(unittest.TestCase):
             np.linspace(0, 1)[:, np.newaxis] * np.ones_like(mesh["whole cell"].nodes),
         )
         self.assertEqual(broad.domain, ["whole cell"])
-
-    def test_integral(self):
-        a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
-        broad_a = pybamm.Broadcast(a, ["negative electrode"])
-        self.assertEqual(broad_a.name, "broadcast")
-        self.assertEqual(broad_a.children[0].name, a.name)
-        self.assertEqual(broad_a.domain, ["negative electrode"])
-
-        b = pybamm.Symbol("b", domain=["negative electrode"])
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.Broadcast(b, ["separator"])
 
 
 if __name__ == "__main__":
