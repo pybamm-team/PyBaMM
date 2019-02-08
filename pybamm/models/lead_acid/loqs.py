@@ -31,10 +31,10 @@ class LOQS(pybamm.BaseModel):
         super().__init__()
 
         # Variables
-        c = pybamm.Variable("c", domain=[])
-        epsn = pybamm.Variable("epsn", domain=[])
-        epss = pybamm.Variable("epss", domain=[])
-        epsp = pybamm.Variable("epsp", domain=[])
+        c0 = pybamm.Variable("c0", domain=[])
+        eps0n = pybamm.Variable("eps0n", domain=[])
+        eps0s = pybamm.Variable("eps0s", domain=[])
+        eps0p = pybamm.Variable("eps0p", domain=[])
 
         # Parameters
         ln = pybamm.standard_parameters.ln
@@ -48,36 +48,42 @@ class LOQS(pybamm.BaseModel):
         iota_ref_p = pybamm.standard_parameters_lead_acid.iota_ref_p
         U_Pb = pybamm.standard_parameters_lead_acid.U_Pb_ref
         U_PbO2 = pybamm.standard_parameters_lead_acid.U_PbO2_ref
+        icell = pybamm.standard_parameters_lead_acid.icell
         # Initial conditions
-        c_init = pybamm.standard_parameters_lead_acid.c_init
-        epsn_init = pybamm.standard_parameters_lead_acid.epsn_init
-        epss_init = pybamm.standard_parameters_lead_acid.epss_init
-        epsp_init = pybamm.standard_parameters_lead_acid.epsp_init
+        c0_init = pybamm.standard_parameters_lead_acid.c_init
+        eps0n_init = pybamm.standard_parameters_lead_acid.epsn_init
+        eps0s_init = pybamm.standard_parameters_lead_acid.epss_init
+        eps0p_init = pybamm.standard_parameters_lead_acid.epsp_init
 
         # ODEs
-        jn = pybamm.standard_parameters_lead_acid.icell / ln
-        jp = -pybamm.standard_parameters_lead_acid.icell / lp
-        depsndt = -beta_surf_n * jn
-        depspdt = -beta_surf_p * jp
-        dcdt = (
+        j0n = icell / ln
+        j0p = -icell / lp
+        deps0ndt = -beta_surf_n * j0n
+        deps0pdt = -beta_surf_p * j0p
+        dc0dt = (
             1
-            / (ln * epsn + ls * epss + lp * epsp)
-            * ((sn - sp) - c * (ln * depsndt + lp * depspdt))
+            / (ln * eps0n + ls * eps0s + lp * eps0p)
+            * ((sn - sp) * icell - c0 * (ln * deps0ndt + lp * deps0pdt))
         )
-        self.rhs = {c: dcdt, epsn: depsndt, epss: pybamm.Scalar(0), epsp: depspdt}
+        self.rhs = {
+            c0: dc0dt,
+            eps0n: deps0ndt,
+            eps0s: pybamm.Scalar(0),
+            eps0p: deps0pdt,
+        }
         # Initial conditions
         self.initial_conditions = {
-            c: c_init,
-            epsn: epsn_init,
-            epss: epss_init,
-            epsp: epsp_init,
+            c0: c0_init,
+            eps0n: eps0n_init,
+            eps0s: eps0s_init,
+            eps0p: eps0p_init,
         }
         # ODE model -> no boundary conditions
         self.boundary_conditions = {}
 
         # Variables
-        Phi = -U_Pb - jn / (2 * iota_ref_n * c)
-        V = Phi + U_PbO2 - jp / (2 * iota_ref_p * c)
+        Phi0 = -U_Pb - j0n / (2 * iota_ref_n * c0)
+        V0 = Phi0 + U_PbO2 - j0p / (2 * iota_ref_p * c0)
         # Phisn = pybamm.Scalar(0)
         # Phisp = V
         # Concatenate variables
@@ -85,10 +91,10 @@ class LOQS(pybamm.BaseModel):
         # Phis = pybamm.Concatenation(Phisn, pybamm.Scalar(0), Phisp)
         # self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
         self.variables = {
-            "c": pybamm.Broadcast(c, ["whole cell"]),
-            "Phi": pybamm.Broadcast(Phi, ["whole cell"]),
-            "V": V,
-            "int(epsilon_times_c)dx": (ln * epsn + ls * epss + lp * epsp) * c,
+            "c": pybamm.Broadcast(c0, ["whole cell"]),
+            "Phi": pybamm.Broadcast(Phi0, ["whole cell"]),
+            "V": V0,
+            "int(epsilon_times_c)dx": (ln * eps0n + ls * eps0s + lp * eps0p) * c0,
         }
 
         # Overwrite default parameter values
