@@ -112,6 +112,36 @@ class Divergence(SpatialOperator):
         super().__init__("div", child)
 
 
+class Integral(SpatialOperator):
+    """A node in the expression tree representing a div operator
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, function, integration_variable):
+        if integration_variable.name.startswith("space"):
+            if integration_variable.domain == []:
+                raise pybamm.DomainError(
+                    """integration_variable must have a non-empty domain"""
+                )
+            # Check that function and integration_variable domains agree
+            if function.domain != integration_variable.domain:
+                raise pybamm.DomainError(
+                    """function and integration_variable must have the same domain"""
+                )
+        super().__init__("integral d{}".format(integration_variable), function)
+        self._function = function
+        self._integration_variable = integration_variable
+
+    @property
+    def function(self):
+        return self._function
+
+    @property
+    def integration_variable(self):
+        return self._integration_variable
+
+
 class Broadcast(SpatialOperator):
     """A node in the expression tree representing a broadcasting operator.
     Broadcasts a child (which *must* have empty domain) to a specified domain. After
