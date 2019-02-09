@@ -72,7 +72,7 @@ class TestScikitsSolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
-        model.initial_conditions_ydot = {var1: 0.1}
+        model.initial_conditions_ydot = {var: 0.1}
         disc = model.default_discretisation
         disc.process_model(model, model.default_geometry)
 
