@@ -45,9 +45,6 @@ class Concatenation(pybamm.Symbol):
         domain_dict = {d: pybamm.KNOWN_DOMAINS.index(d) for d in domain}
         domain = sorted(domain_dict, key=domain_dict.__getitem__)
 
-        # Simplify domain if concatenation spans the whole cell
-        if domain == ["negative electrode", "separator", "positive electrode"]:
-            domain = ["whole cell"]
         return domain
 
 

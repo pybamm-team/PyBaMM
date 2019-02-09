@@ -4,8 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-from tests.shared import MeshForTesting
-
+import tests.shared as shared
 import unittest
 import numpy as np
 
@@ -75,24 +74,32 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.Broadcast(b, ["separator"])
 
     def test_numpy_broadcast(self):
-        mesh = MeshForTesting()
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
 
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        combined_submeshes = mesh.combine_submeshes(*whole_cell)
         # scalar
         a = pybamm.Scalar(7)
-        broad = pybamm.NumpyBroadcast(a, ["whole cell"], mesh)
+        broad = pybamm.NumpyBroadcast(a, whole_cell, mesh)
         np.testing.assert_array_equal(
-            broad.evaluate(), 7 * np.ones_like(mesh["whole cell"].nodes)
+            broad.evaluate(), 7 * np.ones_like(combined_submeshes.nodes)
         )
-        self.assertEqual(broad.domain, ["whole cell"])
+        self.assertEqual(broad.domain, whole_cell)
 
         # vector
         vec = pybamm.Vector(np.linspace(0, 1))
-        broad = pybamm.NumpyBroadcast(vec, ["whole cell"], mesh)
+        broad = pybamm.NumpyBroadcast(vec, whole_cell, mesh)
         np.testing.assert_array_equal(
             broad.evaluate(),
-            np.linspace(0, 1)[:, np.newaxis] * np.ones_like(mesh["whole cell"].nodes),
+            np.linspace(0, 1)[:, np.newaxis] * np.ones_like(combined_submeshes.nodes),
         )
-        self.assertEqual(broad.domain, ["whole cell"])
+        self.assertEqual(broad.domain, whole_cell)
 
 
 if __name__ == "__main__":

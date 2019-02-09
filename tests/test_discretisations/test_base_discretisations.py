@@ -5,34 +5,7 @@ import pybamm
 
 import numpy as np
 import unittest
-
-
-class MeshForTesting(pybamm.BaseMesh):
-    def __init__(self):
-        super().__init__(None)
-        self["whole cell"] = self.submeshclass(np.linspace(0, 1, 100))
-        self["negative electrode"] = self.submeshclass(self["whole cell"].nodes[:40])
-        self["separator"] = self.submeshclass(self["whole cell"].nodes[40:65])
-        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[65:])
-
-
-class DiscretisationForTesting(pybamm.BaseDiscretisation):
-    """Identity operators, no boundary conditions."""
-
-    def __init__(self, mesh):
-        super().__init__(mesh)
-
-    def gradient(self, symbol, y_slices, boundary_conditions):
-        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
-        n = self.mesh[symbol.domain[0]].npts
-        gradient_matrix = pybamm.Matrix(np.eye(n))
-        return gradient_matrix * discretised_symbol
-
-    def divergence(self, symbol, y_slices, boundary_conditions):
-        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
-        n = self.mesh[symbol.domain[0]].npts
-        divergence_matrix = pybamm.Matrix(np.eye(n))
-        return divergence_matrix * discretised_symbol
+import tests.shared as shared
 
 
 class TestDiscretise(unittest.TestCase):
@@ -46,8 +19,14 @@ class TestDiscretise(unittest.TestCase):
             a: pybamm.Scalar(2),
             b: pybamm.Scalar(3),
         }
-        mesh = MeshForTesting()
-        disc = pybamm.BaseDiscretisation(mesh)
+
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+
         result = disc._concatenate_init(initial_conditions, y_slices)
 
         self.assertIsInstance(result, pybamm.NumpyModelConcatenation)
@@ -60,13 +39,18 @@ class TestDiscretise(unittest.TestCase):
             result = disc._concatenate_init(initial_conditions, y_slices)
 
     def test_find_all_variables(self):
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
 
-        mesh = MeshForTesting()
-        disc = pybamm.BaseDiscretisation(mesh)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
 
-        a = pybamm.Variable("a", domain=["whole cell"])
-        b = pybamm.Variable("b", domain=["whole cell"])
-        c = pybamm.Variable("c", domain=["whole cell"])
+        a = pybamm.Variable("a", domain=whole_cell)
+        b = pybamm.Variable("b", domain=whole_cell)
+        c = pybamm.Variable("c", domain=whole_cell)
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.Scalar(1)}
 
@@ -91,19 +75,28 @@ class TestDiscretise(unittest.TestCase):
         self.assertSetEqual({v.id for v in variables}, {v.id for v in [a, c]})
 
     def test_discretise_slicing(self):
-        # One variable
-        mesh = MeshForTesting()
-        disc = pybamm.BaseDiscretisation(mesh)
-        c = pybamm.Variable("c", domain=["whole cell"])
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
         variables = [c]
         y_slices = disc.get_variable_slices(variables)
         self.assertEqual(y_slices, {c.id: slice(0, 100)})
-        c_true = mesh["whole cell"].nodes ** 2
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+
+        c_true = combined_submesh.nodes ** 2
         y = c_true
         np.testing.assert_array_equal(y[y_slices[c.id]], c_true)
 
         # Several variables
-        d = pybamm.Variable("d", domain=["whole cell"])
+        d = pybamm.Variable("d", domain=whole_cell)
         jn = pybamm.Variable("jn", domain=["negative electrode"])
         variables = [c, d, jn]
         y_slices = disc.get_variable_slices(variables)
@@ -111,7 +104,7 @@ class TestDiscretise(unittest.TestCase):
             y_slices,
             {c.id: slice(0, 100), d.id: slice(100, 200), jn.id: slice(200, 240)},
         )
-        d_true = 4 * mesh["whole cell"].nodes
+        d_true = 4 * combined_submesh.nodes
         jn_true = mesh["negative electrode"].nodes ** 3
         y = np.concatenate([c_true, d_true, jn_true])
         np.testing.assert_array_equal(y[y_slices[c.id]], c_true)
@@ -119,7 +112,12 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(y[y_slices[jn.id]], jn_true)
 
     def test_process_symbol_base(self):
-        disc = pybamm.BaseDiscretisation(None)
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
 
         # variable
         var = pybamm.Variable("var")
@@ -180,7 +178,13 @@ class TestDiscretise(unittest.TestCase):
         scal4 = pybamm.Scalar("scal4")
         expression = (scal1 * (scal3 + var2)) / ((var1 - scal4) + scal2)
 
-        disc = pybamm.BaseDiscretisation(None)
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+
         y_slices = {var1.id: slice(53), var2.id: slice(53, 59)}
         exp_disc = disc.process_symbol(expression, y_slices)
         self.assertIsInstance(exp_disc, pybamm.Division)
@@ -214,9 +218,16 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(exp_disc.children[1].children[1], pybamm.Scalar)
 
     def test_discretise_spatial_operator(self):
-        mesh = MeshForTesting()
-        disc = DiscretisationForTesting(mesh)
-        var = pybamm.Variable("var", domain=["whole cell"])
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
         y_slices = disc.get_variable_slices([var])
 
         # Simple expressions
@@ -227,7 +238,8 @@ class TestDiscretise(unittest.TestCase):
             self.assertIsInstance(eqn_disc.children[0], pybamm.Matrix)
             self.assertIsInstance(eqn_disc.children[1], pybamm.StateVector)
 
-            y = mesh["whole cell"].nodes ** 2
+            combined_submesh = mesh.combine_submeshes(*whole_cell)
+            y = combined_submesh.nodes ** 2
             var_disc = disc.process_symbol(var, y_slices)
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(
@@ -244,7 +256,7 @@ class TestDiscretise(unittest.TestCase):
             self.assertIsInstance(eqn_disc.children[1].children[0], pybamm.Matrix)
             self.assertIsInstance(eqn_disc.children[1].children[1], pybamm.StateVector)
 
-            y = mesh["whole cell"].nodes ** 2
+            y = combined_submesh.nodes ** 2
             var_disc = disc.process_symbol(var, y_slices)
             # grad and var are identity operators here (for testing purposes)
             np.testing.assert_array_equal(
@@ -252,7 +264,13 @@ class TestDiscretise(unittest.TestCase):
             )
 
     def test_core_NotImplementedErrors(self):
-        disc = pybamm.BaseDiscretisation(None)
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+
         with self.assertRaises(NotImplementedError):
             disc.gradient(None, None, {})
         with self.assertRaises(NotImplementedError):
@@ -260,13 +278,22 @@ class TestDiscretise(unittest.TestCase):
 
     def test_process_initial_conditions(self):
         # one equation
-        c = pybamm.Variable("c", domain=["whole cell"])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
         initial_conditions = {c: pybamm.Scalar(3)}
-        mesh = MeshForTesting()
-        disc = pybamm.BaseDiscretisation(mesh)
+
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
         y0 = disc.process_initial_conditions(initial_conditions)
         np.testing.assert_array_equal(
-            y0[c].evaluate(0, None), 3 * np.ones_like(mesh["whole cell"].nodes)
+            y0[c].evaluate(0, None), 3 * np.ones_like(combined_submesh.nodes)
         )
 
         # two equations
@@ -274,7 +301,7 @@ class TestDiscretise(unittest.TestCase):
         initial_conditions = {c: pybamm.Scalar(3), T: pybamm.Scalar(5)}
         y0 = disc.process_initial_conditions(initial_conditions)
         np.testing.assert_array_equal(
-            y0[c].evaluate(0, None), 3 * np.ones_like(mesh["whole cell"].nodes)
+            y0[c].evaluate(0, None), 3 * np.ones_like(combined_submesh.nodes)
         )
         np.testing.assert_array_equal(
             y0[T].evaluate(0, None), 5 * np.ones_like(mesh["negative electrode"].nodes)
@@ -282,16 +309,24 @@ class TestDiscretise(unittest.TestCase):
 
     def test_process_dict(self):
         # one equation
-        c = pybamm.Variable("c", domain=["whole cell"])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
         N = pybamm.grad(c)
         rhs = {c: pybamm.div(N)}
         variables = {"c_squared": c ** 2}
-        # can't process boundary conditions with DiscretisationForTesting
-        boundary_conditions = {}
-        mesh = MeshForTesting()
-        disc = DiscretisationForTesting(mesh)
+        boundary_conditions = {N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}}
 
-        y = mesh["whole cell"].nodes ** 2
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+
+        y = combined_submesh.nodes ** 2
         y_slices = disc.get_variable_slices(rhs.keys())
         processed_rhs = disc.process_dict(rhs, y_slices, boundary_conditions)
         processed_vars = disc.process_dict(variables, y_slices, boundary_conditions)
@@ -308,7 +343,7 @@ class TestDiscretise(unittest.TestCase):
         boundary_conditions = {}
 
         y = np.concatenate(
-            [mesh["whole cell"].nodes ** 2, mesh["negative electrode"].nodes ** 4]
+            [combined_submesh.nodes ** 2, mesh["negative electrode"].nodes ** 4]
         )
         y_slices = disc.get_variable_slices(rhs.keys())
         processed_rhs = disc.process_dict(rhs, y_slices, boundary_conditions)
@@ -321,19 +356,29 @@ class TestDiscretise(unittest.TestCase):
 
     def test_process_model_ode(self):
         # one equation
-        c = pybamm.Variable("c", domain=["whole cell"])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
         N = pybamm.grad(c)
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(3)}
-        model.boundary_conditions = {}
+        model.boundary_conditions = {
+            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+        }
         model.variables = {"c": c, "N": N}
-        mesh = MeshForTesting()
-        disc = DiscretisationForTesting(mesh)
 
-        disc.process_model(model)
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.process_model(model, defaults.geometry)
+        mesh = disc.mesh
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+
         y0 = model.concatenated_initial_conditions
-        np.testing.assert_array_equal(y0, 3 * np.ones_like(mesh["whole cell"].nodes))
+        np.testing.assert_array_equal(y0, 3 * np.ones_like(combined_submesh.nodes))
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.variables["c"].evaluate(None, y0))
@@ -351,16 +396,20 @@ class TestDiscretise(unittest.TestCase):
             T: pybamm.Scalar(5),
             S: pybamm.Scalar(8),
         }
-        model.boundary_conditions = {}
+        model.boundary_conditions = {
+            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)},
+            q: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)},
+            p: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)},
+        }
         model.variables = {"ST": S * T}
 
-        disc.process_model(model)
+        disc.process_model(model, defaults.geometry)
         y0 = model.concatenated_initial_conditions
         np.testing.assert_array_equal(
             y0,
             np.concatenate(
                 [
-                    2 * np.ones_like(mesh["whole cell"].nodes),
+                    2 * np.ones_like(combined_submesh.nodes),
                     5 * np.ones_like(mesh["negative electrode"].nodes),
                     8 * np.ones_like(mesh["negative electrode"].nodes),
                 ]
@@ -369,7 +418,7 @@ class TestDiscretise(unittest.TestCase):
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
         c0, T0, S0 = np.split(
-            y0, np.cumsum([mesh["whole cell"].npts, mesh["negative electrode"].npts])
+            y0, np.cumsum([combined_submesh.npts, mesh["negative electrode"].npts])
         )
         np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
 
@@ -380,12 +429,13 @@ class TestDiscretise(unittest.TestCase):
         model.boundary_conditions = {}
         model.variables = {"ST": S * T}
         with self.assertRaises(pybamm.ModelError):
-            disc.process_model(model)
+            disc.process_model(model, defaults.geometry)
 
     def test_process_model_dae(self):
         # one rhs equation and one algebraic
-        c = pybamm.Variable("c", domain=["whole cell"])
-        d = pybamm.Variable("d", domain=["whole cell"])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        d = pybamm.Variable("d", domain=whole_cell)
         N = pybamm.grad(c)
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
@@ -393,19 +443,28 @@ class TestDiscretise(unittest.TestCase):
         model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
         model.initial_conditions_ydot = {d: pybamm.Scalar(2), c: pybamm.Scalar(1)}
 
-        model.boundary_conditions = {}
+        model.boundary_conditions = {
+            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+        }
         model.variables = {"c": c, "N": N, "d": d}
-        mesh = MeshForTesting()
-        disc = DiscretisationForTesting(mesh)
 
-        disc.process_model(model)
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.process_model(model, defaults.geometry)
+        mesh = disc.mesh
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+
         y0 = model.concatenated_initial_conditions
         np.testing.assert_array_equal(
             y0,
             np.concatenate(
                 [
-                    3 * np.ones_like(mesh["whole cell"].nodes),
-                    6 * np.ones_like(mesh["whole cell"].nodes),
+                    3 * np.ones_like(combined_submesh.nodes),
+                    6 * np.ones_like(combined_submesh.nodes),
                 ]
             ),
         )
@@ -414,20 +473,20 @@ class TestDiscretise(unittest.TestCase):
             ydot0,
             np.concatenate(
                 [
-                    1 * np.ones_like(mesh["whole cell"].nodes),
-                    2 * np.ones_like(mesh["whole cell"].nodes),
+                    1 * np.ones_like(combined_submesh.nodes),
+                    2 * np.ones_like(combined_submesh.nodes),
                 ]
             ),
         )
 
         # grad and div are identity operators here
         np.testing.assert_array_equal(
-            y0[: mesh["whole cell"].npts], model.concatenated_rhs.evaluate(None, y0)
+            y0[: combined_submesh.npts], model.concatenated_rhs.evaluate(None, y0)
         )
 
         np.testing.assert_array_equal(
             model.concatenated_algebraic.evaluate(None, y0),
-            np.zeros_like(mesh["whole cell"].nodes),
+            np.zeros_like(combined_submesh.nodes),
         )
 
         # test that not enough initial conditions for ydot raises an error
@@ -441,20 +500,28 @@ class TestDiscretise(unittest.TestCase):
         model.variables = {"c": c, "N": N, "d": d}
 
         with self.assertRaises(pybamm.ModelError):
-            disc.process_model(model)
+            disc.process_model(model, defaults.geometry)
 
     def test_broadcast(self):
-        mesh = MeshForTesting()
-        disc = pybamm.BaseDiscretisation(mesh)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
 
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
         # scalar
         a = pybamm.Scalar(7)
-        broad = disc.broadcast(a, ["whole cell"])
+        broad = disc.broadcast(a, whole_cell)
         self.assertIsInstance(broad, pybamm.Array)
         np.testing.assert_array_equal(
-            broad.evaluate(), 7 * np.ones_like(mesh["whole cell"].nodes)
+            broad.evaluate(), 7 * np.ones_like(combined_submesh.nodes)
         )
-        self.assertEqual(broad.domain, ["whole cell"])
+        self.assertEqual(broad.domain, whole_cell)
 
         # vector
         vec = pybamm.Vector(np.linspace(0, 1))
@@ -484,16 +551,31 @@ class TestDiscretise(unittest.TestCase):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
         c = pybamm.Symbol("c")
-        disc = pybamm.BaseDiscretisation(None)
+
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+
         conc = disc.concatenate(a, b, c)
         self.assertIsInstance(conc, pybamm.NumpyModelConcatenation)
 
     def test_concatenation_of_scalars(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         a = pybamm.Scalar(5, domain=["negative electrode"])
         b = pybamm.Scalar(4, domain=["positive electrode"])
-        mesh = MeshForTesting()
-        disc = pybamm.BaseDiscretisation(mesh)
-        var = pybamm.Variable("var", domain=["whole cell"])
+
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
+
+        var = pybamm.Variable("var", domain=whole_cell)
         y_slices = disc.get_variable_slices([var])
 
         eqn = pybamm.Concatenation(a, b)
@@ -508,8 +590,12 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
 
     def test_discretise_space(self):
-        mesh = MeshForTesting()
-        disc = pybamm.BaseDiscretisation(mesh)
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
 
         # space
         x1 = pybamm.Space(["negative electrode"])

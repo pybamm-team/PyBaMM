@@ -11,7 +11,7 @@ class TestGeometry:
                 "x": {"min": pybamm.Scalar(1), "max": pybamm.Scalar(2)}
             }
         }
-        geometry = pybamm.Geometry(custom_geometry)
+        geometry = pybamm.Geometry1DMacro(custom_geometry)
 
         self.assertEqual(
             geometry["negative electrode"], custom_geometry["negative electrode"]

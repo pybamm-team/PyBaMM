@@ -49,20 +49,36 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertEqual(processed_rxn.children[2].evaluate() * lp.evaluate(), -1)
 
     def test_discretisation(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        mesh = pybamm.FiniteVolumeMacroMesh(param, 2)
-        disc = pybamm.FiniteVolumeDiscretisation(mesh)
+        geometry = pybamm.Geometry1DMacro()
+        param.process_geometry(geometry)
 
+        mesh_type = pybamm.PybammMesh
+        submesh_pts = {
+            "negative electrode": {"x": 40},
+            "separator": {"x": 25},
+            "positive electrode": {"x": 35},
+        }
+        submesh_types = {
+            "negative electrode": pybamm.Pybamm1DUniformSubMesh,
+            "separator": pybamm.Pybamm1DUniformSubMesh,
+            "positive electrode": pybamm.Pybamm1DUniformSubMesh,
+        }
+
+        disc = pybamm.FiniteVolumeDiscretisation(mesh_type, submesh_pts, submesh_types)
+        disc._mesh = mesh_type(geometry, submesh_types, submesh_pts)
         rxn = pybamm.interface.homogeneous_reaction()
 
         param_rxn = param.process_symbol(rxn)
         processed_rxn = disc.process_symbol(param_rxn)
 
+        combined_submeshes = disc.mesh.combine_submeshes(*whole_cell)
         # processed_rxn should be a vector with the right shape
         self.assertIsInstance(processed_rxn, pybamm.Vector)
-        self.assertEqual(processed_rxn.shape, mesh["whole cell"].nodes.shape)
+        self.assertEqual(processed_rxn.shape, combined_submeshes.nodes.shape)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,11 @@ class Geometry(dict):
      custom_geometry : dict containing any extra user defined geometry
      """
 
+    # left empty for now but I think we should have methods to
+    # add Geometries together (i.e. choose 3D macro with 1D micro etc)
+
+
+class Geometry1DMacro(Geometry):
     def __init__(self, custom_geometry={}):
         super().__init__()
         ln = pybamm.standard_parameters.ln
@@ -26,6 +31,15 @@ class Geometry(dict):
         self["negative electrode"] = {"x": {"min": pybamm.Scalar(0), "max": ln}}
         self["separator"] = {"x": {"min": ln, "max": ln + ls}}
         self["positive electrode"] = {"x": {"min": ln + ls, "max": pybamm.Scalar(1)}}
+
+        # update with custom geometry if non empty
+        self.update(custom_geometry)
+
+
+class Geometry1DMicro(Geometry):
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+
         self["negative particle"] = {
             "r": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
         }
@@ -36,7 +50,7 @@ class Geometry(dict):
         self.update(custom_geometry)
 
 
-class Geometry3D(Geometry):
+class Geometry3DMacro(Geometry1DMacro):
     """A geometry class to store the details features of the cell geometry
 
      **Extends**: :class:`dict`

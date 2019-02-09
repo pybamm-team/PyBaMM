@@ -1,8 +1,8 @@
+#
 # Tests for the Concatenation class and subclasses
 #
 import pybamm
-from tests.shared import MeshForTesting
-
+import tests.shared as shared
 import numpy as np
 import unittest
 
@@ -30,10 +30,6 @@ class TestConcatenations(unittest.TestCase):
             conc.domain,
             ["negative electrode", "separator", "positive electrode", "test"],
         )
-
-        # Whole cell concatenations should simplify
-        conc = pybamm.Concatenation(a, b)
-        self.assertEqual(conc.domain, ["whole cell"])
 
         # Can't concatenate nodes with overlapping domains
         d = pybamm.Symbol("d", domain=["separator"])
@@ -82,7 +78,14 @@ class TestConcatenations(unittest.TestCase):
         )
 
     def test_numpy_domain_concatenation(self):
-        mesh = MeshForTesting()
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
+
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
         a = pybamm.Scalar(2, domain=a_dom)
@@ -124,9 +127,6 @@ class TestConcatenations(unittest.TestCase):
                 ]
             ),
         )
-
-        # check special case: final domain is still ["whole cell"]
-        self.assertEqual(conc.domain, ["whole cell"])
 
 
 if __name__ == "__main__":

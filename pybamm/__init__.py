@@ -105,6 +105,16 @@ from .parameters import functions_lead_acid
 from .parameters import standard_parameters
 
 #
+# Geometry
+#
+from .geometry.geometry import (
+    Geometry,
+    Geometry1DMacro,
+    Geometry1DMicro,
+    Geometry3DMacro,
+)
+
+#
 # Mesh and Discretisation classes
 #
 from .discretisations.base_discretisation import BaseDiscretisation
@@ -112,8 +122,8 @@ from .discretisations.finite_volume_discretisations import (
     FiniteVolumeDiscretisation,
     NodeToEdge,
 )
-from .discretisations.meshes.pybamm_meshes import KNOWN_DOMAINS
-from .discretisations.meshes.pybamm_meshes import (
+from .discretisations.pybamm_meshes import KNOWN_DOMAINS
+from .discretisations.pybamm_meshes import (
     PybammMesh,
     PybammSubMesh,
     Pybamm1DUniformSubMesh,

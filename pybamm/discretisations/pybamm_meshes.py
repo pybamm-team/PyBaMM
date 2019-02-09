@@ -58,12 +58,14 @@ class PybammMesh(dict):
         """
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
+
         edges_aligned = all(
             [
                 self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]
                 for i in range(len(submeshnames) - 1)
             ]
         )
+
         if edges_aligned:
             # Combine submeshes, being careful not to double-count repeated edges at the
             # intersection of submeshes
@@ -71,7 +73,9 @@ class PybammMesh(dict):
                 [self[submeshnames[0]].edges]
                 + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
             )
-            return PybammSubMesh().set_submesh(combined_submesh_edges)
+            combined_submesh = PybammSubMesh()
+            combined_submesh.set_submesh(combined_submesh_edges)
+            return combined_submesh
         else:
             raise pybamm.DomainError("submesh edges are not aligned")
 
@@ -89,14 +93,14 @@ class PybammMesh(dict):
             edges = submesh.edges
             # left ghost cell: two edges, one node, to the left of existing submesh
             lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-            self[submeshname + "_left ghost cell"] = PybammSubMesh().set_submesh(
-                lgs_edges
-            )
+            left_ghost_mesh = PybammSubMesh()
+            left_ghost_mesh.set_submesh(lgs_edges)
+            self[submeshname + "_left ghost cell"] = left_ghost_mesh
             # right ghost cell: two edges, one node, to the right of existing submesh
             rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-            self[submeshname + "_right ghost cell"] = PybammSubMesh().set_submesh(
-                rgs_edges
-            )
+            right_ghost_mesh = PybammSubMesh()
+            right_ghost_mesh.set_submesh(rgs_edges)
+            self[submeshname + "_right ghost cell"] = right_ghost_mesh
 
 
 class PybammSubMesh:
@@ -125,12 +129,14 @@ class Pybamm1DUniformSubMesh(PybammSubMesh):
     A class to generate a uniform submesh on a 1D domain
     """
 
-    def __init__(self, domain, npts):
+    def __init__(self, lims, npts):
 
-        spatial_lims = list(domain.values())[0]
-        npts = list(npts.values())[0]
+        spatial_lims = list(lims.values())[0]
+        self.npts = list(npts.values())[0]
 
-        self.edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
+        self.edges = np.linspace(
+            spatial_lims["min"], spatial_lims["max"], self.npts + 1
+        )
         self.nodes = (self.edges[1:] + self.edges[:-1]) / 2
         self.d_edges = np.diff(self.edges)
         self.d_nodes = np.diff(self.nodes)

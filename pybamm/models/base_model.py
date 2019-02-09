@@ -49,8 +49,26 @@ class BaseModel(object):
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        mesh = pybamm.FiniteVolumeMacroMesh(self.default_parameter_values, 2)
-        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(mesh)
+
+        self.default_geometry = pybamm.Geometry1DMacro()
+        self.default_parameter_values.process_geometry(self.default_geometry)
+        # provide mesh properties
+        submesh_pts = {
+            "negative electrode": {"x": 40},
+            "separator": {"x": 25},
+            "positive electrode": {"x": 35},
+        }
+        submesh_types = {
+            "negative electrode": pybamm.Pybamm1DUniformSubMesh,
+            "separator": pybamm.Pybamm1DUniformSubMesh,
+            "positive electrode": pybamm.Pybamm1DUniformSubMesh,
+        }
+
+        mesh_type = pybamm.PybammMesh
+
+        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(
+            mesh_type, submesh_pts, submesh_types
+        )
         self.default_solver = pybamm.ScipySolver(method="RK45")
 
     @property
@@ -108,9 +126,7 @@ class BaseModel(object):
 
     @initial_conditions.setter
     def initial_conditions(self, initial_conditions):
-        self._initial_conditions = self._set_initial_conditions(
-            initial_conditions
-        )
+        self._initial_conditions = self._set_initial_conditions(initial_conditions)
 
     @property
     def initial_conditions_ydot(self):
@@ -118,9 +134,7 @@ class BaseModel(object):
 
     @initial_conditions_ydot.setter
     def initial_conditions_ydot(self, initial_conditions):
-        self._initial_conditions_ydot = self._set_initial_conditions(
-            initial_conditions
-        )
+        self._initial_conditions_ydot = self._set_initial_conditions(initial_conditions)
 
     @property
     def boundary_conditions(self):

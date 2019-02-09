@@ -124,7 +124,9 @@ class ParameterValues(dict):
         for domain in geometry:
             for spatial_variable, spatial_limits in geometry[domain].items():
                 for lim, sym in spatial_limits.items():
-                    geometry[domain][spatial_variable][lim] = self.process_symbol(sym)
+                    geometry[domain][spatial_variable][lim] = self.process_symbol(
+                        sym
+                    ).evaluate()
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.

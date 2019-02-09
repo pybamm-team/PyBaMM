@@ -9,6 +9,64 @@ import unittest
 import numpy as np
 
 
+def mesh_for_testing(number_of_pts=0):
+    param = pybamm.ParameterValues(base_parameters={"Ln": 0.3, "Ls": 0.3, "Lp": 0.3})
+
+    geometry = pybamm.Geometry1DMacro()
+    param.process_geometry(geometry)
+
+    # provide mesh properties
+    submesh_pts = {
+        "negative electrode": {"x": 40},
+        "separator": {"x": 25},
+        "positive electrode": {"x": 35},
+    }
+    submesh_types = {
+        "negative electrode": pybamm.Pybamm1DUniformSubMesh,
+        "separator": pybamm.Pybamm1DUniformSubMesh,
+        "positive electrode": pybamm.Pybamm1DUniformSubMesh,
+    }
+
+    if number_of_pts is not 0:
+        n = round(number_of_pts / 3)
+        submesh_pts = {
+            "negative electrode": {"x": n},
+            "separator": {"x": n},
+            "positive electrode": {"x": n},
+        }
+
+    mesh_type = pybamm.PybammMesh
+
+    # create mesh
+    return mesh_type(geometry, submesh_types, submesh_pts)
+
+
+def disc_for_testing():
+    param = pybamm.ParameterValues(base_parameters={"Ln": 0.3, "Ls": 0.3, "Lp": 0.3})
+
+    geometry = pybamm.Geometry1DMacro()
+    param.process_geometry(geometry)
+
+    # provide mesh properties
+    submesh_pts = {
+        "negative electrode": {"x": 40},
+        "separator": {"x": 25},
+        "positive electrode": {"x": 35},
+    }
+    submesh_types = {
+        "negative electrode": pybamm.Pybamm1DUniformSubMesh,
+        "separator": pybamm.Pybamm1DUniformSubMesh,
+        "positive electrode": pybamm.Pybamm1DUniformSubMesh,
+    }
+
+    mesh_type = pybamm.PybammMesh
+
+    # create disc
+    disc = pybamm.FiniteVolumeDiscretisation(mesh_type, submesh_pts, submesh_types)
+    disc._mesh = mesh_for_testing()
+    return disc, geometry
+
+
 class TestScipySolver(unittest.TestCase):
     def test_integrate(self):
         # Constant
@@ -37,20 +95,17 @@ class TestScipySolver(unittest.TestCase):
     def test_model_solver(self):
         # Create model
         model = pybamm.BaseModel()
-        var = pybamm.Variable("var", domain=["whole cell"])
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: pybamm.Scalar(0.1) * var}
         model.initial_conditions = {var: pybamm.Scalar(1)}
         # No need to set parameters; can use base discretisation (no spatial operators)
-        param = pybamm.ParameterValues(
-            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
-        )
-        mesh = pybamm.FiniteVolumeMacroMesh(param)
-        disc = pybamm.BaseDiscretisation(mesh)
-        disc.process_model(model)
+        disc, geometry = disc_for_testing()
+        disc.process_model(model, geometry)
 
         # Solve
         solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
-        t_eval = mesh["time"]
+        t_eval = np.linspace(0, 1, 100)
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)
         np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))

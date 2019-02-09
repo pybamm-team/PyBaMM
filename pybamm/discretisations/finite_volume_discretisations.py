@@ -20,8 +20,8 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
     **Extends:** :class:`pybamm.BaseDiscretisation`
     """
 
-    def __init__(self, mesh):
-        super().__init__(mesh)
+    def __init__(self, mesh_type, submesh_pts, submesh_types):
+        super().__init__(mesh_type, submesh_pts, submesh_types)
 
     def compute_diffusivity(self, symbol):
         """
