@@ -86,8 +86,9 @@ class TestScikitsSolver(unittest.TestCase):
     def test_model_solver_dae(self):
         # Create model
         model = pybamm.BaseModel()
-        var1 = pybamm.Variable("var1", domain=["whole cell"])
-        var2 = pybamm.Variable("var2", domain=["whole cell"])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = [2 * var1 - var2]
         model.initial_conditions = {var1: 1, var2: 2}
