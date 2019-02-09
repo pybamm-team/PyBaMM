@@ -68,15 +68,12 @@ class TestScikitsSolver(unittest.TestCase):
     def test_model_solver_ode(self):
         # Create model
         model = pybamm.BaseModel()
-        var = pybamm.Variable("var", domain=["whole cell"])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
-        # No need to set parameters; can use base discretisation (no spatial operators)
-        # param = pybamm.ParameterValues(
-        #     base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
-        # )
-        # disc = pybamm.BaseDiscretisation(mesh)
-        # disc.process_model(model)
+        disc = model.default_discretisation
+        disc.process_model(model, model.default_geometry)
 
         # Solve
         solver = pybamm.ScikitsOdeSolver(tol=1e-9)
