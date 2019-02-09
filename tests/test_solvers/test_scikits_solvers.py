@@ -72,6 +72,7 @@ class TestScikitsSolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
+        model.initial_conditions_ydot = {var1: 0.1}
         disc = model.default_discretisation
         disc.process_model(model, model.default_geometry)
 
@@ -91,12 +92,8 @@ class TestScikitsSolver(unittest.TestCase):
         model.algebraic = [2 * var1 - var2]
         model.initial_conditions = {var1: 1, var2: 2}
         model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
-        # No need to set parameters; can use base discretisation (no spatial operators)
-        # param = pybamm.ParameterValues(
-        #     base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
-        # )
-        # disc = pybamm.BaseDiscretisation(mesh)
-        # disc.process_model(model)
+        disc = model.default_discretisation
+        disc.process_model(model, model.default_geometry)
 
         # Solve
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
