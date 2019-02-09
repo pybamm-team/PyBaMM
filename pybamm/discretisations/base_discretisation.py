@@ -6,7 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-import numbers
 
 
 class BaseDiscretisation(object):
@@ -61,12 +60,8 @@ class BaseDiscretisation(object):
         y_slices = self.get_variable_slices(variables)
 
         # Discretise initial conditions
-        model.initial_conditions = self.process_initial_conditions(
-            model.initial_conditions
-        )
-        model.initial_conditions_ydot = self.process_initial_conditions(
-            model.initial_conditions_ydot
-        )
+        model.initial_conditions = self.process_dict(model.initial_conditions)
+        model.initial_conditions_ydot = self.process_dict(model.initial_conditions_ydot)
 
         # Concatenate initial conditions into a single vector
 
@@ -100,7 +95,6 @@ class BaseDiscretisation(object):
         model.variables = self.process_dict(
             model.variables, y_slices, model.boundary_conditions
         )
-
         self.check_model(model)
 
     def get_all_variables(self, model):
@@ -161,52 +155,27 @@ class BaseDiscretisation(object):
         start = 0
         end = 0
         for variable in variables:
-            # Add up the size of all the domains in variable.domain
-            for dom in variable.domain:
-                end += self.mesh[dom].npts
+            # If domain is empty then variable has size 1
+            if variable.domain == []:
+                end += 1
+            # Otherwise, add up the size of all the domains in variable.domain
+            else:
+                for dom in variable.domain:
+                    end += self.mesh[dom].npts
             y_slices[variable.id] = slice(start, end)
             start = end
 
         return y_slices
 
-    def process_initial_conditions(self, initial_conditions):
-        """Discretise initial conditions.
-
-        Parameters
-        ----------
-        initial_conditions : dict
-            Initial conditions ({variable: equation} dict) to dicretise
-
-        Returns
-        -------
-        initial_conditions : dict
-            Discretised initial conditions
-
-        """
-        for variable, equation in initial_conditions.items():
-            if isinstance(equation.evaluate(t=0), numbers.Number):
-                # Broadcast scalar initial condition to the domain specified by
-                # variable.domain
-                equation = self.broadcast(equation, variable.domain)
-            else:
-                raise NotImplementedError(
-                    "Currently only accepts scalar initial conditions"
-                )
-
-            discretised_ic = self.process_symbol(equation)
-
-            initial_conditions[variable] = discretised_ic
-
-        return initial_conditions
-
-    def process_dict(self, var_eqn_dict, y_slices, boundary_conditions):
-        """Discretise a dictionary of {variable: equation}
-        (can be model.rhs or model.variables).
+    def process_dict(self, var_eqn_dict, y_slices=None, boundary_conditions={}):
+        """Discretise a dictionary of {variable: equation}, broadcasting if necessary
+        (can be model.rhs, model.initial_conditions or model.variables).
 
         Parameters
         ----------
         var_eqn_dict : dict
             Equations ({variable: equation} dict) to dicretise
+            (can be model.rhs, model.initial_conditions or model.variables)
         y_slices : dict of {variable id: slice}
             The slices to assign to StateVectors when discretising
         boundary_conditions : dict
@@ -216,13 +185,19 @@ class BaseDiscretisation(object):
         Returns
         -------
         var_eqn_dict : dict
-            Discretised right-hand side equations
+            Discretised equations
 
         """
+        # reformat boundary conditions (for rhs and variables)
         boundary_conditions = {
             key.id: value for key, value in boundary_conditions.items()
         }
         for variable, equation in var_eqn_dict.items():
+            if equation.evaluates_to_number():
+                # Broadcast scalar equation to the domain specified by variable.domain
+                equation = self.broadcast(equation, variable.domain)
+
+            # Process symbol (original or broadcasted)
             var_eqn_dict[variable] = self.process_symbol(
                 equation, y_slices, boundary_conditions
             )
@@ -551,11 +526,13 @@ class BaseDiscretisation(object):
         )
 
         # Check variables in variable list against rhs
+        # Be lenient with size check if the variable in model.variables is broadcasted
         for var in model.rhs.keys():
             if var.name in model.variables.keys():
-                assert (
-                    model.rhs[var].evaluate(0, y0).shape
-                    == model.variables[var.name].evaluate(0, y0).shape
+                assert model.rhs[var].evaluate(0, y0).shape == model.variables[
+                    var.name
+                ].evaluate(0, y0).shape or isinstance(
+                    model.variables[var.name], pybamm.NumpyBroadcast
                 ), pybamm.ModelError(
                     """
                     variable and its eqn must have the same shape after discretisation

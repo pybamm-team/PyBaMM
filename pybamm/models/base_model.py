@@ -71,23 +71,35 @@ class BaseModel(object):
         )
         self.default_solver = pybamm.ScipySolver(method="RK45")
 
+    def _set_dict(self, dict, name):
+        """
+        Convert any scalar equations in dict to 'pybamm.Scalar'
+        and check that domains are consistent
+        """
+        # Convert any numbers to a pybamm.Scalar
+        for var, eqn in dict.items():
+            if isinstance(eqn, numbers.Number):
+                dict[var] = pybamm.Scalar(eqn)
+
+        if not all(
+            [
+                variable.domain == equation.domain or equation.domain == []
+                for variable, equation in dict.items()
+            ]
+        ):
+            raise pybamm.DomainError(
+                """variable and equation in {} must have the same domain""".format(name)
+            )
+
+        return dict
+
     @property
     def rhs(self):
         return self._rhs
 
     @rhs.setter
     def rhs(self, rhs):
-        if all(
-            [
-                variable.domain == equation.domain or equation.domain == []
-                for variable, equation in rhs.items()
-            ]
-        ):
-            self._rhs = rhs
-        else:
-            raise pybamm.DomainError(
-                """variable and equation in rhs must have the same domain"""
-            )
+        self._rhs = self._set_dict(rhs, "rhs")
 
     @property
     def algebraic(self):
@@ -97,36 +109,15 @@ class BaseModel(object):
     def algebraic(self, algebraic):
         self._algebraic = algebraic
 
-    def _set_initial_conditions(self, initial_conditions):
-        """
-        Convert any scalar conditions to 'pybamm.Scalar'
-        and checking that domains are consistent
-        """
-        # Convert any numbers to a pybamm.Scalar
-        for var, eqn in initial_conditions.items():
-            if isinstance(eqn, numbers.Number):
-                initial_conditions[var] = pybamm.Scalar(eqn)
-
-        if not all(
-            [
-                variable.domain == equation.domain or equation.domain == []
-                for variable, equation in initial_conditions.items()
-            ]
-        ):
-            raise pybamm.DomainError(
-                """variable and equation in initial_conditions
-                   must have the same domain"""
-            )
-
-        return initial_conditions
-
     @property
     def initial_conditions(self):
         return self._initial_conditions
 
     @initial_conditions.setter
     def initial_conditions(self, initial_conditions):
-        self._initial_conditions = self._set_initial_conditions(initial_conditions)
+        self._initial_conditions = self._set_dict(
+            initial_conditions, "initial_conditions"
+        )
 
     @property
     def initial_conditions_ydot(self):
@@ -134,7 +125,9 @@ class BaseModel(object):
 
     @initial_conditions_ydot.setter
     def initial_conditions_ydot(self, initial_conditions):
-        self._initial_conditions_ydot = self._set_initial_conditions(initial_conditions)
+        self._initial_conditions_ydot = self._set_dict(
+            initial_conditions, "initial_conditions_ydot"
+        )
 
     @property
     def boundary_conditions(self):

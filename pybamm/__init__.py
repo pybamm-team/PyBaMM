@@ -91,6 +91,8 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
+from .models.simple_ode_model import SimpleODEModel
+from .models import lead_acid
 
 #
 # Submodel classes
@@ -103,6 +105,7 @@ from .models.submodels import electrolyte, interface
 from .parameters.parameter_values import ParameterValues
 from .parameters import functions_lead_acid
 from .parameters import standard_parameters
+from .parameters import standard_parameters_lead_acid  # calls standard_parameters
 
 #
 # Geometry
