@@ -27,7 +27,7 @@ def mesh_for_testing(number_of_pts=0):
         "positive electrode": pybamm.Pybamm1DUniformSubMesh,
     }
 
-    if number_of_pts is not 0:
+    if number_of_pts != 0:
         n = round(number_of_pts / 3)
         submesh_pts = {
             "negative electrode": {"x": n},
