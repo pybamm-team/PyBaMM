@@ -178,8 +178,9 @@ class BaseModel(object):
         """
         Check that the model is well-posed by executing the following tests:
         - All the variables that appear in the rhs and algebraic equations appear in
-        the rhs keys, with leeway for n variables where n is the number of algebraic
-        equations
+        the rhs keys, with leeway for exactly n variables where n is the number of
+        algebraic equations. Overdetermined if more equations than variables,
+        underdetermined if more variables than equations.
         - There is an initial condition in self.initial_conditions for each
         variable/equation pair in self.rhs
         - There are appropriate boundary conditions in self.boundary_conditions for each
