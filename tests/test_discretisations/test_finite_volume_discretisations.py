@@ -8,40 +8,6 @@ import numpy as np
 import unittest
 
 
-# def disc_for_testing(number_of_pts=0):
-#     param = pybamm.ParameterValues(base_parameters={"Ln": 0.3, "Ls": 0.3, "Lp": 0.3})
-#
-#     geometry = pybamm.Geometry1DMacro()
-#     param.process_geometry(geometry)
-#
-#     # provide mesh properties
-#     submesh_pts = {
-#         "negative electrode": {"x": 40},
-#         "separator": {"x": 25},
-#         "positive electrode": {"x": 35},
-#     }
-#     submesh_types = {
-#         "negative electrode": pybamm.Pybamm1DUniformSubMesh,
-#         "separator": pybamm.Pybamm1DUniformSubMesh,
-#         "positive electrode": pybamm.Pybamm1DUniformSubMesh,
-#     }
-#
-#     if number_of_pts is not 0:
-#         n = round(number_of_pts / 3)
-#         submesh_pts = {
-#             "negative electrode": {"x": n},
-#             "separator": {"x": n},
-#             "positive electrode": {"x": n},
-#         }
-#     mesh_type = pybamm.PybammMesh
-#
-#     # create disc
-#     disc = pybamm.FiniteVolumeDiscretisation(mesh_type, submesh_pts, submesh_types)
-#     disc._mesh = testing.mesh_for_testing(number_of_pts=number_of_pts)
-#     return disc
-#
-
-
 class TestFiniteVolumeDiscretisation(unittest.TestCase):
     def test_node_to_edge(self):
         a = pybamm.Symbol("a")

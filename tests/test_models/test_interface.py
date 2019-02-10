@@ -56,16 +56,16 @@ class TestHomogeneousReaction(unittest.TestCase):
         geometry = pybamm.Geometry1DMacro()
         param.process_geometry(geometry)
 
-        mesh_type = pybamm.PybammMesh
+        mesh_type = pybamm.Mesh
         submesh_pts = {
             "negative electrode": {"x": 40},
             "separator": {"x": 25},
             "positive electrode": {"x": 35},
         }
         submesh_types = {
-            "negative electrode": pybamm.Pybamm1DUniformSubMesh,
-            "separator": pybamm.Pybamm1DUniformSubMesh,
-            "positive electrode": pybamm.Pybamm1DUniformSubMesh,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
         }
 
         disc = pybamm.FiniteVolumeDiscretisation(mesh_type, submesh_pts, submesh_types)

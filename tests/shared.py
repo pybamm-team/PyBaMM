@@ -21,12 +21,12 @@ class TestDefaults1DMacro:
             "positive electrode": {"x": 35},
         }
         self.submesh_types = {
-            "negative electrode": pybamm.Pybamm1DUniformSubMesh,
-            "separator": pybamm.Pybamm1DUniformSubMesh,
-            "positive electrode": pybamm.Pybamm1DUniformSubMesh,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
         }
 
-        self.mesh_type = pybamm.PybammMesh
+        self.mesh_type = pybamm.Mesh
 
     def set_equal_pts(self, npts):
         n = 3 * round(npts / 3)

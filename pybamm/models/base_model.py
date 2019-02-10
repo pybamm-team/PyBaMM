@@ -59,12 +59,12 @@ class BaseModel(object):
             "positive electrode": {"x": 35},
         }
         submesh_types = {
-            "negative electrode": pybamm.Pybamm1DUniformSubMesh,
-            "separator": pybamm.Pybamm1DUniformSubMesh,
-            "positive electrode": pybamm.Pybamm1DUniformSubMesh,
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
         }
 
-        mesh_type = pybamm.PybammMesh
+        mesh_type = pybamm.Mesh
 
         self.default_discretisation = pybamm.FiniteVolumeDiscretisation(
             mesh_type, submesh_pts, submesh_types

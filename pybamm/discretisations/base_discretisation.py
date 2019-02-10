@@ -15,7 +15,7 @@ class BaseDiscretisation(object):
     Parameters
     ----------
     mesh_type: class name
-        the type of combined mesh being used (e.g. PybammMesh)
+        the type of combined mesh being used (e.g. Mesh)
     submesh_pts : dict
         the number of points on each of the subdomains
     submesh_types : dict
