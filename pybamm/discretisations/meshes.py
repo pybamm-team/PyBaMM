@@ -127,6 +127,9 @@ class Uniform1DSubMesh(SubMesh):
 
     def __init__(self, lims, npts):
 
+        # currently accept lims and npts as dicts. This may get changed at a future
+        # date depending on the form of mesh we desire for 2D/3D
+
         spatial_lims = list(lims.values())[0]
         npts = list(npts.values())[0]
 
