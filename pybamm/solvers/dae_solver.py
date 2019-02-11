@@ -35,20 +35,24 @@ class DaeSolver(pybamm.BaseSolver):
 
         def residuals(t, y, ydot):
             rhs_eval = model.concatenated_rhs.evaluate(t, y)
-            return np.concatenate((
-                rhs_eval - ydot[:rhs_eval.shape[0]],
-                model.concatenated_algebraic.evaluate(t, y)
-            ))
+            return np.concatenate(
+                (
+                    rhs_eval - ydot[: rhs_eval.shape[0]],
+                    model.concatenated_algebraic.evaluate(t, y),
+                )
+            )
 
         y0 = model.concatenated_initial_conditions
         ydot0 = model.concatenated_initial_conditions_ydot
 
         assert y0.shape == ydot0.shape, pybamm.ModelError(
             "Shape of initial condition y0 {} is different from the shape of initial "
-            "condition ydot0 {}".format(y0.shape, ydot0.shape))
+            "condition ydot0 {}".format(y0.shape, ydot0.shape)
+        )
         assert y0.shape == residuals(0, y0, ydot0).shape, pybamm.ModelError(
             "Shape of initial condition y0 {} is different from the shape of residual "
-            "function {}".format(y0.shape, residuals(0, y0, ydot0).shape))
+            "function {}".format(y0.shape, residuals(0, y0, ydot0).shape)
+        )
 
         self.t, self.y = self.integrate(residuals, y0, ydot0, t_eval)
 

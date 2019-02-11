@@ -97,8 +97,9 @@ class TestBaseModel(unittest.TestCase):
 
     def test_update(self):
         # model
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         model = pybamm.BaseModel()
-        c = pybamm.Variable("c", domain=["whole cell"])
+        c = pybamm.Variable("c", domain=whole_cell)
         rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
         initial_conditions = {c: 1}
         boundary_conditions = {c: {"left": 0, "right": 0}}
@@ -110,7 +111,7 @@ class TestBaseModel(unittest.TestCase):
 
         # update with submodel
         submodel = pybamm.BaseModel()
-        d = pybamm.Variable("d", domain=["whole cell"])
+        d = pybamm.Variable("d", domain=whole_cell)
         submodel.rhs = {
             d: 5 * pybamm.div(pybamm.grad(c)) + pybamm.div(pybamm.grad(d)) - 1
         }
@@ -139,7 +140,7 @@ class TestBaseModel(unittest.TestCase):
         # update with multiple submodels
         submodel1 = submodel  # copy submodel from previous test
         submodel2 = pybamm.BaseModel()
-        e = pybamm.Variable("e", domain=["whole cell"])
+        e = pybamm.Variable("e", domain=whole_cell)
         submodel2.rhs = {
             e: 5 * pybamm.div(pybamm.grad(d)) + pybamm.div(pybamm.grad(e)) - 1
         }
@@ -195,8 +196,9 @@ class TestBaseModel(unittest.TestCase):
 
     def test_check_well_posedness_initial_boundary_conditions(self):
         # Well-posed model - Dirichlet
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         model = pybamm.BaseModel()
-        c = pybamm.Variable("c", domain=["whole cell"])
+        c = pybamm.Variable("c", domain=whole_cell)
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
         model.initial_conditions = {c: 1}
         model.boundary_conditions = {2 * c: {"left": 0, "right": 0}}
@@ -206,21 +208,21 @@ class TestBaseModel(unittest.TestCase):
         model.boundary_conditions = {3 * pybamm.grad(c) + 2: {"left": 0, "right": 0}}
         model.check_well_posedness()
 
-        # Model with bad initial conditions (expect model error)
-        d = pybamm.Variable("d", domain=["whole cell"])
+        # Model with bad initial conditions (expect assertion error)
+        d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {d: 3}
         with self.assertRaisesRegex(pybamm.ModelError, "initial condition"):
             model.check_well_posedness()
 
-        # Model with bad boundary conditions - Dirichlet (expect model error)
-        d = pybamm.Variable("d", domain=["whole cell"])
+        # Model with bad boundary conditions - Dirichlet (expect assertion error)
+        d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {c: 3}
         model.boundary_conditions = {d: {"left": 0, "right": 0}}
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
 
-        # Model with bad boundary conditions - Neumann (expect model error)
-        d = pybamm.Variable("d", domain=["whole cell"])
+        # Model with bad boundary conditions - Neumann (expect assertion error)
+        d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {c: 3}
         model.boundary_conditions = {4 * pybamm.grad(d): {"left": 0, "right": 0}}
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):

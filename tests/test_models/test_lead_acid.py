@@ -13,8 +13,8 @@ import numpy as np
 class TestLeadAcidLOQS(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.LOQS()
-
         modeltest = tests.StandardModelTest(model)
+
         modeltest.test_all()
 
     def test_solution(self):
@@ -23,8 +23,8 @@ class TestLeadAcidLOQS(unittest.TestCase):
         # process parameter values, discretise and solve
         model.default_parameter_values.process_model(model)
         disc = model.default_discretisation
-        disc.process_model(model)
-        t_eval = disc.mesh["time"]
+        disc.process_model(model, model.default_geometry)
+        t_eval = np.linspace(0, 1, 100)
         solver = model.default_solver
         solver.solve(model, t_eval)
         T, Y = solver.t, solver.y
