@@ -67,7 +67,7 @@ class Mesh(dict):
                 [self[submeshnames[0]].edges]
                 + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
             )
-            return SubMesh(combined_submesh_edges)
+            return SubMesh1D(combined_submesh_edges)
         else:
             raise pybamm.DomainError("submesh edges are not aligned")
 
@@ -86,14 +86,14 @@ class Mesh(dict):
 
             # left ghost cell: two edges, one node, to the left of existing submesh
             lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-            self[submeshname + "_left ghost cell"] = SubMesh(lgs_edges)
+            self[submeshname + "_left ghost cell"] = SubMesh1D(lgs_edges)
 
             # right ghost cell: two edges, one node, to the right of existing submesh
             rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-            self[submeshname + "_right ghost cell"] = SubMesh(rgs_edges)
+            self[submeshname + "_right ghost cell"] = SubMesh1D(rgs_edges)
 
 
-class SubMesh:
+class SubMesh1D:
     """ Submesh class.
         Contains the position of the nodes and the number of mesh points.
 
@@ -114,7 +114,7 @@ class SubMesh:
         self.npts = self.nodes.size
 
 
-class Uniform1DSubMesh(SubMesh):
+class Uniform1DSubMesh(SubMesh1D):
     """
     A class to generate a uniform submesh on a 1D domain
     """
