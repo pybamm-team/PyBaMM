@@ -160,8 +160,9 @@ class TestBaseModel(unittest.TestCase):
     def test_check_well_posedness_variables(self):
         # Well-posed ODE model
         model = pybamm.BaseModel()
-        c = pybamm.Variable("c", domain=["whole cell"])
-        d = pybamm.Variable("d", domain=["whole cell"])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        d = pybamm.Variable("d", domain=whole_cell)
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c}
         model.initial_conditions = {c: 1, d: 2}
         model.boundary_conditions = {
@@ -171,7 +172,7 @@ class TestBaseModel(unittest.TestCase):
         model.check_well_posedness()
 
         # Well-posed DAE model
-        e = pybamm.Variable("e", domain=["whole cell"])
+        e = pybamm.Variable("e", domain=whole_cell)
         model.algebraic = [e - c - d]
         model.check_well_posedness()
 
