@@ -45,9 +45,6 @@ class Concatenation(pybamm.Symbol):
         domain_dict = {d: pybamm.KNOWN_DOMAINS.index(d) for d in domain}
         domain = sorted(domain_dict, key=domain_dict.__getitem__)
 
-        # Simplify domain if concatenation spans the whole cell
-        if domain == ["negative electrode", "separator", "positive electrode"]:
-            domain = ["whole cell"]
         return domain
 
 
@@ -115,21 +112,11 @@ class DomainConcatenation(Concatenation):
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
 
-        # deal with "whole cell" special case.
-        # need to split the "whole cell" domain up when we calculate slices, then
-        # recombine again afterwards (see below)
-        if self.domain == ["whole cell"]:
-            self.domain = ["negative electrode", "separator", "positive electrode"]
-
         # create dict of domain => slice of final vector
         self._slices = self.create_slices(self, mesh)
 
         # store size of final vector
         self._size = self._slices[self.domain[-1]].stop
-
-        # deal with "whole cell" special case
-        if self.domain == ["negative electrode", "separator", "positive electrode"]:
-            self.domain = ["whole cell"]
 
         # create disc of domain => slice for each child
         self._children_slices = []

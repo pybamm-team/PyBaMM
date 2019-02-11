@@ -49,8 +49,26 @@ class BaseModel(object):
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        mesh = pybamm.FiniteVolumeMacroMesh(self.default_parameter_values, 2)
-        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(mesh)
+
+        self.default_geometry = pybamm.Geometry1DMacro()
+        self.default_parameter_values.process_geometry(self.default_geometry)
+        # provide mesh properties
+        submesh_pts = {
+            "negative electrode": {"x": 40},
+            "separator": {"x": 25},
+            "positive electrode": {"x": 35},
+        }
+        submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+        }
+
+        mesh_type = pybamm.Mesh
+
+        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(
+            mesh_type, submesh_pts, submesh_types
+        )
         self.default_solver = pybamm.ScipySolver(method="RK45")
 
     def _set_dict(self, dict, name):

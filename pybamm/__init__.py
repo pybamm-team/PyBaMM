@@ -108,6 +108,16 @@ from .parameters import standard_parameters
 from .parameters import standard_parameters_lead_acid  # calls standard_parameters
 
 #
+# Geometry
+#
+from .geometry.geometry import (
+    Geometry,
+    Geometry1DMacro,
+    Geometry1DMicro,
+    Geometry3DMacro,
+)
+
+#
 # Mesh and Discretisation classes
 #
 from .discretisations.base_discretisation import BaseDiscretisation
@@ -115,12 +125,8 @@ from .discretisations.finite_volume_discretisations import (
     FiniteVolumeDiscretisation,
     NodeToEdge,
 )
-from .discretisations.base_mesh import KNOWN_DOMAINS
-from .discretisations.base_mesh import BaseMesh, BaseSubmesh
-from .discretisations.finite_volume_meshes import (
-    FiniteVolumeMacroMesh,
-    FiniteVolumeSubmesh,
-)
+from .discretisations.meshes import KNOWN_DOMAINS
+from .discretisations.meshes import Mesh, SubMesh1D, Uniform1DSubMesh
 
 #
 # Simulation class

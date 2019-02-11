@@ -18,12 +18,15 @@ class TestSimpleODEModel(unittest.TestCase):
         modeltest.test_all()
 
     def test_solution(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         model = pybamm.SimpleODEModel()
 
         # discretise and solve
         disc = model.default_discretisation
-        disc.process_model(model)
-        t_eval = disc.mesh["time"]
+        disc.mesh_geometry(model.default_geometry)
+        combined_submesh = disc.mesh.combine_submeshes(*whole_cell)
+        disc.process_model(model, model.default_geometry)
+        t_eval = np.linspace(0, 1, 100)
         solver = model.default_solver
         solver.solve(model, t_eval)
         T, Y = solver.t, solver.y
@@ -34,7 +37,7 @@ class TestSimpleODEModel(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(
             model.variables["b broadcasted"].evaluate(T, Y),
-            np.ones((disc.mesh["whole cell"].npts, T.size)),
+            np.ones((combined_submesh.npts, T.size)),
         )
         np.testing.assert_array_almost_equal(
             model.variables["c broadcasted"].evaluate(T, Y),

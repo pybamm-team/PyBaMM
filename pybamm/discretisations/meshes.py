@@ -1,62 +1,39 @@
 #
-# Mesh class for space and time discretisation
+# Native PyBaMM Meshes
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
-import pybamm
 
 import numpy as np
+import pybamm
+
+KNOWN_DOMAINS = ["negative electrode", "separator", "positive electrode", "test"]
 
 
-class FiniteVolumeMacroMesh(pybamm.BaseMesh):
-    """A Finite Volumes mesh for the 1D macroscale.
+class Mesh(dict):
+    """
+    Mesh contains the submeshes
 
-    **Extends**: :class:`BaseMesh`
+    **Extends**: dict
+
+    Parameters
+    ----------
+
+    geometry : :class: `Geometry`
+        contains the geometry of the problem
+    submesh_types: dict
+        contains the types of submeshes to use (e.g. Uniform1DSubMesh)
+    submesh_pts: dict
+        contains the number of points on each subdomain
 
     """
 
-    def __init__(self, param, target_npts=10, tsteps=100, tend=1):
-
-        super().__init__(param, target_npts, tsteps, tend)
-
-        # submesh class
-        self.submeshclass = FiniteVolumeSubmesh
-
-        # Space (macro)
-        Ln, Ls, Lp = param["Ln"], param["Ls"], param["Lp"]
-        L = Ln + Ls + Lp
-        ln, ls, lp = Ln / L, Ls / L, Lp / L
-        # We aim to create the grid as uniformly as possible
-        targetmeshsize = min(ln, ls, lp) / target_npts
-
-        # Negative electrode
-        self.neg_mesh_points = round(ln / targetmeshsize) + 1
-        self["negative electrode"] = self.submeshclass(
-            np.linspace(0.0, ln, self.neg_mesh_points)
-        )
-
-        # Separator
-        self.sep_mesh_points = round(ls / targetmeshsize) + 1
-        self["separator"] = self.submeshclass(
-            np.linspace(ln, ln + ls, self.sep_mesh_points)
-        )
-
-        # Positive electrode
-        self.pos_mesh_points = round(lp / targetmeshsize) + 1
-        self["positive electrode"] = self.submeshclass(
-            np.linspace(ln + ls, 1.0, self.pos_mesh_points)
-        )
-
-        # Whole cell
-        self.total_mesh_points = (
-            self.neg_mesh_points + (self.sep_mesh_points - 2) + self.pos_mesh_points
-        )
-        self["whole cell"] = self.combine_submeshes(
-            "negative electrode", "separator", "positive electrode"
-        )
-
-        # Add ghost meshes for ghost cells for Dirichlet boundary conditions
-        self.add_ghost_meshes()
+    def __init__(self, geometry, submesh_types, submesh_pts):
+        super().__init__()
+        for domain in geometry:
+            submesh_type = submesh_types[domain]
+            submesh_pt = submesh_pts[domain]
+            self[domain] = submesh_type(geometry[domain], submesh_pt)
 
     def combine_submeshes(self, *submeshnames):
         """Combine submeshes into a new submesh, using self.submeshclass
@@ -75,12 +52,14 @@ class FiniteVolumeMacroMesh(pybamm.BaseMesh):
         """
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
+
         edges_aligned = all(
             [
                 self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]
                 for i in range(len(submeshnames) - 1)
             ]
         )
+
         if edges_aligned:
             # Combine submeshes, being careful not to double-count repeated edges at the
             # intersection of submeshes
@@ -88,7 +67,7 @@ class FiniteVolumeMacroMesh(pybamm.BaseMesh):
                 [self[submeshnames[0]].edges]
                 + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
             )
-            return self.submeshclass(combined_submesh_edges)
+            return SubMesh1D(combined_submesh_edges)
         else:
             raise pybamm.DomainError("submesh edges are not aligned")
 
@@ -104,26 +83,28 @@ class FiniteVolumeMacroMesh(pybamm.BaseMesh):
         ]
         for submeshname, submesh in submeshes:
             edges = submesh.edges
+
             # left ghost cell: two edges, one node, to the left of existing submesh
             lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-            self[submeshname + "_left ghost cell"] = self.submeshclass(lgs_edges)
+            self[submeshname + "_left ghost cell"] = SubMesh1D(lgs_edges)
+
             # right ghost cell: two edges, one node, to the right of existing submesh
             rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-            self[submeshname + "_right ghost cell"] = self.submeshclass(rgs_edges)
+            self[submeshname + "_right ghost cell"] = SubMesh1D(rgs_edges)
 
 
-class FiniteVolumeSubmesh:
-    """A submesh for finite volumes.
+class SubMesh1D:
+    """ Submesh class.
+        Contains the position of the nodes and the number of mesh points.
 
-    The mesh is defined by its edges; then node positions, diffs and mesh size are
-    calculated from the edge positions.
-
-    Parameters
-    ----------
-    edges : :class:`numpy.array`
-        The position of the edges of the cells
-
-    """
+        Parameters
+        ----------
+        domain : dict
+            A dictionary that contains the limits of the spatial variables
+        npts : dict
+            A dictionary that contains the number of points to be used on each
+            spatial variable
+        """
 
     def __init__(self, edges):
         self.edges = edges
@@ -131,3 +112,21 @@ class FiniteVolumeSubmesh:
         self.d_edges = np.diff(self.edges)
         self.d_nodes = np.diff(self.nodes)
         self.npts = self.nodes.size
+
+
+class Uniform1DSubMesh(SubMesh1D):
+    """
+    A class to generate a uniform submesh on a 1D domain
+    """
+
+    def __init__(self, lims, npts):
+
+        # currently accept lims and npts as dicts. This may get changed at a future
+        # date depending on the form of mesh we desire for 2D/3D
+
+        spatial_lims = list(lims.values())[0]
+        npts = list(npts.values())[0]
+
+        edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
+
+        super().__init__(edges)

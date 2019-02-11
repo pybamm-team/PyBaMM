@@ -30,6 +30,7 @@ class LOQS(pybamm.BaseModel):
     def __init__(self):
         super().__init__()
 
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Variables
         c = pybamm.Variable("c", domain=[])
         epsn = pybamm.Variable("epsn", domain=[])
@@ -85,8 +86,8 @@ class LOQS(pybamm.BaseModel):
         # Phis = pybamm.Concatenation(Phisn, pybamm.Scalar(0), Phisp)
         # self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
         self.variables = {
-            "c": pybamm.Broadcast(c, ["whole cell"]),
-            "Phi": pybamm.Broadcast(Phi, ["whole cell"]),
+            "c": pybamm.Broadcast(c, whole_cell),
+            "Phi": pybamm.Broadcast(Phi, whole_cell),
             "V": V,
             "int(epsilon_times_c)dx": (ln * epsn + ls * epss + lp * epsp) * c,
         }
