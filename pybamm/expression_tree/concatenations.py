@@ -47,6 +47,15 @@ class Concatenation(pybamm.Symbol):
 
         return domain
 
+    @property
+    def children(self):
+        children_list = []
+        for child in tuple(self._NodeMixin__children_):
+            if isinstance(child, pybamm.Variable):
+                child = pybamm.Variable(child.name, child.domain)
+            children_list.append(child)
+        return children_list
+
 
 class NumpyModelConcatenation(pybamm.Symbol):
     """A node in the expression tree representing a concatenation of equations.
