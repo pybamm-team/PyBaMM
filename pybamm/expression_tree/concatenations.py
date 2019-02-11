@@ -5,6 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import copy
 import numpy as np
 import numbers
 
@@ -49,12 +50,11 @@ class Concatenation(pybamm.Symbol):
 
     @property
     def children(self):
-        children_list = []
-        for child in tuple(self._NodeMixin__children_):
-            if isinstance(child, pybamm.Variable):
-                child = pybamm.Variable(child.name, child.domain)
-            children_list.append(child)
-        return children_list
+        """
+        Overwrite the children property, returning copies of the children to avoid
+        corrupting the expression tree internal data
+        """
+        return [copy.copy(child) for child in self._NodeMixin__children_]
 
 
 class NumpyModelConcatenation(pybamm.Symbol):
