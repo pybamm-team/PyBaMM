@@ -43,7 +43,7 @@ To uninstall again, type
 $ pip uninstall pybamm
 ```
 
-## Optional third-party libraries
+## Optional dependencies
 
 ### [scikits.odes](https://github.com/bmcage/odes)
 
@@ -53,7 +53,7 @@ wrapped SUNDIALS ODE and DAE
 To install scikits.odes, either follow the instructions below, or use the provided
 install script in `scripts/install_scikits_odes.sh`.
 
-First download and compile SUNDIALS 3.1.1:
+First download and compile sundials 3.1.1:
 
 ```bash
 $ INSTALL_DIR=`pwd`/sundials
@@ -65,13 +65,13 @@ $ cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DBUILD_ARKODE:BOOL=OFF
 $ make install
 ```
 
-Then install scikits.odes, letting it know the SUNDIALS install location:
+Then install [scikits.odes](https://github.com/bmcage/odes), letting it know the sundials install location:
 
 ```bash
 $ SUNDIALS_INST=$INSTALL_DIR pip install scikits.odes
 ```
 
-After this, you need to set your `LD_LIBRARY_PATH` to see the SUNDIALS install location:
+After this, you need to set your `LD_LIBRARY_PATH`:
 
 ```bash
 $ export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
@@ -79,8 +79,8 @@ $ export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 
 You may wish to put this last line in your `.bashrc` or virtualenv `activate` script.
 
-Note, please see the [scikits.odes
-documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for
+Please see the [scikits.odes
+documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
 detailed installation instructions. 
 
 
