@@ -177,24 +177,21 @@ class TestBaseModel(unittest.TestCase):
         # Underdetermined model - not enough differential equations
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1}
         model.algebraic = [e - c - d]
-        with self.assertRaises(pybamm.ModelError) as error:
+        with self.assertRaisesRegex(pybamm.ModelError, "underdetermined"):
             model.check_well_posedness()
-            self.assertIn("underdetermined", error.exception.args[0])
 
         # Underdetermined model - not enough algebraic equations
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c - e}
         model.algebraic = []
-        with self.assertRaises(pybamm.ModelError) as error:
+        with self.assertRaisesRegex(pybamm.ModelError, "underdetermined"):
             model.check_well_posedness()
-            self.assertIn("underdetermined", error.exception.args[0])
 
         # Overdetermined model - too many algebraic equations
         # Model cannot be overdetermined by too many differential equations, as rhs
         # keys are all unique variables
         model.algebraic = [c - d, e + d]
-        with self.assertRaises(pybamm.ModelError) as error:
+        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
             model.check_well_posedness()
-        self.assertIn("overdetermined", error.exception.args[0])
 
     def test_check_well_posedness_initial_boundary_conditions(self):
         # Well-posed model - Dirichlet
@@ -212,25 +209,22 @@ class TestBaseModel(unittest.TestCase):
         # Model with bad initial conditions (expect model error)
         d = pybamm.Variable("d", domain=["whole cell"])
         model.initial_conditions = {d: 3}
-        with self.assertRaises(pybamm.ModelError) as error:
+        with self.assertRaisesRegex(pybamm.ModelError, "initial condition"):
             model.check_well_posedness()
-        self.assertIn("initial condition", error.exception.args[0])
 
         # Model with bad boundary conditions - Dirichlet (expect model error)
         d = pybamm.Variable("d", domain=["whole cell"])
         model.initial_conditions = {c: 3}
         model.boundary_conditions = {d: {"left": 0, "right": 0}}
-        with self.assertRaises(pybamm.ModelError) as error:
+        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
-        self.assertIn("boundary condition", error.exception.args[0])
 
         # Model with bad boundary conditions - Neumann (expect model error)
         d = pybamm.Variable("d", domain=["whole cell"])
         model.initial_conditions = {c: 3}
         model.boundary_conditions = {4 * pybamm.grad(d): {"left": 0, "right": 0}}
-        with self.assertRaises(pybamm.ModelError) as error:
+        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
-            self.assertIn("boundary condition", error.exception.args[0])
 
 
 if __name__ == "__main__":
