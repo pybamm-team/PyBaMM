@@ -7,64 +7,7 @@ import pybamm
 
 import unittest
 import numpy as np
-
-
-def mesh_for_testing(number_of_pts=0):
-    param = pybamm.ParameterValues(base_parameters={"Ln": 0.3, "Ls": 0.3, "Lp": 0.3})
-
-    geometry = pybamm.Geometry1DMacro()
-    param.process_geometry(geometry)
-
-    # provide mesh properties
-    submesh_pts = {
-        "negative electrode": {"x": 40},
-        "separator": {"x": 25},
-        "positive electrode": {"x": 35},
-    }
-    submesh_types = {
-        "negative electrode": pybamm.Uniform1DSubMesh,
-        "separator": pybamm.Uniform1DSubMesh,
-        "positive electrode": pybamm.Uniform1DSubMesh,
-    }
-
-    if number_of_pts != 0:
-        n = round(number_of_pts / 3)
-        submesh_pts = {
-            "negative electrode": {"x": n},
-            "separator": {"x": n},
-            "positive electrode": {"x": n},
-        }
-
-    mesh_type = pybamm.Mesh
-
-    # create mesh
-    return mesh_type(geometry, submesh_types, submesh_pts)
-
-
-def disc_for_testing():
-    param = pybamm.ParameterValues(base_parameters={"Ln": 0.3, "Ls": 0.3, "Lp": 0.3})
-
-    geometry = pybamm.Geometry1DMacro()
-    param.process_geometry(geometry)
-
-    # provide mesh properties
-    submesh_pts = {
-        "negative electrode": {"x": 40},
-        "separator": {"x": 25},
-        "positive electrode": {"x": 35},
-    }
-    submesh_types = {
-        "negative electrode": pybamm.Uniform1DSubMesh,
-        "separator": pybamm.Uniform1DSubMesh,
-        "positive electrode": pybamm.Uniform1DSubMesh,
-    }
-
-    mesh_type = pybamm.Mesh
-
-    # create disc
-    disc = pybamm.FiniteVolumeDiscretisation(mesh_type, submesh_pts, submesh_types)
-    disc._mesh = mesh_for_testing()
-    return disc, geometry
+import tests.shared as shared
 
 
 class TestScipySolver(unittest.TestCase):
@@ -100,9 +43,13 @@ class TestScipySolver(unittest.TestCase):
         model.rhs = {var: pybamm.Scalar(0.1) * var}
         model.initial_conditions = {var: pybamm.Scalar(1)}
         # No need to set parameters; can use base discretisation (no spatial operators)
-        disc, geometry = disc_for_testing()
-        disc.process_model(model, geometry)
 
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.process_model(model, defaults.geometry)
         # Solve
         solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
         t_eval = np.linspace(0, 1, 100)
