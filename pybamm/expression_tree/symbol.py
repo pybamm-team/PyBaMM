@@ -35,7 +35,7 @@ class Symbol(anytree.NodeMixin):
         for child in children:
             # copy child before adding
             # this also adds copy.deepcopy(child) to self.children
-            copy.deepcopy(child).parent = self
+            copy.copy(child).parent = self
         self.domain = domain
 
     @property
