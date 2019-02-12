@@ -20,7 +20,7 @@ class BaseModel(object):
     algebraic: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the algebraic equations. The algebraic expressions are assumed to equate
-        to zero
+        to zero. Note that all the variables in the model must exist in the keys of `rhs` or `algebraic`.
     initial_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the initial conditions for the state variables y
