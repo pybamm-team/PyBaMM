@@ -191,14 +191,6 @@ class Symbol(anytree.NodeMixin):
             [str(subdomain) for subdomain in self.domain],
         )
 
-    def __deepcopy__(self, memo):
-        deepcopy_method = self.__deepcopy__
-        self.__deepcopy__ = None
-        cp = copy.deepcopy(self, memo)
-        self.__deepcopy__ = deepcopy_method
-
-        return cp
-
     def __add__(self, other):
         """return an :class:`Addition` object"""
         if isinstance(other, (Symbol, numbers.Number)):
