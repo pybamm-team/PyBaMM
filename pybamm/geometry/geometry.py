@@ -76,7 +76,8 @@ class Geometry3DMacro(Geometry1DMacro):
 
         z_lim = {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
 
-        for domain in self["macro"]:
-            self["macro"][domain][y] = y_lim
-            self["macro"][domain][z] = z_lim
+        MACRO_DOMAINS = ["negative electrode", "separator", "positive electrode"]
+        for domain in MACRO_DOMAINS:
+            self[domain][y] = y_lim
+            self[domain][z] = z_lim
         self.update(custom_geometry)
