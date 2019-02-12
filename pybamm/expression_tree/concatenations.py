@@ -54,7 +54,7 @@ class Concatenation(pybamm.Symbol):
         Overwrite the children property, returning copies of the children to avoid
         corrupting the expression tree internal data
         """
-        return [copy.copy(child) for child in self._NodeMixin__children_]
+        return [copy.deepcopy(child) for child in self._NodeMixin__children_]
 
 
 class NumpyModelConcatenation(pybamm.Symbol):

@@ -34,9 +34,8 @@ class Symbol(anytree.NodeMixin):
 
         for child in children:
             # copy child before adding
-            # this also adds copy.copy(child) to self.children
-            copy.copy(child).parent = self
-
+            # this also adds copy.deepcopy(child) to self.children
+            copy.deepcopy(child).parent = self
         self.domain = domain
 
     @property
@@ -192,17 +191,15 @@ class Symbol(anytree.NodeMixin):
             [str(subdomain) for subdomain in self.domain],
         )
 
-    def __copy__(self):
-        # Prepare copy
-        cls = self.__class__
-        result = cls.__new__(cls)
-        result_dict = self.__dict__
-        # Hack to remove parent without raising a TreeError
-        # Not sure whether this is a really bad idea as it accesses a semi-private
-        # variable
-        result_dict["_NodeMixin__parent"] = None
-        result.__dict__.update(result_dict)
-        return result
+    def __deepcopy__(self, memo):
+        deepcopy_method = self.__deepcopy__
+        self.__deepcopy__ = None
+        cp = copy.deepcopy(self, memo)
+        self.__deepcopy__ = deepcopy_method
+
+        # cp.parent = None
+
+        return cp
 
     def __add__(self, other):
         """return an :class:`Addition` object"""

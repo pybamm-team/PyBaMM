@@ -301,7 +301,7 @@ class BaseDiscretisation(object):
             return new_symbol
 
         else:
-            return copy.copy(symbol)
+            return copy.deepcopy(symbol)
 
     def process_binary_operators(self, bin_op, y_slices, boundary_conditions):
         """Discretise binary operators in model equations.  Performs appropriate
