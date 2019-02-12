@@ -155,7 +155,7 @@ class BaseDiscretisation(object):
         model.concatenated_rhs = self.concatenate(*model.rhs.values())
 
         # Discretise and concatenate algebraic equations
-        model.algebraic = self.process_list(
+        model.algebraic = self.process_dict(
             model.algebraic, y_slices, model.boundary_conditions
         )
         model.concatenated_algebraic = self.concatenate(*model.algebraic.values())

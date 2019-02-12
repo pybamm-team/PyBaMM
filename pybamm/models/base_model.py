@@ -195,10 +195,9 @@ class BaseModel(object):
     def check_well_posedness(self):
         """
         Check that the model is well-posed by executing the following tests:
-        - All the variables that appear in the rhs and algebraic equations appear in
-        the rhs keys, with leeway for exactly n variables where n is the number of
-        algebraic equations. Overdetermined if more equations than variables,
-        underdetermined if more variables than equations.
+        - Model is not over- or underdetermined, by comparing keys and equations in rhs
+        and algebraic. Overdetermined if more equations than variables, underdetermined
+        if more variables than equations.
         - There is an initial condition in self.initial_conditions for each
         variable/equation pair in self.rhs
         - There are appropriate boundary conditions in self.boundary_conditions for each
@@ -206,26 +205,36 @@ class BaseModel(object):
         """
         # Equations (differential and algebraic)
         # Get all the variables from differential and algebraic equations
-        variable_ids_in_keys = set()
-        variables_in_eqns = set()
+        vars_in_rhs_keys = set()
+        vars_in_algebraic_keys = set()
+        vars_in_eqns = set()
         # Get all variables ids from rhs and algebraic keys and equations
-        for var, eqn in {**self.rhs, **self.algebraic}.items():
-            variable_ids_in_keys.add(var.id)
-            variables_in_eqns.update(
-                [x for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
+        for var, eqn in self.rhs.items():
+            vars_in_rhs_keys.add(var.id)
+            vars_in_eqns.update(
+                [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
-
-        # Compare eqns and keys
-        extra_variables = [
-            var for var in variables_in_eqns if var.id not in variable_ids_in_keys
-        ]
-        # Raise error if there is are too many variables in equations
+        for var, eqn in self.algebraic.items():
+            vars_in_algebraic_keys.add(var.id)
+            vars_in_eqns.update(
+                [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
+            )
+        # If any keys are repeated between rhs and algebraic then the model is
+        # overdetermined
+        if not set(vars_in_rhs_keys).isdisjoint(vars_in_algebraic_keys):
+            raise pybamm.ModelError("model is overdetermined (repeated keys)")
+        # If any algebraic keys don't appear in the eqns then the model is
+        # overdetermined (but rhs keys can be absent from the eqns, e.g. dcdt = -1 is
+        # fine)
+        extra_algebraic_keys = vars_in_algebraic_keys.difference(vars_in_eqns)
+        if extra_algebraic_keys:
+            raise pybamm.ModelError("model is overdetermined (extra algebraic keys)")
+        # If any variables in the equations don't appear in the keys then the model is
+        # underdetermined
+        vars_in_keys = vars_in_rhs_keys.union(vars_in_algebraic_keys)
+        extra_variables = vars_in_eqns.difference(vars_in_keys)
         if extra_variables:
-            raise pybamm.ModelError(
-                "model is underdetermined: no equation for variables '{}'".format(
-                    extra_variables
-                )
-            )
+            raise pybamm.ModelError("model is underdetermined (too many variables)")
 
         # Initial conditions
         for var in self.rhs.keys():

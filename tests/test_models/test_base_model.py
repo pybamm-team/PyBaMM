@@ -183,15 +183,21 @@ class TestBaseModel(unittest.TestCase):
             model.check_well_posedness()
 
         # Underdetermined model - not enough algebraic equations
-        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c - e}
         model.algebraic = {}
         with self.assertRaisesRegex(pybamm.ModelError, "underdetermined"):
             model.check_well_posedness()
 
-        # Overdetermined model - too many algebraic equations
-        # Model cannot be overdetermined by too many differential equations, as rhs
-        # keys are all unique variables
+        # Overdetermined model - repeated keys
         model.algebraic = {c: c - d, d: e + d}
+        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+            model.check_well_posedness()
+        # Overdetermined model - extra keys in algebraic
+        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -d}
+        model.algebraic = {e: c - d}
+        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+            model.check_well_posedness()
+        model.rhs = {c: 1, d: -1}
+        model.algebraic = {e: c - d}
         with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
             model.check_well_posedness()
 
