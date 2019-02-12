@@ -74,6 +74,8 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
                 + domain
                 + [domain[-1] + "_right ghost cell"]
             )
+
+        # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
 
@@ -166,10 +168,18 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
+            # for the particles there will be a "negative particle" "left" and "right"
+            # and also a "positive particle" left and right.
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
-        divergence_matrix = self.divergence_matrix(symbol.domain)
+
+        domain = symbol.domain
+        # check for
+        if "negative particle" or "positive particle" in domain:
+            divergence_matrix = self.spherical_divergence_matrix(domain)
+        else:
+            divergence_matrix = self.divergence_matrix(domain)
         return divergence_matrix * discretised_symbol
 
     def divergence_matrix(self, domain):
@@ -189,6 +199,36 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh.combine_submeshes(*domain)
+
+        # Create matrix using submesh
+        n = submesh.npts + 1
+        e = 1 / submesh.d_edges
+        data = np.vstack(
+            [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
+        )
+        diags = np.array([0, 1])
+        matrix = spdiags(data, diags, n - 1, n)
+        return pybamm.Matrix(matrix)
+
+    def spherical_divergence_matrix(self, domain):
+        """
+        Spherical Divergence matrix for finite volumes in the spherical domain.
+        Equivalent to 
+        div(N) = ((r[1:]+r[:-1])/2)^2 ( (r[1:]^2 N[1:]) -(r[:-1]^2 N[:-1]) )/dx
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) in which to compute the divergence matrix
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite volume divergence matrix for the domain
+        """
+
+        # domain should now be ["negative particle", "positive particle"]
+        # so we don't want to create a combined submesh
 
         # Create matrix using submesh
         n = submesh.npts + 1
