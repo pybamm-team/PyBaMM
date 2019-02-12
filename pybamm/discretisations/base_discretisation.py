@@ -59,35 +59,11 @@ class BaseDiscretisation(object):
         variables = self.get_all_variables(model)
         y_slices = self.get_variable_slices(variables)
 
-        # Discretise initial conditions
-        model.initial_conditions = self.process_dict(model.initial_conditions)
-        model.initial_conditions_ydot = self.process_dict(model.initial_conditions_ydot)
+        # Process initial condtions
+        self.process_initial_conditions(model, y_slices)
 
-        # Concatenate initial conditions into a single vector
-
-        # check that all initial conditions are set
-        model.concatenated_initial_conditions = self._concatenate_init(
-            model.initial_conditions, y_slices
-        ).evaluate(0, None)
-
-        # evaluate initial conditions for ydot if they exist
-        if len(model.initial_conditions_ydot) > 0:
-            model.concatenated_initial_conditions_ydot = self._concatenate_init(
-                model.initial_conditions_ydot, y_slices
-            ).evaluate(0, None)
-        else:
-            model.concatenated_initial_conditions_ydot = np.array([])
-
-        # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_dict(model.rhs, y_slices, model.boundary_conditions)
-        # Concatenate rhs into a single state vector
-        model.concatenated_rhs = self.concatenate(*model.rhs.values())
-
-        # Discretise and concatenate algebraic equations
-        model.algebraic = self.process_list(
-            model.algebraic, y_slices, model.boundary_conditions
-        )
-        model.concatenated_algebraic = self.concatenate(*model.algebraic)
+        # Process differential and algebraic equations
+        self.process_rhs_and_algebraic(model, y_slices)
 
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
@@ -95,6 +71,8 @@ class BaseDiscretisation(object):
         model.variables = self.process_dict(
             model.variables, y_slices, model.boundary_conditions
         )
+
+        # Check that resulting model makes sense
         self.check_model(model)
 
     def get_all_variables(self, model):
@@ -166,6 +144,62 @@ class BaseDiscretisation(object):
             start = end
 
         return y_slices
+
+    def process_initial_conditions(self, model, y_slices):
+        """Discretise model initial_conditions.
+        Currently inplace, could be changed to return a new model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+        y_slices : dict of {variable id: slice}
+            The slices to assign to StateVectors when discretising
+
+        """
+        # Discretise initial conditions
+        model.initial_conditions = self.process_dict(model.initial_conditions)
+        model.initial_conditions_ydot = self.process_dict(model.initial_conditions_ydot)
+
+        # Concatenate initial conditions into a single vector
+
+        # check that all initial conditions are set
+        model.concatenated_initial_conditions = self._concatenate_init(
+            model.initial_conditions, y_slices
+        ).evaluate(0, None)
+
+        # evaluate initial conditions for ydot if they exist
+        if len(model.initial_conditions_ydot) > 0:
+            model.concatenated_initial_conditions_ydot = self._concatenate_init(
+                model.initial_conditions_ydot, y_slices
+            ).evaluate(0, None)
+        else:
+            model.concatenated_initial_conditions_ydot = np.array([])
+
+    def process_rhs_and_algebraic(self, model, y_slices):
+        """Discretise model equations - differential ('rhs') and algebraic.
+        Currently inplace, could be changed to return a new model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+        y_slices : dict of {variable id: slice}
+            The slices to assign to StateVectors when discretising
+
+        """
+        # Discretise right-hand sides, passing domain from variable
+        model.rhs = self.process_dict(model.rhs, y_slices, model.boundary_conditions)
+        # Concatenate rhs into a single state vector
+        model.concatenated_rhs = self.concatenate(*model.rhs.values())
+
+        # Discretise and concatenate algebraic equations
+        model.algebraic = self.process_list(
+            model.algebraic, y_slices, model.boundary_conditions
+        )
+        model.concatenated_algebraic = self.concatenate(*model.algebraic)
 
     def process_dict(self, var_eqn_dict, y_slices=None, boundary_conditions={}):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
