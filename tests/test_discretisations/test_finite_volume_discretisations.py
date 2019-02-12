@@ -186,6 +186,62 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
         )
 
+    def test_spherical_grad_div_shapes_Dirichlet_bcs(self):
+        """
+        Test grad and div with Dirichlet boundary conditions (applied by grad on var)
+        """
+        # create discretisation
+        defaults = shared.TestDefaults1DParticle(10)
+        disc = pybamm.FiniteVolumeDiscretisation(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
+
+        combined_submesh = mesh.combine_submeshes("negative particle")
+
+        mesh.add_ghost_meshes()
+        disc.mesh.add_ghost_meshes()
+
+        # grad
+        # grad(r) == 1
+        var = pybamm.Variable("var", domain=["negative particle"])
+        grad_eqn = pybamm.grad(var)
+        boundary_conditions = {
+            var.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(1)}
+        }
+        y_slices = disc.get_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+
+        constant_y = np.ones_like(combined_submesh.nodes)
+        np.testing.assert_array_equal(
+            grad_eqn_disc.evaluate(None, constant_y),
+            np.zeros_like(combined_submesh.edges),
+        )
+
+        boundary_conditions = {
+            var.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}
+        }
+        y_linear = combined_submesh.nodes
+        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.evaluate(None, y_linear), np.ones_like(combined_submesh.edges)
+        )
+
+        # div: test on linear r^2
+        # div (grad r^2) = 6
+        const = 6 * np.ones(combined_submesh.npts)
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var.id: {"left": pybamm.Scalar(6), "right": pybamm.Scalar(6)}
+        }
+
+        div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(None, const), np.zeros_like(combined_submesh.nodes)
+        )
+
     def test_grad_div_shapes_Neumann_bcs(self):
         """Test grad and div with Neumann boundary conditions (applied by div on N)"""
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -228,6 +284,52 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
+        )
+
+    def test_spherical_grad_div_shapes_Neumann_bcs(self):
+        """Test grad and div with Neumann boundary conditions (applied by div on N)"""
+
+        # create discretisation
+        defaults = shared.TestDefaults1DParticle(10)
+        disc = pybamm.FiniteVolumeDiscretisation(
+            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
+        )
+        disc.mesh_geometry(defaults.geometry)
+        mesh = disc.mesh
+
+        combined_submesh = mesh.combine_submeshes("negative particle")
+
+        # grad
+        var = pybamm.Variable("var", domain="negative particle")
+        grad_eqn = pybamm.grad(var)
+        y_slices = disc.get_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, {})
+
+        constant_y = np.ones_like(combined_submesh.nodes)
+        np.testing.assert_array_equal(
+            grad_eqn_disc.evaluate(None, constant_y),
+            np.zeros_like(combined_submesh.edges[1:-1]),
+        )
+
+        linear_y = combined_submesh.nodes
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.evaluate(None, linear_y),
+            np.ones_like(combined_submesh.edges[1:-1]),
+        )
+        # div
+        # div ( grad(r^2) ) == 6 , N_left = N_right = 0
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+        }
+        div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+
+        linear_y = combined_submesh.nodes
+        const = 6 * np.ones(combined_submesh.npts)
+
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(None, const), np.zeros_like(combined_submesh.nodes)
         )
 
     def test_grad_div_shapes_mixed_domain(self):
