@@ -481,21 +481,12 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         }
 
         def get_l2_error(n):
-            geometry = {
-                "negative particle": {
-                    "r": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
-                }
-            }
-            param = pybamm.ParameterValues(base_parameters={})
-            param.process_geometry(geometry)
-            mesh_type = pybamm.Mesh
-            submesh_pts = {"negative particle": {"r": n}}
-            submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+            defaults = shared.TestDefaults1DParticle(n)
 
             disc = pybamm.FiniteVolumeDiscretisation(
-                mesh_type, submesh_pts, submesh_types
+                defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
             )
-            disc.mesh_geometry(geometry)
+            disc.mesh_geometry(defaults.geometry)
             mesh = disc.mesh["negative particle"]
             r = mesh.nodes
 
