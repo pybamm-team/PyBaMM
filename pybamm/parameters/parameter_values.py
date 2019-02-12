@@ -168,4 +168,6 @@ class ParameterValues(dict):
             return pybamm.Concatenation(*new_children)
 
         else:
-            return copy.deepcopy(symbol)
+            new_symbol = copy.deepcopy(symbol)
+            new_symbol.parent = None
+            return new_symbol

@@ -51,10 +51,15 @@ class Concatenation(pybamm.Symbol):
     @property
     def children(self):
         """
-        Overwrite the children property, returning copies of the children to avoid
-        corrupting the expression tree internal data
+        Overwrite the children property, returning copies of the children with parent
+        removed to avoid corrupting the expression tree internal data
         """
-        return [copy.deepcopy(child) for child in self._NodeMixin__children_]
+        children_without_parents = []
+        for child in self._NodeMixin__children_:
+            new_child = copy.deepcopy(child)
+            new_child.parent = None
+            children_without_parents.append(new_child)
+        return tuple(children_without_parents)
 
 
 class NumpyModelConcatenation(pybamm.Symbol):

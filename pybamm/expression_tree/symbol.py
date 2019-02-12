@@ -197,8 +197,6 @@ class Symbol(anytree.NodeMixin):
         cp = copy.deepcopy(self, memo)
         self.__deepcopy__ = deepcopy_method
 
-        # cp.parent = None
-
         return cp
 
     def __add__(self, other):
