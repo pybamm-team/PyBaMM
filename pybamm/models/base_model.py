@@ -18,7 +18,9 @@ class BaseModel(object):
         A dictionary that maps expressions (variables) to expressions that represent
         the rhs
     algebraic: dict
-        A list of algebraic expressions that are assumed to equate to zero
+        A dictionary that maps expressions (variables) to expressions that represent
+        the algebraic equations. The algebraic expressions are assumed to equate
+        to zero
     initial_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the initial conditions for the state variables y
