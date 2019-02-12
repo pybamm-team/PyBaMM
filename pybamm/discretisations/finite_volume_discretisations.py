@@ -176,11 +176,23 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
 
         domain = symbol.domain
         # check for
-        if "negative particle" or "positive particle" in domain:
-            divergence_matrix = self.spherical_divergence_matrix(domain)
+        if ("negative particle" or "positive particle") in domain:
+
+            # implement spherical operator
+            divergence_matrix = self.divergence_matrix(domain)
+
+            submesh = self.mesh.combine_submeshes(*domain)
+            r = pybamm.Vector(submesh.nodes)
+            r_edges = pybamm.Vector(submesh.edges)
+
+            out = (1 / (r ** 2)) * (
+                divergence_matrix * ((r_edges ** 2) * discretised_symbol)
+            )
+
         else:
             divergence_matrix = self.divergence_matrix(domain)
-        return divergence_matrix * discretised_symbol
+            out = divergence_matrix * discretised_symbol
+        return out
 
     def divergence_matrix(self, domain):
         """
@@ -199,36 +211,6 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh.combine_submeshes(*domain)
-
-        # Create matrix using submesh
-        n = submesh.npts + 1
-        e = 1 / submesh.d_edges
-        data = np.vstack(
-            [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
-        )
-        diags = np.array([0, 1])
-        matrix = spdiags(data, diags, n - 1, n)
-        return pybamm.Matrix(matrix)
-
-    def spherical_divergence_matrix(self, domain):
-        """
-        Spherical Divergence matrix for finite volumes in the spherical domain.
-        Equivalent to 
-        div(N) = ((r[1:]+r[:-1])/2)^2 ( (r[1:]^2 N[1:]) -(r[:-1]^2 N[:-1]) )/dx
-
-        Parameters
-        ----------
-        domain : list
-            The domain(s) in which to compute the divergence matrix
-
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The (sparse) finite volume divergence matrix for the domain
-        """
-
-        # domain should now be ["negative particle", "positive particle"]
-        # so we don't want to create a combined submesh
 
         # Create matrix using submesh
         n = submesh.npts + 1

@@ -469,6 +469,60 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         rates = np.log2(errs[:-1] / errs[1:])
         np.testing.assert_array_less(1.49 * np.ones_like(rates), rates)
 
+    def test_spherical_operators(self):
+        # test div( grad( sin(r) )) == (2/r)*cos(r) - *sin(r)
+
+        domain = ["negative particle"]
+        c = pybamm.Variable("c", domain=domain)
+        N = pybamm.grad(c)
+        eqn = pybamm.div(N)
+        boundary_conditions = {
+            N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
+        }
+
+        def get_l2_error(n):
+            geometry = {
+                "negative particle": {
+                    "r": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+                }
+            }
+            param = pybamm.ParameterValues(base_parameters={})
+            param.process_geometry(geometry)
+            mesh_type = pybamm.Mesh
+            submesh_pts = {"negative particle": {"r": n}}
+            submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+
+            disc = pybamm.FiniteVolumeDiscretisation(
+                mesh_type, submesh_pts, submesh_types
+            )
+            disc.mesh_geometry(geometry)
+            mesh = disc.mesh["negative particle"]
+            r = mesh.nodes
+
+            # exact solution
+            y = np.sin(r)
+            exact = (2 / r) * np.cos(r) - np.sin(r)
+            exact_internal = exact[1:-1]
+
+            # discretise and evaluate
+            y_slices = disc.get_variable_slices([c])
+            eqn_disc = disc.process_symbol(eqn, y_slices, boundary_conditions)
+            approx_internal = eqn_disc.evaluate(None, y)[1:-1]
+
+            # error
+            error = np.linalg.norm(approx_internal - exact_internal) / np.linalg.norm(
+                exact_internal
+            )
+            return error
+
+        # Get errors
+        ns = 10 * (2 ** np.arange(2, 7))
+        errs = np.array([get_l2_error(int(n)) for n in ns])
+
+        # Get rates: expect h**1.5 convergence because of boundary conditions
+        rates = np.log2(errs[:-1] / errs[1:])
+        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
