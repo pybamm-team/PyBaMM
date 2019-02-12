@@ -38,7 +38,7 @@ class TestBaseModel(unittest.TestCase):
 
     def test_algebraic_set_get(self):
         model = pybamm.BaseModel()
-        algebraic = [pybamm.Symbol("c") - pybamm.Symbol("a")]
+        algebraic = {pybamm.Symbol("b"): pybamm.Symbol("c") - pybamm.Symbol("a")}
         model.algebraic = algebraic
         self.assertEqual(algebraic, model.algebraic)
 
@@ -173,25 +173,31 @@ class TestBaseModel(unittest.TestCase):
 
         # Well-posed DAE model
         e = pybamm.Variable("e", domain=whole_cell)
-        model.algebraic = [e - c - d]
+        model.algebraic = {e: e - c - d}
         model.check_well_posedness()
 
         # Underdetermined model - not enough differential equations
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1}
-        model.algebraic = [e - c - d]
+        model.algebraic = {e: e - c - d}
         with self.assertRaisesRegex(pybamm.ModelError, "underdetermined"):
             model.check_well_posedness()
 
         # Underdetermined model - not enough algebraic equations
-        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c - e}
-        model.algebraic = []
+        model.algebraic = {}
         with self.assertRaisesRegex(pybamm.ModelError, "underdetermined"):
             model.check_well_posedness()
 
-        # Overdetermined model - too many algebraic equations
-        # Model cannot be overdetermined by too many differential equations, as rhs
-        # keys are all unique variables
-        model.algebraic = [c - d, e + d]
+        # Overdetermined model - repeated keys
+        model.algebraic = {c: c - d, d: e + d}
+        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+            model.check_well_posedness()
+        # Overdetermined model - extra keys in algebraic
+        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -d}
+        model.algebraic = {e: c - d}
+        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+            model.check_well_posedness()
+        model.rhs = {c: 1, d: -1}
+        model.algebraic = {e: c - d}
         with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
             model.check_well_posedness()
 
@@ -226,6 +232,20 @@ class TestBaseModel(unittest.TestCase):
         d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {c: 3}
         model.boundary_conditions = {4 * pybamm.grad(d): {"left": 0, "right": 0}}
+        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
+            model.check_well_posedness()
+
+        # Algebraic well-posed model
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        model = pybamm.BaseModel()
+        model.algebraic = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
+        model.boundary_conditions = {2 * c: {"left": 0, "right": 0}}
+        model.check_well_posedness()
+        model.boundary_conditions = {pybamm.grad(c): {"left": 0, "right": 0}}
+        model.check_well_posedness()
+
+        # Algebraic model with bad boundary conditions
+        model.boundary_conditions = {d: {"left": 0, "right": 0}}
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
 

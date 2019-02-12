@@ -90,7 +90,7 @@ class TestScikitsSolver(unittest.TestCase):
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
         model.rhs = {var1: 0.1 * var1}
-        model.algebraic = [2 * var1 - var2]
+        model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
         disc = model.default_discretisation
