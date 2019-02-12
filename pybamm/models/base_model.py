@@ -37,7 +37,7 @@ class BaseModel(object):
     def __init__(self):
         # Initialise empty model
         self._rhs = {}
-        self._algebraic = []
+        self._algebraic = {}
         self._initial_conditions = {}
         self._initial_conditions_ydot = {}
         self._boundary_conditions = {}
@@ -88,7 +88,7 @@ class BaseModel(object):
             ]
         ):
             raise pybamm.DomainError(
-                """variable and equation in {} must have the same domain""".format(name)
+                "variable and equation in '{}' must have the same domain".format(name)
             )
 
         return dict
@@ -107,7 +107,7 @@ class BaseModel(object):
 
     @algebraic.setter
     def algebraic(self, algebraic):
-        self._algebraic = algebraic
+        self._algebraic = self._set_dict(algebraic, "algebraic")
 
     @property
     def initial_conditions(self):
@@ -206,22 +206,26 @@ class BaseModel(object):
         """
         # Equations (differential and algebraic)
         # Get all the variables from differential and algebraic equations
-        variable_ids_in_eqns = set()
-        for eqn in list(self.rhs.values()) + self.algebraic:
-            variable_ids_in_eqns.update(
-                [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
+        variable_ids_in_keys = set()
+        variables_in_eqns = set()
+        # Get all variables ids from rhs and algebraic keys and equations
+        for var, eqn in {**self.rhs, **self.algebraic}.items():
+            variable_ids_in_keys.add(var.id)
+            variables_in_eqns.update(
+                [x for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
-        # Get all variables ids from rhs keys
-        variable_ids_in_keys = set([var.id for var in self.rhs.keys()])
+
         # Compare eqns and keys
-        unaccounted_variables = variable_ids_in_eqns.difference(variable_ids_in_keys)
-        # Count how many variables are not accounted for by algebraic equations
-        n_extra_variables = len(unaccounted_variables) - len(self.algebraic)
-        # Make sure n_extra_variables == 0
-        if n_extra_variables > 0:
-            raise pybamm.ModelError("model is underdetermined")
-        elif n_extra_variables < 0:
-            raise pybamm.ModelError("model is overdetermined")
+        extra_variables = [
+            var for var in variables_in_eqns if var.id not in variable_ids_in_keys
+        ]
+        # Raise error if there is are too many variables in equations
+        if extra_variables:
+            raise pybamm.ModelError(
+                "model is underdetermined: no equation for variables '{}'".format(
+                    extra_variables
+                )
+            )
 
         # Initial conditions
         for var in self.rhs.keys():
