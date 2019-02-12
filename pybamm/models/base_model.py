@@ -20,7 +20,8 @@ class BaseModel(object):
     algebraic: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the algebraic equations. The algebraic expressions are assumed to equate
-        to zero. Note that all the variables in the model must exist in the keys of `rhs` or `algebraic`.
+        to zero. Note that all the variables in the model must exist in the keys of
+        `rhs` or `algebraic`.
     initial_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the initial conditions for the state variables y
@@ -203,7 +204,7 @@ class BaseModel(object):
         - There is an initial condition in self.initial_conditions for each
         variable/equation pair in self.rhs
         - There are appropriate boundary conditions in self.boundary_conditions for each
-        variable/equation pair in self.rhs
+        variable/equation pair in self.rhs and self.algebraic
         """
         # Equations (differential and algebraic)
         # Get all the variables from differential and algebraic equations
@@ -246,7 +247,7 @@ class BaseModel(object):
                 )
 
         # Boundary conditions
-        for var, eqn in self.rhs.items():
+        for var, eqn in {**self.rhs, **self.algebraic}.items():
             if eqn.has_spatial_derivatives():
                 # Variable must be in at least one expression in the boundary condition
                 # keys (to account for both Dirichlet and Neumann boundary conditions)

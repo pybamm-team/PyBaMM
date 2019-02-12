@@ -235,6 +235,20 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
 
+        # Algebraic well-posed model
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        model = pybamm.BaseModel()
+        model.algebraic = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
+        model.boundary_conditions = {2 * c: {"left": 0, "right": 0}}
+        model.check_well_posedness()
+        model.boundary_conditions = {pybamm.grad(c): {"left": 0, "right": 0}}
+        model.check_well_posedness()
+
+        # Algebraic model with bad boundary conditions
+        model.boundary_conditions = {d: {"left": 0, "right": 0}}
+        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
+            model.check_well_posedness()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
