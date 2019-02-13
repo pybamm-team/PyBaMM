@@ -5,6 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import anytree
 import copy
 import numpy as np
 import numbers
@@ -51,11 +52,11 @@ class Concatenation(pybamm.Symbol):
     @property
     def children(self):
         """
-        Overwrite the children property, returning copies of the children with parent
+        Overload the children property, returning deepcopies of the children with parent
         removed to avoid corrupting the expression tree internal data
         """
         children_without_parents = []
-        for child in self._NodeMixin__children_:
+        for child in super().children:
             new_child = copy.deepcopy(child)
             new_child.parent = None
             children_without_parents.append(new_child)
