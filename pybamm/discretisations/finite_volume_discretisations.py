@@ -74,6 +74,8 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
                 + domain
                 + [domain[-1] + "_right ghost cell"]
             )
+
+        # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
 
@@ -166,11 +168,31 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
+            # for the particles there will be a "negative particle" "left" and "right"
+            # and also a "positive particle" left and right.
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
-        divergence_matrix = self.divergence_matrix(symbol.domain)
-        return divergence_matrix * discretised_symbol
+
+        domain = symbol.domain
+        # check for
+        if ("negative particle" or "positive particle") in domain:
+
+            # implement spherical operator
+            divergence_matrix = self.divergence_matrix(domain)
+
+            submesh = self.mesh.combine_submeshes(*domain)
+            r = pybamm.Vector(submesh.nodes)
+            r_edges = pybamm.Vector(submesh.edges)
+
+            out = (1 / (r ** 2)) * (
+                divergence_matrix * ((r_edges ** 2) * discretised_symbol)
+            )
+
+        else:
+            divergence_matrix = self.divergence_matrix(domain)
+            out = divergence_matrix * discretised_symbol
+        return out
 
     def divergence_matrix(self, domain):
         """

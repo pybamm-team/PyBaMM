@@ -38,42 +38,6 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             result = disc._concatenate_init(initial_conditions, y_slices)
 
-    def test_find_all_variables(self):
-        # create discretisation
-        defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
-
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-
-        a = pybamm.Variable("a", domain=whole_cell)
-        b = pybamm.Variable("b", domain=whole_cell)
-        c = pybamm.Variable("c", domain=whole_cell)
-        model = pybamm.BaseModel()
-        model.rhs = {c: pybamm.Scalar(1)}
-
-        variables = disc.get_all_variables(model)
-        self.assertListEqual([v.id for v in variables], [v.id for v in [c]])
-
-        model.rhs = {c: pybamm.Scalar(1), b: pybamm.Scalar(1)}
-
-        variables = disc.get_all_variables(model)
-        self.assertListEqual([v.id for v in variables], [v.id for v in [c, b]])
-
-        model.rhs = {c: pybamm.Scalar(1), b: pybamm.Scalar(1)}
-        model.algebraic = [a - c]
-
-        variables = disc.get_all_variables(model)
-        self.assertListEqual([v.id for v in variables], [v.id for v in [c, b, a]])
-
-        model.rhs = {}
-        model.algebraic = [a - c]
-
-        variables = disc.get_all_variables(model)
-        self.assertSetEqual({v.id for v in variables}, {v.id for v in [a, c]})
-
     def test_discretise_slicing(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
@@ -416,7 +380,7 @@ class TestDiscretise(unittest.TestCase):
         N = pybamm.grad(c)
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
-        model.algebraic = [d - 2 * c]
+        model.algebraic = {d: d - 2 * c}
         model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
         model.initial_conditions_ydot = {d: pybamm.Scalar(2), c: pybamm.Scalar(1)}
 
@@ -469,7 +433,7 @@ class TestDiscretise(unittest.TestCase):
         # test that not enough initial conditions for ydot raises an error
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
-        model.algebraic = [d - 2 * c]
+        model.algebraic = {d: d - 2 * c}
         model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
         model.initial_conditions_ydot = {c: pybamm.Scalar(1)}
 

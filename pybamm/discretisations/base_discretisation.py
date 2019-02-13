@@ -57,9 +57,67 @@ class BaseDiscretisation(object):
         self._mesh = self.mesh_type(geometry, self.submesh_types, self.submesh_pts)
 
         # Set the y split for variables
-        variables = self.get_all_variables(model)
+        variables = list(model.rhs.keys()) + list(model.algebraic.keys())
         y_slices = self.get_variable_slices(variables)
 
+        # Process initial condtions
+        self.process_initial_conditions(model, y_slices)
+
+        # Process differential and algebraic equations
+        self.process_rhs_and_algebraic(model, y_slices)
+
+        # Discretise variables (applying boundary conditions)
+        # Note that we **do not** discretise the keys of model.rhs,
+        # model.initial_conditions and model.boundary_conditions
+        model.variables = self.process_dict(
+            model.variables, y_slices, model.boundary_conditions
+        )
+
+        # Check that resulting model makes sense
+        self.check_model(model)
+
+    def get_variable_slices(self, variables):
+        """Set the slicing for variables.
+
+        Parameters
+        ----------
+        variables : list of Variables
+            Variables for which to set the slices
+
+        Returns
+        -------
+        y_slices : dict of {variable id: slice}
+            The slices to take when solving (assigning chunks of y to each vector)
+        """
+        y_slices = {variable.id: None for variable in variables}
+        start = 0
+        end = 0
+        for variable in variables:
+            # If domain is empty then variable has size 1
+            if variable.domain == []:
+                end += 1
+            # Otherwise, add up the size of all the domains in variable.domain
+            else:
+                for dom in variable.domain:
+                    end += self.mesh[dom].npts
+            y_slices[variable.id] = slice(start, end)
+            start = end
+
+        return y_slices
+
+    def process_initial_conditions(self, model, y_slices):
+        """Discretise model initial_conditions.
+        Currently inplace, could be changed to return a new model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+        y_slices : dict of {variable id: slice}
+            The slices to assign to StateVectors when discretising
+
+        """
         # Discretise initial conditions
         model.initial_conditions = self.process_dict(model.initial_conditions)
         model.initial_conditions_ydot = self.process_dict(model.initial_conditions_ydot)
@@ -79,94 +137,29 @@ class BaseDiscretisation(object):
         else:
             model.concatenated_initial_conditions_ydot = np.array([])
 
+    def process_rhs_and_algebraic(self, model, y_slices):
+        """Discretise model equations - differential ('rhs') and algebraic.
+        Currently inplace, could be changed to return a new model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+        y_slices : dict of {variable id: slice}
+            The slices to assign to StateVectors when discretising
+
+        """
         # Discretise right-hand sides, passing domain from variable
         model.rhs = self.process_dict(model.rhs, y_slices, model.boundary_conditions)
         # Concatenate rhs into a single state vector
         model.concatenated_rhs = self.concatenate(*model.rhs.values())
 
         # Discretise and concatenate algebraic equations
-        model.algebraic = self.process_list(
+        model.algebraic = self.process_dict(
             model.algebraic, y_slices, model.boundary_conditions
         )
-        model.concatenated_algebraic = self.concatenate(*model.algebraic)
-
-        # Discretise variables (applying boundary conditions)
-        # Note that we **do not** discretise the keys of model.rhs,
-        # model.initial_conditions and model.boundary_conditions
-        model.variables = self.process_dict(
-            model.variables, y_slices, model.boundary_conditions
-        )
-        self.check_model(model)
-
-    def get_all_variables(self, model):
-        """get all variables in a model
-
-        This returns all the variables in the model in a list. Given a model with n
-        differential equations in model.rhs, the returned list will have the
-        corresponding variables for these equations (in order) in the first n elements.
-        The remaining elements of the list will have the remaining algebraic variables
-        in no specific order
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
-            Model to dicretise.
-
-
-        Returns
-        -------
-        variables: list of :class:`pybamm.Variable`
-            All the variables in the model
-        """
-        variables = list(model.rhs.keys())
-        algebraic_variables = {}
-        for equation in model.algebraic:
-            # find all variables in the expression
-            eq_variables = {
-                variable.id: pybamm.Variable(variable.name, variable.domain)
-                for variable in equation.pre_order()
-                if isinstance(variable, pybamm.Variable)
-            }
-
-            # add to the total set
-            algebraic_variables.update(eq_variables)
-
-        # remove rhs variables from algebraic variables (if they exist)
-        for variable in variables:
-            algebraic_variables.pop(variable.id, None)
-
-        # return both rhs and algebraic variables
-        return variables + list(algebraic_variables.values())
-
-    def get_variable_slices(self, variables):
-        """Set the slicing for variables.
-
-        Parameters
-        ----------
-        variables : list of Variables
-            Variables for which to set the slices
-
-        Returns
-        -------
-        y_slices : dict of {variable id: slice}
-            The slices to take when solving (assigning chunks of y to each vector)
-        """
-
-        y_slices = {variable.id: None for variable in variables}
-        start = 0
-        end = 0
-        for variable in variables:
-            # If domain is empty then variable has size 1
-            if variable.domain == []:
-                end += 1
-            # Otherwise, add up the size of all the domains in variable.domain
-            else:
-                for dom in variable.domain:
-                    end += self.mesh[dom].npts
-            y_slices[variable.id] = slice(start, end)
-            start = end
-
-        return y_slices
+        model.concatenated_algebraic = self.concatenate(*model.algebraic.values())
 
     def process_dict(self, var_eqn_dict, y_slices=None, boundary_conditions={}):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
@@ -204,36 +197,6 @@ class BaseDiscretisation(object):
             )
 
         return var_eqn_dict
-
-    def process_list(self, var_eqn_list, y_slices, boundary_conditions):
-        """Discretise a list of [equation]
-        (typically model.algebraic).
-
-        Parameters
-        ----------
-        var_eqn_list:list
-            Equations to dicretise
-        y_slices : dict of {variable id: slice}
-            The slices to assign to StateVectors when discretising
-        boundary_conditions : dict
-            Boundary conditions ({symbol.id: {"left": left bc, "right": right bc}} dict)
-            associated with var_eqn_dict to dicretise
-
-        Returns
-        -------
-        var_eqn_dict : dict
-            Discretised right-hand side equations
-
-        """
-        boundary_conditions = {
-            key.id: value for key, value in boundary_conditions.items()
-        }
-        for i, equation in enumerate(var_eqn_list):
-            var_eqn_list[i] = self.process_symbol(
-                equation, y_slices, boundary_conditions
-            )
-
-        return var_eqn_list
 
     def process_symbol(self, symbol, y_slices=None, boundary_conditions={}):
         """Discretise operators in model equations.
