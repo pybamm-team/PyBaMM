@@ -12,18 +12,62 @@ from scipy.sparse import spdiags
 class FiniteVolume(pybamm.SpatialMethod):
     """
     A class which implements the steps specific to the finite volume method during 
-    discretisation. 
+    discretisation.
 
     Parameters
     ----------
+    mesh : :class:`pybamm.Mesh` (or subclass)
+        Contains all the submeshes for discretisation
+
+    **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
-
+    # TODO: figure out where to put mesh
     def __init__(self, mesh):
-        self.mesh = mesh
+        self._mesh = mesh
 
+    def spatial_variable(self, symbol):
+        """
+        Create a discretised spatial variable compatible with 
+        the FiniteVolume method. 
 
-     def gradient(self, symbol, y_slices, boundary_conditions):
+        Parameters
+        -----------
+        symbol : :class:`pybamm.SpatialVariable` 
+            The spatial variable to be discretised.
+        """
+
+        # for finite volume we use the cell centres
+        symbol_mesh = self._mesh.combine_submeshes(*symbol.domain)
+        return pybamm.Vector(symbol_mesh.nodes)
+
+    def broadcast(self, symbol, domain):
+        """
+        Broadcast symbol to a specified domain. To do this, calls
+        :class:`pybamm.NumpyBroadcast`
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol to be broadcasted
+        domain : iterable of string
+            The domain to broadcast to
+        """
+
+        # for finite volume we send variables to cells and so use number_of_cells
+        number_of_cells = self._mesh.submesh_pts
+        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, number_of_cells)
+
+        # if the broadcasted symbol evaluates to a constant value, replace the
+        # symbol-Vector multiplication with a single array
+        if broadcasted_symbol.is_constant():
+            broadcasted_symbol = pybamm.Array(
+                broadcasted_symbol.evaluate(), domain=broadcasted_symbol.domain
+            )
+
+        return broadcasted_symbol
+
+    def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
         See :meth:`pybamm.BaseDiscretisation.gradient`
         """
@@ -33,7 +77,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 "boundary condition keys should be hashes, not {}".format(type(key))
             )
         # Discretise symbol
-        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         domain = symbol.domain
         # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
@@ -66,7 +109,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume gradient matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self._mesh.combine_submeshes(*domain)
 
         # Create matrix using submesh
         n = submesh.npts
@@ -78,7 +121,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = spdiags(data, diags, n - 1, n)
         return pybamm.Matrix(matrix)
 
-    def divergence(self, symbol, y_slices, boundary_conditions):
+    def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.BaseDiscretisation.gradient`
         """
@@ -87,8 +130,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             assert isinstance(key, int), TypeError(
                 "boundary condition keys should be hashes, not {}".format(type(key))
             )
-        # Discretise symbol
-        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
             # for the particles there will be a "negative particle" "left" and "right"
@@ -98,13 +139,13 @@ class FiniteVolume(pybamm.SpatialMethod):
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
 
         domain = symbol.domain
-        # check for
+        # check for spherical domains
         if ("negative particle" or "positive particle") in domain:
 
             # implement spherical operator
             divergence_matrix = self.divergence_matrix(domain)
 
-            submesh = self.mesh.combine_submeshes(*domain)
+            submesh = self._mesh.combine_submeshes(*domain)
             r = pybamm.Vector(submesh.nodes)
             r_edges = pybamm.Vector(submesh.edges)
 
@@ -133,7 +174,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume divergence matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self._mesh.combine_submeshes(*domain)
 
         # Create matrix using submesh
         n = submesh.npts + 1
@@ -145,4 +186,121 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = spdiags(data, diags, n - 1, n)
         return pybamm.Matrix(matrix)
 
+    def add_ghost_nodes(self, discretised_symbol, lbc, rbc):
+        """
+        Add Dirichlet boundary conditions via ghost nodes.
 
+        For a boundary condition "y = a at the left-hand boundary",
+        we concatenate a ghost node to the start of the vector y with value "2*a - y1"
+        where y1 is the value of the first node.
+        Similarly for the right-hand boundary condition.
+
+        Currently, Dirichlet boundary conditions can only be applied on state
+        variables (e.g. concentration, temperature), and not on expressions.
+        To access the value of the first node (y1), we create a "first_node" object
+        which is a StateVector whose y_slice is the start of the y_slice of
+        discretised_symbol.
+        Similarly, the last node is a StateVector whose y_slice is the end of the
+        y_slice of discretised_symbol
+
+        Parameters
+        ----------
+        discretised_symbol : :class:`pybamm.StateVector` (size n)
+            The discretised variable (a state vector) to which to add ghost nodes
+        lbc : :class:`pybamm.Scalar`
+            Dirichlet bouncary condition on the left-hand side
+        rbc : :class:`pybamm.Scalar`
+            Dirichlet bouncary condition on the right-hand side
+
+        Returns
+        -------
+        :class:`pybamm.Concatenation` (size n+2)
+            Concatenation of the variable (a state vector) and ghost nodes
+
+        """
+        assert isinstance(discretised_symbol, pybamm.StateVector), NotImplementedError(
+            """discretised_symbol must be a StateVector, not {}""".format(
+                type(discretised_symbol)
+            )
+        )
+        # left ghost cell
+        y_slice_start = discretised_symbol.y_slice.start
+        first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
+        left_ghost_cell = 2 * lbc - first_node
+        # right ghost cell
+        y_slice_stop = discretised_symbol.y_slice.stop
+        last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
+        right_ghost_cell = 2 * rbc - last_node
+        # concatenate
+        return self.concatenate(left_ghost_cell, discretised_symbol, right_ghost_cell)
+
+    ########################################################################################
+    ## I think the following can probably be moved outside of the spatial method
+    ########################################################################################
+
+    def compute_diffusivity(self, symbol):
+        """
+        Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
+        For now we just take the arithemtic mean, though it may be better to take the
+        harmonic mean based on [1].
+
+        [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
+        the diffusion equation." (2012).
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            Symbol to be averaged. When evaluated, this symbol returns either a scalar
+            or an array of shape (n,), where n is the number of points in the mesh for
+            the symbol's domain (n = self.mesh[symbol.domain].npts)
+
+        Returns
+        -------
+        :class:`pybamm.NodeToEdge`
+            Averaged symbol. When evaluated, this returns either a scalar or an array of
+            shape (n-1,) as appropriate.
+        """
+
+        def arithmetic_mean(array):
+            """Calculate the arithemetic mean of an array"""
+            return (array[1:] + array[:-1]) / 2
+
+        return pybamm.NodeToEdge(symbol, arithmetic_mean)
+
+
+class NodeToEdge(pybamm.SpatialOperator):
+    """A node in the expression tree representing a unary operator that evaluates the
+    value of its child at cell edges by averaging the value at cell nodes.
+
+    Parameters
+    ----------
+
+    name : str
+        name of the node
+    child : :class:`Symbol`
+        child node
+    node_to_edge_function : method
+        the function used to average; only acts if the child evaluates to a
+        one-dimensional numpy array
+
+    **Extends:** :class:`pybamm.SpatialOperator`
+    """
+
+    def __init__(self, child, node_to_edge_function):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__(
+            "node to edge ({})".format(node_to_edge_function.__name__), child
+        )
+        self._node_to_edge_function = node_to_edge_function
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        evaluated_child = self.children[0].evaluate(t, y)
+        # If the evaluated child is a numpy array of shape (n,), do the averaging
+        # NOTE: Doing this check every time might be slow?
+        # NOTE: Will need to deal with 2D arrays at some point
+        if isinstance(evaluated_child, np.ndarray) and len(evaluated_child.shape) == 1:
+            return self._node_to_edge_function(evaluated_child)
+        # If not, no need to average
+        else:
+            return evaluated_child

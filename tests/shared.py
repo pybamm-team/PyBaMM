@@ -53,22 +53,20 @@ class TestDefaults1DParticle:
         self.mesh = pybamm.Mesh(self.geometry, self.submesh_types, self.submesh_pts)
 
 
-class DiscretisationForTesting(pybamm.BaseDiscretisation):
+class DiscretisationForTesting(pybamm.Discretisation):
     """Identity operators, no boundary conditions."""
 
     def __init__(self, mesh):
         super().__init__(mesh)
 
-    def gradient(self, symbol, y_slices, boundary_conditions):
-        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
+    def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain].npts
         gradient_matrix = pybamm.Matrix(np.eye(n))
         return gradient_matrix * discretised_symbol
 
-    def divergence(self, symbol, y_slices, boundary_conditions):
-        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
+    def divergence(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain].npts

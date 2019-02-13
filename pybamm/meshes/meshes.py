@@ -37,6 +37,7 @@ class Mesh(dict):
 
     def __init__(self, geometry, submesh_types, submesh_pts):
         super().__init__()
+        self.submesh_pts = submesh_pts
         for domain in geometry:
             submesh_type = submesh_types[domain]
             submesh_pt = submesh_pts[domain]

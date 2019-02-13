@@ -162,13 +162,14 @@ class NumpyBroadcast(Broadcast):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, domain, mesh):
+    # TODO: change places where mesh is inserted instead of submesh_pts
+    def __init__(self, child, domain, npts):
         super().__init__(child, domain, name="numpy broadcast")
         # determine broadcasting vector size (size 1 if the domain is empty)
         if domain == []:
             self.broadcasting_vector_size = 1
         else:
-            self.broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
+            self.broadcasting_vector_size = sum([npts[dom] for dom in domain])
         # create broadcasting vector (vector of ones with shape determined by the
         # domain)
         self.broadcasting_vector = np.ones(self.broadcasting_vector_size)
