@@ -46,10 +46,8 @@ class TestScipySolver(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.process_model(model, defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
+        disc.process_model(model)
         # Solve
         solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
         t_eval = np.linspace(0, 1, 100)

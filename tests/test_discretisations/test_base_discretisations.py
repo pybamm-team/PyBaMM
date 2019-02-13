@@ -301,6 +301,7 @@ class TestDiscretise(unittest.TestCase):
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
+        disc.process_model(model)
 
         y0 = model.concatenated_initial_conditions
         np.testing.assert_array_equal(y0, 3 * np.ones_like(combined_submesh.nodes))
@@ -328,7 +329,7 @@ class TestDiscretise(unittest.TestCase):
         }
         model.variables = {"ST": S * T}
 
-        disc.process_model(model, defaults.geometry)
+        disc.process_model(model)
         y0 = model.concatenated_initial_conditions
         np.testing.assert_array_equal(
             y0,
@@ -354,7 +355,7 @@ class TestDiscretise(unittest.TestCase):
         model.boundary_conditions = {}
         model.variables = {"ST": S * T}
         with self.assertRaises(pybamm.ModelError):
-            disc.process_model(model, defaults.geometry)
+            disc.process_model(model)
 
     def test_process_model_dae(self):
         # one rhs equation and one algebraic
@@ -378,6 +379,7 @@ class TestDiscretise(unittest.TestCase):
         disc = shared.DiscretisationForTesting(defaults.mesh)
         mesh = disc.mesh
 
+        disc.process_model(model)
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         y0 = model.concatenated_initial_conditions
@@ -422,7 +424,7 @@ class TestDiscretise(unittest.TestCase):
         model.variables = {"c": c, "N": N, "d": d}
 
         with self.assertRaises(pybamm.ModelError):
-            disc.process_model(model, defaults.geometry)
+            disc.process_model(model)
 
     def test_broadcast(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]

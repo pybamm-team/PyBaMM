@@ -27,7 +27,7 @@ class StandardModelTest(object):
         # Overwrite discretisation if given
         if disc is not None:
             self.disc = disc
-        self.disc.process_model(self.model, self.geometry)
+        self.disc.process_model(self.model)
         # Model should still be well-posed after processing
         self.model.check_well_posedness()
 

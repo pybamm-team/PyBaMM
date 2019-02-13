@@ -7,7 +7,7 @@ import numpy as np
 
 
 class TestDefaults1DMacro:
-    def __init__(self, n=0):
+    def __init__(self, npts=0):
         self.param = pybamm.ParameterValues(
             base_parameters={"Ln": 0.3, "Ls": 0.3, "Lp": 0.3}
         )
@@ -16,10 +16,10 @@ class TestDefaults1DMacro:
         self.param.process_geometry(self.geometry)
 
         self.submesh_pts = {
-                "negative electrode": {"x": 40},
-                "separator": {"x": 25},
-                "positive electrode": {"x": 35},
-            }
+            "negative electrode": {"x": 40},
+            "separator": {"x": 25},
+            "positive electrode": {"x": 35},
+        }
 
         self.submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
@@ -27,7 +27,7 @@ class TestDefaults1DMacro:
             "positive electrode": pybamm.Uniform1DSubMesh,
         }
 
-        if n!=0:
+        if npts != 0:
             n = 3 * round(npts / 3)
             self.submesh_pts = {
                 "negative electrode": {"x": n},
@@ -36,8 +36,6 @@ class TestDefaults1DMacro:
             }
 
         self.mesh = pybamm.Mesh(self.geometry, self.submesh_types, self.submesh_pts)
-
-    def set_equal_pts(self, npts):
 
 
 class TestDefaults1DParticle:
@@ -49,16 +47,17 @@ class TestDefaults1DParticle:
         }
         self.param = pybamm.ParameterValues(base_parameters={})
         self.param.process_geometry(self.geometry)
-        self.mesh_type = pybamm.Mesh
         self.submesh_pts = {"negative particle": {"r": n}}
         self.submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+
+        self.mesh = pybamm.Mesh(self.geometry, self.submesh_types, self.submesh_pts)
 
 
 class DiscretisationForTesting(pybamm.BaseDiscretisation):
     """Identity operators, no boundary conditions."""
 
     def __init__(self, mesh):
-        super().__init__(self, mesh)
+        super().__init__(mesh)
 
     def gradient(self, symbol, y_slices, boundary_conditions):
         discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)

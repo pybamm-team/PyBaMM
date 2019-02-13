@@ -76,10 +76,7 @@ class TestUnaryOperators(unittest.TestCase):
     def test_numpy_broadcast(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
         mesh = disc.mesh
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]

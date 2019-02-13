@@ -22,7 +22,7 @@ class BaseDiscretisation(object):
         the types of submeshes being employed on each of the subdomains
     """
 
-    def __init__(mesh):
+    def __init__(self, mesh):
         self._mesh = mesh
 
     @property

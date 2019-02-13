@@ -74,7 +74,7 @@ class Mesh(dict):
                 [self[submeshnames[0]].edges]
                 + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
             )
-            return SubMesh1D(combined_submesh_edges)
+            return pybamm.SubMesh1D(combined_submesh_edges)
         else:
             raise pybamm.DomainError("submesh edges are not aligned")
 
