@@ -50,10 +50,8 @@ $ pip uninstall pybamm
 Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use the
 wrapped SUNDIALS ODE and DAE
 [solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
-To install scikits.odes, either follow the instructions below, or use the provided
-install script in `scripts/install_scikits_odes.sh`.
 
-First download and compile sundials 3.1.1:
+To install scikits.odes, you will need to first download and compile sundials 3.1.1:
 
 ```bash
 $ INSTALL_DIR=`pwd`/sundials
@@ -71,13 +69,14 @@ Then install [scikits.odes](https://github.com/bmcage/odes), letting it know the
 $ SUNDIALS_INST=$INSTALL_DIR pip install scikits.odes
 ```
 
-After this, you need to set your `LD_LIBRARY_PATH`:
+After this, you will need to set your `LD_LIBRARY_PATH` to point to the sundials
+library:
 
 ```bash
 $ export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 ```
 
-You may wish to put this last line in your `.bashrc` or virtualenv `activate` script.
+You may wish to put this last line in your `.bashrc` or virtualenv `activate` script. 
 
 Please see the [scikits.odes
 documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
