@@ -23,5 +23,5 @@ class FunctionParameter(pybamm.UnaryOperator):
 
     """
 
-    def __init__(self, name, child, domain=[]):
-        super().__init__(name, child, domain=domain)
+    def __init__(self, name, child):
+        super().__init__(name, child)
