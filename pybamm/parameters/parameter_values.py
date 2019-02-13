@@ -146,6 +146,13 @@ class ParameterValues(dict):
             value = self.get_parameter_value(symbol)
             return pybamm.Scalar(value, domain=symbol.domain)
 
+        elif isinstance(symbol, pybamm.FunctionParameter):
+            new_child = self.process_symbol(symbol.children[0])
+            function_name = self.get_parameter_value(symbol)
+            # path = os.path.
+            function = pybamm.load_function(self.get_parameter_value(symbol))
+            return pybamm.Function(new_child, function)
+
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
             new_left = self.process_symbol(left)
