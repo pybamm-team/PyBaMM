@@ -76,7 +76,13 @@ library:
 $ export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 ```
 
-You may wish to put this last line in your `.bashrc` or virtualenv `activate` script. 
+You may wish to put this last line in your `.bashrc` or virtualenv `activate` script,
+which will save you needing to set your `LD_LIBRARY_PATH` every time you log in. For
+example, to add this line to your `.bashrc` you can type:
+
+```bash 
+$ echo 'export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
+```
 
 Please see the [scikits.odes
 documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
