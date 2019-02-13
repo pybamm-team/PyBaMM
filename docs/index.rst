@@ -23,6 +23,8 @@ Contents
 .. toctree::
 
     source/expression_tree/index
+    source/geometry/index
+    source/meshes/index
     source/models/index
     source/parameters/index
     source/discretisations/index
