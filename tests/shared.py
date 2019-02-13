@@ -37,6 +37,20 @@ class TestDefaults1DMacro:
         }
 
 
+class TestDefaults1DParticle:
+    def __init__(self, n):
+        self.geometry = {
+            "negative particle": {
+                "r": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+            }
+        }
+        self.param = pybamm.ParameterValues(base_parameters={})
+        self.param.process_geometry(self.geometry)
+        self.mesh_type = pybamm.Mesh
+        self.submesh_pts = {"negative particle": {"r": n}}
+        self.submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
+
+
 class DiscretisationForTesting(pybamm.BaseDiscretisation):
     """Identity operators, no boundary conditions."""
 
