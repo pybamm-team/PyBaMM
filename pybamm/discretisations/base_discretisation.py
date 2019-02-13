@@ -22,25 +22,14 @@ class BaseDiscretisation(object):
         the types of submeshes being employed on each of the subdomains
     """
 
-    def __init__(self, mesh_type, submesh_pts, submesh_types):
-        self.mesh_type = mesh_type
-        self.submesh_pts = submesh_pts
-        self.submesh_types = submesh_types
-
-        self._mesh = {}
+    def __init__(mesh):
+        self._mesh = mesh
 
     @property
     def mesh(self):
         return self._mesh
 
-    @mesh.setter
-    def mesh(self, mesh_in):
-        self._mesh = mesh_in
-
-    def mesh_geometry(self, geometry):
-        self._mesh = self.mesh_type(geometry, self.submesh_types, self.submesh_pts)
-
-    def process_model(self, model, geometry):
+    def process_model(self, model):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
 
@@ -51,9 +40,6 @@ class BaseDiscretisation(object):
             boundary_conditions (all dicts of {variable: equation})
 
         """
-
-        # Set the mesh
-        self._mesh = self.mesh_type(geometry, self.submesh_types, self.submesh_pts)
 
         # Set the y split for variables
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())

@@ -22,10 +22,7 @@ class TestDiscretise(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
 
         result = disc._concatenate_init(initial_conditions, y_slices)
 
@@ -41,10 +38,7 @@ class TestDiscretise(unittest.TestCase):
     def test_discretise_slicing(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
         mesh = disc.mesh
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -78,10 +72,7 @@ class TestDiscretise(unittest.TestCase):
     def test_process_symbol_base(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
 
         # variable
         var = pybamm.Variable("var")
@@ -144,10 +135,7 @@ class TestDiscretise(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
 
         y_slices = {var1.id: slice(53), var2.id: slice(53, 59)}
         exp_disc = disc.process_symbol(expression, y_slices)
@@ -184,10 +172,7 @@ class TestDiscretise(unittest.TestCase):
     def test_discretise_spatial_operator(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
         mesh = disc.mesh
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -230,10 +215,7 @@ class TestDiscretise(unittest.TestCase):
     def test_core_NotImplementedErrors(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
 
         with self.assertRaises(NotImplementedError):
             disc.gradient(None, None, {})
@@ -252,10 +234,7 @@ class TestDiscretise(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -318,10 +297,7 @@ class TestDiscretise(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.process_model(model, defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -399,10 +375,7 @@ class TestDiscretise(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.process_model(model, defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -456,10 +429,7 @@ class TestDiscretise(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -503,10 +473,7 @@ class TestDiscretise(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
 
         conc = disc.concatenate(a, b, c)
         self.assertIsInstance(conc, pybamm.NumpyModelConcatenation)
@@ -518,10 +485,7 @@ class TestDiscretise(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
         mesh = disc.mesh
 
         var = pybamm.Variable("var", domain=whole_cell)
@@ -541,10 +505,7 @@ class TestDiscretise(unittest.TestCase):
     def test_discretise_space(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
 
         # space
         x1 = pybamm.Space(["negative electrode"])

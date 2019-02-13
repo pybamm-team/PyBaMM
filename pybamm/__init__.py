@@ -125,8 +125,9 @@ from .discretisations.finite_volume_discretisations import (
     FiniteVolumeDiscretisation,
     NodeToEdge,
 )
-from .discretisations.meshes import KNOWN_DOMAINS
-from .discretisations.meshes import Mesh, SubMesh1D, Uniform1DSubMesh
+from .meshes.meshes import KNOWN_DOMAINS
+from .meshes.meshes import Mesh
+from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 
 #
 # Simulation class
