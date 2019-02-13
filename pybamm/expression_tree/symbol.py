@@ -100,6 +100,19 @@ class Symbol(anytree.NodeMixin):
             + tuple(self.domain)
         )
 
+    @property
+    def orphans(self):
+        """
+        Returning deepcopies of the children, with parents removed to avoid corrupting
+        the expression tree internal data
+        """
+        orp = []
+        for child in self.children:
+            new_child = copy.deepcopy(child)
+            new_child.parent = None
+            orp.append(new_child)
+        return tuple(orp)
+
     def render(self):
         """print out a visual representation of the tree (this node and its
         children)

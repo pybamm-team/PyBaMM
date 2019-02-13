@@ -128,12 +128,12 @@ class TestConcatenations(unittest.TestCase):
             ),
         )
 
-    def test_unpack_concatenation(self):
+    def test_concatenation_orphans(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
         c = pybamm.Variable("c")
         conc = pybamm.Concatenation(a, b, c)
-        a_new, b_new, c_new = conc.children
+        a_new, b_new, c_new = conc.orphans
 
         # We should be able to manipulate the children without TreeErrors
         self.assertIsInstance(2 * a_new, pybamm.Multiplication)

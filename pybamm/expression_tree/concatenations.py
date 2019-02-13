@@ -5,7 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import copy
 import numpy as np
 import numbers
 
@@ -47,19 +46,6 @@ class Concatenation(pybamm.Symbol):
         domain = sorted(domain_dict, key=domain_dict.__getitem__)
 
         return domain
-
-    @property
-    def children(self):
-        """
-        Overload the children property, returning deepcopies of the children with parent
-        removed to avoid corrupting the expression tree internal data
-        """
-        children_without_parents = []
-        for child in super().children:
-            new_child = copy.deepcopy(child)
-            new_child.parent = None
-            children_without_parents.append(new_child)
-        return tuple(children_without_parents)
 
 
 class NumpyModelConcatenation(pybamm.Symbol):
