@@ -7,7 +7,14 @@ from __future__ import print_function, unicode_literals
 import numpy as np
 import pybamm
 
-KNOWN_DOMAINS = ["negative electrode", "separator", "positive electrode", "test"]
+KNOWN_DOMAINS = [
+    "negative electrode",
+    "separator",
+    "positive electrode",
+    "test",
+    "negative particle",
+    "positive particle",
+]
 
 
 class Mesh(dict):
