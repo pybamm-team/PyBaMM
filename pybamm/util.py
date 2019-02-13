@@ -10,6 +10,7 @@ from __future__ import print_function, unicode_literals
 import timeit
 import cProfile
 import pstats
+import os
 
 
 class Timer(object):
@@ -78,3 +79,26 @@ def profile(code, sort="cumulative", num=30):
     stats = pstats.Stats()
     stats.sort_stats(sort)
     return stats
+
+
+def load_function(filename):
+    """
+    Load a python function from a file "function_name.py" called "function_name".
+
+    Arguments
+    ---------
+    filename : str
+        The name of the file containing the function of the same name.
+
+    Returns
+    -------
+    function
+        The python function loaded from the file.
+    """
+
+    if not filename.endswith('.py'):
+        raise ValueError("Expected filename.py, but got {}".format(filename))
+
+    func_to_return = abs
+
+    return func_to_return
