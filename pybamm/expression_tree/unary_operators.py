@@ -73,7 +73,7 @@ class Function(UnaryOperator):
     **Extends:** :class:`UnaryOperator`
     """
 
-    def __init__(self, child, func):
+    def __init__(self, func, child):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
         super().__init__("function ({})".format(func.__name__), child)
         self.func = func
