@@ -89,6 +89,9 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
 
         # concatenate them the "wrong" way round to check they get reordered correctly
+        import ipdb
+
+        ipdb.set_trace()
         conc = pybamm.DomainConcatenation([b, a], mesh)
         np.testing.assert_array_equal(
             conc.evaluate(),

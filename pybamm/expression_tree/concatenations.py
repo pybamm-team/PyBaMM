@@ -106,74 +106,12 @@ class DomainConcatenation(Concatenation):
         children = list(children)
 
         for i, child in enumerate(children):
-            if child.is_constant():
-                children[i] = self.process_node_for_concatenate(child, mesh)
+            if isinstance(child, pybamm.Scalar):
+                children[i] = pybamm.NumpyBroadcast(child, child.domain, mesh)
 
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
 
-        # create dict of domain => slice of final vector
-        self._slices = self.create_slices(self, mesh)
-
-        # store size of final vector
-        self._size = self._slices[self.domain[-1]].stop
-
-        # create disc of domain => slice for each child
-        self._children_slices = []
-        for child in self.children:
-            self._children_slices.append(self.create_slices(child, mesh))
-
-    def create_slices(self, node, mesh):
-        slices = {}
-        start = 0
-        end = 0
-        for dom in node.domain:
-            end += mesh[dom].npts
-            slices[dom] = slice(start, end)
-            start = end
-        return slices
-
-    def process_node_for_concatenate(self, node, mesh):
-        """
-        the node is assumed to be constant in time. this function replaces it with a
-        single Vector node with the correct length vector (according to its domain)
-
-        Parameters
-        ----------
-        node: derived from :class:`Symbol`
-            the sub-expression to process (node.is_constant() is true)
-
-        """
-
-        # node must be constant
-        value = node.evaluate()
-
-        # correct size of vector should be number of points in the domains
-        subvector_size = sum([mesh[dom].npts for dom in node.domain])
-
-        # check if its a scalar, if so convert to vector
-        if isinstance(value, numbers.Number):
-            value = np.full(subvector_size, value)
-
-        # check it is the right size
-        if value.size != subvector_size:
-            raise ValueError(
-                "Error: expression evaluated to a vector of incorrect length"
-            )
-
-        # convert to a Vector node
-        return pybamm.Vector(value, domain=node.domain)
-
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-
-        # preallocate vector
-        vector = np.empty(self._size)
-
-        # loop through domains of children writing subvectors to final vector
-        for child, slices in zip(self.children, self._children_slices):
-            child_vector = child.evaluate(t, y)
-            for dom in child.domain:
-                vector[self._slices[dom]] = child_vector[slices[dom]]
-
-        return vector
+        return np.concatenate([child.evaluate(t, y) for child in self.children])
