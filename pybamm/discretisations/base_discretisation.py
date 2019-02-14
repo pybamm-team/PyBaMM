@@ -5,6 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import copy
 import numpy as np
 
 
@@ -262,22 +263,10 @@ class BaseDiscretisation(object):
 
             return new_symbol
 
-        elif isinstance(symbol, pybamm.Scalar):
-            return pybamm.Scalar(symbol.value, domain=symbol.domain)
-
-        elif isinstance(symbol, pybamm.Array):
-            return symbol.__class__(symbol.entries, domain=symbol.domain)
-
         else:
-            raise NotImplementedError
-            # hack to copy the symbol but without a parent
-            # (building tree from bottom up)
-            # simply setting new_symbol.parent = None, after copying, raises a TreeError
-            # parent = symbol.parent
-            # symbol.parent = None
-            # new_symbol = copy.copy(symbol)
-            # symbol.parent = parent
-            # return new_symbol
+            new_symbol = copy.deepcopy(symbol)
+            new_symbol.parent = None
+            return new_symbol
 
     def process_binary_operators(self, bin_op, y_slices, boundary_conditions):
         """Discretise binary operators in model equations.  Performs appropriate
