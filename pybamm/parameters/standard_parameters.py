@@ -82,10 +82,6 @@ Ls = Parameter("Ls")
 Lp = Parameter("Lp")
 Lx = Ln + Ls + Lp
 
-# 3D Geometry
-Ly = Parameter("Ly")
-Lz = Parameter("Lz")
-
 # Microscale Geometry
 R_n = Parameter("R_n")
 R_p = Parameter("R_p")
@@ -123,8 +119,6 @@ cp0_dimensional = Parameter("cp0")  # Initial li concentration in pos electrode
 ln = Ln / Lx
 ls = Ls / Lx
 lp = Lp / Lx
-ly = Ly / Lz
-lz = Lz / Lz
 
 # Microscale Geometry
 epsilon_n = Parameter("epsilon_n")  # Electrolyte volume fraction in neg electrode

@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+from tests import shared
 
 import unittest
 
@@ -46,6 +47,26 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         self.assertGreater(param_eval["DeltaVsurf_p"], 0)
         # Excluded volume fraction should be less than 0.1
         self.assertLess(abs(param_eval["alpha"]), 1e-1)
+
+    def test_concatenated_parameters(self):
+        # create
+        s = pybamm.standard_parameters_lead_acid.s
+        self.assertIsInstance(s, pybamm.Concatenation)
+        self.assertEqual(
+            s.domain, ["negative electrode", "separator", "positive electrode"]
+        )
+
+        # process parameters and discretise
+        parameter_values = pybamm.ParameterValues(
+            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+        )
+        mesh = shared.MeshForTesting()
+        disc = pybamm.BaseDiscretisation(mesh)
+        processed_s = disc.process_symbol(parameter_values.process_symbol(s))
+
+        # test output
+        self.assertIsInstance(processed_s, pybamm.Vector)
+        self.assertEqual(processed_s.shape, mesh["whole cell"].nodes.shape)
 
     @unittest.skip("lead acid functions not yet implemented")
     def test_functions_lead_acid(self):

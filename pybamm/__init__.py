@@ -102,6 +102,7 @@ from .models.submodels import electrolyte, interface
 #
 # Parameters class and methods
 #
+from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard parameters
 from .parameters.parameter_values import ParameterValues
 from .parameters import functions_lead_acid
 from .parameters import standard_parameters
@@ -125,7 +126,6 @@ from .discretisations.finite_volume_discretisations import (
     FiniteVolumeDiscretisation,
     NodeToEdge,
 )
-from .meshes.meshes import KNOWN_DOMAINS
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 

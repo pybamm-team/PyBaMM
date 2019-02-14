@@ -91,17 +91,35 @@ Cdl = pybamm.Parameter("Cdl")  # Double-layer capacity [F.m-2]
 U_Pb_ref = pybamm.Parameter("U_Pb_ref")  # Reference OCP in the lead [V]
 U_PbO2_ref = pybamm.Parameter("U_PbO2_ref")  # Reference OCP in the lead dioxide [V]
 
-# Functions
-D_dim = pybamm.Parameter("epsn_max")
+# --------------------------------------------------------------------------------------
+"""Functions"""
+
 rho_dim = pybamm.Parameter("epsn_max")
 mu_dim = pybamm.Parameter("epsn_max")
+
+
+def D_dim(c):
+    return 1
+
+
+def D(c):
+    return D_dim(c * cmax) / D_dim(cmax)
+
+
+def U_Pb(c):
+    return U_Pb_ref
+
+
+def U_PbO2(c):
+    return U_PbO2_ref
+
 
 # --------------------------------------------------------------------------------------
 """Dimensionless Parameters"""
 
 Cd = (
     (pybamm.standard_parameters.Lx ** 2)
-    / D_dim
+    / D_dim(cmax)
     / (cmax * pybamm.standard_parameters.F * pybamm.standard_parameters.Lx / ibar)
 )  # Diffusional C-rate: diffusion timescale/discharge timescale
 alpha = (nu * Vw - Ve) * cmax  # Excluded volume fraction
@@ -174,6 +192,7 @@ pi_os = (
     / (d ** 2 * pybamm.standard_parameters.R * pybamm.standard_parameters.T * cmax)
 )  # Ratio of viscous pressure scale to osmotic pressure scale
 
+
 # Initial conditions
 q_init = pybamm.Parameter("q_init")  # Initial SOC [-]
 qmax = (
@@ -191,3 +210,16 @@ c_init = q_init
 epsn_init = epsn_max - epsDelta_n * (1 - q_init)  # Initial pororsity (neg) [-]
 epss_init = epss_max  # Initial pororsity (sep) [-]
 epsp_init = epsp_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
+
+
+# Concatenated symbols
+# artificially add domains - doesn't seem like the best way of doing this
+# TODO: look into how to do this more elegantly
+neg = pybamm.Scalar(1, domain=["negative electrode"])
+sep0 = pybamm.Scalar(0, domain=["separator"])
+sep1 = pybamm.Scalar(1, domain=["separator"])
+pos = pybamm.Scalar(1, domain=["positive electrode"])
+
+s = pybamm.Concatenation(sn * neg, sep0, sp * pos)
+beta_surf = pybamm.Concatenation(beta_surf_n * neg, sep0, beta_surf_p * pos)
+eps_init = pybamm.Concatenation(epsn_init * neg, epss_init * sep1, epsp_init * pos)
