@@ -29,3 +29,4 @@ Contents
     source/parameters/index
     source/discretisations/index
     source/solvers/index
+    source/simulation
