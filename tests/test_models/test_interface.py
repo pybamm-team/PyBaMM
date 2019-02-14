@@ -61,9 +61,12 @@ class TestHomogeneousReaction(unittest.TestCase):
         param_rxn = param.process_symbol(rxn)
         processed_rxn = disc.process_symbol(param_rxn)
 
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+
+        combined_submeshes = disc.mesh.combine_submeshes(*whole_cell)
         # processed_rxn should be a vector with the right shape
         self.assertIsInstance(processed_rxn, pybamm.Vector)
-        self.assertEqual(processed_rxn.shape, mesh["whole cell"].nodes.shape)
+        self.assertEqual(processed_rxn.shape, combined_submeshes.nodes.shape)
 
 
 class TestButlerVolmerLeadAcid(unittest.TestCase):
@@ -102,25 +105,31 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         self.assertIsInstance(bv, pybamm.Multiplication)
         self.assertEqual(bv.domain, ["positive electrode"])
 
-        # whole cell domain passes, retruns concatenation
+        # whole cell domain passes, returns concatenation
         bv = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
         self.assertIsInstance(bv, pybamm.Concatenation)
         self.assertEqual(
             bv.domain, ["negative electrode", "separator", "positive electrode"]
         )
 
-        # None converts to whole cell
-        bv = pybamm.interface.butler_volmer_lead_acid()
-        self.assertIsInstance(bv, pybamm.Concatenation)
-        self.assertEqual(
-            bv.domain, ["negative electrode", "separator", "positive electrode"]
+        # c and phi without domain, domain gets input
+        c = pybamm.Variable("concentration", domain=[])
+        phi = pybamm.Variable("potential", domain=[])
+        bv = pybamm.interface.butler_volmer_lead_acid(
+            c, phi, domain=["negative electrode"]
         )
+        self.assertIsInstance(bv, pybamm.Multiplication)
+        self.assertEqual(bv.domain, [])
 
     def test_failure(self):
+        # no domain
         with self.assertRaises(pybamm.DomainError):
             pybamm.interface.butler_volmer_lead_acid(
                 None, None, domain=["not a domain"]
             )
+        # mismatched domains
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.interface.butler_volmer_lead_acid(self.cn, self.phip)
 
     def test_set_parameters(self):
         bv = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
@@ -133,7 +142,6 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
     def test_discretisation(self):
         bv_n = pybamm.interface.butler_volmer_lead_acid(self.cn, self.phin)
         bv_p = pybamm.interface.butler_volmer_lead_acid(self.cp, self.phip)
-        bv_whole = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
 
         # process parameters
         param = pybamm.ParameterValues(
@@ -141,7 +149,6 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         )
         param_bv_n = param.process_symbol(bv_n)
         param_bv_p = param.process_symbol(bv_p)
-        param_bv_whole = param.process_symbol(bv_whole)
 
         # discretise
         mesh = shared.TestDefaults1DMacro().mesh
@@ -149,7 +156,6 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         y_slices = disc.get_variable_slices([self.cn, self.cp, self.phin, self.phip])
         processed_bv_n = disc.process_symbol(param_bv_n, y_slices)
         processed_bv_p = disc.process_symbol(param_bv_p, y_slices)
-        processed_bv_whole = disc.process_symbol(param_bv_whole, y_slices)
 
         submesh = np.concatenate(
             [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
@@ -165,8 +171,28 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
             processed_bv_p.evaluate(None, y).shape,
             mesh["positive electrode"].nodes.shape,
         )
+
+    @unittest.skip("needs smarter domain concatenation")
+    def test_discretisation_whole(self):
+        bv_whole = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
+
+        # process parameters
+        param = pybamm.ParameterValues(
+            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+        )
+        param_bv_whole = param.process_symbol(bv_whole)
+
+        # discretise
+        mesh = shared.TestDefaults1DMacro().mesh
+        disc = pybamm.BaseDiscretisation(mesh)
+        y_slices = disc.get_variable_slices([self.cn, self.cp, self.phin, self.phip])
+        processed_bv_whole = disc.process_symbol(param_bv_whole, y_slices)
+
+        # test
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        combined_submeshes = disc.mesh.combine_submeshes(*whole_cell)
         self.assertEqual(
-            processed_bv_whole.evaluate(None, y).shape, mesh["whole cell"].nodes.shape
+            processed_bv_whole.evaluate(None, y).shape, combined_submeshes.nodes.shape
         )
 
 
@@ -200,6 +226,9 @@ class TestExchangeCurrentDensity(unittest.TestCase):
             pybamm.interface.exchange_current_density(self.cp, ["negative electrode"])
         with self.assertRaises(pybamm.DomainError):
             pybamm.interface.exchange_current_density(self.cn, ["positive electrode"])
+        c = pybamm.Variable("concentration", domain=[])
+        with self.assertRaises(ValueError):
+            pybamm.interface.exchange_current_density(c)
 
     def test_failure(self):
         with self.assertRaises(pybamm.DomainError):

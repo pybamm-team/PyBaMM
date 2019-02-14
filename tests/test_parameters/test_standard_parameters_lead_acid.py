@@ -60,13 +60,17 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv", {"current scale": 1}
         )
-        mesh = shared.MeshForTesting()
+        mesh = shared.TestDefaults1DMacro().mesh
         disc = pybamm.BaseDiscretisation(mesh)
         processed_s = disc.process_symbol(parameter_values.process_symbol(s))
 
         # test output
         self.assertIsInstance(processed_s, pybamm.Vector)
-        self.assertEqual(processed_s.shape, mesh["whole cell"].nodes.shape)
+
+        combined_submeshes = disc.mesh.combine_submeshes(
+            "negative electrode", "separator", "positive electrode"
+        )
+        self.assertEqual(processed_s.shape, combined_submeshes.nodes.shape)
 
     @unittest.skip("lead acid functions not yet implemented")
     def test_functions_lead_acid(self):

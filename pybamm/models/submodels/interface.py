@@ -75,8 +75,8 @@ def butler_volmer_lead_acid(c, phi, domain=None):
     elif domain == ["negative electrode", "separator", "positive electrode"]:
         # Unpack c
         if all([isinstance(var, pybamm.Concatenation) for var in [c, phi]]):
-            cn, cs, cp = c.children
-            phin, phis, phip = phi.children
+            cn, cs, cp = c.orphans
+            phin, phis, phip = phi.orphans
         else:
             raise ValueError(
                 "c and phi must both be Concatenations, not '{}' and '{}'".format(
@@ -84,9 +84,6 @@ def butler_volmer_lead_acid(c, phi, domain=None):
                 )
             )
         # Negative electrode
-        import ipdb
-
-        ipdb.set_trace()
         current_neg = butler_volmer_lead_acid(cn, phin, domain=["negative electrode"])
         # Separator
         current_sep = pybamm.Scalar(0, domain=["separator"])
