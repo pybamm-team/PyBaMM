@@ -119,20 +119,20 @@ class TestParameterValues(unittest.TestCase):
         np.testing.assert_array_equal(processed_f.evaluate(), np.ones((5, 6)))
 
     def test_process_function_parameter(self):
-        parameter_values = pybamm.ParameterValues({"a": -1, "func": 'blah.py'})
+        parameter_values = pybamm.ParameterValues(
+            {"a": 3, "func": 'process_symbol_test_function.py'})
 
         # process parameter
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
         self.assertIsInstance(processed_a, pybamm.Scalar)
-        self.assertEqual(processed_a.value, -1)
+        self.assertEqual(processed_a.value, 3)
 
         # process function
         func = pybamm.FunctionParameter("func", a)
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Function)
-        self.assertEqual(processed_func.evaluate(), 1)
-
+        self.assertEqual(processed_func.evaluate(), 369)
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")

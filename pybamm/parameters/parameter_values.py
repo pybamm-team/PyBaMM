@@ -149,9 +149,7 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_child = self.process_symbol(symbol.children[0])
             function_name = self.get_parameter_value(symbol)
-            # path = os.path.
-            function = pybamm.load_function(self.get_parameter_value(symbol))
-            return pybamm.Function(new_child, function)
+            return pybamm.Function(new_child, pybamm.load_function(function_name))
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
