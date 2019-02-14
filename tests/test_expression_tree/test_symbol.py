@@ -231,6 +231,17 @@ class TestSymbol(unittest.TestCase):
         self.assertFalse(algebraic_eqn.has_gradient())
         self.assertFalse(algebraic_eqn.has_divergence())
 
+    def test_orphans(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        sum = a + b
+
+        a_orp, b_orp = sum.orphans
+        self.assertIsNone(a_orp.parent)
+        self.assertIsNone(b_orp.parent)
+        self.assertEqual(a.id, a_orp.id)
+        self.assertEqual(b.id, b_orp.id)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
