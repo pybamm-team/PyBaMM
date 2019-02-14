@@ -22,13 +22,13 @@ class TestMatrix(unittest.TestCase):
         self.assertEqual(self.mat.size, 9)
 
     def test_matrix_evaluate(self):
-        self.assertTrue((self.mat.evaluate() == self.A).all(), self.A)
+        np.testing.assert_array_equal(self.mat.evaluate(), self.A)
 
     def test_matrix_operations(self):
-        self.assertTrue(((self.mat + self.mat).evaluate() == 2 * self.A).all())
-        self.assertTrue(((self.mat - self.mat).evaluate() == 0 * self.A).all())
-        self.assertTrue(
-            ((self.mat * self.vect).evaluate() == np.array([5, 2, 3])).all()
+        np.testing.assert_array_equal((self.mat + self.mat).evaluate(), 2 * self.A)
+        np.testing.assert_array_equal((self.mat - self.mat).evaluate(), 0 * self.A)
+        np.testing.assert_array_equal(
+            (self.mat * self.vect).evaluate(), np.array([5, 2, 3])
         )
 
     def test_matrix_modification(self):

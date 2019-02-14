@@ -36,7 +36,6 @@ class Symbol(anytree.NodeMixin):
             # copy child before adding
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
-
         self.domain = domain
 
     @property
@@ -96,8 +95,23 @@ class Symbol(anytree.NodeMixin):
         which would then mess with loop-checking in the anytree module
         """
         return hash(
-            (self.__class__, self.name) + tuple([child.id for child in self.children])
+            (self.__class__, self.name)
+            + tuple([child.id for child in self.children])
+            + tuple(self.domain)
         )
+
+    @property
+    def orphans(self):
+        """
+        Returning deepcopies of the children, with parents removed to avoid corrupting
+        the expression tree internal data
+        """
+        orp = []
+        for child in self.children:
+            new_child = copy.deepcopy(child)
+            new_child.parent = None
+            orp.append(new_child)
+        return tuple(orp)
 
     def render(self):
         """print out a visual representation of the tree (this node and its
@@ -181,9 +195,13 @@ class Symbol(anytree.NodeMixin):
         return self._name
 
     def __repr__(self):
-        """returns the string `__class__(id, name, parent expression)`"""
-        return "{!s}({}, {!s}, {!s})".format(
-            self.__class__.__name__, hex(self.id), self._name, self.parent
+        """returns the string `__class__(id, name, children, domain)`"""
+        return "{!s}({}, {!s}, children={!s}, domain={!s})".format(
+            self.__class__.__name__,
+            hex(self.id),
+            self._name,
+            [str(child) for child in self.children],
+            [str(subdomain) for subdomain in self.domain],
         )
 
     def __add__(self, other):
@@ -304,16 +322,38 @@ class Symbol(anytree.NodeMixin):
         # do the search, return true if no relevent nodes are found
         return all([not isinstance(n, search_types) for n in self.pre_order()])
 
+    def evaluates_to_number(self):
+        """Returns True if evaluating the expression returns a number.
+        Returns False otherwise, including if NotImplementedError is raised.
+        !Not to be confused with isinstance(self, pybamm.Scalar)!
+
+        See Also
+        --------
+        evaluate : evaluate the expression
+
+        """
+        try:
+            # return true if node evaluates to a number
+            return isinstance(self.evaluate(), numbers.Number)
+        except NotImplementedError:
+            # return false if NotImplementedError is raised
+            # (there is a e.g. Parameter, Variable, ... in the tree)
+            return False
+
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""
         return self.has_gradient() or self.has_divergence()
 
+    def has_gradient_and_not_divergence(self):
+        """Returns True if equation has a Gradient term and not Divergence term."""
+        return self.has_gradient() and not self.has_divergence()
+
     def has_gradient(self):
-        """Returns True if equation has a Gradient."""
+        """Returns True if equation has a Gradient term."""
         return any([isinstance(symbol, pybamm.Gradient) for symbol in self.pre_order()])
 
     def has_divergence(self):
-        """Returns True if equation has a Divergence."""
+        """Returns True if equation has a Divergence term."""
         return any(
             [isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order()]
         )

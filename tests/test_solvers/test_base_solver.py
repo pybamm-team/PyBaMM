@@ -14,8 +14,6 @@ class TestBaseSolver(unittest.TestCase):
         self.assertEqual(solver.tol, 1e-4)
         self.assertEqual(solver.t, None)
         self.assertEqual(solver.y, None)
-        with self.assertRaises(NotImplementedError):
-            solver.integrate(None, None, None)
 
 
 if __name__ == "__main__":

@@ -60,7 +60,7 @@ from .expression_tree.binary_operators import (
 )
 from .expression_tree.concatenations import (
     Concatenation,
-    NumpyConcatenation,
+    NumpyModelConcatenation,
     DomainConcatenation,
 )
 from .expression_tree.array import Array
@@ -73,13 +73,14 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
-    SpatialAverage,
+    Broadcast,
+    NumpyBroadcast,
     grad,
     div,
 )
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
-from .expression_tree.independent_variable import IndependentVariable
+from .expression_tree.independent_variable import IndependentVariable, Time, Space
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
@@ -90,7 +91,8 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
-from .models.electrolyte_current import ElectrolyteCurrentModel
+from .models.simple_ode_model import SimpleODEModel
+from .models import lead_acid
 
 #
 # Submodel classes
@@ -103,18 +105,29 @@ from .models.submodels import electrolyte, interface
 from .parameters.parameter_values import ParameterValues
 from .parameters import functions_lead_acid
 from .parameters import standard_parameters
+from .parameters import standard_parameters_lead_acid  # calls standard_parameters
+
+#
+# Geometry
+#
+from .geometry.geometry import (
+    Geometry,
+    Geometry1DMacro,
+    Geometry1DMicro,
+    Geometry3DMacro,
+)
 
 #
 # Mesh and Discretisation classes
 #
 from .discretisations.base_discretisation import BaseDiscretisation
-from .discretisations.finite_volume_discretisations import FiniteVolumeDiscretisation
-from .discretisations.base_mesh import KNOWN_DOMAINS
-from .discretisations.base_mesh import BaseMesh, BaseSubmesh
-from .discretisations.finite_volume_meshes import (
-    FiniteVolumeMacroMesh,
-    FiniteVolumeSubmesh,
+from .discretisations.finite_volume_discretisations import (
+    FiniteVolumeDiscretisation,
+    NodeToEdge,
 )
+from .meshes.meshes import KNOWN_DOMAINS
+from .meshes.meshes import Mesh
+from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 
 #
 # Simulation class
@@ -125,7 +138,11 @@ from .simulation import Simulation
 # Solver classes
 #
 from .solvers.base_solver import BaseSolver
+from .solvers.ode_solver import OdeSolver
+from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
+from .solvers.scikits_dae_solver import ScikitsDaeSolver
+from .solvers.scikits_ode_solver import ScikitsOdeSolver
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

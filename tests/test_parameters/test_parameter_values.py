@@ -78,6 +78,23 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_grad.children[0], pybamm.Scalar)
         self.assertEqual(processed_grad.children[0].value, 1)
 
+        # process broadcast
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        broad = pybamm.Broadcast(a, whole_cell)
+        processed_broad = parameter_values.process_symbol(broad)
+        self.assertIsInstance(processed_broad, pybamm.Broadcast)
+        self.assertEqual(processed_broad.domain, whole_cell)
+        self.assertIsInstance(processed_broad.children[0], pybamm.Scalar)
+        self.assertEqual(processed_broad.children[0].value, 1)
+
+        # process concatenation
+        conc = pybamm.Concatenation(a, b)
+        processed_conc = parameter_values.process_symbol(conc)
+        self.assertIsInstance(processed_conc.children[0], pybamm.Scalar)
+        self.assertIsInstance(processed_conc.children[1], pybamm.Scalar)
+        self.assertEqual(processed_conc.children[0].value, 1)
+        self.assertEqual(processed_conc.children[1].value, 2)
+
         # process variable
         c = pybamm.Variable("c")
         processed_c = parameter_values.process_symbol(c)
@@ -147,6 +164,7 @@ class TestParameterValues(unittest.TestCase):
         var = pybamm.Variable("var")
         model.rhs = {var: a * pybamm.grad(var)}
         model.initial_conditions = {var: b}
+        model.initial_conditions_ydot = {var: c}
         model.boundary_conditions = {var: {"left": c, "right": d}}
         model.variables = {"var": var, "grad_var": pybamm.grad(var), "d_var": d * var}
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
@@ -159,6 +177,8 @@ class TestParameterValues(unittest.TestCase):
         # initial conditions
         self.assertIsInstance(model.initial_conditions[var], pybamm.Scalar)
         self.assertEqual(model.initial_conditions[var].value, 2)
+        self.assertIsInstance(model.initial_conditions_ydot[var], pybamm.Scalar)
+        self.assertEqual(model.initial_conditions_ydot[var].value, 3)
         # boundary conditions
         bc_key = list(model.boundary_conditions.keys())[0]
         self.assertIsInstance(bc_key, pybamm.Variable)

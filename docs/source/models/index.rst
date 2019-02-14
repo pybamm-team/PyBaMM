@@ -3,12 +3,8 @@ Models
 
 .. toctree::
 
-  electrolyte_current
+  base_model
   reaction_diffusion
-
-Core
-----
-
-.. autoclass:: pybamm.BaseModel
-    :members:
-
+  simple_ode_model
+  lead_acid/index
+  submodels/index

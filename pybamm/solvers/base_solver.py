@@ -58,24 +58,4 @@ class BaseSolver(object):
 
         """
 
-        def dydt(t, y):
-            return model.concatenated_rhs.evaluate(t, y)
-
-        y0 = model.concatenated_initial_conditions
-        self.t, self.y = self.integrate(dydt, y0, t_eval)
-
-    def integrate(self, derivs, y0, t_eval):
-        """
-        Solve a model defined by dydt with initial conditions y0.
-
-        Parameters
-        ----------
-        derivs : method
-            A function that takes in t and y and returns the time-derivative dydt
-        y0 : numeric type
-            The initial conditions
-        t_eval : numeric type
-            The times at which to compute the solution
-
-        """
         raise NotImplementedError

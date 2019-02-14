@@ -112,41 +112,86 @@ class Divergence(SpatialOperator):
         super().__init__("div", child)
 
 
-class SpatialAverage(SpatialOperator):
-    """A node in the expression tree representing a spatially averaging operator.
+class Broadcast(SpatialOperator):
+    """A node in the expression tree representing a broadcasting operator.
+    Broadcasts a child (which *must* have empty domain) to a specified domain. After
+    discretisation, this will evaluate to an array of the right shape for the specified
+    domain.
 
     Parameters
     ----------
-
-    name : str
-        name of the node
     child : :class:`Symbol`
         child node
-    averaging_function : method
-        the function used to average; only acts if the child evaluates to a
-        one-dimensional numpy array
+    domain : iterable of string
+        the domain to broadcast the child to
+    name : string
+        name of the node
 
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, averaging_function):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__(
-            "spatial average ({})".format(averaging_function.__name__), child
-        )
-        self._averaging_function = averaging_function
+    def __init__(self, child, domain, name=None):
+        if child.domain != []:
+            raise pybamm.DomainError(
+                """Domain of a broadcasted child must be [] but is '{}'""".format(
+                    child.domain
+                )
+            )
+        if name is None:
+            name = "broadcast"
+        super().__init__(name, child)
+        # overwrite child domain ([]) with specified broadcasting domain
+        self.domain = domain
+
+
+class NumpyBroadcast(Broadcast):
+    """A node in the expression tree implementing a broadcasting operator using numpy.
+    Broadcasts a child (which *must* have empty domain) to a specified domain. To do
+    this, creates a np array of ones of the same shape as the submesh domain, and then
+    multiplies the child by that array upon evaluation
+
+    Parameters
+    ----------
+    child : :class:`Symbol`
+        child node
+    domain : iterable of string
+        the domain to broadcast the child to
+    mesh : mesh class
+        the mesh used for discretisation
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, domain, mesh):
+        super().__init__(child, domain, name="numpy broadcast")
+        # determine broadcasting vector size (size 1 if the domain is empty)
+        if domain == []:
+            self.broadcasting_vector_size = 1
+        else:
+            self.broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
+        # create broadcasting vector (vector of ones with shape determined by the
+        # domain)
+        self.broadcasting_vector = np.ones(self.broadcasting_vector_size)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        evaluated_child = self.children[0].evaluate(t, y)
-        # If the evaluated child is a numpy array of shape (n,), do the averaging
-        # NOTE: Doing this check every time might be slow?
-        # NOTE: Will need to deal with 2D arrays at some point
-        if isinstance(evaluated_child, np.ndarray) and len(evaluated_child.shape) == 1:
-            return self._averaging_function(evaluated_child)
-        # If not, no need to average
+        child = self.children[0]
+        child_eval = child.evaluate(t, y)
+        # if child is a vector, add a dimension for broadcasting
+        if isinstance(child, pybamm.Vector):
+            return child_eval[:, np.newaxis] * self.broadcasting_vector
+        # if child is a state vector, check that it has the right shape and then
+        # broadcast
+        elif isinstance(child, pybamm.StateVector):
+            assert child_eval.shape[0] == 1, ValueError(
+                """child_eval should have shape (1,n), not {}""".format(
+                    child_eval.shape
+                )
+            )
+            return np.repeat(child_eval, self.broadcasting_vector_size, axis=0)
+        # otherwise just do normal multiplication
         else:
-            return evaluated_child
+            return child_eval * self.broadcasting_vector
 
 
 #

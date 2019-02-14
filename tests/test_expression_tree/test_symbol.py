@@ -134,6 +134,30 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Scalar(1) * pybamm.Vector(np.zeros(10))
         self.assertTrue(a.is_constant())
 
+    def test_symbol_evaluates_to_number(self):
+        a = pybamm.Scalar(3)
+        self.assertTrue(a.evaluates_to_number())
+
+        a = pybamm.Parameter("a")
+        self.assertFalse(a.evaluates_to_number())
+
+        a = pybamm.Scalar(3) * pybamm.Scalar(2)
+        self.assertTrue(a.evaluates_to_number())
+        # highlight difference between this function and isinstance(a, Scalar)
+        self.assertNotIsInstance(a, pybamm.Scalar)
+
+        a = pybamm.Variable("a")
+        self.assertFalse(a.evaluates_to_number())
+
+        a = pybamm.Scalar(3) - 2
+        self.assertTrue(a.evaluates_to_number())
+
+        a = pybamm.Vector(np.ones(5))
+        self.assertFalse(a.evaluates_to_number())
+
+        a = pybamm.Matrix(np.ones((4, 6)))
+        self.assertFalse(a.evaluates_to_number())
+
     def test_symbol_repr(self):
         """
         test that __repr___ returns the string
@@ -141,33 +165,44 @@ class TestSymbol(unittest.TestCase):
         """
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
+        c = pybamm.Symbol("c", domain=["test"])
+        d = pybamm.Symbol("d", domain=["test"])
         hex_regex = r"\-?0x[0-9,a-f]+"
-        self.assertRegex(a.__repr__(), r"Symbol\(" + hex_regex + r", a, None\)")
-        self.assertRegex(b.__repr__(), r"Symbol\(" + hex_regex + r", b, None\)")
         self.assertRegex(
-            (a + b).__repr__(), r"Addition\(" + hex_regex + r", \+, None\)"
+            a.__repr__(),
+            r"Symbol\(" + hex_regex + r", a, children\=\[\], domain\=\[\]\)",
         )
         self.assertRegex(
-            (a + b).children[0].__repr__(), r"Symbol\(" + hex_regex + r", a, a \+ b\)"
+            b.__repr__(),
+            r"Symbol\(" + hex_regex + r", b, children\=\[\], domain\=\[\]\)",
         )
         self.assertRegex(
-            (a + b).children[1].__repr__(), r"Symbol\(" + hex_regex + r", b, a \+ b\)"
+            c.__repr__(),
+            r"Symbol\(" + hex_regex + r", c, children\=\[\], domain\=\['test'\]\)",
         )
         self.assertRegex(
-            (a * b).__repr__(), r"Multiplication\(" + hex_regex + r", \*, None\)"
+            d.__repr__(),
+            r"Symbol\(" + hex_regex + r", d, children\=\[\], domain\=\['test'\]\)",
         )
         self.assertRegex(
-            (a * b).children[0].__repr__(), r"Symbol\(" + hex_regex + r", a, a \* b\)"
+            (a + b).__repr__(),
+            r"Addition\(" + hex_regex + r", \+, children\=\['a', 'b'\], domain=\[\]\)",
         )
         self.assertRegex(
-            (a * b).children[1].__repr__(), r"Symbol\(" + hex_regex + ", b, a \* b\)"
+            (c * d).__repr__(),
+            r"Multiplication\("
+            + hex_regex
+            + r", \*, children\=\['c', 'd'\], domain=\['test'\]\)",
         )
         self.assertRegex(
-            pybamm.grad(a).__repr__(), r"Gradient\(" + hex_regex + ", grad, None\)"
+            pybamm.grad(a).__repr__(),
+            r"Gradient\(" + hex_regex + ", grad, children\=\['a'\], domain=\[\]\)",
         )
         self.assertRegex(
-            pybamm.grad(a).children[0].__repr__(),
-            r"Symbol\(" + hex_regex + ", a, grad\(a\)\)",
+            pybamm.grad(c).__repr__(),
+            r"Gradient\("
+            + hex_regex
+            + ", grad, children\=\['c'\], domain=\['test'\]\)",
         )
 
     def test_symbol_visualise(self):
@@ -195,6 +230,17 @@ class TestSymbol(unittest.TestCase):
         self.assertFalse(algebraic_eqn.has_spatial_derivatives())
         self.assertFalse(algebraic_eqn.has_gradient())
         self.assertFalse(algebraic_eqn.has_divergence())
+
+    def test_orphans(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        sum = a + b
+
+        a_orp, b_orp = sum.orphans
+        self.assertIsNone(a_orp.parent)
+        self.assertIsNone(b_orp.parent)
+        self.assertEqual(a.id, a_orp.id)
+        self.assertEqual(b.id, b_orp.id)
 
 
 if __name__ == "__main__":

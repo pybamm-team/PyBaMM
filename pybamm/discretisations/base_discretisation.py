@@ -5,9 +5,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
-import numbers
 import copy
+import numpy as np
 
 
 class BaseDiscretisation(object):
@@ -16,9 +15,12 @@ class BaseDiscretisation(object):
 
     Parameters
     ----------
-    mesh : :class:`pybamm.BaseMesh` (or subclass)
-        The underlying mesh for discretisation
-
+    mesh_type: class name
+        the type of combined mesh being used (e.g. Mesh)
+    submesh_pts : dict
+        the number of points on each of the subdomains
+    submesh_types : dict
+        the types of submeshes being employed on each of the subdomains
     """
 
     def __init__(self, mesh):
@@ -39,22 +41,16 @@ class BaseDiscretisation(object):
             boundary_conditions (all dicts of {variable: equation})
 
         """
+
         # Set the y split for variables
-        y_slices = self.get_variable_slices(model.rhs.keys())
+        variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+        y_slices = self.get_variable_slices(variables)
 
-        # Discretise initial conditions
-        model.initial_conditions = self.process_initial_conditions(
-            model.initial_conditions
-        )
-        # Concatenate initial conditions into a single vector
-        model.concatenated_initial_conditions = self.concatenate(
-            *model.initial_conditions.values()
-        ).evaluate(0, None)
+        # Process initial condtions
+        self.process_initial_conditions(model, y_slices)
 
-        # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_dict(model.rhs, y_slices, model.boundary_conditions)
-        # Concatenate rhs into a single state vector
-        model.concatenated_rhs = self.concatenate(*model.rhs.values())
+        # Process differential and algebraic equations
+        self.process_rhs_and_algebraic(model, y_slices)
 
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
@@ -63,6 +59,7 @@ class BaseDiscretisation(object):
             model.variables, y_slices, model.boundary_conditions
         )
 
+        # Check that resulting model makes sense
         self.check_model(model)
 
     def get_variable_slices(self, variables):
@@ -70,7 +67,7 @@ class BaseDiscretisation(object):
 
         Parameters
         ----------
-        variables : dict_keys object containing Variable instances
+        variables : list of Variables
             Variables for which to set the slices
 
         Returns
@@ -82,50 +79,83 @@ class BaseDiscretisation(object):
         start = 0
         end = 0
         for variable in variables:
-            # Add up the size of all the domains in variable.domain
-            for dom in variable.domain:
-                end += self.mesh[dom].npts
+            # If domain is empty then variable has size 1
+            if variable.domain == []:
+                end += 1
+            # Otherwise, add up the size of all the domains in variable.domain
+            else:
+                for dom in variable.domain:
+                    end += self.mesh[dom].npts
             y_slices[variable.id] = slice(start, end)
             start = end
 
         return y_slices
 
-    def process_initial_conditions(self, initial_conditions):
-        """Discretise initial conditions.
+    def process_initial_conditions(self, model, y_slices):
+        """Discretise model initial_conditions.
+        Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
-        initial_conditions : dict
-            Initial conditions ({variable: equation} dict) to dicretise
-
-        Returns
-        -------
-        initial_conditions : dict
-            Discretised initial conditions
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+        y_slices : dict of {variable id: slice}
+            The slices to assign to StateVectors when discretising
 
         """
-        for variable, equation in initial_conditions.items():
-            discretised_ic = self.process_symbol(equation).evaluate()
+        # Discretise initial conditions
+        model.initial_conditions = self.process_dict(model.initial_conditions)
+        model.initial_conditions_ydot = self.process_dict(model.initial_conditions_ydot)
 
-            if isinstance(discretised_ic, numbers.Number):
-                discretised_ic = discretised_ic * self.vector_of_ones(variable.domain)
-            else:
-                raise NotImplementedError(
-                    "Currently only accepts scalar initial conditions"
-                )
+        # Concatenate initial conditions into a single vector
 
-            initial_conditions[variable] = discretised_ic
+        # check that all initial conditions are set
+        model.concatenated_initial_conditions = self._concatenate_init(
+            model.initial_conditions, y_slices
+        ).evaluate(0, None)
 
-        return initial_conditions
+        # evaluate initial conditions for ydot if they exist
+        if len(model.initial_conditions_ydot) > 0:
+            model.concatenated_initial_conditions_ydot = self._concatenate_init(
+                model.initial_conditions_ydot, y_slices
+            ).evaluate(0, None)
+        else:
+            model.concatenated_initial_conditions_ydot = np.array([])
 
-    def process_dict(self, var_eqn_dict, y_slices, boundary_conditions):
-        """Discretise a dictionary of {variable: equation}
-        (can be model.rhs or model.variables).
+    def process_rhs_and_algebraic(self, model, y_slices):
+        """Discretise model equations - differential ('rhs') and algebraic.
+        Currently inplace, could be changed to return a new model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+        y_slices : dict of {variable id: slice}
+            The slices to assign to StateVectors when discretising
+
+        """
+        # Discretise right-hand sides, passing domain from variable
+        model.rhs = self.process_dict(model.rhs, y_slices, model.boundary_conditions)
+        # Concatenate rhs into a single state vector
+        model.concatenated_rhs = self.concatenate(*model.rhs.values())
+
+        # Discretise and concatenate algebraic equations
+        model.algebraic = self.process_dict(
+            model.algebraic, y_slices, model.boundary_conditions
+        )
+        model.concatenated_algebraic = self.concatenate(*model.algebraic.values())
+
+    def process_dict(self, var_eqn_dict, y_slices=None, boundary_conditions={}):
+        """Discretise a dictionary of {variable: equation}, broadcasting if necessary
+        (can be model.rhs, model.initial_conditions or model.variables).
 
         Parameters
         ----------
         var_eqn_dict : dict
             Equations ({variable: equation} dict) to dicretise
+            (can be model.rhs, model.initial_conditions or model.variables)
         y_slices : dict of {variable id: slice}
             The slices to assign to StateVectors when discretising
         boundary_conditions : dict
@@ -135,13 +165,19 @@ class BaseDiscretisation(object):
         Returns
         -------
         var_eqn_dict : dict
-            Discretised right-hand side equations
+            Discretised equations
 
         """
+        # reformat boundary conditions (for rhs and variables)
         boundary_conditions = {
             key.id: value for key, value in boundary_conditions.items()
         }
         for variable, equation in var_eqn_dict.items():
+            if equation.evaluates_to_number():
+                # Broadcast scalar equation to the domain specified by variable.domain
+                equation = self.broadcast(equation, variable.domain)
+
+            # Process symbol (original or broadcasted)
             var_eqn_dict[variable] = self.process_symbol(
                 equation, y_slices, boundary_conditions
             )
@@ -170,8 +206,17 @@ class BaseDiscretisation(object):
         if isinstance(symbol, pybamm.Gradient):
             return self.gradient(symbol.children[0], y_slices, boundary_conditions)
 
-        if isinstance(symbol, pybamm.Divergence):
+        elif isinstance(symbol, pybamm.Divergence):
             return self.divergence(symbol.children[0], y_slices, boundary_conditions)
+
+        elif isinstance(symbol, pybamm.Broadcast):
+            # Process child first
+            new_child = self.process_symbol(
+                symbol.children[0], y_slices, boundary_conditions
+            )
+            # Broadcast new_child to the domain specified by symbol.domain
+            # Different discretisations may broadcast differently
+            return self.broadcast(new_child, symbol.domain)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             return self.process_binary_operators(symbol, y_slices, boundary_conditions)
@@ -188,6 +233,10 @@ class BaseDiscretisation(object):
             )
             return pybamm.StateVector(y_slices[symbol.id])
 
+        elif isinstance(symbol, pybamm.Space):
+            symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+            return pybamm.Vector(symbol_mesh.nodes)
+
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [
                 self.process_symbol(child, y_slices, boundary_conditions)
@@ -201,21 +250,16 @@ class BaseDiscretisation(object):
             return new_symbol
 
         else:
-            # hack to copy the symbol but without a parent
-            # (building tree from bottom up)
-            # simply setting new_symbol.parent = None, after copying, raises a TreeError
-            parent = symbol.parent
-            symbol.parent = None
-            new_symbol = copy.copy(symbol)
-            symbol.parent = parent
+            new_symbol = copy.deepcopy(symbol)
+            new_symbol.parent = None
             return new_symbol
 
     def process_binary_operators(self, bin_op, y_slices, boundary_conditions):
-        """Discretise binary operators in model equations.
-        Performs appropriate averaging of diffusivities if one of the children is a
-        gradient operator, so that discretised sizes match up.
-        This is mainly an issue for the Finite Volume Discretisation:
-        see :meth:`pybamm.FiniteVolumeDiscretisation.averaging_function()`
+        """Discretise binary operators in model equations.  Performs appropriate
+        averaging of diffusivities if one of the children is a gradient operator, so
+        that discretised sizes match up.  This is mainly an issue for the Finite Volume
+        Discretisation: see
+        :meth:`pybamm.FiniteVolumeDiscretisation.compute_diffusivity()`
 
         Parameters
         ----------
@@ -237,23 +281,31 @@ class BaseDiscretisation(object):
         left, right = bin_op.children
         new_left = self.process_symbol(left, y_slices, boundary_conditions)
         new_right = self.process_symbol(right, y_slices, boundary_conditions)
-
         # Post-processing to make sure discretised dimensions match
         # If neither child has gradients, or both children have gradients
         # no need to do any averaging
-        if left.has_gradient() == right.has_gradient():
+        if (
+            left.has_gradient_and_not_divergence()
+            == right.has_gradient_and_not_divergence()
+        ):
             pass
-        # If only left child has gradient, average right child
-        elif left.has_gradient() and not right.has_gradient():
-            new_right = self.spatial_average(new_right)
-        # If only right child has gradient, average left child
-        elif right.has_gradient() and not left.has_gradient():
-            new_left = self.spatial_average(new_left)
+        # If only left child has gradient, compute diffusivity for right child
+        elif (
+            left.has_gradient_and_not_divergence()
+            and not right.has_gradient_and_not_divergence()
+        ):
+            new_right = self.compute_diffusivity(new_right)
+        # If only right child has gradient, compute diffusivity for left child
+        elif (
+            right.has_gradient_and_not_divergence()
+            and not left.has_gradient_and_not_divergence()
+        ):
+            new_left = self.compute_diffusivity(new_left)
         # Return new binary operator with appropriate class
         return bin_op.__class__(new_left, new_right)
 
-    def spatial_average(self, symbol):
-        """Default behaviour for a discretisation: averaging does nothing"""
+    def compute_diffusivity(self, symbol):
+        """Compute diffusivity; default behaviour is identity operator"""
         return symbol
 
     def gradient(self, symbol, y_slices, boundary_conditions):
@@ -287,19 +339,70 @@ class BaseDiscretisation(object):
         """
         raise NotImplementedError
 
-    def vector_of_ones(self, domain):
+    def broadcast(self, symbol, domain):
         """
-        Returns a Vector of ones of the size given by the mesh.
+        Broadcast symbol to a specified domain. To do this, calls
+        :class:`pybamm.NumpyBroadcast`
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol to be broadcasted
+        domain : iterable of string
+            The domain to broadcast to
         """
+        # create broadcasted symbol
+        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
-        mesh_points = np.array([])
+        # if the broadcasted symbol evaluates to a constant value, replace the
+        # symbol-Vector multiplication with a single array
+        if broadcasted_symbol.is_constant():
+            broadcasted_symbol = pybamm.Array(
+                broadcasted_symbol.evaluate(), domain=broadcasted_symbol.domain
+            )
 
-        for dom in domain:
-            mesh_points = np.concatenate([mesh_points, self.mesh[dom].nodes])
-        return pybamm.Vector(np.ones_like(mesh_points))
+        return broadcasted_symbol
 
     def concatenate(self, *symbols):
-        return pybamm.NumpyConcatenation(*symbols)
+        return pybamm.NumpyModelConcatenation(*symbols)
+
+    def _concatenate_init(self, var_eqn_dict, y_slices):
+        """
+        Concatenate a dictionary of {variable: equation} initial conditions using
+        y_slices
+
+        The keys/variables in `var_eqn_dict` must be the same as the ids in `y_slices`
+        The resultant concatenation is ordered according to the ordering of the slice
+        values in `y_slices`
+
+        Parameters
+        ----------
+        var_eqn_dict : dict
+            Equations ({variable: equation} dict) to dicretise
+        y_slices : dict of {variable id: slice}
+            The slices to assign to StateVectors when discretising
+
+        Returns
+        -------
+        var_eqn_dict : dict
+            Discretised right-hand side equations
+
+        """
+        ids = {v.id for v in var_eqn_dict.keys()}
+        if ids != y_slices.keys():
+            given_variable_names = [v.name for v in var_eqn_dict.keys()]
+            raise pybamm.ModelError(
+                "Initial conditions are insufficient. Only "
+                "provided for {} ".format(given_variable_names)
+            )
+
+        equations = list(var_eqn_dict.values())
+        slices = [y_slices[var.id] for var in var_eqn_dict.keys()]
+
+        # sort equations according to slices
+        sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
+
+        return self.concatenate(*sorted_equations)
 
     def check_model(self, model):
         """ Perform some basic checks to make sure the discretised model makes sense."""
@@ -345,22 +448,29 @@ class BaseDiscretisation(object):
             )
         # Concatenated
         assert (
-            model.concatenated_rhs.evaluate(0, y0).shape == y0.shape
+            model.concatenated_rhs.evaluate(0, y0).shape[0]
+            + model.concatenated_algebraic.evaluate(0, y0).shape[0]
+            == y0.shape[0]
         ), pybamm.ModelError(
             """
-            Concatenated rhs and initial_conditions must have the same shape after
-            discretisation but rhs.shape = {} and initial_conditions.shape = {}.
+            Concatenation of (rhs, algebraic) and initial_conditions must have the
+            same shape after discretisation but rhs.shape = {}, algebraic.shape = {},
+            and initial_conditions.shape = {}.
             """.format(
-                model.concatenated_rhs.evaluate(0, y0).shape, y0.shape
+                model.concatenated_rhs.evaluate(0, y0).shape,
+                model.concatenated_algebraic.evaluate(0, y0).shape,
+                y0.shape,
             )
         )
 
         # Check variables in variable list against rhs
+        # Be lenient with size check if the variable in model.variables is broadcasted
         for var in model.rhs.keys():
             if var.name in model.variables.keys():
-                assert (
-                    model.rhs[var].evaluate(0, y0).shape
-                    == model.variables[var.name].evaluate(0, y0).shape
+                assert model.rhs[var].evaluate(0, y0).shape == model.variables[
+                    var.name
+                ].evaluate(0, y0).shape or isinstance(
+                    model.variables[var.name], pybamm.NumpyBroadcast
                 ), pybamm.ModelError(
                     """
                     variable and its eqn must have the same shape after discretisation

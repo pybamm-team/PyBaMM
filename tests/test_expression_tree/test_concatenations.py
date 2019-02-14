@@ -1,18 +1,10 @@
+#
 # Tests for the Concatenation class and subclasses
 #
 import pybamm
-
+import tests.shared as shared
 import numpy as np
 import unittest
-
-
-class MeshForTesting(pybamm.BaseMesh):
-    def __init__(self):
-        super().__init__(None)
-        self["whole cell"] = self.submeshclass(np.linspace(0, 1, 100))
-        self["negative electrode"] = self.submeshclass(self["whole cell"].nodes[:30])
-        self["separator"] = self.submeshclass(self["whole cell"].nodes[30:40])
-        self["positive electrode"] = self.submeshclass(self["whole cell"].nodes[40:])
 
 
 class TestConcatenations(unittest.TestCase):
@@ -39,10 +31,6 @@ class TestConcatenations(unittest.TestCase):
             ["negative electrode", "separator", "positive electrode", "test"],
         )
 
-        # Whole cell concatenations should simplify
-        conc = pybamm.Concatenation(a, b)
-        self.assertEqual(conc.domain, ["whole cell"])
-
         # Can't concatenate nodes with overlapping domains
         d = pybamm.Symbol("d", domain=["separator"])
         with self.assertRaises(pybamm.DomainError):
@@ -55,42 +43,46 @@ class TestConcatenations(unittest.TestCase):
             ["negative electrode", "separator", "positive electrode", "test"],
         )
 
-    def test_numpy_concatenation_vectors(self):
+    def test_numpy_model_concatenation_vectors(self):
         # with entries
         y = np.linspace(0, 1, 15)
         a = pybamm.Vector(y[:5])
         b = pybamm.Vector(y[5:9])
         c = pybamm.Vector(y[9:])
-        conc = pybamm.NumpyConcatenation(a, b, c)
+        conc = pybamm.NumpyModelConcatenation(a, b, c)
         np.testing.assert_array_equal(conc.evaluate(None, y), y)
         # with y_slice
         a = pybamm.StateVector(slice(0, 10))
         b = pybamm.StateVector(slice(10, 15))
         c = pybamm.StateVector(slice(15, 23))
-        conc = pybamm.NumpyConcatenation(a, b, c)
+        conc = pybamm.NumpyModelConcatenation(a, b, c)
         y = np.linspace(0, 1, 23)
         np.testing.assert_array_equal(conc.evaluate(None, y), y)
 
-    def test_numpy_concatenation_vector_scalar(self):
+    def test_numpy_model_concatenation_vector_scalar(self):
         # with entries
         y = np.linspace(0, 1, 10)
         a = pybamm.Vector(y)
         b = pybamm.Scalar(16)
         c = pybamm.Scalar(3)
-        conc = pybamm.NumpyConcatenation(a, b, c)
+        conc = pybamm.NumpyModelConcatenation(a, b, c)
         np.testing.assert_array_equal(
             conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
         )
 
         # with y_slice
         a = pybamm.StateVector(slice(0, 10))
-        conc = pybamm.NumpyConcatenation(a, b, c)
+        conc = pybamm.NumpyModelConcatenation(a, b, c)
         np.testing.assert_array_equal(
             conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
         )
 
     def test_numpy_domain_concatenation(self):
-        mesh = MeshForTesting()
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(defaults.mesh)
+        mesh = disc.mesh
+
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
         a = pybamm.Scalar(2, domain=a_dom)
@@ -100,10 +92,9 @@ class TestConcatenations(unittest.TestCase):
         conc = pybamm.DomainConcatenation([b, a], mesh)
         np.testing.assert_array_equal(
             conc.evaluate(),
-            np.concatenate([
-                np.full(mesh[a_dom[0]].npts, 2),
-                np.full(mesh[b_dom[0]].npts, 1)
-            ])
+            np.concatenate(
+                [np.full(mesh[a_dom[0]].npts, 2), np.full(mesh[b_dom[0]].npts, 1)]
+            ),
         )
 
         # vector child of wrong size will throw
@@ -116,23 +107,41 @@ class TestConcatenations(unittest.TestCase):
         b_dom = ["negative electrode", "positive electrode"]
         a = pybamm.Scalar(2, domain=a_dom)
         b = pybamm.Vector(
-            np.concatenate([np.full(mesh[b_dom[0]].npts, 1),
-                            np.full(mesh[b_dom[1]].npts, 3)]),
-            domain=b_dom
+            np.concatenate(
+                [np.full(mesh[b_dom[0]].npts, 1), np.full(mesh[b_dom[1]].npts, 3)]
+            ),
+            domain=b_dom,
         )
 
         conc = pybamm.DomainConcatenation([a, b], mesh)
         np.testing.assert_array_equal(
             conc.evaluate(),
-            np.concatenate([
-                np.full(mesh[b_dom[0]].npts, 1),
-                np.full(mesh[a_dom[0]].npts, 2),
-                np.full(mesh[b_dom[1]].npts, 3),
-            ])
+            np.concatenate(
+                [
+                    np.full(mesh[b_dom[0]].npts, 1),
+                    np.full(mesh[a_dom[0]].npts, 2),
+                    np.full(mesh[b_dom[1]].npts, 3),
+                ]
+            ),
         )
 
-        # check special case: final domain is still ["whole cell"]
-        self.assertEqual(conc.domain, ["whole cell"])
+    def test_concatenation_orphans(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        conc = pybamm.Concatenation(a, b, c)
+        a_new, b_new, c_new = conc.orphans
+
+        # We should be able to manipulate the children without TreeErrors
+        self.assertIsInstance(2 * a_new, pybamm.Multiplication)
+        self.assertIsInstance(3 + b_new, pybamm.Addition)
+        self.assertIsInstance(4 - c_new, pybamm.Subtraction)
+
+        # ids should stay the same
+        self.assertEqual(a.id, a_new.id)
+        self.assertEqual(b.id, b_new.id)
+        self.assertEqual(c.id, c_new.id)
+        self.assertEqual(conc.id, pybamm.Concatenation(a_new, b_new, c_new).id)
 
 
 if __name__ == "__main__":

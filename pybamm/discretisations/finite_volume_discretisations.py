@@ -23,7 +23,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
     def __init__(self, mesh):
         super().__init__(mesh)
 
-    def spatial_average(self, symbol):
+    def compute_diffusivity(self, symbol):
         """
         Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
         For now we just take the arithemtic mean, though it may be better to take the
@@ -41,7 +41,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
 
         Returns
         -------
-        :class:`pybamm.SpatialAverage`
+        :class:`pybamm.NodeToEdge`
             Averaged symbol. When evaluated, this returns either a scalar or an array of
             shape (n-1,) as appropriate.
         """
@@ -50,7 +50,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
             """Calculate the arithemetic mean of an array"""
             return (array[1:] + array[:-1]) / 2
 
-        return pybamm.SpatialAverage(symbol, arithmetic_mean)
+        return pybamm.NodeToEdge(symbol, arithmetic_mean)
 
     def gradient(self, symbol, y_slices, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -74,6 +74,8 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
                 + domain
                 + [domain[-1] + "_right ghost cell"]
             )
+
+        # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
 
@@ -166,11 +168,31 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
+            # for the particles there will be a "negative particle" "left" and "right"
+            # and also a "positive particle" left and right.
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
-        divergence_matrix = self.divergence_matrix(symbol.domain)
-        return divergence_matrix * discretised_symbol
+
+        domain = symbol.domain
+        # check for
+        if ("negative particle" or "positive particle") in domain:
+
+            # implement spherical operator
+            divergence_matrix = self.divergence_matrix(domain)
+
+            submesh = self.mesh.combine_submeshes(*domain)
+            r = pybamm.Vector(submesh.nodes)
+            r_edges = pybamm.Vector(submesh.edges)
+
+            out = (1 / (r ** 2)) * (
+                divergence_matrix * ((r_edges ** 2) * discretised_symbol)
+            )
+
+        else:
+            divergence_matrix = self.divergence_matrix(domain)
+            out = divergence_matrix * discretised_symbol
+        return out
 
     def divergence_matrix(self, domain):
         """
@@ -199,3 +221,41 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         diags = np.array([0, 1])
         matrix = spdiags(data, diags, n - 1, n)
         return pybamm.Matrix(matrix)
+
+
+class NodeToEdge(pybamm.SpatialOperator):
+    """A node in the expression tree representing a unary operator that evaluates the
+    value of its child at cell edges by averaging the value at cell nodes.
+
+    Parameters
+    ----------
+
+    name : str
+        name of the node
+    child : :class:`Symbol`
+        child node
+    node_to_edge_function : method
+        the function used to average; only acts if the child evaluates to a
+        one-dimensional numpy array
+
+    **Extends:** :class:`pybamm.SpatialOperator`
+    """
+
+    def __init__(self, child, node_to_edge_function):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__(
+            "node to edge ({})".format(node_to_edge_function.__name__), child
+        )
+        self._node_to_edge_function = node_to_edge_function
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        evaluated_child = self.children[0].evaluate(t, y)
+        # If the evaluated child is a numpy array of shape (n,), do the averaging
+        # NOTE: Doing this check every time might be slow?
+        # NOTE: Will need to deal with 2D arrays at some point
+        if isinstance(evaluated_child, np.ndarray) and len(evaluated_child.shape) == 1:
+            return self._node_to_edge_function(evaluated_child)
+        # If not, no need to average
+        else:
+            return evaluated_child

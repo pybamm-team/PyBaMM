@@ -16,7 +16,7 @@ setup(
     url="https://github.com/tinosulzer/PyBaMM",
     # List of dependencies
     install_requires=[
-        "numpy>=1.13",
+        "numpy>=1.14",
         "scipy>=1.0",
         "pandas>=0.23",
         "anytree>=2.4.3",

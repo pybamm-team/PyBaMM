@@ -49,8 +49,12 @@ class BinaryOperator(pybamm.Symbol):
         return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
 
     def get_children_domains(self, ldomain, rdomain):
-        if ldomain == rdomain or ldomain == [] or rdomain == []:
-            return list(set(ldomain + rdomain))
+        if ldomain == rdomain:
+            return ldomain
+        elif ldomain == []:
+            return rdomain
+        elif rdomain == []:
+            return ldomain
         else:
             raise pybamm.DomainError("""children must have same (or empty) domains""")
 

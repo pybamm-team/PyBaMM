@@ -94,6 +94,9 @@ class ParameterValues(dict):
         for variable, equation in model.initial_conditions.items():
             model.initial_conditions[variable] = self.process_symbol(equation)
 
+        for variable, equation in model.initial_conditions_ydot.items():
+            model.initial_conditions_ydot[variable] = self.process_symbol(equation)
+
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
         new_boundary_conditions = {}
         for variable, bcs in model.boundary_conditions.items():
@@ -107,6 +110,23 @@ class ParameterValues(dict):
 
         for variable, equation in model.variables.items():
             model.variables[variable] = self.process_symbol(equation)
+
+    def process_geometry(self, geometry):
+        """Assign parameter values to a geometry.
+            Currently inplace, could be changed to return a new model.
+
+            Parameters
+            ----------
+            geometry : :class:`pybamm.Geometry` (or subclass) instance
+                    Geometry specs to assign parameter values to
+            """
+
+        for domain in geometry:
+            for spatial_variable, spatial_limits in geometry[domain].items():
+                for lim, sym in spatial_limits.items():
+                    geometry[domain][spatial_variable][lim] = self.process_symbol(
+                        sym
+                    ).evaluate()
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
@@ -132,16 +152,22 @@ class ParameterValues(dict):
             new_right = self.process_symbol(right)
             return symbol.__class__(new_left, new_right)
 
+        elif isinstance(symbol, pybamm.Broadcast):
+            new_child = self.process_symbol(symbol.children[0])
+            return pybamm.Broadcast(new_child, symbol.domain)
+
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
             return symbol.__class__(new_child)
 
+        elif isinstance(symbol, pybamm.Concatenation):
+            new_children = []
+            for child in symbol.children:
+                new_child = self.process_symbol(child)
+                new_children.append(new_child)
+            return pybamm.Concatenation(*new_children)
+
         else:
-            # hack to copy the symbol but without a parent
-            # (building tree from bottom up)
-            # simply setting new_symbol.parent = None, after copying, raises a TreeError
-            parent = symbol.parent
-            symbol.parent = None
-            new_symbol = copy.copy(symbol)
-            symbol.parent = parent
+            new_symbol = copy.deepcopy(symbol)
+            new_symbol.parent = None
             return new_symbol
