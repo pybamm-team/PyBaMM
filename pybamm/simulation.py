@@ -27,6 +27,13 @@ class Simulation(object):
     name : string, optional
        The simulation name.
 
+    Examples
+    --------
+    >>> import pybamm
+    >>> model = pybamm.lead_acid.LOQS()
+    >>> sim = pybamm.Simulation(model)
+    >>> sim.run()
+
     """
 
     def __init__(
