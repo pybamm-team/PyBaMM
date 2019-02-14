@@ -38,10 +38,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -96,10 +93,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
         mesh = disc.mesh
 
         # Add ghost nodes
@@ -142,10 +136,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -192,10 +183,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         """
         # create discretisation
         defaults = shared.TestDefaults1DParticle(10)
-        disc = pybamm.FiniteVolumeDiscretisation(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes("negative particle")
@@ -248,10 +236,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -291,10 +276,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DParticle(10)
-        disc = pybamm.FiniteVolumeDiscretisation(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes("negative particle")
@@ -338,10 +320,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         """
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(
-            defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-        )
-        disc.mesh_geometry(defaults.geometry)
+        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
         mesh = disc.mesh
 
         mesh.add_ghost_meshes()
@@ -396,12 +375,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             # Set up discretisation
             n = 3 * round(n / 3)
             # create discretisation
-            defaults = shared.TestDefaults1DMacro()
-            defaults.set_equal_pts(n)
-            disc = pybamm.FiniteVolumeDiscretisation(
-                defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-            )
-            disc.mesh_geometry(defaults.geometry)
+            defaults = shared.TestDefaults1DMacro(n)
+            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
             mesh = disc.mesh
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -440,12 +415,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         # Function for convergence testing
         def get_l2_error(n):
             # create discretisation
-            defaults = shared.TestDefaults1DMacro()
-            defaults.set_equal_pts(n)
-            disc = pybamm.FiniteVolumeDiscretisation(
-                defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-            )
-            disc.mesh_geometry(defaults.geometry)
+            defaults = shared.TestDefaults1DMacro(n)
+            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
             mesh = disc.mesh
 
             # Set up discretisation
@@ -490,12 +461,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         def get_l2_error(n):
 
             # create discretisation
-            defaults = shared.TestDefaults1DMacro()
-            defaults.set_equal_pts(n)
-            disc = pybamm.FiniteVolumeDiscretisation(
-                defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-            )
-            disc.mesh_geometry(defaults.geometry)
+            defaults = shared.TestDefaults1DMacro(n)
+            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
             mesh = disc.mesh
 
             whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -538,12 +505,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         def get_l2_error(n):
             whole_cell = ["negative electrode", "separator", "positive electrode"]
             # create discretisation
-            defaults = shared.TestDefaults1DMacro()
-            defaults.set_equal_pts(n)
-            disc = pybamm.FiniteVolumeDiscretisation(
-                defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-            )
-            disc.mesh_geometry(defaults.geometry)
+            defaults = shared.TestDefaults1DMacro(n)
+            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
             mesh = disc.mesh
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -585,10 +548,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         def get_l2_error(n):
             defaults = shared.TestDefaults1DParticle(n)
 
-            disc = pybamm.FiniteVolumeDiscretisation(
-                defaults.mesh_type, defaults.submesh_pts, defaults.submesh_types
-            )
-            disc.mesh_geometry(defaults.geometry)
+            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
             mesh = disc.mesh["negative particle"]
             r = mesh.nodes
 

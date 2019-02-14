@@ -23,9 +23,8 @@ class TestSimpleODEModel(unittest.TestCase):
 
         # discretise and solve
         disc = model.default_discretisation
-        disc.mesh_geometry(model.default_geometry)
         combined_submesh = disc.mesh.combine_submeshes(*whole_cell)
-        disc.process_model(model, model.default_geometry)
+        disc.process_model(model)
         t_eval = np.linspace(0, 1, 100)
         solver = model.default_solver
         solver.solve(model, t_eval)

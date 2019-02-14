@@ -74,7 +74,7 @@ class TestScikitsSolver(unittest.TestCase):
         model.initial_conditions = {var: 1}
         model.initial_conditions_ydot = {var: 0.1}
         disc = model.default_discretisation
-        disc.process_model(model, model.default_geometry)
+        disc.process_model(model)
 
         # Solve
         solver = pybamm.ScikitsOdeSolver(tol=1e-9)
@@ -94,7 +94,7 @@ class TestScikitsSolver(unittest.TestCase):
         model.initial_conditions = {var1: 1, var2: 2}
         model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
         disc = model.default_discretisation
-        disc.process_model(model, model.default_geometry)
+        disc.process_model(model)
 
         # Solve
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)

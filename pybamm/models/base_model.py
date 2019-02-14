@@ -67,11 +67,8 @@ class BaseModel(object):
             "positive electrode": pybamm.Uniform1DSubMesh,
         }
 
-        mesh_type = pybamm.Mesh
-
-        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(
-            mesh_type, submesh_pts, submesh_types
-        )
+        self.mesh = pybamm.Mesh(self.default_geometry, submesh_types, submesh_pts)
+        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(self.mesh)
         self.default_solver = pybamm.ScipySolver(method="RK45")
 
     def _set_dict(self, dict, name):
