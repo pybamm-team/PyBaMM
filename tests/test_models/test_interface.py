@@ -189,6 +189,10 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         processed_bv_whole = disc.process_symbol(param_bv_whole, y_slices)
 
         # test
+        submesh = np.concatenate(
+            [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
+        )
+        y = np.concatenate([submesh ** 2, submesh ** 3, -submesh])
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         combined_submeshes = disc.mesh.combine_submeshes(*whole_cell)
         self.assertEqual(
