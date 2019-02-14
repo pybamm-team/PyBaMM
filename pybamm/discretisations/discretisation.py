@@ -24,8 +24,9 @@ class Discretisation(object):
     def __init__(self, mesh, spatial_methods):
         self._mesh = mesh
         # always going to use the key.id for spatial_methods
+        # also initialise the spatial_methods here
         self._spatial_methods = {
-            key.id: value for key, value in spatial_methods.items()
+            key.id: method(mesh) for key, method in spatial_methods.items()
         }
         self._bcs = {}
         self._y_slices = {}
