@@ -10,6 +10,14 @@ Python Battery Mathematical Modelling solves continuum models for batteries, usi
 
 ## How do I use PyBaMM?
 
+The easiest way to use PyBaMM is to run a constant-current discharge with a model of your choice:
+```
+$ python3 pybamm/simulation.py model_name
+```
+where model_name is the name of one of the [model classes](pybamm/models/). 
+
+### Examples and documentation
+
 PyBaMM comes with a number of [detailed examples](examples/README.md), hosted here on github. In addition, there is a [full API documentation](http://pybamm.readthedocs.io/), hosted on [Read The Docs](readthedocs.io).
 
 ## How can I install PyBaMM?

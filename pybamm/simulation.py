@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import argparse
+import numpy as np
 
 
 class Simulation(object):
@@ -51,6 +52,9 @@ class Simulation(object):
         self.solver = solver
         self.name = name
 
+        # Default evaluation time
+        self.default_t_eval = np.linspace(0, 1)
+
     def __str__(self):
         return self.name
 
@@ -60,13 +64,15 @@ class Simulation(object):
     def discretise(self):
         self.discretisation.process_model(self.model)
 
-    def solve(self):
-        self.solver.solve(self.model, self.discretisation.mesh["time"])
+    def solve(self, t_eval=None):
+        if t_eval is None:
+            t_eval = self.default_t_eval
+        self.solver.solve(self.model, t_eval)
 
-    def run(self):
+    def run(self, t_eval=None):
         self.set_parameters()
         self.discretise()
-        self.solve()
+        self.solve(t_eval)
 
     def load(self):
         raise NotImplementedError
@@ -78,18 +84,19 @@ class Simulation(object):
         raise NotImplementedError
 
 
+# QUESTION: is there a way to test this?
 if __name__ == "__main__":
     # Read inputs
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "model_name", nargs="?", default="DFN", help="the model to be run"
+        "model_name", nargs="?", default="LOQS", help="the model to be run"
     )
-    parser.add_argument(
-        "--current", type=float, nargs=1, help="the charge/discharge current"
-    )
-    parser.add_argument(
-        "--Crate", type=float, nargs=1, help="the charge/discharge C-rate"
-    )
+    # parser.add_argument(
+    #     "--current", type=float, nargs=1, help="the charge/discharge current"
+    # )
+    # parser.add_argument(
+    #     "--Crate", type=float, nargs=1, help="the charge/discharge C-rate"
+    # )
     # parser.add_argument("-s", "--save", action="store_true", help="save the output")
     # parser.add_argument(
     #     "-f",
@@ -99,6 +106,12 @@ if __name__ == "__main__":
     # )
     args = parser.parse_args()
 
-    model = getattr(pybamm, args.model_name)
+    # QUESTION: there must be a cleaner way to do this?
+    try:
+        model_class = getattr(pybamm, args.model_name)
+    except AttributeError:
+        model_class = getattr(pybamm.lead_acid, args.model_name)
+    model = model_class()
     sim = Simulation(model)
     sim.run()
+    # sim.plot()

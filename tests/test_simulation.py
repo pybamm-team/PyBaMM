@@ -2,6 +2,7 @@
 # Test the simulation class
 #
 import pybamm
+import tests.shared as shared
 
 import unittest
 
@@ -24,7 +25,7 @@ class TestSimulation(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        mesh = pybamm.FiniteVolumeMacroMesh(parameter_values, 2)
+        mesh = shared.TestDefaults1DMacro().mesh
         discretisation = pybamm.FiniteVolumeDiscretisation(mesh)
         solver = pybamm.ScipySolver(method="RK45")
 
