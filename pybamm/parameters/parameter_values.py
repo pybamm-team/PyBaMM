@@ -168,11 +168,6 @@ class ParameterValues(dict):
             return pybamm.Concatenation(*new_children)
 
         else:
-            # hack to copy the symbol but without a parent
-            # (building tree from bottom up)
-            # simply setting new_symbol.parent = None, after copying, raises a TreeError
-            parent = symbol.parent
-            symbol.parent = None
-            new_symbol = copy.copy(symbol)
-            symbol.parent = parent
+            new_symbol = copy.deepcopy(symbol)
+            new_symbol.parent = None
             return new_symbol

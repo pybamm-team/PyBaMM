@@ -120,10 +120,6 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(un2_disc, pybamm.AbsoluteValue)
         self.assertIsInstance(un2_disc.children[0], pybamm.Scalar)
 
-        # parameter should fail
-        with self.assertRaises(NotImplementedError):
-            disc.process_symbol(pybamm.Parameter("par"))
-
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
@@ -214,8 +210,7 @@ class TestDiscretise(unittest.TestCase):
 
     def test_core_NotImplementedErrors(self):
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(defaults.mesh)
+        disc = pybamm.BaseDiscretisation(None)
 
         with self.assertRaises(NotImplementedError):
             disc.gradient(None, None, {})
