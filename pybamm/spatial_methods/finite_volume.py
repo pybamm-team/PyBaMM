@@ -146,7 +146,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             # implement spherical operator
             divergence_matrix = self.divergence_matrix(domain)
 
-            submesh = self._mesh.combine_submeshes(*domain)
+            submesh = self._mesh[domain[0]]
             r = pybamm.Vector(submesh.nodes)
             r_edges = pybamm.Vector(submesh.edges)
 
