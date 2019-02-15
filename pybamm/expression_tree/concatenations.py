@@ -6,7 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-import numbers
 
 
 class Concatenation(pybamm.Symbol):
@@ -106,7 +105,7 @@ class DomainConcatenation(Concatenation):
         children = list(children)
 
         for i, child in enumerate(children):
-            if child.is_constant():
+            if child.is_constant() or child.evaluates_to_number():
                 children[i] = self.process_node_for_concatenate(child, mesh)
 
         # Allow the base class to sort the domains into the correct order
@@ -144,25 +143,20 @@ class DomainConcatenation(Concatenation):
             the sub-expression to process (node.is_constant() is true)
 
         """
+        try:
+            node_size = node.size
+        except AttributeError:
+            node_size = 0
 
-        # node must be constant
-        value = node.evaluate()
-
-        # correct size of vector should be number of points in the domains
-        subvector_size = sum([mesh[dom].npts for dom in node.domain])
-
-        # check if its a scalar, if so convert to vector
-        if isinstance(value, numbers.Number):
-            value = np.full(subvector_size, value)
-
-        # check it is the right size
-        if value.size != subvector_size:
-            raise ValueError(
-                "Error: expression evaluated to a vector of incorrect length"
-            )
-
-        # convert to a Vector node
-        return pybamm.Vector(value, domain=node.domain)
+        if node_size > 1:
+            if node_size == sum([mesh[dom].npts for dom in node.domain]):
+                return node
+            else:
+                raise ValueError(
+                    "Error: expression evaluated to a vector of incorrect length"
+                )
+        else:
+            return pybamm.NumpyBroadcast(node, node.domain, mesh)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

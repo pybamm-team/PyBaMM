@@ -5,16 +5,14 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
-
 
 def homogeneous_reaction(current):
     """
     Homogeneous reaction at the electrode-electrolyte interface
     """
     # hack to make the concatenation work. Concatenation needs some work
-    current_neg = current / pybamm.standard_parameters.ln * pybamm.Vector(np.ones(1))
-    current_pos = -current / pybamm.standard_parameters.lp * pybamm.Vector(np.ones(1))
+    current_neg = current / pybamm.standard_parameters.ln
+    current_pos = -current / pybamm.standard_parameters.lp
     return pybamm.piecewise_constant(current_neg, 0, current_pos)
 
 
