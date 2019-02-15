@@ -10,4 +10,4 @@ Concatenations
 .. autoclass:: pybamm.DomainConcatenation
   :members:
 
-.
+.. autofunction:: pybamm.piecewise_constant
