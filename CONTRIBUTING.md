@@ -51,8 +51,8 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 To install PyBaMM with all developer options, use:
 
-```
-$ pip install -e .[dev,docs]
+```bash
+pip install -e .[dev,docs]
 ```
 
 This will
@@ -68,8 +68,8 @@ PyBaMM follows the [PEP8 recommendations](https://www.python.org/dev/peps/pep-00
 
 We use [flake8](http://flake8.pycqa.org/en/latest/) to check our PEP8 adherence. To try this on your system, navigate to the PyBaMM directory in a console and type
 
-```
-$ flake8
+```bash
+flake8
 ```
 The configuration file
 ```
@@ -85,9 +85,11 @@ When you commit your changes they will be checked against flake8 automatically (
 We use [black](https://black.readthedocs.io/en/stable/) to automatically configure our code to adhere to PEP8. Black can be used in two ways:
 
 1. Command line: navigate to the PyBaMM directory in a console and type
+
+```bash
+black {source_file_or_directory}
 ```
-$ black {source_file_or_directory}
-```
+
 2. Editor: black can be [configured](https://black.readthedocs.io/en/stable/editor_integration.html) to automatically reformat a python script each time the script is saved in an editor.
 
 By default, black sets the max line length to 88. To change this to the more common standard of 79, and you are using black from the command line, save the following to a file called `pyproject.toml`:
@@ -163,8 +165,8 @@ All code requires testing. We use the [unittest](https://docs.python.org/3.3/lib
 
 To run quick tests, use
 
-```
-$ python run-tests.py --unit
+```bash
+python run-tests.py --unit
 ```
 
 ### Writing tests
@@ -177,8 +179,8 @@ Next, add some simple (and speedy!) tests of your main features. If these run wi
 
 If you want to check your tests on Python 2 and 3, use
 
-```
-$ python run-tests.py --unit2 --unit3
+```bash
+python run-tests.py --unit2 --unit3
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
@@ -187,14 +189,14 @@ When you commit anything to PyBaMM, these checks will also be run automatically 
 
 To test all example notebooks, use
 
-```
-$ python run-tests.py --books
+```bash
+python run-tests.py --books
 ```
 
 If notebooks fail because of changes to pybamm, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
 
-```
-$ python run-tests.py --debook examples/notebooks/notebook-name.ipynb script.py
+```bash
+python run-tests.py --debook examples/notebooks/notebook-name.ipynb script.py
 ```
 
 
