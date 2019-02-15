@@ -334,14 +334,10 @@ class Symbol(anytree.NodeMixin):
         """
         try:
             # return true if node evaluates to a number
-            return isinstance(self.evaluate(), numbers.Number)
+            return isinstance(self.evaluate(t=0), numbers.Number)
         except NotImplementedError:
             # return false if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
-            return False
-        except ValueError as e:
-            # return false if ValueError is raised (there is a Time node in the tree)
-            assert e.args[0] == "t must be provided"
             return False
 
     def has_spatial_derivatives(self):
