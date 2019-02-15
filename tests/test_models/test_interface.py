@@ -122,14 +122,25 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         self.assertEqual(bv.domain, [])
 
     def test_failure(self):
-        # no domain
+        # domain that doesn't exist
         with self.assertRaises(pybamm.DomainError):
             pybamm.interface.butler_volmer_lead_acid(
                 None, None, domain=["not a domain"]
             )
+        # no domain
+        c = pybamm.Variable("concentration", domain=[])
+        phi = pybamm.Variable("potential", domain=[])
+        with self.assertRaises(ValueError):
+            pybamm.interface.butler_volmer_lead_acid(c, phi)
         # mismatched domains
         with self.assertRaises(pybamm.DomainError):
             pybamm.interface.butler_volmer_lead_acid(self.cn, self.phip)
+        # c, phi not concatenations with domain as whole domain
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("concentration", domain=whole_cell)
+        phi = pybamm.Variable("potential", domain=whole_cell)
+        with self.assertRaises(ValueError):
+            pybamm.interface.butler_volmer_lead_acid(c, phi, whole_cell)
 
     def test_set_parameters(self):
         bv = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)

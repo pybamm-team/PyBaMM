@@ -47,10 +47,11 @@ def butler_volmer_lead_acid(c, phi, domain=None):
         The interfacial current density in the appropriate domain
     """
     if domain is None:
-        # default is for domain to be across the whole cell
-        # (if not specified by c.domain or phi.domain)
+        # raise error if no domain can be found
         if c.domain == [] and phi.domain == []:
-            domain = ["negative electrode", "separator", "positive electrode"]
+            raise ValueError(
+                "domain cannot be None if c.domain and phi.domain are empty"
+            )
         # otherwise read domain from c and phi, making sure they are consistent with
         # each other
         else:
