@@ -108,6 +108,7 @@ from .models.submodels import electrolyte, interface
 #
 from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard parameters
 from .parameters.parameter_values import ParameterValues
+from .parameters import standard_current_functions
 from .parameters import standard_parameters
 from .parameters import standard_parameters_lead_acid  # calls standard_parameters
 

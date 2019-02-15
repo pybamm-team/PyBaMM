@@ -27,7 +27,7 @@ class LOQS(pybamm.BaseModel):
 
     """
 
-    def __init__(self):
+    def __init__(self, current_function):
         super().__init__()
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]

@@ -15,7 +15,7 @@ class TestHomogeneousReaction(unittest.TestCase):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        rxn = pybamm.interface.homogeneous_reaction()
+        rxn = pybamm.interface.homogeneous_reaction(1)
 
         processed_rxn = param.process_symbol(rxn)
 
@@ -38,7 +38,6 @@ class TestHomogeneousReaction(unittest.TestCase):
                 ]
             )
         )
-        self.assertIsInstance(processed_rxn.children[1], pybamm.Scalar)
         self.assertEqual(processed_rxn.children[0].domain, ["negative electrode"])
         self.assertEqual(processed_rxn.children[1].domain, ["separator"])
         self.assertEqual(processed_rxn.children[2].domain, ["positive electrode"])
@@ -47,6 +46,7 @@ class TestHomogeneousReaction(unittest.TestCase):
         ln = param.process_symbol(pybamm.standard_parameters.ln)
         lp = param.process_symbol(pybamm.standard_parameters.lp)
         self.assertEqual(processed_rxn.children[0].evaluate() * ln.evaluate(), 1)
+        self.assertEqual(processed_rxn.children[1].evaluate(), 0)
         self.assertEqual(processed_rxn.children[2].evaluate() * lp.evaluate(), -1)
 
     def test_discretisation(self):
@@ -56,7 +56,7 @@ class TestHomogeneousReaction(unittest.TestCase):
         mesh = shared.TestDefaults1DMacro().mesh
         disc = pybamm.BaseDiscretisation(mesh)
 
-        rxn = pybamm.interface.homogeneous_reaction()
+        rxn = pybamm.interface.homogeneous_reaction(1)
 
         param_rxn = param.process_symbol(rxn)
         processed_rxn = disc.process_symbol(param_rxn)

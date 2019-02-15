@@ -33,7 +33,6 @@ Ibar = pybamm.Parameter("current scale")
 ibar = Ibar / (8 * A_cs)  # Specified scale for the current [A.m-2]
 Q = 17  # Capacity [Ah]
 Crate = Ibar / Q  # C-rate [-]
-icell = Ibar
 
 # Microstructure
 An = pybamm.Parameter(
@@ -92,33 +91,6 @@ U_Pb_ref = pybamm.Parameter("U_Pb_ref")  # Reference OCP in the lead [V]
 U_PbO2_ref = pybamm.Parameter("U_PbO2_ref")  # Reference OCP in the lead dioxide [V]
 
 # --------------------------------------------------------------------------------------
-"""Functions"""
-
-rho_dim = pybamm.Parameter("epsn_max")
-mu_dim = pybamm.Parameter("epsn_max")
-
-
-def D_dim(c):
-    "Dimensional electrolyte diffusivity"
-    return 1  # pybamm.FunctionParameter("electrolyte_diffusivity", c)
-
-
-def D(c):
-    "Dimensionless electrolyte diffusivity"
-    return D_dim(c * cmax) / D_dim(cmax)
-
-
-def U_Pb(c):
-    "Dimensional open-circuit potential for lead electrode"
-    return U_Pb_ref
-
-
-def U_PbO2(c):
-    "Dimensionless open-circuit potential for lead-dioxide electrode"
-    return U_PbO2_ref
-
-
-# --------------------------------------------------------------------------------------
 """Scales"""
 Lx = pybamm.standard_parameters.Lx
 F = pybamm.standard_parameters.F
@@ -133,6 +105,73 @@ current_scale = ibar
 interfacial_current_scale_neg = ibar / (An * Lx)
 interfacial_current_scale_pos = ibar / (Ap * Lx)
 velocity_scale = ibar / (cmax * F)  # Reaction velocity scale
+
+# --------------------------------------------------------------------------------------
+"""Functions"""
+
+
+def dimensional_current(current_scale, current_function, t):
+    """Returns the dimensional current as a function of time
+
+    Parameters
+    ----------
+    current_scale : :class:`numbers.Number` or :class:`pybamm.Symbol`
+        The typical scale for the current
+    current_function : python function
+        The current function
+    t : :class:`pybamm.Time`
+        The independent variable "time"
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        The current as a function of time
+    """
+    t = pybamm.t
+    return current_scale * pybamm.Function(current_function, t)
+
+
+def dimensionless_current(current_function, t):
+    """Returns the dimensionless current as a function of time
+
+    Parameters
+    ----------
+    current_function : python function
+        The current function
+    t : :class:`pybamm.Time`
+        The independent variable "time"
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        The current as a function of time
+    """
+    return pybamm.Function(current_function, t)
+
+
+rho_dim = pybamm.Parameter("epsn_max")
+mu_dim = pybamm.Parameter("epsn_max")
+
+
+def D_dim(c):
+    "Dimensional electrolyte diffusivity"
+    return 1  # pybamm.FunctionParameter("electrolyte_diffusivity", c)
+
+
+def D(c):
+    "Dimensionless electrolyte diffusivity"
+    return D_dim(c * concentration_scale) / D_dim(concentration_scale)
+
+
+def U_Pb(c):
+    "Dimensional open-circuit potential for lead electrode"
+    return U_Pb_ref
+
+
+def U_PbO2(c):
+    "Dimensionless open-circuit potential for lead-dioxide electrode"
+    return U_PbO2_ref
+
 
 # --------------------------------------------------------------------------------------
 """Dimensionless Parameters"""
