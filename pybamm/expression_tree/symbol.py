@@ -339,6 +339,10 @@ class Symbol(anytree.NodeMixin):
             # return false if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
             return False
+        except ValueError as e:
+            # return false if ValueError is raised (there is a Time node in the tree)
+            assert e.args[0] == "t must be provided"
+            return False
 
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""
