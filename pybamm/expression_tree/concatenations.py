@@ -97,21 +97,104 @@ class DomainConcatenation(Concatenation):
         The underlying mesh for discretisation, used to obtain the number of mesh points
         in each domain.
 
+    Examples
+    --------
+    >>> import pybamm
+    >>> mesh = pybamm
+    >>> a = pybamm.Scalar(1, domain=["negative electrode"])
+    >>> b = pybamm.Scalar(2, domain=["separator"])
+    >>> c = pybamm.Scalar(3, domain=["positive electrode"])
+    >>> conc = DomainConcatenation([a,b,c], mesh)
+    >>> conc.evaluate()
+
+    >>> import numpy as np
+    >>> a = pybamm.Scalar(1, domain=["negative electrode"])
+    >>> b = pybamm.Vector(4*np.ones_like(mesh["separator"].nodes), domain=["separator"])
+    >>> c = pybamm.Scalar(3, domain=["positive electrode"])
+    >>> conc = DomainConcatenation([a,b,c], mesh)
+    >>> conc.evaluate()
+
     """
 
-    def __init__(self, children, mesh):
+    def __init__(self, children, mesh, broadcast=False):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
 
         children = list(children)
 
+        # If any child is a constant, prepare if for concatenation, independently of
+        # the value of the 'broadcast' flag
+        # If the 'broadcast' flag is set to True, broadcast all nodes
         for i, child in enumerate(children):
-            if isinstance(child, pybamm.Scalar):
+            if child.is_constant():
+                children[i] = self.process_node_for_concatenate(child, mesh)
+            elif broadcast:
                 children[i] = pybamm.NumpyBroadcast(child, child.domain, mesh)
 
-        # Allow the base class to sort the domains into the correct order
+        # Allow the base class to sort the children and domains into the correct order,
+        # using the order from KNOWN_DOMAINS
         super().__init__(*children, name="domain concatenation")
+
+        # create dict of domain => slice of final vector
+        self._slices = self.create_slices(self, mesh)
+
+        # store size of final vector
+        self._size = self._slices[self.domain[-1]].stop
+
+        # create disc of domain => slice for each child
+        self._children_slices = []
+        for child in self.children:
+            self._children_slices.append(self.create_slices(child, mesh))
+
+    def create_slices(self, node, mesh):
+        slices = {}
+        start = 0
+        end = 0
+        for dom in node.domain:
+            end += mesh[dom].npts
+            slices[dom] = slice(start, end)
+            start = end
+        return slices
+
+    def process_node_for_concatenate(self, node, mesh):
+        """
+        the node is assumed to be constant in time. this function replaces it with a
+        single Vector node with the correct length vector (according to its domain)
+        Parameters
+        ----------
+        node: derived from :class:`Symbol`
+            the sub-expression to process (node.is_constant() is true)
+        """
+
+        # node must be constant
+        value = node.evaluate()
+
+        # correct size of vector should be number of points in the domains
+        subvector_size = sum([mesh[dom].npts for dom in node.domain])
+
+        # check if its a scalar, if so convert to vector
+        if isinstance(value, numbers.Number):
+            value = np.full(subvector_size, value)
+
+        # check it is the right size
+        if value.size != subvector_size:
+            raise ValueError(
+                "Error: expression evaluated to a vector of incorrect length"
+            )
+
+        # convert to a Vector node
+        return pybamm.Vector(value, domain=node.domain)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return np.concatenate([child.evaluate(t, y) for child in self.children])
+
+        # preallocate vector
+        vector = np.empty(self._size)
+
+        # loop through domains of children writing subvectors to final vector
+        for child, slices in zip(self.children, self._children_slices):
+            child_vector = child.evaluate(t, y)
+            for dom in child.domain:
+                vector[self._slices[dom]] = child_vector[slices[dom]]
+
+        return vector
