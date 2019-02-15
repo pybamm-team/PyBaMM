@@ -73,7 +73,7 @@ class SpatialOperator(UnaryOperator):
 
     Derived classes will specify the particular operator
 
-    This type of node will be replaced by the :class:`BaseDiscretisation`
+    This type of node will be replaced by the :class:`Discretisation`
     class with a :class:`Matrix`
 
     **Extends:** :class:`UnaryOperator`
@@ -156,13 +156,12 @@ class NumpyBroadcast(Broadcast):
         child node
     domain : iterable of string
         the domain to broadcast the child to
-    mesh : mesh class
-        the mesh used for discretisation
+    npts : dict
+        contains the number of points on each domain
 
     **Extends:** :class:`SpatialOperator`
     """
 
-    # TODO: change places where mesh is inserted instead of submesh_pts
     def __init__(self, child, domain, npts):
         super().__init__(child, domain, name="numpy broadcast")
         # determine broadcasting vector size (size 1 if the domain is empty)

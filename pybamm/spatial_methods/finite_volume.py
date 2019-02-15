@@ -11,7 +11,7 @@ from scipy.sparse import spdiags
 
 class FiniteVolume(pybamm.SpatialMethod):
     """
-    A class which implements the steps specific to the finite volume method during 
+    A class which implements the steps specific to the finite volume method during
     discretisation.
 
     Parameters
@@ -22,19 +22,23 @@ class FiniteVolume(pybamm.SpatialMethod):
     **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
-    # TODO: figure out where to put mesh
     def __init__(self, mesh):
         self._mesh = mesh
 
     def spatial_variable(self, symbol):
         """
-        Create a discretised spatial variable compatible with 
-        the FiniteVolume method. 
+        Creates a discretised spatial variable compatible with
+        the FiniteVolume method.
 
         Parameters
         -----------
-        symbol : :class:`pybamm.SpatialVariable` 
+        symbol : :class:`pybamm.SpatialVariable`
             The spatial variable to be discretised.
+
+        Returns
+        -------
+        :class:`pybamm.Vector`
+            Contains the discretised spatial variable
         """
 
         # for finite volume we use the cell centres
@@ -46,16 +50,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         Broadcast symbol to a specified domain. To do this, calls
         :class:`pybamm.NumpyBroadcast`
 
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            The symbol to be broadcasted
-        domain : iterable of string
-            The domain to broadcast to
+        See :meth: `pybamm.SpatialMethod.broadcast`
         """
 
         # for finite volume we send variables to cells and so use number_of_cells
-        number_of_cells = self._mesh.submesh_pts
+        number_of_cells = {dom: submesh.npts for dom, submesh in self._mesh.items()}
         broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, number_of_cells)
 
         # if the broadcasted symbol evaluates to a constant value, replace the
@@ -69,7 +68,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
-        See :meth:`pybamm.BaseDiscretisation.gradient`
+        See :meth:`pybamm.SpatialMethod.gradient`
         """
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
@@ -123,7 +122,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
-        See :meth:`pybamm.BaseDiscretisation.gradient`
+        See :meth:`pybamm.SpatialMethod.gradient`
         """
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
@@ -136,7 +135,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             # and also a "positive particle" left and right.
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
-            discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
+            discretised_symbol = pybamm.NumpyModelConcatenation(
+                lbc, discretised_symbol, rbc
+            )
 
         domain = symbol.domain
         # check for spherical domains
@@ -232,11 +233,13 @@ class FiniteVolume(pybamm.SpatialMethod):
         last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
         right_ghost_cell = 2 * rbc - last_node
         # concatenate
-        return self.concatenate(left_ghost_cell, discretised_symbol, right_ghost_cell)
+        return pybamm.NumpyModelConcatenation(
+            left_ghost_cell, discretised_symbol, right_ghost_cell
+        )
 
-    ########################################################################################
-    ## I think the following can probably be moved outside of the spatial method
-    ########################################################################################
+    #######################################################
+    # Can probably be moved outside of the spatial method
+    ######################################################
 
     def compute_diffusivity(self, symbol):
         """

@@ -76,14 +76,15 @@ class TestUnaryOperators(unittest.TestCase):
     def test_numpy_broadcast(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(defaults.mesh)
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
         mesh = disc.mesh
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         combined_submeshes = mesh.combine_submeshes(*whole_cell)
         # scalar
         a = pybamm.Scalar(7)
-        broad = pybamm.NumpyBroadcast(a, whole_cell, mesh)
+        npts = {dom: submesh.npts for dom, submesh in mesh.items()}
+        broad = pybamm.NumpyBroadcast(a, whole_cell, npts)
         np.testing.assert_array_equal(
             broad.evaluate(), 7 * np.ones_like(combined_submeshes.nodes)
         )
@@ -91,7 +92,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # vector
         vec = pybamm.Vector(np.linspace(0, 1))
-        broad = pybamm.NumpyBroadcast(vec, whole_cell, mesh)
+        broad = pybamm.NumpyBroadcast(vec, whole_cell, npts)
         np.testing.assert_array_equal(
             broad.evaluate(),
             np.linspace(0, 1)[:, np.newaxis] * np.ones_like(combined_submeshes.nodes),
@@ -101,7 +102,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # state vector
         state_vec = pybamm.StateVector(slice(1, 2))
-        broad = pybamm.NumpyBroadcast(state_vec, whole_cell, mesh)
+        broad = pybamm.NumpyBroadcast(state_vec, whole_cell, npts)
         y = np.vstack([np.linspace(0, 1), np.linspace(0, 2)])
         np.testing.assert_array_equal(
             broad.evaluate(y=y), (y[1:2].T * np.ones_like(combined_submeshes.nodes)).T
@@ -109,7 +110,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # state vector - bad input
         state_vec = pybamm.StateVector(slice(1, 5))
-        broad = pybamm.NumpyBroadcast(state_vec, whole_cell, mesh)
+        broad = pybamm.NumpyBroadcast(state_vec, whole_cell, npts)
         y = np.vstack([np.linspace(0, 1), np.linspace(0, 2)]).T
         with self.assertRaises(AssertionError):
             broad.evaluate(y=y)

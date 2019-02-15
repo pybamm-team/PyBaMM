@@ -37,6 +37,12 @@ class TestDefaults1DMacro:
 
         self.mesh = pybamm.Mesh(self.geometry, self.submesh_types, self.submesh_pts)
 
+        self.spatial_methods = {
+            "negative electrode": SpatialMethodForTesting,
+            "separator": SpatialMethodForTesting,
+            "positive electrode": SpatialMethodForTesting,
+        }
+
 
 class TestDefaults1DParticle:
     def __init__(self, n):
@@ -52,12 +58,34 @@ class TestDefaults1DParticle:
 
         self.mesh = pybamm.Mesh(self.geometry, self.submesh_types, self.submesh_pts)
 
+        self.spatial_methods = {"negative particle": pybamm.FiniteVolume}
 
-class DiscretisationForTesting(pybamm.Discretisation):
+
+class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
 
     def __init__(self, mesh):
+        self._mesh = mesh
         super().__init__(mesh)
+
+    def spatial_variable(self, symbol):
+        # for finite volume we use the cell centres
+        symbol_mesh = self._mesh.combine_submeshes(*symbol.domain)
+        return pybamm.Vector(symbol_mesh.nodes)
+
+    def broadcast(self, symbol, domain):
+        # for finite volume we send variables to cells and so use number_of_cells
+        number_of_cells = {dom: submesh.npts for dom, submesh in self._mesh.items()}
+        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, number_of_cells)
+
+        # if the broadcasted symbol evaluates to a constant value, replace the
+        # symbol-Vector multiplication with a single array
+        if broadcasted_symbol.is_constant():
+            broadcasted_symbol = pybamm.Array(
+                broadcasted_symbol.evaluate(), domain=broadcasted_symbol.domain
+            )
+
+        return broadcasted_symbol
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
@@ -72,3 +100,6 @@ class DiscretisationForTesting(pybamm.Discretisation):
             n += self.mesh[domain].npts
         divergence_matrix = pybamm.Matrix(np.eye(n))
         return divergence_matrix * discretised_symbol
+
+    def compute_diffusivity(self, symbol):
+        return symbol

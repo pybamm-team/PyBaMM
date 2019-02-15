@@ -51,7 +51,7 @@ class TestHomogeneousReaction(unittest.TestCase):
 
     def test_discretisation(self):
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
 
         rxn = pybamm.interface.homogeneous_reaction()
 
