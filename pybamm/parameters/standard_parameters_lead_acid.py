@@ -99,28 +99,46 @@ mu_dim = pybamm.Parameter("epsn_max")
 
 
 def D_dim(c):
-    return 1
+    "Dimensional electrolyte diffusivity"
+    return 1  # pybamm.FunctionParameter("electrolyte_diffusivity", c)
 
 
 def D(c):
+    "Dimensionless electrolyte diffusivity"
     return D_dim(c * cmax) / D_dim(cmax)
 
 
 def U_Pb(c):
+    "Dimensional open-circuit potential for lead electrode"
     return U_Pb_ref
 
 
 def U_PbO2(c):
+    "Dimensionless open-circuit potential for lead-dioxide electrode"
     return U_PbO2_ref
 
+
+# --------------------------------------------------------------------------------------
+"""Scales"""
+Lx = pybamm.standard_parameters.Lx
+F = pybamm.standard_parameters.F
+R = pybamm.standard_parameters.R
+T = pybamm.standard_parameters.T
+
+concentration_scale = cmax
+length_scale = Lx
+time_scale = cmax * F * Lx / ibar  # discharge time scale
+potential_scale = R * T / F
+current_scale = ibar
+interfacial_current_scale_neg = ibar / (An * Lx)
+interfacial_current_scale_pos = ibar / (Ap * Lx)
+velocity_scale = ibar / (cmax * F)  # Reaction velocity scale
 
 # --------------------------------------------------------------------------------------
 """Dimensionless Parameters"""
 
 Cd = (
-    (pybamm.standard_parameters.Lx ** 2)
-    / D_dim(cmax)
-    / (cmax * pybamm.standard_parameters.F * pybamm.standard_parameters.Lx / ibar)
+    (Lx ** 2) / D_dim(cmax) / time_scale
 )  # Diffusional C-rate: diffusion timescale/discharge timescale
 alpha = (nu * Vw - Ve) * cmax  # Excluded volume fraction
 sn = (
@@ -130,24 +148,16 @@ sp = (
     -(s_plus_p + ne_p * pybamm.standard_parameters.t_plus) / ne_p
 )  # Dimensionless rection rate (pos)
 iota_s_n = (
-    sigma_eff_n
-    * pybamm.standard_parameters.R
-    * pybamm.standard_parameters.T
-    / (pybamm.standard_parameters.F * pybamm.standard_parameters.Lx)
-    / ibar
+    sigma_eff_n * potential_scale / current_scale
 )  # Dimensionless lead conductivity
 iota_s_p = (
-    sigma_eff_p
-    * pybamm.standard_parameters.R
-    * pybamm.standard_parameters.T
-    / (pybamm.standard_parameters.F * pybamm.standard_parameters.Lx)
-    / ibar
+    sigma_eff_p * potential_scale / current_scale
 )  # Dimensionless lead dioxide conductivity
-iota_ref_n = jref_n / (
-    ibar / (An * pybamm.standard_parameters.Lx)
+iota_ref_n = (
+    jref_n / interfacial_current_scale_neg
 )  # Dimensionless exchange-current density (neg)
-iota_ref_p = jref_p / (
-    ibar / (Ap * pybamm.standard_parameters.Lx)
+iota_ref_p = (
+    jref_p / interfacial_current_scale_pos
 )  # Dimensionless exchange-current density (pos)
 beta_surf_n = -cmax * DeltaVsurf_n / ne_n  # Molar volume change (lead)
 beta_surf_p = -cmax * DeltaVsurf_p / ne_p  # Molar volume change (lead dioxide)
@@ -162,34 +172,18 @@ omega_c = (
     cmax * Me / rho_dim * (pybamm.standard_parameters.t_plus + Mn / Me)
 )  # Migrative kinematic relationship coefficient
 gamma_dl_n = (
-    Cdl
-    * pybamm.standard_parameters.R
-    * pybamm.standard_parameters.T
-    * An
-    * pybamm.standard_parameters.Lx
-    / (pybamm.standard_parameters.F * ibar)
-    / (cmax * pybamm.standard_parameters.F * pybamm.standard_parameters.Lx / ibar)
+    Cdl * potential_scale / interfacial_current_scale_neg / time_scale
 )  # Dimensionless double-layer capacity (neg)
 gamma_dl_p = (
-    Cdl
-    * pybamm.standard_parameters.R
-    * pybamm.standard_parameters.T
-    * Ap
-    * pybamm.standard_parameters.Lx
-    / (pybamm.standard_parameters.F * ibar)
-    / (cmax * pybamm.standard_parameters.F * pybamm.standard_parameters.Lx / ibar)
+    Cdl * potential_scale / interfacial_current_scale_pos / time_scale
 )  # Dimensionless double-layer capacity (pos)
 voltage_cutoff = (
-    pybamm.standard_parameters.F
-    / (pybamm.standard_parameters.R * pybamm.standard_parameters.T)
+    1
+    / potential_scale
     * (pybamm.standard_parameters.voltage_low_cut - (U_PbO2_ref - U_Pb_ref))
 )  # Dimensionless voltage cut-off
-U_rxn = ibar / (cmax * pybamm.standard_parameters.F)  # Reaction velocity scale
 pi_os = (
-    mu_dim
-    * U_rxn
-    * pybamm.standard_parameters.Lx
-    / (d ** 2 * pybamm.standard_parameters.R * pybamm.standard_parameters.T * cmax)
+    mu_dim * velocity_scale * Lx / (d ** 2 * R * T * cmax)
 )  # Ratio of viscous pressure scale to osmotic pressure scale
 
 
@@ -201,7 +195,7 @@ qmax = (
         + pybamm.standard_parameters.Ls * epss_max
         + pybamm.standard_parameters.Lp * epsp_max
     )
-    / pybamm.standard_parameters.Lx
+    / Lx
     / (sp - sn)
 )  # Dimensionless max capacity
 epsDelta_n = beta_surf_n / pybamm.standard_parameters.Ln * qmax
