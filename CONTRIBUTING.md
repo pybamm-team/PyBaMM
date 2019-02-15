@@ -49,7 +49,7 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 ## Installation
 
-To install PyBaMM with all developer options, use:
+To install PyBaMM with all developer options, type:
 
 ```bash
 pip install -e .[dev,docs]
@@ -163,7 +163,7 @@ This allows people to (1) use PyBaMM without ever importing Matplotlib and (2) c
 
 All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-To run quick tests, use
+To run quick tests, type
 
 ```bash
 python run-tests.py --unit
@@ -177,7 +177,7 @@ Next, add some simple (and speedy!) tests of your main features. If these run wi
 
 ### Running more tests
 
-If you want to check your tests on Python 2 and 3, use
+If you want to check your tests on Python 2 and 3, type
 
 ```bash
 python run-tests.py --unit2 --unit3
@@ -187,7 +187,7 @@ When you commit anything to PyBaMM, these checks will also be run automatically 
 
 ### Testing notebooks
 
-To test all example notebooks, use
+To test all example notebooks, type
 
 ```bash
 python run-tests.py --books
@@ -272,7 +272,7 @@ The requirements files link to each other, so that calling `$ pip install -r req
 It's always worth using an up-to-date version of pip. On older systems especially, having an up-to-date pip will prevent all kinds of version incompatibility issues:
 
 ```
-$ pip install --upgrade pip
+pip install --upgrade pip
 ```
 
 ### Travis CI

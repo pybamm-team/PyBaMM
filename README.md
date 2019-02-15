@@ -51,7 +51,8 @@ Users can install [scikits.odes](https://github.com/bmcage/odes) in order to use
 wrapped SUNDIALS ODE and DAE
 [solvers](https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html).
 
-To install scikits.odes, you will need to first download and compile sundials 3.1.1:
+To install scikits.odes, you will need to first download and compile sundials 3.1.1. On
+the command-line type:
 
 ```bash
 INSTALL_DIR=`pwd`/sundials
