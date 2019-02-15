@@ -81,7 +81,7 @@ which will save you needing to set your `LD_LIBRARY_PATH` every time you log in.
 example, to add this line to your `.bashrc` you can type:
 
 ```bash 
-$ echo 'export LD_LIBRARY_PATH=$INSTALL_DIR/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
+$ echo "export LD_LIBRARY_PATH=$INSTALL_DIR/lib:\$LD_LIBRARY_PATH" >> ~/.bashrc
 ```
 
 Please see the [scikits.odes
