@@ -207,13 +207,6 @@ epsp_init = epsp_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
 
 
 # Concatenated symbols
-# artificially add domains - doesn't seem like the best way of doing this
-# TODO: look into how to do this more elegantly
-neg = pybamm.Scalar(1, domain=["negative electrode"])
-sep0 = pybamm.Scalar(0, domain=["separator"])
-sep1 = pybamm.Scalar(1, domain=["separator"])
-pos = pybamm.Scalar(1, domain=["positive electrode"])
-
-s = pybamm.Concatenation(sn * neg, sep0, sp * pos)
-beta_surf = pybamm.Concatenation(beta_surf_n * neg, sep0, beta_surf_p * pos)
-eps_init = pybamm.Concatenation(epsn_init * neg, epss_init * sep1, epsp_init * pos)
+s = pybamm.piecewise_constant(sn, 0, sp)
+beta_surf = pybamm.piecewise_constant(beta_surf_n, 0, beta_surf_p)
+eps_init = pybamm.piecewise_constant(epsn_init, epss_init, epsp_init)

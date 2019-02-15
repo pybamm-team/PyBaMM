@@ -131,7 +131,7 @@ def electrolyte_diffusivity(c):
 #
 # # def U_Pb_hat(param, c):
 # #     """Dimensional OCP in the negative electrode [V]"""
-# #     return param._raw["U_Pb_ref"] + param._raw["R"] * param._raw["T_ref"] /param._raw[
+#     return param._raw["U_Pb_ref"] + param._raw["R"] * param._raw["T_ref"] /param._raw[
 # #         "F"
 # #     ] * U_Pb(c / param._raw["cmax"])
 #
