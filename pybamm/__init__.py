@@ -45,6 +45,7 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 from .util import Timer
 from .util import profile
+from .util import load_function
 
 #
 # Classes for the Expression Tree
@@ -70,6 +71,7 @@ from .expression_tree.unary_operators import (
     UnaryOperator,
     Negate,
     AbsoluteValue,
+    Function,
     SpatialOperator,
     Gradient,
     Divergence,
@@ -78,6 +80,7 @@ from .expression_tree.unary_operators import (
     grad,
     div,
 )
+from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import IndependentVariable, Time, Space
