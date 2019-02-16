@@ -372,6 +372,51 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         ln = mesh["negative electrode"].edges[-1]
         ls = mesh["separator"].edges[-1] - ln
 
+        # macroscale variable
+        var = pybamm.Variable("var", domain=["negative electrode", "separator"])
+        integral_eqn = pybamm.Integral(
+            var, pybamm.Space(["negative electrode", "separator"])
+        )
+        y_slices = disc.get_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+
+        combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
+        constant_y = np.ones_like(combined_submesh.nodes)
+        self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), ln + ls)
+        linear_y = combined_submesh.nodes
+        self.assertAlmostEqual(
+            integral_eqn_disc.evaluate(None, linear_y), (ln + ls) ** 2 / 2
+        )
+        cos_y = np.cos(combined_submesh.nodes)
+        self.assertAlmostEqual(
+            integral_eqn_disc.evaluate(None, cos_y), np.sin(ln + ls), places=4
+        )
+
+        # microscale variable
+        var = pybamm.Variable("var", domain=["negative particle"])
+        integral_eqn = pybamm.Integral(var, pybamm.Space(["negative particle"]))
+        y_slices = disc.get_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+
+        constant_y = np.ones_like(mesh["negative particle"].nodes)
+        self.assertEqual(
+            integral_eqn_disc.evaluate(None, constant_y), (ln + ls) ** 2 / 2
+        )
+        linear_y = mesh["negative particle"].nodes
+        self.assertAlmostEqual(
+            integral_eqn_disc.evaluate(None, linear_y), (ln + ls) ** 3 / 3
+        )
+        one_over_y = 1 / mesh["negative particle"].nodes
+        self.assertEqual(integral_eqn_disc.evaluate(None, one_over_y), ln + ls)
+
+    def test_integral(self):
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+        mesh = disc.mesh
+        ln = mesh["negative electrode"].edges[-1]
+        ls = mesh["separator"].edges[-1] - ln
+
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         integral_eqn = pybamm.Integral(
             var, pybamm.Space(["negative electrode", "separator"])

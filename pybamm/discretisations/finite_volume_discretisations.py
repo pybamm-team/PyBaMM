@@ -175,22 +175,16 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
 
         domain = symbol.domain
-        # check for
+        # check for particle domain
+        divergence_matrix = self.divergence_matrix(domain)
         if ("negative particle" or "positive particle") in domain:
-
-            # implement spherical operator
-            divergence_matrix = self.divergence_matrix(domain)
-
             submesh = self.mesh.combine_submeshes(*domain)
             r = pybamm.Vector(submesh.nodes)
             r_edges = pybamm.Vector(submesh.edges)
-
             out = (1 / (r ** 2)) * (
                 divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
             )
-
         else:
-            divergence_matrix = self.divergence_matrix(domain)
             out = divergence_matrix @ discretised_symbol
         return out
 
@@ -228,8 +222,15 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         """
         # Discretise symbol
         discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
+        # check for particle domain
         integral_matrix = self.integral_matrix(symbol.domain)
-        return integral_matrix @ discretised_symbol
+        if ("negative particle" or "positive particle") in symbol.domain:
+            submesh = self.mesh.combine_submeshes(*domain)
+            r = pybamm.Vector(submesh.nodes)
+            out = 2 * np.pi * integral_matrix @ (discretised_symbol * r)
+        else:
+            out = integral_matrix @ discretised_symbol
+        return out
 
     def integral_matrix(self, domain):
         """

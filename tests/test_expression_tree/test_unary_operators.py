@@ -73,6 +73,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta.name, "integral dtime")
         self.assertEqual(inta.children[0].name, a.name)
         self.assertEqual(inta.integration_variable, t)
+        self.assertEqual(inta.domain, [])
 
         # space integral
         a = pybamm.Symbol("a", domain=["negative electrode"])
