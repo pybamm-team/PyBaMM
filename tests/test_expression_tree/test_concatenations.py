@@ -144,15 +144,21 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.id, pybamm.Concatenation(a_new, b_new, c_new).id)
 
     def test_piecewise_constant(self):
-        a = pybamm.Scalar("a")
-        b = pybamm.Scalar("b")
-        c = pybamm.Scalar("c")
-        conc = pybamm.piecewise_constant(a, b, c)
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        c = pybamm.Scalar(3)
+        conc = pybamm.PiecewiseConstant(a, b, c)
 
         self.assertIsInstance(conc, pybamm.Concatenation)
         self.assertEqual(
             conc.domain, ["negative electrode", "separator", "positive electrode"]
         )
+        self.assertEqual(conc.children[0].domain, ["negative electrode"])
+        self.assertEqual(conc.children[1].domain, ["separator"])
+        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+        self.assertEqual(conc.children[0].evaluate(), 1)
+        self.assertEqual(conc.children[1].evaluate(), 2)
+        self.assertEqual(conc.children[2].evaluate(), 3)
 
 
 if __name__ == "__main__":
