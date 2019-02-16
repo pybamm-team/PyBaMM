@@ -76,10 +76,9 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         # create current functions
         current_function = pybamm.standard_current_functions.constant_current
         t = pybamm.t
-        current = pybamm.standard_parameters.dimensional_current(2, current_function, t)
-        dimensionless_current = pybamm.standard_parameters.dimensionless_current(
-            current_function, t
-        )
+        spla = pybamm.standard_parameters_lead_acid
+        current = spla.dimensional_current(2, current_function, t)
+        dimensionless_current = spla.dimensionless_current(current_function, t)
 
         # process
         parameter_values = pybamm.ParameterValues()
