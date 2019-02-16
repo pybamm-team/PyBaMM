@@ -30,7 +30,8 @@ H = pybamm.Parameter("H")
 W = pybamm.Parameter("W")
 A_cs = H * W  # Area of the current collectors [m2]
 Ibar = pybamm.Parameter("current scale")
-ibar = Ibar / (8 * A_cs)  # Specified scale for the current [A.m-2]
+n_electrodes_parallel = pybamm.Parameter("number of electrodes in parallel")
+ibar = Ibar / (n_electrodes_parallel * A_cs)  # Specified scale for the current [A.m-2]
 Q = 17  # Capacity [Ah]
 Crate = Ibar / Q  # C-rate [-]
 
