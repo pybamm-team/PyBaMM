@@ -13,7 +13,7 @@ def homogeneous_reaction(current):
     # hack to make the concatenation work. Concatenation needs some work
     current_neg = current / pybamm.standard_parameters.ln
     current_pos = -current / pybamm.standard_parameters.lp
-    return pybamm.piecewise_constant(current_neg, 0, current_pos)
+    return pybamm.PiecewiseConstant(current_neg, 0, current_pos)
 
 
 def butler_volmer_lead_acid(c, phi, domain=None):

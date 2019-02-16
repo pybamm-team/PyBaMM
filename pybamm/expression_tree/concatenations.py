@@ -173,23 +173,29 @@ class DomainConcatenation(Concatenation):
         return vector
 
 
-def piecewise_constant(neg_value, sep_value, pos_value):
-    """Concatenate three values that don't have a domain into a piecewise constant
-    concatenation. This is useful when we don't want to assign a domain to the inputs
+class PiecewiseConstant(Concatenation):
+    """Piecewise constant concatenation of three symbols.
+    This is useful when we don't want to assign a domain to the inputs
 
     Parameters
     ----------
-    neg_value, sep_value, pos_value : :class:`numbers.Number` or :class:`pybamm.Symbol`
-        The constant values to be concatenated
+    neg_value: :class:`numbers.Number` or :class:`pybamm.Symbol`
+        The value in the negative electrode
+    sep_value: :class:`numbers.Number` or :class:`pybamm.Symbol`
+        The value in the separator
+    pos_value: :class:`numbers.Number` or :class:`pybamm.Symbol`
+        The value in the positive electrode
 
-    Returns
-    -------
-    :class:`pybamm.Concantenation`
-        The piecewise constant concatenation
     """
-    neg_value_with_domain = neg_value * pybamm.Scalar(1, domain=["negative electrode"])
-    sep_value_with_domain = sep_value * pybamm.Scalar(1, domain=["separator"])
-    pos_value_with_domain = pos_value * pybamm.Scalar(1, domain=["positive electrode"])
-    return pybamm.Concatenation(
-        neg_value_with_domain, sep_value_with_domain, pos_value_with_domain
-    )
+
+    def __init__(self, neg_value, sep_value, pos_value):
+        neg_value_with_domain = neg_value * pybamm.Scalar(
+            1, domain=["negative electrode"]
+        )
+        sep_value_with_domain = sep_value * pybamm.Scalar(1, domain=["separator"])
+        pos_value_with_domain = pos_value * pybamm.Scalar(
+            1, domain=["positive electrode"]
+        )
+        super().__init__(
+            neg_value_with_domain, sep_value_with_domain, pos_value_with_domain
+        )

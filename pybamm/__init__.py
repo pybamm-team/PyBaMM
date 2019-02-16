@@ -63,7 +63,7 @@ from .expression_tree.concatenations import (
     Concatenation,
     NumpyModelConcatenation,
     DomainConcatenation,
-    piecewise_constant,
+    PiecewiseConstant,
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix

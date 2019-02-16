@@ -246,6 +246,6 @@ epsp_init = epsp_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
 
 
 # Concatenated symbols
-s = pybamm.piecewise_constant(sn, 0, sp)
-beta_surf = pybamm.piecewise_constant(beta_surf_n, 0, beta_surf_p)
-eps_init = pybamm.piecewise_constant(epsn_init, epss_init, epsp_init)
+s = pybamm.PiecewiseConstant(sn, 0, sp)
+beta_surf = pybamm.PiecewiseConstant(beta_surf_n, 0, beta_surf_p)
+eps_init = pybamm.PiecewiseConstant(epsn_init, epss_init, epsp_init)
