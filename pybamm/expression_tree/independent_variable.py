@@ -63,7 +63,11 @@ class SpatialVariable(IndependentVariable):
             raise ValueError("domain must be provided")
         if name == "r" and domain not in [["negative particle"], ["positive particle"]]:
             raise pybamm.DomainError("domain must be particle if name is 'r'")
-        name = "space ({}, {})".format(name, domain)
+        elif name in ["x", "y", "z"] and any(["particle" in dom for dom in domain]):
+            raise pybamm.DomainError(
+                "domain cannot be particle if name is '{}'".format(name)
+            )
+
         super().__init__(name, domain=domain)
 
 

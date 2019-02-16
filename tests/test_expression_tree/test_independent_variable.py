@@ -35,13 +35,13 @@ class TestIndependentVariable(unittest.TestCase):
 
     def test_spatial_variable(self):
         x = pybamm.SpatialVariable("x", ["negative electrode"])
-        self.assertEqual(x.name, "space (x, ['negative electrode'])")
+        self.assertEqual(x.name, "x")
         y = pybamm.SpatialVariable("y", ["separator"])
-        self.assertEqual(y.name, "space (y, ['separator'])")
+        self.assertEqual(y.name, "y")
         z = pybamm.SpatialVariable("z", ["positive electrode"])
-        self.assertEqual(z.name, "space (z, ['positive electrode'])")
+        self.assertEqual(z.name, "z")
         r = pybamm.SpatialVariable("r", ["negative particle"])
-        self.assertEqual(r.name, "space (r, ['negative particle'])")
+        self.assertEqual(r.name, "r")
         with self.assertRaises(NotImplementedError):
             x.evaluate()
 
@@ -51,6 +51,8 @@ class TestIndependentVariable(unittest.TestCase):
             pybamm.SpatialVariable("x", [])
         with self.assertRaises(pybamm.DomainError):
             pybamm.SpatialVariable("r", ["negative electrode"])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.SpatialVariable("x", ["negative particle"])
 
 
 if __name__ == "__main__":

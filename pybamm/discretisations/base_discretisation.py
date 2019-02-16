@@ -233,10 +233,12 @@ class BaseDiscretisation(object):
             )
             return pybamm.StateVector(y_slices[symbol.id])
 
-        elif isinstance(symbol, pybamm.Space):
-            symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-            return pybamm.Vector(symbol_mesh.nodes)
-
+        elif isinstance(symbol, pybamm.SpatialVariable):
+            if symbol.name in ["x", "r"]:
+                symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+                return pybamm.Vector(symbol_mesh.nodes)
+            else:
+                raise NotImplementedError("3D meshes not yet implemented")
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [
                 self.process_symbol(child, y_slices, boundary_conditions)

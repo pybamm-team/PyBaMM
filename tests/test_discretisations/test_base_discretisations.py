@@ -505,14 +505,14 @@ class TestDiscretise(unittest.TestCase):
         disc = shared.DiscretisationForTesting(defaults.mesh)
 
         # space
-        x1 = pybamm.Space(["negative electrode"])
+        x1 = pybamm.SpatialVariable("x", ["negative electrode"])
         x1_disc = disc.process_symbol(x1)
         self.assertIsInstance(x1_disc, pybamm.Vector)
         np.testing.assert_array_equal(
             x1_disc.evaluate(), disc.mesh["negative electrode"].nodes
         )
 
-        x2 = pybamm.Space(["negative electrode", "separator"])
+        x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
         x2_disc = disc.process_symbol(x2)
         self.assertIsInstance(x2_disc, pybamm.Vector)
         np.testing.assert_array_equal(
@@ -520,12 +520,19 @@ class TestDiscretise(unittest.TestCase):
             disc.mesh.combine_submeshes("negative electrode", "separator").nodes,
         )
 
-        x3 = 3 * pybamm.Space(["negative electrode"])
+        defaults = shared.TestDefaults1DParticle(10)
+        disc = shared.DiscretisationForTesting(defaults.mesh)
+
+        x3 = 3 * pybamm.SpatialVariable("r", ["negative particle"])
         x3_disc = disc.process_symbol(x3)
         self.assertIsInstance(x3_disc.children[1], pybamm.Vector)
         np.testing.assert_array_equal(
-            x3_disc.evaluate(), 3 * disc.mesh["negative electrode"].nodes
+            x3_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes
         )
+
+        x4 = pybamm.SpatialVariable("z", ["negative electrode"])
+        with self.assertRaises(NotImplementedError):
+            disc.process_symbol(x4)
 
 
 if __name__ == "__main__":
