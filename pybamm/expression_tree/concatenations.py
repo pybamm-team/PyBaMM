@@ -27,7 +27,7 @@ class Concatenation(pybamm.Symbol):
         domain = self.get_children_domains(children)
         super().__init__(name, children, domain=domain)
 
-    def evaluate(self, t, y):
+    def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         raise NotImplementedError
 
@@ -45,9 +45,6 @@ class Concatenation(pybamm.Symbol):
         domain_dict = {d: pybamm.KNOWN_DOMAINS.index(d) for d in domain}
         domain = sorted(domain_dict, key=domain_dict.__getitem__)
 
-        # Simplify domain if concatenation spans the whole cell
-        if domain == ["negative electrode", "separator", "positive electrode"]:
-            domain = ["whole cell"]
         return domain
 
 
@@ -113,23 +110,13 @@ class DomainConcatenation(Concatenation):
                 children[i] = self.process_node_for_concatenate(child, mesh)
 
         # Allow the base class to sort the domains into the correct order
-        super().__init__(*children, name="numpy concatenation")
-
-        # deal with "whole cell" special case.
-        # need to split the "whole cell" domain up when we calculate slices, then
-        # recombine again afterwards (see below)
-        if self.domain == ["whole cell"]:
-            self.domain = ["negative electrode", "separator", "positive electrode"]
+        super().__init__(*children, name="domain concatenation")
 
         # create dict of domain => slice of final vector
         self._slices = self.create_slices(self, mesh)
 
         # store size of final vector
         self._size = self._slices[self.domain[-1]].stop
-
-        # deal with "whole cell" special case
-        if self.domain == ["negative electrode", "separator", "positive electrode"]:
-            self.domain = ["whole cell"]
 
         # create disc of domain => slice for each child
         self._children_slices = []
@@ -190,3 +177,25 @@ class DomainConcatenation(Concatenation):
                 vector[self._slices[dom]] = child_vector[slices[dom]]
 
         return vector
+
+
+def piecewise_constant(neg_value, sep_value, pos_value):
+    """Concatenate three values that don't have a domain into a piecewise constant
+    concatenation. This is useful when we don't want to assign a domain to the inputs
+
+    Parameters
+    ----------
+    neg_value, sep_value, pos_value : :class:`numbers.Number` or :class:`pybamm.Symbol`
+        The constant values to be concatenated
+
+    Returns
+    -------
+    :class:`pybamm.Concantenation`
+        The piecewise constant concatenation
+    """
+    neg_value_with_domain = neg_value * pybamm.Scalar(1, domain=["negative electrode"])
+    sep_value_with_domain = sep_value * pybamm.Scalar(1, domain=["separator"])
+    pos_value_with_domain = pos_value * pybamm.Scalar(1, domain=["positive electrode"])
+    return pybamm.Concatenation(
+        neg_value_with_domain, sep_value_with_domain, pos_value_with_domain
+    )

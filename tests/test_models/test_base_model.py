@@ -38,9 +38,7 @@ class TestBaseModel(unittest.TestCase):
 
     def test_algebraic_set_get(self):
         model = pybamm.BaseModel()
-        algebraic = [
-            pybamm.Symbol("c") - pybamm.Symbol("a"),
-        ]
+        algebraic = {pybamm.Symbol("b"): pybamm.Symbol("c") - pybamm.Symbol("a")}
         model.algebraic = algebraic
         self.assertEqual(algebraic, model.algebraic)
 
@@ -99,8 +97,9 @@ class TestBaseModel(unittest.TestCase):
 
     def test_update(self):
         # model
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         model = pybamm.BaseModel()
-        c = pybamm.Variable("c", domain=["whole cell"])
+        c = pybamm.Variable("c", domain=whole_cell)
         rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
         initial_conditions = {c: 1}
         boundary_conditions = {c: {"left": 0, "right": 0}}
@@ -112,7 +111,7 @@ class TestBaseModel(unittest.TestCase):
 
         # update with submodel
         submodel = pybamm.BaseModel()
-        d = pybamm.Variable("d", domain=["whole cell"])
+        d = pybamm.Variable("d", domain=whole_cell)
         submodel.rhs = {
             d: 5 * pybamm.div(pybamm.grad(c)) + pybamm.div(pybamm.grad(d)) - 1
         }
@@ -141,7 +140,7 @@ class TestBaseModel(unittest.TestCase):
         # update with multiple submodels
         submodel1 = submodel  # copy submodel from previous test
         submodel2 = pybamm.BaseModel()
-        e = pybamm.Variable("e", domain=["whole cell"])
+        e = pybamm.Variable("e", domain=whole_cell)
         submodel2.rhs = {
             e: 5 * pybamm.div(pybamm.grad(d)) + pybamm.div(pybamm.grad(e)) - 1
         }
@@ -158,10 +157,55 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(model.initial_conditions[e], submodel2.initial_conditions[e])
         self.assertEqual(model.boundary_conditions[e], submodel2.boundary_conditions[e])
 
-    def test_check_well_posedness(self):
-        # Well-posed model - Dirichlet
+    def test_check_well_posedness_variables(self):
+        # Well-posed ODE model
         model = pybamm.BaseModel()
-        c = pybamm.Variable("c", domain=["whole cell"])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        d = pybamm.Variable("d", domain=whole_cell)
+        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c}
+        model.initial_conditions = {c: 1, d: 2}
+        model.boundary_conditions = {
+            c: {"left": 0, "right": 0},
+            d: {"left": 0, "right": 0},
+        }
+        model.check_well_posedness()
+
+        # Well-posed DAE model
+        e = pybamm.Variable("e", domain=whole_cell)
+        model.algebraic = {e: e - c - d}
+        model.check_well_posedness()
+
+        # Underdetermined model - not enough differential equations
+        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1}
+        model.algebraic = {e: e - c - d}
+        with self.assertRaisesRegex(pybamm.ModelError, "underdetermined"):
+            model.check_well_posedness()
+
+        # Underdetermined model - not enough algebraic equations
+        model.algebraic = {}
+        with self.assertRaisesRegex(pybamm.ModelError, "underdetermined"):
+            model.check_well_posedness()
+
+        # Overdetermined model - repeated keys
+        model.algebraic = {c: c - d, d: e + d}
+        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+            model.check_well_posedness()
+        # Overdetermined model - extra keys in algebraic
+        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -d}
+        model.algebraic = {e: c - d}
+        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+            model.check_well_posedness()
+        model.rhs = {c: 1, d: -1}
+        model.algebraic = {e: c - d}
+        with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
+            model.check_well_posedness()
+
+    def test_check_well_posedness_initial_boundary_conditions(self):
+        # Well-posed model - Dirichlet
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("c", domain=whole_cell)
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
         model.initial_conditions = {c: 1}
         model.boundary_conditions = {2 * c: {"left": 0, "right": 0}}
@@ -172,30 +216,38 @@ class TestBaseModel(unittest.TestCase):
         model.check_well_posedness()
 
         # Model with bad initial conditions (expect assertion error)
-        d = pybamm.Variable("d", domain=["whole cell"])
+        d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {d: 3}
-        with self.assertRaises(AssertionError) as error:
+        with self.assertRaisesRegex(pybamm.ModelError, "initial condition"):
             model.check_well_posedness()
-        self.assertIsInstance(error.exception.args[0], pybamm.ModelError)
-        self.assertIn("initial condition", error.exception.args[0].args[0])
 
         # Model with bad boundary conditions - Dirichlet (expect assertion error)
-        d = pybamm.Variable("d", domain=["whole cell"])
+        d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {c: 3}
         model.boundary_conditions = {d: {"left": 0, "right": 0}}
-        with self.assertRaises(AssertionError) as error:
+        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
-        self.assertIsInstance(error.exception.args[0], pybamm.ModelError)
-        self.assertIn("boundary condition", error.exception.args[0].args[0])
 
         # Model with bad boundary conditions - Neumann (expect assertion error)
-        d = pybamm.Variable("d", domain=["whole cell"])
+        d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {c: 3}
         model.boundary_conditions = {4 * pybamm.grad(d): {"left": 0, "right": 0}}
-        with self.assertRaises(AssertionError) as error:
+        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
-        self.assertIsInstance(error.exception.args[0], pybamm.ModelError)
-        self.assertIn("boundary condition", error.exception.args[0].args[0])
+
+        # Algebraic well-posed model
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        model = pybamm.BaseModel()
+        model.algebraic = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
+        model.boundary_conditions = {2 * c: {"left": 0, "right": 0}}
+        model.check_well_posedness()
+        model.boundary_conditions = {pybamm.grad(c): {"left": 0, "right": 0}}
+        model.check_well_posedness()
+
+        # Algebraic model with bad boundary conditions
+        model.boundary_conditions = {d: {"left": 0, "right": 0}}
+        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
+            model.check_well_posedness()
 
 
 if __name__ == "__main__":

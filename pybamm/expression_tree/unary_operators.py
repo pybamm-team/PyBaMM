@@ -66,6 +66,22 @@ class AbsoluteValue(UnaryOperator):
         return np.abs(self.children[0].evaluate(t, y))
 
 
+class Function(UnaryOperator):
+    """A node in the expression tree representing an arbitrary function
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, func, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("function ({})".format(func.__name__), child)
+        self.func = func
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return self.func(self.children[0].evaluate(t, y))
+
+
 class SpatialOperator(UnaryOperator):
     """A node in the expression tree representing a unary spatial operator
     (e.g. grad, div)
@@ -199,22 +215,34 @@ class NumpyBroadcast(Broadcast):
 
     def __init__(self, child, domain, mesh):
         super().__init__(child, domain, name="numpy broadcast")
+        # determine broadcasting vector size (size 1 if the domain is empty)
+        if domain == []:
+            self.broadcasting_vector_size = 1
+        else:
+            self.broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
         # create broadcasting vector (vector of ones with shape determined by the
         # domain)
-        broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
-        self.broadcasting_vector = np.ones(broadcasting_vector_size)
+        self.broadcasting_vector = np.ones(self.broadcasting_vector_size)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
+        child = self.children[0]
+        child_eval = child.evaluate(t, y)
         # if child is a vector, add a dimension for broadcasting
-        if isinstance(self.children[0], pybamm.Vector):
-            return (
-                self.children[0].evaluate(t, y)[:, np.newaxis]
-                * self.broadcasting_vector
+        if isinstance(child, pybamm.Vector):
+            return child_eval[:, np.newaxis] * self.broadcasting_vector
+        # if child is a state vector, check that it has the right shape and then
+        # broadcast
+        elif isinstance(child, pybamm.StateVector):
+            assert child_eval.shape[0] == 1, ValueError(
+                """child_eval should have shape (1,n), not {}""".format(
+                    child_eval.shape
+                )
             )
+            return np.repeat(child_eval, self.broadcasting_vector_size, axis=0)
         # otherwise just do normal multiplication
         else:
-            return self.children[0].evaluate(t, y) * self.broadcasting_vector
+            return child_eval * self.broadcasting_vector
 
 
 #

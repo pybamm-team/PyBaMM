@@ -1,8 +1,8 @@
+#
 # Tests for the Concatenation class and subclasses
 #
 import pybamm
-from tests.shared import MeshForTesting
-
+import tests.shared as shared
 import numpy as np
 import unittest
 
@@ -30,10 +30,6 @@ class TestConcatenations(unittest.TestCase):
             conc.domain,
             ["negative electrode", "separator", "positive electrode", "test"],
         )
-
-        # Whole cell concatenations should simplify
-        conc = pybamm.Concatenation(a, b)
-        self.assertEqual(conc.domain, ["whole cell"])
 
         # Can't concatenate nodes with overlapping domains
         d = pybamm.Symbol("d", domain=["separator"])
@@ -82,7 +78,11 @@ class TestConcatenations(unittest.TestCase):
         )
 
     def test_numpy_domain_concatenation(self):
-        mesh = MeshForTesting()
+        # create discretisation
+        defaults = shared.TestDefaults1DMacro()
+        disc = shared.DiscretisationForTesting(defaults.mesh)
+        mesh = disc.mesh
+
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
         a = pybamm.Scalar(2, domain=a_dom)
@@ -125,8 +125,34 @@ class TestConcatenations(unittest.TestCase):
             ),
         )
 
-        # check special case: final domain is still ["whole cell"]
-        self.assertEqual(conc.domain, ["whole cell"])
+    def test_concatenation_orphans(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        conc = pybamm.Concatenation(a, b, c)
+        a_new, b_new, c_new = conc.orphans
+
+        # We should be able to manipulate the children without TreeErrors
+        self.assertIsInstance(2 * a_new, pybamm.Multiplication)
+        self.assertIsInstance(3 + b_new, pybamm.Addition)
+        self.assertIsInstance(4 - c_new, pybamm.Subtraction)
+
+        # ids should stay the same
+        self.assertEqual(a.id, a_new.id)
+        self.assertEqual(b.id, b_new.id)
+        self.assertEqual(c.id, c_new.id)
+        self.assertEqual(conc.id, pybamm.Concatenation(a_new, b_new, c_new).id)
+
+    def test_piecewise_constant(self):
+        a = pybamm.Scalar("a")
+        b = pybamm.Scalar("b")
+        c = pybamm.Scalar("c")
+        conc = pybamm.piecewise_constant(a, b, c)
+
+        self.assertIsInstance(conc, pybamm.Concatenation)
+        self.assertEqual(
+            conc.domain, ["negative electrode", "separator", "positive electrode"]
+        )
 
 
 if __name__ == "__main__":

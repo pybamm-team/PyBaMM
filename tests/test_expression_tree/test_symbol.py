@@ -134,6 +134,30 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Scalar(1) * pybamm.Vector(np.zeros(10))
         self.assertTrue(a.is_constant())
 
+    def test_symbol_evaluates_to_number(self):
+        a = pybamm.Scalar(3)
+        self.assertTrue(a.evaluates_to_number())
+
+        a = pybamm.Parameter("a")
+        self.assertFalse(a.evaluates_to_number())
+
+        a = pybamm.Scalar(3) * pybamm.Scalar(2)
+        self.assertTrue(a.evaluates_to_number())
+        # highlight difference between this function and isinstance(a, Scalar)
+        self.assertNotIsInstance(a, pybamm.Scalar)
+
+        a = pybamm.Variable("a")
+        self.assertFalse(a.evaluates_to_number())
+
+        a = pybamm.Scalar(3) - 2
+        self.assertTrue(a.evaluates_to_number())
+
+        a = pybamm.Vector(np.ones(5))
+        self.assertFalse(a.evaluates_to_number())
+
+        a = pybamm.Matrix(np.ones((4, 6)))
+        self.assertFalse(a.evaluates_to_number())
+
     def test_symbol_repr(self):
         """
         test that __repr___ returns the string
@@ -206,6 +230,17 @@ class TestSymbol(unittest.TestCase):
         self.assertFalse(algebraic_eqn.has_spatial_derivatives())
         self.assertFalse(algebraic_eqn.has_gradient())
         self.assertFalse(algebraic_eqn.has_divergence())
+
+    def test_orphans(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        sum = a + b
+
+        a_orp, b_orp = sum.orphans
+        self.assertIsNone(a_orp.parent)
+        self.assertIsNone(b_orp.parent)
+        self.assertEqual(a.id, a_orp.id)
+        self.assertEqual(b.id, b_orp.id)
 
 
 if __name__ == "__main__":

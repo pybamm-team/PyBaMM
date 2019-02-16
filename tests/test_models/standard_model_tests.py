@@ -3,6 +3,7 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
+import numpy as np
 
 
 class StandardModelTest(object):
@@ -10,6 +11,7 @@ class StandardModelTest(object):
         self.model = model
         # Set defaults
         self.param = model.default_parameter_values
+        self.geometry = model.default_geometry
         self.disc = model.default_discretisation
         self.solver = model.default_solver
 
@@ -33,7 +35,7 @@ class StandardModelTest(object):
         # Overwrite solver if given
         if solver is not None:
             self.solver = solver
-        t_eval = self.disc.mesh["time"]
+        t_eval = np.linspace(0, 1, 100)
         self.solver.solve(self.model, t_eval)
 
     def test_all(self, param=None, disc=None, solver=None):

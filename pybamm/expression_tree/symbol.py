@@ -36,7 +36,6 @@ class Symbol(anytree.NodeMixin):
             # copy child before adding
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
-
         self.domain = domain
 
     @property
@@ -100,6 +99,19 @@ class Symbol(anytree.NodeMixin):
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
         )
+
+    @property
+    def orphans(self):
+        """
+        Returning deepcopies of the children, with parents removed to avoid corrupting
+        the expression tree internal data
+        """
+        orp = []
+        for child in self.children:
+            new_child = copy.deepcopy(child)
+            new_child.parent = None
+            orp.append(new_child)
+        return tuple(orp)
 
     def render(self):
         """print out a visual representation of the tree (this node and its
@@ -323,6 +335,24 @@ class Symbol(anytree.NodeMixin):
 
         # do the search, return true if no relevent nodes are found
         return all([not isinstance(n, search_types) for n in self.pre_order()])
+
+    def evaluates_to_number(self):
+        """Returns True if evaluating the expression returns a number.
+        Returns False otherwise, including if NotImplementedError is raised.
+        !Not to be confused with isinstance(self, pybamm.Scalar)!
+
+        See Also
+        --------
+        evaluate : evaluate the expression
+
+        """
+        try:
+            # return true if node evaluates to a number
+            return isinstance(self.evaluate(), numbers.Number)
+        except NotImplementedError:
+            # return false if NotImplementedError is raised
+            # (there is a e.g. Parameter, Variable, ... in the tree)
+            return False
 
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""
