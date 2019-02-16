@@ -125,12 +125,12 @@ class Integral(SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, function, integration_variable):
+    def __init__(self, child, integration_variable):
         if isinstance(integration_variable, pybamm.Space):
-            # Check that function and integration_variable domains agree
-            if function.domain != integration_variable.domain:
+            # Check that child and integration_variable domains agree
+            if child.domain != integration_variable.domain:
                 raise pybamm.DomainError(
-                    """function and integration_variable must have the same domain"""
+                    """child and integration_variable must have the same domain"""
                 )
         elif not isinstance(integration_variable, pybamm.IndependentVariable):
             raise ValueError(
@@ -139,12 +139,8 @@ class Integral(SpatialOperator):
                     type(integration_variable)
                 )
             )
-        super().__init__("integral d{}".format(integration_variable), function)
+        super().__init__("integral d{}".format(integration_variable), child)
         self._integration_variable = integration_variable
-
-    @property
-    def function(self):
-        return self.children[0]
 
     @property
     def integration_variable(self):

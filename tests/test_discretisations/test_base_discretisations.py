@@ -26,13 +26,13 @@ class DiscretisationForTesting(pybamm.BaseDiscretisation):
         discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         n = self.mesh[symbol.domain[0]].npts
         gradient_matrix = pybamm.Matrix(np.eye(n))
-        return gradient_matrix * discretised_symbol
+        return gradient_matrix @ discretised_symbol
 
     def divergence(self, symbol, y_slices, boundary_conditions):
         discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         n = self.mesh[symbol.domain[0]].npts
         divergence_matrix = pybamm.Matrix(np.eye(n))
-        return divergence_matrix * discretised_symbol
+        return divergence_matrix @ discretised_symbol
 
 
 class TestDiscretise(unittest.TestCase):
@@ -223,7 +223,7 @@ class TestDiscretise(unittest.TestCase):
         for eqn in [pybamm.grad(var), pybamm.div(var)]:
             eqn_disc = disc.process_symbol(eqn, y_slices, {})
 
-            self.assertIsInstance(eqn_disc, pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc, pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.Matrix)
             self.assertIsInstance(eqn_disc.children[1], pybamm.StateVector)
 
@@ -240,7 +240,7 @@ class TestDiscretise(unittest.TestCase):
 
             self.assertIsInstance(eqn_disc, pybamm.Multiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.StateVector)
-            self.assertIsInstance(eqn_disc.children[1], pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc.children[1], pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[1].children[0], pybamm.Matrix)
             self.assertIsInstance(eqn_disc.children[1].children[1], pybamm.StateVector)
 
@@ -257,6 +257,8 @@ class TestDiscretise(unittest.TestCase):
             disc.gradient(None, None, {})
         with self.assertRaises(NotImplementedError):
             disc.divergence(None, None, {})
+        with self.assertRaises(NotImplementedError):
+            disc.integral(None, None, {})
 
     def test_process_initial_conditions(self):
         # one equation

@@ -56,6 +56,7 @@ from .expression_tree.binary_operators import (
     Power,
     Subtraction,
     Multiplication,
+    MatrixMultiplication,
     Division,
 )
 from .expression_tree.concatenations import (

@@ -254,6 +254,37 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
         )
 
+    def test_integral(self):
+        """
+        Test integral
+        """
+        Ln = 0.1
+        Ls = 0.2
+        Lp = 0.3
+        L = Ln + Ls + Lp
+        param = pybamm.ParameterValues(base_parameters={"Ln": Ln, "Ls": Ls, "Lp": Lp})
+        mesh = pybamm.FiniteVolumeMacroMesh(param, 200)
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
+
+        var = pybamm.Variable("var", domain=["negative electrode", "separator"])
+        integral_eqn = pybamm.Integral(
+            var, pybamm.Space(["negative electrode", "separator"])
+        )
+        y_slices = disc.get_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+
+        combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
+        constant_y = np.ones_like(combined_submesh.nodes)
+        self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), (Ln + Ls) / L)
+        linear_y = combined_submesh.nodes
+        self.assertAlmostEqual(
+            integral_eqn_disc.evaluate(None, linear_y), ((Ln + Ls) / L) ** 2 / 2
+        )
+        cos_y = np.cos(combined_submesh.nodes)
+        self.assertAlmostEqual(
+            integral_eqn_disc.evaluate(None, cos_y), np.sin((Ln + Ls) / L)
+        )
+
     def test_grad_convergence_without_bcs(self):
         # Convergence
         param = pybamm.ParameterValues(

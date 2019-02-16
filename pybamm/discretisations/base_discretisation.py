@@ -266,6 +266,9 @@ class BaseDiscretisation(object):
         elif isinstance(symbol, pybamm.Divergence):
             return self.divergence(symbol.children[0], y_slices, boundary_conditions)
 
+        elif isinstance(symbol, pybamm.Integral):
+            return self.integral(symbol.children[0], y_slices, boundary_conditions)
+
         elif isinstance(symbol, pybamm.Broadcast):
             # Process child first
             new_child = self.process_symbol(
@@ -400,6 +403,21 @@ class BaseDiscretisation(object):
         ----------
         symbol : :class:`Symbol` (or subclass)
             The symbol (typically a variable) of which to take the divergence
+        y_slices : slice
+            The slice to assign to StateVector when discretising a variable
+        boundary_conditions : dict
+            The boundary conditions of the model
+
+        """
+        raise NotImplementedError
+
+    def integral(self, symbol, y_slices, boundary_conditions):
+        """How to discretise integral operators.
+
+        Parameters
+        ----------
+        symbol : :class:`Symbol` (or subclass)
+            The symbol (typically a variable) of which to take the integral
         y_slices : slice
             The slice to assign to StateVector when discretising a variable
         boundary_conditions : dict

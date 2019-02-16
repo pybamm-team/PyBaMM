@@ -49,7 +49,6 @@ class TestUnaryOperators(unittest.TestCase):
         inta = pybamm.Integral(a, t)
         self.assertEqual(inta.name, "integral dtime")
         self.assertEqual(inta.children[0].name, a.name)
-        self.assertEqual(inta.function.name, a.name)
         self.assertEqual(inta.integration_variable, t)
 
         # space integral
@@ -58,7 +57,6 @@ class TestUnaryOperators(unittest.TestCase):
         inta = pybamm.Integral(a, x)
         self.assertEqual(inta.name, "integral dspace (['whole cell'])")
         self.assertEqual(inta.children[0].name, a.name)
-        self.assertEqual(inta.function.name, a.name)
         self.assertEqual(inta.integration_variable, x)
         self.assertEqual(inta.domain, ["whole cell"])
 

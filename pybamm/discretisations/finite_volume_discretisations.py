@@ -75,7 +75,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
                 + [domain[-1] + "_right ghost cell"]
             )
         gradient_matrix = self.gradient_matrix(domain)
-        return gradient_matrix * discretised_symbol
+        return gradient_matrix @ discretised_symbol
 
     def add_ghost_nodes(self, discretised_symbol, lbc, rbc):
         """
@@ -155,7 +155,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
 
     def divergence(self, symbol, y_slices, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
-        See :meth:`pybamm.BaseDiscretisation.gradient`
+        See :meth:`pybamm.BaseDiscretisation.divergence`
         """
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
@@ -170,7 +170,7 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
             rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
         divergence_matrix = self.divergence_matrix(symbol.domain)
-        return divergence_matrix * discretised_symbol
+        return divergence_matrix @ discretised_symbol
 
     def divergence_matrix(self, domain):
         """
@@ -199,6 +199,37 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         diags = np.array([0, 1])
         matrix = spdiags(data, diags, n - 1, n)
         return pybamm.Matrix(matrix)
+
+    def integral(self, symbol, y_slices, boundary_conditions):
+        """Matrix-vector multiplication to implement the integral operator.
+        See :meth:`pybamm.BaseDiscretisation.integral`
+        """
+        # Discretise symbol
+        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
+        integral_matrix = self.integral_matrix(symbol.domain)
+        return integral_matrix @ discretised_symbol
+
+    def integral_matrix(self, domain):
+        """
+        Integral matrix for finite volumes in the appropriate domain.
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) in which to compute the integral matrix
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite volume integral matrix for the domain
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*domain)
+
+        # Create matrix using submesh
+        vector = submesh.d_edges * np.ones_like(submesh.nodes)
+
+        return pybamm.Vector(vector)
 
 
 class NodeToEdge(pybamm.SpatialOperator):
