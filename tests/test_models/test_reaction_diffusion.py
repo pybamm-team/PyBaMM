@@ -11,9 +11,7 @@ import unittest
 
 class TestReactionDiffusionModel(unittest.TestCase):
     def test_basic_processing(self):
-        current_scale = 1
-        current_function = pybamm.standard_current_functions.constant_current
-        model = pybamm.ReactionDiffusionModel(current_scale, current_function)
+        model = pybamm.ReactionDiffusionModel()
 
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

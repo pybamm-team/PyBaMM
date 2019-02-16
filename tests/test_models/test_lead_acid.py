@@ -12,17 +12,13 @@ import numpy as np
 
 class TestLeadAcidLOQS(unittest.TestCase):
     def test_basic_processing(self):
-        current_scale = 1
-        current_function = pybamm.standard_current_functions.constant_current
-        model = pybamm.lead_acid.LOQS(current_scale, current_function)
+        model = pybamm.lead_acid.LOQS()
         modeltest = tests.StandardModelTest(model)
 
         modeltest.test_all()
 
     def test_solution(self):
-        current_scale = 1
-        current_function = pybamm.standard_current_functions.constant_current
-        model = pybamm.lead_acid.LOQS(current_scale, current_function)
+        model = pybamm.lead_acid.LOQS()
 
         # process parameter values, discretise and solve
         model.default_parameter_values.process_model(model)

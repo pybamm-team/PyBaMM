@@ -120,43 +120,15 @@ cp0_dimensional = pybamm.Parameter("cp0")  # Initial li concentration in pos ele
 """Functions"""
 
 
-def dimensional_current(current_scale, current_function, t):
-    """Returns the dimensional current as a function of time
-
-    pybamm.Parameters
-    ----------
-    current_scale : :class:`numbers.Number` or :class:`pybamm.Symbol`
-        The typical scale for the current
-    current_function : python function
-        The current function
-    t : :class:`pybamm.Time`
-        The independent variable "time"
-
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-        The current as a function of time
-    """
+def dimensional_current(t):
+    """Returns the dimensional current as a function of time """
     t = pybamm.t
-    return current_scale * pybamm.Function(current_function, t)
+    return I_typ * pybamm.FunctionParameter("current function", t)
 
 
-def dimensionless_current(current_function, t):
-    """Returns the dimensionless current as a function of time
-
-    pybamm.Parameters
-    ----------
-    current_function : python function
-        The current function
-    t : :class:`pybamm.Time`
-        The independent variable "time"
-
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-        The current as a function of time
-    """
-    return pybamm.Function(current_function, t)
+def dimensionless_current(t):
+    """Returns the dimensionless current as a function of time """
+    return pybamm.FunctionParameter("current function", t)
 
 
 # --------------------------------------------------------------------------------------

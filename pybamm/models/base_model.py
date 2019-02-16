@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numbers
+import os
 
 
 class BaseModel(object):
@@ -50,7 +51,17 @@ class BaseModel(object):
 
         # Default parameter values, discretisation and solver
         self.default_parameter_values = pybamm.ParameterValues(
-            "input/parameters/lithium-ion/parameters/LCO.csv"
+            "input/parameters/lithium-ion/parameters/LCO.csv",
+            {
+                "I_typ": 1,
+                "current function": os.path.join(
+                    os.getcwd(),
+                    "pybamm",
+                    "parameters",
+                    "standard_current_functions",
+                    "constant_current.py",
+                ),
+            },
         )
 
         self.default_geometry = pybamm.Geometry1DMacro()
