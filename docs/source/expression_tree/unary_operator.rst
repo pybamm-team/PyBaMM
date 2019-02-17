@@ -22,6 +22,9 @@ Unary Operators
 .. autoclass:: pybamm.Integral
   :members:
 
+.. autoclass:: pybamm.IndefiniteIntegral
+  :members:
+
 .. autoclass:: pybamm.Broadcast
   :members:
 

@@ -364,13 +364,13 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
         )
 
-    def test_integral(self):
+    def test_definite_integral(self):
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
-        mesh = disc.mesh
+        mesh = shared.TestDefaults1DMacro().mesh
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
         ln = mesh["negative electrode"].edges[-1]
         ls = mesh["separator"].edges[-1] - ln
+        lp = 1 - (ln + ls)
 
         # macroscale variable
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
@@ -392,48 +392,118 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             integral_eqn_disc.evaluate(None, cos_y), np.sin(ln + ls), places=4
         )
 
+        # domain not starting at zero
+        var = pybamm.Variable("var", domain=["separator", "positive electrode"])
+        integral_eqn = pybamm.Integral(
+            var, pybamm.Space(["separator", "positive electrode"])
+        )
+        y_slices = disc.get_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+
+        combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
+        constant_y = np.ones_like(combined_submesh.nodes)
+        self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), ls + lp)
+        linear_y = combined_submesh.nodes
+        self.assertAlmostEqual(
+            integral_eqn_disc.evaluate(None, linear_y), (1 - (ln) ** 2) / 2
+        )
+        cos_y = np.cos(combined_submesh.nodes)
+        self.assertAlmostEqual(
+            integral_eqn_disc.evaluate(None, cos_y), np.sin(1) - np.sin(ln), places=4
+        )
+
         # microscale variable
+        mesh = shared.TestDefaults1DParticle(200).mesh
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
         var = pybamm.Variable("var", domain=["negative particle"])
         integral_eqn = pybamm.Integral(var, pybamm.Space(["negative particle"]))
         y_slices = disc.get_variable_slices([var])
         integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
 
         constant_y = np.ones_like(mesh["negative particle"].nodes)
-        self.assertEqual(
-            integral_eqn_disc.evaluate(None, constant_y), (ln + ls) ** 2 / 2
-        )
+        self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), np.pi)
         linear_y = mesh["negative particle"].nodes
         self.assertAlmostEqual(
-            integral_eqn_disc.evaluate(None, linear_y), (ln + ls) ** 3 / 3
+            integral_eqn_disc.evaluate(None, linear_y), 2 * np.pi / 3, places=4
         )
         one_over_y = 1 / mesh["negative particle"].nodes
-        self.assertEqual(integral_eqn_disc.evaluate(None, one_over_y), ln + ls)
+        self.assertEqual(integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi)
 
-    def test_integral(self):
+    def test_indefinite_integral(self):
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
-        mesh = disc.mesh
+        mesh = shared.TestDefaults1DMacro().mesh
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
         ln = mesh["negative electrode"].edges[-1]
         ls = mesh["separator"].edges[-1] - ln
+        lp = 1 - (ln + ls)
 
+        # macroscale variable
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
-        integral_eqn = pybamm.Integral(
+        integral_eqn = pybamm.IndefiniteIntegral(
             var, pybamm.Space(["negative electrode", "separator"])
         )
         y_slices = disc.get_variable_slices([var])
         integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
-        constant_y = np.ones_like(combined_submesh.nodes)
-        self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), ln + ls)
+        constant_y_edges = np.ones_like(combined_submesh.edges)
         linear_y = combined_submesh.nodes
-        self.assertAlmostEqual(
-            integral_eqn_disc.evaluate(None, linear_y), (ln + ls) ** 2 / 2
+        linear_y_edges = combined_submesh.edges
+        np.testing.assert_array_equal(
+            integral_eqn_disc.evaluate(None, constant_y_edges), linear_y
+        )
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate(None, linear_y_edges), linear_y ** 2 / 2
+        )
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate(None, np.cos(linear_y_edges)),
+            np.sin(linear_y),
+            places=4,
+        )
+
+        # domain not starting at zero
+        var = pybamm.Variable("var", domain=["separator", "positive electrode"])
+        integral_eqn = pybamm.IndefiniteIntegral(
+            var, pybamm.Space(["separator", "positive electrode"])
+        )
+        y_slices = disc.get_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+
+        combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
+        np.testing.assert_array_equal(
+            integral_eqn_disc.evaluate(None, constant_y), linear_y - ln
+        )
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate(None, linear_y), (linear_y ** 2 - (ln) ** 2) / 2
         )
         cos_y = np.cos(combined_submesh.nodes)
-        self.assertAlmostEqual(
-            integral_eqn_disc.evaluate(None, cos_y), np.sin(ln + ls), places=4
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate(None, cos_y),
+            np.sin(linear_y) - np.sin(ln),
+            places=4,
+        )
+
+        # microscale variable
+        mesh = shared.TestDefaults1DParticle(200).mesh
+        disc = pybamm.FiniteVolumeDiscretisation(mesh)
+        var = pybamm.Variable("var", domain=["negative particle"])
+        integral_eqn = pybamm.IndefiniteIntegral(
+            var, pybamm.Space(["negative particle"])
+        )
+        y_slices = disc.get_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+
+        constant_y = np.ones_like(mesh["negative particle"].nodes)
+        np.testing.assert_array_equal(
+            integral_eqn_disc.evaluate(None, constant_y), np.pi
+        )
+        linear_y = mesh["negative particle"].nodes
+        np.testing.assert_array_almost_equal(
+            integral_eqn_disc.evaluate(None, linear_y), 2 * np.pi / 3, places=4
+        )
+        one_over_y = 1 / mesh["negative particle"].nodes
+        np.testing.assert_array_equal(
+            integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi
         )
 
     def test_grad_convergence_without_bcs(self):

@@ -78,6 +78,7 @@ from .expression_tree.unary_operators import (
     Gradient,
     Divergence,
     Integral,
+    IndefiniteIntegral,
     Broadcast,
     NumpyBroadcast,
     grad,

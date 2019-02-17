@@ -217,7 +217,7 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             disc.divergence(None, None, {})
         with self.assertRaises(NotImplementedError):
-            disc.integral(None, None, {})
+            disc.integral(None, None, {}, None)
 
     def test_process_dict(self):
         # one equation

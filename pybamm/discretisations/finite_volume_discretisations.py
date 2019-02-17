@@ -216,43 +216,81 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         matrix = spdiags(data, diags, n - 1, n)
         return pybamm.Matrix(matrix)
 
-    def integral(self, symbol, y_slices, boundary_conditions):
-        """Matrix-vector multiplication to implement the integral operator.
+    def integral(self, symbol, y_slices, boundary_conditions, definite):
+        """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.BaseDiscretisation.integral`
         """
         # Discretise symbol
         discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
-        # check for particle domain
-        integral_matrix = self.integral_matrix(symbol.domain)
-        if ("negative particle" or "positive particle") in symbol.domain:
-            submesh = self.mesh.combine_submeshes(*domain)
-            r = pybamm.Vector(submesh.nodes)
-            out = 2 * np.pi * integral_matrix @ (discretised_symbol * r)
+        # Check for definite
+        if definite:
+            integral_array = self.definite_integral_vector(symbol.domain)
         else:
-            out = integral_matrix @ discretised_symbol
+            integral_array = self.indefinite_integral_matrix(symbol.domain)
+        # Check for particle domain
+        if ("negative particle" or "positive particle") in symbol.domain:
+            submesh = self.mesh.combine_submeshes(*symbol.domain)
+            r = pybamm.Vector(submesh.nodes)
+            out = 2 * np.pi * integral_array @ (discretised_symbol * r)
+        else:
+            out = integral_array @ discretised_symbol
         return out
 
-    def integral_matrix(self, domain):
+    def definite_integral_vector(self, domain):
         """
-        Integral matrix for finite volumes in the appropriate domain.
+        Vector for finite-volume implementation of the definite integral
+
+        .. math::
+            I = \\int_{a}^{b}\\!f(s)\\,ds
+
+        for where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
+        the domain respectively
 
         Parameters
         ----------
         domain : list
-            The domain(s) in which to compute the integral matrix
+            The domain(s) of integration
 
         Returns
         -------
-        :class:`pybamm.Matrix`
-            The (sparse) finite volume integral matrix for the domain
+        :class:`pybamm.Vector`
+            The finite volume integral vector for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh.combine_submeshes(*domain)
 
-        # Create matrix using submesh
+        # Create vector of ones using submesh
         vector = submesh.d_edges * np.ones_like(submesh.nodes)
 
         return pybamm.Vector(vector)
+
+    def indefinite_integral_matrix(self, domain):
+        """
+        Matrix for finite-volume implementation of the indefinite integral
+
+        .. math::
+            I(s) = \\int_{a}^{s}\\!f(u)\\,du
+
+        for :math:`u \\in \\text{domain}` where :math:`a` is the left-hand boundary of
+        the domain
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) of integration
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite volume indefinite integral matrix for the domain
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*domain)
+
+        # Create lower-triangular matrix using submesh
+        n = submesh.npts
+        matrix = submesh.d_edges * np.tril(np.ones((n, n + 1)), -1)
+        return pybamm.Matrix(matrix)
 
 
 class NodeToEdge(pybamm.SpatialOperator):
