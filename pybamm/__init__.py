@@ -97,6 +97,7 @@ from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
+from .models import li_ion
 
 #
 # Submodel classes
@@ -128,6 +129,7 @@ from .discretisations.base_discretisation import BaseDiscretisation
 from .discretisations.finite_volume_discretisations import (
     FiniteVolumeDiscretisation,
     NodeToEdge,
+    GetSurfaceValue,
 )
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
