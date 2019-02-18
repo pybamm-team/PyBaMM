@@ -37,7 +37,6 @@ class Symbol(anytree.NodeMixin):
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
         self.domain = domain
-        self.spatial_method = None
 
     @property
     def name(self):
