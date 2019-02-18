@@ -9,52 +9,66 @@ import numpy as np
 from scipy.sparse import spdiags
 
 
-class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
-    """Discretisation using Finite Volumes.
+class FiniteVolume(pybamm.SpatialMethod):
+    """
+    A class which implements the steps specific to the finite volume method during
+    discretisation.
 
     Parameters
     ----------
-    mesh : :class:`pybamm.BaseMesh` (or subclass)
-        The underlying mesh for discretisation
+    mesh : :class:`pybamm.Mesh` (or subclass)
+        Contains all the submeshes for discretisation
 
-    **Extends:** :class:`pybamm.BaseDiscretisation`
+    **Extends:"": :class:`pybamm.SpatialMethod`
     """
 
     def __init__(self, mesh):
-        super().__init__(mesh)
+        self._mesh = mesh
 
-    def compute_diffusivity(self, symbol):
+    def spatial_variable(self, symbol):
         """
-        Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
-        For now we just take the arithemtic mean, though it may be better to take the
-        harmonic mean based on [1].
-
-        [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
-        the diffusion equation." (2012).
+        Creates a discretised spatial variable compatible with
+        the FiniteVolume method.
 
         Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            Symbol to be averaged. When evaluated, this symbol returns either a scalar
-            or an array of shape (n,), where n is the number of points in the mesh for
-            the symbol's domain (n = self.mesh[symbol.domain].npts)
+        -----------
+        symbol : :class:`pybamm.SpatialVariable`
+            The spatial variable to be discretised.
 
         Returns
         -------
-        :class:`pybamm.NodeToEdge`
-            Averaged symbol. When evaluated, this returns either a scalar or an array of
-            shape (n-1,) as appropriate.
+        :class:`pybamm.Vector`
+            Contains the discretised spatial variable
         """
 
-        def arithmetic_mean(array):
-            """Calculate the arithemetic mean of an array"""
-            return (array[1:] + array[:-1]) / 2
+        # for finite volume we use the cell centres
+        symbol_mesh = self._mesh.combine_submeshes(*symbol.domain)
+        return pybamm.Vector(symbol_mesh.nodes)
 
-        return pybamm.NodeToEdge(symbol, arithmetic_mean)
+    def broadcast(self, symbol, domain):
+        """
+        Broadcast symbol to a specified domain. To do this, calls
+        :class:`pybamm.NumpyBroadcast`
 
-    def gradient(self, symbol, y_slices, boundary_conditions):
+        See :meth: `pybamm.SpatialMethod.broadcast`
+        """
+
+        # for finite volume we send variables to cells and so use number_of_cells
+        number_of_cells = {dom: submesh.npts for dom, submesh in self._mesh.items()}
+        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, number_of_cells)
+
+        # if the broadcasted symbol evaluates to a constant value, replace the
+        # symbol-Vector multiplication with a single array
+        if broadcasted_symbol.is_constant():
+            broadcasted_symbol = pybamm.Array(
+                broadcasted_symbol.evaluate(), domain=broadcasted_symbol.domain
+            )
+
+        return broadcasted_symbol
+
+    def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
-        See :meth:`pybamm.BaseDiscretisation.gradient`
+        See :meth:`pybamm.SpatialMethod.gradient`
         """
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
@@ -62,7 +76,6 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
                 "boundary condition keys should be hashes, not {}".format(type(key))
             )
         # Discretise symbol
-        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
         domain = symbol.domain
         # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
@@ -78,6 +91,101 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
         return gradient_matrix * discretised_symbol
+
+    def gradient_matrix(self, domain):
+        """
+        Gradient matrix for finite volumes in the appropriate domain.
+        Equivalent to grad(y) = (y[1:] - y[:-1])/dx
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) in which to compute the gradient matrix
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite volume gradient matrix for the domain
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self._mesh.combine_submeshes(*domain)
+
+        # Create matrix using submesh
+        n = submesh.npts
+        e = 1 / submesh.d_nodes
+        data = np.vstack(
+            [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
+        )
+        diags = np.array([0, 1])
+        matrix = spdiags(data, diags, n - 1, n)
+        return pybamm.Matrix(matrix)
+
+    def divergence(self, symbol, discretised_symbol, boundary_conditions):
+        """Matrix-vector multiplication to implement the divergence operator.
+        See :meth:`pybamm.SpatialMethod.gradient`
+        """
+        # Check that boundary condition keys are hashes (ids)
+        for key in boundary_conditions.keys():
+            assert isinstance(key, int), TypeError(
+                "boundary condition keys should be hashes, not {}".format(type(key))
+            )
+        # Add Neumann boundary conditions if defined
+        if symbol.id in boundary_conditions:
+            # for the particles there will be a "negative particle" "left" and "right"
+            # and also a "positive particle" left and right.
+            lbc = boundary_conditions[symbol.id]["left"]
+            rbc = boundary_conditions[symbol.id]["right"]
+            discretised_symbol = pybamm.NumpyModelConcatenation(
+                lbc, discretised_symbol, rbc
+            )
+
+        domain = symbol.domain
+        # check for spherical domains
+        if ("negative particle" or "positive particle") in domain:
+
+            # implement spherical operator
+            divergence_matrix = self.divergence_matrix(domain)
+
+            submesh = self._mesh[domain[0]]
+            r = pybamm.Vector(submesh.nodes)
+            r_edges = pybamm.Vector(submesh.edges)
+
+            out = (1 / (r ** 2)) * (
+                divergence_matrix * ((r_edges ** 2) * discretised_symbol)
+            )
+
+        else:
+            divergence_matrix = self.divergence_matrix(domain)
+            out = divergence_matrix * discretised_symbol
+        return out
+
+    def divergence_matrix(self, domain):
+        """
+        Divergence matrix for finite volumes in the appropriate domain.
+        Equivalent to div(N) = (N[1:] - N[:-1])/dx
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) in which to compute the divergence matrix
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) finite volume divergence matrix for the domain
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self._mesh.combine_submeshes(*domain)
+
+        # Create matrix using submesh
+        n = submesh.npts + 1
+        e = 1 / submesh.d_edges
+        data = np.vstack(
+            [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
+        )
+        diags = np.array([0, 1])
+        matrix = spdiags(data, diags, n - 1, n)
+        return pybamm.Matrix(matrix)
 
     def add_ghost_nodes(self, discretised_symbol, lbc, rbc):
         """
@@ -125,102 +233,42 @@ class FiniteVolumeDiscretisation(pybamm.BaseDiscretisation):
         last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
         right_ghost_cell = 2 * rbc - last_node
         # concatenate
-        return self.concatenate(left_ghost_cell, discretised_symbol, right_ghost_cell)
+        return pybamm.NumpyModelConcatenation(
+            left_ghost_cell, discretised_symbol, right_ghost_cell
+        )
 
-    def gradient_matrix(self, domain):
+    #######################################################
+    # Can probably be moved outside of the spatial method
+    ######################################################
+
+    def compute_diffusivity(self, symbol):
         """
-        Gradient matrix for finite volumes in the appropriate domain.
-        Equivalent to grad(y) = (y[1:] - y[:-1])/dx
+        Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
+        For now we just take the arithemtic mean, though it may be better to take the
+        harmonic mean based on [1].
+
+        [1] Recktenwald, Gerald. "The control-volume finite-difference approximation to
+        the diffusion equation." (2012).
 
         Parameters
         ----------
-        domain : list
-            The domain(s) in which to compute the gradient matrix
+        symbol : :class:`pybamm.Symbol`
+            Symbol to be averaged. When evaluated, this symbol returns either a scalar
+            or an array of shape (n,), where n is the number of points in the mesh for
+            the symbol's domain (n = self.mesh[symbol.domain].npts)
 
         Returns
         -------
-        :class:`pybamm.Matrix`
-            The (sparse) finite volume gradient matrix for the domain
+        :class:`pybamm.NodeToEdge`
+            Averaged symbol. When evaluated, this returns either a scalar or an array of
+            shape (n-1,) as appropriate.
         """
-        # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
 
-        # Create matrix using submesh
-        n = submesh.npts
-        e = 1 / submesh.d_nodes
-        data = np.vstack(
-            [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
-        )
-        diags = np.array([0, 1])
-        matrix = spdiags(data, diags, n - 1, n)
-        return pybamm.Matrix(matrix)
+        def arithmetic_mean(array):
+            """Calculate the arithemetic mean of an array"""
+            return (array[1:] + array[:-1]) / 2
 
-    def divergence(self, symbol, y_slices, boundary_conditions):
-        """Matrix-vector multiplication to implement the divergence operator.
-        See :meth:`pybamm.BaseDiscretisation.gradient`
-        """
-        # Check that boundary condition keys are hashes (ids)
-        for key in boundary_conditions.keys():
-            assert isinstance(key, int), TypeError(
-                "boundary condition keys should be hashes, not {}".format(type(key))
-            )
-        # Discretise symbol
-        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
-        # Add Neumann boundary conditions if defined
-        if symbol.id in boundary_conditions:
-            # for the particles there will be a "negative particle" "left" and "right"
-            # and also a "positive particle" left and right.
-            lbc = boundary_conditions[symbol.id]["left"]
-            rbc = boundary_conditions[symbol.id]["right"]
-            discretised_symbol = self.concatenate(lbc, discretised_symbol, rbc)
-
-        domain = symbol.domain
-        # check for
-        if ("negative particle" or "positive particle") in domain:
-
-            # implement spherical operator
-            divergence_matrix = self.divergence_matrix(domain)
-
-            submesh = self.mesh.combine_submeshes(*domain)
-            r = pybamm.Vector(submesh.nodes)
-            r_edges = pybamm.Vector(submesh.edges)
-
-            out = (1 / (r ** 2)) * (
-                divergence_matrix * ((r_edges ** 2) * discretised_symbol)
-            )
-
-        else:
-            divergence_matrix = self.divergence_matrix(domain)
-            out = divergence_matrix * discretised_symbol
-        return out
-
-    def divergence_matrix(self, domain):
-        """
-        Divergence matrix for finite volumes in the appropriate domain.
-        Equivalent to div(N) = (N[1:] - N[:-1])/dx
-
-        Parameters
-        ----------
-        domain : list
-            The domain(s) in which to compute the divergence matrix
-
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The (sparse) finite volume divergence matrix for the domain
-        """
-        # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
-
-        # Create matrix using submesh
-        n = submesh.npts + 1
-        e = 1 / submesh.d_edges
-        data = np.vstack(
-            [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
-        )
-        diags = np.array([0, 1])
-        matrix = spdiags(data, diags, n - 1, n)
-        return pybamm.Matrix(matrix)
+        return pybamm.NodeToEdge(symbol, arithmetic_mean)
 
 
 class NodeToEdge(pybamm.SpatialOperator):

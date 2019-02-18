@@ -9,7 +9,7 @@ import pybamm
 class Variable(pybamm.Symbol):
     """A node in the expression tree represending a dependent variable
 
-    This node will be discretised by :class:`.BaseDiscretisation` and converted
+    This node will be discretised by :class:`.Discretisation` and converted
     to a :class:`.Vector` node.
 
     Parameters
