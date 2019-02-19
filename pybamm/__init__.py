@@ -128,13 +128,16 @@ from .geometry.geometry import (
 #
 # Mesh and Discretisation classes
 #
-from .discretisations.base_discretisation import BaseDiscretisation
-from .discretisations.finite_volume_discretisations import (
-    FiniteVolumeDiscretisation,
-    NodeToEdge,
-)
+from .discretisations.discretisation import Discretisation
+from .meshes.meshes import KNOWN_DOMAINS
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+
+#
+# Spatial Methods
+#
+from .spatial_methods.spatial_method import SpatialMethod
+from .spatial_methods.finite_volume import FiniteVolume, NodeToEdge
 
 #
 # Simulation class
