@@ -52,7 +52,7 @@ class NumpyModelConcatenation(pybamm.Symbol):
     Upon evaluation, equations are concatenated using numpy concatenation.
     Unlike :class:`pybamm.Concatenation`, this doesn't check domains, as its only use
     is to concatenate model equations (e.g. rhs equations or initial conditions, in
-    :class:`pybamm.BaseDiscretisation`), which might have common domains
+    :class:`pybamm.Discretisation`), which might have common domains
 
     **Extends**: :class:`pybamm.Symbol`
 

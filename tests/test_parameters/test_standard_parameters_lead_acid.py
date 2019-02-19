@@ -61,8 +61,8 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv", {"current scale": 1}
         )
-        mesh = shared.TestDefaults1DMacro().mesh
-        disc = pybamm.BaseDiscretisation(mesh)
+        defaults = shared.TestDefaults1DMacro()
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
         processed_s = disc.process_symbol(parameter_values.process_symbol(s))
 
         # test output

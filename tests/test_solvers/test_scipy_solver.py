@@ -46,7 +46,12 @@ class TestScipySolver(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(defaults.mesh)
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume,
+            "separator": pybamm.FiniteVolume,
+            "positive electrode": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
         disc.process_model(model)
         # Solve
         solver = pybamm.ScipySolver(tol=1e-8, method="RK45")

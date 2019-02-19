@@ -28,4 +28,6 @@ Contents
     source/models/index
     source/parameters/index
     source/discretisations/index
+    source/spatial_methods/index
     source/solvers/index
+

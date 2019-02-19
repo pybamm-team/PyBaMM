@@ -53,8 +53,8 @@ class TestHomogeneousReaction(unittest.TestCase):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        mesh = shared.TestDefaults1DMacro().mesh
-        disc = pybamm.BaseDiscretisation(mesh)
+        defaults = shared.TestDefaults1DMacro()
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
 
         rxn = pybamm.interface.homogeneous_reaction(1)
 
@@ -162,11 +162,13 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         param_bv_p = param.process_symbol(bv_p)
 
         # discretise
-        mesh = shared.TestDefaults1DMacro().mesh
-        disc = pybamm.BaseDiscretisation(mesh)
-        y_slices = disc.get_variable_slices([self.cn, self.cp, self.phin, self.phip])
-        processed_bv_n = disc.process_symbol(param_bv_n, y_slices)
-        processed_bv_p = disc.process_symbol(param_bv_p, y_slices)
+        defaults = shared.TestDefaults1DMacro()
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        mesh = disc.mesh
+        disc._variables = [self.cn, self.cp, self.phin, self.phip]
+        disc.set_variable_slices()
+        processed_bv_n = disc.process_symbol(param_bv_n)
+        processed_bv_p = disc.process_symbol(param_bv_p)
 
         submesh = np.concatenate(
             [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
@@ -194,10 +196,13 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         param_bv_whole = param.process_symbol(bv_whole)
 
         # discretise
-        mesh = shared.TestDefaults1DMacro().mesh
-        disc = pybamm.BaseDiscretisation(mesh)
-        y_slices = disc.get_variable_slices([self.cn, self.cp, self.phin, self.phip])
-        processed_bv_whole = disc.process_symbol(param_bv_whole, y_slices)
+        defaults = shared.TestDefaults1DMacro()
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        mesh = disc.mesh
+
+        disc._variables = [self.cn, self.cp, self.phin, self.phip]
+        disc.set_variable_slices()
+        processed_bv_whole = disc.process_symbol(param_bv_whole)
 
         # test
         submesh = np.concatenate(
@@ -273,11 +278,14 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         param_j0p = param.process_symbol(j0p)
 
         # discretise
-        mesh = shared.TestDefaults1DMacro().mesh
-        disc = pybamm.BaseDiscretisation(mesh)
-        y_slices = disc.get_variable_slices([self.cn, self.cp])
-        processed_j0n = disc.process_symbol(param_j0n, y_slices)
-        processed_j0p = disc.process_symbol(param_j0p, y_slices)
+        defaults = shared.TestDefaults1DMacro()
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        mesh = disc.mesh
+
+        disc._variables = [self.cn, self.cp]
+        disc.set_variable_slices()
+        processed_j0n = disc.process_symbol(param_j0n)
+        processed_j0p = disc.process_symbol(param_j0p)
 
         submesh = np.concatenate(
             [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
