@@ -156,7 +156,12 @@ class DomainConcatenation(Concatenation):
                     "Error: expression evaluated to a vector of incorrect length"
                 )
         else:
-            return pybamm.NumpyBroadcast(node, node.domain, mesh)
+            #!!!! This could cause some problems later !!!!#
+            raise NotImplementedError(
+                """Not ready for merge until we figure this out"""
+            )
+            npts = {dom: submesh.npts for dom, submesh in mesh.items()}
+            return pybamm.NumpyBroadcast(node, node.domain, npts)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

@@ -216,9 +216,7 @@ class Discretisation(object):
             return self.process_binary_operators(symbol)
 
         elif isinstance(symbol, pybamm.Function):
-            new_child = self.process_symbol(
-                symbol.children[0], y_slices, boundary_conditions
-            )
+            new_child = self.process_symbol(symbol.children[0])
             return pybamm.Function(symbol.func, new_child)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
