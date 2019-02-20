@@ -52,7 +52,7 @@ class TestFiniteVolume(unittest.TestCase):
         constant_y = np.ones_like(combined_submesh.nodes)
         self.assertEqual(surf_eqn_disc.evaluate(None, constant_y), 1)
 
-        # check linear variable extroplates correctly
+        # check linear variable extrapolates correctly
         linear_y = combined_submesh.nodes
         y_surf = combined_submesh.nodes[-1] + combined_submesh.d_nodes[-1] / 2
         self.assertEqual(surf_eqn_disc.evaluate(None, linear_y), y_surf)
