@@ -41,6 +41,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a + b, pybamm.Addition)
         self.assertIsInstance(a - b, pybamm.Subtraction)
         self.assertIsInstance(a * b, pybamm.Multiplication)
+        self.assertIsInstance(a @ b, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / b, pybamm.Division)
         self.assertIsInstance(a ** b, pybamm.Power)
 
@@ -48,6 +49,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a + 2, pybamm.Addition)
         self.assertIsInstance(a - 2, pybamm.Subtraction)
         self.assertIsInstance(a * 2, pybamm.Multiplication)
+        self.assertIsInstance(a @ 2, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / 2, pybamm.Division)
         self.assertIsInstance(a ** 2, pybamm.Power)
 
@@ -156,6 +158,9 @@ class TestSymbol(unittest.TestCase):
         self.assertFalse(a.evaluates_to_number())
 
         a = pybamm.Matrix(np.ones((4, 6)))
+        self.assertFalse(a.evaluates_to_number())
+
+        a = pybamm.StateVector(slice(0, 10))
         self.assertFalse(a.evaluates_to_number())
 
         # Time variable returns true

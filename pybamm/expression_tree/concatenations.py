@@ -162,22 +162,22 @@ class DomainConcatenation(Concatenation):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        # return np.concatenate([child.evaluate(t, y) for child in self.children])
-        # preallocate vector
-        vector = np.empty(self._size)
-
-        # loop through domains of children writing subvectors to final vector
-        for child, slices in zip(self.children, self._children_slices):
-            child_vector = child.evaluate(t, y)
-            for dom in child.domain:
-                try:
-                    vector[self._slices[dom]] = child_vector[slices[dom]]
-                except ValueError:
-                    import ipdb
-
-                    ipdb.set_trace()
-
-        return vector
+        return np.concatenate([child.evaluate(t, y) for child in self.children])
+        # # preallocate vector
+        # vector = np.empty(self._size)
+        #
+        # # loop through domains of children writing subvectors to final vector
+        # for child, slices in zip(self.children, self._children_slices):
+        #     child_vector = child.evaluate(t, y)
+        #     for dom in child.domain:
+        #         try:
+        #             vector[self._slices[dom]] = child_vector[slices[dom]]
+        #         except ValueError:
+        #             import ipdb
+        #
+        #             ipdb.set_trace()
+        #
+        # return vector
 
 
 class PiecewiseConstant(Concatenation):

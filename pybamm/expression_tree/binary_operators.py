@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numbers
+import numpy as np
 
 
 class BinaryOperator(pybamm.Symbol):
@@ -116,12 +117,53 @@ class Multiplication(BinaryOperator):
 
         super().__init__("*", left, right)
 
+    @property
+    def size(self):
+        """Get the size of the array, based on the size of children"""
+        return np.prod(self.shape)
+
+    @property
+    def shape(self):
+        """Get the shape of the array, based on the shape of children"""
+        # Scalars are "invisible" for shape
+        if isinstance(self.children[0], pybamm.Scalar):
+            return self.children[1].shape
+        elif isinstance(self.children[1], pybamm.Scalar):
+            return self.children[0].shape
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        if isinstance(self.children[0], pybamm.Matrix):
-            return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
-        else:
-            return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
+        return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
+
+
+class MatrixMultiplication(BinaryOperator):
+    """A node in the expression tree representing a matrix multiplication operator
+
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+
+        super().__init__("*", left, right)
+
+    @property
+    def size(self):
+        """Get the size of the array, based on the size of children"""
+        return np.prod(self.shape)
+
+    @property
+    def shape(self):
+        """Get the shape of the array, based on the shape of children"""
+        # Scalars are "invisible" for shape
+        if isinstance(self.children[0], pybamm.Scalar):
+            return self.children[1].shape
+        elif isinstance(self.children[1], pybamm.Scalar):
+            return self.children[0].shape
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
 
 
 class Division(BinaryOperator):

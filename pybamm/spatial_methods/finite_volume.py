@@ -92,7 +92,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
-        return gradient_matrix * discretised_symbol
+        return gradient_matrix @ discretised_symbol
 
     def gradient_matrix(self, domain):
         """
@@ -153,12 +153,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges = pybamm.Vector(submesh.edges)
 
             out = (1 / (r ** 2)) * (
-                divergence_matrix * ((r_edges ** 2) * discretised_symbol)
+                divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
             )
 
         else:
             divergence_matrix = self.divergence_matrix(domain)
-            out = divergence_matrix * discretised_symbol
+            out = divergence_matrix @ discretised_symbol
         return out
 
     def divergence_matrix(self, domain):

@@ -246,6 +246,20 @@ class Symbol(anytree.NodeMixin):
         else:
             raise NotImplementedError
 
+    def __matmul__(self, other):
+        """return a :class:`MatrixMultiplication` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.MatrixMultiplication(self, other)
+        else:
+            raise NotImplementedError
+
+    def __rmatmul__(self, other):
+        """return a :class:`MatrixMultiplication` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.MatrixMultiplication(other, self)
+        else:
+            raise NotImplementedError
+
     def __truediv__(self, other):
         """return a :class:`Division` object"""
         if isinstance(other, (Symbol, numbers.Number)):

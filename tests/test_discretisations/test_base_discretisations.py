@@ -186,7 +186,7 @@ class TestDiscretise(unittest.TestCase):
         for eqn in [pybamm.grad(var), pybamm.div(var)]:
             eqn_disc = disc.process_symbol(eqn)
 
-            self.assertIsInstance(eqn_disc, pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc, pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.Matrix)
             self.assertIsInstance(eqn_disc.children[1], pybamm.StateVector)
 
@@ -204,7 +204,7 @@ class TestDiscretise(unittest.TestCase):
 
             self.assertIsInstance(eqn_disc, pybamm.Multiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.StateVector)
-            self.assertIsInstance(eqn_disc.children[1], pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc.children[1], pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[1].children[0], pybamm.Matrix)
             self.assertIsInstance(eqn_disc.children[1].children[1], pybamm.StateVector)
 

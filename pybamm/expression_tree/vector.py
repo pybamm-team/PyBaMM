@@ -62,6 +62,6 @@ class StateVector(pybamm.Symbol):
         """Slice of an external y to read"""
         return self._y_slice
 
-    def evaluate(self, t, y):
+    def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return y[self._y_slice]

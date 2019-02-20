@@ -92,14 +92,14 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         for domain in symbol.domain:
             n += self.mesh[domain].npts
         gradient_matrix = pybamm.Matrix(np.eye(n))
-        return gradient_matrix * discretised_symbol
+        return gradient_matrix @ discretised_symbol
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain].npts
         divergence_matrix = pybamm.Matrix(np.eye(n))
-        return divergence_matrix * discretised_symbol
+        return divergence_matrix @ discretised_symbol
 
     def compute_diffusivity(self, symbol):
         return symbol

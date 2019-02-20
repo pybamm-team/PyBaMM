@@ -5,6 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import numpy as np
 import unittest
 
 
@@ -80,6 +81,25 @@ class TestBinaryOperators(unittest.TestCase):
         prod = a * 3
         self.assertIsInstance(prod.children[1], pybamm.Scalar)
         self.assertEqual(prod.evaluate(), 12)
+
+    @unittest.skip("size and shape not yet implemented")
+    def test_size_and_shape(self):
+        M1 = pybamm.Matrix(np.ones((34, 67)))
+        M2 = pybamm.Matrix(2 * np.ones((34, 67)))
+        v1 = pybamm.Vector(3 * np.ones(67))
+        v2 = pybamm.Vector(4 * np.ones(67))
+        s1 = pybamm.Scalar(5)
+        s2 = pybamm.Scalar(6)
+
+        # Addition
+        sum_M = M1 + M2
+        self.assertEqual(sum_M.shape, M1.shape)
+        self.assertEqual(sum_M.size, M1.size)
+        sum_v = v1 + v2
+        self.assertEqual(sum_v.shape, v1.shape)
+        self.assertEqual(sum_v.size, v1.size)
+
+        # Multiplication
 
 
 if __name__ == "__main__":
