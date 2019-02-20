@@ -137,8 +137,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             # and also a "positive particle" left and right.
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
-            discretised_symbol = pybamm.NumpyModelConcatenation(
-                lbc, discretised_symbol, rbc
+            discretised_symbol = pybamm.DomainConcatenation(
+                [lbc, discretised_symbol, rbc], self.mesh
             )
 
         domain = symbol.domain
