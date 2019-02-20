@@ -264,7 +264,7 @@ def div(expression):
 
 
 #
-# Methods to call GetSurfaceValue
+# Method to call SurfaceValue
 #
 
 
