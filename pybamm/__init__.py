@@ -45,6 +45,7 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 from .util import Timer
 from .util import profile
+from .util import load_function
 
 #
 # Classes for the Expression Tree
@@ -62,6 +63,7 @@ from .expression_tree.concatenations import (
     Concatenation,
     NumpyModelConcatenation,
     DomainConcatenation,
+    PiecewiseConstant,
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
@@ -70,6 +72,7 @@ from .expression_tree.unary_operators import (
     UnaryOperator,
     Negate,
     AbsoluteValue,
+    Function,
     SpatialOperator,
     Gradient,
     Divergence,
@@ -78,6 +81,7 @@ from .expression_tree.unary_operators import (
     grad,
     div,
 )
+from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import IndependentVariable, Time, Space
@@ -102,8 +106,9 @@ from .models.submodels import electrolyte, interface
 #
 # Parameters class and methods
 #
+from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard parameters
 from .parameters.parameter_values import ParameterValues
-from .parameters import functions_lead_acid
+from .parameters import standard_current_functions
 from .parameters import standard_parameters
 from .parameters import standard_parameters_lead_acid  # calls standard_parameters
 
@@ -120,14 +125,16 @@ from .geometry.geometry import (
 #
 # Mesh and Discretisation classes
 #
-from .discretisations.base_discretisation import BaseDiscretisation
-from .discretisations.finite_volume_discretisations import (
-    FiniteVolumeDiscretisation,
-    NodeToEdge,
-)
+from .discretisations.discretisation import Discretisation
 from .meshes.meshes import KNOWN_DOMAINS
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+
+#
+# Spatial Methods
+#
+from .spatial_methods.spatial_method import SpatialMethod
+from .spatial_methods.finite_volume import FiniteVolume, NodeToEdge
 
 #
 # Simulation class

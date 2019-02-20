@@ -2,7 +2,7 @@
 # Standard parameters for battery models
 #
 """
-Standard Parameters for battery models
+Standard pybamm.Parameters for battery models
 
 Physical Constants
 ------------------
@@ -66,58 +66,73 @@ cn0_dimensional, cp0_dimensional
 """
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
-from pybamm import Parameter
+import pybamm
 
 # --------------------------------------------------------------------------------------
-"""Dimensional Parameters"""
+"""Dimensional pybamm.Parameters"""
 
 # Physical Constants
-R = Parameter("R")
-F = Parameter("F")
-T = Parameter("T_ref")
+R = pybamm.Parameter("R")
+F = pybamm.Parameter("F")
+T = pybamm.Parameter("T_ref")
 
 # Macroscale Geometry
-Ln = Parameter("Ln")
-Ls = Parameter("Ls")
-Lp = Parameter("Lp")
+Ln = pybamm.Parameter("Ln")
+Ls = pybamm.Parameter("Ls")
+Lp = pybamm.Parameter("Lp")
 Lx = Ln + Ls + Lp
 
 # 3D Geometry
-Ly = Parameter("Ly")
-Lz = Parameter("Lz")
+Ly = pybamm.Parameter("Ly")
+Lz = pybamm.Parameter("Lz")
 
 # Microscale Geometry
-R_n = Parameter("R_n")
-R_p = Parameter("R_p")
-a_n = Parameter("a_n")
-a_p = Parameter("a_p")
+R_n = pybamm.Parameter("R_n")
+R_p = pybamm.Parameter("R_p")
+a_n = pybamm.Parameter("a_n")
+a_p = pybamm.Parameter("a_p")
 
 # Electrolyte Properties
-ce_typ = Parameter("ce_typ")  # Typical lithium ion concentration in electrolyte
-De_typ = Parameter("De_typ")  # Typical electrolyte diffusivity
+ce_typ = pybamm.Parameter("ce_typ")  # Typical lithium ion concentration in electrolyte
+De_typ = pybamm.Parameter("De_typ")  # Typical electrolyte diffusivity
 
 # Electrode Properties
-sigma_n = Parameter("sigma_n")  # Conductivity in negative electrode
-sigma_p = Parameter("sigma_p")  # Conductivity in positive electrode
-cn_max = Parameter("cn_max")  # Max concentration in negative electrode
-cp_max = Parameter("cp_max")  # Max concentration in positive electrode
+sigma_n = pybamm.Parameter("sigma_n")  # Conductivity in negative electrode
+sigma_p = pybamm.Parameter("sigma_p")  # Conductivity in positive electrode
+cn_max = pybamm.Parameter("cn_max")  # Max concentration in negative electrode
+cp_max = pybamm.Parameter("cp_max")  # Max concentration in positive electrode
 
 # Electrochemical Reactions
-m_n = Parameter("m_n")  # Reaction rate in negative electrode
-m_p = Parameter("m_p")  # Reaction rate in positive electrode
+m_n = pybamm.Parameter("m_n")  # Reaction rate in negative electrode
+m_p = pybamm.Parameter("m_p")  # Reaction rate in positive electrode
 
 # Electrical
-voltage_low_cut = Parameter("voltage_low_cut")  # Lower voltage cut-off
-voltage_high_cut = Parameter("voltage_high_cut")  # Upper voltage cut-off
-I_typ = Parameter("I_typ")  # Typical current density
+voltage_low_cut = pybamm.Parameter("voltage_low_cut")  # Lower voltage cut-off
+voltage_high_cut = pybamm.Parameter("voltage_high_cut")  # Upper voltage cut-off
+I_typ = pybamm.Parameter("I_typ")  # Typical current density
 
 # Initial Conditions
-ce0_dimensional = Parameter("ce0")  # Initial li ion concentration in electrolyte
-cn0_dimensional = Parameter("cn0")  # Initial li concentration in neg electrode
-cp0_dimensional = Parameter("cp0")  # Initial li concentration in pos electrode
+ce0_dimensional = pybamm.Parameter("ce0")  # Initial li ion concentration in electrolyte
+cn0_dimensional = pybamm.Parameter("cn0")  # Initial li concentration in neg electrode
+cp0_dimensional = pybamm.Parameter("cp0")  # Initial li concentration in pos electrode
 
 # --------------------------------------------------------------------------------------
-"""Dimensionless Parameters"""
+"""Functions"""
+
+
+def dimensional_current(t):
+    """Returns the dimensional current as a function of time """
+    t = pybamm.t
+    return I_typ * pybamm.FunctionParameter("current function", t)
+
+
+def dimensionless_current(t):
+    """Returns the dimensionless current as a function of time """
+    return pybamm.FunctionParameter("current function", t)
+
+
+# --------------------------------------------------------------------------------------
+"""Dimensionless pybamm.Parameters"""
 
 # Macroscale Geometry
 ln = Ln / Lx
@@ -127,15 +142,19 @@ ly = Ly / Lz
 lz = Lz / Lz
 
 # Microscale Geometry
-epsilon_n = Parameter("epsilon_n")  # Electrolyte volume fraction in neg electrode
-epsilon_s = Parameter("epsilon_s")  # Electrolyte volume fraction in separator
-epsilon_p = Parameter("epsilon_p")  # Electrolyte volume fraction in pos electrode
-b = Parameter("b")  # Bruggeman coefficient
+epsilon_n = pybamm.Parameter(
+    "epsilon_n"
+)  # Electrolyte volume fraction in neg electrode
+epsilon_s = pybamm.Parameter("epsilon_s")  # Electrolyte volume fraction in separator
+epsilon_p = pybamm.Parameter(
+    "epsilon_p"
+)  # Electrolyte volume fraction in pos electrode
+b = pybamm.Parameter("b")  # Bruggeman coefficient
 beta_n = a_n * R_n
 beta_p = a_p * R_p
 
 # Electrolyte Properties
-t_plus = Parameter("t_plus")  # cation transference number
+t_plus = pybamm.Parameter("t_plus")  # cation transference number
 delta = (Lx ** 2 / De_typ) * (I_typ / (F * cn_max * Lx))
 nu = cn_max / ce_typ
 

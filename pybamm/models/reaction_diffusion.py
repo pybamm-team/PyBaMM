@@ -29,8 +29,11 @@ class ReactionDiffusionModel(pybamm.BaseModel):
 
     def __init__(self):
         super().__init__()
+        # Define current
+        t = pybamm.t
+        current = pybamm.standard_parameters.dimensionless_current(t)
         # Load reaction flux from submodels
-        G = pybamm.interface.homogeneous_reaction()
+        G = pybamm.interface.homogeneous_reaction(current)
         # Load diffusion model from submodels
         diffusion_model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
 

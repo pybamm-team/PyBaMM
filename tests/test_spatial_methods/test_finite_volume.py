@@ -8,7 +8,7 @@ import numpy as np
 import unittest
 
 
-class TestFiniteVolumeDiscretisation(unittest.TestCase):
+class TestFiniteVolume(unittest.TestCase):
     def test_node_to_edge(self):
         a = pybamm.Symbol("a")
 
@@ -38,14 +38,20 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume,
+            "separator": pybamm.FiniteVolume,
+            "positive electrode": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         # Discretise some equations where averaging is needed
         var = pybamm.Variable("var", domain=whole_cell)
-        y_slices = disc.get_variable_slices([var])
+        disc._variables = [var]
+        disc.set_variable_slices()
         y_test = np.ones_like(combined_submesh.nodes)
         for eqn in [
             var * pybamm.grad(var),
@@ -57,7 +63,7 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             pybamm.grad(var) * pybamm.grad(var),
             (pybamm.grad(var) + 2) * pybamm.grad(var) ** 2,
         ]:
-            eqn_disc = disc.process_symbol(eqn, y_slices, {})
+            eqn_disc = disc.process_symbol(eqn)
             # Check that the equation can be evaluated
             eqn_disc.evaluate(None, y_test)
 
@@ -80,11 +86,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
                 -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
             ],
         ):
-            eqn_disc = disc.process_symbol(
-                eqn,
-                y_slices,
-                {flux.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}},
-            )
+            disc._bcs = {flux.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}}
+
+            eqn_disc = disc.process_symbol(eqn)
             # Check that the equation can be evaluated
             eqn_disc.evaluate(None, y_test)
 
@@ -93,17 +97,25 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume,
+            "separator": pybamm.FiniteVolume,
+            "positive electrode": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
         mesh = disc.mesh
 
         # Add ghost nodes
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
-        y_slices = disc.get_variable_slices([var])
-        discretised_symbol = pybamm.StateVector(y_slices[var.id])
+        disc._variables = [var]
+        disc.set_variable_slices()
+        discretised_symbol = pybamm.StateVector(disc._y_slices[var.id])
         lbc = pybamm.Scalar(0)
         rbc = pybamm.Scalar(3)
-        symbol_plus_ghost = disc.add_ghost_nodes(discretised_symbol, lbc, rbc)
+        symbol_plus_ghost = pybamm.FiniteVolume(defaults.mesh).add_ghost_nodes(
+            discretised_symbol, lbc, rbc
+        )
 
         # Test
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -136,7 +148,12 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume,
+            "separator": pybamm.FiniteVolume,
+            "positive electrode": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -150,8 +167,11 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         boundary_conditions = {
             var.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(1)}
         }
-        y_slices = disc.get_variable_slices([var])
-        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+        disc._bcs = boundary_conditions
+
+        disc._variables = [var]
+        disc.set_variable_slices()
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
 
         constant_y = np.ones_like(combined_submesh.nodes)
         np.testing.assert_array_equal(
@@ -167,12 +187,14 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             var.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}
         }
 
-        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+        disc._bcs = boundary_conditions
+
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y), np.ones_like(combined_submesh.edges)
         )
 
-        div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+        div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
         )
@@ -183,7 +205,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         """
         # create discretisation
         defaults = shared.TestDefaults1DParticle(10)
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes("negative particle")
@@ -198,8 +221,12 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         boundary_conditions = {
             var.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(1)}
         }
-        y_slices = disc.get_variable_slices([var])
-        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+
+        disc._bcs = boundary_conditions
+
+        disc._variables = [var]
+        disc.set_variable_slices()
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
 
         constant_y = np.ones_like(combined_submesh.nodes)
         np.testing.assert_array_equal(
@@ -210,8 +237,10 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         boundary_conditions = {
             var.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}
         }
+        disc._bcs = boundary_conditions
+
         y_linear = combined_submesh.nodes
-        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, y_linear), np.ones_like(combined_submesh.edges)
         )
@@ -224,8 +253,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         boundary_conditions = {
             var.id: {"left": pybamm.Scalar(6), "right": pybamm.Scalar(6)}
         }
+        disc._bcs = boundary_conditions
 
-        div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+        div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, const), np.zeros_like(combined_submesh.nodes)
         )
@@ -236,7 +266,12 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume,
+            "separator": pybamm.FiniteVolume,
+            "positive electrode": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -244,8 +279,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         # grad
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
-        y_slices = disc.get_variable_slices([var])
-        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, {})
+        disc._variables = [var]
+        disc.set_variable_slices()
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
 
         constant_y = np.ones_like(combined_submesh.nodes)
         np.testing.assert_array_equal(
@@ -259,7 +295,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         boundary_conditions = {
             N.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(1)}
         }
-        div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+        disc._bcs = boundary_conditions
+        div_eqn_disc = disc.process_symbol(div_eqn)
 
         # Linear y should have laplacian zero
         linear_y = combined_submesh.nodes
@@ -276,7 +313,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
         # create discretisation
         defaults = shared.TestDefaults1DParticle(10)
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
         mesh = disc.mesh
 
         combined_submesh = mesh.combine_submeshes("negative particle")
@@ -284,8 +322,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         # grad
         var = pybamm.Variable("var", domain="negative particle")
         grad_eqn = pybamm.grad(var)
-        y_slices = disc.get_variable_slices([var])
-        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, {})
+        disc._variables = [var]
+        disc.set_variable_slices()
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
 
         constant_y = np.ones_like(combined_submesh.nodes)
         np.testing.assert_array_equal(
@@ -305,7 +344,8 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         boundary_conditions = {
             N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
         }
-        div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+        disc._bcs = boundary_conditions
+        div_eqn_disc = disc.process_symbol(div_eqn)
 
         linear_y = combined_submesh.nodes
         const = 6 * np.ones(combined_submesh.npts)
@@ -320,7 +360,12 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         """
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume,
+            "separator": pybamm.FiniteVolume,
+            "positive electrode": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
         mesh = disc.mesh
 
         mesh.add_ghost_meshes()
@@ -332,9 +377,12 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         boundary_conditions = {
             var.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(1)}
         }
-        y_slices = disc.get_variable_slices([var])
+        disc._bcs = boundary_conditions
 
-        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+        disc._variables = [var]
+        disc.set_variable_slices()
+
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
         constant_y = np.ones_like(combined_submesh.nodes)
@@ -353,13 +401,14 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
                 "right": pybamm.Scalar(combined_submesh.edges[-1]),
             }
         }
+        disc._bcs = boundary_conditions
 
-        grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y), np.ones_like(combined_submesh.edges)
         )
 
-        div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+        div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
         )
@@ -376,7 +425,12 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             n = 3 * round(n / 3)
             # create discretisation
             defaults = shared.TestDefaults1DMacro(n)
-            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+            spatial_methods = {
+                "negative electrode": pybamm.FiniteVolume,
+                "separator": pybamm.FiniteVolume,
+                "positive electrode": pybamm.FiniteVolume,
+            }
+            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
             mesh = disc.mesh
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -385,8 +439,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             grad_exact = np.cos(combined_submesh.edges[1:-1])
 
             # Discretise and evaluate
-            y_slices = disc.get_variable_slices([var])
-            grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, {})
+            disc._variables = [var]
+            disc.set_variable_slices()
+            grad_eqn_disc = disc.process_symbol(grad_eqn)
             grad_approx = grad_eqn_disc.evaluate(None, y)
 
             # Calculate errors
@@ -416,8 +471,14 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         def get_l2_error(n):
             # create discretisation
             defaults = shared.TestDefaults1DMacro(n)
-            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+            spatial_methods = {
+                "negative electrode": pybamm.FiniteVolume,
+                "separator": pybamm.FiniteVolume,
+                "positive electrode": pybamm.FiniteVolume,
+            }
+            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
             mesh = disc.mesh
+            disc._bcs = boundary_conditions
 
             # Set up discretisation
             whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -431,8 +492,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             grad_exact = np.cos(combined_submesh.edges)
 
             # Discretise and evaluate
-            y_slices = disc.get_variable_slices([var])
-            grad_eqn_disc = disc.process_symbol(grad_eqn, y_slices, boundary_conditions)
+            disc._variables = [var]
+            disc.set_variable_slices()
+            grad_eqn_disc = disc.process_symbol(grad_eqn)
             grad_approx = grad_eqn_disc.evaluate(None, y)
 
             # Calculate errors
@@ -462,7 +524,13 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
 
             # create discretisation
             defaults = shared.TestDefaults1DMacro(n)
-            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+            spatial_methods = {
+                "negative electrode": pybamm.FiniteVolume,
+                "separator": pybamm.FiniteVolume,
+                "positive electrode": pybamm.FiniteVolume,
+            }
+            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
+            disc._bcs = boundary_conditions
             mesh = disc.mesh
 
             whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -473,8 +541,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             div_exact_internal = -np.sin(combined_submesh.nodes[1:-1])
 
             # Discretise and evaluate
-            y_slices = disc.get_variable_slices([var])
-            div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+            disc._variables = [var]
+            disc.set_variable_slices()
+            div_eqn_disc = disc.process_symbol(div_eqn)
             div_approx_internal = div_eqn_disc.evaluate(None, y)[1:-1]
 
             # Calculate errors
@@ -506,8 +575,14 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             whole_cell = ["negative electrode", "separator", "positive electrode"]
             # create discretisation
             defaults = shared.TestDefaults1DMacro(n)
-            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+            spatial_methods = {
+                "negative electrode": pybamm.FiniteVolume,
+                "separator": pybamm.FiniteVolume,
+                "positive electrode": pybamm.FiniteVolume,
+            }
+            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
             mesh = disc.mesh
+            disc._bcs = boundary_conditions
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
 
@@ -516,8 +591,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             div_exact_internal = -np.sin(combined_submesh.nodes[1:-1])
 
             # Discretise and evaluate
-            y_slices = disc.get_variable_slices([var])
-            div_eqn_disc = disc.process_symbol(div_eqn, y_slices, boundary_conditions)
+            disc._variables = [var]
+            disc.set_variable_slices()
+            div_eqn_disc = disc.process_symbol(div_eqn)
             div_approx_internal = div_eqn_disc.evaluate(None, y)[1:-1]
 
             # Calculate errors
@@ -548,7 +624,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         def get_l2_error(n):
             defaults = shared.TestDefaults1DParticle(n)
 
-            disc = pybamm.FiniteVolumeDiscretisation(defaults.mesh)
+            spatial_methods = {"negative particle": pybamm.FiniteVolume}
+            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
+            disc._bcs = boundary_conditions
             mesh = disc.mesh["negative particle"]
             r = mesh.nodes
 
@@ -558,8 +636,9 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
             exact_internal = exact[1:-1]
 
             # discretise and evaluate
-            y_slices = disc.get_variable_slices([c])
-            eqn_disc = disc.process_symbol(eqn, y_slices, boundary_conditions)
+            disc._variables = [c]
+            disc.set_variable_slices()
+            eqn_disc = disc.process_symbol(eqn)
             approx_internal = eqn_disc.evaluate(None, y)[1:-1]
 
             # error

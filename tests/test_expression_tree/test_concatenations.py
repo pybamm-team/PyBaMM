@@ -80,7 +80,7 @@ class TestConcatenations(unittest.TestCase):
     def test_numpy_domain_concatenation(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(defaults.mesh)
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
         mesh = disc.mesh
 
         a_dom = ["negative electrode"]
@@ -89,9 +89,6 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
 
         # concatenate them the "wrong" way round to check they get reordered correctly
-        import ipdb
-
-        ipdb.set_trace()
         conc = pybamm.DomainConcatenation([b, a], mesh)
         np.testing.assert_array_equal(
             conc.evaluate(),
@@ -145,6 +142,23 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(b.id, b_new.id)
         self.assertEqual(c.id, c_new.id)
         self.assertEqual(conc.id, pybamm.Concatenation(a_new, b_new, c_new).id)
+
+    def test_piecewise_constant(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        c = pybamm.Scalar(3)
+        conc = pybamm.PiecewiseConstant(a, b, c)
+
+        self.assertIsInstance(conc, pybamm.Concatenation)
+        self.assertEqual(
+            conc.domain, ["negative electrode", "separator", "positive electrode"]
+        )
+        self.assertEqual(conc.children[0].domain, ["negative electrode"])
+        self.assertEqual(conc.children[1].domain, ["separator"])
+        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+        self.assertEqual(conc.children[0].evaluate(), 1)
+        self.assertEqual(conc.children[1].evaluate(), 2)
+        self.assertEqual(conc.children[2].evaluate(), 3)
 
 
 if __name__ == "__main__":

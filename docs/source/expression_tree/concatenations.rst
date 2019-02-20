@@ -10,4 +10,5 @@ Concatenations
 .. autoclass:: pybamm.DomainConcatenation
   :members:
 
-.
+.. autoclass:: pybamm.PiecewiseConstant
+  :members:

@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-import numbers
+import warnings
 
 
 class Concatenation(pybamm.Symbol):
@@ -53,7 +53,7 @@ class NumpyModelConcatenation(pybamm.Symbol):
     Upon evaluation, equations are concatenated using numpy concatenation.
     Unlike :class:`pybamm.Concatenation`, this doesn't check domains, as its only use
     is to concatenate model equations (e.g. rhs equations or initial conditions, in
-    :class:`pybamm.BaseDiscretisation`), which might have common domains
+    :class:`pybamm.Discretisation`), which might have common domains
 
     **Extends**: :class:`pybamm.Symbol`
 
@@ -97,42 +97,19 @@ class DomainConcatenation(Concatenation):
         The underlying mesh for discretisation, used to obtain the number of mesh points
         in each domain.
 
-    Examples
-    --------
-    >>> import pybamm
-    >>> mesh = pybamm
-    >>> a = pybamm.Scalar(1, domain=["negative electrode"])
-    >>> b = pybamm.Scalar(2, domain=["separator"])
-    >>> c = pybamm.Scalar(3, domain=["positive electrode"])
-    >>> conc = DomainConcatenation([a,b,c], mesh)
-    >>> conc.evaluate()
-
-    >>> import numpy as np
-    >>> a = pybamm.Scalar(1, domain=["negative electrode"])
-    >>> b = pybamm.Vector(4*np.ones_like(mesh["separator"].nodes), domain=["separator"])
-    >>> c = pybamm.Scalar(3, domain=["positive electrode"])
-    >>> conc = DomainConcatenation([a,b,c], mesh)
-    >>> conc.evaluate()
-
     """
 
-    def __init__(self, children, mesh, broadcast=False):
+    def __init__(self, children, mesh):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
 
         children = list(children)
 
-        # If any child is a constant, prepare if for concatenation, independently of
-        # the value of the 'broadcast' flag
-        # If the 'broadcast' flag is set to True, broadcast all nodes
         for i, child in enumerate(children):
-            if child.is_constant():
+            if child.is_constant() or child.evaluates_to_number():
                 children[i] = self.process_node_for_concatenate(child, mesh)
-            elif broadcast:
-                children[i] = pybamm.NumpyBroadcast(child, child.domain, mesh)
 
-        # Allow the base class to sort the children and domains into the correct order,
-        # using the order from KNOWN_DOMAINS
+        # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
 
         # create dict of domain => slice of final vector
@@ -160,30 +137,29 @@ class DomainConcatenation(Concatenation):
         """
         the node is assumed to be constant in time. this function replaces it with a
         single Vector node with the correct length vector (according to its domain)
+
         Parameters
         ----------
         node: derived from :class:`Symbol`
             the sub-expression to process (node.is_constant() is true)
+
         """
+        try:
+            node_size = node.size
+        except AttributeError:
+            node_size = 0
 
-        # node must be constant
-        value = node.evaluate()
-
-        # correct size of vector should be number of points in the domains
-        subvector_size = sum([mesh[dom].npts for dom in node.domain])
-
-        # check if its a scalar, if so convert to vector
-        if isinstance(value, numbers.Number):
-            value = np.full(subvector_size, value)
-
-        # check it is the right size
-        if value.size != subvector_size:
-            raise ValueError(
-                "Error: expression evaluated to a vector of incorrect length"
-            )
-
-        # convert to a Vector node
-        return pybamm.Vector(value, domain=node.domain)
+        if node_size > 1:
+            if node_size == sum([mesh[dom].npts for dom in node.domain]):
+                return node
+            else:
+                raise ValueError(
+                    "Error: expression evaluated to a vector of incorrect length"
+                )
+        else:
+            warnings.warn("Implementation not robust")
+            npts = {dom: submesh.npts for dom, submesh in mesh.items()}
+            return pybamm.NumpyBroadcast(node, node.domain, npts)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -198,3 +174,31 @@ class DomainConcatenation(Concatenation):
                 vector[self._slices[dom]] = child_vector[slices[dom]]
 
         return vector
+
+
+class PiecewiseConstant(Concatenation):
+    """Piecewise constant concatenation of three symbols.
+    This is useful when we don't want to assign a domain to the inputs
+
+    Parameters
+    ----------
+    neg_value: :class:`numbers.Number` or :class:`pybamm.Symbol`
+        The value in the negative electrode
+    sep_value: :class:`numbers.Number` or :class:`pybamm.Symbol`
+        The value in the separator
+    pos_value: :class:`numbers.Number` or :class:`pybamm.Symbol`
+        The value in the positive electrode
+
+    """
+
+    def __init__(self, neg_value, sep_value, pos_value):
+        neg_value_with_domain = neg_value * pybamm.Scalar(
+            1, domain=["negative electrode"]
+        )
+        sep_value_with_domain = sep_value * pybamm.Scalar(1, domain=["separator"])
+        pos_value_with_domain = pos_value * pybamm.Scalar(
+            1, domain=["positive electrode"]
+        )
+        super().__init__(
+            neg_value_with_domain, sep_value_with_domain, pos_value_with_domain
+        )

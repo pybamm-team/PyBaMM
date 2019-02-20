@@ -158,6 +158,10 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Matrix(np.ones((4, 6)))
         self.assertFalse(a.evaluates_to_number())
 
+        # Time variable returns true
+        a = 3 * pybamm.t + 2
+        self.assertTrue(a.evaluates_to_number())
+
     def test_symbol_repr(self):
         """
         test that __repr___ returns the string

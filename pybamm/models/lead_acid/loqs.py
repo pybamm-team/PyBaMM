@@ -5,6 +5,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import os
+
 
 class LOQS(pybamm.BaseModel):
     """Leading-Order Quasi-Static model for lead-acid.
@@ -37,7 +39,10 @@ class LOQS(pybamm.BaseModel):
         epss = pybamm.Variable("epss", domain=[])
         epsp = pybamm.Variable("epsp", domain=[])
 
-        # Parameters
+        # Current function
+        t = pybamm.t
+        icell = pybamm.standard_parameters_lead_acid.dimensionless_current(t)
+        # Parameters and functions
         ln = pybamm.standard_parameters.ln
         ls = pybamm.standard_parameters.ls
         lp = pybamm.standard_parameters.lp
@@ -56,14 +61,14 @@ class LOQS(pybamm.BaseModel):
         epsp_init = pybamm.standard_parameters_lead_acid.epsp_init
 
         # ODEs
-        jn = pybamm.standard_parameters_lead_acid.icell / ln
-        jp = -pybamm.standard_parameters_lead_acid.icell / lp
+        jn = icell / ln
+        jp = -icell / lp
         depsndt = -beta_surf_n * jn
         depspdt = -beta_surf_p * jp
         dcdt = (
             1
             / (ln * epsn + ls * epss + lp * epsp)
-            * ((sn - sp) - c * (ln * depsndt + lp * depspdt))
+            * ((sn - sp) * icell - c * (ln * depsndt + lp * depspdt))
         )
         self.rhs = {c: dcdt, epsn: depsndt, epss: pybamm.Scalar(0), epsp: depspdt}
         # Initial conditions
@@ -94,5 +99,15 @@ class LOQS(pybamm.BaseModel):
 
         # Overwrite default parameter values
         self.default_parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+            "input/parameters/lead-acid/default.csv",
+            {
+                "current scale": 1,
+                "current function": os.path.join(
+                    os.getcwd(),
+                    "pybamm",
+                    "parameters",
+                    "standard_current_functions",
+                    "constant_current.py",
+                ),
+            },
         )
