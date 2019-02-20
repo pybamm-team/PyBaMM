@@ -7,7 +7,6 @@ import pybamm
 import tests
 
 import unittest
-import numpy as np
 
 
 class TestLiIonSPM(unittest.TestCase):

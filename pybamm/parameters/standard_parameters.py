@@ -155,7 +155,7 @@ tau_r_p = F / (m_p_dim * a_p * ce_typ ** 0.5)
 
 # Scaled maximum concentration in positive particle
 # Note: C_hat_n == 1, so not needed
-C_hat_p = cp_max/cn_max
+C_hat_p = cp_max / cn_max
 
 # Ratio of discharge and solid diffusion timescales
 gamma_n = tau_d / tau_n

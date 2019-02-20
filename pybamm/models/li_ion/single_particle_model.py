@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 import numpy as np
 
+
 class SPM(pybamm.BaseModel):
     """Single Particle Model for li-ion.
 
@@ -31,18 +32,19 @@ class SPM(pybamm.BaseModel):
         super().__init__()
 
         # Overwrite default geometry
-        # NOTE: Probably not the best way to do this
-        self.default_geometry = pybamm.Geometry1DMacro()
+        # NOTE: Is this the best way/place to do this?
+        self.default_geometry = pybamm.Geometry1DMicro()
         self.default_parameter_values.process_geometry(self.default_geometry)
         submesh_pts = {
             "negative particle": {"r": 10},
             "positive particle": {"r": 10},
         }
-        submehs_types = {
+        submesh_types = {
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
         }
         self.mesh = pybamm.Mesh(self.default_geometry, submesh_types, submesh_pts)
+        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(self.mesh)
 
         # Variables
         cn = pybamm.Variable("cn", domain="negative particle")
@@ -104,10 +106,7 @@ class SPM(pybamm.BaseModel):
         #     - (2 / Lambda) * (1 / (gp * lp))
         #     - (2 / Lambda) * (1 / (gn * ln)))
 
-        # Just returns ref value of OCV
-        V = U_p(1) - U_n(0)
         self.variables = {
             "cn": cn,
             "cp": cp,
-            "V" : V,
         }
