@@ -47,12 +47,13 @@ class Concatenation(pybamm.Symbol):
         return domain
 
 
-class NumpyModelConcatenation(pybamm.Symbol):
-    """A node in the expression tree representing a concatenation of equations.
+class NumpyConcatenation(pybamm.Symbol):
+    """A node in the expression tree representing a concatenation of equations, when we
+    *don't* care about domains. The class :class:`pybamm.DomainConcatenation`, which
+    *is* careful about domains and uses broadcasting where appropriate, should be used
+    whenever possible instead. 
+
     Upon evaluation, equations are concatenated using numpy concatenation.
-    Unlike :class:`pybamm.Concatenation`, this doesn't check domains, as its only use
-    is to concatenate model equations (e.g. rhs equations or initial conditions, in
-    :class:`pybamm.Discretisation`), which might have common domains
 
     **Extends**: :class:`pybamm.Symbol`
 
@@ -79,7 +80,8 @@ class NumpyModelConcatenation(pybamm.Symbol):
 
 
 class DomainConcatenation(Concatenation):
-    """A node in the expression tree representing a concatenation of symbols.
+    """A node in the expression tree representing a concatenation of symbols, being
+    careful about domains.
 
     It is assumed that each child has a domain, and the final concatenated vector will
     respect the sizes and ordering of domains established in pybamm.KNOWN_DOMAINS
@@ -162,22 +164,21 @@ class DomainConcatenation(Concatenation):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return np.concatenate([child.evaluate(t, y) for child in self.children])
-        # # preallocate vector
-        # vector = np.empty(self._size)
-        #
-        # # loop through domains of children writing subvectors to final vector
-        # for child, slices in zip(self.children, self._children_slices):
-        #     child_vector = child.evaluate(t, y)
-        #     for dom in child.domain:
-        #         try:
-        #             vector[self._slices[dom]] = child_vector[slices[dom]]
-        #         except ValueError:
-        #             import ipdb
-        #
-        #             ipdb.set_trace()
-        #
-        # return vector
+        # preallocate vector
+        vector = np.empty(self._size)
+
+        # loop through domains of children writing subvectors to final vector
+        for child, slices in zip(self.children, self._children_slices):
+            child_vector = child.evaluate(t, y)
+            for dom in child.domain:
+                try:
+                    vector[self._slices[dom]] = child_vector[slices[dom]]
+                except ValueError:
+                    import ipdb
+
+                    ipdb.set_trace()
+
+        return vector
 
 
 class PiecewiseConstant(Concatenation):

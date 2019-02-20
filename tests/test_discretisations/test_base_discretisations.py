@@ -27,7 +27,7 @@ class TestDiscretise(unittest.TestCase):
         disc._y_slices = {c.id: slice(0, 1), a.id: slice(2, 3), b.id: slice(3, 4)}
         result = disc._concatenate_init(initial_conditions)
 
-        self.assertIsInstance(result, pybamm.NumpyModelConcatenation)
+        self.assertIsInstance(result, pybamm.NumpyConcatenation)
         self.assertEqual(result.children[0].evaluate(), 1)
         self.assertEqual(result.children[1].evaluate(), 2)
         self.assertEqual(result.children[2].evaluate(), 3)
@@ -491,7 +491,7 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
 
         conc = disc.concatenate(a, b, c)
-        self.assertIsInstance(conc, pybamm.NumpyModelConcatenation)
+        self.assertIsInstance(conc, pybamm.NumpyConcatenation)
 
     def test_concatenation_of_scalars(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]

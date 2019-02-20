@@ -62,7 +62,7 @@ from .expression_tree.binary_operators import (
 )
 from .expression_tree.concatenations import (
     Concatenation,
-    NumpyModelConcatenation,
+    NumpyConcatenation,
     DomainConcatenation,
     PiecewiseConstant,
 )

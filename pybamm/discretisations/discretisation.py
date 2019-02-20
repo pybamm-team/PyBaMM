@@ -292,7 +292,7 @@ class Discretisation(object):
         return bin_op.__class__(new_left, new_right)
 
     def concatenate(self, *symbols):
-        return pybamm.NumpyModelConcatenation(*symbols)
+        return pybamm.NumpyConcatenation(*symbols)
 
     def _concatenate_init(self, var_eqn_dict):
         """
