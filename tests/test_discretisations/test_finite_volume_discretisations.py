@@ -718,6 +718,26 @@ class TestFiniteVolumeDiscretisation(unittest.TestCase):
         rates = np.log2(errs[:-1] / errs[1:])
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
+    def test_grad_int_div_int(self):
+        # Integral of gradient should be difference in boundary conditions
+
+        # Indefinite integral of gradient should be same as variable
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        N = pybamm.grad(var)
+        int_N = pybamm.Integral(N)
+        boundary_conditions = {
+            N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
+        }
+        np.testing.assert_array_equal(var, int_N)
+        # Gradient of indefinite integral should be same as variable
+
+        # Integral of divergence should be difference in boundary conditions
+
+        # Indefinite integral of divergence should be same as variable
+
+        # Divergence of indefinite integral should be same as variable
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
