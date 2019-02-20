@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
+import warnings
 
 
 class Concatenation(pybamm.Symbol):
@@ -156,10 +157,7 @@ class DomainConcatenation(Concatenation):
                     "Error: expression evaluated to a vector of incorrect length"
                 )
         else:
-            #!!!! This could cause some problems later !!!!#
-            raise NotImplementedError(
-                """Not ready for merge until we figure this out"""
-            )
+            warnings.warn("Implementation not robust")
             npts = {dom: submesh.npts for dom, submesh in mesh.items()}
             return pybamm.NumpyBroadcast(node, node.domain, npts)
 
