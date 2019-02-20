@@ -6,7 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-import warnings
 
 
 class Concatenation(pybamm.Symbol):
@@ -150,16 +149,14 @@ class DomainConcatenation(Concatenation):
             node_size = 0
 
         if node_size > 1:
-            if node_size == sum([mesh[dom].npts for dom in node.domain]):
+            if node_size == sum([mesh[dom].npts_for_broadcast for dom in node.domain]):
                 return node
             else:
                 raise ValueError(
                     "Error: expression evaluated to a vector of incorrect length"
                 )
         else:
-            warnings.warn("Implementation not robust")
-            npts = {dom: submesh.npts for dom, submesh in mesh.items()}
-            return pybamm.NumpyBroadcast(node, node.domain, npts)
+            return pybamm.NumpyBroadcast(node, node.domain, mesh)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

@@ -65,18 +65,18 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
 
     def __init__(self, mesh):
-        self._mesh = mesh
+        for dom in mesh.keys():
+            mesh[dom].npts_for_broadcast = mesh[dom].npts
         super().__init__(mesh)
 
     def spatial_variable(self, symbol):
         # for finite volume we use the cell centres
-        symbol_mesh = self._mesh.combine_submeshes(*symbol.domain)
+        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         return pybamm.Vector(symbol_mesh.nodes)
 
     def broadcast(self, symbol, domain):
         # for finite volume we send variables to cells and so use number_of_cells
-        number_of_cells = {dom: submesh.npts for dom, submesh in self._mesh.items()}
-        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, number_of_cells)
+        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
         # if the broadcasted symbol evaluates to a constant value, replace the
         # symbol-Vector multiplication with a single array

@@ -175,19 +175,21 @@ class NumpyBroadcast(Broadcast):
         child node
     domain : iterable of string
         the domain to broadcast the child to
-    npts : dict
-        contains the number of points on each domain
+    mesh : :class:`pybamm.Mesh`
+        the mesh on which to broadcast
 
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, domain, npts):
+    def __init__(self, child, domain, mesh):
         super().__init__(child, domain, name="numpy broadcast")
         # determine broadcasting vector size (size 1 if the domain is empty)
         if domain == []:
             self.broadcasting_vector_size = 1
         else:
-            self.broadcasting_vector_size = sum([npts[dom] for dom in domain])
+            self.broadcasting_vector_size = sum(
+                [mesh[dom].npts_for_broadcast for dom in domain]
+            )
         # create broadcasting vector (vector of ones with shape determined by the
         # domain)
         self.broadcasting_vector = np.ones(self.broadcasting_vector_size)

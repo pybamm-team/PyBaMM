@@ -23,7 +23,10 @@ class FiniteVolume(pybamm.SpatialMethod):
     """
 
     def __init__(self, mesh):
-        self._mesh = mesh
+        # add npts_for_broadcast to mesh domains for this particular discretisation
+        for dom in mesh.keys():
+            mesh[dom].npts_for_broadcast = mesh[dom].npts
+        super().__init__(mesh)
 
     def spatial_variable(self, symbol):
         """
@@ -42,7 +45,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
 
         # for finite volume we use the cell centres
-        symbol_mesh = self._mesh.combine_submeshes(*symbol.domain)
+        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         return pybamm.Vector(symbol_mesh.nodes)
 
     def broadcast(self, symbol, domain):
@@ -54,8 +57,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
 
         # for finite volume we send variables to cells and so use number_of_cells
-        number_of_cells = {dom: submesh.npts for dom, submesh in self._mesh.items()}
-        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, number_of_cells)
+        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
         # if the broadcasted symbol evaluates to a constant value, replace the
         # symbol-Vector multiplication with a single array
@@ -108,7 +110,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume gradient matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self._mesh.combine_submeshes(*domain)
+        submesh = self.mesh.combine_submeshes(*domain)
 
         # Create matrix using submesh
         n = submesh.npts
@@ -146,7 +148,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             # implement spherical operator
             divergence_matrix = self.divergence_matrix(domain)
 
-            submesh = self._mesh[domain[0]]
+            submesh = self.mesh[domain[0]]
             r = pybamm.Vector(submesh.nodes)
             r_edges = pybamm.Vector(submesh.edges)
 
@@ -175,7 +177,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume divergence matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self._mesh.combine_submeshes(*domain)
+        submesh = self.mesh.combine_submeshes(*domain)
 
         # Create matrix using submesh
         n = submesh.npts + 1
