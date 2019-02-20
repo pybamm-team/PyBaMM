@@ -32,6 +32,31 @@ class TestFiniteVolume(unittest.TestCase):
         avd = pybamm.NodeToEdge(d, arithmetic_mean)
         np.testing.assert_array_equal(avd.evaluate(None, y_test), np.ones(9))
 
+    def test_surface_value(self):
+        # create discretisation
+        defaults = shared.TestDefaults1DParticle(10)
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
+        mesh = disc.mesh
+
+        combined_submesh = mesh.combine_submeshes("negative particle")
+
+        # create variable
+        var = pybamm.Variable("var", domain="negative particle")
+        surf_eqn = pybamm.surf(var)
+        disc._variables = [var]
+        disc.set_variable_slices()
+        surf_eqn_disc = disc.process_symbol(surf_eqn)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(combined_submesh.nodes)
+        self.assertEqual(surf_eqn_disc.evaluate(None, constant_y), 1)
+
+        # check linear variable extroplates correctly
+        linear_y = combined_submesh.nodes
+        y_surf = combined_submesh.nodes[-1] + combined_submesh.d_nodes[-1] / 2
+        self.assertEqual(surf_eqn_disc.evaluate(None, linear_y), y_surf)
+
     def test_discretise_diffusivity_times_spatial_operator(self):
         # Set up
         whole_cell = ["negative electrode", "separator", "positive electrode"]

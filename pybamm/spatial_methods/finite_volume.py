@@ -237,6 +237,33 @@ class FiniteVolume(pybamm.SpatialMethod):
             left_ghost_cell, discretised_symbol, right_ghost_cell
         )
 
+    def surface_value(self, discretised_symbol):
+        """
+        Uses linear extrapolation to get the surface value of a variable in the
+        Finite Volume Method.
+
+        Parameters
+        -----------
+        discretised_symbol : :class:`pybamm.StateVector`
+            The discretised variable (a state vector) from which to calculate
+            the surface value.
+
+        Returns
+        -------
+        :class:`pybamm.Variable`
+            The variable representing the surface value.
+        """
+        # Better to make class similar NodeToEdge and pass function?
+        # def surface_value(array):
+        #     "Linear extrapolation for surface value"
+        #     array[-1] + (array[-1] - array[-2]) / 2
+        # ... or make StateVector and add?
+        y_slice_stop = discretised_symbol.y_slice.stop
+        last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
+        penultimate_node = pybamm.StateVector(slice(y_slice_stop - 2, y_slice_stop - 1))
+        surface_value = (last_node + (last_node - penultimate_node) / 2)
+        return surface_value
+
     #######################################################
     # Can probably be moved outside of the spatial method
     ######################################################
