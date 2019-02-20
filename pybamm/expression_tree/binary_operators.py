@@ -59,6 +59,41 @@ class BinaryOperator(pybamm.Symbol):
         else:
             raise pybamm.DomainError("""children must have same (or empty) domains""")
 
+    @property
+    def size(self):
+        """Get the size of the array, based on the shape."""
+        return np.prod(self.shape)
+
+    @property
+    def shape(self):
+        """
+        Get the shape of the array, based on the shape of children.
+        Default behaviour is elementwise.
+        Note that not all object types have a shape, so this will throw AttributeError
+        unless used exclusively on combinations of Scalars, Arrays and StateVectors.
+        """
+        # Scalars are "invisible" for shape.
+        if isinstance(self.children[0], pybamm.Scalar):
+            return self.children[1].shape
+        elif isinstance(self.children[1], pybamm.Scalar):
+            return self.children[0].shape
+        # Two objects with the same shape
+        shape0 = self.children[0].shape
+        shape1 = self.children[1].shape
+        if shape0 == shape1:
+            return shape0
+        # Matrix times vector or state vector
+        elif len(shape1) == 1 and shape0[-1] == shape1[0]:
+            return shape0
+        elif len(shape0) == 1 and shape1[-1] == shape0[0]:
+            return shape1
+        else:
+            raise ValueError(
+                "children shapes '{}' and '{}' are not compatible".format(
+                    shape0, shape1
+                )
+            )
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
@@ -117,20 +152,6 @@ class Multiplication(BinaryOperator):
 
         super().__init__("*", left, right)
 
-    @property
-    def size(self):
-        """Get the size of the array, based on the size of children"""
-        return np.prod(self.shape)
-
-    @property
-    def shape(self):
-        """Get the shape of the array, based on the shape of children"""
-        # Scalars are "invisible" for shape
-        if isinstance(self.children[0], pybamm.Scalar):
-            return self.children[1].shape
-        elif isinstance(self.children[1], pybamm.Scalar):
-            return self.children[0].shape
-
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
@@ -148,18 +169,27 @@ class MatrixMultiplication(BinaryOperator):
         super().__init__("*", left, right)
 
     @property
-    def size(self):
-        """Get the size of the array, based on the size of children"""
-        return np.prod(self.shape)
-
-    @property
     def shape(self):
-        """Get the shape of the array, based on the shape of children"""
+        """
+        Get the shape of the array, based on the shape of children, for a matrix
+        multiplication (not elementwise, so we need to overload BinaryOperator)
+        """
         # Scalars are "invisible" for shape
         if isinstance(self.children[0], pybamm.Scalar):
             return self.children[1].shape
         elif isinstance(self.children[1], pybamm.Scalar):
             return self.children[0].shape
+        # Two objects with the same shape
+        shape0 = self.children[0].shape
+        shape1 = self.children[1].shape
+        if shape0[-1] == shape1[0]:
+            return tuple(list(shape0[:-1]) + list(shape1[1:]))
+        else:
+            raise ValueError(
+                "children shapes '{}' and '{}' are not compatible".format(
+                    shape0, shape1
+                )
+            )
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
