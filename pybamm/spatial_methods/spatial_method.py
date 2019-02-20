@@ -1,7 +1,6 @@
 #
 # A general spatial method class
 #
-import pybamm
 
 
 class SpatialMethod:
@@ -18,7 +17,11 @@ class SpatialMethod:
     """
 
     def __init__(self, mesh):
-        self.mesh = mesh
+        self._mesh = mesh
+
+    @property
+    def mesh(self):
+        return self._mesh
 
     def spatial_variable(self, symbol):
         """

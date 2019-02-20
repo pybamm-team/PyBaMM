@@ -37,14 +37,13 @@ class TestFiniteVolume(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
+        mesh = shared.TestDefaults1DMacro().mesh
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume,
             "separator": pybamm.FiniteVolume,
             "positive electrode": pybamm.FiniteVolume,
         }
-        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-        mesh = disc.mesh
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
@@ -96,14 +95,13 @@ class TestFiniteVolume(unittest.TestCase):
         # Set up
 
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
+        mesh = shared.TestDefaults1DMacro().mesh
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume,
             "separator": pybamm.FiniteVolume,
             "positive electrode": pybamm.FiniteVolume,
         }
-        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-        mesh = disc.mesh
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
         # Add ghost nodes
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -113,7 +111,7 @@ class TestFiniteVolume(unittest.TestCase):
         discretised_symbol = pybamm.StateVector(disc._y_slices[var.id])
         lbc = pybamm.Scalar(0)
         rbc = pybamm.Scalar(3)
-        symbol_plus_ghost = pybamm.FiniteVolume(defaults.mesh).add_ghost_nodes(
+        symbol_plus_ghost = pybamm.FiniteVolume(mesh).add_ghost_nodes(
             discretised_symbol, lbc, rbc
         )
 
@@ -147,14 +145,13 @@ class TestFiniteVolume(unittest.TestCase):
         """
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
+        mesh = shared.TestDefaults1DMacro().mesh
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume,
             "separator": pybamm.FiniteVolume,
             "positive electrode": pybamm.FiniteVolume,
         }
-        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-        mesh = disc.mesh
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
@@ -204,10 +201,9 @@ class TestFiniteVolume(unittest.TestCase):
         Test grad and div with Dirichlet boundary conditions (applied by grad on var)
         """
         # create discretisation
-        defaults = shared.TestDefaults1DParticle(10)
+        mesh = shared.TestDefaults1DParticle(10).mesh
         spatial_methods = {"negative particle": pybamm.FiniteVolume}
-        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-        mesh = disc.mesh
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
         combined_submesh = mesh.combine_submeshes("negative particle")
 
@@ -265,14 +261,13 @@ class TestFiniteVolume(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
+        mesh = shared.TestDefaults1DMacro().mesh
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume,
             "separator": pybamm.FiniteVolume,
             "positive electrode": pybamm.FiniteVolume,
         }
-        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-        mesh = disc.mesh
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
@@ -312,10 +307,9 @@ class TestFiniteVolume(unittest.TestCase):
         """Test grad and div with Neumann boundary conditions (applied by div on N)"""
 
         # create discretisation
-        defaults = shared.TestDefaults1DParticle(10)
+        mesh = shared.TestDefaults1DParticle(10).mesh
         spatial_methods = {"negative particle": pybamm.FiniteVolume}
-        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-        mesh = disc.mesh
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
         combined_submesh = mesh.combine_submeshes("negative particle")
 
@@ -359,14 +353,13 @@ class TestFiniteVolume(unittest.TestCase):
         Test grad and div with Dirichlet boundary conditions (applied by grad on var)
         """
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
+        mesh = shared.TestDefaults1DMacro().mesh
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume,
             "separator": pybamm.FiniteVolume,
             "positive electrode": pybamm.FiniteVolume,
         }
-        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-        mesh = disc.mesh
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
         mesh.add_ghost_meshes()
         disc.mesh.add_ghost_meshes()
@@ -424,14 +417,13 @@ class TestFiniteVolume(unittest.TestCase):
             # Set up discretisation
             n = 3 * round(n / 3)
             # create discretisation
-            defaults = shared.TestDefaults1DMacro(n)
+            mesh = shared.TestDefaults1DMacro(n).mesh
             spatial_methods = {
                 "negative electrode": pybamm.FiniteVolume,
                 "separator": pybamm.FiniteVolume,
                 "positive electrode": pybamm.FiniteVolume,
             }
-            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-            mesh = disc.mesh
+            disc = pybamm.Discretisation(mesh, spatial_methods)
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
             # Define exact solutions
@@ -470,14 +462,13 @@ class TestFiniteVolume(unittest.TestCase):
         # Function for convergence testing
         def get_l2_error(n):
             # create discretisation
-            defaults = shared.TestDefaults1DMacro(n)
+            mesh = shared.TestDefaults1DMacro(n).mesh
             spatial_methods = {
                 "negative electrode": pybamm.FiniteVolume,
                 "separator": pybamm.FiniteVolume,
                 "positive electrode": pybamm.FiniteVolume,
             }
-            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-            mesh = disc.mesh
+            disc = pybamm.Discretisation(mesh, spatial_methods)
             disc._bcs = boundary_conditions
 
             # Set up discretisation
@@ -523,15 +514,14 @@ class TestFiniteVolume(unittest.TestCase):
         def get_l2_error(n):
 
             # create discretisation
-            defaults = shared.TestDefaults1DMacro(n)
+            mesh = shared.TestDefaults1DMacro(n).mesh
             spatial_methods = {
                 "negative electrode": pybamm.FiniteVolume,
                 "separator": pybamm.FiniteVolume,
                 "positive electrode": pybamm.FiniteVolume,
             }
-            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
+            disc = pybamm.Discretisation(mesh, spatial_methods)
             disc._bcs = boundary_conditions
-            mesh = disc.mesh
 
             whole_cell = ["negative electrode", "separator", "positive electrode"]
             combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -574,14 +564,13 @@ class TestFiniteVolume(unittest.TestCase):
         def get_l2_error(n):
             whole_cell = ["negative electrode", "separator", "positive electrode"]
             # create discretisation
-            defaults = shared.TestDefaults1DMacro(n)
+            mesh = shared.TestDefaults1DMacro(n).mesh
             spatial_methods = {
                 "negative electrode": pybamm.FiniteVolume,
                 "separator": pybamm.FiniteVolume,
                 "positive electrode": pybamm.FiniteVolume,
             }
-            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
-            mesh = disc.mesh
+            disc = pybamm.Discretisation(mesh, spatial_methods)
             disc._bcs = boundary_conditions
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
@@ -622,10 +611,9 @@ class TestFiniteVolume(unittest.TestCase):
         }
 
         def get_l2_error(n):
-            defaults = shared.TestDefaults1DParticle(n)
-
+            mesh = shared.TestDefaults1DParticle(n).mesh
             spatial_methods = {"negative particle": pybamm.FiniteVolume}
-            disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
+            disc = pybamm.Discretisation(mesh, spatial_methods)
             disc._bcs = boundary_conditions
             mesh = disc.mesh["negative particle"]
             r = mesh.nodes
@@ -657,8 +645,13 @@ class TestFiniteVolume(unittest.TestCase):
 
     def test_discretise_spatial_variable(self):
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        mesh = shared.TestDefaults1DMacro().mesh
+        spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume,
+            "separator": pybamm.FiniteVolume,
+            "positive electrode": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
         # space
         x1 = pybamm.SpatialVariable("x", ["negative electrode"])
@@ -680,8 +673,10 @@ class TestFiniteVolume(unittest.TestCase):
             disc.mesh.combine_submeshes("negative electrode", "separator").nodes,
         )
 
-        defaults = shared.TestDefaults1DParticle(10)
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        mesh = shared.TestDefaults1DParticle(10).mesh
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
         r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
         r_disc = disc.process_symbol(r)
