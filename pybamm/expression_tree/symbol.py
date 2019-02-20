@@ -324,7 +324,8 @@ class Symbol(anytree.NodeMixin):
 
     def evaluates_to_number(self):
         """Returns True if evaluating the expression returns a number.
-        Returns False otherwise, including if NotImplementedError is raised.
+        Returns False otherwise, including if NotImplementedError or TyperError
+        is raised.
         !Not to be confused with isinstance(self, pybamm.Scalar)!
 
         See Also
@@ -339,6 +340,13 @@ class Symbol(anytree.NodeMixin):
             # return false if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
             return False
+        except TypeError as error:
+            # return false if specific TypeError is raised
+            # (there is a e.g. StateVector in the tree)
+            if error.args[0] == "'NoneType' object is not subscriptable":
+                return False
+            else:
+                raise error
 
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""

@@ -185,7 +185,6 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
             mesh["positive electrode"].nodes.shape,
         )
 
-    @unittest.skip("needs smarter domain concatenation")
     def test_discretisation_whole(self):
         bv_whole = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
 

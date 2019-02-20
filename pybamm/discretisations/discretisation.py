@@ -224,7 +224,7 @@ class Discretisation(object):
             return symbol.__class__(new_child)
 
         elif isinstance(symbol, pybamm.Variable):
-            return pybamm.StateVector(self._y_slices[symbol.id])
+            return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.Space):
             return self._spatial_methods[symbol.domain[0]].spatial_variable(symbol)
