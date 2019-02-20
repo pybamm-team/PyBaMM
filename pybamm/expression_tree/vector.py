@@ -62,6 +62,20 @@ class StateVector(pybamm.Symbol):
         """Slice of an external y to read"""
         return self._y_slice
 
+    @property
+    def size(self):
+        return self.y_slice.stop - self.y_slice.start
+
+    @property
+    def shape(self):
+        return (self.y_slice.stop - self.y_slice.start,)
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return y[self._y_slice]
+        value = y[self._y_slice]
+        if value.size < self.size:
+            raise ValueError(
+                "y is too short, so value with slice is smaller than expected"
+            )
+        else:
+            return value
