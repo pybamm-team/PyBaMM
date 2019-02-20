@@ -73,9 +73,9 @@ class BinaryOperator(pybamm.Symbol):
         unless used exclusively on combinations of Scalars, Arrays and StateVectors.
         """
         # Scalars are "invisible" for shape.
-        if isinstance(self.children[0], pybamm.Scalar):
+        if self.children[0].shape == ():
             return self.children[1].shape
-        elif isinstance(self.children[1], pybamm.Scalar):
+        elif self.children[1].shape == ():
             return self.children[0].shape
         # Two objects with the same shape
         shape0 = self.children[0].shape
@@ -87,6 +87,7 @@ class BinaryOperator(pybamm.Symbol):
             return shape0
         elif len(shape0) == 1 and shape1[-1] == shape0[0]:
             return shape1
+        # Incompatible shapes
         else:
             raise ValueError(
                 "children shapes '{}' and '{}' are not compatible".format(

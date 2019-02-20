@@ -51,7 +51,7 @@ class NumpyConcatenation(pybamm.Symbol):
     """A node in the expression tree representing a concatenation of equations, when we
     *don't* care about domains. The class :class:`pybamm.DomainConcatenation`, which
     *is* careful about domains and uses broadcasting where appropriate, should be used
-    whenever possible instead. 
+    whenever possible instead.
 
     Upon evaluation, equations are concatenated using numpy concatenation.
 
@@ -107,8 +107,7 @@ class DomainConcatenation(Concatenation):
         children = list(children)
 
         for i, child in enumerate(children):
-            if child.is_constant() or child.evaluates_to_number():
-                children[i] = self.process_node_for_concatenate(child, mesh)
+            children[i] = self.process_node_for_concatenate(child, mesh)
 
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
@@ -171,12 +170,7 @@ class DomainConcatenation(Concatenation):
         for child, slices in zip(self.children, self._children_slices):
             child_vector = child.evaluate(t, y)
             for dom in child.domain:
-                try:
-                    vector[self._slices[dom]] = child_vector[slices[dom]]
-                except ValueError:
-                    import ipdb
-
-                    ipdb.set_trace()
+                vector[self._slices[dom]] = child_vector[slices[dom]]
 
         return vector
 

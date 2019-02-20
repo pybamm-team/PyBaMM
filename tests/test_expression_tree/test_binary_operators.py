@@ -138,6 +138,12 @@ class TestBinaryOperators(unittest.TestCase):
                 (left @ right).shape, (left.evaluate(y=y) @ right.evaluate(y=y)).shape
             )
 
+        # Errors (mismatched sizes)
+        for left, right in ((M1, M1), (M1, v2), (v2, M1), (v1, v2)):
+            bad_matprod = left @ right
+            with self.assertRaises(ValueError):
+                bad_matprod.shape
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
