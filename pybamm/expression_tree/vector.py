@@ -72,10 +72,11 @@ class StateVector(pybamm.Symbol):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        value = y[self._y_slice]
-        if value.size < self.size:
+        if y is None:
+            raise TypeError("StateVector cannot evaluate input 'y=None'")
+        if y.shape[0] < self.y_slice.stop:
             raise ValueError(
                 "y is too short, so value with slice is smaller than expected"
             )
         else:
-            return value
+            return y[self._y_slice]

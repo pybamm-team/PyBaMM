@@ -50,6 +50,18 @@ class TestStateVector(unittest.TestCase):
         ):
             sv.evaluate(y=y2)
 
+    def test_evaluate_2D(self):
+        sv = pybamm.StateVector(slice(0, 10))
+        y = np.ones((20, 40))
+        np.testing.assert_array_equal(sv.evaluate(y=y), np.ones((10, 40)))
+
+        # Try evaluating with a y that is too short
+        y2 = np.ones((5, 40))
+        with self.assertRaisesRegex(
+            ValueError, "y is too short, so value with slice is smaller than expected"
+        ):
+            sv.evaluate(y=y2)
+
     def test_size_and_shape(self):
         sv = pybamm.StateVector(slice(0, 14))
         self.assertEqual(sv.shape, (14,))

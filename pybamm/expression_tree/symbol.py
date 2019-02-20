@@ -357,7 +357,7 @@ class Symbol(anytree.NodeMixin):
         except TypeError as error:
             # return false if specific TypeError is raised
             # (there is a e.g. StateVector in the tree)
-            if error.args[0] == "'NoneType' object is not subscriptable":
+            if error.args[0] == "StateVector cannot evaluate input 'y=None'":
                 return False
             else:
                 raise error
