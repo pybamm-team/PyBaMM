@@ -3,5 +3,9 @@ Submodels
 
 .. toctree::
 
-  electrolyte
+  electrolyte_diffusion
+  electrolyte_current
   interface
+  particle
+  electrode
+  

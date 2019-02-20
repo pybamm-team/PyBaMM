@@ -102,6 +102,10 @@ sigma_p = Parameter("sigma_p")  # Conductivity in positive electrode
 cn_max = Parameter("cn_max")  # Max concentration in negative electrode
 cp_max = Parameter("cp_max")  # Max concentration in positive electrode
 
+# Particle Properties
+D_n = Parameter("D_n")
+D_p = Parameter("D_p")
+
 # Electrochemical Reactions
 m_n = Parameter("m_n")  # Reaction rate in negative electrode
 m_p = Parameter("m_p")  # Reaction rate in positive electrode
@@ -138,6 +142,15 @@ beta_p = a_p * R_p
 t_plus = Parameter("t_plus")  # cation transference number
 delta = (Lx ** 2 / De_typ) * (I_typ / (F * cn_max * Lx))
 nu = cn_max / ce_typ
+
+Lambda = F / R / T  # taking phi_ref = 1
+
+# Particle Properties
+gamma_n = F * cn_max * Lx * D_n / I_typ / (R_n**2)
+gamma_p = F * cp_max * Lx * D_p / I_typ / (R_p**2)
+
+C_n = cn_max / cn_max
+C_p = cp_max / cn_max
 
 # Initial conditions
 ce0 = ce0_dimensional / ce_typ

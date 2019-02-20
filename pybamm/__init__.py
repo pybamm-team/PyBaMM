@@ -101,7 +101,7 @@ from .models import lead_acid
 #
 # Submodel classes
 #
-from .models.submodels import electrolyte, interface
+from .models.submodels import electrode, particle, interface, electrolyte_concentration, electrolyte_current
 
 #
 # Parameters class and methods
