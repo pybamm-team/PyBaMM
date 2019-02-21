@@ -188,17 +188,26 @@ class BaseModel(object):
             The submodels from which to create new model
         """
         for submodel in submodels:
-            # check for duplicates in keys
-            vars = [var.id for var in submodel.rhs.keys()] + [
-                var.id for var in self.rhs.keys()
-            ]
-            assert len(vars) == len(set(vars)), pybamm.ModelError("duplicate variables")
 
-            # update dicts
-            self._rhs.update(submodel.rhs)
-            self._initial_conditions.update(submodel.initial_conditions)
-            self._boundary_conditions.update(submodel.boundary_conditions)
-            self._variables.update(submodel.variables)
+            # check and then update dicts
+            self.check_and_combine_dict(self._rhs, submodel.rhs)
+            self.check_and_combine_dict(self._algebraic, submodel.algebraic)
+            self.check_and_combine_dict(
+                self._initial_conditions, submodel.initial_conditions
+            )
+            self.check_and_combine_dict(
+                self._boundary_conditions, submodel.boundary_conditions
+            )
+            self._variables.update(submodel.variables)  # keys are strings so no check
+
+    def check_and_combine_dict(self, dict1, dict2):
+        # check that the key ids are distinct
+        ids1 = set(map(lambda x: x.id, list(dict1.keys())))
+        ids2 = set(map(lambda x: x.id, list(dict2.keys())))
+        assert len(ids1.intersection(ids2)) == 0, pybamm.ModelError(
+            "Submodel incompatible: duplicate variables"
+        )
+        dict1.update(dict2)
 
     def check_well_posedness(self):
         """
