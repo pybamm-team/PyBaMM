@@ -88,18 +88,29 @@ class NumpyBroadcast(Broadcast):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         child = self.children[0]
         child_eval = child.evaluate(t, y)
-        # if child is a vector, add a dimension for broadcasting
-        if isinstance(child, pybamm.Vector):
-            return child_eval[:, np.newaxis] * self.broadcasting_vector
-        # if child is a state vector, check that it has the right shape and then
-        # broadcast
-        elif isinstance(child, pybamm.StateVector):
-            assert child_eval.shape[0] == 1, ValueError(
-                """child_eval should have shape (1,n), not {}""".format(
-                    child_eval.shape
+        try:
+            child_eval_size = child_eval.size
+        except AttributeError:
+            child_eval_size = 0
+
+        if child_eval_size > 1:
+            if child_eval.shape[0] > 1:
+                return np.repeat(
+                    child_eval[np.newaxis, :], self.broadcasting_vector_size, axis=0
                 )
-            )
-            return np.repeat(child_eval, self.broadcasting_vector_size, axis=0)
-        # otherwise just do normal multiplication
+            else:
+                return np.repeat(child_eval, self.broadcasting_vector_size, axis=0)
+        #
+        # # if child is a vector, add a dimension for broadcasting
+        # if isinstance(child, pybamm.Vector):
+        # # if child is a state vector, check that it has the right shape and then
+        # # broadcast
+        # elif isinstance(child, pybamm.StateVector):
+        #     assert child_eval.shape[0] == 1, ValueError(
+        #         """child_eval should have shape (1,n), not {}""".format(
+        #             child_eval.shape
+        #         )
+        #     )
+        # # otherwise just do normal multiplication
         else:
             return child_eval * self.broadcasting_vector

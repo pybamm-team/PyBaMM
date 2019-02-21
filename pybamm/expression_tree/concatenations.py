@@ -116,7 +116,7 @@ class DomainConcatenation(Concatenation):
         self._slices = self.create_slices(self, mesh)
 
         # store size of final vector
-        self._size = self._slices[self.domain[-1]].stop
+        self._domain_size = self._slices[self.domain[-1]].stop
 
         # create disc of domain => slice for each child
         self._children_slices = []
@@ -165,14 +165,12 @@ class DomainConcatenation(Concatenation):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        try:
-            return np.concatenate([child.evaluate(t, y) for child in self.children])
-        except ValueError:
-            import ipdb
-
-            ipdb.set_trace()
         # preallocate vector
-        vector = np.empty(self._size)
+        if t is None:
+            size = self._domain_size
+        else:
+            size = (self._domain_size, len(t))
+        vector = np.empty(size)
 
         # loop through domains of children writing subvectors to final vector
         for child, slices in zip(self.children, self._children_slices):
