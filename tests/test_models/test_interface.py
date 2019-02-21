@@ -42,19 +42,13 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertEqual(processed_rxn.children[1].domain, ["separator"])
         self.assertEqual(processed_rxn.children[2].domain, ["positive electrode"])
 
-        # test values
-        ln = param.process_symbol(pybamm.standard_parameters.ln)
-        lp = param.process_symbol(pybamm.standard_parameters.lp)
-        self.assertEqual(processed_rxn.children[0].evaluate() * ln.evaluate(), 1)
-        self.assertEqual(processed_rxn.children[1].evaluate(), 0)
-        self.assertEqual(processed_rxn.children[2].evaluate() * lp.evaluate(), -1)
-
     def test_discretisation(self):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
         defaults = shared.TestDefaults1DMacro()
         disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        mesh = defaults.mesh
 
         rxn = pybamm.interface.homogeneous_reaction(1)
 
@@ -67,6 +61,22 @@ class TestHomogeneousReaction(unittest.TestCase):
         # processed_rxn should be a vector with the right shape
         self.assertIsInstance(processed_rxn, pybamm.Vector)
         self.assertEqual(processed_rxn.shape, combined_submeshes.nodes.shape)
+
+        # test values
+        ln = param.process_symbol(pybamm.standard_parameters.ln)
+        lp = param.process_symbol(pybamm.standard_parameters.lp)
+        npts_n = mesh["negative electrode"].npts
+        npts_s = mesh["separator"].npts
+        npts_p = mesh["positive electrode"].npts
+        np.testing.assert_array_equal(
+            processed_rxn.evaluate()[:npts_n] * ln.evaluate(), 1
+        )
+        np.testing.assert_array_equal(
+            processed_rxn.evaluate()[npts_n : npts_n + npts_s], 0
+        )
+        np.testing.assert_array_equal(
+            processed_rxn.evaluate()[npts_n + npts_s :] * lp.evaluate(), -1
+        )
 
 
 class TestButlerVolmerLeadAcid(unittest.TestCase):

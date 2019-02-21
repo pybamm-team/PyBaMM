@@ -158,8 +158,8 @@ class DomainConcatenation(Concatenation):
                 raise ValueError(
                     "Error: expression evaluated to a vector of incorrect length"
                 )
-            # Broadcast in space if the node had size 1
         else:
+            # Broadcast in space if the node had size 1
             node = pybamm.NumpyBroadcast(node, node.domain, mesh)
         return node
 
@@ -184,7 +184,7 @@ class DomainConcatenation(Concatenation):
 
 
 class PiecewiseConstant(Concatenation):
-    """Piecewise constant concatenation of three symbols.
+    """Piecewise constant concatenation of three symbols, with explicit broadcasting.
     This is useful when we don't want to assign a domain to the inputs
 
     Parameters
@@ -199,9 +199,15 @@ class PiecewiseConstant(Concatenation):
     """
 
     def __init__(self, neg_value, sep_value, pos_value):
-        neg_value_with_domain = pybamm.Broadcast(neg_value, ["negative electrode"])
-        sep_value_with_domain = pybamm.Broadcast(sep_value, ["separator"])
-        pos_value_with_domain = pybamm.Broadcast(pos_value, ["positive electrode"])
+        neg_value_with_domain = pybamm.Broadcast(
+            neg_value * pybamm.Scalar(1), ["negative electrode"]
+        )
+        sep_value_with_domain = pybamm.Broadcast(
+            sep_value * pybamm.Scalar(1), ["separator"]
+        )
+        pos_value_with_domain = pybamm.Broadcast(
+            pos_value * pybamm.Scalar(1), ["positive electrode"]
+        )
         super().__init__(
             neg_value_with_domain, sep_value_with_domain, pos_value_with_domain
         )

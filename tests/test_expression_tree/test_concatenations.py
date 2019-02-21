@@ -223,9 +223,6 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[0].domain, ["negative electrode"])
         self.assertEqual(conc.children[1].domain, ["separator"])
         self.assertEqual(conc.children[2].domain, ["positive electrode"])
-        self.assertEqual(conc.children[0].evaluate(), 1)
-        self.assertEqual(conc.children[1].evaluate(), 2)
-        self.assertEqual(conc.children[2].evaluate(), 3)
         processed_conc = disc.process_symbol(conc)
         np.testing.assert_array_equal(
             processed_conc.evaluate(),
@@ -251,9 +248,6 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[0].domain, ["negative electrode"])
         self.assertEqual(conc.children[1].domain, ["separator"])
         self.assertEqual(conc.children[2].domain, ["positive electrode"])
-        np.testing.assert_array_equal(conc.children[0].evaluate(), ones)
-        np.testing.assert_array_equal(conc.children[1].evaluate(), 2 * ones)
-        np.testing.assert_array_equal(conc.children[2].evaluate(), 3 * ones)
 
         processed_conc = disc.process_symbol(conc)
         np.testing.assert_array_equal(
@@ -280,12 +274,9 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[0].domain, ["negative electrode"])
         self.assertEqual(conc.children[1].domain, ["separator"])
         self.assertEqual(conc.children[2].domain, ["positive electrode"])
-        y = np.vstack([ones, 2 * ones, 3 * ones])
-        np.testing.assert_array_equal(conc.children[0].evaluate(y=y), y[slice(0, 1)])
-        np.testing.assert_array_equal(conc.children[1].evaluate(y=y), y[slice(1, 2)])
-        np.testing.assert_array_equal(conc.children[2].evaluate(y=y), y[slice(2, 3)])
 
         processed_conc = disc.process_symbol(conc)
+        y = np.vstack([ones, 2 * ones, 3 * ones])
         np.testing.assert_array_equal(
             processed_conc.evaluate(y=y),
             np.concatenate(
