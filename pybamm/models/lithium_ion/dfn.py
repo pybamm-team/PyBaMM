@@ -1,5 +1,5 @@
 #
-# Lead-acid LOQS model
+# Doyle-Fuller-Newman (DFN) Model
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -30,8 +30,6 @@ class DFN(pybamm.BaseModel):
     def __init__(self):
         super().__init__()
 
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-
         "Model Variables"
         # Electrolyte concentration
         c_en = pybamm.Variable("c_en", ["negative electrode"])
@@ -52,10 +50,37 @@ class DFN(pybamm.BaseModel):
         phi_p = pybamm.Variable("phi_p", ["positive electrode"])
 
         # Particle concentration
-        c_en = pybamm.Variable("c_en", ["negative electrode"])
-        c_ep = pybamm.Variable("c_ep", ["positive electrode"])
+        c_n = pybamm.Variable("c_n", ["negative particle"])
+        c_p = pybamm.Variable("c_p", ["positive particle"])
 
-        "Model Parameters"
+        "Model Parameters and functions"
+        m_n = pybamm.standard_parameters.m_n
+        m_p = pybamm.standard_parameters.m_p
+        U_n = pybamm.standard_parameters.U_n
+        U_p = pybamm.standard_parameters.U_p
+
+        "Interface Conditions"
+        # TODO: deal with combining different domains of particle and electrode
+        G_n = pybamm.interface.butler_volmer(m_n, U_n, c_en, phi_n - phi_en, c_k=c_n)
+        G_p = pybamm.interface.butler_volmer(m_p, U_p, c_ep, phi_p - phi_ep, c_k=c_p)
+        G = pybamm.Concatenation(G_n, pybamm.Scalar(0, domain=["separator"]), G_p)
 
         "Model Equations"
+        self.update(
+            pybamm.electrolyte_diffusion.StefanMaxwell(c_e, G),
+            pybamm.electrolyte_current.StefanMaxwell(c_e, phi_e, G),
+            pybamm.electrode.Standard(phi_n, G_n),
+            pybamm.electrode.Standard(phi_p, G_p),
+            pybamm.particle.Standard(c_n, G_n),
+            pybamm.particle.Standard(c_p, G_p),
+        )
 
+        "Additional Conditions"
+        # phi is only determined to a constant so set phi_n = 0 on left boundary
+        additional_bcs = {phi_n: {"left": pybamm.Scalar(0)}}
+        self._boundary_conditions.update(additional_bcs)
+
+        "Additional Model Variables"
+        # TODO: add voltage and overpotentials to this
+        additional_variables = {}
+        self._variables.update(additional_variables)

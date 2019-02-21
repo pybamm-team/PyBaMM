@@ -40,21 +40,24 @@ class Standard(pybamm.BaseModel):
     def __init__(self, c, G):
         super().__init__()
 
-        if c.domain[0] == "negative particle":
+        if (len(c.domain) != 1) or (len(G.domain) != 1):
+            raise NotImplementedError("Only implemented for one domain at a time")
 
+        if c.domain[0] == "negative particle":
             gamma = pybamm.standard_parameters.gamma_n
             beta = pybamm.standard_parameters.beta_n
             C = pybamm.standard_parameters.C_n
-            G = G.orphans[0]
+
         elif c.domain[0] == "positive particle":
             gamma = pybamm.standard_parameters.gamma_p
-            G = G.orphans[2]
+            beta = pybamm.standard_parameters.beta_p
+            C = pybamm.standard_parameters.C_p
         else:
-            raise pybamm.ModelError("Domain not valid for the electrode equations")
+            raise pybamm.ModelError("Domain not valid for the particle equations")
 
         N = -gamma * pybamm.grad(c)
 
-        self.rhs = {-pybamm.div(N)}
+        self.rhs = {c: -pybamm.div(N)}
         self.algebraic = {}
         self.initial_conditions = {}
         self.boundary_conditions = {

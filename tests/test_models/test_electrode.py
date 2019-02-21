@@ -4,7 +4,6 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-import tests
 
 import unittest
 
@@ -13,14 +12,12 @@ class TestStandardElectrode(unittest.TestCase):
     def test_make_tree(self):
         phi_n = pybamm.Variable("phi_n", domain=["negative electrode"])
         G = pybamm.Scalar(1)
-        pybamm.electrolyte_current.StefanMaxwell(c_e, phi_e, G)
+        pybamm.electrode.Standard(phi_n, G)
 
     def test_basic_processing(self):
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c_e = pybamm.Variable("c_e", domain=whole_cell)
-        phi_e = pybamm.Variable("phi_e", domain=whole_cell)
+        phi_n = pybamm.Variable("phi_n", domain=["negative electrode"])
         G = pybamm.Scalar(0.001)
-        model = pybamm.electrolyte_current.StefanMaxwell(c_e, phi_e, G)
+        model = pybamm.electrode.Standard(phi_n, G)
 
         param = model.default_parameter_values
         param.process_model(model)

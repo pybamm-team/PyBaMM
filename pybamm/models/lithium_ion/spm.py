@@ -1,13 +1,13 @@
 #
-# Reaction-diffusion model
+# Single Particle Model (SPM)
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class ReactionDiffusionModel(pybamm.BaseModel):
-    """Reaction-diffusion model.
+class SPM(pybamm.BaseModel):
+    """Single Particle Model (SPM) of a lithium-ion battery.
 
     Attributes
     ----------
@@ -31,25 +31,28 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         super().__init__()
 
         "Model Variables"
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c_e = pybamm.Variable("c_e", whole_cell)
+        # Particle concentration
+        c_n = pybamm.Variable("c_n", ["negative particle"])
+        c_p = pybamm.Variable("c_p", ["positive particle"])
 
         "Model Parameters and functions"
         #
 
         "Interface Conditions"
-        G = pybamm.interface.homogeneous_reaction(whole_cell)
+        G_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
+        G_p = pybamm.interface.homogeneous_reaction(domain=["positive electrode"])
 
         "Model Equations"
-        self.update(pybamm.electrolyte_diffusion.StefanMaxwell(c_e, G))
+        self.update(
+            pybamm.particle.Standard(c_n, G_n), pybamm.particle.Standard(c_p, G_p)
+        )
 
         "Additional Conditions"
+        # phi is only determined to a constant so set phi_n = 0 on left boundary
         additional_bcs = {}
         self._boundary_conditions.update(additional_bcs)
 
         "Additional Model Variables"
+        # TODO: add voltage and overpotentials to this
         additional_variables = {}
         self._variables.update(additional_variables)
-
-        # Overwrite default solver for faster solution
-        self.default_solver = pybamm.ScipySolver(method="BDF")

@@ -35,20 +35,16 @@ class StefanMaxwell(pybamm.BaseModel):
     *Extends:* :class:`BaseModel`
     """
 
-    def __init__(self, G):
+    def __init__(self, c_e, G):
         super().__init__()
 
-        epsilon = pybamm.standard_parameters.epsilon_s  # make issue for spatially
-        # dependent parameters
+        # TODO: spatially dependent
+        epsilon = pybamm.standard_parameters.epsilon_s
         b = pybamm.standard_parameters.b
         delta = pybamm.standard_parameters.delta
         nu = pybamm.standard_parameters.nu
         t_plus = pybamm.standard_parameters.t_plus
         ce0 = pybamm.standard_parameters.ce0
-
-        electrolyte_domain = ["negative electrode", "separator", "positive electrode"]
-
-        c_e = pybamm.Variable("c_e", electrolyte_domain)
 
         N_e = -(epsilon ** b) * pybamm.grad(c_e)
 

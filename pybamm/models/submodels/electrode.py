@@ -40,12 +40,10 @@ class Standard(pybamm.BaseModel):
     def __init__(self, phi, G):
         super().__init__()
 
-        if phi.domain[0] == "negative electrode":
+        if phi.domain == ["negative electrode"]:
             sigma = pybamm.standard_parameters.sigma_n
-            G = G.orphans[0]
-        elif phi.domain[0] == "positive electrode":
+        elif phi.domain == ["positive electrode"]:
             sigma = pybamm.standard_parameters.sigma_p
-            G = G.orphans[2]
         else:
             raise pybamm.ModelError("Domain not valid for the electrode equations")
 

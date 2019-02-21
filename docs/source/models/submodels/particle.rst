@@ -1,5 +1,5 @@
 Particle Submodels
 ==================
 
-.. autoclass:: pybamm.particle.StandardParticle
+.. autoclass:: pybamm.particle.Standard
     :members:

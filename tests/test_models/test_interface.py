@@ -15,7 +15,10 @@ class TestHomogeneousReaction(unittest.TestCase):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        rxn = pybamm.interface.homogeneous_reaction()
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+
+        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
 
         processed_rxn = param.process_symbol(rxn)
 
@@ -56,17 +59,18 @@ class TestHomogeneousReaction(unittest.TestCase):
         defaults = shared.TestDefaults1DMacro()
         disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
 
-        rxn = pybamm.interface.homogeneous_reaction()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+
+        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
 
         param_rxn = param.process_symbol(rxn)
         processed_rxn = disc.process_symbol(param_rxn)
 
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        submesh = disc.mesh.combine_submeshes(*whole_cell)
 
-        combined_submeshes = disc.mesh.combine_submeshes(*whole_cell)
         # processed_rxn should be a vector with the right shape
         self.assertIsInstance(processed_rxn, pybamm.Vector)
-        self.assertEqual(processed_rxn.shape, combined_submeshes.nodes.shape)
+        self.assertEqual(processed_rxn.shape, submesh.nodes.shape)
 
 
 class TestButlerVolmerLeadAcid(unittest.TestCase):
@@ -232,34 +236,48 @@ class TestExchangeCurrentDensity(unittest.TestCase):
     def test_creation(self):
         # Concentration without domain passes
         c = pybamm.Variable("c")
-        pybamm.interface.exchange_current_density(c, ["negative electrode"])
-        pybamm.interface.exchange_current_density(c, ["positive electrode"])
+        iota = pybamm.standard_parameters.m_n
+        pybamm.interface.exchange_current_density(
+            iota, c, domain=["negative electrode"]
+        )
+        pybamm.interface.exchange_current_density(
+            iota, c, domain=["positive electrode"]
+        )
 
         # Concentration with correct domain passes
-        j0n = pybamm.interface.exchange_current_density(self.cn)
-        j0p = pybamm.interface.exchange_current_density(self.cp)
+        j0n = pybamm.interface.exchange_current_density(iota, self.cn)
+        j0p = pybamm.interface.exchange_current_density(iota, self.cp)
         self.assertEqual(j0n.domain, ["negative electrode"])
         self.assertEqual(j0p.domain, ["positive electrode"])
 
         # Concentration with wrong domain fails
         with self.assertRaises(pybamm.DomainError):
-            pybamm.interface.exchange_current_density(self.cp, ["negative electrode"])
+            pybamm.interface.exchange_current_density(
+                iota, self.cp, domain=["negative electrode"]
+            )
         with self.assertRaises(pybamm.DomainError):
-            pybamm.interface.exchange_current_density(self.cn, ["positive electrode"])
+            pybamm.interface.exchange_current_density(
+                iota, self.cn, domain=["positive electrode"]
+            )
         c = pybamm.Variable("concentration", domain=[])
         with self.assertRaises(ValueError):
-            pybamm.interface.exchange_current_density(c)
+            pybamm.interface.exchange_current_density(iota, c)
 
     def test_failure(self):
+        iota = pybamm.standard_parameters.m_n
         with self.assertRaises(pybamm.DomainError):
-            pybamm.interface.exchange_current_density(None, ["not a domain"])
+            pybamm.interface.exchange_current_density(
+                iota, None, domain=["not a domain"]
+            )
 
     def test_set_parameters(self):
         param = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv", {"current scale": 1}
         )
-        j0n = pybamm.interface.exchange_current_density(self.cn)
-        j0p = pybamm.interface.exchange_current_density(self.cp)
+        iota_n = pybamm.standard_parameters_lead_acid.iota_ref_n
+        iota_p = pybamm.standard_parameters_lead_acid.iota_ref_p
+        j0n = pybamm.interface.exchange_current_density(iota_n, self.cn)
+        j0p = pybamm.interface.exchange_current_density(iota_p, self.cp)
         proc_j0n = param.process_symbol(j0n)
         proc_j0p = param.process_symbol(j0p)
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_j0n.pre_order()]
@@ -267,8 +285,10 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
     def test_discretisation(self):
         # create exchange-current densities
-        j0n = pybamm.interface.exchange_current_density(self.cn)
-        j0p = pybamm.interface.exchange_current_density(self.cp)
+        iota_n = pybamm.standard_parameters_lead_acid.iota_ref_n
+        iota_p = pybamm.standard_parameters_lead_acid.iota_ref_p
+        j0n = pybamm.interface.exchange_current_density(iota_n, self.cn)
+        j0p = pybamm.interface.exchange_current_density(iota_p, self.cp)
 
         # process parameters
         param = pybamm.ParameterValues(

@@ -67,6 +67,7 @@ cn0_dimensional, cp0_dimensional
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 from pybamm import Parameter
+import pybamm
 
 # --------------------------------------------------------------------------------------
 """Dimensional Parameters"""
@@ -146,11 +147,22 @@ nu = cn_max / ce_typ
 Lambda = F / R / T  # taking phi_ref = 1
 
 # Particle Properties
-gamma_n = F * cn_max * Lx * D_n / I_typ / (R_n**2)
-gamma_p = F * cp_max * Lx * D_p / I_typ / (R_p**2)
+gamma_n = F * cn_max * Lx * D_n / I_typ / (R_n ** 2)
+gamma_p = F * cp_max * Lx * D_p / I_typ / (R_p ** 2)
 
 C_n = cn_max / cn_max
 C_p = cp_max / cn_max
 
+# dimensionles current
+current = pybamm.Scalar(1)
+
+
 # Initial conditions
 ce0 = ce0_dimensional / ce_typ
+
+
+# ---------------------------------------------------------------------------------------
+"""Functions"""
+
+U_n = pybamm.Scalar(1)
+U_p = pybamm.Scalar(1)

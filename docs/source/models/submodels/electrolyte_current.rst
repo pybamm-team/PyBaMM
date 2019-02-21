@@ -1,6 +1,6 @@
 Electrolyte Current Submodel
 ============================
 
-.. autoclass:: pybamm.electrolyte_current.StefanMaxwellCurrent
+.. autoclass:: pybamm.electrolyte_current.StefanMaxwell
     :members:
 

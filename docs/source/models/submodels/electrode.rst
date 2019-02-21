@@ -1,5 +1,5 @@
 Electrode Submodels
 ===================
 
-.. automethod:: pybamm.electrode.StandardElectrode
+.. autoclass:: pybamm.electrode.Standard
     :members:
