@@ -36,10 +36,6 @@ class Scalar(pybamm.Symbol):
         self.value = value
 
     @property
-    def size(self):
-        return 1
-
-    @property
     def shape(self):
         return ()
 

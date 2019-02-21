@@ -63,11 +63,12 @@ class StateVector(pybamm.Symbol):
         return self._y_slice
 
     @property
-    def size(self):
-        return self.y_slice.stop - self.y_slice.start
-
-    @property
     def shape(self):
+        """
+        Shape of a StateVector object. Shape of self.evaluate(t,y) could be different
+        depending on what y is input to self.evaluate(), but we just give the length of
+        the slice here. 
+        """
         return (self.y_slice.stop - self.y_slice.start,)
 
     def evaluate(self, t=None, y=None):

@@ -38,16 +38,23 @@ class TestUnaryOperators(unittest.TestCase):
             broad.evaluate(), 7 * np.ones_like(combined_submeshes.nodes)
         )
         self.assertEqual(broad.domain, whole_cell)
+        self.assertEqual(broad.shape, broad.evaluate().shape)
 
-        # vector
-        vec = pybamm.Vector(np.linspace(0, 1))
-        broad = pybamm.NumpyBroadcast(vec, whole_cell, mesh)
-        np.testing.assert_array_equal(
-            broad.evaluate(),
-            np.repeat(np.linspace(0, 1)[np.newaxis, :], combined_submeshes.npts, axis=0),
-        )
-
+        # time
+        t = 3 * pybamm.t + 4
+        broad = pybamm.NumpyBroadcast(t, whole_cell, mesh)
         self.assertEqual(broad.domain, whole_cell)
+        np.testing.assert_array_equal(
+            broad.evaluate(t=3), 13 * np.ones_like(combined_submeshes.nodes)
+        )
+        self.assertEqual(broad.shape, broad.evaluate(t=3).shape)
+        np.testing.assert_array_equal(
+            broad.evaluate(t=np.linspace(0, 1)),
+            (
+                (3 * np.linspace(0, 1) + 4)[:, np.newaxis]
+                * np.ones_like(combined_submeshes.nodes)
+            ).T,
+        )
 
         # state vector
         state_vec = pybamm.StateVector(slice(1, 2))
@@ -61,9 +68,15 @@ class TestUnaryOperators(unittest.TestCase):
         state_vec = pybamm.StateVector(slice(1, 5))
         broad = pybamm.NumpyBroadcast(state_vec, whole_cell, mesh)
         y = np.vstack([np.linspace(0, 1), np.linspace(0, 2)]).T
-        with self.assertRaises(AssertionError):
+        with self.assertRaisesRegex(ValueError, "cannot broadcast child with shape"):
             broad.evaluate(y=y)
 
+        # vector - not accepted
+        vec = pybamm.Vector(np.ones(5))
+        with self.assertRaisesRegex(
+            TypeError, "cannot Broadcast a constant Vector or Matrix"
+        ):
+            broad = pybamm.NumpyBroadcast(vec, whole_cell, mesh)
 
 
 if __name__ == "__main__":

@@ -234,7 +234,7 @@ class Discretisation(object):
             new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
 
             if new_symbol.is_constant():
-                return pybamm.Vector(new_symbol.evaluate())
+                return pybamm.Array(new_symbol.evaluate())
             return new_symbol
 
         else:

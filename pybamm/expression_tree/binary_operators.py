@@ -60,11 +60,6 @@ class BinaryOperator(pybamm.Symbol):
             raise pybamm.DomainError("""children must have same (or empty) domains""")
 
     @property
-    def size(self):
-        """Get the size of the array, based on the shape."""
-        return np.prod(self.shape)
-
-    @property
     def shape(self):
         """
         Get the shape of the array, based on the shape of children.

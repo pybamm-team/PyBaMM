@@ -7,6 +7,7 @@ import pybamm
 
 import anytree
 import numbers
+import numpy as np
 import copy
 
 from anytree.exporter import DotExporter
@@ -52,6 +53,11 @@ class Symbol(anytree.NodeMixin):
             iterable of str
         """
         return self._domain
+
+    @property
+    def size(self):
+        """Only works if shape is defined (not the case for all objects)"""
+        return np.prod(self.shape)
 
     @domain.setter
     def domain(self, domain):

@@ -234,6 +234,7 @@ class TestConcatenations(unittest.TestCase):
                 ]
             ),
         )
+
         # Piecewise constant vectors
         ones = np.ones(50)
         a = pybamm.Vector(ones)
@@ -275,6 +276,9 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[1].domain, ["separator"])
         self.assertEqual(conc.children[2].domain, ["positive electrode"])
 
+        import ipdb
+
+        ipdb.set_trace()
         processed_conc = disc.process_symbol(conc)
         y = np.vstack([ones, 2 * ones, 3 * ones])
         np.testing.assert_array_equal(

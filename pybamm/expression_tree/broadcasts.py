@@ -72,6 +72,11 @@ class NumpyBroadcast(Broadcast):
     """
 
     def __init__(self, child, domain, mesh):
+        # Only accept a 'constant' input if it evaluates to a number (i.e. no vectors
+        # and matrices)
+        if child.is_constant() and not child.evaluates_to_number():
+            raise TypeError("cannot Broadcast a constant Vector or Matrix")
+
         super().__init__(child, domain, name="numpy broadcast")
         # determine broadcasting vector size (size 1 if the domain is empty)
         if domain == []:
@@ -84,33 +89,44 @@ class NumpyBroadcast(Broadcast):
         # domain)
         self.broadcasting_vector = np.ones(self.broadcasting_vector_size)
 
+    @property
+    def shape(self):
+        """Update shape based on the shape of the child (either go to )"""
+        if self.children[0].shape == ():
+            return (self.broadcasting_vector_size,)
+        else:
+            return (self.children[0].size, self.broadcasting_vector_size)
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         child = self.children[0]
         child_eval = child.evaluate(t, y)
+        # Note that child_eval_size can be different to child.size!!
         try:
             child_eval_size = child_eval.size
         except AttributeError:
             child_eval_size = 0
 
+        if child_eval_size <= 1:
+            return child_eval * self.broadcasting_vector
         if child_eval_size > 1:
-            if child_eval.shape[0] > 1:
+            # Possible shapes for a child with a shape:
+            # (n,) -> (e.g. time-like object) broadcast to (n, broadcasting_size)
+            # (1,m) -> (e.g. state-vector-like object) broadcast to
+            #          (n, broadcasting_size)
+            # (n,1) -> error
+            # (n,m) -> error
+            # (n,m,k,...) -> error
+            if len(child_eval.shape) == 1:
+                # shape (n,)
                 return np.repeat(
                     child_eval[np.newaxis, :], self.broadcasting_vector_size, axis=0
                 )
-            else:
-                return np.repeat(child_eval, self.broadcasting_vector_size, axis=0)
-        #
-        # # if child is a vector, add a dimension for broadcasting
-        # if isinstance(child, pybamm.Vector):
-        # # if child is a state vector, check that it has the right shape and then
-        # # broadcast
-        # elif isinstance(child, pybamm.StateVector):
-        #     assert child_eval.shape[0] == 1, ValueError(
-        #         """child_eval should have shape (1,n), not {}""".format(
-        #             child_eval.shape
-        #         )
-        #     )
-        # # otherwise just do normal multiplication
-        else:
-            return child_eval * self.broadcasting_vector
+            elif len(child_eval.shape) == 2:
+                if child_eval.shape[0] == 1:
+                    # shape (1, m) since size > 1
+                    return np.repeat(child_eval, self.broadcasting_vector_size, axis=0)
+            # All other cases
+            raise ValueError(
+                "cannot broadcast child with shape '{}'".format(child_eval.shape)
+            )

@@ -165,6 +165,7 @@ class DomainConcatenation(Concatenation):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return np.concatenate([child.evaluate(t, y) for child in self.children])
         # preallocate vector
         if t is None:
             size = self._domain_size
