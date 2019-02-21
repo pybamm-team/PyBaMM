@@ -135,8 +135,8 @@ class DomainConcatenation(Concatenation):
 
     def process_node_for_concatenate(self, node, mesh):
         """
-        the node is assumed to be constant in time. this function replaces it with a
-        single Vector node with the correct length vector (according to its domain)
+        Check that the node has the correct size, broadcasting to a node of the correct
+        size if it has size 1 (according to its domain).
 
         Parameters
         ----------
@@ -152,20 +152,25 @@ class DomainConcatenation(Concatenation):
         if node_size > 1:
             # Make sure node size is the same as the number of points specified for
             # broadcast. Note that npts_for_broadcast is set by the discretisation
-            if node.shape[0] == sum(
+            if node.shape[0] != sum(
                 [mesh[dom].npts_for_broadcast for dom in node.domain]
             ):
-                return node
-            else:
                 raise ValueError(
                     "Error: expression evaluated to a vector of incorrect length"
                 )
+            # Broadcast in space if the node had size 1
         else:
-            return pybamm.NumpyBroadcast(node, node.domain, mesh)
+            node = pybamm.NumpyBroadcast(node, node.domain, mesh)
+        return node
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return np.concatenate([child.evaluate(t, y) for child in self.children])
+        try:
+            return np.concatenate([child.evaluate(t, y) for child in self.children])
+        except ValueError:
+            import ipdb
+
+            ipdb.set_trace()
         # preallocate vector
         vector = np.empty(self._size)
 
@@ -194,13 +199,9 @@ class PiecewiseConstant(Concatenation):
     """
 
     def __init__(self, neg_value, sep_value, pos_value):
-        neg_value_with_domain = neg_value * pybamm.Scalar(
-            1, domain=["negative electrode"]
-        )
-        sep_value_with_domain = sep_value * pybamm.Scalar(1, domain=["separator"])
-        pos_value_with_domain = pos_value * pybamm.Scalar(
-            1, domain=["positive electrode"]
-        )
+        neg_value_with_domain = pybamm.Broadcast(neg_value, ["negative electrode"])
+        sep_value_with_domain = pybamm.Broadcast(sep_value, ["separator"])
+        pos_value_with_domain = pybamm.Broadcast(pos_value, ["positive electrode"])
         super().__init__(
             neg_value_with_domain, sep_value_with_domain, pos_value_with_domain
         )

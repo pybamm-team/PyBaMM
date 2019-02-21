@@ -77,11 +77,10 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
-    Broadcast,
-    NumpyBroadcast,
     grad,
     div,
 )
+from .expression_tree.broadcasts import TimeBroadcast, Broadcast, NumpyBroadcast
 from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
