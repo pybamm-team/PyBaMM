@@ -34,10 +34,7 @@ class SPM(pybamm.BaseModel):
         # NOTE: Is this the best way/place to do this?
         self.default_geometry = pybamm.Geometry1DMicro()
         self.default_parameter_values.process_geometry(self.default_geometry)
-        submesh_pts = {
-            "negative particle": {"r": 10},
-            "positive particle": {"r": 10},
-        }
+        submesh_pts = {"negative particle": {"r": 10}, "positive particle": {"r": 10}}
         submesh_types = {
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
@@ -50,6 +47,7 @@ class SPM(pybamm.BaseModel):
         self.default_discretisation = pybamm.Discretisation(
             self.mesh, self.default_spatial_methods
         )
+        self.default_solver = pybamm.ScipySolver(method="BDF")
 
         # Variables
         cn = pybamm.Variable("cn", domain="negative particle")
@@ -76,26 +74,24 @@ class SPM(pybamm.BaseModel):
         cp_init = pybamm.standard_parameters.cp0
 
         # PDE RHS
-        Nn = - gamma_n * D_n(cn) * pybamm.grad(cn)
-        dcndt = - pybamm.div(Nn)
-        Np = - gamma_p * D_p(cp) * pybamm.grad(cp)
+        Nn = -gamma_n * D_n(cn) * pybamm.grad(cn)
+        dcndt = -pybamm.div(Nn)
+        Np = -gamma_p * D_p(cp) * pybamm.grad(cp)
         dcpdt = -pybamm.div(Np)
         self.rhs = {cn: dcndt, cp: dcpdt}
 
         # Boundary conditions
         # Note: this is for constant current discharge only
         self.boundary_conditions = {
-            Nn: {"left": pybamm.Scalar(0),
-                 "right": pybamm.Scalar(1) / ln / beta_n},
-            Np: {"left": pybamm.Scalar(0),
-                 "right": pybamm.Scalar(1) / lp / beta_p / C_hat_p},
+            Nn: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1) / ln / beta_n},
+            Np: {
+                "left": pybamm.Scalar(0),
+                "right": pybamm.Scalar(1) / lp / beta_p / C_hat_p,
+            },
         }
 
         # Initial conditions
-        self.initial_conditions = {
-            cn: cn_init,
-            cp: cp_init,
-        }
+        self.initial_conditions = {cn: cn_init, cp: cp_init}
 
         # Variables
         cn_surf = pybamm.surf(cn)
@@ -103,9 +99,12 @@ class SPM(pybamm.BaseModel):
         gn = m_n * cn_surf ** 0.5 * (1 - cn_surf) ** 0.5
         gp = m_p * C_hat_p * cp_surf ** 0.5 * (1 - cp_surf) ** 0.5
         # linearise BV for now
-        V = (U_p(cp_surf) - U_n(cn_surf)
-             - (2 / Lambda) * (1 / (gp * lp))
-             - (2 / Lambda) * (1 / (gn * ln)))
+        V = (
+            U_p(cp_surf)
+            - U_n(cn_surf)
+            - (2 / Lambda) * (1 / (gp * lp))
+            - (2 / Lambda) * (1 / (gn * ln))
+        )
 
         self.variables = {
             "cn": cn,
