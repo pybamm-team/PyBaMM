@@ -67,7 +67,6 @@ class TestHomogeneousReaction(unittest.TestCase):
         lp = param.process_symbol(pybamm.standard_parameters.lp)
         npts_n = mesh["negative electrode"].npts
         npts_s = mesh["separator"].npts
-        npts_p = mesh["positive electrode"].npts
         np.testing.assert_array_equal(
             processed_rxn.evaluate()[:npts_n] * ln.evaluate(), 1
         )

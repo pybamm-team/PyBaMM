@@ -19,7 +19,6 @@ Unary Operators
 .. autoclass:: pybamm.Divergence
   :members:
 
-
 .. autofunction:: pybamm.grad
 
 .. autofunction:: pybamm.div

@@ -7,7 +7,6 @@ import pybamm
 
 import anytree
 import numbers
-import numpy as np
 import copy
 
 from anytree.exporter import DotExporter
