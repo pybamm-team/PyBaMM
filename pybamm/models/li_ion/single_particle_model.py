@@ -4,7 +4,6 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-import numpy as np
 
 
 class SPM(pybamm.BaseModel):
@@ -43,8 +42,14 @@ class SPM(pybamm.BaseModel):
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
         }
+        self.default_spatial_methods = {
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
         self.mesh = pybamm.Mesh(self.default_geometry, submesh_types, submesh_pts)
-        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(self.mesh)
+        self.default_discretisation = pybamm.Discretisation(
+            self.mesh, self.default_spatial_methods
+        )
 
         # Variables
         cn = pybamm.Variable("cn", domain="negative particle")
@@ -93,20 +98,19 @@ class SPM(pybamm.BaseModel):
         }
 
         # Variables
-        # Question: how to get surface values of c?
-        #  cn_surf =
-        #  cp_surf =
-        #  gn = m_n * cn_surf ** 0.5 * (1 - cn_surf) ** 0.5
-        #  gp = m_p * C_hat_p * cp_surf ** 0.5 * (1 - cp_surf) ** 0.5
+        cn_surf = pybamm.surf(cn)
+        cp_surf = pybamm.surf(cp)
+        gn = m_n * cn_surf ** 0.5 * (1 - cn_surf) ** 0.5
+        gp = m_p * C_hat_p * cp_surf ** 0.5 * (1 - cp_surf) ** 0.5
         # linearise BV for now
-        #  V = (U_p(cp_surf) - U_n(cn_surf)
-        #     - (2 / Lambda) * np.arcsinh(1 / (gp * lp))
-        #     - (2 / Lambda) * np.arcsinh(1 / (gn * ln)))
-        #V = (U_p(cp_surf) - U_n(cn_surf)
-        #     - (2 / Lambda) * (1 / (gp * lp))
-        #     - (2 / Lambda) * (1 / (gn * ln)))
+        V = (U_p(cp_surf) - U_n(cn_surf)
+             - (2 / Lambda) * (1 / (gp * lp))
+             - (2 / Lambda) * (1 / (gn * ln)))
 
         self.variables = {
             "cn": cn,
             "cp": cp,
+            "cn_surf": cn_surf,
+            "cp_surf": cp_surf,
+            "V": V,
         }

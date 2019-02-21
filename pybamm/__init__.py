@@ -127,17 +127,8 @@ from .geometry.geometry import (
 #
 # Mesh and Discretisation classes
 #
-<<<<<<< HEAD
-from .discretisations.base_discretisation import BaseDiscretisation
-from .discretisations.finite_volume_discretisations import (
-    FiniteVolumeDiscretisation,
-    NodeToEdge,
-    GetSurfaceValue,
-)
-=======
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import KNOWN_DOMAINS
->>>>>>> master
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 
