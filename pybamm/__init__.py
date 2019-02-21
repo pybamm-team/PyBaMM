@@ -99,6 +99,7 @@ from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
+from .models import li_ion
 
 #
 # Submodel classes

@@ -219,6 +219,10 @@ class SurfaceValue(SpatialOperator):
     def __init__(self, child):
         super().__init__("surf", child)
 
+        # Domain of SurfaceValue must be ([]) so that expressions can be formed
+        # of surface values of variables in different domains
+        self.domain = []
+
 
 #
 # Methods to call Gradient and Divergence
