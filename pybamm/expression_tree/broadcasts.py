@@ -117,12 +117,12 @@ class NumpyBroadcast(Broadcast):
             # (n,1) -> error
             # (n,m) -> error
             # (n,m,k,...) -> error
-            if len(child_eval.shape) == 1:
+            if child_eval.ndim == 1:
                 # shape (n,)
                 return np.repeat(
                     child_eval[np.newaxis, :], self.broadcasting_vector_size, axis=0
                 )
-            elif len(child_eval.shape) == 2:
+            elif child_eval.ndim == 2:
                 if child_eval.shape[0] == 1:
                     # shape (1, m) since size > 1
                     return np.repeat(child_eval, self.broadcasting_vector_size, axis=0)

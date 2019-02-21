@@ -125,67 +125,6 @@ class TestConcatenations(unittest.TestCase):
             ),
         )
 
-    def test_numpy_domain_concatenation_2D(self):
-        # create discretisation
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
-        mesh = disc.mesh
-
-        # Concatenate 2D matrices
-        a_dom = ["negative electrode"]
-        b_dom = ["separator"]
-        c_dom = ["positive electrode"]
-        a = pybamm.Matrix(np.ones((mesh[a_dom[0]].npts, 100)), domain=a_dom)
-        b = pybamm.Scalar(2, domain=b_dom)
-        c = pybamm.Matrix(3 * np.ones((mesh[c_dom[0]].npts, 100)), domain=c_dom)
-        conc = pybamm.DomainConcatenation([a, b, c], mesh)
-        np.testing.assert_array_equal(
-            conc.evaluate(),
-            np.concatenate(
-                [
-                    np.ones((mesh["negative electrode"].npts, 100)),
-                    2 * np.ones((mesh["separator"].npts, 100)),
-                    3 * np.ones((mesh["positive electrode"].npts, 100)),
-                ]
-            ),
-        )
-
-        # Concatenate 2D StateVectors
-        a_slice = slice(0, mesh[a_dom[0]].npts)
-        c_slice = slice(
-            mesh[a_dom[0]].npts + mesh[b_dom[0]].npts,
-            mesh[a_dom[0]].npts + mesh[b_dom[0]].npts + mesh[c_dom[0]].npts,
-        )
-        a_state = pybamm.StateVector(a_slice, domain=a_dom)
-        b = pybamm.Scalar(2, domain=b_dom)
-        c_state = 3 * pybamm.StateVector(c_slice, domain=c_dom)
-        conc = pybamm.DomainConcatenation([a_state, b, c_state], mesh)
-        ones = np.ones(100)
-        y = np.vstack([ones, 2 * ones, 3 * ones])
-        np.testing.assert_array_equal(
-            conc.evaluate(y=y),
-            np.concatenate(
-                [
-                    np.ones((mesh["negative electrode"].npts, 100)),
-                    2 * np.ones((mesh["separator"].npts, 100)),
-                    3 * np.ones((mesh["positive electrode"].npts, 100)),
-                ]
-            ),
-        )
-
-        # Mixed
-        conc = pybamm.DomainConcatenation([a_state, b, c], mesh)
-        np.testing.assert_array_equal(
-            conc.evaluate(y=y),
-            np.concatenate(
-                [
-                    np.ones((mesh["negative electrode"].npts, 100)),
-                    2 * np.ones((mesh["separator"].npts, 100)),
-                    3 * np.ones((mesh["positive electrode"].npts, 100)),
-                ]
-            ),
-        )
-
     def test_concatenation_orphans(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
@@ -235,12 +174,11 @@ class TestConcatenations(unittest.TestCase):
             ),
         )
 
-        # Piecewise constant vectors
-        ones = np.ones(50)
-        a = pybamm.Vector(ones)
-        b = pybamm.Vector(2 * ones)
-        c = pybamm.Vector(3 * ones)
-        conc = pybamm.PiecewiseConstant(a, b, c)
+        # Piecewise constant functions of time
+        a_t = pybamm.t
+        b_t = 2 * pybamm.t
+        c_t = 3 * pybamm.t
+        conc = pybamm.PiecewiseConstant(a_t, b_t, c_t)
 
         self.assertIsInstance(conc, pybamm.Concatenation)
         self.assertEqual(
@@ -252,7 +190,18 @@ class TestConcatenations(unittest.TestCase):
 
         processed_conc = disc.process_symbol(conc)
         np.testing.assert_array_equal(
-            processed_conc.evaluate(),
+            processed_conc.evaluate(t=2),
+            np.concatenate(
+                [
+                    2 * np.ones(mesh["negative electrode"].npts),
+                    4 * np.ones(mesh["separator"].npts),
+                    6 * np.ones(mesh["positive electrode"].npts),
+                ]
+            ),
+        )
+        ones = np.ones(50)
+        np.testing.assert_array_equal(
+            processed_conc.evaluate(t=ones),
             np.concatenate(
                 [
                     np.ones((mesh["negative electrode"].npts, 50)),
@@ -263,10 +212,10 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # Piecewise constant state vectors
-        a = pybamm.StateVector(slice(0, 1))
-        b = pybamm.StateVector(slice(1, 2))
-        c = pybamm.StateVector(slice(2, 3))
-        conc = pybamm.PiecewiseConstant(a, b, c)
+        a_sv = pybamm.StateVector(slice(0, 1))
+        b_sv = pybamm.StateVector(slice(1, 2))
+        c_sv = pybamm.StateVector(slice(2, 3))
+        conc = pybamm.PiecewiseConstant(a_sv, b_sv, c_sv)
 
         self.assertIsInstance(conc, pybamm.Concatenation)
         self.assertEqual(
@@ -276,13 +225,54 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[1].domain, ["separator"])
         self.assertEqual(conc.children[2].domain, ["positive electrode"])
 
-        import ipdb
-
-        ipdb.set_trace()
         processed_conc = disc.process_symbol(conc)
-        y = np.vstack([ones, 2 * ones, 3 * ones])
+        y_1D = np.array([1, 2, 3])
         np.testing.assert_array_equal(
-            processed_conc.evaluate(y=y),
+            processed_conc.evaluate(y=y_1D),
+            np.concatenate(
+                [
+                    np.ones(mesh["negative electrode"].npts),
+                    2 * np.ones(mesh["separator"].npts),
+                    3 * np.ones(mesh["positive electrode"].npts),
+                ]
+            ),
+        )
+        y_2D = np.vstack([ones, 2 * ones, 3 * ones])
+        np.testing.assert_array_equal(
+            processed_conc.evaluate(y=y_2D),
+            np.concatenate(
+                [
+                    np.ones((mesh["negative electrode"].npts, 50)),
+                    2 * np.ones((mesh["separator"].npts, 50)),
+                    3 * np.ones((mesh["positive electrode"].npts, 50)),
+                ]
+            ),
+        )
+
+        # Mixed
+        conc = pybamm.PiecewiseConstant(a, b_t, c_sv)
+
+        self.assertIsInstance(conc, pybamm.Concatenation)
+        self.assertEqual(
+            conc.domain, ["negative electrode", "separator", "positive electrode"]
+        )
+        self.assertEqual(conc.children[0].domain, ["negative electrode"])
+        self.assertEqual(conc.children[1].domain, ["separator"])
+        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+
+        processed_conc = disc.process_symbol(conc)
+        np.testing.assert_array_equal(
+            processed_conc.evaluate(t=2, y=y_1D),
+            np.concatenate(
+                [
+                    np.ones(mesh["negative electrode"].npts),
+                    4 * np.ones(mesh["separator"].npts),
+                    3 * np.ones(mesh["positive electrode"].npts),
+                ]
+            ),
+        )
+        np.testing.assert_array_equal(
+            processed_conc.evaluate(t=ones, y=y_2D),
             np.concatenate(
                 [
                     np.ones((mesh["negative electrode"].npts, 50)),

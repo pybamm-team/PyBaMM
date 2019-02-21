@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
+import numbers
 
 
 class Concatenation(pybamm.Symbol):
@@ -135,56 +136,69 @@ class DomainConcatenation(Concatenation):
 
     def process_node_for_concatenate(self, node, mesh):
         """
-        Check that the node has the correct size, broadcasting to a node of the correct
-        size if it has size 1 (according to its domain).
+        If the node evaluates to a number, broadcasts it to the appropriate mesh.
+        If the resulting node is constant in time, checks size and replaces it with a
+        single Array node with the correct length vector (according to its domain)
 
         Parameters
         ----------
         node: derived from :class:`Symbol`
-            the sub-expression to process (node.is_constant() is true)
+            the sub-expression to process
 
         """
-        try:
-            node_size = node.size
-        except AttributeError:
-            node_size = 0
+        if node.evaluates_to_number():
+            node = pybamm.NumpyBroadcast(node, node.domain, mesh)
+        if node.is_constant():
+            # Check size and simplify if constant
+            value = node.evaluate()
 
-        if node_size > 1:
-            # Make sure node size is the same as the number of points specified for
-            # broadcast. Note that npts_for_broadcast is set by the discretisation
-            if node.shape[0] != sum(
-                [mesh[dom].npts_for_broadcast for dom in node.domain]
-            ):
+            # correct size of vector should be number of points in the domains
+            subvector_size = sum([mesh[dom].npts for dom in node.domain])
+
+            if value.shape[0] != subvector_size:
                 raise ValueError(
                     "Error: expression evaluated to a vector of incorrect length"
                 )
-        else:
-            # Broadcast in space if the node had size 1
-            node = pybamm.NumpyBroadcast(node, node.domain, mesh)
+
+            # convert to an Array node(could be vector or matrix)
+            node = pybamm.Array(value, domain=node.domain)
         return node
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return np.concatenate([child.evaluate(t, y) for child in self.children])
+        # return np.concatenate([child.evaluate(t, y) for child in self.children])
         # preallocate vector
-        if t is None:
+        if t is None or isinstance(t, numbers.Number):
+            if y is None or y.ndim == 1:
+                time_dim = 1
+            elif y.ndim == 2:
+                time_dim = y.shape[1]
+        else:
+            if y is None or len(t) == y.shape[1]:
+                time_dim = len(t)
+            else:
+                raise ValueError("incompatible t and y")
+        if time_dim == 1:
             size = self._domain_size
         else:
-            size = (self._domain_size, len(t))
+            size = (self._domain_size, time_dim)
         vector = np.empty(size)
 
         # loop through domains of children writing subvectors to final vector
         for child, slices in zip(self.children, self._children_slices):
             child_vector = child.evaluate(t, y)
             for dom in child.domain:
-                vector[self._slices[dom]] = child_vector[slices[dom]]
-
+                if time_dim > 1 and child_vector.ndim == 1:
+                    vector[self._slices[dom]] = child_vector[slices[dom]][:, np.newaxis]
+                else:
+                    vector[self._slices[dom]] = child_vector[slices[dom]]
         return vector
 
 
 class PiecewiseConstant(Concatenation):
-    """Piecewise constant concatenation of three symbols, with explicit broadcasting.
-    This is useful when we don't want to assign a domain to the inputs
+    """Piecewise constant concatenation of three symbols, with *explicit* broadcasting.
+    This is useful as a step before passing to DomainConcatenation so that it is
+    explicit that we do want to broadcast.
 
     Parameters
     ----------
