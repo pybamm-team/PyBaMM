@@ -152,7 +152,9 @@ class DomainConcatenation(Concatenation):
         if node_size > 1:
             # Make sure node size is the same as the number of points specified for
             # broadcast. Note that npts_for_broadcast is set by the discretisation
-            if node_size == sum([mesh[dom].npts_for_broadcast for dom in node.domain]):
+            if node.shape[0] == sum(
+                [mesh[dom].npts_for_broadcast for dom in node.domain]
+            ):
                 return node
             else:
                 raise ValueError(
@@ -163,6 +165,7 @@ class DomainConcatenation(Concatenation):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return np.concatenate([child.evaluate(t, y) for child in self.children])
         # preallocate vector
         vector = np.empty(self._size)
 
