@@ -90,7 +90,8 @@ class NumpyBroadcast(Broadcast):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         child = self.children[0]
         child_eval = child.evaluate(t, y)
-        # Note that child_eval_size can be different to child.size!!
+
+        # Different broadcasting based on the shape of child_eval
         try:
             child_eval_size = child_eval.size
         except AttributeError:
