@@ -36,10 +36,6 @@ class Scalar(pybamm.Symbol):
         self.value = value
 
     @property
-    def shape(self):
-        return ()
-
-    @property
     def id(self):
         """
         The immutable "identity" of a variable (for identifying y_slices).

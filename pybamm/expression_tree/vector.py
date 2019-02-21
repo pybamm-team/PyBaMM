@@ -62,15 +62,6 @@ class StateVector(pybamm.Symbol):
         """Slice of an external y to read"""
         return self._y_slice
 
-    @property
-    def shape(self):
-        """
-        Shape of a StateVector object. Shape of self.evaluate(t,y) could be different
-        depending on what y is input to self.evaluate(), but we just give the length of
-        the slice here. 
-        """
-        return (self.y_slice.stop - self.y_slice.start,)
-
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if y is None:

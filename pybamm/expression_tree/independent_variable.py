@@ -34,15 +34,6 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
-    @property
-    def shape(self):
-        """
-        Shape of a Time object. Shape of self.evaluate(t,y) could be different
-        depending on what t is input to self.evaluate(), but we just give a default
-        behaviour here.
-        """
-        return ()
-
     def evaluate(self, t, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if t is None:

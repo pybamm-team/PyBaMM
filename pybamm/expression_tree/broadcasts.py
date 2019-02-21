@@ -78,14 +78,6 @@ class NumpyBroadcast(Broadcast):
         # domain)
         self.broadcasting_vector = np.ones(self.broadcasting_vector_size)
 
-    @property
-    def shape(self):
-        """Update shape based on the shape of the child (either go to )"""
-        if self.children[0].shape == ():
-            return (self.broadcasting_vector_size,)
-        else:
-            return (self.children[0].size, self.broadcasting_vector_size)
-
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         child = self.children[0]

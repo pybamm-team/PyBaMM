@@ -38,7 +38,6 @@ class TestUnaryOperators(unittest.TestCase):
             broad.evaluate(), 7 * np.ones_like(combined_submeshes.nodes)
         )
         self.assertEqual(broad.domain, whole_cell)
-        self.assertEqual(broad.shape, broad.evaluate().shape)
 
         # time
         t = 3 * pybamm.t + 4
@@ -47,7 +46,6 @@ class TestUnaryOperators(unittest.TestCase):
         np.testing.assert_array_equal(
             broad.evaluate(t=3), 13 * np.ones_like(combined_submeshes.nodes)
         )
-        self.assertEqual(broad.shape, broad.evaluate(t=3).shape)
         np.testing.assert_array_equal(
             broad.evaluate(t=np.linspace(0, 1)),
             (

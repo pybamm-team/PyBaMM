@@ -54,11 +54,6 @@ class Symbol(anytree.NodeMixin):
         """
         return self._domain
 
-    @property
-    def size(self):
-        """Only works if shape is defined (not the case for all objects)"""
-        return np.prod(self.shape)
-
     @domain.setter
     def domain(self, domain):
         if isinstance(domain, str):

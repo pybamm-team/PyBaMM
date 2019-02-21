@@ -62,15 +62,6 @@ class TestStateVector(unittest.TestCase):
         ):
             sv.evaluate(y=y2)
 
-    def test_size_and_shape(self):
-        sv = pybamm.StateVector(slice(0, 14))
-        self.assertEqual(sv.shape, (14,))
-        self.assertEqual(sv.size, 14)
-
-        sv = pybamm.StateVector(slice(52, 64))
-        self.assertEqual(sv.shape, (12,))
-        self.assertEqual(sv.size, 12)
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -82,68 +82,6 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertIsInstance(prod.children[1], pybamm.Scalar)
         self.assertEqual(prod.evaluate(), 12)
 
-    def test_size_and_shape(self):
-        M1 = pybamm.Matrix(np.ones((34, 67)))
-        M2 = pybamm.Matrix(2 * np.ones((67, 18)))
-        v1 = pybamm.Vector(3 * np.ones(67))
-        v2 = pybamm.Vector(4 * np.ones(18))
-        sv1 = pybamm.StateVector(slice(0, 67))
-        sv2 = pybamm.StateVector(slice(67, 67 + 18))
-        s = pybamm.Scalar(5)
-
-        y = np.ones(67 + 18)
-        # Elementwise
-        for left, right in (
-            (M1, M1),
-            (v1, v1),
-            (M1, v1),
-            (v1, M1),
-            (sv1, v1),
-            (sv1, sv1),
-            (M1, sv1),
-            (sv1, M1),
-            (s, M1),
-            (M1, s),
-        ):
-            # Addition
-            self.assertEqual(
-                (left + right).shape, (left.evaluate(y=y) + right.evaluate(y=y)).shape
-            )
-            # Elementwise multiplication
-            self.assertEqual(
-                (left * right).shape, (left.evaluate(y=y) * right.evaluate(y=y)).shape
-            )
-            self.assertEqual(
-                (left + right).size, (left.evaluate(y=y) + right.evaluate(y=y)).size
-            )
-
-        # Errors (mismatched sizes)
-        for left, right in ((M1, M2), (M1, v2), (v2, M1), (v1, v2)):
-            bad_prod = left * right
-            with self.assertRaises(ValueError):
-                bad_prod.shape
-
-        # Matrix Multiplication
-        for left, right in (
-            (M1, M2),
-            (M1, v1),
-            (M2, v2),
-            (v1, v1),
-            (sv1, v1),
-            (sv1, sv1),
-            (M1, sv1),
-            (M2, sv2),
-        ):
-            self.assertEqual(
-                (left @ right).shape, (left.evaluate(y=y) @ right.evaluate(y=y)).shape
-            )
-
-        # Errors (mismatched sizes)
-        for left, right in ((M1, M1), (M1, v2), (v2, M1), (v1, v2)):
-            bad_matprod = left @ right
-            with self.assertRaises(ValueError):
-                bad_matprod.shape
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

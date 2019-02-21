@@ -28,11 +28,6 @@ class UnaryOperator(pybamm.Symbol):
     def __init__(self, name, child):
         super().__init__(name, children=[child], domain=child.domain)
 
-    @property
-    def shape(self):
-        """inherit shape from child"""
-        return self.child.shape
-
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}({!s})".format(self.name, self.children[0])
@@ -111,15 +106,6 @@ class SpatialOperator(UnaryOperator):
 
     def __init__(self, name, child):
         super().__init__(name, child)
-
-    @property
-    def shape(self):
-        """
-        lose shape inheritance from child, as Spatial Operator will change the shape
-        """
-        raise AttributeError(
-            """'{}' object has no attribute 'shape'""".format(type(self))
-        )
 
 
 class Gradient(SpatialOperator):
