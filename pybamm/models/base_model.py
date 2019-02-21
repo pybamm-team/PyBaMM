@@ -54,6 +54,7 @@ class BaseModel(object):
         )
 
         self.default_geometry = pybamm.Geometry1DMacro()
+
         self.default_parameter_values.process_geometry(self.default_geometry)
         # provide mesh properties
         submesh_pts = {
@@ -67,8 +68,15 @@ class BaseModel(object):
             "positive electrode": pybamm.Uniform1DSubMesh,
         }
 
+        self.default_spatial_methods = {
+            "negative electrode": pybamm.FiniteVolume,
+            "separator": pybamm.FiniteVolume,
+            "positive electrode": pybamm.FiniteVolume,
+        }
         self.mesh = pybamm.Mesh(self.default_geometry, submesh_types, submesh_pts)
-        self.default_discretisation = pybamm.FiniteVolumeDiscretisation(self.mesh)
+        self.default_discretisation = pybamm.Discretisation(
+            self.mesh, self.default_spatial_methods
+        )
         self.default_solver = pybamm.ScipySolver(method="RK45")
 
     def _set_dict(self, dict, name):

@@ -89,7 +89,7 @@ class SpatialOperator(UnaryOperator):
 
     Derived classes will specify the particular operator
 
-    This type of node will be replaced by the :class:`BaseDiscretisation`
+    This type of node will be replaced by the :class:`Discretisation`
     class with a :class:`Matrix`
 
     **Extends:** :class:`UnaryOperator`
@@ -172,19 +172,19 @@ class NumpyBroadcast(Broadcast):
         child node
     domain : iterable of string
         the domain to broadcast the child to
-    mesh : mesh class
-        the mesh used for discretisation
+    npts : dict
+        contains the number of points on each domain
 
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, domain, mesh):
+    def __init__(self, child, domain, npts):
         super().__init__(child, domain, name="numpy broadcast")
         # determine broadcasting vector size (size 1 if the domain is empty)
         if domain == []:
             self.broadcasting_vector_size = 1
         else:
-            self.broadcasting_vector_size = sum([mesh[dom].npts for dom in domain])
+            self.broadcasting_vector_size = sum([npts[dom] for dom in domain])
         # create broadcasting vector (vector of ones with shape determined by the
         # domain)
         self.broadcasting_vector = np.ones(self.broadcasting_vector_size)
@@ -208,6 +208,16 @@ class NumpyBroadcast(Broadcast):
         # otherwise just do normal multiplication
         else:
             return child_eval * self.broadcasting_vector
+
+
+class SurfaceValue(SpatialOperator):
+    """A node in the expression tree which gets the surface value of a variable.
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("surf", child)
 
 
 #
@@ -251,3 +261,27 @@ def div(expression):
     """
 
     return Divergence(expression)
+
+
+#
+# Method to call SurfaceValue
+#
+
+
+def surf(variable):
+    """convenience function for creating a :class:`SurfaceValue`
+
+    Parameters
+    ----------
+
+    variable : :class:`Symbol`
+        the surface value of this variable will be returned
+
+    Returns
+    -------
+
+    :class:`GetSurfaceValue`
+        the surface value of ``variable``
+    """
+
+    return SurfaceValue(variable)

@@ -80,7 +80,7 @@ class TestConcatenations(unittest.TestCase):
     def test_numpy_domain_concatenation(self):
         # create discretisation
         defaults = shared.TestDefaults1DMacro()
-        disc = shared.DiscretisationForTesting(defaults.mesh)
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
         mesh = disc.mesh
 
         a_dom = ["negative electrode"]

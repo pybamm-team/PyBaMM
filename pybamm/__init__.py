@@ -78,8 +78,10 @@ from .expression_tree.unary_operators import (
     Divergence,
     Broadcast,
     NumpyBroadcast,
+    SurfaceValue,
     grad,
     div,
+    surf,
 )
 from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar
@@ -125,14 +127,25 @@ from .geometry.geometry import (
 #
 # Mesh and Discretisation classes
 #
+<<<<<<< HEAD
 from .discretisations.base_discretisation import BaseDiscretisation
 from .discretisations.finite_volume_discretisations import (
     FiniteVolumeDiscretisation,
     NodeToEdge,
     GetSurfaceValue,
 )
+=======
+from .discretisations.discretisation import Discretisation
+from .meshes.meshes import KNOWN_DOMAINS
+>>>>>>> master
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+
+#
+# Spatial Methods
+#
+from .spatial_methods.spatial_method import SpatialMethod
+from .spatial_methods.finite_volume import FiniteVolume, NodeToEdge
 
 #
 # Simulation class
