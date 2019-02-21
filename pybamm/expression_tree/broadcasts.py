@@ -7,17 +7,6 @@ import pybamm
 import numpy as np
 
 
-class TimeBroadcast(pybamm.UnaryOperator):
-    def __init__(self, child):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__("time broadcast", child)
-
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        child_eval = child.evaluate(t, y)
-        raise NotImplementedError
-
-
 class Broadcast(pybamm.SpatialOperator):
     """A node in the expression tree representing a broadcasting operator.
     Broadcasts a child (which *must* have empty domain) to a specified domain. After

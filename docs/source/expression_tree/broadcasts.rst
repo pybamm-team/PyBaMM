@@ -1,9 +1,6 @@
 Broadcasting Operators
 ======================
 
-.. autoclass:: pybamm.TimeBroadcast
-  :members:
-
 .. autoclass:: pybamm.Broadcast
   :members:
 
