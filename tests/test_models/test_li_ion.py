@@ -19,14 +19,9 @@ class TestLiIonSPM(unittest.TestCase):
 
     def test_surface_concentrartion(self):
         model = pybamm.li_ion.SPM()
-        params = model.default_parameter_values
-        params.process_model(model)
-        disc = model.default_discretisation
-        disc.process_model(model)
-        t_eval = np.linspace(0, 1, 100)
-        solver = model.default_solver
-        solver.solve(model, t_eval)
-        T, Y = solver.t, solver.y
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+        T, Y = modeltest.solver.t, modeltest.solver.y
 
         # check surface concentration decreases in negative particle and
         # increases in positive particle for discharge
@@ -38,3 +33,12 @@ class TestLiIonSPM(unittest.TestCase):
             model.variables["cp_surf"].evaluate(T, Y)[:, :-1],
             model.variables["cp_surf"].evaluate(T, Y)[:, 1:],
         )
+
+
+if __name__ == "__main__":
+    print("Add -v for more debug output")
+    import sys
+
+    if "-v" in sys.argv:
+        debug = True
+    unittest.main()
