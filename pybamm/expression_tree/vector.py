@@ -27,7 +27,7 @@ class Vector(pybamm.Array):
         # make sure that entries are a vector
         if entries.ndim != 1:
             raise ValueError(
-                """Entries must have 1 dimension,  not {}""".format(entries.ndim)
+                """Entries must have 1 dimension, not {}""".format(entries.ndim)
             )
         if name is None:
             name = "Vector of length {!s}".format(entries.shape[0])

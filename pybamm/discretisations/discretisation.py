@@ -237,10 +237,7 @@ class Discretisation(object):
 
             if new_symbol.is_constant():
                 value = new_symbol.evaluate()
-                if value.ndim == 1:
-                    return pybamm.Vector(value)
-                else:
-                    return pybamm.Array(value)
+                return pybamm.Vector(value)
             return new_symbol
 
         else:

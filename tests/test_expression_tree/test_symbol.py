@@ -60,6 +60,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((3 - b).children[1].id, b.id)
         self.assertIsInstance(3 * b, pybamm.Multiplication)
         self.assertEqual((3 * b).children[1].id, b.id)
+        self.assertIsInstance(3 @ b, pybamm.MatrixMultiplication)
+        self.assertEqual((3 @ b).children[1].id, b.id)
         self.assertIsInstance(3 / b, pybamm.Division)
         self.assertEqual((3 / b).children[1].id, b.id)
         self.assertIsInstance(3 ** b, pybamm.Power)
@@ -73,6 +75,8 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             a * "two"
         with self.assertRaises(NotImplementedError):
+            a @ "two"
+        with self.assertRaises(NotImplementedError):
             a / "two"
         with self.assertRaises(NotImplementedError):
             a ** "two"
@@ -82,6 +86,8 @@ class TestSymbol(unittest.TestCase):
             "two" - a
         with self.assertRaises(NotImplementedError):
             "two" * a
+        with self.assertRaises(NotImplementedError):
+            "two" @ a
         with self.assertRaises(NotImplementedError):
             "two" / a
         with self.assertRaises(NotImplementedError):

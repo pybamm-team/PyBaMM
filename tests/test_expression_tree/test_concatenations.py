@@ -282,6 +282,10 @@ class TestConcatenations(unittest.TestCase):
             ),
         )
 
+        # incompatible t and y
+        with self.assertRaisesRegex(ValueError, "incompatible t and y"):
+            processed_conc.evaluate(t=np.ones(20), y=y_2D)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
