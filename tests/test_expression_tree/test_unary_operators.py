@@ -4,7 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-import tests.shared as shared
+from tests import get_discretisation_for_testing
 import unittest
 import numpy as np
 
@@ -99,8 +99,7 @@ class TestUnaryOperators(unittest.TestCase):
 
     def test_numpy_broadcast(self):
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        disc = get_discretisation_for_testing()
         mesh = disc.mesh
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]

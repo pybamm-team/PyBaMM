@@ -74,21 +74,22 @@ def get_mesh_for_testing(npts=None):
         }
     else:
         n = 3 * round(npts / 3)
-        self.submesh_pts = {
+        submesh_pts = {
             "negative electrode": {"x": n},
             "separator": {"x": n},
             "positive electrode": {"x": n},
-            "negative particle": {"r": n},
-            "positive particle": {"r": n},
+            "negative particle": {"r": npts},
+            "positive particle": {"r": npts},
         }
     return pybamm.Mesh(geometry, submesh_types, submesh_pts)
 
 
 def get_discretisation_for_testing(npts=None):
+    mesh = get_mesh_for_testing(npts)
     spatial_methods = {
         "macroscale": SpatialMethodForTesting,
         "negative particle": SpatialMethodForTesting,
         "positive particle": SpatialMethodForTesting,
     }
 
-    return pybamm.Discretisation(mesh_for_testing(npts), spatial_methods)
+    return pybamm.Discretisation(mesh, spatial_methods)
