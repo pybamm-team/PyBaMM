@@ -25,6 +25,11 @@ Unary Operators
 .. autoclass:: pybamm.NumpyBroadcast
   :members:
 
+.. autoclass:: pybamm.SurfaceValue
+  :members:
+
 .. autofunction:: pybamm.grad
 
 .. autofunction:: pybamm.div
+
+.. autofunction:: pybamm.surf
