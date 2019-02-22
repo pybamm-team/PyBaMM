@@ -78,8 +78,10 @@ from .expression_tree.unary_operators import (
     Divergence,
     Broadcast,
     NumpyBroadcast,
+    SurfaceValue,
     grad,
     div,
+    surf,
 )
 from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar

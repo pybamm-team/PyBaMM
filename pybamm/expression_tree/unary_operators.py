@@ -210,6 +210,20 @@ class NumpyBroadcast(Broadcast):
             return child_eval * self.broadcasting_vector
 
 
+class SurfaceValue(SpatialOperator):
+    """A node in the expression tree which gets the surface value of a variable.
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("surf", child)
+
+        # Domain of SurfaceValue must be ([]) so that expressions can be formed
+        # of surface values of variables in different domains
+        self.domain = []
+
+
 #
 # Methods to call Gradient and Divergence
 #
@@ -251,3 +265,27 @@ def div(expression):
     """
 
     return Divergence(expression)
+
+
+#
+# Method to call SurfaceValue
+#
+
+
+def surf(variable):
+    """convenience function for creating a :class:`SurfaceValue`
+
+    Parameters
+    ----------
+
+    variable : :class:`Symbol`
+        the surface value of this variable will be returned
+
+    Returns
+    -------
+
+    :class:`GetSurfaceValue`
+        the surface value of ``variable``
+    """
+
+    return SurfaceValue(variable)
