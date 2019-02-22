@@ -72,6 +72,22 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertIsInstance(processed_rxn, pybamm.Vector)
         self.assertEqual(processed_rxn.shape, submesh.nodes.shape)
 
+    def disc_for_scalars(self):
+        param = pybamm.ParameterValues(
+            "input/parameters/lithium-ion/parameters/LCO.csv"
+        )
+        defaults = shared.TestDefaults1DMacro()
+        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+
+        G_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
+        G_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
+
+        G_n = param.process_symbol(G_n)
+        G_p = param.process_symbol(G_p)
+
+        disc.process_symbol(G_n)
+        disc.process_symbol(G_p)
+
 
 class TestButlerVolmerLeadAcid(unittest.TestCase):
     def setUp(self):

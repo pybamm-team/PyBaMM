@@ -109,10 +109,6 @@ cp_max = Parameter("cp_max")  # Max concentration in positive electrode
 Dn_typ = Parameter("Dn_typ")  # Typical negative particle diffusivity
 Dp_typ = Parameter("Dp_typ")  # Typical positive particle diffusivity
 
-# Particle Properties
-D_n = Parameter("D_n")
-D_p = Parameter("D_p")
-
 # Electrochemical Reactions
 m_n_dim = Parameter("m_n_dim")  # Reaction rate in negative electrode
 m_p_dim = Parameter("m_p_dim")  # Reaction rate in positive electrode
@@ -173,11 +169,6 @@ m_p = tau_d / tau_r_n
 t_plus = Parameter("t_plus")  # cation transference number
 delta = (Lx ** 2 / De_typ) * (I_typ / (F * cn_max * Lx))
 nu = cn_max / ce_typ
-
-
-# Particle Properties
-gamma_n = F * cn_max * Lx * D_n / I_typ / (R_n ** 2)
-gamma_p = F * cp_max * Lx * D_p / I_typ / (R_p ** 2)
 
 C_n = cn_max / cn_max
 C_p = cp_max / cn_max

@@ -12,13 +12,13 @@ import numpy as np
 
 class TestLiIonSPM(unittest.TestCase):
     def test_basic_processing(self):
-        model = pybamm.li_ion.SPM()
+        model = pybamm.lithium_ion.SPM_rob()
         modeltest = tests.StandardModelTest(model)
 
         modeltest.test_all()
 
     def test_surface_concentrartion(self):
-        model = pybamm.li_ion.SPM()
+        model = pybamm.lithium_ion.SPM_rob()
         params = model.default_parameter_values
         params.process_model(model)
         disc = model.default_discretisation

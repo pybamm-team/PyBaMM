@@ -18,9 +18,7 @@ def homogeneous_reaction(domain):
 
     if domain == ["negative electrode"]:
         exchange_current = (
-            pybamm.standard_parameters.current
-            / pybamm.standard_parameters.ln
-            * pybamm.Scalar(1, domain=domain)
+            pybamm.standard_parameters.current / pybamm.standard_parameters.ln
         )
     elif domain == ["separator"]:
         exchange_current = pybamm.Scalar(0)
@@ -44,6 +42,9 @@ def homogeneous_reaction(domain):
 
     else:
         raise NotImplementedError("Not a valid domain")
+
+    # set the domain (required for processing boundary conditions)
+    exchange_current.domain = domain
 
     return exchange_current
 
