@@ -79,7 +79,7 @@ class SPM(pybamm.BaseModel):
         Nn = - gamma_n * D_n(cn) * pybamm.grad(cn)
         dcndt = - pybamm.div(Nn)
         Np = - gamma_p * D_p(cp) * pybamm.grad(cp)
-        dcpdt = -pybamm.div(Np)
+        dcpdt = - pybamm.div(Np)
         self.rhs = {cn: dcndt, cp: dcpdt}
 
         # Boundary conditions
@@ -88,7 +88,7 @@ class SPM(pybamm.BaseModel):
             Nn: {"left": pybamm.Scalar(0),
                  "right": pybamm.Scalar(1) / ln / beta_n},
             Np: {"left": pybamm.Scalar(0),
-                 "right": pybamm.Scalar(1) / lp / beta_p / C_hat_p},
+                 "right": - pybamm.Scalar(1) / lp / beta_p / C_hat_p},
         }
 
         # Initial conditions
