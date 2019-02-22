@@ -141,6 +141,17 @@ class TestGeometry(unittest.TestCase):
                 "positive particle",
             ],
         )
+        geometry = pybamm.Geometry("3D macro", "1D micro")
+        self.assertEqual(
+            list(geometry.keys()),
+            [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+                "negative particle",
+                "positive particle",
+            ],
+        )
 
 
 if __name__ == "__main__":
