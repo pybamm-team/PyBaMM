@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid models
+# Tests for the li-ion models
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -10,29 +10,28 @@ import unittest
 import numpy as np
 
 
-class TestLeadAcidLOQS(unittest.TestCase):
+class TestLiIonSPM(unittest.TestCase):
     def test_basic_processing(self):
-        model = pybamm.lead_acid.LOQS()
+        model = pybamm.li_ion.SPM()
         modeltest = tests.StandardModelTest(model)
 
         modeltest.test_all()
 
-    def test_solution(self):
-        model = pybamm.lead_acid.LOQS()
+    def test_surface_concentrartion(self):
+        model = pybamm.li_ion.SPM()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
         T, Y = modeltest.solver.t, modeltest.solver.y
 
-        # check output
-        # make sure concentration and voltage are monotonically decreasing
-        # for a discharge
+        # check surface concentration decreases in negative particle and
+        # increases in positive particle for discharge
         np.testing.assert_array_less(
-            model.variables["c"].evaluate(T, Y)[:, 1:],
-            model.variables["c"].evaluate(T, Y)[:, :-1],
+            model.variables["cn_surf"].evaluate(T, Y)[:, 1:],
+            model.variables["cn_surf"].evaluate(T, Y)[:, :-1],
         )
         np.testing.assert_array_less(
-            model.variables["V"].evaluate(T, Y)[1:],
-            model.variables["V"].evaluate(T, Y)[:-1],
+            model.variables["cp_surf"].evaluate(T, Y)[:, :-1],
+            model.variables["cp_surf"].evaluate(T, Y)[:, 1:],
         )
 
 

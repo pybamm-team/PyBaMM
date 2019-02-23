@@ -78,8 +78,10 @@ from .expression_tree.unary_operators import (
     Divergence,
     Broadcast,
     NumpyBroadcast,
+    SurfaceValue,
     grad,
     div,
+    surf,
 )
 from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar
@@ -101,6 +103,7 @@ from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
+from .models import li_ion
 
 #
 # Submodel classes

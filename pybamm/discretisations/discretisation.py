@@ -24,12 +24,17 @@ class Discretisation(object):
 
     def __init__(self, mesh, spatial_methods):
         self._mesh = mesh
+        # Unpack macroscale to the constituent subdomains
+        if "macroscale" in spatial_methods.keys():
+            method = spatial_methods["macroscale"]
+            spatial_methods["negative electrode"] = method
+            spatial_methods["separator"] = method
+            spatial_methods["positive electrode"] = method
         self._spatial_methods = {
             dom: method(mesh) for dom, method in spatial_methods.items()
         }
         self._bcs = {}
         self._y_slices = {}
-        self._variables = []
 
     @property
     def mesh(self):
@@ -49,10 +54,10 @@ class Discretisation(object):
         # set boundary conditions (only need key ids for boundary_conditions)
         self._bcs = {key.id: value for key, value in model.boundary_conditions.items()}
         # set variables (we require the full variable not just id)
-        self._variables = list(model.rhs.keys()) + list(model.algebraic.keys())
+        variables = list(model.rhs.keys()) + list(model.algebraic.keys())
 
         # Set the y split for variables
-        self.set_variable_slices()
+        self.set_variable_slices(variables)
 
         # Process initial condtions
         self.process_initial_conditions(model)
@@ -68,13 +73,16 @@ class Discretisation(object):
         # Check that resulting model makes sense
         self.check_model(model)
 
-    def set_variable_slices(self):
+    def set_variable_slices(self, variables):
         """Sets the slicing for variables.
+
+        variables : iterable of :class:`pybamm.Variables`
+            The variables for which to set slices
         """
-        y_slices = {variable.id: None for variable in self._variables}
+        y_slices = {variable.id: None for variable in variables}
         start = 0
         end = 0
-        for variable in self._variables:
+        for variable in variables:
             # If domain is empty then variable has size 1
             if variable.domain == []:
                 end += 1
@@ -211,6 +219,13 @@ class Discretisation(object):
                     new_child, symbol.domain
                 )
             return symbol
+
+        elif isinstance(symbol, pybamm.SurfaceValue):
+            child = symbol.children[0]
+            discretised_child = self.process_symbol(child)
+            return self._spatial_methods[child.domain[0]].surface_value(
+                discretised_child
+            )
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             return self.process_binary_operators(symbol)

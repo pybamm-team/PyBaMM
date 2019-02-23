@@ -7,7 +7,7 @@ import pybamm
 
 import unittest
 import numpy as np
-import tests.shared as shared
+from tests import get_mesh_for_testing
 
 
 class TestScipySolver(unittest.TestCase):
@@ -45,13 +45,9 @@ class TestScipySolver(unittest.TestCase):
         # No need to set parameters; can use base discretisation (no spatial operators)
 
         # create discretisation
-        defaults = shared.TestDefaults1DMacro()
-        spatial_methods = {
-            "negative electrode": pybamm.FiniteVolume,
-            "separator": pybamm.FiniteVolume,
-            "positive electrode": pybamm.FiniteVolume,
-        }
-        disc = pybamm.Discretisation(defaults.mesh, spatial_methods)
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
         # Solve
         solver = pybamm.ScipySolver(tol=1e-8, method="RK45")

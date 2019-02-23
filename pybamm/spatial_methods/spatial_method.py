@@ -104,6 +104,24 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def surface_value(self, discretised_symbol):
+        """
+        Returns the surface value using the approriate expression for the
+        spatial method.
+
+        Parameters
+        -----------
+        discretised_symbol : :class:`pybamm.StateVector`
+            The discretised variable (a state vector) from which to calculate
+            the surface value.
+
+        Returns
+        -------
+        :class:`pybamm.Variable`
+            The variable representing the surface value.
+        """
+        raise NotImplementedError
+
     # We could possibly move the following outside of SpatialMethod
     # depending on the requirements of the FiniteVolume
 

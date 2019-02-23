@@ -6,61 +6,6 @@ import pybamm
 import numpy as np
 
 
-class TestDefaults1DMacro:
-    def __init__(self, npts=0):
-        self.param = pybamm.ParameterValues(
-            base_parameters={"Ln": 0.3, "Ls": 0.3, "Lp": 0.3}
-        )
-
-        self.geometry = pybamm.Geometry1DMacro()
-        self.param.process_geometry(self.geometry)
-
-        self.submesh_pts = {
-            "negative electrode": {"x": 40},
-            "separator": {"x": 25},
-            "positive electrode": {"x": 35},
-        }
-
-        self.submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-        }
-
-        if npts != 0:
-            n = 3 * round(npts / 3)
-            self.submesh_pts = {
-                "negative electrode": {"x": n},
-                "separator": {"x": n},
-                "positive electrode": {"x": n},
-            }
-
-        self.mesh = pybamm.Mesh(self.geometry, self.submesh_types, self.submesh_pts)
-
-        self.spatial_methods = {
-            "negative electrode": SpatialMethodForTesting,
-            "separator": SpatialMethodForTesting,
-            "positive electrode": SpatialMethodForTesting,
-        }
-
-
-class TestDefaults1DParticle:
-    def __init__(self, n):
-        self.geometry = {
-            "negative particle": {
-                "r": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
-            }
-        }
-        self.param = pybamm.ParameterValues(base_parameters={})
-        self.param.process_geometry(self.geometry)
-        self.submesh_pts = {"negative particle": {"r": n}}
-        self.submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
-
-        self.mesh = pybamm.Mesh(self.geometry, self.submesh_types, self.submesh_pts)
-
-        self.spatial_methods = {"negative particle": pybamm.FiniteVolume}
-
-
 class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
 
@@ -69,7 +14,6 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         super().__init__(mesh)
 
     def spatial_variable(self, symbol):
-        # for finite volume we use the cell centres
         symbol_mesh = self._mesh.combine_submeshes(*symbol.domain)
         return pybamm.Vector(symbol_mesh.nodes)
 
@@ -103,3 +47,48 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
 
     def compute_diffusivity(self, symbol):
         return symbol
+
+
+def get_mesh_for_testing(npts=None):
+    param = pybamm.ParameterValues(base_parameters={"Ln": 0.3, "Ls": 0.3, "Lp": 0.3})
+
+    geometry = pybamm.Geometry("1D macro", "1D micro")
+    param.process_geometry(geometry)
+
+    submesh_types = {
+        "negative electrode": pybamm.Uniform1DSubMesh,
+        "separator": pybamm.Uniform1DSubMesh,
+        "positive electrode": pybamm.Uniform1DSubMesh,
+        "negative particle": pybamm.Uniform1DSubMesh,
+        "positive particle": pybamm.Uniform1DSubMesh,
+    }
+
+    if npts is None:
+        submesh_pts = {
+            "negative electrode": {"x": 40},
+            "separator": {"x": 25},
+            "positive electrode": {"x": 35},
+            "negative particle": {"r": 10},
+            "positive particle": {"r": 10},
+        }
+    else:
+        n = 3 * round(npts / 3)
+        submesh_pts = {
+            "negative electrode": {"x": n},
+            "separator": {"x": n},
+            "positive electrode": {"x": n},
+            "negative particle": {"r": npts},
+            "positive particle": {"r": npts},
+        }
+    return pybamm.Mesh(geometry, submesh_types, submesh_pts)
+
+
+def get_discretisation_for_testing(npts=None):
+    mesh = get_mesh_for_testing(npts)
+    spatial_methods = {
+        "macroscale": SpatialMethodForTesting,
+        "negative particle": SpatialMethodForTesting,
+        "positive particle": SpatialMethodForTesting,
+    }
+
+    return pybamm.Discretisation(mesh, spatial_methods)

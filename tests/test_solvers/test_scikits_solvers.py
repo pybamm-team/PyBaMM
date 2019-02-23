@@ -5,7 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
-
+from tests import StandardModelTest
 
 import unittest
 import numpy as np
@@ -73,7 +73,7 @@ class TestScikitsSolver(unittest.TestCase):
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
         model.initial_conditions_ydot = {var: 0.1}
-        disc = model.default_discretisation
+        disc = StandardModelTest(model).disc
         disc.process_model(model)
 
         # Solve
@@ -93,7 +93,7 @@ class TestScikitsSolver(unittest.TestCase):
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
-        disc = model.default_discretisation
+        disc = StandardModelTest(model).disc
         disc.process_model(model)
 
         # Solve

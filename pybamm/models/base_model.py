@@ -48,35 +48,30 @@ class BaseModel(object):
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
 
-        # Default parameter values, discretisation and solver
+        # Default parameter values, geometry, submesh, spatial methods and solver
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-
-        self.default_geometry = pybamm.Geometry1DMacro()
-
-        self.default_parameter_values.process_geometry(self.default_geometry)
-        # provide mesh properties
-        submesh_pts = {
+        self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
+        self.default_submesh_pts = {
             "negative electrode": {"x": 40},
             "separator": {"x": 25},
             "positive electrode": {"x": 35},
+            "negative particle": {"r": 10},
+            "positive particle": {"r": 10},
         }
-        submesh_types = {
+        self.default_submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
             "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
         }
-
         self.default_spatial_methods = {
-            "negative electrode": pybamm.FiniteVolume,
-            "separator": pybamm.FiniteVolume,
-            "positive electrode": pybamm.FiniteVolume,
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
         }
-        self.mesh = pybamm.Mesh(self.default_geometry, submesh_types, submesh_pts)
-        self.default_discretisation = pybamm.Discretisation(
-            self.mesh, self.default_spatial_methods
-        )
         self.default_solver = pybamm.ScipySolver(method="RK45")
 
     def _set_dict(self, dict, name):
@@ -188,17 +183,26 @@ class BaseModel(object):
             The submodels from which to create new model
         """
         for submodel in submodels:
-            # check for duplicates in keys
-            vars = [var.id for var in submodel.rhs.keys()] + [
-                var.id for var in self.rhs.keys()
-            ]
-            assert len(vars) == len(set(vars)), pybamm.ModelError("duplicate variables")
 
-            # update dicts
-            self._rhs.update(submodel.rhs)
-            self._initial_conditions.update(submodel.initial_conditions)
-            self._boundary_conditions.update(submodel.boundary_conditions)
-            self._variables.update(submodel.variables)
+            # check and then update dicts
+            self.check_and_combine_dict(self._rhs, submodel.rhs)
+            self.check_and_combine_dict(self._algebraic, submodel.algebraic)
+            self.check_and_combine_dict(
+                self._initial_conditions, submodel.initial_conditions
+            )
+            self.check_and_combine_dict(
+                self._boundary_conditions, submodel.boundary_conditions
+            )
+            self._variables.update(submodel.variables)  # keys are strings so no check
+
+    def check_and_combine_dict(self, dict1, dict2):
+        # check that the key ids are distinct
+        ids1 = set(x.id for x in dict1.keys())
+        ids2 = set(x.id for x in dict2.keys())
+        assert len(ids1.intersection(ids2)) == 0, pybamm.ModelError(
+            "Submodel incompatible: duplicate variables"
+        )
+        dict1.update(dict2)
 
     def check_well_posedness(self):
         """
