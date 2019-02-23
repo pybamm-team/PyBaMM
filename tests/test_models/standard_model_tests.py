@@ -3,16 +3,25 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
+import pybamm
+
 import numpy as np
 
 
 class StandardModelTest(object):
     def __init__(self, model):
         self.model = model
-        # Set defaults
+        # Set default parameters
         self.param = model.default_parameter_values
-        self.geometry = model.default_geometry
-        self.disc = model.default_discretisation
+        # Process geometry
+        self.param.process_geometry(model.default_geometry)
+        geometry = model.default_geometry
+        # Set default discretisation
+        mesh = pybamm.Mesh(
+            geometry, model.default_submesh_types, model.default_submesh_pts
+        )
+        self.disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        # Set default solver
         self.solver = model.default_solver
 
     def test_processing_parameters(self, param=None):

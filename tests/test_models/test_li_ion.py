@@ -17,17 +17,11 @@ class TestLiIonSPM(unittest.TestCase):
 
         modeltest.test_all()
 
-    @unittest.skip("bug in SPM")
-    def test_surface_concentration(self):
+    def test_surface_concentrartion(self):
         model = pybamm.li_ion.SPM()
-        params = model.default_parameter_values
-        params.process_model(model)
-        disc = model.default_discretisation
-        disc.process_model(model)
-        t_eval = np.linspace(0, 1, 100)
-        solver = model.default_solver
-        solver.solve(model, t_eval)
-        T, Y = solver.t, solver.y
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+        T, Y = modeltest.solver.t, modeltest.solver.y
 
         # check surface concentration decreases in negative particle and
         # increases in positive particle for discharge

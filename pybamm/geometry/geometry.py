@@ -18,8 +18,20 @@ class Geometry(dict):
      custom_geometry : dict containing any extra user defined geometry
      """
 
-    # left empty for now but I think we should have methods to
-    # add Geometries together (i.e. choose 3D macro with 1D micro etc)
+    def __init__(self, *geometries, custom_geometry={}):
+        for geometry in geometries:
+            if geometry == "1D macro":
+                geometry = Geometry1DMacro()
+            elif geometry == "3D macro":
+                geometry = Geometry3DMacro()
+            elif geometry == "1D micro":
+                geometry = Geometry1DMicro()
+            # avoid combining geometries that clash
+            if any([k in self.keys() for k in geometry.keys()]):
+                raise ValueError("trying to overwrite existing geometry")
+            self.update(geometry)
+        # Allow overwriting with a custom geometry
+        self.update(custom_geometry)
 
 
 class Geometry1DMacro(Geometry):

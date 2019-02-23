@@ -2,14 +2,14 @@
 # Test for the operator class
 #
 import pybamm
-import tests.shared as shared
+from tests import get_mesh_for_testing
 
 import unittest
 
 
 class TestSpatialMethod(unittest.TestCase):
     def test_basics(self):
-        mesh = shared.TestDefaults1DMacro().mesh
+        mesh = get_mesh_for_testing()
         spatial_method = pybamm.SpatialMethod(mesh)
         self.assertEqual(spatial_method.mesh, mesh)
         with self.assertRaises(NotImplementedError):

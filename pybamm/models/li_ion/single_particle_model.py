@@ -30,25 +30,6 @@ class SPM(pybamm.BaseModel):
     def __init__(self):
         super().__init__()
 
-        # Overwrite default geometry
-        # NOTE: Is this the best way/place to do this?
-        self.default_geometry = pybamm.Geometry1DMicro()
-        self.default_parameter_values.process_geometry(self.default_geometry)
-        submesh_pts = {"negative particle": {"r": 10}, "positive particle": {"r": 10}}
-        submesh_types = {
-            "negative particle": pybamm.Uniform1DSubMesh,
-            "positive particle": pybamm.Uniform1DSubMesh,
-        }
-        self.default_spatial_methods = {
-            "negative particle": pybamm.FiniteVolume,
-            "positive particle": pybamm.FiniteVolume,
-        }
-        self.mesh = pybamm.Mesh(self.default_geometry, submesh_types, submesh_pts)
-        self.default_discretisation = pybamm.Discretisation(
-            self.mesh, self.default_spatial_methods
-        )
-        self.default_solver = pybamm.ScipySolver(method="BDF")
-
         # Variables
         cn = pybamm.Variable("cn", domain="negative particle")
         cp = pybamm.Variable("cp", domain="positive particle")
@@ -86,7 +67,7 @@ class SPM(pybamm.BaseModel):
             Nn: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1) / ln / beta_n},
             Np: {
                 "left": pybamm.Scalar(0),
-                "right": pybamm.Scalar(1) / lp / beta_p / C_hat_p,
+                "right": -pybamm.Scalar(1) / lp / beta_p / C_hat_p,
             },
         }
 
@@ -113,3 +94,6 @@ class SPM(pybamm.BaseModel):
             "cp_surf": cp_surf,
             "V": V,
         }
+
+        # Overwrite default solver
+        self.default_solver = pybamm.ScipySolver(method="BDF")

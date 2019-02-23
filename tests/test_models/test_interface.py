@@ -4,7 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-from tests import shared
+from tests import get_discretisation_for_testing
 
 import unittest
 import numpy as np
@@ -46,9 +46,8 @@ class TestHomogeneousReaction(unittest.TestCase):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
-        mesh = defaults.mesh
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
 
         rxn = pybamm.interface.homogeneous_reaction(1)
 
@@ -171,11 +170,10 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         param_bv_p = param.process_symbol(bv_p)
 
         # discretise
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        disc = get_discretisation_for_testing()
         mesh = disc.mesh
-        disc._variables = [self.cn, self.cp, self.phin, self.phip]
-        disc.set_variable_slices()
+        variables = [self.cn, self.cp, self.phin, self.phip]
+        disc.set_variable_slices(variables)
         processed_bv_n = disc.process_symbol(param_bv_n)
         processed_bv_p = disc.process_symbol(param_bv_p)
 
@@ -204,12 +202,11 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         param_bv_whole = param.process_symbol(bv_whole)
 
         # discretise
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        disc = get_discretisation_for_testing()
         mesh = disc.mesh
 
-        disc._variables = [self.cn, self.cp, self.phin, self.phip]
-        disc.set_variable_slices()
+        variables = [self.cn, self.cp, self.phin, self.phip]
+        disc.set_variable_slices(variables)
         processed_bv_whole = disc.process_symbol(param_bv_whole)
 
         # test
@@ -286,12 +283,11 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         param_j0p = param.process_symbol(j0p)
 
         # discretise
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        disc = get_discretisation_for_testing()
         mesh = disc.mesh
 
-        disc._variables = [self.cn, self.cp]
-        disc.set_variable_slices()
+        variables = [self.cn, self.cp]
+        disc.set_variable_slices(variables)
         processed_j0n = disc.process_symbol(param_j0n)
         processed_j0p = disc.process_symbol(param_j0p)
 

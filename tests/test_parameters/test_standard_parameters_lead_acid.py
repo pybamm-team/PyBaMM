@@ -4,7 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-from tests import shared
+from tests import get_discretisation_for_testing
 
 import os
 import unittest
@@ -61,8 +61,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv", {"current scale": 1}
         )
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        disc = get_discretisation_for_testing()
         processed_s = disc.process_symbol(parameter_values.process_symbol(s))
 
         # test output

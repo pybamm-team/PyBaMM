@@ -49,7 +49,7 @@ class BaseModel(object):
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
 
-        # Default parameter values, discretisation and solver
+        # Default parameter values, geometry, submesh, spatial methods and solver
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv",
             {
@@ -63,31 +63,26 @@ class BaseModel(object):
                 ),
             },
         )
-
-        self.default_geometry = pybamm.Geometry1DMacro()
-
-        self.default_parameter_values.process_geometry(self.default_geometry)
-        # provide mesh properties
-        submesh_pts = {
+        self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
+        self.default_submesh_pts = {
             "negative electrode": {"x": 40},
             "separator": {"x": 25},
             "positive electrode": {"x": 35},
+            "negative particle": {"r": 10},
+            "positive particle": {"r": 10},
         }
-        submesh_types = {
+        self.default_submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
             "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
         }
-
         self.default_spatial_methods = {
-            "negative electrode": pybamm.FiniteVolume,
-            "separator": pybamm.FiniteVolume,
-            "positive electrode": pybamm.FiniteVolume,
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
         }
-        self.mesh = pybamm.Mesh(self.default_geometry, submesh_types, submesh_pts)
-        self.default_discretisation = pybamm.Discretisation(
-            self.mesh, self.default_spatial_methods
-        )
         self.default_solver = pybamm.ScipySolver(method="RK45")
 
     def _set_dict(self, dict, name):
