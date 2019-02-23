@@ -19,15 +19,9 @@ class TestLeadAcidLOQS(unittest.TestCase):
 
     def test_solution(self):
         model = pybamm.lead_acid.LOQS()
-
-        # process parameter values, discretise and solve
-        model.default_parameter_values.process_model(model)
-        disc = model.default_discretisation
-        disc.process_model(model)
-        t_eval = np.linspace(0, 1, 100)
-        solver = model.default_solver
-        solver.solve(model, t_eval)
-        T, Y = solver.t, solver.y
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+        T, Y = modeltest.solver.t, modeltest.solver.y
 
         # check output
         # make sure concentration and voltage are monotonically decreasing
