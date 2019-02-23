@@ -79,10 +79,18 @@ class Discretisation(object):
         variables : iterable of :class:`pybamm.Variables`
             The variables for which to set slices
         """
-        y_slices = {variable.id: None for variable in variables}
+        # Unpack symbols in variables that are concatenations of variables
+        unpacked_variables = []
+        for symbol in variables:
+            if isinstance(symbol, pybamm.Concatenation):
+                unpacked_variables.extend([var for var in symbol.children])
+            else:
+                unpacked_variables.append(symbol)
+        # Set up y_slices
+        y_slices = {variable.id: None for variable in unpacked_variables}
         start = 0
         end = 0
-        for variable in variables:
+        for variable in unpacked_variables:
             # If domain is empty then variable has size 1
             if variable.domain == []:
                 end += 1
