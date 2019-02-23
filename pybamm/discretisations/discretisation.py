@@ -171,18 +171,13 @@ class Discretisation(object):
 
         """
 
-        for eqn_key, eqn in var_eqn_dict.items():
-
+        for var, eqn in var_eqn_dict.items():
+            # Broadcast if the equation evaluates to a number(e.g. Scalar)
             if eqn.evaluates_to_number():
-                if eqn_key.domain == []:
-                    eqn = pybamm.NumpyBroadcast(eqn, eqn_key.domain, {})
-                else:
-                    eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(
-                        eqn, eqn_key.domain
-                    )
+                eqn = pybamm.Broadcast(eqn, var.domain)
 
             # Process symbol (original or broadcasted)
-            var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            var_eqn_dict[var] = self.process_symbol(eqn)
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
         return var_eqn_dict
@@ -221,7 +216,7 @@ class Discretisation(object):
             # Broadcast new_child to the domain specified by symbol.domain
             # Different discretisations may broadcast differently
             if symbol.domain == []:
-                symbol = pybamm.NumpyBroadcast(symbol, symbol.domain, {})
+                symbol = pybamm.NumpyBroadcast(new_child, symbol.domain, {})
             else:
                 symbol = self._spatial_methods[symbol.domain[0]].broadcast(
                     new_child, symbol.domain
@@ -238,12 +233,16 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.BinaryOperator):
             return self.process_binary_operators(symbol)
 
+        elif isinstance(symbol, pybamm.Function):
+            new_child = self.process_symbol(symbol.children[0])
+            return pybamm.Function(symbol.func, new_child)
+
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
             return symbol.__class__(new_child)
 
         elif isinstance(symbol, pybamm.Variable):
-            return pybamm.StateVector(self._y_slices[symbol.id])
+            return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.Space):
             return self._spatial_methods[symbol.domain[0]].spatial_variable(symbol)
@@ -253,7 +252,8 @@ class Discretisation(object):
             new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
 
             if new_symbol.is_constant():
-                return pybamm.Vector(new_symbol.evaluate())
+                value = new_symbol.evaluate()
+                return pybamm.Vector(value)
             return new_symbol
 
         else:
@@ -311,7 +311,7 @@ class Discretisation(object):
         return bin_op.__class__(new_left, new_right)
 
     def concatenate(self, *symbols):
-        return pybamm.NumpyModelConcatenation(*symbols)
+        return pybamm.NumpyConcatenation(*symbols)
 
     def _concatenate_init(self, var_eqn_dict):
         """
@@ -334,7 +334,14 @@ class Discretisation(object):
             Discretised right-hand side equations
 
         """
-        ids = {v.id for v in var_eqn_dict.keys()}
+        # Unpack symbols in variables that are concatenations of variables
+        unpacked_variables = []
+        for symbol in var_eqn_dict.keys():
+            if isinstance(symbol, pybamm.Concatenation):
+                unpacked_variables.extend([var for var in symbol.children])
+            else:
+                unpacked_variables.append(symbol)
+        ids = {v.id for v in unpacked_variables}
         if ids != self._y_slices.keys():
             given_variable_names = [v.name for v in var_eqn_dict.keys()]
             raise pybamm.ModelError(
@@ -343,7 +350,7 @@ class Discretisation(object):
             )
 
         equations = list(var_eqn_dict.values())
-        slices = [self._y_slices[var.id] for var in var_eqn_dict.keys()]
+        slices = [self._y_slices[var.id] for var in unpacked_variables]
 
         # sort equations according to slices
         sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
