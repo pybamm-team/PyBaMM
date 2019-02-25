@@ -72,6 +72,7 @@ class SPM(pybamm.BaseModel):
         )
         voltage = ocp + reaction_overpotential
 
+        # TODO: add ocp and overpot once domain issue fixed
         # "opc": ocp,
         # "reaction overpotential": reaction_overpotential,
         additional_variables = {

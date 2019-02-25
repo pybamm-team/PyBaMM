@@ -32,13 +32,13 @@ class SPMe(pybamm.BaseModel):
 
         "Model Variables"
         # Electrolyte concentration
-        # c_en = pybamm.Variable("c_en", ["negative electrode"])
-        # c_es = pybamm.Variable("c_es", ["separator"])
-        # c_ep = pybamm.Variable("c_ep", ["positive electrode"])
-        # c_e = pybamm.Concatenation(c_en, c_es, c_ep)
-        c_e = pybamm.Variable(
-            "c_e", ["negative electrode", "separator", "positive electrode"]
-        )
+        c_en = pybamm.Variable("c_en", ["negative electrode"])
+        c_es = pybamm.Variable("c_es", ["separator"])
+        c_ep = pybamm.Variable("c_ep", ["positive electrode"])
+        c_e = pybamm.Concatenation(c_en, c_es, c_ep)
+        # c_e = pybamm.Variable(
+        #     "c_e", ["negative electrode", "separator", "positive electrode"]
+        # )
 
         # Particle concentration
         c_n = pybamm.Variable("c_n", ["negative particle"])
@@ -69,3 +69,27 @@ class SPMe(pybamm.BaseModel):
         # TODO: add voltage and overpotentials to this
         additional_variables = {}
         self._variables.update(additional_variables)
+
+        #
+        # ------------------------------------------------------
+        #
+        "Defaults"
+        # NOTE: Is this the best way/place to do this?
+        self.default_geometry = pybamm.Geometry1DMicro()
+        self.default_parameter_values.process_geometry(self.default_geometry)
+        submesh_pts = {"negative particle": {"r": 10}, "positive particle": {"r": 10}}
+        submesh_types = {
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+        }
+        self.default_spatial_methods = {
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        self.mesh = pybamm.Mesh(self.default_geometry, submesh_types, submesh_pts)
+        self.default_discretisation = pybamm.Discretisation(
+            self.mesh, self.default_spatial_methods
+        )
+        self.default_solver = pybamm.ScipySolver(method="BDF")
+
+        # --------------------------------------------------------

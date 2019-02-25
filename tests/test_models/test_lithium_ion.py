@@ -17,3 +17,11 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
 
         modeltest.test_all()
+
+
+class TestSPMe(unittest.TestCase):
+    def test_basic_processing(self):
+        model = pybamm.lithium_ion.SPMe()
+        modeltest = tests.StandardModelTest(model)
+
+        modeltest.test_all()
