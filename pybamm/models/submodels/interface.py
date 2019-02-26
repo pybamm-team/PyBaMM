@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-def homogeneous_reaction(domain):
+def homogeneous_reaction(current, domain):
     """ Homogeneous reaction at the electrode-electrolyte interface """
 
     # If feed in just a single domain then will return a Scalar which will
@@ -17,31 +17,22 @@ def homogeneous_reaction(domain):
     # will be processed into a vector upon discretisation.
 
     if domain == ["negative electrode"]:
-        exchange_current = (
-            pybamm.standard_parameters.current / pybamm.standard_parameters.ln
-        )
+        exchange_current = current / pybamm.standard_parameters.ln
     elif domain == ["separator"]:
         exchange_current = pybamm.Scalar(0)
     elif domain == ["positive electrode"]:
         exchange_current = (
-            -pybamm.standard_parameters.current
-            / pybamm.standard_parameters.lp
-            * pybamm.Scalar(1, domain=domain)
+            -current / pybamm.standard_parameters.lp * pybamm.Scalar(1, domain=domain)
         )
     elif domain == ["negative electrode", "separator", "positive electrode"]:
-        current_neg = (
-            pybamm.Scalar(1, domain=["negative electrode"])
-            / pybamm.standard_parameters.ln
+        current_neg = homogeneous_reaction(current, ["negative electrode"])
+        current_sep = homogeneous_reaction(current, ["separator"])
+        current_pos = homogeneous_reaction(current, ["positive electrode"])
+        exchange_current = pybamm.PiecewiseConstant(
+            current_neg, current_sep, current_pos
         )
-        current_sep = pybamm.Scalar(0, domain=["separator"])
-        current_pos = (
-            -pybamm.Scalar(1, domain=["positive electrode"])
-            / pybamm.standard_parameters.lp
-        )
-        exchange_current = pybamm.Concatenation(current_neg, current_sep, current_pos)
-
     else:
-        raise NotImplementedError("Not a valid domain")
+        raise NotImplementedError("{} is not a valid domain".format(domain))
 
     # set the domain (required for processing boundary conditions)
     exchange_current.domain = domain

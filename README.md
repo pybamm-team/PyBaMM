@@ -16,30 +16,30 @@ PyBaMM comes with a number of [detailed examples](examples/README.md), hosted he
 
 You'll need the following requirements:
 
-- Python 2.7 or Python 3.4+
+- Python 3.5+
 - Python libraries: `numpy` `scipy` `pandas` `matplotlib`
 
 These can easily be installed using `pip`. To do this, first make sure you have the latest version of pip installed:
 
-```bash 
+```bash
 pip install --upgrade pip
 ```
 
 Then navigate to the path where you downloaded PyBaMM to, and install both PyBaMM and its dependencies by typing:
 
-```bash 
+```bash
 pip install .
 ```
 
 Or, if you want to install PyBaMM as a [developer](CONTRIBUTING.md), use
 
-```bash 
+```bash
 pip install -e .[dev,docs]
 ```
 
 To uninstall again, type
 
-```bash 
+```bash
 pip uninstall pybamm
 ```
 
@@ -81,13 +81,13 @@ You may wish to put this last line in your `.bashrc` or virtualenv `activate` sc
 which will save you needing to set your `LD_LIBRARY_PATH` every time you log in. For
 example, to add this line to your `.bashrc` you can type:
 
-```bash 
+```bash
 echo "export LD_LIBRARY_PATH=$INSTALL_DIR/lib:\$LD_LIBRARY_PATH" >> ~/.bashrc
 ```
 
 Please see the [scikits.odes
 documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
-detailed installation instructions. 
+detailed installation instructions.
 
 
 ## How can I contribute to PyBaMM?

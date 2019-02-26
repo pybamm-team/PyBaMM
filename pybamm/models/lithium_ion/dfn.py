@@ -35,14 +35,12 @@ class DFN(pybamm.BaseModel):
         c_en = pybamm.Variable("c_en", ["negative electrode"])
         c_es = pybamm.Variable("c_es", ["separator"])
         c_ep = pybamm.Variable("c_ep", ["positive electrode"])
-        # TODO: find the right way to concatenate
         c_e = pybamm.Concatenation(c_en, c_es, c_ep)
 
         # Electrolyte Potential
         phi_en = pybamm.Variable("phi_en", ["negative electrode"])
         phi_es = pybamm.Variable("phi_es", ["separator"])
         phi_ep = pybamm.Variable("phi_ep", ["positive electrode"])
-        # TODO: find the right way to concatenate
         phi_e = pybamm.Concatenation(phi_en, phi_es, phi_ep)
 
         # Electrode Potential

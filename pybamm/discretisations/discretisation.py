@@ -231,6 +231,10 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.BinaryOperator):
             return self.process_binary_operators(symbol)
 
+        elif isinstance(symbol, pybamm.Function):
+            new_child = self.process_symbol(symbol.children[0])
+            return pybamm.Function(symbol.func, new_child)
+
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
             return symbol.__class__(new_child)
@@ -238,7 +242,7 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Variable):
             return pybamm.StateVector(self._y_slices[symbol.id])
 
-        elif isinstance(symbol, pybamm.Space):
+        elif isinstance(symbol, pybamm.SpatialVariable):
             return self._spatial_methods[symbol.domain[0]].spatial_variable(symbol)
 
         elif isinstance(symbol, pybamm.Concatenation):

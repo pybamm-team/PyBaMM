@@ -147,9 +147,12 @@ class Broadcast(SpatialOperator):
     """
 
     def __init__(self, child, domain, name=None):
-        if child.domain != []:
+        if child.domain not in [[], domain]:
             raise pybamm.DomainError(
-                """Domain of a broadcasted child must be [] but is '{}'""".format(
+                """
+                Domain of a broadcasted child must be []
+                or same as 'domain' but is '{}'
+                """.format(
                     child.domain
                 )
             )

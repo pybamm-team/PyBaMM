@@ -17,9 +17,7 @@ class TestHomogeneousReaction(unittest.TestCase):
         )
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-
-        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
-
+        rxn = pybamm.interface.homogeneous_reaction(1, whole_cell)
         processed_rxn = param.process_symbol(rxn)
 
         # rxn (a concatenation of functions of scalars and parameters) should get
@@ -41,7 +39,6 @@ class TestHomogeneousReaction(unittest.TestCase):
                 ]
             )
         )
-        self.assertIsInstance(processed_rxn.children[1], pybamm.Scalar)
         self.assertEqual(processed_rxn.children[0].domain, ["negative electrode"])
         self.assertEqual(processed_rxn.children[1].domain, ["separator"])
         self.assertEqual(processed_rxn.children[2].domain, ["positive electrode"])
@@ -50,6 +47,7 @@ class TestHomogeneousReaction(unittest.TestCase):
         ln = param.process_symbol(pybamm.standard_parameters.ln)
         lp = param.process_symbol(pybamm.standard_parameters.lp)
         self.assertEqual(processed_rxn.children[0].evaluate() * ln.evaluate(), 1)
+        self.assertEqual(processed_rxn.children[1].evaluate(), 0)
         self.assertEqual(processed_rxn.children[2].evaluate() * lp.evaluate(), -1)
 
     def test_discretisation(self):
@@ -60,7 +58,7 @@ class TestHomogeneousReaction(unittest.TestCase):
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
-        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
+        rxn = pybamm.interface.homogeneous_reaction(1, whole_cell)
 
         param_rxn = param.process_symbol(rxn)
         processed_rxn = disc.process_symbol(param_rxn)

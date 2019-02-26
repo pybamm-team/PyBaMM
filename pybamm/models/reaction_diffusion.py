@@ -35,10 +35,10 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         c_e = pybamm.Variable("c_e", whole_cell)
 
         "Model Parameters and functions"
-        #
+        current = pybamm.standard_parameters.current_with_time
 
         "Interface Conditions"
-        G = pybamm.interface.homogeneous_reaction(whole_cell)
+        G = pybamm.interface.homogeneous_reaction(current, whole_cell)
 
         "Model Equations"
         self.update(pybamm.electrolyte_diffusion.StefanMaxwell(c_e, G))

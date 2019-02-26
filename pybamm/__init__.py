@@ -63,7 +63,7 @@ from .expression_tree.concatenations import (
     Concatenation,
     NumpyModelConcatenation,
     DomainConcatenation,
-    piecewise_constant,
+    PiecewiseConstant,
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
@@ -86,7 +86,11 @@ from .expression_tree.unary_operators import (
 from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
-from .expression_tree.independent_variable import IndependentVariable, Time, Space
+from .expression_tree.independent_variable import (
+    IndependentVariable,
+    Time,
+    SpatialVariable,
+)
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
@@ -111,6 +115,7 @@ from .models.submodels import electrode, particle, interface, electrolyte_diffus
 #
 from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard parameters
 from .parameters.parameter_values import ParameterValues
+from .parameters import standard_current_functions
 from .parameters import standard_parameters
 from .parameters import standard_parameters_lead_acid  # calls standard_parameters
 

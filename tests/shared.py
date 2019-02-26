@@ -14,7 +14,6 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         super().__init__(mesh)
 
     def spatial_variable(self, symbol):
-        # for finite volume we use the cell centres
         symbol_mesh = self._mesh.combine_submeshes(*symbol.domain)
         return pybamm.Vector(symbol_mesh.nodes)
 

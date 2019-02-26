@@ -41,23 +41,33 @@ class Time(IndependentVariable):
         return t
 
 
-class Space(IndependentVariable):
-    """A node in the expression tree representing time
+class SpatialVariable(IndependentVariable):
+    """A node in the expression tree representing a spatial variable
 
     Parameters
     ----------
     name : str
-        name of the node
+        name of the node ("x", "y", "z" or "r")
     domain : iterable of str
         list of domains that this variable is valid over
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, domain):
-        if domain is []:
+    def __init__(self, name, domain):
+        if name not in ["x", "y", "z", "r"]:
+            raise ValueError(
+                "name must be 'x', 'y', 'z' or 'r' but is '{}'".format(name)
+            )
+        if domain == []:
             raise ValueError("domain must be provided")
-        name = "space ({})".format(domain)
+        if name == "r" and domain not in [["negative particle"], ["positive particle"]]:
+            raise pybamm.DomainError("domain must be particle if name is 'r'")
+        elif name in ["x", "y", "z"] and any(["particle" in dom for dom in domain]):
+            raise pybamm.DomainError(
+                "domain cannot be particle if name is '{}'".format(name)
+            )
+
         super().__init__(name, domain=domain)
 
 
