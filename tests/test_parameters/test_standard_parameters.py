@@ -33,9 +33,8 @@ class TestStandardParameters(unittest.TestCase):
 
     def test_functions(self):
         # create current functions
-        t = pybamm.t
-        current = pybamm.standard_parameters.dimensional_current(t)
-        dimensionless_current = pybamm.standard_parameters.dimensionless_current(t)
+        current = pybamm.standard_parameters.dimensional_current_with_time
+        dimensionless_current = pybamm.standard_parameters.current_with_time
 
         # process
         parameter_values = pybamm.ParameterValues(

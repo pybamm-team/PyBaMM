@@ -43,10 +43,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         :class:`pybamm.Vector`
             Contains the discretised spatial variable
         """
-
         # for finite volume we use the cell centres
-        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        return pybamm.Vector(symbol_mesh.nodes)
+        if symbol.name in ["x", "r"]:
+            symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+            return pybamm.Vector(symbol_mesh.nodes)
+        else:
+            raise NotImplementedError("3D meshes not yet implemented")
 
     def broadcast(self, symbol, domain):
         """
@@ -261,7 +263,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         y_slice_stop = discretised_symbol.y_slice.stop
         last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
         penultimate_node = pybamm.StateVector(slice(y_slice_stop - 2, y_slice_stop - 1))
-        surface_value = (last_node + (last_node - penultimate_node) / 2)
+        surface_value = last_node + (last_node - penultimate_node) / 2
         return surface_value
 
     #######################################################

@@ -40,8 +40,7 @@ class LOQS(pybamm.BaseModel):
         epsp = pybamm.Variable("epsp", domain=[])
 
         # Current function
-        t = pybamm.t
-        icell = pybamm.standard_parameters_lead_acid.dimensionless_current(t)
+        icell = pybamm.standard_parameters_lead_acid.current_with_time
         # Parameters and functions
         ln = pybamm.standard_parameters.ln
         ls = pybamm.standard_parameters.ls

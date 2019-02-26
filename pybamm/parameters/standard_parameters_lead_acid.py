@@ -34,6 +34,9 @@ n_electrodes_parallel = pybamm.Parameter("number of electrodes in parallel")
 ibar = Ibar / (n_electrodes_parallel * A_cs)  # Specified scale for the current [A.m-2]
 Q = 17  # Capacity [Ah]
 Crate = Ibar / Q  # C-rate [-]
+current_with_time = pybamm.FunctionParameter("current function", pybamm.t)
+dimensional_current_with_time = ibar * current_with_time
+
 
 # Microstructure
 An = pybamm.Parameter(
@@ -109,18 +112,6 @@ velocity_scale = ibar / (cmax * F)  # Reaction velocity scale
 
 # --------------------------------------------------------------------------------------
 """Functions"""
-
-
-def dimensional_current(t):
-    """Returns the dimensional current as a function of time """
-    t = pybamm.t
-    return ibar * pybamm.FunctionParameter("current function", t)
-
-
-def dimensionless_current(t):
-    """Returns the dimensionless current as a function of time """
-    return pybamm.FunctionParameter("current function", t)
-
 
 rho_dim = pybamm.Parameter("epsn_max")
 mu_dim = pybamm.Parameter("epsn_max")

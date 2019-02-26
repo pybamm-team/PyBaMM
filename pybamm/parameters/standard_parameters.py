@@ -117,26 +117,13 @@ voltage_low_cut = pybamm.Parameter("voltage_low_cut")  # Lower voltage cut-off
 voltage_high_cut = pybamm.Parameter("voltage_high_cut")  # Upper voltage cut-off
 I_typ = pybamm.Parameter("I_typ")  # Typical current density
 Phi_typ = pybamm.Parameter("Phi_typ")  # Typical voltage drop
+current_with_time = pybamm.FunctionParameter("current function", pybamm.t)
+dimensional_current_with_time = I_typ * current_with_time
 
 # Initial Conditions
 ce0_dimensional = pybamm.Parameter("ce0")  # Initial li ion concentration in electrolyte
 cn0_dimensional = pybamm.Parameter("cn0")  # Initial li concentration in neg electrode
 cp0_dimensional = pybamm.Parameter("cp0")  # Initial li concentration in pos electrode
-
-# --------------------------------------------------------------------------------------
-"""Functions"""
-
-
-def dimensional_current(t):
-    """Returns the dimensional current as a function of time """
-    t = pybamm.t
-    return I_typ * pybamm.FunctionParameter("current function", t)
-
-
-def dimensionless_current(t):
-    """Returns the dimensionless current as a function of time """
-    return pybamm.FunctionParameter("current function", t)
-
 
 # --------------------------------------------------------------------------------------
 """Dimensionless Parameters"""
