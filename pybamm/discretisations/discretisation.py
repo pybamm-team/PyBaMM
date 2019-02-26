@@ -167,6 +167,7 @@ class Discretisation(object):
 
             if eqn.evaluates_to_number():
                 if eqn_key.domain == []:
+                    # NOTE: does this just make a scalar? why pass this to NpBrd?
                     eqn = pybamm.NumpyBroadcast(eqn, eqn_key.domain, {})
                 else:
                     eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(

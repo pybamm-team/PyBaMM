@@ -60,9 +60,14 @@ class DFN(pybamm.BaseModel):
         U_p = pybamm.standard_parameters.U_p
 
         "Interface Conditions"
-        # TODO: deal with combining different domains of particle and electrode
-        G_n = pybamm.interface.butler_volmer(m_n, U_n, c_en, phi_n - phi_en, c_k=c_n)
-        G_p = pybamm.interface.butler_volmer(m_p, U_p, c_ep, phi_p - phi_ep, c_k=c_p)
+        cn_surf = pybamm.SurfaceValue(c_n)
+        cp_surf = pybamm.SurfaceValue(c_p)
+        G_n = pybamm.interface.butler_volmer(
+            m_n, U_n, c_en, phi_n - phi_en, ck_surf=cn_surf
+        )
+        G_p = pybamm.interface.butler_volmer(
+            m_p, U_p, c_ep, phi_p - phi_ep, ck_surf=cp_surf
+        )
         G = pybamm.Concatenation(G_n, pybamm.Scalar(0, domain=["separator"]), G_p)
 
         "Model Equations"

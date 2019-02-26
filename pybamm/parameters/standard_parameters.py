@@ -239,3 +239,9 @@ def U_p(c):
     # Set constant until functions implemented correctly
     out = 4.1212
     return out / Phi_typ
+
+
+def sigma_e(c):
+    "Dimensionless electrolyte conductivity"
+
+    return 1

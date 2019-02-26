@@ -49,7 +49,7 @@ def homogeneous_reaction(domain):
     return exchange_current
 
 
-def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
+def butler_volmer(iota, U_eq, c_e, Delta_phi, ck_surf=None, domain=None):
     """
     Butler-Volmer reactions.
 
@@ -69,8 +69,8 @@ def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
         The electrolyte concentration
     Delta_phi : :class:`pybamm.Symbol`
         The difference between the electrode potential and the electrolyte potential.
-    c_k: :class: `pybamm.Variable`
-        The concentration in the negative and positive particles.
+    ck_surf: :class: `pybamm.Variable`
+        The concentration of lithium on the surface of a particle.
     domain : iterable of strings
         The domain in which to calculate the interfacial current density. Default is
         None, in which case the domain is calculated based on c and phi or defaults to
@@ -104,25 +104,25 @@ def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
     # Get the current densities based on domain
     if domain == ["negative electrode"]:
         j0n = exchange_current_density(
-            iota, c_e, c_k=c_k, domain=["negative electrode"]
+            iota, c_e, ck_surf=ck_surf, domain=["negative electrode"]
         )
-        eta_n = Delta_phi - U_eq
+        eta_n = Delta_phi - U_eq(ck_surf)
         return j0n * eta_n  # Function(etan, np.sinh)
     elif domain == ["positive electrode"]:
         j0p = exchange_current_density(
-            iota, c_e, c_k=c_k, domain=["positive electrode"]
+            iota, c_e, ck_surf=ck_surf, domain=["positive electrode"]
         )
-        eta_p = Delta_phi - U_eq
+        eta_p = Delta_phi - U_eq(ck_surf)
         return j0p * eta_p  # Function(etap, np.sinh)
     # To get current density across the whole domain, unpack and call this function
     # again in the subdomains, then concatenate
     elif domain == ["negative electrode", "separator", "positive electrode"]:
 
         # Unpack c
-        if c_k is None:
+        if ck_surf is None:
             variables = [c_e, Delta_phi, U_eq]
         else:
-            variables = [c_e, Delta_phi, U_eq, c_k]
+            variables = [c_e, Delta_phi, U_eq, ck_surf]
 
         if all([isinstance(var, pybamm.Concatenation) for var in variables]):
             c_en, c_es, c_ep = c_e.orphans
@@ -131,20 +131,20 @@ def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
             iota_n, iota_s, iota_p = iota.orphans
         else:
             raise ValueError(
-                "c_e, Delta_phi, U_eq, (and c_k)\
+                "c_e, Delta_phi, U_eq, (and ck_surf)\
                 must both be Concatenations, not '{}' and '{}', '{}".format(
                     type(c_e), type(Delta_phi), type(U_eq)
                 )
             )
         # Negative electrode
         j_n = butler_volmer(
-            iota, U_n, c_en, Delta_phi_n, c_k=c_k, domain=["negative electrode"]
+            iota, U_n, c_en, Delta_phi_n, ck_surf=ck_surf, domain=["negative electrode"]
         )
         # Separator
         j_s = pybamm.Scalar(0, domain=["separator"])
         # Positive electrode
         j_p = butler_volmer(
-            iota, U_p, c_e, Delta_phi, c_k=c_k, domain=["negative electrode"]
+            iota, U_p, c_e, Delta_phi, ck_surf=ck_surf, domain=["negative electrode"]
         )
         # Concatenate
         return pybamm.Concatenation(j_n, j_s, j_p)
@@ -152,7 +152,7 @@ def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
         raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
 
-def exchange_current_density(iota, c_e, c_k=None, domain=None):
+def exchange_current_density(iota, c_e, ck_surf=None, domain=None):
     """The exchange current-density as a function of concentration
 
     Parameters
@@ -162,7 +162,8 @@ def exchange_current_density(iota, c_e, c_k=None, domain=None):
         current density)
     c_e : :class:`pybamm.Variable`
         The electrolyte concentration
-    c_k : :class:`pybamm.Variable`
+    ck_surf : :class:`pybamm.Variable`
+        The concentration of lithium on the surface of a particle
     domain : string
         Which domain to calculate the exchange current density in ("negative electrode"
         or "positive electrode"). Default is None, in which case the domain is\
@@ -184,16 +185,20 @@ def exchange_current_density(iota, c_e, c_k=None, domain=None):
     if domain[0] not in pybamm.KNOWN_DOMAINS:
         raise pybamm.DomainError("{} is not in known domains".format(domain))
 
-    if c_k is not None:
-        # check that c_k and c_e have are both negative or positive
-        if (c_k.domain == ["negative particle"]) and (domain != ["negative electrode"]):
+    if ck_surf is not None:
+        # check that ck_surf and c_e have are both negative or positive
+        if (ck_surf.domain == ["negative particle"]) and (
+            domain != ["negative electrode"]
+        ):
             raise ValueError(
-                "c_k and c_e must both be on respective 'negative' or 'positive'\
+                "ck_surf and c_e must both be on respective 'negative' or 'positive'\
                         domains"
             )
-        if (c_k.domain == ["positive particle"]) and (domain != ["positive electrode"]):
+        if (ck_surf.domain == ["positive particle"]) and (
+            domain != ["positive electrode"]
+        ):
             raise ValueError(
-                "c_k and c_e must both be on respective 'negative' or 'positive'\
+                "ck_surf and c_e must both be on respective 'negative' or 'positive'\
                         domains"
             )
 
@@ -206,9 +211,9 @@ def exchange_current_density(iota, c_e, c_k=None, domain=None):
             raise pybamm.DomainError("""concentration and domain do not match""")
 
     # I actually don't like the set of if statements here.
-    if c_k is not None:
+    if ck_surf is not None:
         # only activated by li-ion
-        return iota * c_e ** (1 / 2) * c_k ** (1 / 2) * (1 - c_k) ** (1 / 2)
+        return iota * c_e ** (1 / 2) * ck_surf ** (1 / 2) * (1 - ck_surf) ** (1 / 2)
     elif domain == ["negative electrode"]:
         # only activated in neg of lead-acid
         return iota * c_e

@@ -75,8 +75,7 @@ class TestHomogeneousReaction(unittest.TestCase):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-        defaults = shared.TestDefaults1DMacro()
-        disc = pybamm.Discretisation(defaults.mesh, defaults.spatial_methods)
+        disc = get_discretisation_for_testing()
 
         G_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
         G_p = pybamm.interface.homogeneous_reaction(["positive electrode"])

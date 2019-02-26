@@ -50,6 +50,3 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         "Additional Model Variables"
         additional_variables = {}
         self._variables.update(additional_variables)
-
-        # Overwrite default solver for faster solution
-        self.default_solver = pybamm.ScipySolver(method="BDF")

@@ -56,7 +56,12 @@ class BinaryOperator(pybamm.Symbol):
         elif rdomain == []:
             return ldomain
         else:
-            raise pybamm.DomainError("""children must have same (or empty) domains""")
+            raise pybamm.DomainError(
+                """children must have same (or empty) domains.
+                {} and {} are not the same.""".format(
+                    ldomain, rdomain
+                )
+            )
 
 
 class Power(BinaryOperator):
