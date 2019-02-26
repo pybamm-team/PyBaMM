@@ -38,7 +38,7 @@ class Geometry1DMacro(Geometry):
     def __init__(self, custom_geometry={}):
         super().__init__()
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        x = pybamm.IndependentVariable("x", whole_cell)
+        x = pybamm.SpatialVariable("x", whole_cell)
         ln = pybamm.standard_parameters.ln
         ls = pybamm.standard_parameters.ls
 
@@ -54,13 +54,14 @@ class Geometry1DMicro(Geometry):
     def __init__(self, custom_geometry={}):
         super().__init__()
 
-        r = pybamm.IndependentVariable("r", ["negative particle", "positive particle"])
+        rn = pybamm.SpatialVariable("r", ["negative particle"])
+        rp = pybamm.SpatialVariable("r", ["positive particle"])
 
         self["negative particle"] = {
-            r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+            rn: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
         }
         self["positive particle"] = {
-            r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+            rp: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
         }
         # update with custom geometry if non empty
         self.update(custom_geometry)
@@ -81,8 +82,8 @@ class Geometry3DMacro(Geometry1DMacro):
         super().__init__()
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        y = pybamm.IndependentVariable("y", whole_cell)
-        z = pybamm.IndependentVariable("z", whole_cell)
+        y = pybamm.SpatialVariable("y", whole_cell)
+        z = pybamm.SpatialVariable("z", whole_cell)
 
         y_lim = {"min": pybamm.Scalar(0), "max": pybamm.standard_parameters.ly}
 
