@@ -16,7 +16,7 @@ T
 Macroscale Geometry
 -------------------
 
-Ln, Ls, Lp
+L_n, Ls, Lp
     The widths of the negative electrode, separator and positive electrode, respectively
 Lx
     The width of a single cell
@@ -44,7 +44,7 @@ sigma_n, sigma_p
     Electrical conductivities of the negative and positive electrode
 cn_max, cp_max
     Maximum lithium concentration in the negative and positive electrode
-Dn_typ, Dp_typ
+D_n_typ, Dp_typ
     Typical diffusivitites in the solid electrode material
 
 Electrochemical Reactions
@@ -75,139 +75,103 @@ import pybamm
 # --------------------------------------------------------------------------------------
 """Dimensional Parameters"""
 
-# Physical Constants
-R = pybamm.Parameter("R")
-F = pybamm.Parameter("F")
-T = pybamm.Parameter("T_ref")
+# Physical constants
+R = pybamm.Parameter("Ideal gas constant")
+F = pybamm.Parameter("Faraday's constant")
+T = pybamm.Parameter("Reference temperature")
 
-# Macroscale Geometry
-Ln = pybamm.Parameter("Ln")
-Ls = pybamm.Parameter("Ls")
-Lp = pybamm.Parameter("Lp")
-Lx = Ln + Ls + Lp
-
-# 3D Geometry
-Ly = pybamm.Parameter("Ly")
-Lz = pybamm.Parameter("Lz")
-
-# Microscale Geometry
-R_n = pybamm.Parameter("R_n")
-R_p = pybamm.Parameter("R_p")
-a_n = pybamm.Parameter("a_n")
-a_p = pybamm.Parameter("a_p")
-
-# Electrolyte Properties
-ce_typ = pybamm.Parameter("ce_typ")  # Typical lithium ion concentration in electrolyte
-De_typ = pybamm.Parameter("De_typ")  # Typical electrolyte diffusivity
-
-# Electrode Properties
-sigma_n = pybamm.Parameter("sigma_n")  # Conductivity in negative electrode
-sigma_p = pybamm.Parameter("sigma_p")  # Conductivity in positive electrode
-cn_max = pybamm.Parameter("cn_max")  # Max concentration in negative electrode
-cp_max = pybamm.Parameter("cp_max")  # Max concentration in positive electrode
-Dn_typ = pybamm.Parameter("Dn_typ")  # Typical negative particle diffusivity
-Dp_typ = pybamm.Parameter("Dp_typ")  # Typical positive particle diffusivity
-
-# Electrochemical Reactions
-m_n_dim = pybamm.Parameter("m_n_dim")  # Reaction rate in negative electrode
-m_p_dim = pybamm.Parameter("m_p_dim")  # Reaction rate in positive electrode
+# Macroscale geometry
+L_n = pybamm.Parameter("Negative electrode width")
+L_s = pybamm.Parameter("Separator width")
+L_p = pybamm.Parameter("Positive electrode width")
+L_x = L_n + L_s + L_p  # Total cell width
+L_y = pybamm.Parameter("Electrode depth")
+L_z = pybamm.Parameter("Electrode height")
+A_cc = L_y * L_z  # Area of current collector
 
 # Electrical
-voltage_low_cut = pybamm.Parameter("voltage_low_cut")  # Lower voltage cut-off
-voltage_high_cut = pybamm.Parameter("voltage_high_cut")  # Upper voltage cut-off
-I_typ = pybamm.Parameter("I_typ")  # Typical current density
-Phi_typ = pybamm.Parameter("Phi_typ")  # Typical voltage drop
+I_typ = pybamm.Parameter("Typical current density")
+n_electrodes_parallel = pybamm.Parameter(
+    "Number of electrodes connected in parallel to make a cell"
+)
+i_typ = I_typ / (n_electrodes_parallel * A_cc)
+Q = pybamm.Parameter("Cell capacity")
+Crate = I_typ / Q
+voltage_low_cut_dimensional = pybamm.Parameter("Lower voltage cut-off")
+voltage_high_cut_dimensional = pybamm.Parameter("Upper voltage cut-off")
 current_with_time = pybamm.FunctionParameter("current function", pybamm.t)
 dimensional_current_with_time = I_typ * current_with_time
 
-# Initial Conditions
-ce0_dimensional = pybamm.Parameter("ce0")  # Initial li ion concentration in electrolyte
-cn0_dimensional = pybamm.Parameter("cn0")  # Initial li concentration in neg electrode
-cp0_dimensional = pybamm.Parameter("cp0")  # Initial li concentration in pos electrode
+# Electrolyte properties
+c_e_typ = pybamm.Parameter("Typical electrolyte concentration")
+V_w = pybamm.Parameter("Partial molar volume of water")
+V_plus = pybamm.Parameter("Partial molar volume of cations")
+V_minus = pybamm.Parameter("Partial molar volume of anions")
+V_e = V_minus + V_plus  # Partial molar volume of electrolyte [m3.mol-1]
+nu_plus = pybamm.Parameter("Cation stoichiometry")
+nu_minus = pybamm.Parameter("Anion stoichiometry")
+nu = nu_plus + nu_minus
+t_plus = pybamm.Parameter("Cation transference number")
 
-# --------------------------------------------------------------------------------------
-"""Dimensionless Parameters"""
+# Electrode properties
+sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity")
+sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity")
+a_n = pybamm.Parameter("Negative particle surface area density")
+a_p = pybamm.Parameter("Positive particle surface area density")
+b = pybamm.Parameter("Bruggeman coefficient")
 
-# Macroscale Geometry
-ln = Ln / Lx
-ls = Ls / Lx
-lp = Lp / Lx
-ly = Ly / Lz
-lz = Lz / Lz
-
-# Microscale Geometry
-epsilon_n = pybamm.Parameter(
-    "epsilon_n"
-)  # Electrolyte volume fraction in neg electrode
-epsilon_s = pybamm.Parameter("epsilon_s")  # Electrolyte volume fraction in separator
-epsilon_p = pybamm.Parameter(
-    "epsilon_p"
-)  # Electrolyte volume fraction in pos electrode
-b = pybamm.Parameter("b")  # Bruggeman coefficient
-beta_n = a_n * R_n
-beta_p = a_p * R_p
-
-# Discharge timescale
-tau_d = (F * cn_max * Lx) / I_typ
-
-# Particle diffusion timescales
-tau_n = R_n ** 2 / Dn_typ
-tau_p = R_n ** 2 / Dp_typ
-
-# Reaction timescales
-tau_r_n = F / (m_n_dim * a_n * ce_typ ** 0.5)
-tau_r_p = F / (m_p_dim * a_p * ce_typ ** 0.5)
-
-# Scaled maximum concentration in positive particle
-# Note: C_hat_n == 1, so not needed
-C_hat_p = cp_max / cn_max
-
-# Ratio of discharge and solid diffusion timescales
-gamma_n = tau_d / tau_n
-gamma_p = tau_d / tau_p
-
-# Reaction properties
-m_n = tau_d / tau_r_n
-m_p = tau_d / tau_r_n
-
-# Electrolyte Properties
-t_plus = pybamm.Parameter("t_plus")  # cation transference number
-delta = (Lx ** 2 / De_typ) * (I_typ / (F * cn_max * Lx))
-nu = cn_max / ce_typ
-
-# Ratio of typical to thermal voltage
-Lambda = Phi_typ / (R * T / F)
-
-# Initial conditions
-ce0 = ce0_dimensional / ce_typ
-cn0 = cn0_dimensional / cn_max
-cp0 = cp0_dimensional / cp_max
+# Electrochemical reactions
+m_n_dimensional = pybamm.Parameter(
+    "Negative electrode reference exchange-current density"
+)
+m_p_dimensional = pybamm.Parameter(
+    "Positive electrode reference exchange-current density"
+)
+s_plus_n = pybamm.Parameter("Negative electrode cation signed stoichiometry")
+s_plus_p = pybamm.Parameter("Positive electrode cation signed stoichiometry")
+ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
+ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
+C_dl = pybamm.Parameter("Double-layer capacity")
+U_n_ref = pybamm.Parameter("Reference OCP in the negative electrode")
+U_p_ref = pybamm.Parameter("Reference OCP in the positive electrode")
 
 # -----------------------------------------------------------------------------
 """Functions"""
 
 
-def D_n_dim(c):
-    "Dimensional diffusivity in negative particle"
-    return Dn_typ
+def D_e_dimensional(c_e):
+    "Dimensional diffusivity in electrolyte"
+    return pybamm.FunctionParameter("Electrolyte diffusivity", c_e)
 
 
-def D_n(c):
-    "Dimensionless negative particle diffusivity"
-    return D_n_dim(c) / Dn_typ
+def D_e(c_e):
+    "Dimensionless electrolyte diffusivity"
+    c_e_dimensional = c_e * c_e_typ
+    return D_e_dimensional(c_e_dimensional) / D_e_dimensional(c_e_typ)
 
 
-def D_p_dim(c):
-    "Dimensional diffusivity in positive particle"
-    return Dp_typ
+def kappa_e_dimensional(c_e):
+    "Dimensional electrolyte conductivity"
+    return pybamm.FunctionParameter("Electrolyte conductivity", c_e)
 
 
-def D_p(c):
-    "Dimensionless positive particle diffusivity"
-    return D_p_dim(c) / Dp_typ
+def kappa_e(c_e):
+    "Dimensionless electrolyte conductivity"
+    c_e_dimensional = c_e * c_e_typ
+    return kappa_e_dimensional(c_e_dimensional) / kappa_e_dimensional(c_e_typ)
 
 
-def U_n(c):
+def chi_dimensional(c_e):
+    return pybamm.FunctionParameter("Darken thermodynamic factor", c_e)
+
+
+def chi(c_e):
+    c_e_dimensional = c_e * c_e_typ
+    alpha = (nu * V_w - V_e) * c_e_typ
+    return chi_dimensional(c_e_dimensional) * 2 * (1 - t_plus) / (1 - alpha * c_e)
+
+
+def U_n_dimensional(c):
     "Dimensionless open circuit potential in the negative electrode"
     #  out = (0.194 + 1.5 * np.exp(-120.0 * c)
     #       + 0.0351 * np.tanh((c - 0.286) / 0.083)
@@ -220,10 +184,10 @@ def U_n(c):
     #       + 0.0155 * np.tanh((c - 0.105) / 0.029))
     # Set constant until functions implemented correctly
     out = 0.2230
-    return out / Phi_typ
+    return out
 
 
-def U_p(c):
+def U_p_dimensional(c):
     "Dimensionless open circuit potential in the positive electrode"
     # stretch = 1.062
     # sto = stretch * c
@@ -235,4 +199,50 @@ def U_p(c):
     #       - 0.02167 * np.tanh((sto - 0.525) / 0.006))
     # Set constant until functions implemented correctly
     out = 4.1212
-    return out / Phi_typ
+    return out
+
+
+# --------------------------------------------------------------------------------------
+"""Scales"""
+concentration_scale = c_e_typ
+length_scale = L_x
+potential_scale = R * T / F
+current_scale = i_typ
+interfacial_current_scale_n = i_typ / (a_n * L_x)
+interfacial_current_scale_p = i_typ / (a_p * L_x)
+
+# Timescales
+# Reaction timescales
+tau_rxn_n = 1 / (m_n_dimensional * a_n * c_e_typ ** 0.5)
+tau_rxn_p = 1 / (m_p_dimensional * a_p * c_e_typ ** 0.5)
+# Diffusion timescale
+tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ)
+
+# --------------------------------------------------------------------------------------
+"""Dimensionless Parameters"""
+
+# Macroscale Geometry
+l_n = L_n / length_scale
+l_s = L_s / length_scale
+l_p = L_p / length_scale
+l_y = L_y / L_z
+l_z = L_z / L_z
+
+# Electrochemical Reactions
+s_n = -(s_plus_n + ne_n * t_plus) / ne_n  # Dimensionless rection rate (neg)
+s_p = -(s_plus_p + ne_p * t_plus) / ne_p  # Dimensionless rection rate (pos)
+m_n = m_n_dimensional / interfacial_current_scale_n
+m_n = m_p_dimensional / interfacial_current_scale_p
+# m_n = time_scale / tau_rxn_n
+# m_p = time_scale / tau_rxn_n
+s = pybamm.PiecewiseConstant(s_n, 0, s_p)
+
+# Electrode Properties
+sigma_n = sigma_n_dimensional * potential_scale / current_scale
+sigma_p = sigma_p_dimensional * potential_scale / current_scale
+
+# Electrical
+voltage_low_cut = (voltage_low_cut_dimensional - (U_p_ref - U_n_ref)) / potential_scale
+voltage_high_cut = (
+    voltage_high_cut_dimensional - (U_p_ref - U_n_ref)
+) / potential_scale
