@@ -6,19 +6,14 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-def homogeneous_reaction():
+def homogeneous_reaction(current):
     """
     Homogeneous reaction at the electrode-electrolyte interface
     """
-
-    current_neg = (
-        pybamm.Scalar(1, domain=["negative electrode"]) / pybamm.standard_parameters.ln
-    )
-    current_sep = pybamm.Scalar(0, domain=["separator"])
-    current_pos = (
-        -pybamm.Scalar(1, domain=["positive electrode"]) / pybamm.standard_parameters.lp
-    )
-    return pybamm.Concatenation(current_neg, current_sep, current_pos)
+    # hack to make the concatenation work. Concatenation needs some work
+    current_neg = current / pybamm.standard_parameters.ln
+    current_pos = -current / pybamm.standard_parameters.lp
+    return pybamm.PiecewiseConstant(current_neg, 0, current_pos)
 
 
 def butler_volmer_lead_acid(c, phi, domain=None):

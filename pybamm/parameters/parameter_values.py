@@ -161,6 +161,10 @@ class ParameterValues(dict):
             new_child = self.process_symbol(symbol.children[0])
             return pybamm.Broadcast(new_child, symbol.domain)
 
+        elif isinstance(symbol, pybamm.Function):
+            new_child = self.process_symbol(symbol.children[0])
+            return pybamm.Function(symbol.func, new_child)
+
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
             return symbol.__class__(new_child)
