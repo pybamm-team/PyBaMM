@@ -64,15 +64,15 @@ class SPMe(pybamm.BaseModel):
         epsilon_p = pybamm.standard_parameters.epsilon_p
         b = pybamm.standard_parameters.b
         sigma_e = pybamm.standard_parameters.sigma_e
-        current = pybamm.standard_parameters.current
         t_plus = pybamm.standard_parameters.t_plus
         sigma_n = pybamm.standard_parameters.sigma_n
         sigma_p = pybamm.standard_parameters.sigma_p
+        current = pybamm.standard_parameters.current_with_time
 
         "Interface Conditions"
-        G_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
-        G_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
-        G = pybamm.interface.homogeneous_reaction(whole_cell)
+        G_n = pybamm.interface.homogeneous_reaction(current, ["negative electrode"])
+        G_p = pybamm.interface.homogeneous_reaction(current, ["positive electrode"])
+        G = pybamm.interface.homogeneous_reaction(current, whole_cell)
 
         "Model Equations"
         self.update(

@@ -44,10 +44,11 @@ class SPM(pybamm.BaseModel):
         C_hat_p = pybamm.standard_parameters.C_hat_p
         ln = pybamm.standard_parameters.ln
         lp = pybamm.standard_parameters.lp
+        current = pybamm.standard_parameters.current_with_time
 
         "Interface Conditions"
-        G_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
-        G_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
+        G_n = pybamm.interface.homogeneous_reaction(current, ["negative electrode"])
+        G_p = pybamm.interface.homogeneous_reaction(current, ["positive electrode"])
 
         "Model Equations"
         self.update(

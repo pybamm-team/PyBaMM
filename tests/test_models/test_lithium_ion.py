@@ -25,8 +25,8 @@ class TestSPMe(unittest.TestCase):
         modeltest.test_all()
 
 
-class TestDFN(unittest.TestCase):
-    def test_basic_processing(self):
-        model = pybamm.lithium_ion.DFN()
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+# class TestDFN(unittest.TestCase):
+#     def test_basic_processing(self):
+#         model = pybamm.lithium_ion.DFN()
+#         modeltest = tests.StandardModelTest(model)
+#         modeltest.test_all()
