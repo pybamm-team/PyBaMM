@@ -38,7 +38,7 @@ class TestDiscretise(unittest.TestCase):
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
