@@ -67,7 +67,7 @@ class SPMe(pybamm.BaseModel):
         t_plus = pybamm.standard_parameters.t_plus
         sigma_n = pybamm.standard_parameters.sigma_n
         sigma_p = pybamm.standard_parameters.sigma_p
-        current = pybamm.standard_parameters.current_with_time
+        current = pybamm.standard_parameters.current
 
         "Interface Conditions"
         G_n = pybamm.interface.homogeneous_reaction(current, ["negative electrode"])

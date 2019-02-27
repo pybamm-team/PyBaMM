@@ -263,7 +263,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         y_slice_stop = discretised_symbol.y_slice.stop
         last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
         penultimate_node = pybamm.StateVector(slice(y_slice_stop - 2, y_slice_stop - 1))
-        surface_value = (last_node + (last_node - penultimate_node) / 2)
+        surface_value = last_node + (last_node - penultimate_node) / 2
         return surface_value
 
     #######################################################
