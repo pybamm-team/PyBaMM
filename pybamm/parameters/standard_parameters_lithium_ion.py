@@ -87,8 +87,8 @@ c_p_max = pybamm.Parameter("Maximum concentration in positive electrode")
 
 # Initial conditions
 c_e_init_dimensional = pybamm.Parameter("Initial concentration in electrolyte")
-c_n_init_dimensional = pybamm.Parameter("Initial concentration in neg electrode")
-c_p_init_dimensional = pybamm.Parameter("Initial concentration in pos electrode")
+c_n_init_dimensional = pybamm.Parameter("Initial concentration in negative electrode")
+c_p_init_dimensional = pybamm.Parameter("Initial concentration in positive electrode")
 
 # --------------------------------------------------------------------------------------
 """Functions"""
@@ -96,24 +96,24 @@ c_p_init_dimensional = pybamm.Parameter("Initial concentration in pos electrode"
 
 def D_n_dimensional(c_n):
     "Dimensional diffusivity in negative particle"
-    return pybamm.FunctionParameter("Negative electrode diffusivity", c_n)
+    return 1  # pybamm.FunctionParameter("Negative electrode diffusivity", c_n)
 
 
 def D_n(c_n):
     "Dimensionless negative particle diffusivity"
     c_n_dimensional = c_n * c_n_max
-    return D_n_dimensional(c_n_dimensional) / D_n_dimensional(c_n_max)
+    return 1  # D_n_dimensional(c_n_dimensional) / D_n_dimensional(c_n_max)
 
 
 def D_p_dimensional(c_p):
     "Dimensional diffusivity in positive particle"
-    return pybamm.FunctionParameter("Positive electrode diffusivity", c_p)
+    return 1  # pybamm.FunctionParameter("Positive electrode diffusivity", c_p)
 
 
 def D_p(c_p):
     "Dimensionless positive particle diffusivity"
     c_p_dimensional = c_p * c_p_max
-    return D_p_dimensional(c_p_dimensional) / D_p_dimensional(c_p_max)
+    return 1  # D_p_dimensional(c_p_dimensional) / D_p_dimensional(c_p_max)
 
 
 def U_n(c_n):

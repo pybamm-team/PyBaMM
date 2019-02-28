@@ -4,27 +4,14 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import numpy as np
 import os
 
 
 class LOQS(pybamm.BaseModel):
     """Leading-Order Quasi-Static model for lead-acid.
 
-    Attributes
-    ----------
-
-    rhs: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the rhs
-    initial_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions
-    boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions
-    variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables
+    **Extends**: :class:`pybamm.BaseModel`
 
     """
 
@@ -33,10 +20,10 @@ class LOQS(pybamm.BaseModel):
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Variables
-        c_e = pybamm.Variable("c", domain=[])
-        eps_n = pybamm.Variable("eps_n", domain=[])
-        eps_s = pybamm.Variable("eps_s", domain=[])
-        eps_p = pybamm.Variable("eps_p", domain=[])
+        c_e = pybamm.Variable("Concentration", domain=[])
+        eps_n = pybamm.Variable("Negative electrode porosity", domain=[])
+        eps_s = pybamm.Variable("Separator porosity", domain=[])
+        eps_p = pybamm.Variable("Positive electrode porosity", domain=[])
 
         # Parameters
         sp = pybamm.standard_parameters
@@ -57,12 +44,7 @@ class LOQS(pybamm.BaseModel):
                 - c_e * (sp.l_n * deps_n_dt + sp.l_p * deps_p_dt)
             )
         )
-        self.rhs = {
-            c_e: dc_e_dt,
-            eps_n: deps_n_dt,
-            eps_s: pybamm.Scalar(0),
-            eps_p: deps_p_dt,
-        }
+        self.rhs = {c_e: dc_e_dt, eps_n: deps_n_dt, eps_s: 0, eps_p: deps_p_dt}
         # Initial conditions
         self.initial_conditions = {
             c_e: spla.c_e_init,
@@ -76,8 +58,8 @@ class LOQS(pybamm.BaseModel):
         # Variables
         j0_n = pybamm.interface.exchange_current_density(c_e, ["negative electrode"])
         j0_p = pybamm.interface.exchange_current_density(c_e, ["positive electrode"])
-        Phi = -sp.U_n_ref - j_n / (2 * j0_n)
-        V = Phi + sp.U_p_ref - j_p / (2 * j0_p)
+        Phi = -sp.U_n_ref - pybamm.Function(np.arcsinh, j_n / (2 * j0_n * sp.l_n))
+        V = Phi + sp.U_p_ref - pybamm.Function(np.arcsinh, j_p / (2 * j0_p * sp.l_p))
         # Phis_n = pybamm.Scalar(0)
         # Phis_p = V
         # Concatenate variables

@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import numpy as np
 
 
 def homogeneous_reaction(current):
@@ -61,11 +62,11 @@ def butler_volmer_lead_acid(c, phi, domain=None):
     if domain == ["negative electrode"]:
         j0_n = exchange_current_density(c, ["negative electrode"])
         eta_n = phi - pybamm.standard_parameters_lead_acid.U_n(c)
-        return j0_n * Function(eta_n, np.sinh)
+        return j0_n * pybamm.Function(np.sinh, eta_n)
     elif domain == ["positive electrode"]:
         j0_p = exchange_current_density(c, ["positive electrode"])
         eta_p = phi - pybamm.standard_parameters_lead_acid.U_p(c)
-        return j0_p * Function(eta_p, np.sinh)
+        return j0_p * pybamm.Function(np.sinh, eta_p)
     # To get current density across the whole domain, unpack and call this function
     # again in the subdomains, then concatenate
     elif domain == ["negative electrode", "separator", "positive electrode"]:
