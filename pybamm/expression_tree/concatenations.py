@@ -107,9 +107,6 @@ class DomainConcatenation(Concatenation):
 
         children = list(children)
 
-        for i, child in enumerate(children):
-            children[i] = self.process_node_for_concatenate(child, mesh)
-
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
 
@@ -133,36 +130,6 @@ class DomainConcatenation(Concatenation):
             slices[dom] = slice(start, end)
             start = end
         return slices
-
-    def process_node_for_concatenate(self, node, mesh):
-        """
-        If the node evaluates to a number, broadcasts it to the appropriate mesh.
-        If the resulting node is constant in time, checks size and replaces it with a
-        single Array node with the correct length vector (according to its domain)
-
-        Parameters
-        ----------
-        node: derived from :class:`Symbol`
-            the sub-expression to process
-
-        """
-        if node.evaluates_to_number():
-            node = pybamm.NumpyBroadcast(node, node.domain, mesh)
-        if node.is_constant():
-            # Check size and simplify if constant
-            value = node.evaluate()
-
-            # correct size of vector should be number of points in the domains
-            subvector_size = sum([mesh[dom].npts for dom in node.domain])
-
-            if value.shape[0] != subvector_size:
-                raise ValueError(
-                    "Error: expression evaluated to a vector of incorrect length"
-                )
-
-            # convert to an Array node(could be vector or matrix)
-            node = pybamm.Array(value, domain=node.domain)
-        return node
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -193,34 +160,3 @@ class DomainConcatenation(Concatenation):
                 else:
                     vector[self._slices[dom]] = child_vector[slices[dom]]
         return vector
-
-
-class PiecewiseConstant(Concatenation):
-    """Piecewise constant concatenation of three symbols, with *explicit* broadcasting.
-    This is useful as a step before passing to DomainConcatenation so that it is
-    explicit that we do want to broadcast.
-
-    Parameters
-    ----------
-    neg_value: :class:`numbers.Number` or :class:`pybamm.Symbol`
-        The value in the negative electrode
-    sep_value: :class:`numbers.Number` or :class:`pybamm.Symbol`
-        The value in the separator
-    pos_value: :class:`numbers.Number` or :class:`pybamm.Symbol`
-        The value in the positive electrode
-
-    """
-
-    def __init__(self, neg_value, sep_value, pos_value):
-        neg_value_with_domain = pybamm.Broadcast(
-            neg_value * pybamm.Scalar(1), ["negative electrode"]
-        )
-        sep_value_with_domain = pybamm.Broadcast(
-            sep_value * pybamm.Scalar(1), ["separator"]
-        )
-        pos_value_with_domain = pybamm.Broadcast(
-            pos_value * pybamm.Scalar(1), ["positive electrode"]
-        )
-        super().__init__(
-            neg_value_with_domain, sep_value_with_domain, pos_value_with_domain
-        )

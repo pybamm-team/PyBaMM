@@ -84,7 +84,7 @@ class TestConcatenations(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a = pybamm.Scalar(2, domain=a_dom)
+        a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
 
         # concatenate them the "wrong" way round to check they get reordered correctly
@@ -96,15 +96,10 @@ class TestConcatenations(unittest.TestCase):
             ),
         )
 
-        # vector child of wrong size will throw
-        b = pybamm.Vector(np.full(mesh[b_dom[0]].npts - 5, 1), domain=b_dom)
-        with self.assertRaises(ValueError):
-            conc = pybamm.DomainConcatenation([b, a], mesh)
-
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
         b_dom = ["negative electrode", "positive electrode"]
-        a = pybamm.Scalar(2, domain=a_dom)
+        a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
         b = pybamm.Vector(
             np.concatenate(
                 [np.full(mesh[b_dom[0]].npts, 1), np.full(mesh[b_dom[1]].npts, 3)]
@@ -142,18 +137,17 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(c.id, c_new.id)
         self.assertEqual(conc.id, pybamm.Concatenation(a_new, b_new, c_new).id)
 
-    def test_piecewise_constant(self):
+    def test_broadcast_and_concatenate(self):
         # create discretisation
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
 
         # Piecewise constant scalars
-        a = pybamm.Scalar(1)
-        b = pybamm.Scalar(2)
-        c = pybamm.Scalar(3)
-        conc = pybamm.PiecewiseConstant(a, b, c)
+        a = pybamm.Broadcast(1, domain=["negative electrode"])
+        b = pybamm.Broadcast(2, domain=["separator"])
+        c = pybamm.Broadcast(3, domain=["positive electrode"])
+        conc = pybamm.Concatenation(a, b, c)
 
-        self.assertIsInstance(conc, pybamm.Concatenation)
         self.assertEqual(
             conc.domain, ["negative electrode", "separator", "positive electrode"]
         )
@@ -173,12 +167,11 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # Piecewise constant functions of time
-        a_t = pybamm.t
-        b_t = 2 * pybamm.t
-        c_t = 3 * pybamm.t
-        conc = pybamm.PiecewiseConstant(a_t, b_t, c_t)
+        a_t = pybamm.Broadcast(pybamm.t, domain=["negative electrode"])
+        b_t = pybamm.Broadcast(2 * pybamm.t, domain=["separator"])
+        c_t = pybamm.Broadcast(3 * pybamm.t, domain=["positive electrode"])
+        conc = pybamm.Concatenation(a_t, b_t, c_t)
 
-        self.assertIsInstance(conc, pybamm.Concatenation)
         self.assertEqual(
             conc.domain, ["negative electrode", "separator", "positive electrode"]
         )
@@ -210,12 +203,11 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # Piecewise constant state vectors
-        a_sv = pybamm.StateVector(slice(0, 1))
-        b_sv = pybamm.StateVector(slice(1, 2))
-        c_sv = pybamm.StateVector(slice(2, 3))
-        conc = pybamm.PiecewiseConstant(a_sv, b_sv, c_sv)
+        a_sv = pybamm.Broadcast(pybamm.StateVector(slice(0, 1)), ["negative electrode"])
+        b_sv = pybamm.Broadcast(pybamm.StateVector(slice(1, 2)), ["separator"])
+        c_sv = pybamm.Broadcast(pybamm.StateVector(slice(2, 3)), ["positive electrode"])
+        conc = pybamm.Concatenation(a_sv, b_sv, c_sv)
 
-        self.assertIsInstance(conc, pybamm.Concatenation)
         self.assertEqual(
             conc.domain, ["negative electrode", "separator", "positive electrode"]
         )
@@ -248,9 +240,8 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # Mixed
-        conc = pybamm.PiecewiseConstant(a, b_t, c_sv)
+        conc = pybamm.Concatenation(a, b_t, c_sv)
 
-        self.assertIsInstance(conc, pybamm.Concatenation)
         self.assertEqual(
             conc.domain, ["negative electrode", "separator", "positive electrode"]
         )

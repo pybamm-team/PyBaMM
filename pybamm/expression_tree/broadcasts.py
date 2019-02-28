@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import numbers
 import numpy as np
 
 
@@ -26,6 +27,10 @@ class Broadcast(pybamm.SpatialOperator):
     """
 
     def __init__(self, child, domain, name=None):
+        # Convert child to Scalar if it is a number
+        if isinstance(child, numbers.Number):
+            child = pybamm.Scalar(child)
+        # Check domain
         if child.domain not in [[], domain]:
             raise pybamm.DomainError(
                 """

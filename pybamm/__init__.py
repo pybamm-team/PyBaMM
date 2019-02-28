@@ -64,7 +64,6 @@ from .expression_tree.concatenations import (
     Concatenation,
     NumpyConcatenation,
     DomainConcatenation,
-    PiecewiseConstant,
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix

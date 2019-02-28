@@ -472,8 +472,8 @@ class TestDiscretise(unittest.TestCase):
 
     def test_concatenation_of_scalars(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        a = pybamm.Scalar(5, domain=["negative electrode"])
-        b = pybamm.Scalar(4, domain=["positive electrode"])
+        a = pybamm.Broadcast(5, ["negative electrode"])
+        b = pybamm.Broadcast(4, ["positive electrode"])
 
         # create discretisation
         disc = get_discretisation_for_testing()

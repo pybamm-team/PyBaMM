@@ -210,6 +210,18 @@ epsp_init = epsp_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
 
 
 # Concatenated symbols
-s = pybamm.PiecewiseConstant(sn, 0, sp)
-beta_surf = pybamm.PiecewiseConstant(beta_surf_n, 0, beta_surf_p)
-eps_init = pybamm.PiecewiseConstant(epsn_init, epss_init, epsp_init)
+s = pybamm.Concatenation(
+    pybamm.Broadcast(sn, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(sp, ["positive electrode"]),
+)
+beta_surf = pybamm.Concatenation(
+    pybamm.Broadcast(beta_surf_n, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(beta_surf_p, ["positive electrode"]),
+)
+eps_init = pybamm.Concatenation(
+    pybamm.Broadcast(epsn_init, ["negative electrode"]),
+    pybamm.Broadcast(epss_init, ["separator"]),
+    pybamm.Broadcast(epsp_init, ["positive electrode"]),
+)

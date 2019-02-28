@@ -21,6 +21,17 @@ class TestBroadcasts(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             pybamm.Broadcast(b, ["separator"])
 
+    def test_broadcast_number(self):
+        broad_a = pybamm.Broadcast(1, ["negative electrode"])
+        self.assertEqual(broad_a.name, "broadcast")
+        self.assertIsInstance(broad_a.children[0], pybamm.Symbol)
+        self.assertEqual(broad_a.children[0].name, str(1))
+        self.assertEqual(broad_a.domain, ["negative electrode"])
+
+        b = pybamm.Symbol("b", domain=["negative electrode"])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.Broadcast(b, ["separator"])
+
     def test_numpy_broadcast(self):
         # create discretisation
         disc = get_discretisation_for_testing()
