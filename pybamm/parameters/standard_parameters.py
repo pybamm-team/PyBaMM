@@ -237,7 +237,6 @@ m_n = m_n_dimensional / interfacial_current_scale_n
 m_p = m_p_dimensional / interfacial_current_scale_p
 # m_n = time_scale / tau_rxn_n
 # m_p = time_scale / tau_rxn_n
-s = pybamm.PiecewiseConstant(s_n, 0, s_p)
 
 # Electrode Properties
 sigma_n = sigma_n_dimensional * potential_scale / current_scale

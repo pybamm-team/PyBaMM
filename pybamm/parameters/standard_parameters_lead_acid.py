@@ -85,7 +85,6 @@ velocity_scale = sp.i_typ / (sp.c_e_typ * sp.F)  # Reaction velocity scale
 # Electrolyte properties
 beta_surf_n = -sp.c_e_typ * DeltaVsurf_n / sp.ne_n  # Molar volume change (lead)
 beta_surf_p = -sp.c_e_typ * DeltaVsurf_p / sp.ne_p  # Molar volume change (lead dioxide)
-beta_surf = pybamm.PiecewiseConstant(beta_surf_n, 0, beta_surf_p)
 beta_liq_n = (
     -sp.c_e_typ * DeltaVliq_n / sp.ne_n
 )  # Molar volume change (electrolyte, neg)
@@ -126,4 +125,3 @@ c_e_init = q_init
 eps_n_init = eps_n_max - epsDelta_n * (1 - q_init)  # Initial pororsity (neg) [-]
 eps_s_init = eps_s_max  # Initial pororsity (sep) [-]
 eps_p_init = eps_p_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
-eps_init = pybamm.PiecewiseConstant(eps_n_init, eps_s_init, eps_p_init)
