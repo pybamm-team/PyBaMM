@@ -41,7 +41,7 @@ Pore size,1E-07,m,,
 Maximum porosity of negative electrode,0.53,-,,
 Maximum porosity of separator,0.92,-,,
 Maximum porosity of positive electrode,0.57,,,
-Molar volume of lead ,1.82539682539683E-05,m3.mol-1,,Calculated as () divided by ()
+Molar volume of lead,1.82539682539683E-05,m3.mol-1,,Calculated as () divided by ()
 Molar volume of lead-dioxide,2.54797441364606E-05,m3.mol-1,,
 Molar volume of lead sulfate,4.81717011128776E-05,m3.mol-1,,
 ,,,,
@@ -53,10 +53,10 @@ Negative electrode capacity,3473000000,C.m-3,,
 Positive electrode capacity,2745000000,C.m-3,,
 ,,,,
 # Electrochemical reactions,,,,
-Cation signed stoichiometry in the negative electrode,-1,-,,
-Cation signed stoichiometry ,-3,-,,
-number of electrons involved in the reaction (neg electrode),2,-,,
-number of electrons involved in the reaction (pos electrode),2,-,,
+Negative electrode cation signed stoichiometry,-1,-,,
+Positive electrode cation signed stoichiometry,-3,-,,
+Negative electrode electrons in reaction,2,-,,
+Positive electrode electrons in reaction,2,-,,
 Double-layer capacity,0.2,F.m-2,,
 Reference OCP vs SHE in the negative electrode,-0.294,V,,Lead
 Reference OCP vs SHE in the positive electrode,1.628,V,,Lead-dioxide
