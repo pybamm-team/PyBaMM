@@ -116,8 +116,10 @@ from .models.submodels import electrolyte, interface
 from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard parameters
 from .parameters.parameter_values import ParameterValues
 from .parameters import standard_current_functions
-from .parameters.standard_parameters import standard_parameters
-from .parameters import standard_parameters_lead_acid  # calls standard_parameters
+from .parameters import standard_parameters
+
+# The following modules call standard_parameters
+from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
 
 #
 # Geometry
@@ -133,7 +135,6 @@ from .geometry.geometry import (
 # Mesh and Discretisation classes
 #
 from .discretisations.discretisation import Discretisation
-from .meshes.meshes import KNOWN_DOMAINS
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 

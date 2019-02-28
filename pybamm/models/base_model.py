@@ -53,8 +53,8 @@ class BaseModel(object):
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv",
             {
-                "I_typ": 1,
-                "current function": os.path.join(
+                "Typical current density": 1,
+                "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
                     "parameters",

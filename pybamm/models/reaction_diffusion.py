@@ -30,7 +30,7 @@ class ReactionDiffusionModel(pybamm.BaseModel):
     def __init__(self):
         super().__init__()
         # Define current
-        current = pybamm.standard_parameters.current_with_time
+        current = current_with_time
         # Load reaction flux from submodels
         G = pybamm.interface.homogeneous_reaction(current)
         # Load diffusion model from submodels

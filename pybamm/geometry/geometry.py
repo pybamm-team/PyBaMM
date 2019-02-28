@@ -85,9 +85,9 @@ class Geometry3DMacro(Geometry1DMacro):
         y = pybamm.SpatialVariable("y", whole_cell)
         z = pybamm.SpatialVariable("z", whole_cell)
 
-        y_lim = {"min": pybamm.Scalar(0), "max": pybamm.standard_parameters.ly}
+        y_lim = {"min": pybamm.Scalar(0), "max": pybamm.standard_parameters.l_y}
 
-        z_lim = {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+        z_lim = {"min": pybamm.Scalar(0), "max": pybamm.standard_parameters.l_z}
 
         MACRO_DOMAINS = ["negative electrode", "separator", "positive electrode"]
         for domain in MACRO_DOMAINS:
