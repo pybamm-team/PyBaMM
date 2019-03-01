@@ -190,17 +190,6 @@ class TestConcatenations(unittest.TestCase):
                 ]
             ),
         )
-        ones = np.ones(50)
-        np.testing.assert_array_equal(
-            processed_conc.evaluate(t=ones),
-            np.concatenate(
-                [
-                    np.ones((mesh["negative electrode"].npts, 50)),
-                    2 * np.ones((mesh["separator"].npts, 50)),
-                    3 * np.ones((mesh["positive electrode"].npts, 50)),
-                ]
-            ),
-        )
 
         # Piecewise constant state vectors
         a_sv = pybamm.Broadcast(pybamm.StateVector(slice(0, 1)), ["negative electrode"])
@@ -216,25 +205,14 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[2].domain, ["positive electrode"])
 
         processed_conc = disc.process_symbol(conc)
-        y_1D = np.array([1, 2, 3])
+        y = np.array([1, 2, 3])
         np.testing.assert_array_equal(
-            processed_conc.evaluate(y=y_1D),
+            processed_conc.evaluate(y=y),
             np.concatenate(
                 [
                     np.ones(mesh["negative electrode"].npts),
                     2 * np.ones(mesh["separator"].npts),
                     3 * np.ones(mesh["positive electrode"].npts),
-                ]
-            ),
-        )
-        y_2D = np.vstack([ones, 2 * ones, 3 * ones])
-        np.testing.assert_array_equal(
-            processed_conc.evaluate(y=y_2D),
-            np.concatenate(
-                [
-                    np.ones((mesh["negative electrode"].npts, 50)),
-                    2 * np.ones((mesh["separator"].npts, 50)),
-                    3 * np.ones((mesh["positive electrode"].npts, 50)),
                 ]
             ),
         )
@@ -251,7 +229,7 @@ class TestConcatenations(unittest.TestCase):
 
         processed_conc = disc.process_symbol(conc)
         np.testing.assert_array_equal(
-            processed_conc.evaluate(t=2, y=y_1D),
+            processed_conc.evaluate(t=2, y=y),
             np.concatenate(
                 [
                     np.ones(mesh["negative electrode"].npts),
@@ -260,20 +238,6 @@ class TestConcatenations(unittest.TestCase):
                 ]
             ),
         )
-        np.testing.assert_array_equal(
-            processed_conc.evaluate(t=ones, y=y_2D),
-            np.concatenate(
-                [
-                    np.ones((mesh["negative electrode"].npts, 50)),
-                    2 * np.ones((mesh["separator"].npts, 50)),
-                    3 * np.ones((mesh["positive electrode"].npts, 50)),
-                ]
-            ),
-        )
-
-        # incompatible t and y
-        with self.assertRaisesRegex(ValueError, "incompatible t and y"):
-            processed_conc.evaluate(t=np.ones(20), y=y_2D)
 
 
 if __name__ == "__main__":

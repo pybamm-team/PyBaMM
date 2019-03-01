@@ -6,7 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-import numbers
 
 
 class Concatenation(pybamm.Symbol):
@@ -114,7 +113,7 @@ class DomainConcatenation(Concatenation):
         self._slices = self.create_slices(self, mesh)
 
         # store size of final vector
-        self._domain_size = self._slices[self.domain[-1]].stop
+        self._size = self._slices[self.domain[-1]].stop
 
         # create disc of domain => slice for each child
         self._children_slices = []
@@ -133,30 +132,13 @@ class DomainConcatenation(Concatenation):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        # return np.concatenate([child.evaluate(t, y) for child in self.children])
         # preallocate vector
-        if t is None or isinstance(t, numbers.Number):
-            if y is None or y.ndim == 1:
-                time_dim = 1
-            elif y.ndim == 2:
-                time_dim = y.shape[1]
-        else:
-            if y is None or len(t) == y.shape[1]:
-                time_dim = len(t)
-            else:
-                raise ValueError("incompatible t and y")
-        if time_dim == 1:
-            size = self._domain_size
-        else:
-            size = (self._domain_size, time_dim)
-        vector = np.empty(size)
+        vector = np.empty(self._size)
 
         # loop through domains of children writing subvectors to final vector
         for child, slices in zip(self.children, self._children_slices):
             child_vector = child.evaluate(t, y)
             for dom in child.domain:
-                if time_dim > 1 and child_vector.ndim == 1:
-                    vector[self._slices[dom]] = child_vector[slices[dom]][:, np.newaxis]
-                else:
-                    vector[self._slices[dom]] = child_vector[slices[dom]]
+                vector[self._slices[dom]] = child_vector[slices[dom]]
+
         return vector
