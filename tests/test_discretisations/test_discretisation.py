@@ -309,6 +309,15 @@ class TestDiscretise(unittest.TestCase):
             y0[T].evaluate(0, None), 5 * np.ones_like(mesh["negative electrode"].nodes)
         )
 
+    def test_process_variables_dict(self):
+        # want to check the case where the keys are strings and
+        # and the equation evals to a number
+
+        variables = {"c": pybamm.Scalar(0)}
+
+        disc = get_discretisation_for_testing()
+        disc.process_dict(variables)
+
     def test_process_model_ode(self):
         # one equation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -525,8 +534,8 @@ class TestDiscretise(unittest.TestCase):
 
     def test_concatenation_of_scalars(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        a = pybamm.Scalar(5, domain=["negative electrode"])
-        b = pybamm.Scalar(4, domain=["positive electrode"])
+        a = pybamm.Broadcast(5, ["negative electrode"])
+        b = pybamm.Broadcast(4, ["positive electrode"])
 
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -546,22 +555,19 @@ class TestDiscretise(unittest.TestCase):
         )
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
 
-    def test_discretise_space(self):
-        # variables
-        x1 = pybamm.Space(["negative electrode"])
-        x2 = pybamm.Space(["negative electrode", "separator"])
-        x3 = 3 * pybamm.Space(["negative electrode"])
-
+    def test_discretise_spatial_variable(self):
         # create discretisation
         disc = get_discretisation_for_testing()
 
         # space
+        x1 = pybamm.SpatialVariable("x", ["negative electrode"])
         x1_disc = disc.process_symbol(x1)
         self.assertIsInstance(x1_disc, pybamm.Vector)
         np.testing.assert_array_equal(
             x1_disc.evaluate(), disc.mesh["negative electrode"].nodes
         )
 
+        x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
         x2_disc = disc.process_symbol(x2)
         self.assertIsInstance(x2_disc, pybamm.Vector)
         np.testing.assert_array_equal(
@@ -569,10 +575,11 @@ class TestDiscretise(unittest.TestCase):
             disc.mesh.combine_submeshes("negative electrode", "separator").nodes,
         )
 
-        x3_disc = disc.process_symbol(x3)
-        self.assertIsInstance(x3_disc.children[1], pybamm.Vector)
+        r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
+        r_disc = disc.process_symbol(r)
+        self.assertIsInstance(r_disc.children[1], pybamm.Vector)
         np.testing.assert_array_equal(
-            x3_disc.evaluate(), 3 * disc.mesh["negative electrode"].nodes
+            r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes
         )
 
 

@@ -171,13 +171,20 @@ class Discretisation(object):
 
         """
 
-        for var, eqn in var_eqn_dict.items():
+        for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
             if eqn.evaluates_to_number():
-                eqn = pybamm.Broadcast(eqn, var.domain)
+                if isinstance(eqn_key, str):
+                    eqn = pybamm.Broadcast(eqn, [])
+                elif eqn_key.domain == []:
+                    eqn = pybamm.Broadcast(eqn, eqn_key.domain)
+                else:
+                    eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(
+                        eqn, eqn_key.domain
+                    )
 
             # Process symbol (original or broadcasted)
-            var_eqn_dict[var] = self.process_symbol(eqn)
+            var_eqn_dict[eqn_key] = self.process_symbol(eqn)
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
         return var_eqn_dict
@@ -244,7 +251,7 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Variable):
             return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
 
-        elif isinstance(symbol, pybamm.Space):
+        elif isinstance(symbol, pybamm.SpatialVariable):
             return self._spatial_methods[symbol.domain[0]].spatial_variable(symbol)
 
         elif isinstance(symbol, pybamm.Concatenation):

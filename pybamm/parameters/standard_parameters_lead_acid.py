@@ -30,10 +30,13 @@ H = pybamm.Parameter("H")
 W = pybamm.Parameter("W")
 A_cs = H * W  # Area of the current collectors [m2]
 Ibar = pybamm.Parameter("current scale")
-ibar = Ibar / (8 * A_cs)  # Specified scale for the current [A.m-2]
+n_electrodes_parallel = pybamm.Parameter("number of electrodes in parallel")
+ibar = Ibar / (n_electrodes_parallel * A_cs)  # Specified scale for the current [A.m-2]
 Q = 17  # Capacity [Ah]
 Crate = Ibar / Q  # C-rate [-]
-icell = Ibar
+current_with_time = pybamm.FunctionParameter("current function", pybamm.t)
+dimensional_current_with_time = ibar * current_with_time
+
 
 # Microstructure
 An = pybamm.Parameter(
@@ -92,33 +95,6 @@ U_Pb_ref = pybamm.Parameter("U_Pb_ref")  # Reference OCP in the lead [V]
 U_PbO2_ref = pybamm.Parameter("U_PbO2_ref")  # Reference OCP in the lead dioxide [V]
 
 # --------------------------------------------------------------------------------------
-"""Functions"""
-
-rho_dim = pybamm.Parameter("epsn_max")
-mu_dim = pybamm.Parameter("epsn_max")
-
-
-def D_dim(c):
-    "Dimensional electrolyte diffusivity"
-    return 1  # pybamm.FunctionParameter("electrolyte_diffusivity", c)
-
-
-def D(c):
-    "Dimensionless electrolyte diffusivity"
-    return D_dim(c * cmax) / D_dim(cmax)
-
-
-def U_Pb(c):
-    "Dimensional open-circuit potential for lead electrode"
-    return U_Pb_ref
-
-
-def U_PbO2(c):
-    "Dimensionless open-circuit potential for lead-dioxide electrode"
-    return U_PbO2_ref
-
-
-# --------------------------------------------------------------------------------------
 """Scales"""
 Lx = pybamm.standard_parameters.Lx
 F = pybamm.standard_parameters.F
@@ -133,6 +109,33 @@ current_scale = ibar
 interfacial_current_scale_neg = ibar / (An * Lx)
 interfacial_current_scale_pos = ibar / (Ap * Lx)
 velocity_scale = ibar / (cmax * F)  # Reaction velocity scale
+
+# --------------------------------------------------------------------------------------
+"""Functions"""
+
+rho_dim = pybamm.Parameter("epsn_max")
+mu_dim = pybamm.Parameter("epsn_max")
+
+
+def D_dim(c):
+    "Dimensional electrolyte diffusivity"
+    return 1  # pybamm.FunctionParameter("electrolyte_diffusivity", c)
+
+
+def D(c):
+    "Dimensionless electrolyte diffusivity"
+    return D_dim(c * concentration_scale) / D_dim(concentration_scale)
+
+
+def U_Pb(c):
+    "Dimensional open-circuit potential for lead electrode"
+    return U_Pb_ref
+
+
+def U_PbO2(c):
+    "Dimensionless open-circuit potential for lead-dioxide electrode"
+    return U_PbO2_ref
+
 
 # --------------------------------------------------------------------------------------
 """Dimensionless Parameters"""
@@ -207,6 +210,18 @@ epsp_init = epsp_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
 
 
 # Concatenated symbols
-s = pybamm.piecewise_constant(sn, 0, sp)
-beta_surf = pybamm.piecewise_constant(beta_surf_n, 0, beta_surf_p)
-eps_init = pybamm.piecewise_constant(epsn_init, epss_init, epsp_init)
+s = pybamm.Concatenation(
+    pybamm.Broadcast(sn, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(sp, ["positive electrode"]),
+)
+beta_surf = pybamm.Concatenation(
+    pybamm.Broadcast(beta_surf_n, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(beta_surf_p, ["positive electrode"]),
+)
+eps_init = pybamm.Concatenation(
+    pybamm.Broadcast(epsn_init, ["negative electrode"]),
+    pybamm.Broadcast(epss_init, ["separator"]),
+    pybamm.Broadcast(epsp_init, ["positive electrode"]),
+)

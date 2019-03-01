@@ -4,10 +4,8 @@ Concatenations
 .. autoclass:: pybamm.Concatenation
   :members:
 
-.. autoclass:: pybamm.NumpyModelConcatenation
+.. autoclass:: pybamm.NumpyConcatenation
   :members:
 
 .. autoclass:: pybamm.DomainConcatenation
   :members:
-
-.. autofunction:: pybamm.piecewise_constant

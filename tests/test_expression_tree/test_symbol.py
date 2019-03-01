@@ -41,6 +41,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a + b, pybamm.Addition)
         self.assertIsInstance(a - b, pybamm.Subtraction)
         self.assertIsInstance(a * b, pybamm.Multiplication)
+        self.assertIsInstance(a @ b, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / b, pybamm.Division)
         self.assertIsInstance(a ** b, pybamm.Power)
 
@@ -48,6 +49,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a + 2, pybamm.Addition)
         self.assertIsInstance(a - 2, pybamm.Subtraction)
         self.assertIsInstance(a * 2, pybamm.Multiplication)
+        self.assertIsInstance(a @ 2, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / 2, pybamm.Division)
         self.assertIsInstance(a ** 2, pybamm.Power)
 
@@ -58,6 +60,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((3 - b).children[1].id, b.id)
         self.assertIsInstance(3 * b, pybamm.Multiplication)
         self.assertEqual((3 * b).children[1].id, b.id)
+        self.assertIsInstance(3 @ b, pybamm.MatrixMultiplication)
+        self.assertEqual((3 @ b).children[1].id, b.id)
         self.assertIsInstance(3 / b, pybamm.Division)
         self.assertEqual((3 / b).children[1].id, b.id)
         self.assertIsInstance(3 ** b, pybamm.Power)
@@ -71,6 +75,8 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             a * "two"
         with self.assertRaises(NotImplementedError):
+            a @ "two"
+        with self.assertRaises(NotImplementedError):
             a / "two"
         with self.assertRaises(NotImplementedError):
             a ** "two"
@@ -80,6 +86,8 @@ class TestSymbol(unittest.TestCase):
             "two" - a
         with self.assertRaises(NotImplementedError):
             "two" * a
+        with self.assertRaises(NotImplementedError):
+            "two" @ a
         with self.assertRaises(NotImplementedError):
             "two" / a
         with self.assertRaises(NotImplementedError):
@@ -157,6 +165,13 @@ class TestSymbol(unittest.TestCase):
 
         a = pybamm.Matrix(np.ones((4, 6)))
         self.assertFalse(a.evaluates_to_number())
+
+        a = pybamm.StateVector(slice(0, 10))
+        self.assertFalse(a.evaluates_to_number())
+
+        # Time variable returns true
+        a = 3 * pybamm.t + 2
+        self.assertTrue(a.evaluates_to_number())
 
     def test_symbol_repr(self):
         """

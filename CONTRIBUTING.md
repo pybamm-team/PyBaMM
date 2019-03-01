@@ -246,34 +246,7 @@ Configuration files:
 setup.py
 ```
 
-Note that this file must be kept in sync with
-
-- The version number in [pybamm/__init__.py](pybamm/__init__.py).
-- The dependencies and dependency structure of the [pip requirements files](#pip).
-
-### PIP
-
-Installation of PyBaMM dependencies can also be handled by [PIP](http://pip.readthedocs.io/). This is needed for certain other tools too.
-
-Configuration files ([format](https://pip.readthedocs.io/en/1.1/requirements.html)):
-
-```
-requirements.txt
-requirements-dev.txt
-requirements-docs.txt
-```
-
-Note that these files must be kept in sync with
-
-- The dependencies and dependency structure of setuptools `setup.py`.
-
-The requirements files link to each other, so that calling `$ pip install -r requirements-dev.txt` will install everything listed in `requirements.txt` and `requirements-docs.txt` as well.
-
-It's always worth using an up-to-date version of pip. On older systems especially, having an up-to-date pip will prevent all kinds of version incompatibility issues:
-
-```
-pip install --upgrade pip
-```
+Note that this file must be kept in sync with the version number in [pybamm/__init__.py](pybamm/__init__.py).
 
 ### Travis CI
 

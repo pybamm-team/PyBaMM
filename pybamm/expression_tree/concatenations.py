@@ -6,7 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-import numbers
 
 
 class Concatenation(pybamm.Symbol):
@@ -48,12 +47,13 @@ class Concatenation(pybamm.Symbol):
         return domain
 
 
-class NumpyModelConcatenation(pybamm.Symbol):
-    """A node in the expression tree representing a concatenation of equations.
+class NumpyConcatenation(pybamm.Symbol):
+    """A node in the expression tree representing a concatenation of equations, when we
+    *don't* care about domains. The class :class:`pybamm.DomainConcatenation`, which
+    *is* careful about domains and uses broadcasting where appropriate, should be used
+    whenever possible instead.
+
     Upon evaluation, equations are concatenated using numpy concatenation.
-    Unlike :class:`pybamm.Concatenation`, this doesn't check domains, as its only use
-    is to concatenate model equations (e.g. rhs equations or initial conditions, in
-    :class:`pybamm.Discretisation`), which might have common domains
 
     **Extends**: :class:`pybamm.Symbol`
 
@@ -80,7 +80,8 @@ class NumpyModelConcatenation(pybamm.Symbol):
 
 
 class DomainConcatenation(Concatenation):
-    """A node in the expression tree representing a concatenation of symbols.
+    """A node in the expression tree representing a concatenation of symbols, being
+    careful about domains.
 
     It is assumed that each child has a domain, and the final concatenated vector will
     respect the sizes and ordering of domains established in pybamm.KNOWN_DOMAINS
@@ -104,10 +105,6 @@ class DomainConcatenation(Concatenation):
         # concatenation
 
         children = list(children)
-
-        for i, child in enumerate(children):
-            if child.is_constant():
-                children[i] = self.process_node_for_concatenate(child, mesh)
 
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
@@ -133,40 +130,8 @@ class DomainConcatenation(Concatenation):
             start = end
         return slices
 
-    def process_node_for_concatenate(self, node, mesh):
-        """
-        the node is assumed to be constant in time. this function replaces it with a
-        single Vector node with the correct length vector (according to its domain)
-
-        Parameters
-        ----------
-        node: derived from :class:`Symbol`
-            the sub-expression to process (node.is_constant() is true)
-
-        """
-
-        # node must be constant
-        value = node.evaluate()
-
-        # correct size of vector should be number of points in the domains
-        subvector_size = sum([mesh[dom].npts for dom in node.domain])
-
-        # check if its a scalar, if so convert to vector
-        if isinstance(value, numbers.Number):
-            value = np.full(subvector_size, value)
-
-        # check it is the right size
-        if value.size != subvector_size:
-            raise ValueError(
-                "Error: expression evaluated to a vector of incorrect length"
-            )
-
-        # convert to a Vector node
-        return pybamm.Vector(value, domain=node.domain)
-
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-
         # preallocate vector
         vector = np.empty(self._size)
 
@@ -177,25 +142,3 @@ class DomainConcatenation(Concatenation):
                 vector[self._slices[dom]] = child_vector[slices[dom]]
 
         return vector
-
-
-def piecewise_constant(neg_value, sep_value, pos_value):
-    """Concatenate three values that don't have a domain into a piecewise constant
-    concatenation. This is useful when we don't want to assign a domain to the inputs
-
-    Parameters
-    ----------
-    neg_value, sep_value, pos_value : :class:`numbers.Number` or :class:`pybamm.Symbol`
-        The constant values to be concatenated
-
-    Returns
-    -------
-    :class:`pybamm.Concantenation`
-        The piecewise constant concatenation
-    """
-    neg_value_with_domain = neg_value * pybamm.Scalar(1, domain=["negative electrode"])
-    sep_value_with_domain = sep_value * pybamm.Scalar(1, domain=["separator"])
-    pos_value_with_domain = pos_value * pybamm.Scalar(1, domain=["positive electrode"])
-    return pybamm.Concatenation(
-        neg_value_with_domain, sep_value_with_domain, pos_value_with_domain
-    )

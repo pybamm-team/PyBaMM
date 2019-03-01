@@ -619,6 +619,43 @@ class TestFiniteVolume(unittest.TestCase):
         rates = np.log2(errs[:-1] / errs[1:])
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
+    def test_discretise_spatial_variable(self):
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # space
+        x1 = pybamm.SpatialVariable("x", ["negative electrode"])
+        x1_disc = disc.process_symbol(x1)
+        self.assertIsInstance(x1_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            x1_disc.evaluate(), disc.mesh["negative electrode"].nodes
+        )
+
+        z = pybamm.SpatialVariable("z", ["negative electrode"])
+        with self.assertRaises(NotImplementedError):
+            disc.process_symbol(z)
+
+        x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        x2_disc = disc.process_symbol(x2)
+        self.assertIsInstance(x2_disc, pybamm.Vector)
+        np.testing.assert_array_equal(
+            x2_disc.evaluate(),
+            disc.mesh.combine_submeshes("negative electrode", "separator").nodes,
+        )
+
+        r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
+        r_disc = disc.process_symbol(r)
+        self.assertIsInstance(r_disc.children[1], pybamm.Vector)
+        np.testing.assert_array_equal(
+            r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
