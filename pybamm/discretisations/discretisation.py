@@ -90,6 +90,7 @@ class Discretisation(object):
         y_slices = {variable.id: None for variable in unpacked_variables}
         start = 0
         end = 0
+        # Iterate through unpacked variables, adding appropriate slices to y_slices
         for variable in unpacked_variables:
             # If domain is empty then variable has size 1
             if variable.domain == []:
@@ -348,6 +349,7 @@ class Discretisation(object):
                 unpacked_variables.extend([var for var in symbol.children])
             else:
                 unpacked_variables.append(symbol)
+        # Check keys from the given var_eqn_dict against self._y_slices
         ids = {v.id for v in unpacked_variables}
         if ids != self._y_slices.keys():
             given_variable_names = [v.name for v in var_eqn_dict.keys()]
