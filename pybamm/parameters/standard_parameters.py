@@ -134,8 +134,6 @@ s_plus_p = pybamm.Parameter("Positive electrode cation signed stoichiometry")
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
 C_dl = pybamm.Parameter("Double-layer capacity")
-U_n_ref = pybamm.Parameter("Reference OCP vs SHE in the negative electrode")
-U_p_ref = pybamm.Parameter("Reference OCP vs SHE in the positive electrode")
 
 # -----------------------------------------------------------------------------
 """Functions"""
@@ -212,6 +210,10 @@ potential_scale = R * T / F
 current_scale = i_typ
 interfacial_current_scale_n = i_typ / (a_n * L_x)
 interfacial_current_scale_p = i_typ / (a_p * L_x)
+# TODO: separate lithium ion and lead acid
+# Reference potentials: evaluate at m = 1
+U_n_ref = U_n_dimensional(1)
+U_p_ref = U_p_dimensional(1)
 
 # Timescales
 # Reaction timescales

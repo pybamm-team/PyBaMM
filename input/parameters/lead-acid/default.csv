@@ -57,8 +57,6 @@ Positive electrode cation signed stoichiometry,-3,-,,
 Negative electrode electrons in reaction,2,-,,
 Positive electrode electrons in reaction,2,-,,
 Double-layer capacity,0.2,F.m-2,,
-Reference OCP vs SHE in the negative electrode,-0.294,V,,Lead
-Reference OCP vs SHE in the positive electrode,1.628,V,,Lead-dioxide
 Negative electrode reference exchange-current density,0.06,A.m-2,,
 Positive electrode reference exchange-current density,0.004,A.m-2,,
 Oxygen reference OCP vs SHE,1.229,V,,

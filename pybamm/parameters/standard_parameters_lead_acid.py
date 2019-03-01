@@ -57,20 +57,54 @@ eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
 # --------------------------------------------------------------------------------------
 """Functions"""
 
-rho_dimensional = pybamm.Parameter("epsn_max")
-mu_dimensional = pybamm.Parameter("epsn_max")
+
+def rho_dimensional(c_e):
+    """
+    Dimensional density of electrolyte [kg.m-3], from thermodynamics. c_e in [mol.m-3].
+
+    """
+    return M_w / sp.V_w * (1 + (M_e * sp.V_w / M_w - sp.V_e) * c_e)
+
+
+def m_dimensional(c_e):
+    """
+    Dimensional electrolyte molar mass [mol.kg-1], from thermodynamics.
+    c_e in [mol.m-3].
+
+    """
+    return c_e * sp.V_w / ((1 - c_e * sp.V_e) * M_w)
+
+
+def mu_dimensional(c_e):
+    """
+    Dimensional viscosity of electrolyte [kg.m-1.s-1].
+
+    """
+    return pybamm.FunctionParameter("Electrolyte viscosity", c_e)
+
+
+def U_n_dimensional(c_e):
+    "Dimensional open-circuit voltage in the negative electrode [V]"
+    return pybamm.FunctionParameter("Negative electrode potential", m_dimensional(c_e))
+
+
+def U_p_dimensional(c_e):
+    "Dimensional open-circuit voltage in the positive electrode [V]"
+    return pybamm.FunctionParameter("Positive electrode potential", m_dimensional(c_e))
 
 
 def U_n(c_en):
-    "Dimensionless open-circuit sp.potential in the negative electrode"
+    "Dimensionless open-circuit voltage in the negative electrode"
     c_en_dimensional = c_en * sp.c_e_typ
-    return (sp.U_n_dimensional(c_en_dimensional) - sp.U_n_ref) / sp.potential_scale
+    U_n_ref = pybamm.FunctionParameter("Negative electrode potential", pybamm.Scalar(1))
+    return (sp.U_n_dimensional(c_en_dimensional) - U_n_ref) / sp.potential_scale
 
 
 def U_p(c_ep):
-    "Dimensionless open-circuit sp.potential in the positive electrode"
+    "Dimensionless open-circuit voltage in the positive electrode"
     c_ep_dimensional = c_ep * sp.c_e_typ
-    return (sp.U_p_dimensional(c_ep_dimensional) - sp.U_p_ref) / sp.potential_scale
+    U_p_ref = pybamm.FunctionParameter("Positive electrode potential", pybamm.Scalar(1))
+    return (sp.U_p_dimensional(c_ep_dimensional) - U_p_ref) / sp.potential_scale
 
 
 # --------------------------------------------------------------------------------------
@@ -94,14 +128,17 @@ beta_liq_p = (
 beta_n = beta_surf_n + beta_liq_n  # Total molar volume change (neg)
 beta_p = beta_surf_p + beta_liq_p  # Total molar volume change (pos)
 omega_i = (
-    sp.c_e_typ * M_e / rho_dimensional * (1 - M_w * sp.V_e / sp.V_w * M_e)
+    sp.c_e_typ * M_e / rho_dimensional(sp.c_e_typ) * (1 - M_w * sp.V_e / sp.V_w * M_e)
 )  # Diffusive kinematic relationship coefficient
 omega_c = (
-    sp.c_e_typ * M_e / rho_dimensional * (sp.t_plus + M_n / M_e)
+    sp.c_e_typ * M_e / rho_dimensional(sp.c_e_typ) * (sp.t_plus + M_n / M_e)
 )  # Migrative kinematic relationship coefficient
 C_e = sp.tau_diffusion_e / tau_discharge
 pi_os = (
-    mu_dimensional * velocity_scale * sp.L_x / (d ** 2 * sp.R * sp.T * sp.c_e_typ)
+    mu_dimensional(sp.c_e_typ)
+    * velocity_scale
+    * sp.L_x
+    / (d ** 2 * sp.R * sp.T * sp.c_e_typ)
 )  # Ratio of viscous pressure scale to osmotic pressure scale
 
 # Electrochemical reactions
