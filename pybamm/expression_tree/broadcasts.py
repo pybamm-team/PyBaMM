@@ -99,7 +99,7 @@ class NumpyBroadcast(Broadcast):
         if child_eval_size > 1:
             # Possible shapes for a child with a shape:
             # (n,) -> (e.g. time-like object) broadcast to (n, broadcasting_size)
-            # (1,m) -> (e.g. state-vector-like object) broadcast to
+            # (1,n) -> (e.g. state-vector-like object) broadcast to
             #          (n, broadcasting_size)
             # (n,1) -> error
             # (n,m) -> error
