@@ -11,9 +11,15 @@ def homogeneous_reaction(current):
     Homogeneous reaction at the electrode-electrolyte interface
     """
     # hack to make the concatenation work. Concatenation needs some work
-    current_neg = current / pybamm.standard_parameters.ln
-    current_pos = -current / pybamm.standard_parameters.lp
-    return pybamm.PiecewiseConstant(current_neg, 0, current_pos)
+    current_neg = pybamm.Broadcast(
+        current / pybamm.standard_parameters.ln, ["negative electrode"]
+    )
+    current_pos = pybamm.Broadcast(
+        -current / pybamm.standard_parameters.lp, ["positive electrode"]
+    )
+    return pybamm.Concatenation(
+        current_neg, pybamm.Broadcast(0, ["separator"]), current_pos
+    )
 
 
 def butler_volmer_lead_acid(c, phi, domain=None):
@@ -82,7 +88,7 @@ def butler_volmer_lead_acid(c, phi, domain=None):
         # Negative electrode
         current_neg = butler_volmer_lead_acid(cn, phin, domain=["negative electrode"])
         # Separator
-        current_sep = pybamm.Scalar(0, domain=["separator"])
+        current_sep = pybamm.Broadcast(0, ["separator"])
         # Positive electrode
         current_pos = butler_volmer_lead_acid(cp, phip, domain=["positive electrode"])
         # Concatenate
