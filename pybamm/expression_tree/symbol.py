@@ -246,6 +246,20 @@ class Symbol(anytree.NodeMixin):
         else:
             raise NotImplementedError
 
+    def __matmul__(self, other):
+        """return a :class:`MatrixMultiplication` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.MatrixMultiplication(self, other)
+        else:
+            raise NotImplementedError
+
+    def __rmatmul__(self, other):
+        """return a :class:`MatrixMultiplication` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.MatrixMultiplication(other, self)
+        else:
+            raise NotImplementedError
+
     def __truediv__(self, other):
         """return a :class:`Division` object"""
         if isinstance(other, (Symbol, numbers.Number)):
@@ -324,7 +338,8 @@ class Symbol(anytree.NodeMixin):
 
     def evaluates_to_number(self):
         """Returns True if evaluating the expression returns a number.
-        Returns False otherwise, including if NotImplementedError is raised.
+        Returns False otherwise, including if NotImplementedError or TyperError
+        is raised.
         !Not to be confused with isinstance(self, pybamm.Scalar)!
 
         See Also
@@ -339,10 +354,13 @@ class Symbol(anytree.NodeMixin):
             # return false if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
             return False
-        except TypeError:
-            # return false if TypeError is raised
+        except TypeError as error:
+            # return false if specific TypeError is raised
             # (there is a e.g. StateVector in the tree)
-            return False
+            if error.args[0] == "StateVector cannot evaluate input 'y=None'":
+                return False
+            else:
+                raise error
 
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""

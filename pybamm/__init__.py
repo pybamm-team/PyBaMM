@@ -57,13 +57,13 @@ from .expression_tree.binary_operators import (
     Power,
     Subtraction,
     Multiplication,
+    MatrixMultiplication,
     Division,
 )
 from .expression_tree.concatenations import (
     Concatenation,
-    NumpyModelConcatenation,
+    NumpyConcatenation,
     DomainConcatenation,
-    PiecewiseConstant,
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
@@ -76,13 +76,12 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
-    Broadcast,
-    NumpyBroadcast,
     SurfaceValue,
     grad,
     div,
     surf,
 )
+from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
 from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable

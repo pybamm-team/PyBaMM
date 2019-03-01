@@ -164,10 +164,12 @@ class Discretisation(object):
         """
 
         for eqn_key, eqn in var_eqn_dict.items():
-
+            # Broadcast if the equation evaluates to a number(e.g. Scalar)
             if eqn.evaluates_to_number():
-                if eqn_key.domain == []:
-                    eqn = pybamm.NumpyBroadcast(eqn, eqn_key.domain, {})
+                if isinstance(eqn_key, str):
+                    eqn = pybamm.Broadcast(eqn, [])
+                elif eqn_key.domain == []:
+                    eqn = pybamm.Broadcast(eqn, eqn_key.domain)
                 else:
                     eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(
                         eqn, eqn_key.domain
@@ -213,7 +215,7 @@ class Discretisation(object):
             # Broadcast new_child to the domain specified by symbol.domain
             # Different discretisations may broadcast differently
             if symbol.domain == []:
-                symbol = pybamm.NumpyBroadcast(symbol, symbol.domain, {})
+                symbol = pybamm.NumpyBroadcast(new_child, symbol.domain, {})
             else:
                 symbol = self._spatial_methods[symbol.domain[0]].broadcast(
                     new_child, symbol.domain
@@ -239,7 +241,7 @@ class Discretisation(object):
             return symbol.__class__(new_child)
 
         elif isinstance(symbol, pybamm.Variable):
-            return pybamm.StateVector(self._y_slices[symbol.id])
+            return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             return self._spatial_methods[symbol.domain[0]].spatial_variable(symbol)
@@ -249,7 +251,8 @@ class Discretisation(object):
             new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
 
             if new_symbol.is_constant():
-                return pybamm.Vector(new_symbol.evaluate())
+                value = new_symbol.evaluate()
+                return pybamm.Vector(value)
             return new_symbol
 
         else:
@@ -307,7 +310,7 @@ class Discretisation(object):
         return bin_op.__class__(new_left, new_right)
 
     def concatenate(self, *symbols):
-        return pybamm.NumpyModelConcatenation(*symbols)
+        return pybamm.NumpyConcatenation(*symbols)
 
     def _concatenate_init(self, var_eqn_dict):
         """

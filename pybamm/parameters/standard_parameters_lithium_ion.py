@@ -102,7 +102,7 @@ def D_n_dimensional(c_n):
 def D_n(c_n):
     "Dimensionless negative particle diffusivity"
     c_n_dimensional = c_n * c_n_max
-    return 1  # D_n_dimensional(c_n_dimensional) / D_n_dimensional(c_n_max)
+    return D_n_dimensional(c_n_dimensional) / D_n_dimensional(c_n_max)
 
 
 def D_p_dimensional(c_p):
@@ -113,7 +113,7 @@ def D_p_dimensional(c_p):
 def D_p(c_p):
     "Dimensionless positive particle diffusivity"
     c_p_dimensional = c_p * c_p_max
-    return 1  # D_p_dimensional(c_p_dimensional) / D_p_dimensional(c_p_max)
+    return D_p_dimensional(c_p_dimensional) / D_p_dimensional(c_p_max)
 
 
 def U_n(c_n):
@@ -145,7 +145,6 @@ tau_diffusion_p = R_n ** 2 / D_p_dimensional(c_p_max)
 epsilon_n = pybamm.Parameter("Negative electrode porosity")
 epsilon_s = pybamm.Parameter("Separator porosity")
 epsilon_p = pybamm.Parameter("Positive electrode porosity")
-epsilon = pybamm.PiecewiseConstant(epsilon_n, epsilon_s, epsilon_p)
 beta_n = sp.a_n * R_n
 beta_p = sp.a_p * R_p
 
