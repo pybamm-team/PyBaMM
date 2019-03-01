@@ -10,16 +10,13 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
 
     def __init__(self, mesh):
-        self._mesh = mesh
+        for dom in mesh.keys():
+            mesh[dom].npts_for_broadcast = mesh[dom].npts
         super().__init__(mesh)
 
-        # use cell centres for testing
-        self.npts_for_broadcasting = {
-            dom: submesh.npts for dom, submesh in self.mesh.items()
-        }
-
     def spatial_variable(self, symbol):
-        symbol_mesh = self._mesh.combine_submeshes(*symbol.domain)
+        # for finite volume we use the cell centres
+        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         return pybamm.Vector(symbol_mesh.nodes)
 
     def get_num_of_vars(self, domain):
@@ -27,8 +24,7 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
 
     def broadcast(self, symbol, domain):
         # for finite volume we send variables to cells and so use number_of_cells
-        number_of_cells = {dom: submesh.npts for dom, submesh in self._mesh.items()}
-        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, number_of_cells)
+        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
         # if the broadcasted symbol evaluates to a constant value, replace the
         # symbol-Vector multiplication with a single array
@@ -44,14 +40,14 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         for domain in symbol.domain:
             n += self.mesh[domain].npts
         gradient_matrix = pybamm.Matrix(np.eye(n))
-        return gradient_matrix * discretised_symbol
+        return gradient_matrix @ discretised_symbol
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain].npts
         divergence_matrix = pybamm.Matrix(np.eye(n))
-        return divergence_matrix * discretised_symbol
+        return divergence_matrix @ discretised_symbol
 
     def compute_diffusivity(self, symbol):
         return symbol
