@@ -13,6 +13,11 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         self._mesh = mesh
         super().__init__(mesh)
 
+        # use cell centres for testing
+        self.npts_for_broadcasting = {
+            dom: submesh.npts for dom, submesh in self.mesh.items()
+        }
+
     def spatial_variable(self, symbol):
         symbol_mesh = self._mesh.combine_submeshes(*symbol.domain)
         return pybamm.Vector(symbol_mesh.nodes)

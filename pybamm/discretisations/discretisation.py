@@ -89,7 +89,7 @@ class Discretisation(object):
             # Otherwise, add up the size of all the domains in variable.domain
             else:
                 for dom in variable.domain:
-                    end += self._spatial_methods[dom].get_num_of_vars(dom)
+                    end += self._spatial_methods[dom].npts_for_broadcasting[dom]
             y_slices[variable.id] = slice(start, end)
             start = end
         self._y_slices = y_slices

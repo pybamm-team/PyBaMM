@@ -25,6 +25,11 @@ class FiniteVolume(pybamm.SpatialMethod):
     def __init__(self, mesh):
         super().__init__(mesh)
 
+        # use cell centres for finite volume
+        self.npts_for_broadcasting = {
+            dom: submesh.npts for dom, submesh in self.mesh.items()
+        }
+
     def spatial_variable(self, symbol):
         """
         Creates a discretised spatial variable compatible with
@@ -47,19 +52,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             raise NotImplementedError("3D meshes not yet implemented")
 
-    def get_num_of_vars(self, domain):
-        """
-        This function simply returns the number of discrete variables a
-        variable on domain is converted into.
-
-        Parameters
-        ----------
-        domain : str
-            The domain from which we need to get the points
-        """
-
-        return self.mesh[domain].npts
-
     def broadcast(self, symbol, domain):
         """
         Broadcast symbol to a specified domain. To do this, calls
@@ -69,8 +61,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
 
         # for finite volume we send variables to cells and so use number_of_cells
-        number_of_cells = {dom: submesh.npts for dom, submesh in self.mesh.items()}
-        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, number_of_cells)
+        broadcasted_symbol = pybamm.NumpyBroadcast(
+            symbol, domain, self.npts_for_broadcasting
+        )
 
         # if the broadcasted symbol evaluates to a constant value, replace the
         # symbol-Vector multiplication with a single array
