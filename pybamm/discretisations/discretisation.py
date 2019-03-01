@@ -166,7 +166,9 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
 
             if eqn.evaluates_to_number():
-                if eqn_key.domain == []:
+                if isinstance(eqn_key, str):
+                    eqn = pybamm.NumpyBroadcast(eqn, [], {})
+                elif eqn_key.domain == []:
                     eqn = pybamm.NumpyBroadcast(eqn, eqn_key.domain, {})
                 else:
                     eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(

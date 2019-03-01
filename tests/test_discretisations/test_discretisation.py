@@ -286,6 +286,15 @@ class TestDiscretise(unittest.TestCase):
             y0[T].evaluate(0, None), 5 * np.ones_like(mesh["negative electrode"].nodes)
         )
 
+    def test_process_variables_dict(self):
+        # want to check the case where the keys are strings and
+        # and the equation evals to a number
+
+        variables = {"c": pybamm.Scalar(0)}
+
+        disc = get_discretisation_for_testing()
+        disc.process_dict(variables)
+
     def test_process_model_ode(self):
         # one equation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
