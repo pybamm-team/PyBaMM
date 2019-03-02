@@ -158,10 +158,10 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current density": 1,
-                "Negative electrode ocv": os.path.join(
+                "Negative electrode OCV": os.path.join(
                     input_path, "lead_electrode_ocv_Bode1977.py"
                 ),
-                "Positive electrode ocv": os.path.join(
+                "Positive electrode OCV": os.path.join(
                     input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
                 ),
             },
@@ -179,10 +179,10 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current density": 1,
-                "Negative electrode ocv": os.path.join(
+                "Negative electrode OCV": os.path.join(
                     input_path, "lead_electrode_ocv_Bode1977.py"
                 ),
-                "Positive electrode ocv": os.path.join(
+                "Positive electrode OCV": os.path.join(
                     input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
                 ),
             },
@@ -222,10 +222,10 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current density": 1,
-                "Negative electrode ocv": os.path.join(
+                "Negative electrode OCV": os.path.join(
                     input_path, "lead_electrode_ocv_Bode1977.py"
                 ),
-                "Positive electrode ocv": os.path.join(
+                "Positive electrode OCV": os.path.join(
                     input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
                 ),
             },

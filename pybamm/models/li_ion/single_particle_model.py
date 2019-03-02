@@ -66,6 +66,3 @@ class SPM(pybamm.BaseModel):
             "cp_surf": c_p_surf,
             "V": V,
         }
-
-        # Overwrite default solver
-        self.default_solver = pybamm.ScipySolver(method="BDF")

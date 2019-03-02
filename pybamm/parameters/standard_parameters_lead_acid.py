@@ -58,6 +58,16 @@ eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
 """Functions"""
 
 
+def chi_dimensional(c_e):
+    return pybamm.FunctionParameter("Darken thermodynamic factor", c_e)
+
+
+def chi(c_e):
+    c_e_dimensional = c_e * sp.c_e_typ
+    alpha = (sp.nu * sp.V_w - sp.V_e) * sp.c_e_typ
+    return chi_dimensional(c_e_dimensional) * 2 * (1 - sp.t_plus) / (1 - alpha * c_e)
+
+
 def rho_dimensional(c_e):
     """
     Dimensional density of electrolyte [kg.m-3], from thermodynamics. c_e in [mol.m-3].
@@ -85,26 +95,30 @@ def mu_dimensional(c_e):
 
 def U_n_dimensional(c_e):
     "Dimensional open-circuit voltage in the negative electrode [V]"
-    return pybamm.FunctionParameter("Negative electrode ocv", m_dimensional(c_e))
+    return pybamm.FunctionParameter("Negative electrode OCV", m_dimensional(c_e))
+
+
+U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(1))
 
 
 def U_p_dimensional(c_e):
     "Dimensional open-circuit voltage in the positive electrode [V]"
-    return pybamm.FunctionParameter("Positive electrode ocv", m_dimensional(c_e))
+    return pybamm.FunctionParameter("Positive electrode OCV", m_dimensional(c_e))
+
+
+U_p_ref = pybamm.FunctionParameter("Positive electrode OCV", pybamm.Scalar(1))
 
 
 def U_n(c_en):
     "Dimensionless open-circuit voltage in the negative electrode"
     c_en_dimensional = c_en * sp.c_e_typ
-    U_n_ref = pybamm.FunctionParameter("Negative electrode ocv", pybamm.Scalar(1))
-    return (sp.U_n_dimensional(c_en_dimensional) - U_n_ref) / sp.potential_scale
+    return (U_n_dimensional(c_en_dimensional) - U_n_ref) / sp.potential_scale
 
 
 def U_p(c_ep):
     "Dimensionless open-circuit voltage in the positive electrode"
     c_ep_dimensional = c_ep * sp.c_e_typ
-    U_p_ref = pybamm.FunctionParameter("Positive electrode ocv", pybamm.Scalar(1))
-    return (sp.U_p_dimensional(c_ep_dimensional) - U_p_ref) / sp.potential_scale
+    return (U_p_dimensional(c_ep_dimensional) - U_p_ref) / sp.potential_scale
 
 
 # --------------------------------------------------------------------------------------
@@ -142,12 +156,26 @@ pi_os = (
 )  # Ratio of viscous pressure scale to osmotic pressure scale
 
 # Electrochemical reactions
-gamma_dl_n = (
-    sp.C_dl * sp.potential_scale / sp.interfacial_current_scale_n / tau_discharge
+C_dl_n = (
+    sp.C_dl_dimensional
+    * sp.potential_scale
+    / sp.interfacial_current_scale_n
+    / tau_discharge
 )
-gamma_dl_p = (
-    sp.C_dl * sp.potential_scale / sp.interfacial_current_scale_p / tau_discharge
+C_dl_p = (
+    sp.C_dl_dimensional
+    * sp.potential_scale
+    / sp.interfacial_current_scale_p
+    / tau_discharge
 )
+
+# Electrical
+voltage_low_cut = (
+    sp.voltage_low_cut_dimensional - (U_p_ref - U_n_ref)
+) / sp.potential_scale
+voltage_high_cut = (
+    sp.voltage_high_cut_dimensional - (U_p_ref - U_n_ref)
+) / sp.potential_scale
 
 # Initial conditions
 q_init = pybamm.Parameter("Initial State of Charge")

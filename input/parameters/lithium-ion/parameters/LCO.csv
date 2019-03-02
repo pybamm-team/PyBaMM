@@ -45,6 +45,10 @@ Positive electrode surface area density,90000,m-1, Scott Moura,
 Bruggeman coefficient,1.5,-,Scott Moura,
 ,,,,
 # Interfacial reactions,,,,
+Negative electrode cation signed stoichiometry,-1,-,,
+Positive electrode cation signed stoichiometry,-1,-,,
+Negative electrode electrons in reaction,1,-,,
+Positive electrode electrons in reaction,1,-,,
 Negative electrode reference exchange-current density,2E-05,Am-2(m3/mol)1.5,Scott Moura,Be careful how we implement BV
 Positive electrode reference exchange-current density,6E-07,Am-2(m3/mol)1.5,Scott Moura,Be careful how we implement BV
 Reference OCP vs SHE in the negative electrode,0.02230,V,,

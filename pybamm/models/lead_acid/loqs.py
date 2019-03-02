@@ -58,8 +58,8 @@ class LOQS(pybamm.BaseModel):
         # Variables
         j0_n = pybamm.interface.exchange_current_density(c_e, ["negative electrode"])
         j0_p = pybamm.interface.exchange_current_density(c_e, ["positive electrode"])
-        Phi = -sp.U_n_ref - pybamm.Function(np.arcsinh, j_n / (2 * j0_n * sp.l_n))
-        V = Phi + sp.U_p_ref - pybamm.Function(np.arcsinh, j_p / (2 * j0_p * sp.l_p))
+        Phi = -spla.U_n(c_e) - pybamm.Function(np.arcsinh, j_n / (2 * j0_n * sp.l_n))
+        V = Phi + spla.U_p(c_e) - pybamm.Function(np.arcsinh, j_p / (2 * j0_p * sp.l_p))
         # Phis_n = pybamm.Scalar(0)
         # Phis_p = V
         # Concatenate variables
@@ -91,7 +91,7 @@ class LOQS(pybamm.BaseModel):
                     input_path, "electrolyte_diffusivity_Gu1997.py"
                 ),
                 "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conducivity_Gu1997.py"
+                    input_path, "electrolyte_conductivity_Gu1997.py"
                 ),
                 "Darken thermodynamic factor": os.path.join(
                     input_path, "darken_thermodynamic_factor_Chapman1968.py"

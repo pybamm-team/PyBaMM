@@ -81,6 +81,11 @@ sp = pybamm.standard_parameters
 R_n = pybamm.Parameter("Negative particle radius")
 R_p = pybamm.Parameter("Positive particle radius")
 
+# Electrolyte properties
+# QUESTION: should this be (1-2*t_plus) or 2*(1-t_plus)? See
+# Bizeray et al (2016) "Resolving a discrepancy ..."
+chi = 1 - 2 * sp.t_plus
+
 # Electrode properties
 c_n_max = pybamm.Parameter("Maximum concentration in negative electrode")
 c_p_max = pybamm.Parameter("Maximum concentration in positive electrode")
@@ -116,16 +121,53 @@ def D_p(c_p):
     return D_p_dimensional(c_p_dimensional) / D_p_dimensional(c_p_max)
 
 
+def U_n_dimensional(c):
+    "Dimensionless open circuit potential in the negative electrode"
+    #  out = (0.194 + 1.5 * np.exp(-120.0 * c)
+    #       + 0.0351 * np.tanh((c - 0.286) / 0.083)
+    #       - 0.0045 * np.tanh((c - 0.849) / 0.119)
+    #       - 0.035 * np.tanh((c - 0.9233) / 0.05)
+    #       - 0.0147 * np.tanh((c - 0.5) / 0.034)
+    #       - 0.102 * np.tanh((c - 0.194) / 0.142)
+    #       - 0.022 * np.tanh((c - 0.9) / 0.0164)
+    #       - 0.011 * np.tanh((c - 0.124) / 0.0226)
+    #       + 0.0155 * np.tanh((c - 0.105) / 0.029))
+    # Set constant until functions implemented correctly
+    out = 0.2230
+    return out
+
+
+U_n_ref = U_n_dimensional(1)
+
+
+def U_p_dimensional(c):
+    "Dimensionless open circuit potential in the positive electrode"
+    # stretch = 1.062
+    # sto = stretch * c
+    # out = (2.16216 + 0.07645 * np.tanh(30.834 - 54.4806 * sto)
+    #       + 2.1581 * np.tanh(52.294 - 50.294 * sto)
+    #       - 0.14169 * np.tanh(11.0923 - 19.8543 * sto)
+    #       + 0.2051 * np.tanh(1.4684 - 5.4888 * sto)
+    #       + 0.2531 * np.tanh((-sto + 0.56478) / 0.1316)
+    #       - 0.02167 * np.tanh((sto - 0.525) / 0.006))
+    # Set constant until functions implemented correctly
+    out = 4.1212
+    return out
+
+
+U_p_ref = U_p_dimensional(1)
+
+
 def U_n(c_n):
     "Dimensionless open-circuit sp.potential in the negative electrode"
     c_n_dimensional = c_n * c_n_max
-    return (sp.U_n_dimensional(c_n_dimensional) - sp.U_n_ref) / sp.potential_scale
+    return (U_n_dimensional(c_n_dimensional) - U_n_ref) / sp.potential_scale
 
 
 def U_p(c_p):
     "Dimensionless open-circuit sp.potential in the positive electrode"
     c_p_dimensional = c_p * c_p_max
-    return (sp.U_p_dimensional(c_p_dimensional) - sp.U_p_ref) / sp.potential_scale
+    return (U_p_dimensional(c_p_dimensional) - U_p_ref) / sp.potential_scale
 
 
 # --------------------------------------------------------------------------------------
@@ -150,6 +192,7 @@ epsilon = pybamm.Concatenation(
     pybamm.Broadcast(epsilon_s, ["separator"]),
     pybamm.Broadcast(epsilon_p, ["positive electrode"]),
 )
+# QUESTION: can we call these something different? they clash with the betas in Pb-acid
 beta_n = sp.a_n * R_n
 beta_p = sp.a_p * R_p
 
@@ -164,12 +207,26 @@ C_e = sp.tau_diffusion_e / tau_discharge  # diffusional C-rate in electrolyte
 gamma_hat_e = sp.c_e_typ / c_n_max
 
 # Electrochemical Reactions
-gamma_dl_n = (
-    sp.C_dl * sp.potential_scale / sp.interfacial_current_scale_n / tau_discharge
+C_dl_n = (
+    sp.C_dl_dimensional
+    * sp.potential_scale
+    / sp.interfacial_current_scale_n
+    / tau_discharge
 )
-gamma_dl_p = (
-    sp.C_dl * sp.potential_scale / sp.interfacial_current_scale_p / tau_discharge
+C_dl_p = (
+    sp.C_dl_dimensional
+    * sp.potential_scale
+    / sp.interfacial_current_scale_p
+    / tau_discharge
 )
+
+# Electrical
+voltage_low_cut = (
+    sp.voltage_low_cut_dimensional - (U_p_ref - U_n_ref)
+) / sp.potential_scale
+voltage_high_cut = (
+    sp.voltage_high_cut_dimensional - (U_p_ref - U_n_ref)
+) / sp.potential_scale
 
 # Initial conditions
 c_e_init = c_e_init_dimensional / sp.c_e_typ

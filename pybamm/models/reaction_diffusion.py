@@ -24,6 +24,3 @@ class ReactionDiffusionModel(pybamm.BaseModel):
 
         # Create own model from diffusion model
         self.update(diffusion_model)
-
-        # Overwrite default solver for faster solution
-        self.default_solver = pybamm.ScipySolver(method="BDF")

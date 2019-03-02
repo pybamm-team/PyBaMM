@@ -133,7 +133,7 @@ s_plus_n = pybamm.Parameter("Negative electrode cation signed stoichiometry")
 s_plus_p = pybamm.Parameter("Positive electrode cation signed stoichiometry")
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
-C_dl = pybamm.Parameter("Double-layer capacity")
+C_dl_dimensional = pybamm.Parameter("Double-layer capacity")
 
 # -----------------------------------------------------------------------------
 """Functions"""
@@ -158,48 +158,8 @@ def kappa_e_dimensional(c_e):
 def kappa_e(c_e):
     "Dimensionless electrolyte conductivity"
     c_e_dimensional = c_e * c_e_typ
+    kappa_scale = F ** 2 * D_e_dimensional(c_e_typ) * c_e_typ / (R * T)
     return kappa_e_dimensional(c_e_dimensional) / kappa_e_dimensional(c_e_typ)
-
-
-def chi_dimensional(c_e):
-    return pybamm.FunctionParameter("Darken thermodynamic factor", c_e)
-
-
-def chi(c_e):
-    c_e_dimensional = c_e * c_e_typ
-    alpha = (nu * V_w - V_e) * c_e_typ
-    return chi_dimensional(c_e_dimensional) * 2 * (1 - t_plus) / (1 - alpha * c_e)
-
-
-def U_n_dimensional(c):
-    "Dimensionless open circuit potential in the negative electrode"
-    #  out = (0.194 + 1.5 * np.exp(-120.0 * c)
-    #       + 0.0351 * np.tanh((c - 0.286) / 0.083)
-    #       - 0.0045 * np.tanh((c - 0.849) / 0.119)
-    #       - 0.035 * np.tanh((c - 0.9233) / 0.05)
-    #       - 0.0147 * np.tanh((c - 0.5) / 0.034)
-    #       - 0.102 * np.tanh((c - 0.194) / 0.142)
-    #       - 0.022 * np.tanh((c - 0.9) / 0.0164)
-    #       - 0.011 * np.tanh((c - 0.124) / 0.0226)
-    #       + 0.0155 * np.tanh((c - 0.105) / 0.029))
-    # Set constant until functions implemented correctly
-    out = 0.2230
-    return out
-
-
-def U_p_dimensional(c):
-    "Dimensionless open circuit potential in the positive electrode"
-    # stretch = 1.062
-    # sto = stretch * c
-    # out = (2.16216 + 0.07645 * np.tanh(30.834 - 54.4806 * sto)
-    #       + 2.1581 * np.tanh(52.294 - 50.294 * sto)
-    #       - 0.14169 * np.tanh(11.0923 - 19.8543 * sto)
-    #       + 0.2051 * np.tanh(1.4684 - 5.4888 * sto)
-    #       + 0.2531 * np.tanh((-sto + 0.56478) / 0.1316)
-    #       - 0.02167 * np.tanh((sto - 0.525) / 0.006))
-    # Set constant until functions implemented correctly
-    out = 4.1212
-    return out
 
 
 # --------------------------------------------------------------------------------------
@@ -210,10 +170,6 @@ potential_scale = R * T / F
 current_scale = i_typ
 interfacial_current_scale_n = i_typ / (a_n * L_x)
 interfacial_current_scale_p = i_typ / (a_p * L_x)
-# TODO: separate lithium ion and lead acid
-# Reference potentials: evaluate at m = 1
-U_n_ref = U_n_dimensional(1)
-U_p_ref = U_p_dimensional(1)
 
 # Timescales
 # Reaction timescales
@@ -248,9 +204,3 @@ m_p = m_p_dimensional / interfacial_current_scale_p
 # Electrode Properties
 sigma_n = sigma_n_dimensional * potential_scale / current_scale
 sigma_p = sigma_p_dimensional * potential_scale / current_scale
-
-# Electrical
-voltage_low_cut = (voltage_low_cut_dimensional - (U_p_ref - U_n_ref)) / potential_scale
-voltage_high_cut = (
-    voltage_high_cut_dimensional - (U_p_ref - U_n_ref)
-) / potential_scale
