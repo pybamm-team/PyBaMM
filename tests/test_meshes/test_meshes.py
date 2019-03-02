@@ -9,7 +9,11 @@ import unittest
 class TestMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
-            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+            base_parameters={
+                "Negative electrode width": 0.1,
+                "Separator width": 0.2,
+                "Positive electrode width": 0.3,
+            }
         )
 
         geometry = pybamm.Geometry1DMacro()
@@ -52,7 +56,11 @@ class TestMesh(unittest.TestCase):
 
     def test_mesh_sizes(self):
         param = pybamm.ParameterValues(
-            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+            base_parameters={
+                "Negative electrode width": 0.1,
+                "Separator width": 0.2,
+                "Positive electrode width": 0.3,
+            }
         )
 
         geometry = pybamm.Geometry1DMacro()
@@ -84,7 +92,11 @@ class TestMesh(unittest.TestCase):
 
     def test_combine_submeshes(self):
         param = pybamm.ParameterValues(
-            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+            base_parameters={
+                "Negative electrode width": 0.1,
+                "Separator width": 0.2,
+                "Positive electrode width": 0.3,
+            }
         )
 
         geometry = pybamm.Geometry1DMacro()
@@ -129,7 +141,11 @@ class TestMesh(unittest.TestCase):
 
     def test_ghost_cells(self):
         param = pybamm.ParameterValues(
-            base_parameters={"Ln": 0.1, "Ls": 0.2, "Lp": 0.3}
+            base_parameters={
+                "Negative electrode width": 0.1,
+                "Separator width": 0.2,
+                "Positive electrode width": 0.3,
+            }
         )
 
         geometry = pybamm.Geometry1DMacro()

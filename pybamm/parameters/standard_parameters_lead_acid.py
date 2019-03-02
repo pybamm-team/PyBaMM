@@ -85,25 +85,25 @@ def mu_dimensional(c_e):
 
 def U_n_dimensional(c_e):
     "Dimensional open-circuit voltage in the negative electrode [V]"
-    return pybamm.FunctionParameter("Negative electrode potential", m_dimensional(c_e))
+    return pybamm.FunctionParameter("Negative electrode ocv", m_dimensional(c_e))
 
 
 def U_p_dimensional(c_e):
     "Dimensional open-circuit voltage in the positive electrode [V]"
-    return pybamm.FunctionParameter("Positive electrode potential", m_dimensional(c_e))
+    return pybamm.FunctionParameter("Positive electrode ocv", m_dimensional(c_e))
 
 
 def U_n(c_en):
     "Dimensionless open-circuit voltage in the negative electrode"
     c_en_dimensional = c_en * sp.c_e_typ
-    U_n_ref = pybamm.FunctionParameter("Negative electrode potential", pybamm.Scalar(1))
+    U_n_ref = pybamm.FunctionParameter("Negative electrode ocv", pybamm.Scalar(1))
     return (sp.U_n_dimensional(c_en_dimensional) - U_n_ref) / sp.potential_scale
 
 
 def U_p(c_ep):
     "Dimensionless open-circuit voltage in the positive electrode"
     c_ep_dimensional = c_ep * sp.c_e_typ
-    U_p_ref = pybamm.FunctionParameter("Positive electrode potential", pybamm.Scalar(1))
+    U_p_ref = pybamm.FunctionParameter("Positive electrode ocv", pybamm.Scalar(1))
     return (sp.U_p_dimensional(c_ep_dimensional) - U_p_ref) / sp.potential_scale
 
 

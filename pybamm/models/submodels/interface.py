@@ -13,10 +13,10 @@ def homogeneous_reaction(current):
     """
     # hack to make the concatenation work. Concatenation needs some work
     current_neg = pybamm.Broadcast(
-        current / pybamm.standard_parameters.ln, ["negative electrode"]
+        current / pybamm.standard_parameters.l_n, ["negative electrode"]
     )
     current_pos = pybamm.Broadcast(
-        -current / pybamm.standard_parameters.lp, ["positive electrode"]
+        -current / pybamm.standard_parameters.l_p, ["positive electrode"]
     )
     return pybamm.Concatenation(
         current_neg, pybamm.Broadcast(0, ["separator"]), current_pos

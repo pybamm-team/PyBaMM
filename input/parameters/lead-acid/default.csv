@@ -3,7 +3,7 @@ Name,Value,Units,Reference,Notes
 ,,,,
 # Physical constants,,,,
 Ideal gas constant,8.314,J.K-1.mol-1,-,
-Faraday’s constant,96487,C.mol-1,-,
+Faraday's constant,96487,C.mol-1,-,
 Reference temperature,294.85,K,Room temperature,
 ,,,,
 # Macroscale geometry,,,,

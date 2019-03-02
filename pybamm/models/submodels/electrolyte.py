@@ -12,8 +12,8 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
 
     Parameters
     ----------
-    G : :class:`pybamm.Symbol`
-        An expression tree that represents the concentration flux at the
+    j : :class:`pybamm.Symbol`
+        An expression tree that represents the interfacial current density at the
         electrode-electrolyte interface
 
     Attributes
@@ -35,25 +35,24 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
     *Extends:* :class:`BaseModel`
     """
 
-    def __init__(self, G):
+    def __init__(self, j):
         super().__init__()
 
-        epsilon = pybamm.standard_parameters.epsilon_s  # make issue for spatially
-        # dependent parameters
-        b = pybamm.standard_parameters.b
-        delta = pybamm.standard_parameters.delta
-        nu = pybamm.standard_parameters.nu
-        t_plus = pybamm.standard_parameters.t_plus
-        ce0 = pybamm.standard_parameters.ce0
+        # Parameters
+        sp = pybamm.standard_parameters
+        spli = pybamm.standard_parameters_lithium_ion
 
         electrolyte_domain = ["negative electrode", "separator", "positive electrode"]
 
         c_e = pybamm.Variable("c_e", electrolyte_domain)
 
-        N_e = -(epsilon ** b) * pybamm.grad(c_e)
+        N_e = -(spli.epsilon ** sp.b) * pybamm.grad(c_e)
 
-        self.rhs = {c_e: -pybamm.div(N_e) / delta / epsilon + nu * (1 - t_plus) * G}
-        self.initial_conditions = {c_e: ce0}
+        self.rhs = {
+            c_e: -pybamm.div(N_e) / spli.C_e / spli.epsilon
+            + (1 - sp.t_plus) / spli.gamma_hat_e * j
+        }
+        self.initial_conditions = {c_e: spli.c_e_init}
         self.boundary_conditions = {
             N_e: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
         }

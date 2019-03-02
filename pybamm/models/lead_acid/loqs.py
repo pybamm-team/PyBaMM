@@ -75,7 +75,7 @@ class LOQS(pybamm.BaseModel):
         }
 
         # Overwrite default parameter values
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead_acid")
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
@@ -97,10 +97,10 @@ class LOQS(pybamm.BaseModel):
                     input_path, "darken_thermodynamic_factor_Chapman1968.py"
                 ),
                 "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_OCV_Bode1977.py"
+                    input_path, "lead_electrode_ocv_Bode1977.py"
                 ),
                 "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_OCV_Bode1977.py"
+                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
                 ),
             },
         )

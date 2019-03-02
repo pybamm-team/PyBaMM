@@ -14,19 +14,25 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
         parameters = {
-            "Cd": pybamm.standard_parameters_lead_acid.Cd,
-            "Crate": pybamm.standard_parameters_lead_acid.Crate,
-            "iota_s_n": pybamm.standard_parameters_lead_acid.iota_s_n,
-            "iota_s_p": pybamm.standard_parameters_lead_acid.iota_s_p,
+            "C_e": pybamm.standard_parameters_lead_acid.C_e,
+            "C_rate": pybamm.standard_parameters.C_rate,
+            "sigma_n": pybamm.standard_parameters.sigma_n,
+            "sigma_p": pybamm.standard_parameters.sigma_p,
             "gamma_dl_n": pybamm.standard_parameters_lead_acid.gamma_dl_n,
             "gamma_dl_p": pybamm.standard_parameters_lead_acid.gamma_dl_p,
             "DeltaVsurf_n": pybamm.standard_parameters_lead_acid.DeltaVsurf_n,
             "DeltaVsurf_p": pybamm.standard_parameters_lead_acid.DeltaVsurf_p,
-            "alpha": pybamm.standard_parameters_lead_acid.alpha,
         }
         # Process
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+            "input/parameters/lead-acid/default.csv",
+            {
+                "Typical current density": 1,
+                "Electrolyte diffusivity": os.path.join(
+                    input_path, "electrolyte_diffusivity_Gu1997.py"
+                ),
+            },
         )
         param_eval = {
             name: parameter_values.process_symbol(parameter).evaluate()
@@ -34,11 +40,11 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         }
 
         # Diffusional C-rate should be smaller than C-rate
-        self.assertLess(param_eval["Cd"], param_eval["Crate"])
+        self.assertLess(param_eval["C_e"], param_eval["C_rate"])
 
         # Dimensionless electrode conductivities should be large
-        self.assertGreater(param_eval["iota_s_n"], 10)
-        self.assertGreater(param_eval["iota_s_p"], 10)
+        self.assertGreater(param_eval["sigma_n"], 10)
+        self.assertGreater(param_eval["sigma_p"], 10)
         # Dimensionless double-layer capacity should be small
         self.assertLess(param_eval["gamma_dl_n"], 1e-3)
         self.assertLess(param_eval["gamma_dl_p"], 1e-3)
@@ -46,12 +52,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         # electrode
         self.assertLess(param_eval["DeltaVsurf_n"], 0)
         self.assertGreater(param_eval["DeltaVsurf_p"], 0)
-        # Excluded volume fraction should be less than 0.1
-        self.assertLess(abs(param_eval["alpha"]), 1e-1)
 
     def test_concatenated_parameters(self):
         # create
-        s = pybamm.standard_parameters_lead_acid.s
+        s = pybamm.standard_parameters.s
         self.assertIsInstance(s, pybamm.Concatenation)
         self.assertEqual(
             s.domain, ["negative electrode", "separator", "positive electrode"]
@@ -59,7 +63,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
         # process parameters and discretise
         parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+            "input/parameters/lead-acid/default.csv", {"Typical current density": 1}
         )
         disc = get_discretisation_for_testing()
         processed_s = disc.process_symbol(parameter_values.process_symbol(s))
@@ -74,17 +78,17 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_current_functions(self):
         # create current functions
-        current = pybamm.standard_parameters_lead_acid.dimensional_current_with_time
-        dimensionless_current = pybamm.standard_parameters_lead_acid.current_with_time
+        dimensional_current = pybamm.standard_parameters.dimensional_current_with_time
+        dimensionless_current = pybamm.standard_parameters.current_with_time
 
         # process
         parameter_values = pybamm.ParameterValues(
             {
-                "H": 0.1,
-                "W": 0.1,
-                "number of electrodes in parallel": 8,
-                "current scale": 2,
-                "current function": os.path.join(
+                "Electrode height": 0.1,
+                "Electrode depth": 0.1,
+                "Number of electrodes connected in parallel to make a cell": 8,
+                "Typical current density": 2,
+                "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
                     "parameters",
@@ -93,11 +97,13 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
                 ),
             }
         )
-        current_eval = parameter_values.process_symbol(current)
+        dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
         dimensionless_current_eval = parameter_values.process_symbol(
             dimensionless_current
         )
-        self.assertAlmostEqual(current_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1))
+        self.assertAlmostEqual(
+            dimensional_current_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1)
+        )
         self.assertEqual(dimensionless_current_eval.evaluate(t=3), 1)
 
     @unittest.skip("lead acid functions not yet implemented")

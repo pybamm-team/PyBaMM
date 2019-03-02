@@ -20,7 +20,7 @@ L_n, Ls, Lp
     The widths of the negative electrode, separator and positive electrode, respectively
 Lx
     The width of a single cell
-ln, ls, lp
+l_n, l_s, l_p
     The dimesionless widths of the negative electrode, separator and positive
     electrode respectively
 
@@ -92,7 +92,7 @@ A_cc = L_y * L_z  # Area of current collector
 # Electrical
 I_typ = pybamm.Parameter("Typical current density")
 Q = pybamm.Parameter("Cell capacity")
-Crate = I_typ / Q
+C_rate = I_typ / Q
 n_electrodes_parallel = pybamm.Parameter(
     "Number of electrodes connected in parallel to make a cell"
 )
@@ -100,7 +100,7 @@ i_typ = I_typ / (n_electrodes_parallel * A_cc)
 voltage_low_cut_dimensional = pybamm.Parameter("Lower voltage cut-off")
 voltage_high_cut_dimensional = pybamm.Parameter("Upper voltage cut-off")
 current_with_time = pybamm.FunctionParameter("Current function", pybamm.t)
-dimensional_current_with_time = I_typ * current_with_time
+dimensional_current_with_time = i_typ * current_with_time
 
 # Electrolyte properties
 c_e_typ = pybamm.Parameter("Typical electrolyte concentration")
@@ -235,6 +235,11 @@ l_z = L_z / L_z
 # Electrochemical Reactions
 s_n = -(s_plus_n + ne_n * t_plus) / ne_n  # Dimensionless rection rate (neg)
 s_p = -(s_plus_p + ne_p * t_plus) / ne_p  # Dimensionless rection rate (pos)
+s = pybamm.Concatenation(
+    pybamm.Broadcast(s_n, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(s_p, ["positive electrode"]),
+)
 m_n = m_n_dimensional / interfacial_current_scale_n
 m_p = m_p_dimensional / interfacial_current_scale_p
 # m_n = time_scale / tau_rxn_n

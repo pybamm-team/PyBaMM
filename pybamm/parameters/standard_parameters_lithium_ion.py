@@ -16,11 +16,11 @@ T
 Macroscale Geometry
 -------------------
 
-L_n, Ls, Lp
+L_n, L_s, L_p
     The widths of the negative electrode, separator and positive electrode, respectively
-Lx
+L_x
     The width of a single cell
-ln, ls, lp
+l_n, l_s, l_p
     The dimesionless widths of the negative electrode, separator and positive
     electrode respectively
 
@@ -145,6 +145,11 @@ tau_diffusion_p = R_n ** 2 / D_p_dimensional(c_p_max)
 epsilon_n = pybamm.Parameter("Negative electrode porosity")
 epsilon_s = pybamm.Parameter("Separator porosity")
 epsilon_p = pybamm.Parameter("Positive electrode porosity")
+epsilon = pybamm.Concatenation(
+    pybamm.Broadcast(epsilon_n, ["negative electrode"]),
+    pybamm.Broadcast(epsilon_s, ["separator"]),
+    pybamm.Broadcast(epsilon_p, ["positive electrode"]),
+)
 beta_n = sp.a_n * R_n
 beta_p = sp.a_p * R_p
 
@@ -156,7 +161,7 @@ C_p = tau_discharge / tau_diffusion_p  # diffusional C-rate in positive electrod
 
 # Electrolyte Properties
 C_e = sp.tau_diffusion_e / tau_discharge  # diffusional C-rate in electrolyte
-nu = c_n_max / sp.c_e_typ
+gamma_hat_e = sp.c_e_typ / c_n_max
 
 # Electrochemical Reactions
 gamma_dl_n = (

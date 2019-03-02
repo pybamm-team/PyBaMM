@@ -1,4 +1,4 @@
-def lfp_cond(c):
+def electrolyte_conducivity(c):
     """
     Conductivity of LiPF6 in EC:DMC as in Newman's Dualfoil code. This
     function is in dimensional form.
