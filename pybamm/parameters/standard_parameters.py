@@ -159,7 +159,7 @@ def kappa_e(c_e):
     "Dimensionless electrolyte conductivity"
     c_e_dimensional = c_e * c_e_typ
     kappa_scale = F ** 2 * D_e_dimensional(c_e_typ) * c_e_typ / (R * T)
-    return kappa_e_dimensional(c_e_dimensional) / kappa_e_dimensional(c_e_typ)
+    return kappa_e_dimensional(c_e_dimensional) / kappa_scale
 
 
 # --------------------------------------------------------------------------------------
