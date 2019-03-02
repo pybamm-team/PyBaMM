@@ -19,9 +19,6 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         return pybamm.Vector(symbol_mesh.nodes)
 
-    def get_num_of_vars(self, domain):
-        return self.mesh[domain].npts
-
     def broadcast(self, symbol, domain):
         # for finite volume we send variables to cells and so use number_of_cells
         broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)

@@ -40,19 +40,6 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def get_num_of_vars(self, domain):
-        """
-        This function simply returns the number of discrete variables a
-        variable on domain is converted into.
-
-        Parameters
-        ----------
-        domain : str
-            The domain from which we need to get the points
-        """
-
-        return NotImplementedError
-
     def broadcast(self, symbol, domain):
         """
         Broadcast symbol to a specified domain.
