@@ -6,10 +6,12 @@ import numpy as np
 
 def lead_electrode_ocv_Bode1977(m):
     """
-    Dimensional open-circuit voltage in the negative (lead) electrode [V], from [1],
+    Dimensional open-circuit voltage in the negative (lead) electrode [V], from [1]_,
     as a function of the molar mass m [mol.kg-1].
 
-    [1] H Bode. Lead-acid batteries. John Wiley and Sons, Inc., New York, NY, 1977.
+    References
+    ----------
+    .. [1] H Bode. Lead-acid batteries. John Wiley and Sons, Inc., New York, NY, 1977.
 
     """
     U = (

@@ -7,9 +7,11 @@ import numpy as np
 def lead_dioxide_electrode_ocv_Bode1977(m):
     """
     Dimensional open-circuit voltage in the positive (lead-dioxide) electrode [V],
-    from [1], as a function of the molar mass m [mol.kg-1].
+    from [1]_, as a function of the molar mass m [mol.kg-1].
 
-    [1] H Bode. Lead-acid batteries. John Wiley and Sons, Inc., New York, NY, 1977.
+    References
+    ----------
+    .. [1] H Bode. Lead-acid batteries. John Wiley and Sons, Inc., New York, NY, 1977.
 
     """
     U = (
