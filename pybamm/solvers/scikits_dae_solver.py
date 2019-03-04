@@ -7,6 +7,7 @@ import pybamm
 
 import numpy as np
 import importlib
+
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:
     scikits_odes_spec = importlib.util.find_spec("scikits.odes")
@@ -42,7 +43,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, residuals, y0, ydot0, t_eval):
+    def integrate(self, residuals, y0, ydot0, t_eval, events=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0 and ydot_0.
 
@@ -55,16 +56,21 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
+        events : method, optional
+            A function that takes in t and y and returns conditions for the solver to
+            stop
 
         """
+
         def eqsres(t, y, ydot, return_residuals):
             return_residuals[:] = residuals(t, y, ydot)
 
-        extra_options = {
-            'old_api': False,
-            'rtol': self.tol,
-            'atol': self.tol,
-        }
+        def rootfn(t, y, ydot, return_root):
+            return_root[:] = events(t, y)
+
+        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
+        if events:
+            extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events(0, y0))})
 
         dae_solver = scikits_odes.dae(self.method, eqsres, **extra_options)
         sol = dae_solver.solve(t_eval, y0, ydot0)
