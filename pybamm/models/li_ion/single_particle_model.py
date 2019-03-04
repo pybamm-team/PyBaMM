@@ -94,6 +94,8 @@ class SPM(pybamm.BaseModel):
             "cp_surf": cp_surf,
             "V": V,
         }
+        # Cut-off if either concentration goes negative
+        self.events = [cn, cp]
 
         # Overwrite default solver
         self.default_solver = pybamm.ScipySolver(method="BDF")
