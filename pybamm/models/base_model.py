@@ -232,13 +232,20 @@ class BaseModel(object):
         vars_in_algebraic_keys = set()
         vars_in_eqns = set()
         # Get all variables ids from rhs and algebraic keys and equations
+        # For equations we look through the whole expression tree.
+        # "Variables" can be Concatenations so we also have to look in the whole
+        # expression tree
         for var, eqn in self.rhs.items():
-            vars_in_rhs_keys.add(var.id)
+            vars_in_rhs_keys.update(
+                [x.id for x in var.pre_order() if isinstance(x, pybamm.Variable)]
+            )
             vars_in_eqns.update(
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
         for var, eqn in self.algebraic.items():
-            vars_in_algebraic_keys.add(var.id)
+            vars_in_algebraic_keys.update(
+                [x.id for x in var.pre_order() if isinstance(x, pybamm.Variable)]
+            )
             vars_in_eqns.update(
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
