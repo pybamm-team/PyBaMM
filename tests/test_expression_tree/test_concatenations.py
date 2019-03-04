@@ -77,6 +77,13 @@ class TestConcatenations(unittest.TestCase):
             conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
         )
 
+        # with time
+        b = pybamm.t
+        conc = pybamm.NumpyConcatenation(a, b, c)
+        np.testing.assert_array_equal(
+            conc.evaluate(16, y), np.concatenate([y, np.array([16]), np.array([3])])
+        )
+
     def test_numpy_domain_concatenation(self):
         # create discretisation
         disc = get_discretisation_for_testing()

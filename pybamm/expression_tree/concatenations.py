@@ -66,9 +66,11 @@ class NumpyConcatenation(pybamm.Symbol):
 
     def __init__(self, *children):
         children = list(children)
+        # Turn objects that evaluate to scalars to objects that evaluate to vectors,
+        # so that we can concatenate them
         for i, child in enumerate(children):
             if child.evaluates_to_number():
-                children[i] = pybamm.Vector(np.array([child.evaluate()]))
+                children[i] = pybamm.NumpyBroadcast(child, [], None)
         super().__init__("model concatenation", children, domain=[])
 
     def evaluate(self, t=None, y=None):
