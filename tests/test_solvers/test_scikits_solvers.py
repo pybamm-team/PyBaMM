@@ -37,6 +37,40 @@ class TestScikitsSolver(unittest.TestCase):
         t_sol, y_sol = solver.integrate(exponential_decay, y0, t_eval)
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
 
+    def test_ode_integrate_find_root(self):
+        # Constant
+        solver = pybamm.ScikitsOdeSolver(tol=1e-8)
+
+        def constant_decay(t, y):
+            return -2 * np.ones_like(y)
+
+        def event(t, y, out):
+            out[0] = y[0]
+            return 0
+
+        y0 = np.array([1])
+        t_eval = np.linspace(0, 1, 100)
+        t_sol, y_sol = solver.integrate(constant_decay, y0, t_eval, event=event)
+        np.testing.assert_allclose(1 - 2 * t_sol, y_sol[0])
+        np.testing.assert_array_less(0, y_sol[0])
+        np.testing.assert_array_less(t_sol, 0.5)
+
+        # Expnonential growth
+        solver = pybamm.ScikitsOdeSolver(tol=1e-8)
+
+        def exponential_growth(t, y):
+            return y
+
+        def event(t, y, out):
+            out[0] = y[0] - 10
+            return 0
+
+        y0 = np.array([1])
+        t_eval = np.linspace(0, 3, 100)
+        t_sol, y_sol = solver.integrate(exponential_growth, y0, t_eval, event=event)
+        np.testing.assert_allclose(np.exp(t_sol), y_sol[0], rtol=1e-4)
+        np.testing.assert_array_less(y_sol[0], 10)
+
     def test_dae_integrate(self):
         # Constant
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)

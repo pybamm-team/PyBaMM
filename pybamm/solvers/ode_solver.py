@@ -38,7 +38,7 @@ class OdeSolver(pybamm.BaseSolver):
         y0 = model.concatenated_initial_conditions
         self.t, self.y = self.integrate(dydt, y0, t_eval)
 
-    def integrate(self, derivs, y0, t_eval):
+    def integrate(self, derivs, y0, t_eval, event=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
