@@ -43,13 +43,6 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertEqual(processed_rxn.children[1].domain, ["separator"])
         self.assertEqual(processed_rxn.children[2].domain, ["positive electrode"])
 
-        # test values
-        ln = param.process_symbol(pybamm.standard_parameters.ln)
-        lp = param.process_symbol(pybamm.standard_parameters.lp)
-        self.assertEqual(processed_rxn.children[0].evaluate() * ln.evaluate(), 1)
-        self.assertEqual(processed_rxn.children[1].evaluate(), 0)
-        self.assertEqual(processed_rxn.children[2].evaluate() * lp.evaluate(), -1)
-
     def test_discretisation(self):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
@@ -74,15 +67,27 @@ class TestHomogeneousReaction(unittest.TestCase):
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
         disc = get_discretisation_for_testing()
+        mesh = disc.mesh
 
-        G_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
-        G_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
+        j_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
+        j_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
 
-        G_n = param.process_symbol(G_n)
-        G_p = param.process_symbol(G_p)
+        j_n = param.process_symbol(j_n)
+        j_p = param.process_symbol(j_p)
 
-        disc.process_symbol(G_n)
-        disc.process_symbol(G_p)
+        disc.process_symbol(j_n)
+        disc.process_symbol(j_p)
+
+        # test values
+        ln = param.process_symbol(pybamm.standard_parameters.ln)
+        lp = param.process_symbol(pybamm.standard_parameters.lp)
+        npts_n = mesh["negative electrode"].npts
+        npts_s = mesh["separator"].npts
+        np.testing.assert_array_equal(j_n.evaluate()[:npts_n] * ln.evaluate(), 1)
+        np.testing.assert_array_equal(j_n.evaluate()[npts_n : npts_n + npts_s], 0)
+        np.testing.assert_array_equal(
+            j_n.evaluate()[npts_n + npts_s :] * lp.evaluate(), -1
+        )
 
 
 class TestButlerVolmerLeadAcid(unittest.TestCase):
@@ -200,7 +205,6 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
             mesh["positive electrode"].nodes.shape,
         )
 
-    @unittest.skip("needs smarter domain concatenation")
     def test_discretisation_whole(self):
         bv_whole = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
 

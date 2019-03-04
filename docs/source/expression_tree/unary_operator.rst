@@ -19,12 +19,6 @@ Unary Operators
 .. autoclass:: pybamm.Divergence
   :members:
 
-.. autoclass:: pybamm.Broadcast
-  :members:
-
-.. autoclass:: pybamm.NumpyBroadcast
-  :members:
-
 .. autoclass:: pybamm.SurfaceValue
   :members:
 

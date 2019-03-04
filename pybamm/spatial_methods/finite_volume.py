@@ -23,6 +23,9 @@ class FiniteVolume(pybamm.SpatialMethod):
     """
 
     def __init__(self, mesh):
+        # add npts_for_broadcast to mesh domains for this particular discretisation
+        for dom in mesh.keys():
+            mesh[dom].npts_for_broadcast = mesh[dom].npts
         super().__init__(mesh)
 
     def spatial_variable(self, symbol):
@@ -56,8 +59,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
 
         # for finite volume we send variables to cells and so use number_of_cells
-        number_of_cells = {dom: submesh.npts for dom, submesh in self.mesh.items()}
-        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, number_of_cells)
+        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
         # if the broadcasted symbol evaluates to a constant value, replace the
         # symbol-Vector multiplication with a single array
@@ -92,7 +94,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
-        return gradient_matrix * discretised_symbol
+        return gradient_matrix @ discretised_symbol
 
     def gradient_matrix(self, domain):
         """
@@ -137,9 +139,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             # and also a "positive particle" left and right.
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
-            discretised_symbol = pybamm.NumpyModelConcatenation(
-                lbc, discretised_symbol, rbc
-            )
+            discretised_symbol = pybamm.NumpyConcatenation(lbc, discretised_symbol, rbc)
 
         domain = symbol.domain
         # check for spherical domains
@@ -153,12 +153,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges = pybamm.Vector(submesh.edges)
 
             out = (1 / (r ** 2)) * (
-                divergence_matrix * ((r_edges ** 2) * discretised_symbol)
+                divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
             )
 
         else:
             divergence_matrix = self.divergence_matrix(domain)
-            out = divergence_matrix * discretised_symbol
+            out = divergence_matrix @ discretised_symbol
         return out
 
     def divergence_matrix(self, domain):
@@ -235,7 +235,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
         right_ghost_cell = 2 * rbc - last_node
         # concatenate
-        return pybamm.NumpyModelConcatenation(
+        return pybamm.NumpyConcatenation(
             left_ghost_cell, discretised_symbol, right_ghost_cell
         )
 

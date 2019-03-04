@@ -21,15 +21,18 @@ def homogeneous_reaction(current, domain):
     elif domain == ["separator"]:
         exchange_current = pybamm.Scalar(0)
     elif domain == ["positive electrode"]:
-        exchange_current = (
-            -current / pybamm.standard_parameters.lp * pybamm.Scalar(1, domain=domain)
-        )
+        exchange_current = -current / pybamm.standard_parameters.lp
+
     elif domain == ["negative electrode", "separator", "positive electrode"]:
-        current_neg = homogeneous_reaction(current, ["negative electrode"])
-        current_sep = homogeneous_reaction(current, ["separator"])
-        current_pos = homogeneous_reaction(current, ["positive electrode"])
-        exchange_current = pybamm.PiecewiseConstant(
-            current_neg, current_sep, current_pos
+        # hack to make the concatenation work. Concatenation needs some work
+        current_neg = pybamm.Broadcast(
+            current / pybamm.standard_parameters.ln, ["negative electrode"]
+        )
+        current_pos = pybamm.Broadcast(
+            -current / pybamm.standard_parameters.lp, ["positive electrode"]
+        )
+        return pybamm.Concatenation(
+            current_neg, pybamm.Broadcast(0, ["separator"]), current_pos
         )
     else:
         raise NotImplementedError("{} is not a valid domain".format(domain))
@@ -284,7 +287,7 @@ def butler_volmer_lead_acid(c, phi, domain=None):
         # Negative electrode
         current_neg = butler_volmer_lead_acid(cn, phin, domain=["negative electrode"])
         # Separator
-        current_sep = pybamm.Scalar(0, domain=["separator"])
+        current_sep = pybamm.Broadcast(0, ["separator"])
         # Positive electrode
         current_pos = butler_volmer_lead_acid(cp, phip, domain=["positive electrode"])
         # Concatenate

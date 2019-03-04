@@ -26,7 +26,7 @@ class TestDiscretise(unittest.TestCase):
         disc._y_slices = {c.id: slice(0, 1), a.id: slice(2, 3), b.id: slice(3, 4)}
         result = disc._concatenate_init(initial_conditions)
 
-        self.assertIsInstance(result, pybamm.NumpyModelConcatenation)
+        self.assertIsInstance(result, pybamm.NumpyConcatenation)
         self.assertEqual(result.children[0].evaluate(), 1)
         self.assertEqual(result.children[1].evaluate(), 2)
         self.assertEqual(result.children[2].evaluate(), 3)
@@ -38,7 +38,7 @@ class TestDiscretise(unittest.TestCase):
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -182,7 +182,7 @@ class TestDiscretise(unittest.TestCase):
         for eqn in [pybamm.grad(var), pybamm.div(var)]:
             eqn_disc = disc.process_symbol(eqn)
 
-            self.assertIsInstance(eqn_disc, pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc, pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.Matrix)
             self.assertIsInstance(eqn_disc.children[1], pybamm.StateVector)
 
@@ -200,7 +200,7 @@ class TestDiscretise(unittest.TestCase):
 
             self.assertIsInstance(eqn_disc, pybamm.Multiplication)
             self.assertIsInstance(eqn_disc.children[0], pybamm.StateVector)
-            self.assertIsInstance(eqn_disc.children[1], pybamm.Multiplication)
+            self.assertIsInstance(eqn_disc.children[1], pybamm.MatrixMultiplication)
             self.assertIsInstance(eqn_disc.children[1].children[0], pybamm.Matrix)
             self.assertIsInstance(eqn_disc.children[1].children[1], pybamm.StateVector)
 
@@ -285,6 +285,15 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(
             y0[T].evaluate(0, None), 5 * np.ones_like(mesh["negative electrode"].nodes)
         )
+
+    def test_process_variables_dict(self):
+        # want to check the case where the keys are strings and
+        # and the equation evals to a number
+
+        variables = {"c": pybamm.Scalar(0)}
+
+        disc = get_discretisation_for_testing()
+        disc.process_dict(variables)
 
     def test_process_model_ode(self):
         # one equation
@@ -432,7 +441,6 @@ class TestDiscretise(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
         a = pybamm.Scalar(7)
-        vec = pybamm.Vector(np.linspace(0, 1))
         var = pybamm.Variable("var")
 
         # create discretisation
@@ -449,27 +457,16 @@ class TestDiscretise(unittest.TestCase):
         )
         self.assertEqual(broad.domain, whole_cell)
 
-        # vector
-        broad = disc._spatial_methods[whole_cell[0]].broadcast(vec, ["separator"])
-        self.assertIsInstance(broad, pybamm.Array)
-        np.testing.assert_array_equal(
-            broad.evaluate(),
-            np.linspace(0, 1)[:, np.newaxis] * np.ones_like(mesh["separator"].nodes),
-        )
-        self.assertEqual(broad.domain, ["separator"])
+        broad_disc = disc.process_symbol(broad)
+        # type of broad will be array as broad is constant
+        self.assertIsInstance(broad_disc, pybamm.Array)
 
-        # process Broadcast symbol
+        # process Broadcast variable
         disc._y_slices = {var.id: slice(53)}
         broad1 = pybamm.Broadcast(var, ["negative electrode"])
         broad1_disc = disc.process_symbol(broad1)
         self.assertIsInstance(broad1_disc, pybamm.NumpyBroadcast)
         self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
-
-        scal = pybamm.Scalar(3)
-        broad2 = pybamm.Broadcast(scal, ["negative electrode"])
-        broad2_disc = disc.process_symbol(broad2)
-        # type of broad2 will be array as broad2 is constant
-        self.assertIsInstance(broad2_disc, pybamm.Array)
 
     def test_concatenation(self):
         a = pybamm.Symbol("a")
@@ -480,12 +477,12 @@ class TestDiscretise(unittest.TestCase):
         disc = get_discretisation_for_testing()
 
         conc = disc.concatenate(a, b, c)
-        self.assertIsInstance(conc, pybamm.NumpyModelConcatenation)
+        self.assertIsInstance(conc, pybamm.NumpyConcatenation)
 
     def test_concatenation_of_scalars(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        a = pybamm.Scalar(5, domain=["negative electrode"])
-        b = pybamm.Scalar(4, domain=["positive electrode"])
+        a = pybamm.Broadcast(5, ["negative electrode"])
+        b = pybamm.Broadcast(4, ["positive electrode"])
 
         # create discretisation
         disc = get_discretisation_for_testing()
