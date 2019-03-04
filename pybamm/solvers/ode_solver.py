@@ -35,8 +35,11 @@ class OdeSolver(pybamm.BaseSolver):
         def dydt(t, y):
             return model.concatenated_rhs.evaluate(t, y)
 
+        def events(t, y):
+            return model.concatenated_events.evaluate(t, y)
+
         y0 = model.concatenated_initial_conditions
-        self.t, self.y = self.integrate(dydt, y0, t_eval)
+        self.t, self.y = self.integrate(dydt, y0, t_eval, events=events)
 
     def integrate(self, derivs, y0, t_eval, events=None):
         """

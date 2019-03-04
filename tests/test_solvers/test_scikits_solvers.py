@@ -164,6 +164,25 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_array_equal(solver.t, t_eval)
         np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
 
+    def test_model_solver_ode_events(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=whole_cell)
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+        model.initial_conditions_ydot = {var: 0.1}
+        model.events = [var - 1.5]
+        disc = StandardModelTest(model).disc
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScikitsOdeSolver(tol=1e-9)
+        t_eval = np.linspace(0, 10, 100)
+        solver.solve(model, t_eval)
+        np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
+        np.testing.assert_array_less(solver.y[0], 1.5)
+
     def test_model_solver_dae(self):
         # Create model
         model = pybamm.BaseModel()
@@ -182,6 +201,29 @@ class TestScikitsSolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)
+        np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
+        np.testing.assert_allclose(solver.y[-1], 2 * np.exp(0.1 * solver.t))
+
+    def test_model_solver_dae_events(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
+        model.events = [var1 - 1.5, var2 - 2.5]
+        disc = StandardModelTest(model).disc
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        t_eval = np.linspace(0, 1, 100)
+        solver.solve(model, t_eval)
+        np.testing.assert_array_less(solver.y[0], 1.5)
+        np.testing.assert_array_less(solver.y[-1], 2.5)
         np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
         np.testing.assert_allclose(solver.y[-1], 2 * np.exp(0.1 * solver.t))
 

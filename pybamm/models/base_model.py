@@ -175,7 +175,7 @@ class BaseModel(object):
 
     @events.setter
     def events(self, events):
-        self._events = variables
+        self._events = events
 
     @property
     def concatenated_rhs(self):

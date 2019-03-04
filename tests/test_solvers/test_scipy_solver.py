@@ -76,8 +76,8 @@ class TestScipySolver(unittest.TestCase):
         model = pybamm.BaseModel()
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
-        model.rhs = {var: pybamm.Scalar(0.1) * var}
-        model.initial_conditions = {var: pybamm.Scalar(1)}
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
         # No need to set parameters; can use base discretisation (no spatial operators)
 
         # create discretisation
@@ -91,6 +91,28 @@ class TestScipySolver(unittest.TestCase):
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)
         np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
+
+    def test_model_solver_with_event(self):
+        # Create model
+        model = pybamm.BaseModel()
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: -0.1 * var}
+        model.initial_conditions = {var: 1}
+        model.events = [var - 0.5]
+        # No need to set parameters; can use base discretisation (no spatial operators)
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+        # Solve
+        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+        t_eval = np.linspace(0, 10, 100)
+        solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solver.t, t_eval)
+        np.testing.assert_allclose(solver.y[0], np.exp(-0.1 * solver.t))
 
 
 if __name__ == "__main__":
