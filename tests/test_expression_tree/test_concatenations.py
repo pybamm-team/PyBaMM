@@ -1,8 +1,8 @@
+#
 # Tests for the Concatenation class and subclasses
 #
 import pybamm
-from tests.shared import MeshForTesting
-
+from tests import get_discretisation_for_testing
 import numpy as np
 import unittest
 
@@ -31,10 +31,6 @@ class TestConcatenations(unittest.TestCase):
             ["negative electrode", "separator", "positive electrode", "test"],
         )
 
-        # Whole cell concatenations should simplify
-        conc = pybamm.Concatenation(a, b)
-        self.assertEqual(conc.domain, ["whole cell"])
-
         # Can't concatenate nodes with overlapping domains
         d = pybamm.Symbol("d", domain=["separator"])
         with self.assertRaises(pybamm.DomainError):
@@ -47,45 +43,55 @@ class TestConcatenations(unittest.TestCase):
             ["negative electrode", "separator", "positive electrode", "test"],
         )
 
-    def test_numpy_model_concatenation_vectors(self):
+    def test_numpy_concatenation_vectors(self):
         # with entries
         y = np.linspace(0, 1, 15)
         a = pybamm.Vector(y[:5])
         b = pybamm.Vector(y[5:9])
         c = pybamm.Vector(y[9:])
-        conc = pybamm.NumpyModelConcatenation(a, b, c)
+        conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(conc.evaluate(None, y), y)
         # with y_slice
         a = pybamm.StateVector(slice(0, 10))
         b = pybamm.StateVector(slice(10, 15))
         c = pybamm.StateVector(slice(15, 23))
-        conc = pybamm.NumpyModelConcatenation(a, b, c)
+        conc = pybamm.NumpyConcatenation(a, b, c)
         y = np.linspace(0, 1, 23)
         np.testing.assert_array_equal(conc.evaluate(None, y), y)
 
-    def test_numpy_model_concatenation_vector_scalar(self):
+    def test_numpy_concatenation_vector_scalar(self):
         # with entries
         y = np.linspace(0, 1, 10)
         a = pybamm.Vector(y)
         b = pybamm.Scalar(16)
         c = pybamm.Scalar(3)
-        conc = pybamm.NumpyModelConcatenation(a, b, c)
+        conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(
             conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
         )
 
         # with y_slice
         a = pybamm.StateVector(slice(0, 10))
-        conc = pybamm.NumpyModelConcatenation(a, b, c)
+        conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(
             conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
         )
 
+        # with time
+        b = pybamm.t
+        conc = pybamm.NumpyConcatenation(a, b, c)
+        np.testing.assert_array_equal(
+            conc.evaluate(16, y), np.concatenate([y, np.array([16]), np.array([3])])
+        )
+
     def test_numpy_domain_concatenation(self):
-        mesh = MeshForTesting()
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a = pybamm.Scalar(2, domain=a_dom)
+        a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
 
         # concatenate them the "wrong" way round to check they get reordered correctly
@@ -97,15 +103,10 @@ class TestConcatenations(unittest.TestCase):
             ),
         )
 
-        # vector child of wrong size will throw
-        b = pybamm.Vector(np.full(mesh[b_dom[0]].npts - 5, 1), domain=b_dom)
-        with self.assertRaises(ValueError):
-            conc = pybamm.DomainConcatenation([b, a], mesh)
-
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
         b_dom = ["negative electrode", "positive electrode"]
-        a = pybamm.Scalar(2, domain=a_dom)
+        a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
         b = pybamm.Vector(
             np.concatenate(
                 [np.full(mesh[b_dom[0]].npts, 1), np.full(mesh[b_dom[1]].npts, 3)]
@@ -125,8 +126,125 @@ class TestConcatenations(unittest.TestCase):
             ),
         )
 
-        # check special case: final domain is still ["whole cell"]
-        self.assertEqual(conc.domain, ["whole cell"])
+    def test_concatenation_orphans(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        conc = pybamm.Concatenation(a, b, c)
+        a_new, b_new, c_new = conc.orphans
+
+        # We should be able to manipulate the children without TreeErrors
+        self.assertIsInstance(2 * a_new, pybamm.Multiplication)
+        self.assertIsInstance(3 + b_new, pybamm.Addition)
+        self.assertIsInstance(4 - c_new, pybamm.Subtraction)
+
+        # ids should stay the same
+        self.assertEqual(a.id, a_new.id)
+        self.assertEqual(b.id, b_new.id)
+        self.assertEqual(c.id, c_new.id)
+        self.assertEqual(conc.id, pybamm.Concatenation(a_new, b_new, c_new).id)
+
+    def test_broadcast_and_concatenate(self):
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+
+        # Piecewise constant scalars
+        a = pybamm.Broadcast(1, domain=["negative electrode"])
+        b = pybamm.Broadcast(2, domain=["separator"])
+        c = pybamm.Broadcast(3, domain=["positive electrode"])
+        conc = pybamm.Concatenation(a, b, c)
+
+        self.assertEqual(
+            conc.domain, ["negative electrode", "separator", "positive electrode"]
+        )
+        self.assertEqual(conc.children[0].domain, ["negative electrode"])
+        self.assertEqual(conc.children[1].domain, ["separator"])
+        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+        processed_conc = disc.process_symbol(conc)
+        np.testing.assert_array_equal(
+            processed_conc.evaluate(),
+            np.concatenate(
+                [
+                    np.ones(mesh["negative electrode"].npts),
+                    2 * np.ones(mesh["separator"].npts),
+                    3 * np.ones(mesh["positive electrode"].npts),
+                ]
+            ),
+        )
+
+        # Piecewise constant functions of time
+        a_t = pybamm.Broadcast(pybamm.t, domain=["negative electrode"])
+        b_t = pybamm.Broadcast(2 * pybamm.t, domain=["separator"])
+        c_t = pybamm.Broadcast(3 * pybamm.t, domain=["positive electrode"])
+        conc = pybamm.Concatenation(a_t, b_t, c_t)
+
+        self.assertEqual(
+            conc.domain, ["negative electrode", "separator", "positive electrode"]
+        )
+        self.assertEqual(conc.children[0].domain, ["negative electrode"])
+        self.assertEqual(conc.children[1].domain, ["separator"])
+        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+
+        processed_conc = disc.process_symbol(conc)
+        np.testing.assert_array_equal(
+            processed_conc.evaluate(t=2),
+            np.concatenate(
+                [
+                    2 * np.ones(mesh["negative electrode"].npts),
+                    4 * np.ones(mesh["separator"].npts),
+                    6 * np.ones(mesh["positive electrode"].npts),
+                ]
+            ),
+        )
+
+        # Piecewise constant state vectors
+        a_sv = pybamm.Broadcast(pybamm.StateVector(slice(0, 1)), ["negative electrode"])
+        b_sv = pybamm.Broadcast(pybamm.StateVector(slice(1, 2)), ["separator"])
+        c_sv = pybamm.Broadcast(pybamm.StateVector(slice(2, 3)), ["positive electrode"])
+        conc = pybamm.Concatenation(a_sv, b_sv, c_sv)
+
+        self.assertEqual(
+            conc.domain, ["negative electrode", "separator", "positive electrode"]
+        )
+        self.assertEqual(conc.children[0].domain, ["negative electrode"])
+        self.assertEqual(conc.children[1].domain, ["separator"])
+        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+
+        processed_conc = disc.process_symbol(conc)
+        y = np.array([1, 2, 3])
+        np.testing.assert_array_equal(
+            processed_conc.evaluate(y=y),
+            np.concatenate(
+                [
+                    np.ones(mesh["negative electrode"].npts),
+                    2 * np.ones(mesh["separator"].npts),
+                    3 * np.ones(mesh["positive electrode"].npts),
+                ]
+            ),
+        )
+
+        # Mixed
+        conc = pybamm.Concatenation(a, b_t, c_sv)
+
+        self.assertEqual(
+            conc.domain, ["negative electrode", "separator", "positive electrode"]
+        )
+        self.assertEqual(conc.children[0].domain, ["negative electrode"])
+        self.assertEqual(conc.children[1].domain, ["separator"])
+        self.assertEqual(conc.children[2].domain, ["positive electrode"])
+
+        processed_conc = disc.process_symbol(conc)
+        np.testing.assert_array_equal(
+            processed_conc.evaluate(t=2, y=y),
+            np.concatenate(
+                [
+                    np.ones(mesh["negative electrode"].npts),
+                    4 * np.ones(mesh["separator"].npts),
+                    3 * np.ones(mesh["positive electrode"].npts),
+                ]
+            ),
+        )
 
 
 if __name__ == "__main__":

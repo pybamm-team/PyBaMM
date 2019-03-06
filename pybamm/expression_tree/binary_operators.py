@@ -49,8 +49,12 @@ class BinaryOperator(pybamm.Symbol):
         return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
 
     def get_children_domains(self, ldomain, rdomain):
-        if ldomain == rdomain or ldomain == [] or rdomain == []:
-            return list(set(ldomain + rdomain))
+        if ldomain == rdomain:
+            return ldomain
+        elif ldomain == []:
+            return rdomain
+        elif rdomain == []:
+            return ldomain
         else:
             raise pybamm.DomainError("""children must have same (or empty) domains""")
 
@@ -114,10 +118,23 @@ class Multiplication(BinaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        if isinstance(self.children[0], pybamm.Matrix):
-            return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
-        else:
-            return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
+        return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
+
+
+class MatrixMultiplication(BinaryOperator):
+    """A node in the expression tree representing a matrix multiplication operator
+
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+
+        super().__init__("*", left, right)
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
 
 
 class Division(BinaryOperator):

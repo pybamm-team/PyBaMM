@@ -45,6 +45,7 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 from .util import Timer
 from .util import profile
+from .util import load_function
 
 #
 # Classes for the Expression Tree
@@ -56,11 +57,12 @@ from .expression_tree.binary_operators import (
     Power,
     Subtraction,
     Multiplication,
+    MatrixMultiplication,
     Division,
 )
 from .expression_tree.concatenations import (
     Concatenation,
-    NumpyModelConcatenation,
+    NumpyConcatenation,
     DomainConcatenation,
 )
 from .expression_tree.array import Array
@@ -70,17 +72,24 @@ from .expression_tree.unary_operators import (
     UnaryOperator,
     Negate,
     AbsoluteValue,
+    Function,
     SpatialOperator,
     Gradient,
     Divergence,
-    Broadcast,
-    NumpyBroadcast,
+    SurfaceValue,
     grad,
     div,
+    surf,
 )
+from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
+from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
-from .expression_tree.independent_variable import IndependentVariable, Time, Space
+from .expression_tree.independent_variable import (
+    IndependentVariable,
+    Time,
+    SpatialVariable,
+)
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
@@ -93,6 +102,7 @@ from .models.base_model import BaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
+from .models import li_ion
 
 #
 # Submodel classes
@@ -102,25 +112,35 @@ from .models.submodels import electrolyte, interface
 #
 # Parameters class and methods
 #
+from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard parameters
 from .parameters.parameter_values import ParameterValues
-from .parameters import functions_lead_acid
+from .parameters import standard_current_functions
 from .parameters import standard_parameters
 from .parameters import standard_parameters_lead_acid  # calls standard_parameters
 
 #
+# Geometry
+#
+from .geometry.geometry import (
+    Geometry,
+    Geometry1DMacro,
+    Geometry1DMicro,
+    Geometry3DMacro,
+)
+
+#
 # Mesh and Discretisation classes
 #
-from .discretisations.base_discretisation import BaseDiscretisation
-from .discretisations.finite_volume_discretisations import (
-    FiniteVolumeDiscretisation,
-    NodeToEdge,
-)
-from .discretisations.base_mesh import KNOWN_DOMAINS
-from .discretisations.base_mesh import BaseMesh, BaseSubmesh
-from .discretisations.finite_volume_meshes import (
-    FiniteVolumeMacroMesh,
-    FiniteVolumeSubmesh,
-)
+from .discretisations.discretisation import Discretisation
+from .meshes.meshes import KNOWN_DOMAINS
+from .meshes.meshes import Mesh
+from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+
+#
+# Spatial Methods
+#
+from .spatial_methods.spatial_method import SpatialMethod
+from .spatial_methods.finite_volume import FiniteVolume, NodeToEdge
 
 #
 # Simulation class

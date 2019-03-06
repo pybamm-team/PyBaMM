@@ -5,6 +5,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import os
+
 
 class LOQS(pybamm.BaseModel):
     """Leading-Order Quasi-Static model for lead-acid.
@@ -16,13 +18,16 @@ class LOQS(pybamm.BaseModel):
     def __init__(self):
         super().__init__()
 
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Variables
         c0 = pybamm.Variable("c0", domain=[])
         eps0n = pybamm.Variable("eps0n", domain=[])
         eps0s = pybamm.Variable("eps0s", domain=[])
         eps0p = pybamm.Variable("eps0p", domain=[])
 
-        # Parameters
+        # Current function
+        icell = pybamm.standard_parameters_lead_acid.current_with_time
+        # Parameters and functions
         ln = pybamm.standard_parameters.ln
         ls = pybamm.standard_parameters.ls
         lp = pybamm.standard_parameters.lp
@@ -34,7 +39,6 @@ class LOQS(pybamm.BaseModel):
         iota_ref_p = pybamm.standard_parameters_lead_acid.iota_ref_p
         U_Pb = pybamm.standard_parameters_lead_acid.U_Pb_ref
         U_PbO2 = pybamm.standard_parameters_lead_acid.U_PbO2_ref
-        icell = pybamm.standard_parameters_lead_acid.icell
         # Initial conditions
         c0_init = pybamm.standard_parameters_lead_acid.c_init
         eps0n_init = pybamm.standard_parameters_lead_acid.epsn_init
@@ -77,13 +81,23 @@ class LOQS(pybamm.BaseModel):
         # Phis = pybamm.Concatenation(Phisn, pybamm.Scalar(0), Phisp)
         # self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
         self.variables = {
-            "c": pybamm.Broadcast(c0, ["whole cell"]),
-            "Phi": pybamm.Broadcast(Phi0, ["whole cell"]),
+            "c": pybamm.Broadcast(c0, whole_cell),
+            "Phi": pybamm.Broadcast(Phi0, whole_cell),
             "V": V0,
             "int(epsilon_times_c)dx": (ln * eps0n + ls * eps0s + lp * eps0p) * c0,
         }
 
         # Overwrite default parameter values
         self.default_parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+            "input/parameters/lead-acid/default.csv",
+            {
+                "current scale": 1,
+                "current function": os.path.join(
+                    os.getcwd(),
+                    "pybamm",
+                    "parameters",
+                    "standard_current_functions",
+                    "constant_current.py",
+                ),
+            },
         )

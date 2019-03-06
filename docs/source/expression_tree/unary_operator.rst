@@ -19,12 +19,11 @@ Unary Operators
 .. autoclass:: pybamm.Divergence
   :members:
 
-.. autoclass:: pybamm.Broadcast
-  :members:
-
-.. autoclass:: pybamm.NumpyBroadcast
+.. autoclass:: pybamm.SurfaceValue
   :members:
 
 .. autofunction:: pybamm.grad
 
 .. autofunction:: pybamm.div
+
+.. autofunction:: pybamm.surf

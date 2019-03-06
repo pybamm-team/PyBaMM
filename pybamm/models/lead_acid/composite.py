@@ -76,7 +76,7 @@ class Composite(pybamm.BaseModel):
         lp = pybamm.standard_parameters.lp
         Cd = pybamm.standard_parameters_lead_acid.Cd
         # Functions
-        icell = pybamm.standard_parameters_lead_acid.icell(pybamm.t)
+        icell = pybamm.standard_parameters_lead_acid.current_with_time
         kappa_0n = pybamm.standard_parameters_lead_acid.kappa(c0, eps_0n)
         kappa_0s = pybamm.standard_parameters_lead_acid.kappa(c0, eps_0s)
         kappa_0p = pybamm.standard_parameters_lead_acid.kappa(c0, eps_0p)

@@ -79,10 +79,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_grad.children[0].value, 1)
 
         # process broadcast
-        broad = pybamm.Broadcast(a, ["whole cell"])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        broad = pybamm.Broadcast(a, whole_cell)
         processed_broad = parameter_values.process_symbol(broad)
         self.assertIsInstance(processed_broad, pybamm.Broadcast)
-        self.assertEqual(processed_broad.domain, ["whole cell"])
+        self.assertEqual(processed_broad.domain, whole_cell)
         self.assertIsInstance(processed_broad.children[0], pybamm.Scalar)
         self.assertEqual(processed_broad.children[0].value, 1)
 
@@ -116,6 +117,22 @@ class TestParameterValues(unittest.TestCase):
         processed_f = parameter_values.process_symbol(f)
         self.assertIsInstance(processed_f, pybamm.Matrix)
         np.testing.assert_array_equal(processed_f.evaluate(), np.ones((5, 6)))
+
+    def test_process_function_parameter(self):
+        parameter_values = pybamm.ParameterValues(
+            {"a": 3, "func": 'process_symbol_test_function.py'})
+
+        # process parameter
+        a = pybamm.Parameter("a")
+        processed_a = parameter_values.process_symbol(a)
+        self.assertIsInstance(processed_a, pybamm.Scalar)
+        self.assertEqual(processed_a.value, 3)
+
+        # process function
+        func = pybamm.FunctionParameter("func", a)
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.Function)
+        self.assertEqual(processed_func.evaluate(), 369)
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")

@@ -27,7 +27,7 @@ class Vector(pybamm.Array):
         # make sure that entries are a vector
         if entries.ndim != 1:
             raise ValueError(
-                """Entries must have 1 dimension,  not {}""".format(entries.ndim)
+                """Entries must have 1 dimension, not {}""".format(entries.ndim)
             )
         if name is None:
             name = "Vector of length {!s}".format(entries.shape[0])
@@ -62,6 +62,13 @@ class StateVector(pybamm.Symbol):
         """Slice of an external y to read"""
         return self._y_slice
 
-    def evaluate(self, t, y):
+    def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return y[self._y_slice]
+        if y is None:
+            raise TypeError("StateVector cannot evaluate input 'y=None'")
+        if y.shape[0] < self.y_slice.stop:
+            raise ValueError(
+                "y is too short, so value with slice is smaller than expected"
+            )
+        else:
+            return y[self._y_slice]

@@ -4,7 +4,9 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+from tests import get_discretisation_for_testing
 
+import os
 import unittest
 
 
@@ -46,6 +48,57 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         self.assertGreater(param_eval["DeltaVsurf_p"], 0)
         # Excluded volume fraction should be less than 0.1
         self.assertLess(abs(param_eval["alpha"]), 1e-1)
+
+    def test_concatenated_parameters(self):
+        # create
+        s = pybamm.standard_parameters_lead_acid.s
+        self.assertIsInstance(s, pybamm.Concatenation)
+        self.assertEqual(
+            s.domain, ["negative electrode", "separator", "positive electrode"]
+        )
+
+        # process parameters and discretise
+        parameter_values = pybamm.ParameterValues(
+            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+        )
+        disc = get_discretisation_for_testing()
+        processed_s = disc.process_symbol(parameter_values.process_symbol(s))
+
+        # test output
+        self.assertIsInstance(processed_s, pybamm.Vector)
+
+        combined_submeshes = disc.mesh.combine_submeshes(
+            "negative electrode", "separator", "positive electrode"
+        )
+        self.assertEqual(processed_s.shape, combined_submeshes.nodes.shape)
+
+    def test_current_functions(self):
+        # create current functions
+        current = pybamm.standard_parameters_lead_acid.dimensional_current_with_time
+        dimensionless_current = pybamm.standard_parameters_lead_acid.current_with_time
+
+        # process
+        parameter_values = pybamm.ParameterValues(
+            {
+                "H": 0.1,
+                "W": 0.1,
+                "number of electrodes in parallel": 8,
+                "current scale": 2,
+                "current function": os.path.join(
+                    os.getcwd(),
+                    "pybamm",
+                    "parameters",
+                    "standard_current_functions",
+                    "constant_current.py",
+                ),
+            }
+        )
+        current_eval = parameter_values.process_symbol(current)
+        dimensionless_current_eval = parameter_values.process_symbol(
+            dimensionless_current
+        )
+        self.assertAlmostEqual(current_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1))
+        self.assertEqual(dimensionless_current_eval.evaluate(t=3), 1)
 
     @unittest.skip("lead acid functions not yet implemented")
     def test_functions_lead_acid(self):

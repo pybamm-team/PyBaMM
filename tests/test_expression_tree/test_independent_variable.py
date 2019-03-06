@@ -33,11 +33,26 @@ class TestIndependentVariable(unittest.TestCase):
         with self.assertRaises(ValueError):
             t.evaluate(None)
 
-    def test_space(self):
-        x = pybamm.Space(["negative electrode"])
-        self.assertEqual(x.name, "space (['negative electrode'])")
+    def test_spatial_variable(self):
+        x = pybamm.SpatialVariable("x", ["negative electrode"])
+        self.assertEqual(x.name, "x")
+        y = pybamm.SpatialVariable("y", ["separator"])
+        self.assertEqual(y.name, "y")
+        z = pybamm.SpatialVariable("z", ["positive electrode"])
+        self.assertEqual(z.name, "z")
+        r = pybamm.SpatialVariable("r", ["negative particle"])
+        self.assertEqual(r.name, "r")
         with self.assertRaises(NotImplementedError):
             x.evaluate()
+
+        with self.assertRaisesRegex(ValueError, "name must be"):
+            pybamm.SpatialVariable("not a variable", ["negative electrode"])
+        with self.assertRaisesRegex(ValueError, "domain must be"):
+            pybamm.SpatialVariable("x", [])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.SpatialVariable("r", ["negative electrode"])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.SpatialVariable("x", ["negative particle"])
 
 
 if __name__ == "__main__":

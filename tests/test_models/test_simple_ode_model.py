@@ -19,14 +19,12 @@ class TestSimpleODEModel(unittest.TestCase):
 
     def test_solution(self):
         model = pybamm.SimpleODEModel()
-
-        # discretise and solve
-        disc = model.default_discretisation
-        disc.process_model(model)
-        t_eval = disc.mesh["time"]
-        solver = model.default_solver
-        solver.solve(model, t_eval)
-        T, Y = solver.t, solver.y
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+        T, Y = modeltest.solver.t, modeltest.solver.y
+        mesh = modeltest.disc.mesh
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         # check output
         np.testing.assert_array_almost_equal(
@@ -34,13 +32,13 @@ class TestSimpleODEModel(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(
             model.variables["b broadcasted"].evaluate(T, Y),
-            np.ones((disc.mesh["whole cell"].npts, T.size)),
+            np.ones((combined_submesh.npts, T.size)),
         )
         np.testing.assert_array_almost_equal(
             model.variables["c broadcasted"].evaluate(T, Y),
-            np.ones(
-                sum([disc.mesh[d].npts for d in ["negative electrode", "separator"]])
-            )[:, np.newaxis]
+            np.ones(sum([mesh[d].npts for d in ["negative electrode", "separator"]]))[
+                :, np.newaxis
+            ]
             * np.exp(-T),
         )
 

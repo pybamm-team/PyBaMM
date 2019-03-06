@@ -10,6 +10,7 @@ import unittest
 import numpy as np
 
 
+@unittest.skip("")
 class TestLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.Composite()

@@ -3,14 +3,25 @@
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
+import pybamm
+
+import numpy as np
 
 
 class StandardModelTest(object):
     def __init__(self, model):
         self.model = model
-        # Set defaults
+        # Set default parameters
         self.param = model.default_parameter_values
-        self.disc = model.default_discretisation
+        # Process geometry
+        self.param.process_geometry(model.default_geometry)
+        geometry = model.default_geometry
+        # Set default discretisation
+        mesh = pybamm.Mesh(
+            geometry, model.default_submesh_types, model.default_submesh_pts
+        )
+        self.disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        # Set default solver
         self.solver = model.default_solver
 
     def test_processing_parameters(self, param=None):
@@ -33,7 +44,7 @@ class StandardModelTest(object):
         # Overwrite solver if given
         if solver is not None:
             self.solver = solver
-        t_eval = self.disc.mesh["time"]
+        t_eval = np.linspace(0, 1, 100)
         self.solver.solve(self.model, t_eval)
 
     def test_all(self, param=None, disc=None, solver=None):

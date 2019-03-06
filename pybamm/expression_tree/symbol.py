@@ -36,7 +36,6 @@ class Symbol(anytree.NodeMixin):
             # copy child before adding
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
-
         self.domain = domain
 
     @property
@@ -100,6 +99,19 @@ class Symbol(anytree.NodeMixin):
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
         )
+
+    @property
+    def orphans(self):
+        """
+        Returning deepcopies of the children, with parents removed to avoid corrupting
+        the expression tree internal data
+        """
+        orp = []
+        for child in self.children:
+            new_child = copy.deepcopy(child)
+            new_child.parent = None
+            orp.append(new_child)
+        return tuple(orp)
 
     def render(self):
         """print out a visual representation of the tree (this node and its
@@ -234,6 +246,20 @@ class Symbol(anytree.NodeMixin):
         else:
             raise NotImplementedError
 
+    def __matmul__(self, other):
+        """return a :class:`MatrixMultiplication` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.MatrixMultiplication(self, other)
+        else:
+            raise NotImplementedError
+
+    def __rmatmul__(self, other):
+        """return a :class:`MatrixMultiplication` object"""
+        if isinstance(other, (Symbol, numbers.Number)):
+            return pybamm.MatrixMultiplication(other, self)
+        else:
+            raise NotImplementedError
+
     def __truediv__(self, other):
         """return a :class:`Division` object"""
         if isinstance(other, (Symbol, numbers.Number)):
@@ -312,7 +338,8 @@ class Symbol(anytree.NodeMixin):
 
     def evaluates_to_number(self):
         """Returns True if evaluating the expression returns a number.
-        Returns False otherwise, including if NotImplementedError is raised.
+        Returns False otherwise, including if NotImplementedError or TyperError
+        is raised.
         !Not to be confused with isinstance(self, pybamm.Scalar)!
 
         See Also
@@ -322,11 +349,18 @@ class Symbol(anytree.NodeMixin):
         """
         try:
             # return true if node evaluates to a number
-            return isinstance(self.evaluate(), numbers.Number)
+            return isinstance(self.evaluate(t=0), numbers.Number)
         except NotImplementedError:
             # return false if NotImplementedError is raised
             # (there is a e.g. Parameter, Variable, ... in the tree)
             return False
+        except TypeError as error:
+            # return false if specific TypeError is raised
+            # (there is a e.g. StateVector in the tree)
+            if error.args[0] == "StateVector cannot evaluate input 'y=None'":
+                return False
+            else:
+                raise error
 
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""
