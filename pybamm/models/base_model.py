@@ -87,7 +87,7 @@ class BaseModel(object):
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
         }
-        self.default_solver = pybamm.ScipySolver(method="RK45")
+        self.default_solver = pybamm.ScikitsOdeSolver()
 
     def _set_dict(self, dict, name):
         """
