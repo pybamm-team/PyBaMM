@@ -78,9 +78,9 @@ class TestUnaryOperators(unittest.TestCase):
 
         # space integral
         a = pybamm.Symbol("a", domain=["negative electrode"])
-        x = pybamm.Space(["negative electrode"])
+        x = pybamm.SpatialVariable("x", ["negative electrode"])
         inta = pybamm.Integral(a, x)
-        self.assertEqual(inta.name, "integral dspace (['negative electrode'])")
+        self.assertEqual(inta.name, "integral dx ['negative electrode']")
         self.assertEqual(inta.children[0].name, a.name)
         self.assertEqual(inta.integration_variable, x)
         self.assertEqual(inta.domain, ["negative electrode"])
@@ -100,7 +100,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # expected errors
         a = pybamm.Symbol("a", domain=["negative electrode"])
-        x = pybamm.Space(["separator"])
+        x = pybamm.SpatialVariable("x", ["separator"])
         y = pybamm.Variable("y")
         with self.assertRaises(pybamm.DomainError):
             pybamm.Integral(a, x)

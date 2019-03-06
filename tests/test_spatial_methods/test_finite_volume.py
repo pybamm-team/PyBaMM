@@ -404,7 +404,7 @@ class TestFiniteVolume(unittest.TestCase):
 
     def test_definite_integral(self):
         # create discretisation
-        mesh = get_mesh_for_testing()
+        mesh = get_mesh_for_testing(200)
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
@@ -418,11 +418,10 @@ class TestFiniteVolume(unittest.TestCase):
 
         # macroscale variable
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
-        integral_eqn = pybamm.Integral(
-            var, pybamm.Space(["negative electrode", "separator"])
-        )
-        y_slices = disc.get_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        integral_eqn = pybamm.Integral(var, x)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
         constant_y = np.ones_like(combined_submesh.nodes)
@@ -438,11 +437,10 @@ class TestFiniteVolume(unittest.TestCase):
 
         # domain not starting at zero
         var = pybamm.Variable("var", domain=["separator", "positive electrode"])
-        integral_eqn = pybamm.Integral(
-            var, pybamm.Space(["separator", "positive electrode"])
-        )
-        y_slices = disc.get_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+        x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
+        integral_eqn = pybamm.Integral(var, x)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
         constant_y = np.ones_like(combined_submesh.nodes)
@@ -458,9 +456,10 @@ class TestFiniteVolume(unittest.TestCase):
 
         # microscale variable
         var = pybamm.Variable("var", domain=["negative particle"])
-        integral_eqn = pybamm.Integral(var, pybamm.Space(["negative particle"]))
-        y_slices = disc.get_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+        r = pybamm.SpatialVariable("r", ["negative particle"])
+        integral_eqn = pybamm.Integral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         constant_y = np.ones_like(mesh["negative particle"].nodes)
         self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), np.pi)
@@ -486,11 +485,10 @@ class TestFiniteVolume(unittest.TestCase):
 
         # macroscale variable
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
-        integral_eqn = pybamm.IndefiniteIntegral(
-            var, pybamm.Space(["negative electrode", "separator"])
-        )
-        y_slices = disc.get_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        integral_eqn = pybamm.IndefiniteIntegral(var, x)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
         constant_y = np.ones_like(combined_submesh.nodes)
@@ -511,11 +509,10 @@ class TestFiniteVolume(unittest.TestCase):
 
         # domain not starting at zero
         var = pybamm.Variable("var", domain=["separator", "positive electrode"])
-        integral_eqn = pybamm.IndefiniteIntegral(
-            var, pybamm.Space(["separator", "positive electrode"])
-        )
-        y_slices = disc.get_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+        x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
+        integral_eqn = pybamm.IndefiniteIntegral(var, x)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
         np.testing.assert_array_equal(
@@ -533,11 +530,10 @@ class TestFiniteVolume(unittest.TestCase):
 
         # microscale variable
         var = pybamm.Variable("var", domain=["negative particle"])
-        integral_eqn = pybamm.IndefiniteIntegral(
-            var, pybamm.Space(["negative particle"])
-        )
-        y_slices = disc.get_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
+        r = pybamm.SpatialVariable("r", ["negative particle"])
+        integral_eqn = pybamm.IndefiniteIntegral(var, r)
+        disc.set_variable_slices([var])
+        integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         constant_y = np.ones_like(mesh["negative particle"].nodes)
         np.testing.assert_array_equal(

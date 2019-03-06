@@ -151,7 +151,7 @@ class Integral(SpatialOperator):
     """
 
     def __init__(self, child, integration_variable):
-        if isinstance(integration_variable, pybamm.Space):
+        if isinstance(integration_variable, pybamm.SpatialVariable):
             # Check that child and integration_variable domains agree
             if child.domain != integration_variable.domain:
                 raise pybamm.DomainError(
@@ -164,9 +164,9 @@ class Integral(SpatialOperator):
                     type(integration_variable)
                 )
             )
-        name = "integral d{}".format(
-            integration_variable.name, integration_variable.domain
-        )
+        name = "integral d{}".format(integration_variable.name)
+        if isinstance(integration_variable, pybamm.SpatialVariable):
+            name += " {}".format(integration_variable.domain)
         super().__init__(name, child)
         self._integration_variable = integration_variable
 

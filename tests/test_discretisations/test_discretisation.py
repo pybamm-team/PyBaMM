@@ -235,15 +235,15 @@ class TestDiscretise(unittest.TestCase):
             )
 
     def test_core_NotImplementedErrors(self):
-        # create discretisation
-        disc = pybamm.Discretisation(None, {})
+        # create spatial method
+        spatial_method = pybamm.SpatialMethod(None)
 
         with self.assertRaises(NotImplementedError):
-            disc.gradient(None, None, {})
+            spatial_method.gradient(None, None, {})
         with self.assertRaises(NotImplementedError):
-            disc.divergence(None, None, {})
+            spatial_method.divergence(None, None, {})
         with self.assertRaises(NotImplementedError):
-            disc.integral(None, None)
+            spatial_method.integral(None, None)
 
     def test_process_dict(self):
         # one equation
