@@ -1,5 +1,5 @@
 #
-# Equation classes for the electrolyte
+# Equation classes for the electrolyte concentration
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -43,7 +43,7 @@ class StefanMaxwell(pybamm.BaseModel):
         self.variables = {"c_e": c_e, "N_e": N_e}
 
 
-class StefanMaxwellDiffusionWithPorosity(pybamm.BaseModel):
+class StefanMaxwellWithPorosity(pybamm.BaseModel):
     """A class that generates the expression tree for Stefan-Maxwell Diffusion in the
     electrolyte.
 
@@ -78,25 +78,3 @@ class StefanMaxwellDiffusionWithPorosity(pybamm.BaseModel):
         self.initial_conditions = {c_e: param.c_e_init}
         self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
         self.variables = {"c_e": c_e, "N_e": N_e}
-
-
-class Porosity(pybamm.BaseModel):
-    """A class that generates the expression tree for Stefan-Maxwell Diffusion in the
-    electrolyte.
-
-    Parameters
-    ----------
-    j : :class:`pybamm.Symbol`
-        An expression tree that represents the interfacial current density at the
-        electrode-electrolyte interface
-
-    *Extends:* :class:`BaseModel`
-    """
-
-    def __init__(self, epsilon, j):
-        super().__init__()
-        sp = pybamm.standard_parameters_lead_acid
-
-        # Model
-        self.rhs = {epsilon: -sp.beta_surf * j}
-        self.initial_conditions = {epsilon: sp.eps_init}

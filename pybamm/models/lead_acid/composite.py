@@ -73,12 +73,13 @@ class Composite(pybamm.LeadAcidBaseModel):
         )
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
         # Interfacial current density
-        j = pybamm.interface.homogeneous_reaction(i_cell)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        j = pybamm.interface.homogeneous_reaction(whole_cell)
         # Concentration model (reaction diffusion with homogeneous reaction)
-        conc_model = pybamm.electrolyte.StefanMaxwellDiffusionWithPorosity(
+        conc_model = pybamm.electrolyte_diffusion.StefanMaxwellWithPorosity(
             c, eps, j, spla
         )
-        porosity_model = pybamm.electrolyte.Porosity(eps, j)
+        porosity_model = pybamm.electrolyte_porosity.Standard(eps, j)
 
         # Update own model with submodels
         self.update(loqs_model, conc_model, porosity_model)

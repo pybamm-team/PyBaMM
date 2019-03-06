@@ -87,7 +87,6 @@ class TestHomogeneousReaction(unittest.TestCase):
         np.testing.assert_array_equal(j_n.evaluate()[:npts_n] * ln.evaluate(), 1)
         np.testing.assert_array_equal(j_n.evaluate()[npts_n : npts_n + npts_s], 0)
         np.testing.assert_array_equal(
-<<<<<<< HEAD
             processed_rxn.evaluate()[:npts_n] * l_n.evaluate(), 1
         )
         np.testing.assert_array_equal(
@@ -95,9 +94,6 @@ class TestHomogeneousReaction(unittest.TestCase):
         )
         np.testing.assert_array_equal(
             processed_rxn.evaluate()[npts_n + npts_s :] * l_p.evaluate(), -1
-=======
-            j_n.evaluate()[npts_n + npts_s :] * lp.evaluate(), -1
->>>>>>> issue-74-implement-DFN
         )
 
 
@@ -322,11 +318,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         iota = pybamm.standard_parameters.m_n
         with self.assertRaises(pybamm.DomainError):
             pybamm.interface.exchange_current_density(
-<<<<<<< HEAD
-                pybamm.Scalar(3), ["not a domain"]
-=======
                 iota, None, domain=["not a domain"]
->>>>>>> issue-74-implement-DFN
             )
 
     def test_set_parameters(self):

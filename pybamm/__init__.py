@@ -107,7 +107,14 @@ from .models import li_ion
 #
 # Submodel classes
 #
-from .models.submodels import electrolyte, interface
+from .models.submodels import (
+    electrode,
+    electrolyte_current,
+    electrolyte_diffusion,
+    electrolyte_porosity,
+    interface,
+    particle,
+)
 
 #
 # Parameters class and methods

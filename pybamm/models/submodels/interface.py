@@ -7,7 +7,7 @@ import pybamm
 import numpy as np
 
 
-def homogeneous_reaction(current, domain):
+def homogeneous_reaction(domain):
     """ Homogeneous reaction at the electrode-electrolyte interface """
 
     # If feed in just a single domain then will return a Scalar which will
@@ -16,21 +16,22 @@ def homogeneous_reaction(current, domain):
     # If feed in ["negative electrode", "separator", "positive electrode"]
     # will return a concatenation of scalars. Concatenations
     # will be processed into a vector upon discretisation.
+    current = pybamm.standard_parameters.current_with_time
 
     if domain == ["negative electrode"]:
-        exchange_current = current / pybamm.standard_parameters.ln
+        exchange_current = current / pybamm.standard_parameters.l_n
     elif domain == ["separator"]:
         exchange_current = pybamm.Scalar(0)
     elif domain == ["positive electrode"]:
-        exchange_current = -current / pybamm.standard_parameters.lp
+        exchange_current = -current / pybamm.standard_parameters.l_p
 
     elif domain == ["negative electrode", "separator", "positive electrode"]:
         # hack to make the concatenation work. Concatenation needs some work
         current_neg = pybamm.Broadcast(
-            current / pybamm.standard_parameters.ln, ["negative electrode"]
+            current / pybamm.standard_parameters.l_n, ["negative electrode"]
         )
         current_pos = pybamm.Broadcast(
-            -current / pybamm.standard_parameters.lp, ["positive electrode"]
+            -current / pybamm.standard_parameters.l_p, ["positive electrode"]
         )
         return pybamm.Concatenation(
             current_neg, pybamm.Broadcast(0, ["separator"]), current_pos
@@ -214,10 +215,10 @@ def exchange_current_density(iota, c_e, ck_surf=None, domain=None):
         return iota * c_e
     elif domain == ["positive electrode"]:
         # only activated in pos of lead-acid
-        Ve = pybamm.standard_parameters_lead_acid.Ve
-        Vw = pybamm.standard_parameters_lead_acid.Vw
-        cw = (1 - c_e * Ve) / Vw
-        return iota * c_e ** 2 * cw
+        V_e = pybamm.standard_parameters.V_e
+        V_w = pybamm.standard_parameters.V_w
+        c_w = (1 - c_e * V_e) / V_w
+        return iota * c_e ** 2 * c_w
     else:
         raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 

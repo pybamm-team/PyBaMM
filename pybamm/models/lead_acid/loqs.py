@@ -4,8 +4,8 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+
 import numpy as np
-import os
 
 
 class LOQS(pybamm.LeadAcidBaseModel):
@@ -56,8 +56,12 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.boundary_conditions = {}
 
         # Variables
-        j0_n = pybamm.interface.exchange_current_density(c_e, ["negative electrode"])
-        j0_p = pybamm.interface.exchange_current_density(c_e, ["positive electrode"])
+        j0_n = pybamm.interface.exchange_current_density(
+            sp.m_n, c_e, domain=["negative electrode"]
+        )
+        j0_p = pybamm.interface.exchange_current_density(
+            sp.m_p, c_e, domain=["positive electrode"]
+        )
         Phi = -spla.U_n(c_e) - pybamm.Function(np.arcsinh, j_n / (2 * j0_n * sp.l_n))
         V = Phi + spla.U_p(c_e) - pybamm.Function(np.arcsinh, j_p / (2 * j0_p * sp.l_p))
         # Phis_n = pybamm.Scalar(0)
