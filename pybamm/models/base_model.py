@@ -50,16 +50,25 @@ class BaseModel(object):
         self._concatenated_initial_conditions = None
 
         # Default parameter values, geometry, submesh, spatial methods and solver
+        input_path = os.path.join(
+            os.getcwd(), "input", "parameters", "lithium-ion", "experimental_functions"
+        )
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv",
             {
-                "I_typ": 1,
-                "current function": os.path.join(
+                "Typical current density": 1,
+                "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
                     "parameters",
                     "standard_current_functions",
                     "constant_current.py",
+                ),
+                "Electrolyte diffusivity": os.path.join(
+                    input_path, "electrolyte_diffusivity.py"
+                ),
+                "Electrolyte conductivity": os.path.join(
+                    input_path, "electrolyte_conducivity.py"
                 ),
             },
         )
@@ -83,7 +92,7 @@ class BaseModel(object):
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
         }
-        self.default_solver = pybamm.ScipySolver(method="RK45")
+        self.default_solver = pybamm.ScikitsOdeSolver()
 
     def _set_dict(self, dict, name):
         """

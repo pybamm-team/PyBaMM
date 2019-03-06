@@ -66,9 +66,9 @@ class Composite(pybamm.BaseModel):
         c = self.variables["c"]  # composite concentration, c = c0 + Cd * c1
 
         # Independent variables
-        xn = pybamm.Space("negative electrode")
-        xs = pybamm.Space("separator")
-        xp = pybamm.Space("positive electrode")
+        xn = pybamm.SpatialVariable("x", ["negative electrode"])
+        xs = pybamm.SpatialVariable("x", ["separator"])
+        xp = pybamm.SpatialVariable("x", ["positive electrode"])
 
         # Parameters
         ln = pybamm.standard_parameters.ln
@@ -95,7 +95,7 @@ class Composite(pybamm.BaseModel):
         cbar_1n = pybamm.Integral(c1, xn) / ln
         j0bar_1n = pybamm.Integral(j0_1n, xn) / ln
         An = (
-            j0bar_1n * pybamm.Function(eta_0n, np.tanh) / j0_0n
+            j0bar_1n * pybamm.Function(np.tanh, eta_0n) / j0_0n
             - dUPbdc(c0) * cbar_1n
             - chi0 / c0 * cbar_1n
             + icell * ln / (6 * kappa_0n)
@@ -117,7 +117,7 @@ class Composite(pybamm.BaseModel):
         V1 = (
             Phibar_1p
             + dUPbO2dc(c0) * cbar_1p
-            - j0bar_1p * pybamm.Function(eta_0p, np.tanh) / j0_0p
+            - j0bar_1p * pybamm.Function(np.tanh, eta_0p) / j0_0p
         )
 
         # Variables

@@ -1,5 +1,5 @@
 Name,Value,Units,Meaning,Reference
 # Geometric parameters,,,,
-Ln,0.5,,,
-Ls,0.5,,,
-Lp,0.5,,,
+Negative electrode width,0.5,,,
+Separator width,0.5,,,
+Positive electrode width,0.5,,,

@@ -9,21 +9,7 @@ import pybamm
 class ReactionDiffusionModel(pybamm.BaseModel):
     """Reaction-diffusion model.
 
-    Attributes
-    ----------
-
-    rhs: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the rhs
-    initial_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions
-    boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions
-    variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables
+    **Extends**: :class:`pybamm.BaseModel`
 
     """
 
@@ -38,6 +24,3 @@ class ReactionDiffusionModel(pybamm.BaseModel):
 
         # Create own model from diffusion model
         self.update(diffusion_model)
-
-        # Overwrite default solver for faster solution
-        self.default_solver = pybamm.ScipySolver(method="BDF")

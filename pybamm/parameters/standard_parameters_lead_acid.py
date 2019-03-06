@@ -22,206 +22,171 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+sp = pybamm.standard_parameters
+
 # --------------------------------------------------------------------------------------
 """Dimensional Parameters"""
 
-# Current collectors / Electrical properties
-H = pybamm.Parameter("H")
-W = pybamm.Parameter("W")
-A_cs = H * W  # Area of the current collectors [m2]
-Ibar = pybamm.Parameter("current scale")
-n_electrodes_parallel = pybamm.Parameter("number of electrodes in parallel")
-ibar = Ibar / (n_electrodes_parallel * A_cs)  # Specified scale for the current [A.m-2]
-Q = 17  # Capacity [Ah]
-Crate = Ibar / Q  # C-rate [-]
-current_with_time = pybamm.FunctionParameter("current function", pybamm.t)
-dimensional_current_with_time = ibar * current_with_time
-
-
-# Microstructure
-An = pybamm.Parameter(
-    "Anmax"
-)  # Negative electrode surface area density [m-1] (or 1e4 or 1e6?)
-Ap = pybamm.Parameter("Apmax")  # Positive electrode surface area density [m-1]
-epsn_max = pybamm.Parameter("epsn_max")  # Max porosity of negative electrode [-]
-epss_max = pybamm.Parameter("epss_max")  # Max porosity of separator [-]
-epsp_max = pybamm.Parameter("epsp_max")  # Max porosity of positive electrode [-]
-
-# Reactions
-s_plus_n = pybamm.Parameter("s_plus_n")
-s_plus_p = pybamm.Parameter("s_plus_p")
-ne_n = pybamm.Parameter("ne_n")
-ne_p = pybamm.Parameter("ne_p")
-
-# Electrolyte physical properties
-cmax = pybamm.Parameter("cmax")  # Maximum electrolye concentration [mol.m-3]
-Vw = pybamm.Parameter("Vw")  # Partial molar volume of water [m3.mol-1]
-V_plus = pybamm.Parameter("V_plus")  # Partial molar volume of cations [m3.mol-1]
-V_minus = pybamm.Parameter("V_minus")  # Partial molar volume of anions [m3.mol-1]
-Ve = V_minus + V_plus  # Partial molar volume of electrolyte [m3.mol-1]
-Mw = pybamm.Parameter("Mw")  # Molar mass of water [kg.mol-1]
-Mp = pybamm.Parameter("Mp")  # Molar mass of cations [kg.mol-1]
-Mn = pybamm.Parameter("Mn")  # Molar mass of anions [kg.mol-1]
-Me = Mn + Mp  # Molar mass of electrolyte [kg.mol-1]
+# Electrolyte properties
+M_w = pybamm.Parameter("Molar mass of water")
+M_p = pybamm.Parameter("Molar mass of cations")
+M_n = pybamm.Parameter("Molar mass of anions")
+M_e = M_n + M_p  # Molar mass of electrolyte [kg.mol-1]
 DeltaVliq_n = (
-    V_minus - V_plus
+    sp.V_minus - sp.V_plus
 )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
 DeltaVliq_p = (
-    2 * Vw - V_minus - 3 * V_plus
+    2 * sp.V_w - sp.V_minus - 3 * sp.V_plus
 )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
-nu_plus = pybamm.Parameter("nu_plus")
-nu_minus = pybamm.Parameter("nu_minus")
-nu = nu_plus + nu_minus
 
-# Electrode physical properties
-VPb = pybamm.Parameter("VPb")  # Molar volume of lead [m3.mol-1]
-VPbO2 = pybamm.Parameter("VPbO2")  # Molar volume of lead dioxide [m3.mol-1]
-VPbSO4 = pybamm.Parameter("VPbSO4")  # Molar volume of lead sulfate [m3.mol-1]
-DeltaVsurf_n = VPb - VPbSO4  # Net Molar Volume consumed in neg electrode [m3.mol-1]
-DeltaVsurf_p = VPbSO4 - VPbO2  # Net Molar Volume consumed in pos electrode [m3.mol-1]
-sigma_eff_n = (
-    pybamm.standard_parameters.sigma_n * (1 - epsn_max) ** 1.5
-)  # Effective lead conductivity [S/m-1]
-sigma_eff_p = (
-    pybamm.standard_parameters.sigma_p * (1 - epsp_max) ** 1.5
-)  # Effective lead dioxide conductivity [S/m-1]
-d = pybamm.Parameter("d")  # Pore size [m]
-
-# Butler-Volmer
-jref_n = pybamm.Parameter("jref_n")  # Reference exchange-current density (neg) [A.m-2]
-jref_p = pybamm.Parameter("jref_p")  # Reference exchange-current density (pos) [A.m-2]
-Cdl = pybamm.Parameter("Cdl")  # Double-layer capacity [F.m-2]
-U_Pb_ref = pybamm.Parameter("U_Pb_ref")  # Reference OCP in the lead [V]
-U_PbO2_ref = pybamm.Parameter("U_PbO2_ref")  # Reference OCP in the lead dioxide [V]
-
-# --------------------------------------------------------------------------------------
-"""Scales"""
-Lx = pybamm.standard_parameters.Lx
-F = pybamm.standard_parameters.F
-R = pybamm.standard_parameters.R
-T = pybamm.standard_parameters.T
-
-concentration_scale = cmax
-length_scale = Lx
-time_scale = cmax * F * Lx / ibar  # discharge time scale
-potential_scale = R * T / F
-current_scale = ibar
-interfacial_current_scale_neg = ibar / (An * Lx)
-interfacial_current_scale_pos = ibar / (Ap * Lx)
-velocity_scale = ibar / (cmax * F)  # Reaction velocity scale
+# Electrode properties
+sp.V_Pb = pybamm.Parameter("Molar volume of lead")
+sp.V_PbO2 = pybamm.Parameter("Molar volume of lead-dioxide")
+sp.V_PbSO4 = pybamm.Parameter("Molar volume of lead sulfate")
+DeltaVsurf_n = (
+    sp.V_Pb - sp.V_PbSO4
+)  # Net Molar Volume consumed in neg electrode [m3.mol-1]
+DeltaVsurf_p = (
+    sp.V_PbSO4 - sp.V_PbO2
+)  # Net Molar Volume consumed in pos electrode [m3.mol-1]
+d = pybamm.Parameter("Pore size")
+eps_n_max = pybamm.Parameter("Maximum porosity of negative electrode")
+eps_s_max = pybamm.Parameter("Maximum porosity of separator")
+eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
 
 # --------------------------------------------------------------------------------------
 """Functions"""
 
-rho_dim = pybamm.Parameter("epsn_max")
-mu_dim = pybamm.Parameter("epsn_max")
+
+def chi_dimensional(c_e):
+    return pybamm.FunctionParameter("Darken thermodynamic factor", c_e)
 
 
-def D_dim(c):
-    "Dimensional electrolyte diffusivity"
-    return 1  # pybamm.FunctionParameter("electrolyte_diffusivity", c)
+def chi(c_e):
+    c_e_dimensional = c_e * sp.c_e_typ
+    alpha = (sp.nu * sp.V_w - sp.V_e) * sp.c_e_typ
+    return chi_dimensional(c_e_dimensional) * 2 * (1 - sp.t_plus) / (1 - alpha * c_e)
 
 
-def D(c):
-    "Dimensionless electrolyte diffusivity"
-    return D_dim(c * concentration_scale) / D_dim(concentration_scale)
+def rho_dimensional(c_e):
+    """
+    Dimensional density of electrolyte [kg.m-3], from thermodynamics. c_e in [mol.m-3].
+
+    """
+    return M_w / sp.V_w * (1 + (M_e * sp.V_w / M_w - sp.V_e) * c_e)
 
 
-def U_Pb(c):
-    "Dimensional open-circuit potential for lead electrode"
-    return U_Pb_ref
+def m_dimensional(c_e):
+    """
+    Dimensional electrolyte molar mass [mol.kg-1], from thermodynamics.
+    c_e in [mol.m-3].
+
+    """
+    return c_e * sp.V_w / ((1 - c_e * sp.V_e) * M_w)
 
 
-def U_PbO2(c):
-    "Dimensionless open-circuit potential for lead-dioxide electrode"
-    return U_PbO2_ref
+def mu_dimensional(c_e):
+    """
+    Dimensional viscosity of electrolyte [kg.m-1.s-1].
 
+    """
+    return pybamm.FunctionParameter("Electrolyte viscosity", c_e)
+
+
+def U_n_dimensional(c_e):
+    "Dimensional open-circuit voltage in the negative electrode [V]"
+    return pybamm.FunctionParameter("Negative electrode OCV", m_dimensional(c_e))
+
+
+U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(1))
+
+
+def U_p_dimensional(c_e):
+    "Dimensional open-circuit voltage in the positive electrode [V]"
+    return pybamm.FunctionParameter("Positive electrode OCV", m_dimensional(c_e))
+
+
+U_p_ref = pybamm.FunctionParameter("Positive electrode OCV", pybamm.Scalar(1))
+
+
+def U_n(c_en):
+    "Dimensionless open-circuit voltage in the negative electrode"
+    c_en_dimensional = c_en * sp.c_e_typ
+    return (U_n_dimensional(c_en_dimensional) - U_n_ref) / sp.potential_scale
+
+
+def U_p(c_ep):
+    "Dimensionless open-circuit voltage in the positive electrode"
+    c_ep_dimensional = c_ep * sp.c_e_typ
+    return (U_p_dimensional(c_ep_dimensional) - U_p_ref) / sp.potential_scale
+
+
+# --------------------------------------------------------------------------------------
+"""Scales"""
+
+tau_discharge = sp.F * sp.c_e_typ * sp.L_x / sp.i_typ
+velocity_scale = sp.i_typ / (sp.c_e_typ * sp.F)  # Reaction velocity scale
 
 # --------------------------------------------------------------------------------------
 """Dimensionless Parameters"""
 
-Cd = (
-    (Lx ** 2) / D_dim(cmax) / time_scale
-)  # Diffusional C-rate: diffusion timescale/discharge timescale
-alpha = (nu * Vw - Ve) * cmax  # Excluded volume fraction
-sn = (
-    -(s_plus_n + ne_n * pybamm.standard_parameters.t_plus) / ne_n
-)  # Dimensionless rection rate (neg)
-sp = (
-    -(s_plus_p + ne_p * pybamm.standard_parameters.t_plus) / ne_p
-)  # Dimensionless rection rate (pos)
-iota_s_n = (
-    sigma_eff_n * potential_scale / current_scale
-)  # Dimensionless lead conductivity
-iota_s_p = (
-    sigma_eff_p * potential_scale / current_scale
-)  # Dimensionless lead dioxide conductivity
-iota_ref_n = (
-    jref_n / interfacial_current_scale_neg
-)  # Dimensionless exchange-current density (neg)
-iota_ref_p = (
-    jref_p / interfacial_current_scale_pos
-)  # Dimensionless exchange-current density (pos)
-beta_surf_n = -cmax * DeltaVsurf_n / ne_n  # Molar volume change (lead)
-beta_surf_p = -cmax * DeltaVsurf_p / ne_p  # Molar volume change (lead dioxide)
-beta_liq_n = -cmax * DeltaVliq_n / ne_n  # Molar volume change (electrolyte, neg)
-beta_liq_p = -cmax * DeltaVliq_p / ne_p  # Molar volume change (electrolyte, pos)
+# Electrolyte properties
+beta_surf_n = -sp.c_e_typ * DeltaVsurf_n / sp.ne_n  # Molar volume change (lead)
+beta_surf_p = -sp.c_e_typ * DeltaVsurf_p / sp.ne_p  # Molar volume change (lead dioxide)
+beta_liq_n = (
+    -sp.c_e_typ * DeltaVliq_n / sp.ne_n
+)  # Molar volume change (electrolyte, neg)
+beta_liq_p = (
+    -sp.c_e_typ * DeltaVliq_p / sp.ne_p
+)  # Molar volume change (electrolyte, pos)
 beta_n = beta_surf_n + beta_liq_n  # Total molar volume change (neg)
 beta_p = beta_surf_p + beta_liq_p  # Total molar volume change (pos)
 omega_i = (
-    cmax * Me / rho_dim * (1 - Mw * Ve / Vw * Me)
+    sp.c_e_typ * M_e / rho_dimensional(sp.c_e_typ) * (1 - M_w * sp.V_e / sp.V_w * M_e)
 )  # Diffusive kinematic relationship coefficient
 omega_c = (
-    cmax * Me / rho_dim * (pybamm.standard_parameters.t_plus + Mn / Me)
+    sp.c_e_typ * M_e / rho_dimensional(sp.c_e_typ) * (sp.t_plus + M_n / M_e)
 )  # Migrative kinematic relationship coefficient
-gamma_dl_n = (
-    Cdl * potential_scale / interfacial_current_scale_neg / time_scale
-)  # Dimensionless double-layer capacity (neg)
-gamma_dl_p = (
-    Cdl * potential_scale / interfacial_current_scale_pos / time_scale
-)  # Dimensionless double-layer capacity (pos)
-voltage_cutoff = (
-    1
-    / potential_scale
-    * (pybamm.standard_parameters.voltage_low_cut - (U_PbO2_ref - U_Pb_ref))
-)  # Dimensionless voltage cut-off
+C_e = sp.tau_diffusion_e / tau_discharge
 pi_os = (
-    mu_dim * velocity_scale * Lx / (d ** 2 * R * T * cmax)
+    mu_dimensional(sp.c_e_typ)
+    * velocity_scale
+    * sp.L_x
+    / (d ** 2 * sp.R * sp.T * sp.c_e_typ)
 )  # Ratio of viscous pressure scale to osmotic pressure scale
 
+# Electrochemical reactions
+C_dl_n = (
+    sp.C_dl_dimensional
+    * sp.potential_scale
+    / sp.interfacial_current_scale_n
+    / tau_discharge
+)
+C_dl_p = (
+    sp.C_dl_dimensional
+    * sp.potential_scale
+    / sp.interfacial_current_scale_p
+    / tau_discharge
+)
+
+# Electrical
+voltage_low_cut = (
+    sp.voltage_low_cut_dimensional - (U_p_ref - U_n_ref)
+) / sp.potential_scale
+voltage_high_cut = (
+    sp.voltage_high_cut_dimensional - (U_p_ref - U_n_ref)
+) / sp.potential_scale
 
 # Initial conditions
-q_init = pybamm.Parameter("q_init")  # Initial SOC [-]
-qmax = (
-    (
-        pybamm.standard_parameters.Ln * epsn_max
-        + pybamm.standard_parameters.Ls * epss_max
-        + pybamm.standard_parameters.Lp * epsp_max
-    )
-    / Lx
-    / (sp - sn)
+q_init = pybamm.Parameter("Initial State of Charge")
+q_max = (
+    (sp.L_n * eps_n_max + sp.L_s * eps_s_max + sp.L_p * eps_p_max)
+    / sp.L_x
+    / (sp.s_p - sp.s_n)
 )  # Dimensionless max capacity
-epsDelta_n = beta_surf_n / pybamm.standard_parameters.Ln * qmax
-epsDelta_p = beta_surf_p / pybamm.standard_parameters.Lp * qmax
-c_init = q_init
-epsn_init = epsn_max - epsDelta_n * (1 - q_init)  # Initial pororsity (neg) [-]
-epss_init = epss_max  # Initial pororsity (sep) [-]
-epsp_init = epsp_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
-
-
-# Concatenated symbols
-s = pybamm.Concatenation(
-    pybamm.Broadcast(sn, ["negative electrode"]),
-    pybamm.Broadcast(0, ["separator"]),
-    pybamm.Broadcast(sp, ["positive electrode"]),
-)
-beta_surf = pybamm.Concatenation(
-    pybamm.Broadcast(beta_surf_n, ["negative electrode"]),
-    pybamm.Broadcast(0, ["separator"]),
-    pybamm.Broadcast(beta_surf_p, ["positive electrode"]),
-)
-eps_init = pybamm.Concatenation(
-    pybamm.Broadcast(epsn_init, ["negative electrode"]),
-    pybamm.Broadcast(epss_init, ["separator"]),
-    pybamm.Broadcast(epsp_init, ["positive electrode"]),
-)
+epsDelta_n = beta_surf_n / sp.L_n * q_max
+epsDelta_p = beta_surf_p / sp.L_p * q_max
+c_e_init = q_init
+eps_n_init = eps_n_max - epsDelta_n * (1 - q_init)  # Initial pororsity (neg) [-]
+eps_s_init = eps_s_max  # Initial pororsity (sep) [-]
+eps_p_init = eps_p_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
