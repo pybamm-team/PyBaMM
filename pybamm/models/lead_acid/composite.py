@@ -83,7 +83,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Update own model with submodels
         self.update(loqs_model, conc_model, porosity_model)
 
-        # Extract leading-order variables
+        # Extract leading-order variables, taking orphans to remove domains
         c_0 = loqs_model.variables["Concentration"].orphans[0]
         eps_0 = loqs_model.variables["Porosity"]
         eps_0n, eps_0s, eps_0p = [e.orphans[0] for e in eps_0.orphans]
@@ -131,7 +131,15 @@ class Composite(pybamm.LeadAcidBaseModel):
             + sp.l_s / (kappa_0s)
             + (sp.l_p ** 2 - (1 - x_p) ** 2) / (2 * sp.l_p * kappa_0p)
         )
-        Phi1 = chi_0 / c_0 * c_1 + pybamm.Concatenation(Phi_1n, Phi_1s, Phi_1p) + An
+        Phi1 = (
+            chi_0 / c_0 * c_1
+            + pybamm.Concatenation(
+                pybamm.Broadcast(Phi_1n, ["negative electrode"]),
+                pybamm.Broadcast(Phi_1s, ["separator"]),
+                pybamm.Broadcast(Phi_1p, ["positive electrode"]),
+            )
+            + An
+        )
 
         # Voltage
         cbar_1p = pybamm.Scalar(1)  # pybamm.Integral(c_1p, x_p) / sp.l_p

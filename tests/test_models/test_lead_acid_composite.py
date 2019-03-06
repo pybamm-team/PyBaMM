@@ -26,10 +26,11 @@ class TestLeadAcidComposite(unittest.TestCase):
         # check output
         # make sure concentration and voltage are monotonically decreasing
         # for a discharge
-        np.testing.assert_array_less(
-            model.variables["c"].evaluate(T, Y)[:, 1:],
-            model.variables["c"].evaluate(T, Y)[:, :-1],
-        )
+        for idx in range(len(T) - 1):
+            np.testing.assert_array_less(
+                model.variables["c"].evaluate(T[idx + 1], Y[:, idx + 1]),
+                model.variables["c"].evaluate(T[idx], Y[:, idx]),
+            )
         np.testing.assert_array_less(
             model.variables["V"].evaluate(T, Y)[1:],
             model.variables["V"].evaluate(T, Y)[:-1],
