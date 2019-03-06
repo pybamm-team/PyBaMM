@@ -27,12 +27,12 @@ class TestLeadAcidLOQS(unittest.TestCase):
         # make sure concentration and voltage are monotonically decreasing
         # for a discharge
         np.testing.assert_array_less(
-            model.variables["c"].evaluate(T, Y)[:, 1:],
-            model.variables["c"].evaluate(T, Y)[:, :-1],
+            model.variables["Concentration"].evaluate(T, Y)[:, 1:],
+            model.variables["Concentration"].evaluate(T, Y)[:, :-1],
         )
         np.testing.assert_array_less(
-            model.variables["V"].evaluate(T, Y)[1:],
-            model.variables["V"].evaluate(T, Y)[:-1],
+            model.variables["Voltage"].evaluate(T, Y)[1:],
+            model.variables["Voltage"].evaluate(T, Y)[:-1],
         )
 
 

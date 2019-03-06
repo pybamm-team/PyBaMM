@@ -17,10 +17,13 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         super().__init__()
         # Define current
         current = pybamm.standard_parameters.current_with_time
+        # Define concentration variable
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c_e = pybamm.Variable("Concentration", whole_cell)
         # Load reaction flux from submodels
-        G = pybamm.interface.homogeneous_reaction(current)
+        j = pybamm.interface.homogeneous_reaction(whole_cell)
         # Load diffusion model from submodels
-        diffusion_model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j)
 
         # Create own model from diffusion model
         self.update(diffusion_model)

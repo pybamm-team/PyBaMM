@@ -19,16 +19,12 @@ class StefanMaxwell(pybamm.BaseModel):
     *Extends:* :class:`BaseModel`
     """
 
-    def __init__(self, j):
+    def __init__(self, c_e, j):
         super().__init__()
 
         # Parameters
         sp = pybamm.standard_parameters
         spli = pybamm.standard_parameters_lithium_ion
-
-        electrolyte_domain = ["negative electrode", "separator", "positive electrode"]
-
-        c_e = pybamm.Variable("c_e", electrolyte_domain)
 
         N_e = -sp.D_e(c_e) * (spli.epsilon ** sp.b) * pybamm.grad(c_e)
 
