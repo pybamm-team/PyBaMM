@@ -13,43 +13,9 @@ class StefanMaxwell(pybamm.BaseModel):
     Parameters
     ----------
     c_e : :class:`pybamm.Symbol`
-        A symbol representing the concentration of ions in the electrolyte
-    j : :class:`pybamm.Symbol`
-        The interfacial current density at the electrode-electrolyte interface
-
-    *Extends:* :class:`BaseModel`
-    """
-
-    def __init__(self, c_e, j):
-        super().__init__()
-
-        # Parameters
-        sp = pybamm.standard_parameters
-        spli = pybamm.standard_parameters_lithium_ion
-
-        N_e = -sp.D_e(c_e) * (spli.epsilon ** sp.b) * pybamm.grad(c_e)
-
-        self.rhs = {
-            c_e: -pybamm.div(N_e) / spli.C_e / spli.epsilon
-            + sp.s / spli.gamma_hat_e * j
-        }
-        self.initial_conditions = {c_e: spli.c_e_init}
-        self.boundary_conditions = {
-            N_e: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
-        }
-        self.variables = {"c_e": c_e, "N_e": N_e}
-
-
-class StefanMaxwellWithPorosity(pybamm.BaseModel):
-    """A class that generates the expression tree for Stefan-Maxwell Diffusion in the
-    electrolyte.
-
-    Parameters
-    ----------
-    c_e : :class:`pybamm.Symbol`
         The electrolyte concentration
     epsilon : :class:`pybamm.Symbol`
-        The (electrolyte/liquid phase) porosity
+        The (electrolyte/liquid phase) porosity (can be Variable or Parameter)
     j : :class:`pybamm.Symbol`
         An expression tree that represents the interfacial current density at the
         electrode-electrolyte interface
@@ -61,10 +27,9 @@ class StefanMaxwellWithPorosity(pybamm.BaseModel):
 
     def __init__(self, c_e, epsilon, j, param):
         super().__init__()
-        sp = pybamm.standard_parameters
 
         # Flux
-        N_e = -(epsilon ** sp.b) * pybamm.grad(c_e)
+        N_e = -(epsilon ** param.b) * pybamm.grad(c_e)
         # Porosity change
         deps_dt = -param.beta_surf * j
 
@@ -74,7 +39,7 @@ class StefanMaxwellWithPorosity(pybamm.BaseModel):
             / epsilon
             * (
                 -pybamm.div(N_e) / param.C_e
-                + sp.s / param.gamma_hat_e * j
+                + param.s / param.gamma_hat_e * j
                 - c_e * deps_dt
             )
         }
