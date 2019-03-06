@@ -70,5 +70,5 @@ class ScipySolver(pybamm.OdeSolver):
             atol=self.tol,
             events=events,
         )
-        # TODO: implement concentration cut-off event
+
         return sol.t, sol.y
