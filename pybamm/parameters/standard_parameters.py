@@ -201,6 +201,7 @@ m_p = m_p_dimensional / interfacial_current_scale_p
 # m_n = time_scale / tau_rxn_n
 # m_p = time_scale / tau_rxn_n
 
+
 # Electrode Properties
 sigma_n = sigma_n_dimensional * potential_scale / current_scale
 sigma_p = sigma_p_dimensional * potential_scale / current_scale

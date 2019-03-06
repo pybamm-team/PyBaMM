@@ -88,26 +88,25 @@ class StefanMaxwellDiffusionWithPorosity(pybamm.BaseModel):
     *Extends:* :class:`BaseModel`
     """
 
-    def __init__(self, G):
+    def __init__(self, c_e, epsilon, j, param):
         super().__init__()
+        sp = pybamm.standard_parameters
 
-        epsilon = pybamm.standard_parameters.epsilon_s  # make issue for spatially
-        # dependent parameters
-        b = pybamm.standard_parameters.b
-        delta = pybamm.standard_parameters.delta
-        nu = pybamm.standard_parameters.nu
-        t_plus = pybamm.standard_parameters.t_plus
-        ce0 = pybamm.standard_parameters.ce0
+        # Flux
+        N_e = -(epsilon ** sp.b) * pybamm.grad(c_e)
+        # Porosity change
+        deps_dt = -param.beta_surf * j
 
-        electrolyte_domain = ["whole cell"]
-
-        c_e = pybamm.Variable("c_e", electrolyte_domain)
-
-        N_e = -(epsilon ** b) * pybamm.grad(c_e)
-
-        self.rhs = {c_e: -pybamm.div(N_e) / delta / epsilon + nu * (1 - t_plus) * G}
-        self.initial_conditions = {c_e: ce0}
-        self.boundary_conditions = {
-            N_e: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+        # Model
+        self.rhs = {
+            c_e: 1
+            / epsilon
+            * (
+                -pybamm.div(N_e) / param.C_e
+                + sp.s / param.gamma_hat_e * j
+                - c_e * deps_dt
+            )
         }
+        self.initial_conditions = {c_e: param.c_e_init}
+        self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
         self.variables = {"c_e": c_e, "N_e": N_e}

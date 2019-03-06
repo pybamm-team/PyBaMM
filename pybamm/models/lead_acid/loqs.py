@@ -67,11 +67,20 @@ class LOQS(pybamm.BaseModel):
         # Phis = pybamm.Concatenation(Phis_n, pybamm.Scalar(0), Phis_p)
         # self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
         self.variables = {
-            "c": pybamm.Broadcast(c_e, whole_cell),
-            "Phi": pybamm.Broadcast(Phi, whole_cell),
-            "V": V,
-            "int(epsilon_times_c)dx": (sp.l_n * eps_n + sp.l_s * eps_s + sp.l_p * eps_p)
-            * c_e,
+            "Concentration": pybamm.Broadcast(c_e, whole_cell),
+            "Porosity": pybamm.Concatenation(
+                pybamm.Broadcast(eps_n, ["negative electrode"]),
+                pybamm.Broadcast(eps_s, ["separator"]),
+                pybamm.Broadcast(eps_p, ["positive electrode"]),
+            ),
+            "Negative electrode overpotential": pybamm.Broadcast(
+                Phi, ["negative electrode"]
+            ),
+            "Positive electrode overpotential": pybamm.Broadcast(
+                V, ["positive electrode"]
+            ),
+            "Electrolyte potential": pybamm.Broadcast(Phi, whole_cell),
+            "Voltage": V,
         }
 
         # Overwrite default parameter values

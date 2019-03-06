@@ -75,24 +75,27 @@ class Composite(pybamm.BaseModel):
         # Interfacial current density
         j = pybamm.interface.homogeneous_reaction(i_cell)
         # Concentration model (reaction diffusion with homogeneous reaction)
-        conc_model = pybamm.electrolyte.StefanMaxwellDiffusionWithPorosity(c, eps, j)
+        conc_model = pybamm.electrolyte.StefanMaxwellDiffusionWithPorosity(
+            c, eps, j, spla
+        )
 
         # Update own model with submodels
         self.update(loqs_model, conc_model)
 
         # Extract leading-order variables
-        c_0 = self.variables["c0"]  # concentration
-        eps_0 = self.variables["eps0"]  # porosities
+        c_0 = loqs_model.variables["Concentration"].orphans[0]
+        eps_0 = loqs_model.variables["Porosity"]
         eps_0n, eps_0s, eps_0p = eps_0.orphans
-        eta_0n = self.variables["eta_0n"]  # overpotentials
-        eta_0p = self.variables["eta_0p"]
-        Phi_0 = self.variables["Phi0"]
-        V_0 = self.variables["V0"]
+        eta_0n = loqs_model.variables["Negative electrode overpotential"].orphans[0]
+        eta_0p = loqs_model.variables["Positive electrode overpotential"].orphans[0]
+        Phi_0 = loqs_model.variables["Electrolyte potential"].orphans[0]
+        V_0 = loqs_model.variables["Voltage"].orphans[0]
+
         # Pre-define functions of leading-order variables
         chi_0 = spla.chi(c_0)
-        kappa_0n = sp.kappa(c_0) * eps_0n ** sp.b
-        kappa_0s = sp.kappa(c_0) * eps_0s ** sp.b
-        kappa_0p = sp.kappa(c_0) * eps_0p ** sp.b
+        kappa_0n = sp.kappa_e(c_0) * eps_0n ** sp.b
+        kappa_0s = sp.kappa_e(c_0) * eps_0s ** sp.b
+        kappa_0p = sp.kappa_e(c_0) * eps_0p ** sp.b
         j0_0n = pybamm.Scalar(1)
         j0_0p = pybamm.Scalar(1)
         j0_1n = pybamm.Scalar(1)

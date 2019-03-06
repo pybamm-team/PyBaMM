@@ -133,6 +133,11 @@ velocity_scale = sp.i_typ / (sp.c_e_typ * sp.F)  # Reaction velocity scale
 # Electrolyte properties
 beta_surf_n = -sp.c_e_typ * DeltaVsurf_n / sp.ne_n  # Molar volume change (lead)
 beta_surf_p = -sp.c_e_typ * DeltaVsurf_p / sp.ne_p  # Molar volume change (lead dioxide)
+beta_surf = pybamm.Concatenation(
+    pybamm.Broadcast(beta_surf_n, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(beta_surf_p, ["positive electrode"]),
+)
 beta_liq_n = (
     -sp.c_e_typ * DeltaVliq_n / sp.ne_n
 )  # Molar volume change (electrolyte, neg)
@@ -154,6 +159,7 @@ pi_os = (
     * sp.L_x
     / (d ** 2 * sp.R * sp.T * sp.c_e_typ)
 )  # Ratio of viscous pressure scale to osmotic pressure scale
+gamma_hat_e = 1  # ratio of electrolyte concentration to electrode concentration, undef.
 
 # Electrochemical reactions
 C_dl_n = (
