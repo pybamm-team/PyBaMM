@@ -22,6 +22,12 @@ Unary Operators
 .. autoclass:: pybamm.SurfaceValue
   :members:
 
+.. autoclass:: pybamm.Integral
+  :members:
+
+.. autoclass:: pybamm.IndefiniteIntegral
+  :members:
+
 .. autofunction:: pybamm.grad
 
 .. autofunction:: pybamm.div

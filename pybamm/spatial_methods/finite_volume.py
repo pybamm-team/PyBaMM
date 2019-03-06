@@ -126,7 +126,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
-        See :meth:`pybamm.SpatialMethod.gradient`
+        See :meth:`pybamm.SpatialMethod.divergence`
         """
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
@@ -142,20 +142,15 @@ class FiniteVolume(pybamm.SpatialMethod):
             discretised_symbol = pybamm.NumpyConcatenation(lbc, discretised_symbol, rbc)
 
         domain = symbol.domain
-        # check for spherical domains
+        # check for particle domain
+        divergence_matrix = self.divergence_matrix(domain)
         if ("negative particle" or "positive particle") in domain:
-
-            # implement spherical operator
-            divergence_matrix = self.divergence_matrix(domain)
-
-            submesh = self.mesh[domain[0]]
+            submesh = self.mesh.combine_submeshes(*domain)
             r = pybamm.Vector(submesh.nodes)
             r_edges = pybamm.Vector(submesh.edges)
-
             out = (1 / (r ** 2)) * (
                 divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
             )
-
         else:
             divergence_matrix = self.divergence_matrix(domain)
             out = divergence_matrix @ discretised_symbol
@@ -298,6 +293,82 @@ class FiniteVolume(pybamm.SpatialMethod):
             return (array[1:] + array[:-1]) / 2
 
         return pybamm.NodeToEdge(symbol, arithmetic_mean)
+
+    def integral(self, symbol, y_slices, boundary_conditions, definite):
+        """Vector-vector dot product to implement the integral operator.
+        See :meth:`pybamm.BaseDiscretisation.integral`
+        """
+        # Discretise symbol
+        discretised_symbol = self.process_symbol(symbol, y_slices, boundary_conditions)
+        # Check for definite
+        if definite:
+            integral_array = self.definite_integral_vector(symbol.domain)
+        else:
+            integral_array = self.indefinite_integral_matrix(symbol.domain)
+        # Check for particle domain
+        if ("negative particle" or "positive particle") in symbol.domain:
+            submesh = self.mesh.combine_submeshes(*symbol.domain)
+            r = pybamm.Vector(submesh.nodes)
+            out = 2 * np.pi * integral_array @ (discretised_symbol * r)
+        else:
+            out = integral_array @ discretised_symbol
+        return out
+
+    def definite_integral_vector(self, domain):
+        """
+        Vector for finite-volume implementation of the definite integral
+
+        .. math::
+            I = \\int_{a}^{b}\\!f(s)\\,ds
+
+        for where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
+        the domain respectively
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) of integration
+
+        Returns
+        -------
+        :class:`pybamm.Vector`
+            The finite volume integral vector for the domain
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*domain)
+
+        # Create vector of ones using submesh
+        vector = submesh.d_edges * np.ones_like(submesh.nodes)
+
+        return pybamm.Vector(vector)
+
+    # def indefinite_integral_matrix(self, domain):
+    #     """
+    #     Matrix for finite-volume implementation of the indefinite integral
+    #
+    #     .. math::
+    #         I(s) = \\int_{a}^{s}\\!f(u)\\,du
+    #
+    #     for :math:`u \\in \\text{domain}` where :math:`a` is the left-hand boundary of
+    #     the domain
+    #
+    #     Parameters
+    #     ----------
+    #     domain : list
+    #         The domain(s) of integration
+    #
+    #     Returns
+    #     -------
+    #     :class:`pybamm.Matrix`
+    #         The (sparse) finite volume indefinite integral matrix for the domain
+    #     """
+    #     # Create appropriate submesh by combining submeshes in domain
+    #     submesh = self.mesh.combine_submeshes(*domain)
+    #
+    #     # Create lower-triangular matrix using submesh
+    #     n = submesh.npts
+    #     matrix = submesh.d_edges * np.tril(np.ones((n, n + 1)), -1)
+    #     return pybamm.Matrix(matrix)
 
 
 class NodeToEdge(pybamm.SpatialOperator):

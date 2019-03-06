@@ -238,11 +238,12 @@ class TestDiscretise(unittest.TestCase):
         # create discretisation
         pybamm.Discretisation(None, {})
 
-        # TODO: implement and equivelent test in spatial_methods
-        # with self.assertRaises(NotImplementedError):
-        #     disc.gradient(None, None, {})
-        # with self.assertRaises(NotImplementedError):
-        #     disc.divergence(None, None, {})
+        with self.assertRaises(NotImplementedError):
+            disc.gradient(None, None, {})
+        with self.assertRaises(NotImplementedError):
+            disc.divergence(None, None, {})
+        with self.assertRaises(NotImplementedError):
+            disc.integral(None, None, {})
 
     def test_process_dict(self):
         # one equation

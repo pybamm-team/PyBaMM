@@ -65,6 +65,48 @@ class TestUnaryOperators(unittest.TestCase):
         grad = pybamm.Gradient(a)
         self.assertEqual(grad.children[0].name, a.name)
 
+    def test_integral(self):
+        # time integral
+        a = pybamm.Symbol("a")
+        t = pybamm.t
+        inta = pybamm.Integral(a, t)
+        self.assertEqual(inta.name, "integral dtime")
+        self.assertTrue(inta.definite)
+        self.assertEqual(inta.children[0].name, a.name)
+        self.assertEqual(inta.integration_variable, t)
+        self.assertEqual(inta.domain, [])
+
+        # space integral
+        a = pybamm.Symbol("a", domain=["negative electrode"])
+        x = pybamm.Space(["negative electrode"])
+        inta = pybamm.Integral(a, x)
+        self.assertEqual(inta.name, "integral dspace (['negative electrode'])")
+        self.assertEqual(inta.children[0].name, a.name)
+        self.assertEqual(inta.integration_variable, x)
+        self.assertEqual(inta.domain, ["negative electrode"])
+
+        # # Indefinite
+        # for inta in [
+        #     pybamm.Integral(a, x, definite=False),
+        #     pybamm.IndefiniteIntegral(a, x),
+        # ]:
+        #     self.assertEqual(
+        #         inta.name, "indefinite integral dspace (['negative electrode'])"
+        #     )
+        #     self.assertFalse(inta.definite)
+        #     self.assertEqual(inta.children[0].name, a.name)
+        #     self.assertEqual(inta.integration_variable, x)
+        #     self.assertEqual(inta.domain, ["negative electrode"])
+
+        # expected errors
+        a = pybamm.Symbol("a", domain=["negative electrode"])
+        x = pybamm.Space(["separator"])
+        y = pybamm.Variable("y")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.Integral(a, x)
+        with self.assertRaises(ValueError):
+            pybamm.Integral(a, y)
+
     def test_printing(self):
         a = pybamm.Symbol("a")
         self.assertEqual(str(-a), "-a")

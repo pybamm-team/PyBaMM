@@ -17,7 +17,6 @@ class UnaryOperator(pybamm.Symbol):
 
     Parameters
     ----------
-
     name : str
         name of the node
     child : :class:`Symbol`
@@ -126,6 +125,75 @@ class Divergence(SpatialOperator):
 
     def __init__(self, child):
         super().__init__("div", child)
+
+
+class Integral(SpatialOperator):
+    """A node in the expression tree representing an integral operator (definite or
+    indefinite)
+
+    .. math::
+        \\text{definite}: \\quad I = \\int_{a}^{b}\\!f(u)\\,du,
+
+        \\text{indefinite}: \\quad I(s) = \\int_{a}^{s}\\!f(u)\\,du,
+
+    where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
+    the domain respectively, and :math:`s\\in\\text{domain}`.
+    Can be integration with respect to time or space.
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
+    definite : boolean, optional
+        Whether the integral is definite or indefinite. If definite, the resulting
+        integral has one dimension fewer than the integrand; if indefinite, the
+        resulting integral has the same shape as the integrand. Default is definite.
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, integration_variable, definite=True):
+        if isinstance(integration_variable, pybamm.Space):
+            # Check that child and integration_variable domains agree
+            if child.domain != integration_variable.domain:
+                raise pybamm.DomainError(
+                    """child and integration_variable must have the same domain"""
+                )
+        elif not isinstance(integration_variable, pybamm.IndependentVariable):
+            raise ValueError(
+                """integration_variable must be of type pybamm.IndependentVariable,
+                   not {}""".format(
+                    type(integration_variable)
+                )
+            )
+        name = "integral d{}".format(
+            integration_variable.name, integration_variable.domain
+        )
+        if not definite:
+            name = "indefinite " + name
+        super().__init__(name, child)
+        self._integration_variable = integration_variable
+        self._definite = definite
+
+    @property
+    def integration_variable(self):
+        return self._integration_variable
+
+    @property
+    def definite(self):
+        return self._definite
+
+
+class IndefiniteIntegral(Integral):
+    """A node in the expression tree representing an indefinite integral operator.
+
+    **Extends:** :class:`Integral`
+    """
+
+    def __init__(self, child, integration_variable):
+        super().__init__(child, integration_variable, definite=False)
 
 
 class SurfaceValue(SpatialOperator):

@@ -218,6 +218,11 @@ class Discretisation(object):
                 child, discretised_child, self._bcs
             )
 
+        elif isinstance(symbol, pybamm.Integral):
+            return self.integral(
+                symbol.children[0], y_slices, boundary_conditions, symbol.definite
+            )
+
         elif isinstance(symbol, pybamm.Broadcast):
             # Process child first
             new_child = self.process_symbol(symbol.children[0])
