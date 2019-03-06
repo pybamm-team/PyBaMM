@@ -300,7 +300,6 @@ class TestDiscretise(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         y = combined_submesh.nodes
-        y_edges = combined_submesh.edges
 
         disc.set_variable_slices([c])
         # grad and div are identity operators here
