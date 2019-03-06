@@ -17,8 +17,12 @@ class SPM(pybamm.BaseModel):
         super().__init__()
 
         # Variables
-        c_n = pybamm.Variable("Particle concentration", domain="negative particle")
-        c_p = pybamm.Variable("Particle concentration", domain="positive particle")
+        c_n = pybamm.Variable(
+            "Negative particle concentration", domain="negative particle"
+        )
+        c_p = pybamm.Variable(
+            "Positive particle concentration", domain="positive particle"
+        )
 
         # Parameters
         sp = pybamm.standard_parameters
@@ -34,7 +38,6 @@ class SPM(pybamm.BaseModel):
         self.rhs = {c_n: dc_n_dt, c_p: dc_p_dt}
 
         # Boundary conditions
-        # Note: this is for constant current discharge only
         self.boundary_conditions = {
             N_n: {"left": 0, "right": i_cell / sp.l_n / spli.beta_n},
             N_p: {

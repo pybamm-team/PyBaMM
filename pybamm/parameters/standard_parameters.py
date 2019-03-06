@@ -16,7 +16,7 @@ T
 Macroscale Geometry
 -------------------
 
-L_n, Ls, Lp
+L_n, L_s, L_p
     The widths of the negative electrode, separator and positive electrode, respectively
 Lx
     The width of a single cell
