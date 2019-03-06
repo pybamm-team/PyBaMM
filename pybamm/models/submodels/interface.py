@@ -7,10 +7,7 @@ import pybamm
 import numpy as np
 
 
-<<<<<<< HEAD
-def homogeneous_reaction(current):
-=======
-def homogeneous_reaction(domain):
+def homogeneous_reaction(current, domain):
     """ Homogeneous reaction at the electrode-electrolyte interface """
 
     # If feed in just a single domain then will return a Scalar which will
@@ -21,39 +18,33 @@ def homogeneous_reaction(domain):
     # will be processed into a vector upon discretisation.
 
     if domain == ["negative electrode"]:
-        exchange_current = (
-            pybamm.standard_parameters.current
-            / pybamm.standard_parameters.ln
-            * pybamm.Scalar(1, domain=domain)
-        )
+        exchange_current = current / pybamm.standard_parameters.ln
     elif domain == ["separator"]:
         exchange_current = pybamm.Scalar(0)
     elif domain == ["positive electrode"]:
-        exchange_current = (
-            -pybamm.standard_parameters.current
-            / pybamm.standard_parameters.lp
-            * pybamm.Scalar(1, domain=domain)
-        )
-    elif domain == ["negative electrode", "separator", "positive electrode"]:
-        current_neg = (
-            pybamm.Scalar(1, domain=["negative electrode"])
-            / pybamm.standard_parameters.ln
-        )
-        current_sep = pybamm.Scalar(0, domain=["separator"])
-        current_pos = (
-            -pybamm.Scalar(1, domain=["positive electrode"])
-            / pybamm.standard_parameters.lp
-        )
-        exchange_current = pybamm.Concatenation(current_neg, current_sep, current_pos)
+        exchange_current = -current / pybamm.standard_parameters.lp
 
+    elif domain == ["negative electrode", "separator", "positive electrode"]:
+        # hack to make the concatenation work. Concatenation needs some work
+        current_neg = pybamm.Broadcast(
+            current / pybamm.standard_parameters.ln, ["negative electrode"]
+        )
+        current_pos = pybamm.Broadcast(
+            -current / pybamm.standard_parameters.lp, ["positive electrode"]
+        )
+        return pybamm.Concatenation(
+            current_neg, pybamm.Broadcast(0, ["separator"]), current_pos
+        )
     else:
-        raise NotImplementedError("Not a valid domain")
+        raise NotImplementedError("{} is not a valid domain".format(domain))
+
+    # set the domain (required for processing boundary conditions)
+    exchange_current.domain = domain
 
     return exchange_current
 
 
-def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
->>>>>>> issue-74-implement-DFN
+def butler_volmer(iota, U_eq, c_e, Delta_phi, ck_surf=None, domain=None):
     """
     Butler-Volmer reactions.
 
@@ -73,8 +64,8 @@ def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
         The electrolyte concentration
     Delta_phi : :class:`pybamm.Symbol`
         The difference between the electrode potential and the electrolyte potential.
-    c_k: :class: `pybamm.Variable`
-        The concentration in the negative and positive particles.
+    ck_surf: :class: `pybamm.Variable`
+        The concentration of lithium on the surface of a particle.
     domain : iterable of strings
         The domain in which to calculate the interfacial current density. Default is
         None, in which case the domain is calculated based on c and phi or defaults to
@@ -85,18 +76,6 @@ def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
     :class:`pybamm.Symbol`
         The dimensionless interfacial current density (=dimensionless flux density)
     """
-<<<<<<< HEAD
-    # hack to make the concatenation work. Concatenation needs some work
-    current_neg = pybamm.Broadcast(
-        current / pybamm.standard_parameters.l_n, ["negative electrode"]
-    )
-    current_pos = pybamm.Broadcast(
-        -current / pybamm.standard_parameters.l_p, ["positive electrode"]
-    )
-    return pybamm.Concatenation(
-        current_neg, pybamm.Broadcast(0, ["separator"]), current_pos
-    )
-=======
     if domain is None:
         # raise error if no domain can be found
         if c_e.domain == [] and Delta_phi.domain == []:
@@ -120,25 +99,25 @@ def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
     # Get the current densities based on domain
     if domain == ["negative electrode"]:
         j0n = exchange_current_density(
-            iota, c_e, c_k=c_k, domain=["negative electrode"]
+            iota, c_e, ck_surf=ck_surf, domain=["negative electrode"]
         )
-        eta_n = Delta_phi - U_eq
+        eta_n = Delta_phi - U_eq(ck_surf)
         return j0n * eta_n  # Function(etan, np.sinh)
     elif domain == ["positive electrode"]:
         j0p = exchange_current_density(
-            iota, c_e, c_k=c_k, domain=["positive electrode"]
+            iota, c_e, ck_surf=ck_surf, domain=["positive electrode"]
         )
-        eta_p = Delta_phi - U_eq
+        eta_p = Delta_phi - U_eq(ck_surf)
         return j0p * eta_p  # Function(etap, np.sinh)
     # To get current density across the whole domain, unpack and call this function
     # again in the subdomains, then concatenate
     elif domain == ["negative electrode", "separator", "positive electrode"]:
 
         # Unpack c
-        if c_k is None:
+        if ck_surf is None:
             variables = [c_e, Delta_phi, U_eq]
         else:
-            variables = [c_e, Delta_phi, U_eq, c_k]
+            variables = [c_e, Delta_phi, U_eq, ck_surf]
 
         if all([isinstance(var, pybamm.Concatenation) for var in variables]):
             c_en, c_es, c_ep = c_e.orphans
@@ -147,20 +126,20 @@ def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
             iota_n, iota_s, iota_p = iota.orphans
         else:
             raise ValueError(
-                "c_e, Delta_phi, U_eq, (and c_k)\
+                "c_e, Delta_phi, U_eq, (and ck_surf)\
                 must both be Concatenations, not '{}' and '{}', '{}".format(
                     type(c_e), type(Delta_phi), type(U_eq)
                 )
             )
         # Negative electrode
         j_n = butler_volmer(
-            iota, U_n, c_en, Delta_phi_n, c_k=c_k, domain=["negative electrode"]
+            iota, U_n, c_en, Delta_phi_n, ck_surf=ck_surf, domain=["negative electrode"]
         )
         # Separator
         j_s = pybamm.Scalar(0, domain=["separator"])
         # Positive electrode
         j_p = butler_volmer(
-            iota, U_p, c_e, Delta_phi, c_k=c_k, domain=["negative electrode"]
+            iota, U_p, c_e, Delta_phi, ck_surf=ck_surf, domain=["negative electrode"]
         )
         # Concatenate
         return pybamm.Concatenation(j_n, j_s, j_p)
@@ -168,7 +147,7 @@ def butler_volmer(iota, U_eq, c_e, Delta_phi, c_k=None, domain=None):
         raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
 
-def exchange_current_density(iota, c_e, c_k=None, domain=None):
+def exchange_current_density(iota, c_e, ck_surf=None, domain=None):
     """The exchange current-density as a function of concentration
 
     Parameters
@@ -178,7 +157,8 @@ def exchange_current_density(iota, c_e, c_k=None, domain=None):
         current density)
     c_e : :class:`pybamm.Variable`
         The electrolyte concentration
-    c_k : :class:`pybamm.Variable`
+    ck_surf : :class:`pybamm.Variable`
+        The concentration of lithium on the surface of a particle
     domain : string
         Which domain to calculate the exchange current density in ("negative electrode"
         or "positive electrode"). Default is None, in which case the domain is\
@@ -200,16 +180,20 @@ def exchange_current_density(iota, c_e, c_k=None, domain=None):
     if domain[0] not in pybamm.KNOWN_DOMAINS:
         raise pybamm.DomainError("{} is not in known domains".format(domain))
 
-    if c_k is not None:
-        # check that c_k and c_e have are both negative or positive
-        if (c_k.domain == ["negative particle"]) and (domain != ["negative electrode"]):
+    if ck_surf is not None:
+        # check that ck_surf and c_e have are both negative or positive
+        if (ck_surf.domain == ["negative particle"]) and (
+            domain != ["negative electrode"]
+        ):
             raise ValueError(
-                "c_k and c_e must both be on respective 'negative' or 'positive'\
+                "ck_surf and c_e must both be on respective 'negative' or 'positive'\
                         domains"
             )
-        if (c_k.domain == ["positive particle"]) and (domain != ["positive electrode"]):
+        if (ck_surf.domain == ["positive particle"]) and (
+            domain != ["positive electrode"]
+        ):
             raise ValueError(
-                "c_k and c_e must both be on respective 'negative' or 'positive'\
+                "ck_surf and c_e must both be on respective 'negative' or 'positive'\
                         domains"
             )
 
@@ -222,9 +206,9 @@ def exchange_current_density(iota, c_e, c_k=None, domain=None):
             raise pybamm.DomainError("""concentration and domain do not match""")
 
     # I actually don't like the set of if statements here.
-    if c_k is not None:
+    if ck_surf is not None:
         # only activated by li-ion
-        return iota * c_e ** (1 / 2) * c_k ** (1 / 2) * (1 - c_k) ** (1 / 2)
+        return iota * c_e ** (1 / 2) * ck_surf ** (1 / 2) * (1 - ck_surf) ** (1 / 2)
     elif domain == ["negative electrode"]:
         # only activated in neg of lead-acid
         return iota * c_e
@@ -236,7 +220,6 @@ def exchange_current_density(iota, c_e, c_k=None, domain=None):
         return iota * c_e ** 2 * cw
     else:
         raise pybamm.DomainError("domain '{}' not recognised".format(domain))
->>>>>>> issue-74-implement-DFN
 
 
 def butler_volmer_lead_acid(c, phi, domain=None):
@@ -282,7 +265,6 @@ def butler_volmer_lead_acid(c, phi, domain=None):
 
     # Get the current densities based on domain
     if domain == ["negative electrode"]:
-<<<<<<< HEAD
         j0_n = exchange_current_density(c, ["negative electrode"])
         eta_n = phi - pybamm.standard_parameters_lead_acid.U_n(c)
         return j0_n * pybamm.Function(np.sinh, eta_n)
@@ -290,15 +272,6 @@ def butler_volmer_lead_acid(c, phi, domain=None):
         j0_p = exchange_current_density(c, ["positive electrode"])
         eta_p = phi - pybamm.standard_parameters_lead_acid.U_p(c)
         return j0_p * pybamm.Function(np.sinh, eta_p)
-=======
-        j0n = exchange_current_density_lead_acid(c, ["negative electrode"])
-        etan = phi - pybamm.standard_parameters_lead_acid.U_Pb(c)
-        return j0n * etan  # Function(etan, np.sinh)
-    elif domain == ["positive electrode"]:
-        j0p = exchange_current_density_lead_acid(c, ["positive electrode"])
-        etap = phi - pybamm.standard_parameters_lead_acid.U_PbO2(c)
-        return j0p * etap  # Function(etap, np.sinh)
->>>>>>> issue-74-implement-DFN
     # To get current density across the whole domain, unpack and call this function
     # again in the subdomains, then concatenate
     elif domain == ["negative electrode", "separator", "positive electrode"]:
@@ -324,11 +297,7 @@ def butler_volmer_lead_acid(c, phi, domain=None):
         raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
 
-<<<<<<< HEAD
-def exchange_current_density(c_e, domain=None):
-=======
-def exchange_current_density_lead_acid(c, domain=None):
->>>>>>> issue-74-implement-DFN
+def exchange_current_density_lead_acid(c_e, domain=None):
     """The exchange current-density as a function of concentration
 
     Parameters

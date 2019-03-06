@@ -19,7 +19,6 @@ class StefanMaxwell(pybamm.BaseModel):
     *Extends:* :class:`BaseModel`
     """
 
-<<<<<<< HEAD:pybamm/models/submodels/electrolyte.py
     def __init__(self, j):
         super().__init__()
 
@@ -32,20 +31,6 @@ class StefanMaxwell(pybamm.BaseModel):
         c_e = pybamm.Variable("c_e", electrolyte_domain)
 
         N_e = -sp.D_e(c_e) * (spli.epsilon ** sp.b) * pybamm.grad(c_e)
-=======
-    def __init__(self, c_e, G):
-        super().__init__()
-
-        # TODO: spatially dependent
-        epsilon = pybamm.standard_parameters.epsilon_s
-        b = pybamm.standard_parameters.b
-        delta = pybamm.standard_parameters.delta
-        nu = pybamm.standard_parameters.nu
-        t_plus = pybamm.standard_parameters.t_plus
-        ce0 = pybamm.standard_parameters.ce0
-
-        N_e = -(epsilon ** b) * pybamm.grad(c_e)
->>>>>>> issue-74-implement-DFN:pybamm/models/submodels/electrolyte_diffusion.py
 
         self.rhs = {
             c_e: -pybamm.div(N_e) / spli.C_e / spli.epsilon

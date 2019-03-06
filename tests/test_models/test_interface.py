@@ -16,15 +16,9 @@ class TestHomogeneousReaction(unittest.TestCase):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
-<<<<<<< HEAD
-        rxn = pybamm.interface.homogeneous_reaction(1)
-=======
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-
-        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
->>>>>>> issue-74-implement-DFN
-
+        rxn = pybamm.interface.homogeneous_reaction(1, whole_cell)
         processed_rxn = param.process_symbol(rxn)
 
         # rxn (a concatenation of functions of scalars and parameters) should get
@@ -55,15 +49,10 @@ class TestHomogeneousReaction(unittest.TestCase):
             "input/parameters/lithium-ion/parameters/LCO.csv"
         )
         disc = get_discretisation_for_testing()
-        mesh = disc.mesh
 
-<<<<<<< HEAD
-        rxn = pybamm.interface.homogeneous_reaction(1)
-=======
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
-        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
->>>>>>> issue-74-implement-DFN
+        rxn = pybamm.interface.homogeneous_reaction(1, whole_cell)
 
         param_rxn = param.process_symbol(rxn)
         processed_rxn = disc.process_symbol(param_rxn)
@@ -74,12 +63,31 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertIsInstance(processed_rxn, pybamm.Vector)
         self.assertEqual(processed_rxn.shape, submesh.nodes.shape)
 
+    def disc_for_scalars(self):
+        param = pybamm.ParameterValues(
+            "input/parameters/lithium-ion/parameters/LCO.csv"
+        )
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+
+        j_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
+        j_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
+
+        j_n = param.process_symbol(j_n)
+        j_p = param.process_symbol(j_p)
+
+        disc.process_symbol(j_n)
+        disc.process_symbol(j_p)
+
         # test values
         l_n = param.process_symbol(pybamm.standard_parameters.l_n)
         l_p = param.process_symbol(pybamm.standard_parameters.l_p)
         npts_n = mesh["negative electrode"].npts
         npts_s = mesh["separator"].npts
+        np.testing.assert_array_equal(j_n.evaluate()[:npts_n] * ln.evaluate(), 1)
+        np.testing.assert_array_equal(j_n.evaluate()[npts_n : npts_n + npts_s], 0)
         np.testing.assert_array_equal(
+<<<<<<< HEAD
             processed_rxn.evaluate()[:npts_n] * l_n.evaluate(), 1
         )
         np.testing.assert_array_equal(
@@ -87,6 +95,9 @@ class TestHomogeneousReaction(unittest.TestCase):
         )
         np.testing.assert_array_equal(
             processed_rxn.evaluate()[npts_n + npts_s :] * l_p.evaluate(), -1
+=======
+            j_n.evaluate()[npts_n + npts_s :] * lp.evaluate(), -1
+>>>>>>> issue-74-implement-DFN
         )
 
 
