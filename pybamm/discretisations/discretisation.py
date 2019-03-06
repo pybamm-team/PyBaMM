@@ -72,7 +72,6 @@ class Discretisation(object):
 
         # Process events
         model.events = self.process_list(model.events)
-        model.concatenated_events = self.concatenate(*model.events)
 
         # Check that resulting model makes sense
         self.check_model(model)

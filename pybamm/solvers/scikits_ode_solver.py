@@ -65,11 +65,11 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             return_ydot[:] = derivs(t, y)
 
         def rootfn(t, y, return_root):
-            return_root[:] = events(t, y)
+            return_root[:] = [event(t, y) for event in events]
 
         extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
         if events:
-            extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events(0, y0))})
+            extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
 
         ode_solver = scikits_odes.ode(self.method, eqsydot, **extra_options)
         sol = ode_solver.solve(t_eval, y0)

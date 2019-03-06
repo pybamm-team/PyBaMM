@@ -57,7 +57,8 @@ class ScipySolver(pybamm.OdeSolver):
         """
         # make events terminal so that the solver stops when they are reached
         if events:
-            events.terminal = True
+            for event in events:
+                event.terminal = True
 
         sol = it.solve_ivp(
             derivs,
