@@ -113,7 +113,6 @@ from .models.submodels import (
     electrolyte_diffusion,
     electrolyte_porosity,
     interface,
-    particle,
 )
 
 #

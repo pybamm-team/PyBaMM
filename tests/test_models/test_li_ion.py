@@ -10,10 +10,9 @@ import unittest
 import numpy as np
 
 
-@unittest.skip("Removed liIon")
 class TestLiIonSPM(unittest.TestCase):
     def test_basic_processing(self):
-        model = pybamm.lithium_ion.SPM_rob()
+        model = pybamm.li_ion.SPM()
         modeltest = tests.StandardModelTest(model)
 
         modeltest.test_all()
