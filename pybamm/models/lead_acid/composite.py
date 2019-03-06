@@ -8,7 +8,7 @@ import pybamm
 import numpy as np
 
 
-class Composite(pybamm.BaseModel):
+class Composite(pybamm.LeadAcidBaseModel):
     """Composite model for lead-acid, from [1].
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
@@ -38,7 +38,7 @@ class Composite(pybamm.BaseModel):
         = \\frac{1}{\\ell_\\text{n}}
         \\int_0^{\\ell_\\text{n}} \\! c_\\text{n} \\, \\mathrm{d}x
 
-    **Extends:** :class:`pybamm.BaseModel`
+    **Extends:** :class:`pybamm.LeadAcidBaseModel`
 
     """
 
@@ -78,14 +78,15 @@ class Composite(pybamm.BaseModel):
         conc_model = pybamm.electrolyte.StefanMaxwellDiffusionWithPorosity(
             c, eps, j, spla
         )
+        porosity_model = pybamm.electrolyte.Porosity(eps, j)
 
         # Update own model with submodels
-        self.update(loqs_model, conc_model)
+        self.update(loqs_model, conc_model, porosity_model)
 
         # Extract leading-order variables
         c_0 = loqs_model.variables["Concentration"].orphans[0]
         eps_0 = loqs_model.variables["Porosity"]
-        eps_0n, eps_0s, eps_0p = eps_0.orphans
+        eps_0n, eps_0s, eps_0p = [e.orphans[0] for e in eps_0.orphans]
         eta_0n = loqs_model.variables["Negative electrode overpotential"].orphans[0]
         eta_0p = loqs_model.variables["Positive electrode overpotential"].orphans[0]
         Phi_0 = loqs_model.variables["Electrolyte potential"].orphans[0]
@@ -114,8 +115,8 @@ class Composite(pybamm.BaseModel):
         c_1p = (c_p - c_0) / spla.C_e
 
         # Potential
-        cbar_1n = pybamm.Integral(c_1n, x_n) / sp.l_n
-        j0bar_1n = pybamm.Integral(j0_1n, x_n) / sp.l_n
+        cbar_1n = pybamm.Scalar(1)  # pybamm.Integral(c_1n, x_n) / sp.l_n
+        j0bar_1n = pybamm.Scalar(1)  # pybamm.Integral(j0_1n, x_n) / sp.l_n
         An = (
             j0bar_1n * pybamm.Function(np.tanh, eta_0n) / j0_0n
             - dUPbdc * cbar_1n
@@ -133,9 +134,9 @@ class Composite(pybamm.BaseModel):
         Phi1 = chi_0 / c_0 * c_1 + pybamm.Concatenation(Phi_1n, Phi_1s, Phi_1p) + An
 
         # Voltage
-        cbar_1p = pybamm.Integral(c_1p, x_p) / sp.l_p
-        Phibar_1p = pybamm.Integral(Phi1, x_p) / sp.l_p
-        j0bar_1p = pybamm.Integral(j0_1p, x_p) / sp.l_p
+        cbar_1p = pybamm.Scalar(1)  # pybamm.Integral(c_1p, x_p) / sp.l_p
+        Phibar_1p = pybamm.Scalar(1)  # pybamm.Integral(Phi1, x_p) / sp.l_p
+        j0bar_1p = pybamm.Scalar(1)  # pybamm.Integral(j0_1p, x_p) / sp.l_p
         V1 = (
             Phibar_1p
             + dUPbO2dc * cbar_1p
@@ -148,8 +149,3 @@ class Composite(pybamm.BaseModel):
             "Phi": Phi_0 + spla.C_e * Phi1,
             "V": V_0 + spla.C_e * V1,
         }
-
-        # Overwrite default parameter values
-        self.default_parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
-        )

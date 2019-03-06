@@ -301,3 +301,47 @@ class BaseModel(object):
                             var, eqn
                         )
                     )
+
+
+class LeadAcidBaseModel(BaseModel):
+    """
+    Overwrites default parameters from Base Model with default parameters for
+    lead-acid models
+
+    **Extends:** :class:`BaseModel`
+
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        # Overwrite default parameter values
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
+        self.default_parameter_values = pybamm.ParameterValues(
+            "input/parameters/lead-acid/default.csv",
+            {
+                "Typical current density": 1,
+                "Current function": os.path.join(
+                    os.getcwd(),
+                    "pybamm",
+                    "parameters",
+                    "standard_current_functions",
+                    "constant_current.py",
+                ),
+                "Electrolyte diffusivity": os.path.join(
+                    input_path, "electrolyte_diffusivity_Gu1997.py"
+                ),
+                "Electrolyte conductivity": os.path.join(
+                    input_path, "electrolyte_conductivity_Gu1997.py"
+                ),
+                "Darken thermodynamic factor": os.path.join(
+                    input_path, "darken_thermodynamic_factor_Chapman1968.py"
+                ),
+                "Negative electrode OCV": os.path.join(
+                    input_path, "lead_electrode_ocv_Bode1977.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
+                ),
+            },
+        )

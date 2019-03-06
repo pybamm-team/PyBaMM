@@ -16,22 +16,6 @@ class StefanMaxwellDiffusion(pybamm.BaseModel):
         An expression tree that represents the interfacial current density at the
         electrode-electrolyte interface
 
-    Attributes
-    ----------
-
-    rhs: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the rhs
-    initial_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions
-    boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions
-    variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables
-
     *Extends:* :class:`BaseModel`
     """
 
@@ -65,25 +49,9 @@ class StefanMaxwellDiffusionWithPorosity(pybamm.BaseModel):
 
     Parameters
     ----------
-    G : :class:`pybamm.Symbol`
-        An expression tree that represents the concentration flux at the
+    j : :class:`pybamm.Symbol`
+        An expression tree that represents the interfacial current density at the
         electrode-electrolyte interface
-
-    Attributes
-    ----------
-
-    rhs: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the rhs
-    initial_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions
-    boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions
-    variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables
 
     *Extends:* :class:`BaseModel`
     """
@@ -110,3 +78,25 @@ class StefanMaxwellDiffusionWithPorosity(pybamm.BaseModel):
         self.initial_conditions = {c_e: param.c_e_init}
         self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
         self.variables = {"c_e": c_e, "N_e": N_e}
+
+
+class Porosity(pybamm.BaseModel):
+    """A class that generates the expression tree for Stefan-Maxwell Diffusion in the
+    electrolyte.
+
+    Parameters
+    ----------
+    j : :class:`pybamm.Symbol`
+        An expression tree that represents the interfacial current density at the
+        electrode-electrolyte interface
+
+    *Extends:* :class:`BaseModel`
+    """
+
+    def __init__(self, epsilon, j):
+        super().__init__()
+        sp = pybamm.standard_parameters_lead_acid
+
+        # Model
+        self.rhs = {epsilon: -sp.beta_surf * j}
+        self.initial_conditions = {epsilon: sp.eps_init}

@@ -8,10 +8,10 @@ import numpy as np
 import os
 
 
-class LOQS(pybamm.BaseModel):
+class LOQS(pybamm.LeadAcidBaseModel):
     """Leading-Order Quasi-Static model for lead-acid.
 
-    **Extends**: :class:`pybamm.BaseModel`
+    **Extends**: :class:`pybamm.LeadAcidBaseModel`
 
     """
 
@@ -82,34 +82,3 @@ class LOQS(pybamm.BaseModel):
             "Electrolyte potential": pybamm.Broadcast(Phi, whole_cell),
             "Voltage": V,
         }
-
-        # Overwrite default parameter values
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
-        self.default_parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
-            {
-                "Typical current density": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Gu1997.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Gu1997.py"
-                ),
-                "Darken thermodynamic factor": os.path.join(
-                    input_path, "darken_thermodynamic_factor_Chapman1968.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
-                ),
-            },
-        )
