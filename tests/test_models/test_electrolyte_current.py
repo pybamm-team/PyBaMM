@@ -8,6 +8,7 @@ import pybamm
 import unittest
 
 
+@unittest.skip("not implemented")
 class TestStefanMaxwellCurrent(unittest.TestCase):
     def test_make_tree(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]

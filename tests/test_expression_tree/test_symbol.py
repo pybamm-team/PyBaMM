@@ -221,8 +221,10 @@ class TestSymbol(unittest.TestCase):
         )
 
     def test_symbol_visualise(self):
-        G = pybamm.Symbol("G")
-        model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", whole_cell)
+        j = pybamm.Variable("j", whole_cell)
+        model = pybamm.electrolyte_diffusion.StefanMaxwell(c, j)
         c_e = list(model.rhs.keys())[0]
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test", test=True)
