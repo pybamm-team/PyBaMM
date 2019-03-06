@@ -12,9 +12,10 @@ class StefanMaxwell(pybamm.BaseModel):
 
     Parameters
     ----------
+    c_e : :class:`pybamm.Symbol`
+        A symbol representing the concentration of ions in the electrolyte
     j : :class:`pybamm.Symbol`
-        An expression tree that represents the interfacial current density at the
-        electrode-electrolyte interface
+        The interfacial current density at the electrode-electrolyte interface
 
     *Extends:* :class:`BaseModel`
     """
@@ -45,9 +46,15 @@ class StefanMaxwellWithPorosity(pybamm.BaseModel):
 
     Parameters
     ----------
+    c_e : :class:`pybamm.Symbol`
+        The electrolyte concentration
+    epsilon : :class:`pybamm.Symbol`
+        The (electrolyte/liquid phase) porosity
     j : :class:`pybamm.Symbol`
         An expression tree that represents the interfacial current density at the
         electrode-electrolyte interface
+    param : parameter class
+        The parameters to use for this submodel
 
     *Extends:* :class:`BaseModel`
     """

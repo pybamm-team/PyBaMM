@@ -12,17 +12,18 @@ class Standard(pybamm.BaseModel):
 
     Parameters
     ----------
+    epsilon : :class:`pybamm.Symbol`
+        The (electrolyte/liquid phase) porosity
     j : :class:`pybamm.Symbol`
-        An expression tree that represents the interfacial current density at the
-        electrode-electrolyte interface
+        The interfacial current density at the electrode-electrolyte interface
+    param : parameter class
+        The parameters to use for this submodel
 
     *Extends:* :class:`BaseModel`
     """
 
-    def __init__(self, epsilon, j):
+    def __init__(self, epsilon, j, param):
         super().__init__()
-        sp = pybamm.standard_parameters_lead_acid
 
-        # Model
-        self.rhs = {epsilon: -sp.beta_surf * j}
-        self.initial_conditions = {epsilon: sp.eps_init}
+        self.rhs = {epsilon: -param.beta_surf * j}
+        self.initial_conditions = {epsilon: param.eps_init}

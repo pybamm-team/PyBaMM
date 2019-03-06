@@ -110,8 +110,8 @@ from .models import li_ion
 from .models.submodels import (
     electrolyte_current,
     electrolyte_diffusion,
-    electrolyte_porosity,
     interface,
+    porosity,
 )
 
 #

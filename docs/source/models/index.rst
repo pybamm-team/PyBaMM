@@ -3,7 +3,7 @@ Models
 
 .. toctree::
 
-  base_model
+  base_models
   reaction_diffusion
   simple_ode_model
   lead_acid/index

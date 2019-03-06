@@ -79,7 +79,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         conc_model = pybamm.electrolyte_diffusion.StefanMaxwellWithPorosity(
             c, eps, j, spla
         )
-        porosity_model = pybamm.electrolyte_porosity.Standard(eps, j)
+        porosity_model = pybamm.porosity.Standard(eps, j)
 
         # Update own model with submodels
         self.update(loqs_model, conc_model, porosity_model)
