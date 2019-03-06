@@ -9,6 +9,7 @@ import tests
 import unittest
 
 
+# unittest.TestCase
 class TestReactionDiffusionModel(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.ReactionDiffusionModel()
