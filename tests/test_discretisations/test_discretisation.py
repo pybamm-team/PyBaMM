@@ -236,14 +236,14 @@ class TestDiscretise(unittest.TestCase):
 
     def test_core_NotImplementedErrors(self):
         # create discretisation
-        pybamm.Discretisation(None, {})
+        disc = pybamm.Discretisation(None, {})
 
         with self.assertRaises(NotImplementedError):
             disc.gradient(None, None, {})
         with self.assertRaises(NotImplementedError):
             disc.divergence(None, None, {})
         with self.assertRaises(NotImplementedError):
-            disc.integral(None, None, {})
+            disc.integral(None, None)
 
     def test_process_dict(self):
         # one equation

@@ -219,8 +219,10 @@ class Discretisation(object):
             )
 
         elif isinstance(symbol, pybamm.Integral):
-            return self.integral(
-                symbol.children[0], y_slices, boundary_conditions, symbol.definite
+            child = symbol.children[0]
+            discretised_child = self.process_symbol(child)
+            return self._spatial_methods[symbol.domain[0]].integral(
+                child, discretised_child
             )
 
         elif isinstance(symbol, pybamm.Broadcast):

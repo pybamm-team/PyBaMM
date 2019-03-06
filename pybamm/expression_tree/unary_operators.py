@@ -146,15 +146,11 @@ class Integral(SpatialOperator):
         The function to be integrated (will become self.children[0])
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
-    definite : boolean, optional
-        Whether the integral is definite or indefinite. If definite, the resulting
-        integral has one dimension fewer than the integrand; if indefinite, the
-        resulting integral has the same shape as the integrand. Default is definite.
 
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, integration_variable, definite=True):
+    def __init__(self, child, integration_variable):
         if isinstance(integration_variable, pybamm.Space):
             # Check that child and integration_variable domains agree
             if child.domain != integration_variable.domain:
@@ -171,29 +167,12 @@ class Integral(SpatialOperator):
         name = "integral d{}".format(
             integration_variable.name, integration_variable.domain
         )
-        if not definite:
-            name = "indefinite " + name
         super().__init__(name, child)
         self._integration_variable = integration_variable
-        self._definite = definite
 
     @property
     def integration_variable(self):
         return self._integration_variable
-
-    @property
-    def definite(self):
-        return self._definite
-
-
-class IndefiniteIntegral(Integral):
-    """A node in the expression tree representing an indefinite integral operator.
-
-    **Extends:** :class:`Integral`
-    """
-
-    def __init__(self, child, integration_variable):
-        super().__init__(child, integration_variable, definite=False)
 
 
 class SurfaceValue(SpatialOperator):

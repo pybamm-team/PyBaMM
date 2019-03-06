@@ -474,11 +474,15 @@ class TestFiniteVolume(unittest.TestCase):
     @unittest.skip("indefinite integral not yet implemented")
     def test_indefinite_integral(self):
         # create discretisation
-        mesh = shared.TestDefaults1DMacro().mesh
-        disc = pybamm.FiniteVolumeDiscretisation(mesh)
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        # lengths
         ln = mesh["negative electrode"].edges[-1]
-        ls = mesh["separator"].edges[-1] - ln
-        lp = 1 - (ln + ls)
 
         # macroscale variable
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
@@ -489,6 +493,7 @@ class TestFiniteVolume(unittest.TestCase):
         integral_eqn_disc = disc.process_symbol(integral_eqn, y_slices)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
+        constant_y = np.ones_like(combined_submesh.nodes)
         constant_y_edges = np.ones_like(combined_submesh.edges)
         linear_y = combined_submesh.nodes
         linear_y_edges = combined_submesh.edges
@@ -527,8 +532,6 @@ class TestFiniteVolume(unittest.TestCase):
         )
 
         # microscale variable
-        mesh = shared.TestDefaults1DParticle(200).mesh
-        disc = pybamm.FiniteVolumeDiscretisation(mesh)
         var = pybamm.Variable("var", domain=["negative particle"])
         integral_eqn = pybamm.IndefiniteIntegral(
             var, pybamm.Space(["negative particle"])
