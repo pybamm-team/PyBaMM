@@ -11,12 +11,16 @@ import unittest
 
 class TestStefanMaxwellDiffusion(unittest.TestCase):
     def test_make_tree(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         G = pybamm.Scalar(1)
-        pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        c_e = pybamm.Variable("c_e", domain=whole_cell)
+        pybamm.electrolyte_diffusion.StefanMaxwell(c_e, G)
 
     def test_basic_processing(self):
         G = pybamm.Scalar(0.001)
-        model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c_e = pybamm.Variable("c_e", domain=whole_cell)
+        model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, G)
 
         modeltest = tests.StandardModelTest(model)
         # Either

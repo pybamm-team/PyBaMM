@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class StefanMaxwellDiffusion(pybamm.BaseModel):
+class StefanMaxwell(pybamm.BaseModel):
     """A class that generates the expression tree for Stefan-Maxwell Diffusion in the
     electrolyte.
 

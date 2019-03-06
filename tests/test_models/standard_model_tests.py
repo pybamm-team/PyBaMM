@@ -48,7 +48,7 @@ class StandardModelTest(object):
         self.solver.solve(self.model, t_eval)
 
     def test_all(self, param=None, disc=None, solver=None):
-        self.model.check_well_posedness()
+        # self.model.check_well_posedness()
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver)
