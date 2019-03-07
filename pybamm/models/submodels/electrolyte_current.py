@@ -43,18 +43,6 @@ class FirstOrderPotential(pybamm.BaseModel):
         Phi_0 = leading_order_model.variables["Electrolyte potential"].orphans[0]
         V_0 = leading_order_model.variables["Voltage"].orphans[0]
 
-        # Pre-define functions of leading-order variables
-        chi_0 = param.chi(c_e_0)
-        kappa_0n = param.kappa_e(c_e_0) * eps_0n ** param.b
-        kappa_0s = param.kappa_e(c_e_0) * eps_0s ** param.b
-        kappa_0p = param.kappa_e(c_e_0) * eps_0p ** param.b
-        j0_0n = pybamm.Scalar(1)
-        j0_0p = pybamm.Scalar(1)
-        j0_1n = pybamm.Scalar(1)
-        j0_1p = pybamm.Scalar(1)
-        dUPbdc = pybamm.Scalar(1)
-        dUPbO2dc = pybamm.Scalar(1)
-
         # Independent variables
         x_n = pybamm.SpatialVariable("x", ["negative electrode"])
         x_s = pybamm.SpatialVariable("x", ["separator"])
@@ -67,9 +55,21 @@ class FirstOrderPotential(pybamm.BaseModel):
         c_e_p = c_e.orphans[2]
         c_e_1p = (c_e_p - c_e_0) / param.C_e
 
+        # Pre-define functions of leading-order variables
+        chi_0 = param.chi(c_e_0)
+        kappa_0n = param.kappa_e(c_e_0) * eps_0n ** param.b
+        kappa_0s = param.kappa_e(c_e_0) * eps_0s ** param.b
+        kappa_0p = param.kappa_e(c_e_0) * eps_0p ** param.b
+        j0_0n = pybamm.Scalar(1)
+        j0_0p = pybamm.Scalar(1)
+        j0_1n = c_e_1n
+        j0_1p = c_e_1p
+        dUPbdc = pybamm.Scalar(1)
+        dUPbO2dc = pybamm.Scalar(1)
+
         # Potential
-        cbar_1n = pybamm.Scalar(1)  # pybamm.Integral(c_e_1n, x_n) / param.l_n
-        j0bar_1n = pybamm.Scalar(1)  # pybamm.Integral(j0_1n, x_n) / param.l_n
+        cbar_1n = pybamm.Integral(c_e_1n, x_n) / param.l_n
+        j0bar_1n = pybamm.Integral(j0_1n, x_n) / param.l_n
         A_n = (
             j0bar_1n * pybamm.Function(np.tanh, eta_0n) / j0_0n
             - dUPbdc * cbar_1n
@@ -95,9 +95,9 @@ class FirstOrderPotential(pybamm.BaseModel):
         )
 
         # Voltage
-        cbar_1p = pybamm.Scalar(1)  # pybamm.Integral(c_e_1p, x_p) / param.l_p
-        Phibar_1p = pybamm.Scalar(1)  # pybamm.Integral(Phi1, x_p) / param.l_p
-        j0bar_1p = pybamm.Scalar(1)  # pybamm.Integral(j0_1p, x_p) / param.l_p
+        cbar_1p = pybamm.Integral(c_e_1p, x_p) / param.l_p
+        Phibar_1p = pybamm.Integral(Phi_1p, x_p) / param.l_p
+        j0bar_1p = pybamm.Integral(j0_1p, x_p) / param.l_p
         V_1 = (
             Phibar_1p
             + dUPbO2dc * cbar_1p

@@ -83,7 +83,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta.name, "integral dx ['negative electrode']")
         self.assertEqual(inta.children[0].name, a.name)
         self.assertEqual(inta.integration_variable, x)
-        self.assertEqual(inta.domain, ["negative electrode"])
+        self.assertEqual(inta.domain, [])
 
         # # Indefinite
         # for inta in [
@@ -96,7 +96,7 @@ class TestUnaryOperators(unittest.TestCase):
         #     self.assertFalse(inta.definite)
         #     self.assertEqual(inta.children[0].name, a.name)
         #     self.assertEqual(inta.integration_variable, x)
-        #     self.assertEqual(inta.domain, ["negative electrode"])
+        #     self.assertEqual(inta.domain, [])
 
         # expected errors
         a = pybamm.Symbol("a", domain=["negative electrode"])

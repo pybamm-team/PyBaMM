@@ -34,10 +34,10 @@ class TestLeadAcidComposite(unittest.TestCase):
             np.testing.assert_array_less(
                 0, model.variables["c"].evaluate(T[idx + 1], Y[:, idx + 1])
             )
-        np.testing.assert_array_less(
-            model.variables["V"].evaluate(T, Y)[1:],
-            model.variables["V"].evaluate(T, Y)[:-1],
-        )
+            self.assertLess(
+                model.variables["V"].evaluate(T[idx + 1], Y[:, idx + 1]),
+                model.variables["V"].evaluate(T[idx], Y[:, idx]),
+            )
 
 
 if __name__ == "__main__":

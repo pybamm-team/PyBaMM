@@ -128,16 +128,13 @@ class Divergence(SpatialOperator):
 
 
 class Integral(SpatialOperator):
-    """A node in the expression tree representing an integral operator (definite or
-    indefinite)
+    """A node in the expression tree representing an integral operator
 
     .. math::
-        \\text{definite}: \\quad I = \\int_{a}^{b}\\!f(u)\\,du,
-
-        \\text{indefinite}: \\quad I(s) = \\int_{a}^{s}\\!f(u)\\,du,
+        I = \\int_{a}^{b}\\!f(u)\\,du,
 
     where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
-    the domain respectively, and :math:`s\\in\\text{domain}`.
+    the domain respectively, and :math:`u\\in\\text{domain}`.
     Can be integration with respect to time or space.
 
     Parameters
@@ -169,6 +166,8 @@ class Integral(SpatialOperator):
             name += " {}".format(integration_variable.domain)
         super().__init__(name, child)
         self._integration_variable = integration_variable
+        # integrating removes the domain
+        self.domain = []
 
     @property
     def integration_variable(self):
