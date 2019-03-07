@@ -7,6 +7,8 @@ import pybamm
 
 import numpy as np
 from scipy.sparse import spdiags
+from scipy.sparse import eye
+from scipy.sparse import kron
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -132,8 +134,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         second_dim_len = len(submesh_list)
 
         # generate full matrix from the submatrix
-        matrix = np.kron(np.eye(second_dim_len), sub_matrix)
-        # TODO: sort the sparse matrix thing here
+        matrix = kron(eye(second_dim_len), sub_matrix)
 
         return pybamm.Matrix(matrix)
 
@@ -150,9 +151,28 @@ class FiniteVolume(pybamm.SpatialMethod):
         if symbol.id in boundary_conditions:
             # for the particles there will be a "negative particle" "left" and "right"
             # and also a "positive particle" left and right.
+
+            # TODO: put the gradient boundary conditions in the correct place
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = pybamm.NumpyConcatenation(lbc, discretised_symbol, rbc)
+
+            import ipdb
+
+            ipdb.set_trace()
+
+            # Could we implement the boundary conditions as a separate + vector?
+            # - only need the correct matrix locations (i.e. npts)
+
+            # from symbol.domain do self.mesh[domain]
+            # then have primary and secondary meshes and therefore all
+            # points information
+
+            # create a vector witht the boundary conditoins of this length
+
+            # remove the correct entries from the div_matrix
+
+            # return div_mat @ discrete_sym + boundary_conditoins
 
         domain = symbol.domain
         # check for particle domain
@@ -215,7 +235,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # second dim length
         second_dim_len = len(submesh_list)
         # generate full matrix from the submatrix
-        matrix = np.kron(np.eye(second_dim_len), sub_matrix)
+        matrix = kron(eye(second_dim_len), sub_matrix)
         return pybamm.Matrix(matrix)
 
     def integral(self, symbol, discretised_symbol):

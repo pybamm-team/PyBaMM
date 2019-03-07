@@ -185,7 +185,7 @@ class TestFiniteVolume(unittest.TestCase):
         )
 
         # div: test on linear y (should have laplacian zero) so change bcs
-        linear_y = combined_submesh.nodes
+        linear_y = combined_submesh[0].nodes
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -236,7 +236,7 @@ class TestFiniteVolume(unittest.TestCase):
         constant_y = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges),
+            np.zeros_like(combined_submesh[0].edges),
         )
 
         boundary_conditions = {
@@ -244,10 +244,11 @@ class TestFiniteVolume(unittest.TestCase):
         }
         disc._bcs = boundary_conditions
 
-        y_linear = combined_submesh.nodes
+        y_linear = combined_submesh[0].nodes
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
-            grad_eqn_disc.evaluate(None, y_linear), np.ones_like(combined_submesh.edges)
+            grad_eqn_disc.evaluate(None, y_linear),
+            np.ones_like(combined_submesh[0].edges),
         )
 
         # div: test on linear r^2
@@ -285,7 +286,7 @@ class TestFiniteVolume(unittest.TestCase):
         constant_y = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges[1:-1]),
+            np.zeros_like(combined_submesh[0].edges[1:-1]),
         )
 
         # div
@@ -298,13 +299,14 @@ class TestFiniteVolume(unittest.TestCase):
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         # Linear y should have laplacian zero
-        linear_y = combined_submesh.nodes
+        linear_y = combined_submesh[0].nodes
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y),
-            np.ones_like(combined_submesh.edges[1:-1]),
+            np.ones_like(combined_submesh[0].edges[1:-1]),
         )
         np.testing.assert_array_almost_equal(
-            div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
+            div_eqn_disc.evaluate(None, linear_y),
+            np.zeros_like(combined_submesh[0].nodes),
         )
 
     def test_spherical_grad_div_shapes_Neumann_bcs(self):
@@ -326,13 +328,13 @@ class TestFiniteVolume(unittest.TestCase):
         constant_y = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges[1:-1]),
+            np.zeros_like(combined_submesh[0].edges[1:-1]),
         )
 
-        linear_y = combined_submesh.nodes
+        linear_y = combined_submesh[0].nodes
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y),
-            np.ones_like(combined_submesh.edges[1:-1]),
+            np.ones_like(combined_submesh[0].edges[1:-1]),
         )
         # div
         # div ( grad(r^2) ) == 6 , N_left = N_right = 0
@@ -344,11 +346,11 @@ class TestFiniteVolume(unittest.TestCase):
         disc._bcs = boundary_conditions
         div_eqn_disc = disc.process_symbol(div_eqn)
 
-        linear_y = combined_submesh.nodes
-        const = 6 * np.ones(combined_submesh.npts)
+        linear_y = combined_submesh[0].nodes
+        const = 6 * np.ones(combined_submesh[0].npts)
 
         np.testing.assert_array_almost_equal(
-            div_eqn_disc.evaluate(None, const), np.zeros_like(combined_submesh.nodes)
+            div_eqn_disc.evaluate(None, const), np.zeros_like(combined_submesh[0].nodes)
         )
 
     def test_grad_div_shapes_mixed_domain(self):
