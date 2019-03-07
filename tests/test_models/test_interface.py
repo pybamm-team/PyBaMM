@@ -69,6 +69,7 @@ class TestHomogeneousReaction(unittest.TestCase):
             },
         )
         disc = get_discretisation_for_testing()
+        mesh = disc.mesh
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
@@ -83,7 +84,22 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertIsInstance(processed_rxn, pybamm.Concatenation)
         self.assertEqual(processed_rxn.evaluate(0, None).shape, submesh.nodes.shape)
 
-    def disc_for_scalars(self):
+        # test values
+        l_n = param.process_symbol(pybamm.standard_parameters.l_n)
+        l_p = param.process_symbol(pybamm.standard_parameters.l_p)
+        npts_n = mesh["negative electrode"].npts
+        npts_s = mesh["separator"].npts
+        np.testing.assert_array_equal(
+            (l_n * processed_rxn).evaluate(0, None)[:npts_n], 1
+        )
+        np.testing.assert_array_equal(
+            processed_rxn.evaluate(0, None)[npts_n : npts_n + npts_s], 0
+        )
+        np.testing.assert_array_equal(
+            (l_p * processed_rxn).evaluate(0, None)[npts_n + npts_s :], -1
+        )
+
+    def test_disc_for_scalars(self):
         param = pybamm.ParameterValues(
             "input/parameters/lithium-ion/parameters/LCO.csv",
             {
@@ -98,33 +114,22 @@ class TestHomogeneousReaction(unittest.TestCase):
             },
         )
         disc = get_discretisation_for_testing()
-        mesh = disc.mesh
 
         j_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
         j_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
 
-        j_n = param.process_symbol(j_n)
-        j_p = param.process_symbol(j_p)
+        param_j_n = param.process_symbol(j_n)
+        param_j_p = param.process_symbol(j_p)
 
-        disc.process_symbol(j_n)
-        disc.process_symbol(j_p)
+        processed_j_n = disc.process_symbol(param_j_n)
+        processed_j_p = disc.process_symbol(param_j_p)
 
         # test values
         l_n = param.process_symbol(pybamm.standard_parameters.l_n)
         l_p = param.process_symbol(pybamm.standard_parameters.l_p)
-        npts_n = mesh["negative electrode"].npts
-        npts_s = mesh["separator"].npts
-        np.testing.assert_array_equal(j_n.evaluate()[:npts_n] * ln.evaluate(), 1)
-        np.testing.assert_array_equal(j_n.evaluate()[npts_n : npts_n + npts_s], 0)
-        np.testing.assert_array_equal(
-            processed_rxn.evaluate()[:npts_n] * l_n.evaluate(), 1
-        )
-        np.testing.assert_array_equal(
-            processed_rxn.evaluate()[npts_n : npts_n + npts_s], 0
-        )
-        np.testing.assert_array_equal(
-            processed_rxn.evaluate()[npts_n + npts_s :] * l_p.evaluate(), -1
-        )
+
+        np.testing.assert_array_equal((processed_j_n * l_n).evaluate(0, None), 1)
+        np.testing.assert_array_equal((processed_j_p * l_p).evaluate(0, None), -1)
 
 
 class TestButlerVolmerLeadAcid(unittest.TestCase):

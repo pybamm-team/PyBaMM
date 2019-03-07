@@ -140,7 +140,7 @@ def butler_volmer(m, U_eq, c_e, Delta_phi, ck_surf=None, domain=None):
         j_s = pybamm.Scalar(0, domain=["separator"])
         # Positive electrode
         j_p = butler_volmer(
-            m, U_p, c_e, Delta_phi, ck_surf=ck_surf, domain=["negative electrode"]
+            m, U_p, c_e, Delta_phi, ck_surf=ck_surf, domain=["positive electrode"]
         )
         # Concatenate
         return pybamm.Concatenation(j_n, j_s, j_p)
