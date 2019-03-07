@@ -41,18 +41,18 @@ class TestMesh(unittest.TestCase):
         mesh = mesh_type(geometry, submesh_types, submesh_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative electrode"].edges[0], 0)
-        self.assertEqual(mesh["positive electrode"].edges[-1], 1)
+        self.assertEqual(mesh["negative electrode"][0].edges[0], 0)
+        self.assertEqual(mesh["positive electrode"][0].edges[-1], 1)
 
         # check internal boundary locations
         self.assertEqual(
-            mesh["negative electrode"].edges[-1], mesh["separator"].edges[0]
+            mesh["negative electrode"][0].edges[-1], mesh["separator"][0].edges[0]
         )
         self.assertEqual(
-            mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
+            mesh["positive electrode"][0].edges[0], mesh["separator"][0].edges[-1]
         )
         for domain in mesh:
-            self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
+            self.assertEqual(len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1)
 
     def test_mesh_sizes(self):
         param = pybamm.ParameterValues(
