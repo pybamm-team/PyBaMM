@@ -40,15 +40,16 @@ class StandardModelTest(object):
         # Model should still be well-posed after processing
         self.model.check_well_posedness()
 
-    def test_solving(self, solver=None):
+    def test_solving(self, solver=None, t_eval=None):
         # Overwrite solver if given
         if solver is not None:
             self.solver = solver
-        t_eval = np.linspace(0, 1, 100)
+        if t_eval is None:
+            t_eval = np.linspace(0, 1, 100)
         self.solver.solve(self.model, t_eval)
 
-    def test_all(self, param=None, disc=None, solver=None):
-        # self.model.check_well_posedness()
+    def test_all(self, param=None, disc=None, solver=None, t_eval=None):
+        self.model.check_well_posedness()
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
-        self.test_solving(solver)
+        self.test_solving(solver, t_eval)

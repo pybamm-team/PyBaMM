@@ -7,6 +7,7 @@ import pybamm
 
 import numpy as np
 import importlib
+
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:
     scikits_odes_spec = importlib.util.find_spec("scikits.odes")
@@ -42,7 +43,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, derivs, y0, t_eval):
+    def integrate(self, derivs, y0, t_eval, events=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -54,17 +55,21 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
+        events : method, optional
+            A function that takes in t and y and returns conditions for the solver to
+            stop
 
         """
 
         def eqsydot(t, y, return_ydot):
             return_ydot[:] = derivs(t, y)
 
-        extra_options = {
-            'old_api': False,
-            'rtol': self.tol,
-            'atol': self.tol,
-        }
+        def rootfn(t, y, return_root):
+            return_root[:] = [event(t, y) for event in events]
+
+        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
+        if events:
+            extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
 
         ode_solver = scikits_odes.ode(self.method, eqsydot, **extra_options)
         sol = ode_solver.solve(t_eval, y0)

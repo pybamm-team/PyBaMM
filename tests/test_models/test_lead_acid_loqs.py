@@ -20,7 +20,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
     def test_solution(self):
         model = pybamm.lead_acid.LOQS()
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+        modeltest.test_all(t_eval=np.linspace(0, 2))
         T, Y = modeltest.solver.t, modeltest.solver.y
 
         # check output
@@ -34,6 +34,8 @@ class TestLeadAcidLOQS(unittest.TestCase):
             model.variables["Voltage"].evaluate(T, Y)[1:],
             model.variables["Voltage"].evaluate(T, Y)[:-1],
         )
+        # Make sure the concentration is always positive (cut-off event working)
+        np.testing.assert_array_less(0, model.variables["Concentration"].evaluate(T, Y))
 
 
 if __name__ == "__main__":

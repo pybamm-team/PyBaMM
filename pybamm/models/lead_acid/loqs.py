@@ -86,3 +86,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
             "Electrolyte potential": pybamm.Broadcast(Phi, whole_cell),
             "Voltage": V,
         }
+
+        # Terminate if concentration goes below zero
+        self.events = [c_e]

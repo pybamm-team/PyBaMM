@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import numpy as np
 
 
 class SPM(pybamm.BaseModel):
@@ -17,8 +18,12 @@ class SPM(pybamm.BaseModel):
         super().__init__()
 
         # Variables
-        c_n = pybamm.Variable("Particle concentration", domain="negative particle")
-        c_p = pybamm.Variable("Particle concentration", domain="positive particle")
+        c_n = pybamm.Variable(
+            "Negative particle concentration", domain="negative particle"
+        )
+        c_p = pybamm.Variable(
+            "Positive particle concentration", domain="positive particle"
+        )
 
         # Parameters
         sp = pybamm.standard_parameters
@@ -34,7 +39,6 @@ class SPM(pybamm.BaseModel):
         self.rhs = {c_n: dc_n_dt, c_p: dc_p_dt}
 
         # Boundary conditions
-        # Note: this is for constant current discharge only
         self.boundary_conditions = {
             N_n: {"left": 0, "right": i_cell / sp.l_n / spli.beta_n},
             N_p: {
@@ -66,3 +70,6 @@ class SPM(pybamm.BaseModel):
             "cp_surf": c_p_surf,
             "V": V,
         }
+
+        # Cut-off if either concentration goes negative
+        self.events = [pybamm.Function(np.min, c_n), pybamm.Function(np.min, c_p)]

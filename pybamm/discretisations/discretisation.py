@@ -70,6 +70,11 @@ class Discretisation(object):
         # model.initial_conditions and model.boundary_conditions
         model.variables = self.process_dict(model.variables)
 
+        # Process events
+        for idx, event in enumerate(model.events):
+            model.events[idx] = self.process_symbol(event)
+        model.concatenated_events = self.concatenate(*model.events)
+
         # Check that resulting model makes sense
         self.check_model(model)
 
@@ -216,6 +221,13 @@ class Discretisation(object):
             discretised_child = self.process_symbol(child)
             return self._spatial_methods[symbol.domain[0]].divergence(
                 child, discretised_child, self._bcs
+            )
+
+        elif isinstance(symbol, pybamm.Integral):
+            child = symbol.children[0]
+            discretised_child = self.process_symbol(child)
+            return self._spatial_methods[symbol.domain[0]].integral(
+                child, discretised_child
             )
 
         elif isinstance(symbol, pybamm.Broadcast):
