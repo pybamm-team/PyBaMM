@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import numpy as np
 
 
 class SPM(pybamm.BaseModel):
@@ -95,5 +96,5 @@ class SPM(pybamm.BaseModel):
             "V": V,
         }
 
-        # Overwrite default solver
-        self.default_solver = pybamm.ScipySolver(method="BDF")
+        # Cut-off if either concentration goes negative
+        self.events = [pybamm.Function(np.min, cn), pybamm.Function(np.min, cp)]

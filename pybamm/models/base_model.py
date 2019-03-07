@@ -35,6 +35,9 @@ class BaseModel(object):
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables
+    events: list
+        A list of events that should cause the solver to terminate (e.g. concentration
+        goes negative)
 
     """
 
@@ -46,6 +49,7 @@ class BaseModel(object):
         self._initial_conditions_ydot = {}
         self._boundary_conditions = {}
         self._variables = {}
+        self._events = []
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
 
@@ -83,7 +87,7 @@ class BaseModel(object):
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
         }
-        self.default_solver = pybamm.ScipySolver(method="RK45")
+        self.default_solver = pybamm.ScikitsOdeSolver()
 
     def _set_dict(self, dict, name):
         """
@@ -164,6 +168,14 @@ class BaseModel(object):
     @variables.setter
     def variables(self, variables):
         self._variables = variables
+
+    @property
+    def events(self):
+        return self._events
+
+    @events.setter
+    def events(self, events):
+        self._events = events
 
     @property
     def concatenated_rhs(self):

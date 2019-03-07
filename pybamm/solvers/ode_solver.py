@@ -35,10 +35,12 @@ class OdeSolver(pybamm.BaseSolver):
         def dydt(t, y):
             return model.concatenated_rhs.evaluate(t, y)
 
-        y0 = model.concatenated_initial_conditions
-        self.t, self.y = self.integrate(dydt, y0, t_eval)
+        events = [lambda t, y: event.evaluate(t, y) for event in model.events]
 
-    def integrate(self, derivs, y0, t_eval):
+        y0 = model.concatenated_initial_conditions
+        self.t, self.y = self.integrate(dydt, y0, t_eval, events=events)
+
+    def integrate(self, derivs, y0, t_eval, events=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -50,6 +52,9 @@ class OdeSolver(pybamm.BaseSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
+        events : method, optional
+            A function that takes in t and y and returns conditions for the solver to
+            stop
 
         """
         raise NotImplementedError

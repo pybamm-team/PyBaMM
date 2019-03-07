@@ -32,7 +32,7 @@ class ScipySolver(pybamm.OdeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, derivs, y0, t_eval):
+    def integrate(self, derivs, y0, t_eval, events=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -45,6 +45,9 @@ class ScipySolver(pybamm.OdeSolver):
             The initial conditions
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
+        events : method, optional
+            A function that takes in t and y and returns conditions for the solver to
+            stop
 
         Returns
         -------
@@ -52,6 +55,11 @@ class ScipySolver(pybamm.OdeSolver):
             An object containing the times and values of the solution, as well as
             various diagnostic messages.
         """
+        # make events terminal so that the solver stops when they are reached
+        if events:
+            for event in events:
+                event.terminal = True
+
         sol = it.solve_ivp(
             derivs,
             (t_eval[0], t_eval[-1]),
@@ -60,6 +68,7 @@ class ScipySolver(pybamm.OdeSolver):
             method=self.method,
             rtol=self.tol,
             atol=self.tol,
+            events=events,
         )
-        # TODO: implement concentration cut-off event
+
         return sol.t, sol.y

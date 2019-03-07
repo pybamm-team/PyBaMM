@@ -96,6 +96,9 @@ class LOQS(pybamm.BaseModel):
             "int(epsilon_times_c)dx": (ln * epsn + ls * epss + lp * epsp) * c,
         }
 
+        # Terminate if concentration goes below zero
+        self.events = [c]
+
         # Overwrite default parameter values
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",

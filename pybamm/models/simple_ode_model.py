@@ -54,6 +54,3 @@ class SimpleODEModel(pybamm.BaseModel):
             "b broadcasted": pybamm.Broadcast(b, whole_cell),
             "c broadcasted": pybamm.Broadcast(c, ["negative electrode", "separator"]),
         }
-
-        # Overwrite default solver for faster solution
-        # self.default_solver = pybamm.ScipySolver(method="BDF")
