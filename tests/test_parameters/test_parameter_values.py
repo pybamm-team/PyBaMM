@@ -12,7 +12,7 @@ class TestParameterValues(unittest.TestCase):
         data = pybamm.ParameterValues().read_parameters_csv(
             "input/parameters/lead-acid/default.csv"
         )
-        self.assertEqual(data["R"], 8.314)
+        self.assertEqual(data["Ideal gas constant"], 8.314)
 
     def test_init(self):
         # from dict
@@ -20,7 +20,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(param["a"], 1)
         # from file
         param = pybamm.ParameterValues("input/parameters/lead-acid/default.csv")
-        self.assertEqual(param["R"], 8.314)
+        self.assertEqual(param["Ideal gas constant"], 8.314)
 
     def test_overwrite(self):
         # from dicts
@@ -36,8 +36,8 @@ class TestParameterValues(unittest.TestCase):
             base_parameters="input/parameters/lead-acid/default.csv",
             optional_parameters="input/parameters/lead-acid/optional_test.csv",
         )
-        self.assertEqual(param["R"], 8.314)
-        self.assertEqual(param["Ln"], 0.5)
+        self.assertEqual(param["Ideal gas constant"], 8.314)
+        self.assertEqual(param["Negative electrode width"], 0.5)
 
     def test_get_parameter_value(self):
         parameter_values = pybamm.ParameterValues({"a": 1})
@@ -120,7 +120,8 @@ class TestParameterValues(unittest.TestCase):
 
     def test_process_function_parameter(self):
         parameter_values = pybamm.ParameterValues(
-            {"a": 3, "func": 'process_symbol_test_function.py'})
+            {"a": 3, "func": "process_symbol_test_function.py"}
+        )
 
         # process parameter
         a = pybamm.Parameter("a")

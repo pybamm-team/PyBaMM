@@ -10,21 +10,7 @@ import numpy as np
 class SPM(pybamm.BaseModel):
     """Single Particle Model for li-ion.
 
-    Attributes
-    ----------
-
-    rhs: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the rhs
-    initial_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions
-    boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions
-    variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables
+    **Extends**: :class:`pybamm.BaseModel`
 
     """
 
@@ -32,69 +18,58 @@ class SPM(pybamm.BaseModel):
         super().__init__()
 
         # Variables
-        cn = pybamm.Variable("cn", domain="negative particle")
-        cp = pybamm.Variable("cp", domain="positive particle")
+        c_n = pybamm.Variable(
+            "Negative particle concentration", domain="negative particle"
+        )
+        c_p = pybamm.Variable(
+            "Positive particle concentration", domain="positive particle"
+        )
 
         # Parameters
-        ln = pybamm.standard_parameters.ln
-        lp = pybamm.standard_parameters.lp
-        gamma_n = pybamm.standard_parameters.gamma_n
-        gamma_p = pybamm.standard_parameters.gamma_p
-        beta_n = pybamm.standard_parameters.beta_n
-        beta_p = pybamm.standard_parameters.beta_p
-        C_hat_p = pybamm.standard_parameters.C_hat_p
-        m_n = pybamm.standard_parameters.m_n
-        m_p = pybamm.standard_parameters.m_p
-        D_n = pybamm.standard_parameters.D_n
-        D_p = pybamm.standard_parameters.D_p
-        U_n = pybamm.standard_parameters.U_n
-        U_p = pybamm.standard_parameters.U_p
-        Lambda = pybamm.standard_parameters.Lambda
-
-        # Initial conditions
-        cn_init = pybamm.standard_parameters.cn0
-        cp_init = pybamm.standard_parameters.cp0
+        sp = pybamm.standard_parameters
+        spli = pybamm.standard_parameters_lithium_ion
+        # Current function
+        i_cell = sp.current_with_time
 
         # PDE RHS
-        Nn = -gamma_n * D_n(cn) * pybamm.grad(cn)
-        dcndt = -pybamm.div(Nn)
-        Np = -gamma_p * D_p(cp) * pybamm.grad(cp)
-        dcpdt = -pybamm.div(Np)
-        self.rhs = {cn: dcndt, cp: dcpdt}
+        N_n = -spli.C_n * spli.D_n(c_n) * pybamm.grad(c_n)
+        dc_n_dt = -pybamm.div(N_n)
+        N_p = -spli.C_p * spli.D_p(c_p) * pybamm.grad(c_p)
+        dc_p_dt = -pybamm.div(N_p)
+        self.rhs = {c_n: dc_n_dt, c_p: dc_p_dt}
 
         # Boundary conditions
-        # Note: this is for constant current discharge only
         self.boundary_conditions = {
-            Nn: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1) / ln / beta_n},
-            Np: {
-                "left": pybamm.Scalar(0),
-                "right": -pybamm.Scalar(1) / lp / beta_p / C_hat_p,
+            N_n: {"left": 0, "right": i_cell / sp.l_n / spli.beta_n},
+            N_p: {
+                "left": 0,
+                "right": -i_cell / sp.l_p / spli.beta_p / spli.gamma_hat_p,
             },
         }
 
         # Initial conditions
-        self.initial_conditions = {cn: cn_init, cp: cp_init}
+        self.initial_conditions = {c_n: spli.c_n_init, c_p: spli.c_p_init}
 
         # Variables
-        cn_surf = pybamm.surf(cn)
-        cp_surf = pybamm.surf(cp)
-        gn = m_n * cn_surf ** 0.5 * (1 - cn_surf) ** 0.5
-        gp = m_p * C_hat_p * cp_surf ** 0.5 * (1 - cp_surf) ** 0.5
+        c_n_surf = pybamm.surf(c_n)
+        c_p_surf = pybamm.surf(c_p)
+        j0_n = sp.m_n * c_n_surf ** 0.5 * (1 - c_n_surf) ** 0.5
+        j0_p = sp.m_p * spli.gamma_hat_p * c_p_surf ** 0.5 * (1 - c_p_surf) ** 0.5
         # linearise BV for now
         V = (
-            U_p(cp_surf)
-            - U_n(cn_surf)
-            - (2 / Lambda) * (1 / (gp * lp))
-            - (2 / Lambda) * (1 / (gn * ln))
+            spli.U_p(c_p_surf)
+            - spli.U_n(c_n_surf)
+            - 2 * (i_cell / (j0_p * sp.l_p))
+            - 2 * (i_cell / (j0_n * sp.l_n))
         )
 
         self.variables = {
-            "cn": cn,
-            "cp": cp,
-            "cn_surf": cn_surf,
-            "cp_surf": cp_surf,
+            "cn": c_n,
+            "cp": c_p,
+            "cn_surf": c_n_surf,
+            "cp_surf": c_p_surf,
             "V": V,
         }
 
         # Cut-off if either concentration goes negative
-        self.events = [pybamm.Function(np.min, cn), pybamm.Function(np.min, cp)]
+        self.events = [pybamm.Function(np.min, c_n), pybamm.Function(np.min, c_p)]

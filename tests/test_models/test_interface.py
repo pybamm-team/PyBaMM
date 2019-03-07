@@ -8,6 +8,7 @@ from tests import get_discretisation_for_testing
 
 import unittest
 import numpy as np
+import os
 
 
 class TestHomogeneousReaction(unittest.TestCase):
@@ -62,18 +63,18 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertEqual(processed_rxn.shape, combined_submeshes.nodes.shape)
 
         # test values
-        ln = param.process_symbol(pybamm.standard_parameters.ln)
-        lp = param.process_symbol(pybamm.standard_parameters.lp)
+        l_n = param.process_symbol(pybamm.standard_parameters.l_n)
+        l_p = param.process_symbol(pybamm.standard_parameters.l_p)
         npts_n = mesh["negative electrode"].npts
         npts_s = mesh["separator"].npts
         np.testing.assert_array_equal(
-            processed_rxn.evaluate()[:npts_n] * ln.evaluate(), 1
+            processed_rxn.evaluate()[:npts_n] * l_n.evaluate(), 1
         )
         np.testing.assert_array_equal(
             processed_rxn.evaluate()[npts_n : npts_n + npts_s], 0
         )
         np.testing.assert_array_equal(
-            processed_rxn.evaluate()[npts_n + npts_s :] * lp.evaluate(), -1
+            processed_rxn.evaluate()[npts_n + npts_s :] * l_p.evaluate(), -1
         )
 
 
@@ -152,8 +153,18 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
 
     def test_set_parameters(self):
         bv = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         param = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+            "input/parameters/lead-acid/default.csv",
+            {
+                "Typical current density": 1,
+                "Negative electrode OCV": os.path.join(
+                    input_path, "lead_electrode_ocv_Bode1977.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
+                ),
+            },
         )
         proc_bv = param.process_symbol(bv)
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_bv.pre_order()]
@@ -163,8 +174,18 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         bv_p = pybamm.interface.butler_volmer_lead_acid(self.cp, self.phip)
 
         # process parameters
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         param = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+            "input/parameters/lead-acid/default.csv",
+            {
+                "Typical current density": 1,
+                "Negative electrode OCV": os.path.join(
+                    input_path, "lead_electrode_ocv_Bode1977.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
+                ),
+            },
         )
         param_bv_n = param.process_symbol(bv_n)
         param_bv_p = param.process_symbol(bv_p)
@@ -196,8 +217,18 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         bv_whole = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
 
         # process parameters
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         param = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+            "input/parameters/lead-acid/default.csv",
+            {
+                "Typical current density": 1,
+                "Negative electrode OCV": os.path.join(
+                    input_path, "lead_electrode_ocv_Bode1977.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
+                ),
+            },
         )
         param_bv_whole = param.process_symbol(bv_whole)
 
@@ -257,11 +288,13 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
     def test_failure(self):
         with self.assertRaises(pybamm.DomainError):
-            pybamm.interface.exchange_current_density(None, ["not a domain"])
+            pybamm.interface.exchange_current_density(
+                pybamm.Scalar(3), ["not a domain"]
+            )
 
     def test_set_parameters(self):
         param = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+            "input/parameters/lead-acid/default.csv", {"Typical current density": 1}
         )
         j0n = pybamm.interface.exchange_current_density(self.cn)
         j0p = pybamm.interface.exchange_current_density(self.cp)
@@ -277,7 +310,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
         # process parameters
         param = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"current scale": 1}
+            "input/parameters/lead-acid/default.csv", {"Typical current density": 1}
         )
         param_j0n = param.process_symbol(j0n)
         param_j0p = param.process_symbol(j0p)

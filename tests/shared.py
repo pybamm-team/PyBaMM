@@ -51,7 +51,13 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
 
 
 def get_mesh_for_testing(npts=None):
-    param = pybamm.ParameterValues(base_parameters={"Ln": 0.3, "Ls": 0.3, "Lp": 0.3})
+    param = pybamm.ParameterValues(
+        base_parameters={
+            "Negative electrode width": 0.3,
+            "Separator width": 0.3,
+            "Positive electrode width": 0.3,
+        }
+    )
 
     geometry = pybamm.Geometry("1D macro", "1D micro")
     param.process_geometry(geometry)
