@@ -46,6 +46,13 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return -self.children[0].evaluate(t, y)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return -self.children[0].diff(variable)
+
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}{!s}".format(self.name, self.children[0])

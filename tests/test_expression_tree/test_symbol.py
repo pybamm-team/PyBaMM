@@ -118,6 +118,14 @@ class TestSymbol(unittest.TestCase):
         for node, expect in zip(exp.pre_order(), expected_preorder):
             self.assertEqual(node.name, expect)
 
+    def test_symbol_diff(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        self.assertIsInstance(a.diff(a), pybamm.Scalar)
+        self.assertEqual(a.diff(a).evaluate(), 1)
+        self.assertIsInstance(a.diff(b), pybamm.Scalar)
+        self.assertEqual(a.diff(b).evaluate(), 0)
+
     def test_symbol_evaluation(self):
         a = pybamm.Symbol("a")
         with self.assertRaises(NotImplementedError):
