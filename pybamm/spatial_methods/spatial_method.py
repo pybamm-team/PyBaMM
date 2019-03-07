@@ -67,7 +67,7 @@ class SpatialMethod:
         ----------
         symbol: :class:`pybamm.Symbol`
             The symbol that we will take the gradient of.
-        broadcasted_symbol: class: pybamm.Array
+        discretised_symbol: class: pybamm.Array
             The discretised symbol of the correct size
 
         boundary_conditions : dict
@@ -82,7 +82,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def divergence(self, symbol, broadcasted_symbol, boundary_conditions):
+    def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """
         Implements the divergence for a spatial method.
 
@@ -90,16 +90,35 @@ class SpatialMethod:
         ----------
         symbol: :class:`pybamm.Symbol`
             The symbol that we will take the gradient of.
-        broadcasted_symbol: class: pybamm.Array
+        discretised_symbol: class: pybamm.Array
             The discretised symbol of the correct size
-
         boundary_conditions : dict
             The boundary conditions of the model
             ({symbol.id: {"left": left bc, "right": right bc}})
+
         Returns
         -------
         :class: `pybamm.Array`
             Contains the result of acting the discretised divergence on
+            the child discretised_symbol
+        """
+        raise NotImplementedError
+
+    def integral(self, symbol, discretised_symbol):
+        """
+        Implements the integral for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol that we will take the gradient of.
+        discretised_symbol: class: pybamm.Array
+            The discretised symbol of the correct size
+
+        Returns
+        -------
+        :class: `pybamm.Array`
+            Contains the result of acting the discretised integral on
             the child discretised_symbol
         """
         raise NotImplementedError
