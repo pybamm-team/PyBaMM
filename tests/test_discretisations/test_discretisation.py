@@ -286,36 +286,6 @@ class TestDiscretise(unittest.TestCase):
             y0[T].evaluate(0, None), 5 * np.ones_like(mesh["negative electrode"].nodes)
         )
 
-    def test_process_list(self):
-        # one equation
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c = pybamm.Variable("c", domain=whole_cell)
-        N = pybamm.grad(c)
-        list_ = [c, N]
-
-        # create discretisation
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
-
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
-
-        y = combined_submesh.nodes
-
-        disc.set_variable_slices([c])
-        # grad and div are identity operators here
-        processed_list = disc.process_list(list_)
-        np.testing.assert_array_equal(y, processed_list[0].evaluate(None, y))
-        np.testing.assert_array_equal(y, processed_list[1].evaluate(None, y))
-
-        # test broadcasting
-        list_ = [pybamm.Scalar(0), pybamm.Scalar(1, domain=["negative electrode"])]
-        # rhs - grad and div are identity operators here
-        processed_list = disc.process_list(list_)
-        np.testing.assert_array_equal(0, processed_list[0].evaluate())
-        np.testing.assert_array_equal(
-            np.ones_like(mesh["negative electrode"].nodes), processed_list[1].evaluate()
-        )
-
     def test_process_variables_dict(self):
         # want to check the case where the keys are strings and
         # and the equation evals to a number

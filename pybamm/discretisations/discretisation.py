@@ -71,7 +71,9 @@ class Discretisation(object):
         model.variables = self.process_dict(model.variables)
 
         # Process events
-        model.events = self.process_list(model.events)
+        for idx, event in enumerate(model.events):
+            model.events[idx] = self.process_symbol(event)
+        model.concatenated_events = self.concatenate(*model.events)
 
         # Check that resulting model makes sense
         self.check_model(model)
@@ -183,35 +185,6 @@ class Discretisation(object):
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
         return var_eqn_dict
-
-    def process_list(self, eqn_list):
-        """Discretise a list of equations, broadcasting if necessary (for model.events).
-
-        Parameters
-        ----------
-        eqn_list : list
-            Equations to dicretise
-
-        Returns
-        -------
-        eqn_list : dict
-            Discretised equations
-
-        """
-
-        for idx, eqn in enumerate(eqn_list):
-            # Broadcast if the equation evaluates to a number(e.g. Scalar)
-            if eqn.evaluates_to_number():
-                if eqn.domain == []:
-                    eqn = pybamm.Broadcast(eqn, eqn.domain)
-                else:
-                    eqn = self._spatial_methods[eqn.domain[0]].broadcast(
-                        eqn, eqn.domain
-                    )
-
-            # Process symbol (original or broadcasted)
-            eqn_list[idx] = self.process_symbol(eqn)
-        return eqn_list
 
     def process_symbol(self, symbol):
         """Discretise operators in model equations.
