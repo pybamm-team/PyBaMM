@@ -7,7 +7,7 @@ import pybamm
 
 
 class Composite(pybamm.LeadAcidBaseModel):
-    """Composite model for lead-acid, from [1].
+    """Composite model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     .. math::
@@ -20,8 +20,6 @@ class Composite(pybamm.LeadAcidBaseModel):
             \\right)j^{(0)}
         \\right)
 
-
-    [1] Paper reference
 
     **Notation for variables and parameters:**
 
@@ -37,6 +35,12 @@ class Composite(pybamm.LeadAcidBaseModel):
         \\int_0^{\\ell_\\text{n}} \\! c_\\text{n} \\, \\mathrm{d}x
 
     **Extends:** :class:`pybamm.LeadAcidBaseModel`
+
+    References
+    ==========
+    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
+           Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
+           arXiv preprint arXiv:1902.01774, 2019.
 
     """
 

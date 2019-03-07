@@ -60,19 +60,26 @@ class FirstOrderPotential(pybamm.BaseModel):
         kappa_0n = param.kappa_e(c_e_0) * eps_0n ** param.b
         kappa_0s = param.kappa_e(c_e_0) * eps_0s ** param.b
         kappa_0p = param.kappa_e(c_e_0) * eps_0p ** param.b
-        j0_0n = pybamm.Scalar(1)
-        j0_0p = pybamm.Scalar(1)
-        j0_1n = c_e_1n
-        j0_1p = c_e_1p
-        dUPbdc = pybamm.Scalar(1)
-        dUPbO2dc = pybamm.Scalar(1)
+        j0_0n = pybamm.interface.exchange_current_density(
+            param.m_n, c_e_0, domain=["negative electrode"]
+        )
+        j0_0p = pybamm.interface.exchange_current_density(
+            param.m_p, c_e_0, domain=["positive electrode"]
+        )
+        U_0n = param.U_n(c_e_0)
+        U_0p = param.U_p(c_e_0)
+        # TODO: replace these with symbolically differentiated objects
+        j0_1n = c_e_1n * j0_0n  # j0_0n.diff(c_e_0)
+        j0_1p = c_e_1p * j0_0p  # j0_0p.diff(c_e_0)
+        dU_0n__dc0 = U_0n  # U_0n.diff(c_e_0)
+        dU_0p__dc0 = U_0p  # U_0p.diff(c_e_0)
 
         # Potential
         cbar_1n = pybamm.Integral(c_e_1n, x_n) / param.l_n
         j0bar_1n = pybamm.Integral(j0_1n, x_n) / param.l_n
         A_n = (
             j0bar_1n * pybamm.Function(np.tanh, eta_0n) / j0_0n
-            - dUPbdc * cbar_1n
+            - dU_0n__dc0 * cbar_1n
             - chi_0 / c_e_0 * cbar_1n
             + i_cell * param.l_n / (6 * kappa_0n)
         )
@@ -100,7 +107,7 @@ class FirstOrderPotential(pybamm.BaseModel):
         j0bar_1p = pybamm.Integral(j0_1p, x_p) / param.l_p
         V_1 = (
             Phibar_1p
-            + dUPbO2dc * cbar_1p
+            + dU_0p__dc0 * cbar_1p
             - j0bar_1p * pybamm.Function(np.tanh, eta_0p) / j0_0p
         )
 
