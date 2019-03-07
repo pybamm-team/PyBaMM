@@ -226,6 +226,7 @@ class BaseModel(object):
                 self._boundary_conditions, submodel.boundary_conditions
             )
             self._variables.update(submodel.variables)  # keys are strings so no check
+            self._events.extend(submodel.events)
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
