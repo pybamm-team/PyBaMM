@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import numpy as np
 
 
 class SPM(pybamm.BaseModel):
@@ -69,3 +70,6 @@ class SPM(pybamm.BaseModel):
             "cp_surf": c_p_surf,
             "V": V,
         }
+
+        # Cut-off if either concentration goes negative
+        self.events = [pybamm.Function(np.min, c_n), pybamm.Function(np.min, c_p)]

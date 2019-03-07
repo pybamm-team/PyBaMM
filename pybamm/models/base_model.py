@@ -35,6 +35,9 @@ class BaseModel(object):
     variables: dict
         A dictionary that maps strings to expressions that represent
         the useful variables
+    events: list
+        A list of events that should cause the solver to terminate (e.g. concentration
+        goes negative)
 
     """
 
@@ -46,6 +49,7 @@ class BaseModel(object):
         self._initial_conditions_ydot = {}
         self._boundary_conditions = {}
         self._variables = {}
+        self._events = []
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
 
@@ -175,6 +179,14 @@ class BaseModel(object):
         self._variables = variables
 
     @property
+    def events(self):
+        return self._events
+
+    @events.setter
+    def events(self, events):
+        self._events = events
+
+    @property
     def concatenated_rhs(self):
         return self._concatenated_rhs
 
@@ -241,13 +253,20 @@ class BaseModel(object):
         vars_in_algebraic_keys = set()
         vars_in_eqns = set()
         # Get all variables ids from rhs and algebraic keys and equations
+        # For equations we look through the whole expression tree.
+        # "Variables" can be Concatenations so we also have to look in the whole
+        # expression tree
         for var, eqn in self.rhs.items():
-            vars_in_rhs_keys.add(var.id)
+            vars_in_rhs_keys.update(
+                [x.id for x in var.pre_order() if isinstance(x, pybamm.Variable)]
+            )
             vars_in_eqns.update(
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )
         for var, eqn in self.algebraic.items():
-            vars_in_algebraic_keys.add(var.id)
+            vars_in_algebraic_keys.update(
+                [x.id for x in var.pre_order() if isinstance(x, pybamm.Variable)]
+            )
             vars_in_eqns.update(
                 [x.id for x in eqn.pre_order() if isinstance(x, pybamm.Variable)]
             )

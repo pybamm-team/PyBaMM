@@ -74,6 +74,9 @@ class LOQS(pybamm.BaseModel):
             * c_e,
         }
 
+        # Terminate if concentration goes below zero
+        self.events = [c_e]
+
         # Overwrite default parameter values
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         self.default_parameter_values = pybamm.ParameterValues(

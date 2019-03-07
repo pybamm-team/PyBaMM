@@ -38,7 +38,7 @@ class TestDiscretise(unittest.TestCase):
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -63,6 +63,29 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(
             disc._y_slices,
             {c.id: slice(0, 100), d.id: slice(100, 200), jn.id: slice(200, 240)},
+        )
+        d_true = 4 * combined_submesh.nodes
+        jn_true = mesh["negative electrode"].nodes ** 3
+        y = np.concatenate([c_true, d_true, jn_true])
+        np.testing.assert_array_equal(y[disc._y_slices[c.id]], c_true)
+        np.testing.assert_array_equal(y[disc._y_slices[d.id]], d_true)
+        np.testing.assert_array_equal(y[disc._y_slices[jn.id]], jn_true)
+
+        # Variables with a concatenation
+        js = pybamm.Variable("js", domain=["separator"])
+        jp = pybamm.Variable("jp", domain=["positive electrode"])
+        j = pybamm.Concatenation(jn, js, jp)
+        variables = [c, d, j]
+        disc.set_variable_slices(variables)
+        self.assertEqual(
+            disc._y_slices,
+            {
+                c.id: slice(0, 100),
+                d.id: slice(100, 200),
+                jn.id: slice(200, 240),
+                js.id: slice(240, 265),
+                jp.id: slice(265, 300),
+            },
         )
         d_true = 4 * combined_submesh.nodes
         jn_true = mesh["negative electrode"].nodes ** 3
@@ -212,14 +235,15 @@ class TestDiscretise(unittest.TestCase):
             )
 
     def test_core_NotImplementedErrors(self):
-        # create discretisation
-        pybamm.Discretisation(None, {})
+        # create spatial method
+        spatial_method = pybamm.SpatialMethod(None)
 
-        # TODO: implement and equivelent test in spatial_methods
-        # with self.assertRaises(NotImplementedError):
-        #     disc.gradient(None, None, {})
-        # with self.assertRaises(NotImplementedError):
-        #     disc.divergence(None, None, {})
+        with self.assertRaises(NotImplementedError):
+            spatial_method.gradient(None, None, {})
+        with self.assertRaises(NotImplementedError):
+            spatial_method.divergence(None, None, {})
+        with self.assertRaises(NotImplementedError):
+            spatial_method.integral(None, None)
 
     def test_process_dict(self):
         # one equation
@@ -436,6 +460,36 @@ class TestDiscretise(unittest.TestCase):
 
         with self.assertRaises(pybamm.ModelError):
             disc.process_model(model)
+
+    def test_process_model_concatenation(self):
+        # concatenation of variables as the key
+        cn = pybamm.Variable("c", domain=["negative electrode"])
+        cs = pybamm.Variable("c", domain=["separator"])
+        cp = pybamm.Variable("c", domain=["positive electrode"])
+        c = pybamm.Concatenation(cn, cs, cp)
+        N = pybamm.grad(c)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+
+        model.boundary_conditions = {N: {"left": 0, "right": 0}}
+        model.check_well_posedness()
+
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+
+        combined_submesh = mesh.combine_submeshes(
+            "negative electrode", "separator", "positive electrode"
+        )
+
+        disc.process_model(model)
+        y0 = model.concatenated_initial_conditions
+        np.testing.assert_array_equal(y0, 3 * np.ones_like(combined_submesh.nodes))
+
+        # grad and div are identity operators here
+        np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
+        model.check_well_posedness()
 
     def test_broadcast(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]

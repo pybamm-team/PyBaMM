@@ -70,6 +70,11 @@ class Discretisation(object):
         # model.initial_conditions and model.boundary_conditions
         model.variables = self.process_dict(model.variables)
 
+        # Process events
+        for idx, event in enumerate(model.events):
+            model.events[idx] = self.process_symbol(event)
+        model.concatenated_events = self.concatenate(*model.events)
+
         # Check that resulting model makes sense
         self.check_model(model)
 
@@ -79,17 +84,26 @@ class Discretisation(object):
         variables : iterable of :class:`pybamm.Variables`
             The variables for which to set slices
         """
-        y_slices = {variable.id: None for variable in variables}
+        # Unpack symbols in variables that are concatenations of variables
+        unpacked_variables = []
+        for symbol in variables:
+            if isinstance(symbol, pybamm.Concatenation):
+                unpacked_variables.extend([var for var in symbol.children])
+            else:
+                unpacked_variables.append(symbol)
+        # Set up y_slices
+        y_slices = {variable.id: None for variable in unpacked_variables}
         start = 0
         end = 0
-        for variable in variables:
+        # Iterate through unpacked variables, adding appropriate slices to y_slices
+        for variable in unpacked_variables:
             # If domain is empty then variable has size 1
             if variable.domain == []:
                 end += 1
             # Otherwise, add up the size of all the domains in variable.domain
             else:
                 for dom in variable.domain:
-                    end += self.mesh[dom].npts
+                    end += self._spatial_methods[dom].mesh[dom].npts_for_broadcast
             y_slices[variable.id] = slice(start, end)
             start = end
         self._y_slices = y_slices
@@ -207,6 +221,13 @@ class Discretisation(object):
             discretised_child = self.process_symbol(child)
             return self._spatial_methods[symbol.domain[0]].divergence(
                 child, discretised_child, self._bcs
+            )
+
+        elif isinstance(symbol, pybamm.Integral):
+            child = symbol.children[0]
+            discretised_child = self.process_symbol(child)
+            return self._spatial_methods[symbol.domain[0]].integral(
+                child, discretised_child
             )
 
         elif isinstance(symbol, pybamm.Broadcast):
@@ -333,7 +354,15 @@ class Discretisation(object):
             Discretised right-hand side equations
 
         """
-        ids = {v.id for v in var_eqn_dict.keys()}
+        # Unpack symbols in variables that are concatenations of variables
+        unpacked_variables = []
+        for symbol in var_eqn_dict.keys():
+            if isinstance(symbol, pybamm.Concatenation):
+                unpacked_variables.extend([var for var in symbol.children])
+            else:
+                unpacked_variables.append(symbol)
+        # Check keys from the given var_eqn_dict against self._y_slices
+        ids = {v.id for v in unpacked_variables}
         if ids != self._y_slices.keys():
             given_variable_names = [v.name for v in var_eqn_dict.keys()]
             raise pybamm.ModelError(
@@ -342,7 +371,7 @@ class Discretisation(object):
             )
 
         equations = list(var_eqn_dict.values())
-        slices = [self._y_slices[var.id] for var in var_eqn_dict.keys()]
+        slices = [self._y_slices[var.id] for var in unpacked_variables]
 
         # sort equations according to slices
         sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]

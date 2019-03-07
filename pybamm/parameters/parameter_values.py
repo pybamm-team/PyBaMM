@@ -111,6 +111,9 @@ class ParameterValues(dict):
         for variable, equation in model.variables.items():
             model.variables[variable] = self.process_symbol(equation)
 
+        for idx, equation in enumerate(model.events):
+            model.events[idx] = self.process_symbol(equation)
+
     def process_geometry(self, geometry):
         """Assign parameter values to a geometry.
             Currently inplace, could be changed to return a new model.

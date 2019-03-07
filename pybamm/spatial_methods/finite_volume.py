@@ -126,7 +126,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the divergence operator.
-        See :meth:`pybamm.SpatialMethod.gradient`
+        See :meth:`pybamm.SpatialMethod.divergence`
         """
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
@@ -142,20 +142,15 @@ class FiniteVolume(pybamm.SpatialMethod):
             discretised_symbol = pybamm.NumpyConcatenation(lbc, discretised_symbol, rbc)
 
         domain = symbol.domain
-        # check for spherical domains
+        # check for particle domain
+        divergence_matrix = self.divergence_matrix(domain)
         if ("negative particle" or "positive particle") in domain:
-
-            # implement spherical operator
-            divergence_matrix = self.divergence_matrix(domain)
-
-            submesh = self.mesh[domain[0]]
+            submesh = self.mesh.combine_submeshes(*domain)
             r = pybamm.Vector(submesh.nodes)
             r_edges = pybamm.Vector(submesh.edges)
-
             out = (1 / (r ** 2)) * (
                 divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
             )
-
         else:
             divergence_matrix = self.divergence_matrix(domain)
             out = divergence_matrix @ discretised_symbol
@@ -188,6 +183,49 @@ class FiniteVolume(pybamm.SpatialMethod):
         diags = np.array([0, 1])
         matrix = spdiags(data, diags, n - 1, n)
         return pybamm.Matrix(matrix)
+
+    def integral(self, symbol, discretised_symbol):
+        """Vector-vector dot product to implement the integral operator.
+        See :meth:`pybamm.BaseDiscretisation.integral`
+        """
+        # Calculate integration vector
+        integration_vector = self.definite_integral_vector(symbol.domain)
+        # Check for particle domain
+        if ("negative particle" or "positive particle") in symbol.domain:
+            submesh = self.mesh.combine_submeshes(*symbol.domain)
+            r = pybamm.Vector(submesh.nodes)
+            out = 2 * np.pi * integration_vector @ (discretised_symbol * r)
+        else:
+            out = integration_vector @ discretised_symbol
+        return out
+
+    def definite_integral_vector(self, domain):
+        """
+        Vector for finite-volume implementation of the definite integral
+
+        .. math::
+            I = \\int_{a}^{b}\\!f(s)\\,ds
+
+        for where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
+        the domain respectively
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) of integration
+
+        Returns
+        -------
+        :class:`pybamm.Vector`
+            The finite volume integral vector for the domain
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*domain)
+
+        # Create vector of ones using submesh
+        vector = submesh.d_edges * np.ones_like(submesh.nodes)
+
+        return pybamm.Vector(vector)
 
     def add_ghost_nodes(self, discretised_symbol, lbc, rbc):
         """

@@ -56,7 +56,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         self.t, self.y = self.integrate(residuals, y0, ydot0, t_eval)
 
-    def integrate(self, residuals, y0, ydot0, t_eval):
+    def integrate(self, residuals, y0, ydot0, t_eval, events=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0 and ydot0.
 
@@ -69,6 +69,9 @@ class DaeSolver(pybamm.BaseSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
+        events : method, optional
+            A function that takes in t and y and returns conditions for the solver to
+            stop
 
         """
         raise NotImplementedError
