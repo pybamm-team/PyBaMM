@@ -40,9 +40,9 @@ class Mesh(dict):
         self.submesh_pts = submesh_pts
         for domain in geometry:
             repeats = 1
-            if "secondary" in geometry.keys():
-                for var in geometry["secondary"].keys():
-                    repeats = submesh_pts[domain][var.nam]  # note (specific to FV)
+            if "secondary" in geometry[domain].keys():
+                for var in geometry[domain]["secondary"].keys():
+                    repeats = submesh_pts[domain][var.name]  # note (specific to FV)
 
             self[domain] = [None] * repeats
             for i in range(repeats):
@@ -68,21 +68,32 @@ class Mesh(dict):
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
 
-        edges_aligned = all(
-            [
-                self[submeshnames[i]].edges[-1] == self[submeshnames[i + 1]].edges[0]
-                for i in range(len(submeshnames) - 1)
-            ]
-        )
+        edges_aligned = [None] * (len(submeshnames) - 1)
+        for i in range(len(submeshnames) - 1):
+
+            edges_aligned[i] = all(
+                [
+                    self[submeshnames[i]][j].edges[-1]
+                    == self[submeshnames[i + 1]][j].edges[0]
+                    for j in range(len(self[submeshnames[i]]))
+                ]
+            )
+        edges_aligned = all(edges_aligned)
 
         if edges_aligned:
             # Combine submeshes, being careful not to double-count repeated edges at the
             # intersection of submeshes
-            combined_submesh_edges = np.concatenate(
-                [self[submeshnames[0]].edges]
-                + [self[submeshname].edges[1:] for submeshname in submeshnames[1:]]
-            )
-            return pybamm.SubMesh1D(combined_submesh_edges)
+            submeshes = [None] * len(self[submeshnames[0]])
+            for i in range(len(self[submeshnames[0]])):
+                combined_submesh_edges = np.concatenate(
+                    [self[submeshnames[0]][i].edges]
+                    + [
+                        self[submeshname][i].edges[1:]
+                        for submeshname in submeshnames[1:]
+                    ]
+                )
+                submeshes[i] = pybamm.SubMesh1D(combined_submesh_edges)
+            return submeshes
         else:
             raise pybamm.DomainError("submesh edges are not aligned")
 
@@ -94,15 +105,22 @@ class Mesh(dict):
         """
         # Get all submeshes relating to space (i.e. exclude time)
         submeshes = [
-            (name, submesh) for name, submesh in self.items() if name != "time"
+            (domain, submesh_list)
+            for domain, submesh_list in self.items()
+            if domain != "time"
         ]
-        for submeshname, submesh in submeshes:
-            edges = submesh.edges
+        for domain, submesh_list in submeshes:
 
-            # left ghost cell: two edges, one node, to the left of existing submesh
-            lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-            self[submeshname + "_left ghost cell"] = pybamm.SubMesh1D(lgs_edges)
+            self[domain + "_left ghost cell"] = [None] * len(submesh_list)
+            self[domain + "_right ghost cell"] = [None] * len(submesh_list)
+            for i, submesh in enumerate(submesh_list):
+                edges = submesh.edges
 
-            # right ghost cell: two edges, one node, to the right of existing submesh
-            rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-            self[submeshname + "_right ghost cell"] = pybamm.SubMesh1D(rgs_edges)
+                # left ghost cell: two edges, one node, to the left of existing submesh
+                lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
+                self[domain + "_left ghost cell"][i] = pybamm.SubMesh1D(lgs_edges)
+
+                # right ghost cell: two edges, one node, to the right of
+                # existing submesh
+                rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
+                self[domain + "_right ghost cell"][i] = pybamm.SubMesh1D(rgs_edges)

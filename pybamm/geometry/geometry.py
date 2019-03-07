@@ -26,6 +26,8 @@ class Geometry(dict):
                 geometry = Geometry3DMacro()
             elif geometry == "1D micro":
                 geometry = Geometry1DMicro()
+            elif geometry == "1+1D micro":
+                geometry = Geometry1p1DMicro()
             # avoid combining geometries that clash
             if any([k in self.keys() for k in geometry.keys()]):
                 raise ValueError("trying to overwrite existing geometry")
@@ -83,16 +85,12 @@ class Geometry1p1DMicro(Geometry):
         l_s = pybamm.standard_parameters.l_s
 
         self["negative particle"] = {
-            "primary": {r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-        }
-        self["negative particle"] = {
-            "primary": {x: {"min": pybamm.Scalar(0), "max": l_n}}
+            "primary": {r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
+            "secondary": {x: {"min": pybamm.Scalar(0), "max": l_n}},
         }
         self["positive particle"] = {
-            "primary": {r_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
-        }
-        self["positive particle"] = {
-            "primary": {x: {"min": l_n + l_s, "max": pybamm.Scalar(1)}}
+            "primary": {r_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
+            "secondary": {x: {"min": l_n + l_s, "max": pybamm.Scalar(1)}},
         }
         # update with custom geometry if non empty
         self.update(custom_geometry)
