@@ -25,7 +25,8 @@ class FiniteVolume(pybamm.SpatialMethod):
     def __init__(self, mesh):
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
-            mesh[dom].npts_for_broadcast = mesh[dom].npts
+            for i in range(len(mesh[dom])):
+                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
         super().__init__(mesh)
 
     def spatial_variable(self, symbol):
@@ -46,7 +47,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # for finite volume we use the cell centres
         if symbol.name in ["x", "r"]:
             symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-            return pybamm.Vector(symbol_mesh.nodes)
+            return pybamm.Vector(symbol_mesh[0].nodes)
         else:
             raise NotImplementedError("3D meshes not yet implemented")
 
@@ -58,7 +59,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         See :meth: `pybamm.SpatialMethod.broadcast`
         """
 
-        # for finite volume we send variables to cells and so use number_of_cells
         broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
         # if the broadcasted symbol evaluates to a constant value, replace the
@@ -85,7 +85,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         if symbol.id in boundary_conditions:
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
-            discretised_symbol = self.add_ghost_nodes(discretised_symbol, lbc, rbc)
+            discretised_symbol = self.add_ghost_nodes(
+                symbol, discretised_symbol, lbc, rbc
+            )
             domain = (
                 [domain[0] + "_left ghost cell"]
                 + domain
@@ -112,16 +114,27 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume gradient matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh_list = self.mesh.combine_submeshes(*domain)
 
-        # Create matrix using submesh
+        # can just use 1st entry of list to obtain the point etc
+        submesh = submesh_list[0]
+
+        # Create 1D matrix using submesh
         n = submesh.npts
         e = 1 / submesh.d_nodes
         data = np.vstack(
             [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
         )
         diags = np.array([0, 1])
-        matrix = spdiags(data, diags, n - 1, n)
+        sub_matrix = spdiags(data, diags, n - 1, n)
+
+        # second dim length
+        second_dim_len = len(submesh_list)
+
+        # generate full matrix from the submatrix
+        matrix = np.kron(np.eye(second_dim_len), sub_matrix)
+        # TODO: sort the sparse matrix thing here
+
         return pybamm.Matrix(matrix)
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
@@ -145,9 +158,22 @@ class FiniteVolume(pybamm.SpatialMethod):
         # check for particle domain
         divergence_matrix = self.divergence_matrix(domain)
         if ("negative particle" or "positive particle") in domain:
-            submesh = self.mesh.combine_submeshes(*domain)
-            r = pybamm.Vector(submesh.nodes)
-            r_edges = pybamm.Vector(submesh.edges)
+            submesh_list = self.mesh.combine_submeshes(*domain)
+            # TODO: sort what happens with r etc
+
+            prim_dim = submesh_list[0].npts
+            second_dim = len(submesh_list)
+
+            if prim_dim > 1:
+                NotImplementedError("Only supports 1D primary dimensions")
+
+            # create np.array of repeated submesh[0].nodes
+            r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
+            r_edges_numpy = np.kron(np.ones(second_dim), submesh_list[0].edges)
+
+            r = pybamm.Vector(r_numpy)
+            r_edges = pybamm.Vector(r_edges_numpy)
+
             out = (1 / (r ** 2)) * (
                 divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
             )
@@ -172,7 +198,10 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume divergence matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh_list = self.mesh.combine_submeshes(*domain)
+
+        # can just use 1st entry of list to obtain the point etc
+        submesh = submesh_list[0]
 
         # Create matrix using submesh
         n = submesh.npts + 1
@@ -181,7 +210,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
         )
         diags = np.array([0, 1])
-        matrix = spdiags(data, diags, n - 1, n)
+        sub_matrix = spdiags(data, diags, n - 1, n)
+
+        # second dim length
+        second_dim_len = len(submesh_list)
+        # generate full matrix from the submatrix
+        matrix = np.kron(np.eye(second_dim_len), sub_matrix)
         return pybamm.Matrix(matrix)
 
     def integral(self, symbol, discretised_symbol):
@@ -192,8 +226,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         integration_vector = self.definite_integral_vector(symbol.domain)
         # Check for particle domain
         if ("negative particle" or "positive particle") in symbol.domain:
-            submesh = self.mesh.combine_submeshes(*symbol.domain)
-            r = pybamm.Vector(submesh.nodes)
+            submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+            second_dim = len(submesh_list)
+            r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
+            r = pybamm.Vector(r_numpy)
             out = 2 * np.pi * integration_vector @ (discretised_symbol * r)
         else:
             out = integration_vector @ discretised_symbol
@@ -220,14 +256,16 @@ class FiniteVolume(pybamm.SpatialMethod):
             The finite volume integral vector for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh_list = self.mesh.combine_submeshes(*domain)
 
         # Create vector of ones using submesh
-        vector = submesh.d_edges * np.ones_like(submesh.nodes)
+        vector = np.array([])
+        for submesh in submesh_list:
+            vector = np.append(vector, submesh.d_edges * np.ones_like(submesh.nodes))
 
         return pybamm.Vector(vector)
 
-    def add_ghost_nodes(self, discretised_symbol, lbc, rbc):
+    def add_ghost_nodes(self, symbol, discretised_symbol, lbc, rbc):
         """
         Add Dirichlet boundary conditions via ghost nodes.
 
@@ -264,18 +302,49 @@ class FiniteVolume(pybamm.SpatialMethod):
                 type(discretised_symbol)
             )
         )
-        # left ghost cell
+
+        # determine the y_slice sizes
         y_slice_start = discretised_symbol.y_slice.start
-        first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
-        left_ghost_cell = 2 * lbc - first_node
-        # right ghost cell
         y_slice_stop = discretised_symbol.y_slice.stop
-        last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
-        right_ghost_cell = 2 * rbc - last_node
-        # concatenate
-        return pybamm.NumpyConcatenation(
-            left_ghost_cell, discretised_symbol, right_ghost_cell
-        )
+
+        y = np.arange(y_slice_start, y_slice_stop)
+
+        # reshape y_slices into more helpful form
+        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        if isinstance(submesh_list[0].npts, list):
+            NotImplementedError("Can only take in 1D primary directions")
+        size = [submesh_list[0].npts, len(submesh_list)]
+        y = np.reshape(y, size)
+        y_left = y[0]
+        y_right = y[-1]
+
+        new_discretised_symbol = None
+
+        for i in range(len(submesh_list)):
+            y_slice_start = y_left[i]
+            y_slice_stop = y_right[i]
+
+            # left ghost cell
+            first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
+            left_ghost_cell = 2 * lbc - first_node
+            # middle symbol
+            sub_disc_symbol = pybamm.StateVector(slice(y_slice_start, y_slice_stop + 1))
+            # right ghost cell
+            last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
+            right_ghost_cell = 2 * rbc - last_node
+
+            concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
+                left_ghost_cell, sub_disc_symbol, right_ghost_cell
+            )
+
+            if new_discretised_symbol is None:
+                new_discretised_symbol = concatenated_sub_disc_symbol
+            else:
+                new_discretised_symbol = pybamm.NumpyConcatenation(
+                    new_discretised_symbol, concatenated_sub_disc_symbol
+                )
+
+        return new_discretised_symbol
 
     def surface_value(self, discretised_symbol):
         """

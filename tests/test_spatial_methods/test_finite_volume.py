@@ -47,12 +47,12 @@ class TestFiniteVolume(unittest.TestCase):
         surf_eqn_disc = disc.process_symbol(surf_eqn)
 
         # check constant extrapolates to constant
-        constant_y = np.ones_like(combined_submesh.nodes)
+        constant_y = np.ones_like(combined_submesh[0].nodes)
         self.assertEqual(surf_eqn_disc.evaluate(None, constant_y), 1)
 
         # check linear variable extrapolates correctly
-        linear_y = combined_submesh.nodes
-        y_surf = combined_submesh.nodes[-1] + combined_submesh.d_nodes[-1] / 2
+        linear_y = combined_submesh[0].nodes
+        y_surf = combined_submesh[0].nodes[-1] + combined_submesh[0].d_nodes[-1] / 2
         self.assertEqual(surf_eqn_disc.evaluate(None, linear_y), y_surf)
 
     def test_discretise_diffusivity_times_spatial_operator(self):
@@ -69,7 +69,7 @@ class TestFiniteVolume(unittest.TestCase):
         # Discretise some equations where averaging is needed
         var = pybamm.Variable("var", domain=whole_cell)
         disc.set_variable_slices([var])
-        y_test = np.ones_like(combined_submesh.nodes)
+        y_test = np.ones_like(combined_submesh[0].nodes)
         for eqn in [
             var * pybamm.grad(var),
             var ** 2 * pybamm.grad(var),
@@ -125,12 +125,12 @@ class TestFiniteVolume(unittest.TestCase):
         lbc = pybamm.Scalar(0)
         rbc = pybamm.Scalar(3)
         symbol_plus_ghost = pybamm.FiniteVolume(mesh).add_ghost_nodes(
-            discretised_symbol, lbc, rbc
+            var, discretised_symbol, lbc, rbc
         )
 
         # Test
         combined_submesh = mesh.combine_submeshes(*whole_cell)
-        y_test = np.ones_like(combined_submesh.nodes)
+        y_test = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             symbol_plus_ghost.evaluate(None, y_test)[1:-1],
             discretised_symbol.evaluate(None, y_test),
@@ -178,10 +178,10 @@ class TestFiniteVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
 
-        constant_y = np.ones_like(combined_submesh.nodes)
+        constant_y = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges),
+            np.zeros_like(combined_submesh[0].edges),
         )
 
         # div: test on linear y (should have laplacian zero) so change bcs
@@ -196,12 +196,14 @@ class TestFiniteVolume(unittest.TestCase):
 
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
-            grad_eqn_disc.evaluate(None, linear_y), np.ones_like(combined_submesh.edges)
+            grad_eqn_disc.evaluate(None, linear_y),
+            np.ones_like(combined_submesh[0].edges),
         )
 
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
-            div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
+            div_eqn_disc.evaluate(None, linear_y),
+            np.zeros_like(combined_submesh[0].nodes),
         )
 
     def test_spherical_grad_div_shapes_Dirichlet_bcs(self):
@@ -231,7 +233,7 @@ class TestFiniteVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
 
-        constant_y = np.ones_like(combined_submesh.nodes)
+        constant_y = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges),
@@ -280,7 +282,7 @@ class TestFiniteVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
 
-        constant_y = np.ones_like(combined_submesh.nodes)
+        constant_y = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges[1:-1]),
@@ -321,7 +323,7 @@ class TestFiniteVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
 
-        constant_y = np.ones_like(combined_submesh.nodes)
+        constant_y = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges[1:-1]),
@@ -374,32 +376,34 @@ class TestFiniteVolume(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
-        constant_y = np.ones_like(combined_submesh.nodes)
+        constant_y = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges),
+            np.zeros_like(combined_submesh[0].edges),
         )
 
         # div: test on linear y (should have laplacian zero) so change bcs
-        linear_y = combined_submesh.nodes
+        linear_y = combined_submesh[0].nodes
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
             var.id: {
                 "left": pybamm.Scalar(0),
-                "right": pybamm.Scalar(combined_submesh.edges[-1]),
+                "right": pybamm.Scalar(combined_submesh[0].edges[-1]),
             }
         }
         disc._bcs = boundary_conditions
 
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
-            grad_eqn_disc.evaluate(None, linear_y), np.ones_like(combined_submesh.edges)
+            grad_eqn_disc.evaluate(None, linear_y),
+            np.ones_like(combined_submesh[0].edges),
         )
 
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
-            div_eqn_disc.evaluate(None, linear_y), np.zeros_like(combined_submesh.nodes)
+            div_eqn_disc.evaluate(None, linear_y),
+            np.zeros_like(combined_submesh[0].nodes),
         )
 
     def test_definite_integral(self):
@@ -412,8 +416,8 @@ class TestFiniteVolume(unittest.TestCase):
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         # lengths
-        ln = mesh["negative electrode"].edges[-1]
-        ls = mesh["separator"].edges[-1] - ln
+        ln = mesh["negative electrode"][0].edges[-1]
+        ls = mesh["separator"][0].edges[-1] - ln
         lp = 1 - (ln + ls)
 
         # macroscale variable
@@ -424,13 +428,13 @@ class TestFiniteVolume(unittest.TestCase):
         integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
-        constant_y = np.ones_like(combined_submesh.nodes)
+        constant_y = np.ones_like(combined_submesh[0].nodes)
         self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), ln + ls)
-        linear_y = combined_submesh.nodes
+        linear_y = combined_submesh[0].nodes
         self.assertAlmostEqual(
             integral_eqn_disc.evaluate(None, linear_y), (ln + ls) ** 2 / 2
         )
-        cos_y = np.cos(combined_submesh.nodes)
+        cos_y = np.cos(combined_submesh[0].nodes)
         self.assertAlmostEqual(
             integral_eqn_disc.evaluate(None, cos_y), np.sin(ln + ls), places=4
         )
@@ -443,13 +447,13 @@ class TestFiniteVolume(unittest.TestCase):
         integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
-        constant_y = np.ones_like(combined_submesh.nodes)
+        constant_y = np.ones_like(combined_submesh[0].nodes)
         self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), ls + lp)
-        linear_y = combined_submesh.nodes
+        linear_y = combined_submesh[0].nodes
         self.assertAlmostEqual(
             integral_eqn_disc.evaluate(None, linear_y), (1 - (ln) ** 2) / 2
         )
-        cos_y = np.cos(combined_submesh.nodes)
+        cos_y = np.cos(combined_submesh[0].nodes)
         self.assertAlmostEqual(
             integral_eqn_disc.evaluate(None, cos_y), np.sin(1) - np.sin(ln), places=4
         )
@@ -461,13 +465,13 @@ class TestFiniteVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         integral_eqn_disc = disc.process_symbol(integral_eqn)
 
-        constant_y = np.ones_like(mesh["negative particle"].nodes)
+        constant_y = np.ones_like(mesh["negative particle"][0].nodes)
         self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), np.pi)
-        linear_y = mesh["negative particle"].nodes
+        linear_y = mesh["negative particle"][0].nodes
         self.assertAlmostEqual(
             integral_eqn_disc.evaluate(None, linear_y), 2 * np.pi / 3, places=4
         )
-        one_over_y = 1 / mesh["negative particle"].nodes
+        one_over_y = 1 / mesh["negative particle"][0].nodes
         self.assertEqual(integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi)
 
     @unittest.skip("indefinite integral not yet implemented")
@@ -565,8 +569,8 @@ class TestFiniteVolume(unittest.TestCase):
 
             combined_submesh = mesh.combine_submeshes(*whole_cell)
             # Define exact solutions
-            y = np.sin(combined_submesh.nodes)
-            grad_exact = np.cos(combined_submesh.edges[1:-1])
+            y = np.sin(combined_submesh[0].nodes)
+            grad_exact = np.cos(combined_submesh[0].edges[1:-1])
 
             # Discretise and evaluate
             disc.set_variable_slices([var])
@@ -612,8 +616,8 @@ class TestFiniteVolume(unittest.TestCase):
             disc.mesh.add_ghost_meshes()
 
             # Define exact solutions
-            y = np.sin(combined_submesh.nodes)
-            grad_exact = np.cos(combined_submesh.edges)
+            y = np.sin(combined_submesh[0].nodes)
+            grad_exact = np.cos(combined_submesh[0].edges)
 
             # Discretise and evaluate
             disc.set_variable_slices([var])
@@ -655,8 +659,8 @@ class TestFiniteVolume(unittest.TestCase):
             combined_submesh = mesh.combine_submeshes(*whole_cell)
 
             # Define exact solutions
-            y = np.sin(combined_submesh.nodes)
-            div_exact_internal = -np.sin(combined_submesh.nodes[1:-1])
+            y = np.sin(combined_submesh[0].nodes)
+            div_exact_internal = -np.sin(combined_submesh[0].nodes[1:-1])
 
             # Discretise and evaluate
             disc.set_variable_slices([var])
@@ -699,8 +703,8 @@ class TestFiniteVolume(unittest.TestCase):
             combined_submesh = mesh.combine_submeshes(*whole_cell)
 
             # Define exact solutions
-            y = np.sin(combined_submesh.nodes)
-            div_exact_internal = -np.sin(combined_submesh.nodes[1:-1])
+            y = np.sin(combined_submesh[0].nodes)
+            div_exact_internal = -np.sin(combined_submesh[0].nodes[1:-1])
 
             # Discretise and evaluate
             disc.set_variable_slices([var])
@@ -738,7 +742,7 @@ class TestFiniteVolume(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             disc._bcs = boundary_conditions
             mesh = disc.mesh["negative particle"]
-            r = mesh.nodes
+            r = mesh[0].nodes
 
             # exact solution
             y = np.sin(r)
@@ -780,7 +784,7 @@ class TestFiniteVolume(unittest.TestCase):
         x1_disc = disc.process_symbol(x1)
         self.assertIsInstance(x1_disc, pybamm.Vector)
         np.testing.assert_array_equal(
-            x1_disc.evaluate(), disc.mesh["negative electrode"].nodes
+            x1_disc.evaluate(), disc.mesh["negative electrode"][0].nodes
         )
 
         z = pybamm.SpatialVariable("z", ["negative electrode"])
@@ -792,14 +796,14 @@ class TestFiniteVolume(unittest.TestCase):
         self.assertIsInstance(x2_disc, pybamm.Vector)
         np.testing.assert_array_equal(
             x2_disc.evaluate(),
-            disc.mesh.combine_submeshes("negative electrode", "separator").nodes,
+            disc.mesh.combine_submeshes("negative electrode", "separator")[0].nodes,
         )
 
         r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
         r_disc = disc.process_symbol(r)
         self.assertIsInstance(r_disc.children[1], pybamm.Vector)
         np.testing.assert_array_equal(
-            r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes
+            r_disc.evaluate(), 3 * disc.mesh["negative particle"][0].nodes
         )
 
 

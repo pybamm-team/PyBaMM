@@ -103,7 +103,8 @@ class Discretisation(object):
             # Otherwise, add up the size of all the domains in variable.domain
             else:
                 for dom in variable.domain:
-                    end += self._spatial_methods[dom].mesh[dom].npts_for_broadcast
+                    for submesh in self._spatial_methods[dom].mesh[dom]:
+                        end += submesh.npts_for_broadcast
             y_slices[variable.id] = slice(start, end)
             start = end
         self._y_slices = y_slices

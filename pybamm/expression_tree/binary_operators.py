@@ -134,6 +134,7 @@ class MatrixMultiplication(BinaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
+
         return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
 
 
