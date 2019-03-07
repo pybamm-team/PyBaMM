@@ -4,6 +4,8 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+
+import autograd
 import numpy as np
 
 
@@ -68,6 +70,11 @@ class AbsoluteValue(UnaryOperator):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
         super().__init__("abs", child)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        # Derivative is not well-defined
+        raise NotImplementedError("Derivative of absolute function is not defined")
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return np.abs(self.children[0].evaluate(t, y))
@@ -83,6 +90,14 @@ class Function(UnaryOperator):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
         super().__init__("function ({})".format(func.__name__), child)
         self.func = func
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # use autograd to differentiate function
+            return Function(autograd.grad(self.func), self.orphans[0])
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -112,6 +127,11 @@ class SpatialOperator(UnaryOperator):
 
     def __init__(self, name, child):
         super().__init__(name, child)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        # We shouldn't need this
+        raise NotImplementedError
 
 
 class Gradient(SpatialOperator):

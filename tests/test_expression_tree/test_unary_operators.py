@@ -7,6 +7,7 @@ import pybamm
 
 import unittest
 import numpy as np
+import autograd.numpy as auto_np
 
 
 def test_function(arg):
@@ -106,6 +107,35 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.Integral(a, x)
         with self.assertRaises(ValueError):
             pybamm.Integral(a, y)
+
+    def test_diff(self):
+        a = pybamm.StateVector(slice(0, 1))
+        y = np.array([5])
+
+        # negation
+        self.assertEqual((-a).diff(a).evaluate(y=y), -1)
+        self.assertEqual((-a).diff(-a).evaluate(), 1)
+
+        # absolute value (not implemented)
+        absa = abs(a)
+        with self.assertRaises(NotImplementedError):
+            absa.diff(a)
+
+        # function: use autograd
+        func = pybamm.Function(test_function, a)
+        self.assertEqual((func).diff(a).evaluate(y=y), 2)
+        self.assertEqual((func).diff(func).evaluate(), 1)
+        func = pybamm.Function(auto_np.sin, a)
+        self.assertEqual(func.evaluate(y=y), np.sin(a.evaluate(y=y)))
+        self.assertEqual(func.diff(a).evaluate(y=y), np.cos(a.evaluate(y=y)))
+        func = pybamm.Function(auto_np.exp, a)
+        self.assertEqual(func.evaluate(y=y), np.exp(a.evaluate(y=y)))
+        self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
+
+        # spatial operator (not implemented)
+        spatial_a = pybamm.SpatialOperator("name", a)
+        with self.assertRaises(NotImplementedError):
+            spatial_a.diff(a)
 
     def test_printing(self):
         a = pybamm.Symbol("a")
