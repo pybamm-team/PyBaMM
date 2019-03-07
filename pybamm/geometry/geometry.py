@@ -42,9 +42,13 @@ class Geometry1DMacro(Geometry):
         l_n = pybamm.standard_parameters.l_n
         l_s = pybamm.standard_parameters.l_s
 
-        self["negative electrode"] = {x: {"min": pybamm.Scalar(0), "max": l_n}}
-        self["separator"] = {x: {"min": l_n, "max": l_n + l_s}}
-        self["positive electrode"] = {x: {"min": l_n + l_s, "max": pybamm.Scalar(1)}}
+        self["negative electrode"] = {
+            "primary": {x: {"min": pybamm.Scalar(0), "max": l_n}}
+        }
+        self["separator"] = {"primary": {x: {"min": l_n, "max": l_n + l_s}}}
+        self["positive electrode"] = {
+            "primary": {x: {"min": l_n + l_s, "max": pybamm.Scalar(1)}}
+        }
 
         # update with custom geometry if non empty
         self.update(custom_geometry)
@@ -58,10 +62,37 @@ class Geometry1DMicro(Geometry):
         r_p = pybamm.SpatialVariable("r", ["positive particle"])
 
         self["negative particle"] = {
-            r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+            "primary": {r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
         self["positive particle"] = {
-            r_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}
+            "primary": {r_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
+        # update with custom geometry if non empty
+        self.update(custom_geometry)
+
+
+class Geometry1p1DMicro(Geometry):
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        x = pybamm.SpatialVariable("x", whole_cell)
+        r_n = pybamm.SpatialVariable("r", ["negative particle"])
+        r_p = pybamm.SpatialVariable("r", ["positive particle"])
+        l_n = pybamm.standard_parameters.l_n
+        l_s = pybamm.standard_parameters.l_s
+
+        self["negative particle"] = {
+            "primary": {r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
+        self["negative particle"] = {
+            "primary": {x: {"min": pybamm.Scalar(0), "max": l_n}}
+        }
+        self["positive particle"] = {
+            "primary": {r_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
+        self["positive particle"] = {
+            "primary": {x: {"min": l_n + l_s, "max": pybamm.Scalar(1)}}
         }
         # update with custom geometry if non empty
         self.update(custom_geometry)
@@ -91,6 +122,6 @@ class Geometry3DMacro(Geometry1DMacro):
 
         MACRO_DOMAINS = ["negative electrode", "separator", "positive electrode"]
         for domain in MACRO_DOMAINS:
-            self[domain][y] = y_lim
-            self[domain][z] = z_lim
+            self[domain]["primary"][y] = y_lim
+            self[domain]["primary"][z] = z_lim
         self.update(custom_geometry)
