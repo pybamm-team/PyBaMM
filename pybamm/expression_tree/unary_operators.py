@@ -96,8 +96,12 @@ class Function(UnaryOperator):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            # use autograd to differentiate function
-            return Function(autograd.grad(self.func), self.orphans[0])
+            child = self.orphans[0]
+            if variable.id in [symbol.id for symbol in child.pre_order()]:
+                # use autograd to differentiate function, and apply chain rule
+                return child.diff(variable) * Function(autograd.grad(self.func), child)
+            else:
+                return pybamm.Scalar(0)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
