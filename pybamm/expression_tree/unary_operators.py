@@ -98,9 +98,11 @@ class Function(UnaryOperator):
         else:
             child = self.orphans[0]
             if variable.id in [symbol.id for symbol in child.pre_order()]:
-                # use autograd to differentiate function, and apply chain rule
+                # if variable appears in the function,use autograd to differentiate
+                # function, and apply chain rule
                 return child.diff(variable) * Function(autograd.grad(self.func), child)
             else:
+                # otherwise the derivative of the function is zero
                 return pybamm.Scalar(0)
 
     def evaluate(self, t=None, y=None):
