@@ -131,8 +131,12 @@ class TestHomogeneousReaction(unittest.TestCase):
         np.testing.assert_array_equal((processed_j_n * l_n).evaluate(0, None), 1)
         np.testing.assert_array_equal((processed_j_p * l_p).evaluate(0, None), -1)
 
+    def test_failure(self):
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.interface.homogeneous_reaction(["not a domain"])
 
-class TestButlerVolmerLeadAcid(unittest.TestCase):
+
+class TestButlerVolmer(unittest.TestCase):
     def setUp(self):
         self.cn = pybamm.Variable("concentration", domain=["negative electrode"])
         self.cs = pybamm.Variable("concentration", domain=["separator"])
@@ -147,6 +151,9 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         )
         self.phi = pybamm.Concatenation(self.phin, self.phis, self.phip)
 
+        self.param = pybamm.standard_parameters
+        self.param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
+
     def tearDown(self):
         del self.cn
         del self.cs
@@ -159,17 +166,17 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
 
     def test_creation(self):
         # negative electrode passes, returns Multiplication
-        bv = pybamm.interface.butler_volmer_lead_acid(self.cn, self.phin)
+        bv = pybamm.interface.butler_volmer(self.param, self.cn, self.phin)
         self.assertIsInstance(bv, pybamm.Multiplication)
         self.assertEqual(bv.domain, ["negative electrode"])
 
         # positive electrode passes, returns Multiplication
-        bv = pybamm.interface.butler_volmer_lead_acid(self.cp, self.phip)
+        bv = pybamm.interface.butler_volmer(self.param, self.cp, self.phip)
         self.assertIsInstance(bv, pybamm.Multiplication)
         self.assertEqual(bv.domain, ["positive electrode"])
 
         # whole cell domain passes, returns concatenation
-        bv = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
+        bv = pybamm.interface.butler_volmer(self.param, self.c, self.phi)
         self.assertIsInstance(bv, pybamm.Concatenation)
         self.assertEqual(
             bv.domain, ["negative electrode", "separator", "positive electrode"]
@@ -178,35 +185,14 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         # c and phi without domain, domain gets input
         c = pybamm.Variable("concentration", domain=[])
         phi = pybamm.Variable("potential", domain=[])
-        bv = pybamm.interface.butler_volmer_lead_acid(
-            c, phi, domain=["negative electrode"]
+        bv = pybamm.interface.butler_volmer(
+            self.param, c, phi, domain=["negative electrode"]
         )
         self.assertIsInstance(bv, pybamm.Multiplication)
         self.assertEqual(bv.domain, [])
 
-    def test_failure(self):
-        # domain that doesn't exist
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.interface.butler_volmer_lead_acid(
-                None, None, domain=["not a domain"]
-            )
-        # no domain
-        c = pybamm.Variable("concentration", domain=[])
-        phi = pybamm.Variable("potential", domain=[])
-        with self.assertRaises(ValueError):
-            pybamm.interface.butler_volmer_lead_acid(c, phi)
-        # mismatched domains
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.interface.butler_volmer_lead_acid(self.cn, self.phip)
-        # c, phi not concatenations with domain as whole domain
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c = pybamm.Variable("concentration", domain=whole_cell)
-        phi = pybamm.Variable("potential", domain=whole_cell)
-        with self.assertRaises(ValueError):
-            pybamm.interface.butler_volmer_lead_acid(c, phi, whole_cell)
-
     def test_set_parameters(self):
-        bv = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
+        bv = pybamm.interface.butler_volmer(self.param, self.c, self.phi)
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         param = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
@@ -224,8 +210,8 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_bv.pre_order()]
 
     def test_discretisation(self):
-        bv_n = pybamm.interface.butler_volmer_lead_acid(self.cn, self.phin)
-        bv_p = pybamm.interface.butler_volmer_lead_acid(self.cp, self.phip)
+        bv_n = pybamm.interface.butler_volmer(self.param, self.cn, self.phin)
+        bv_p = pybamm.interface.butler_volmer(self.param, self.cp, self.phip)
 
         # process parameters
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
@@ -268,7 +254,7 @@ class TestButlerVolmerLeadAcid(unittest.TestCase):
         )
 
     def test_discretisation_whole(self):
-        bv_whole = pybamm.interface.butler_volmer_lead_acid(self.c, self.phi)
+        bv_whole = pybamm.interface.butler_volmer(self.param, self.c, self.phi)
 
         # process parameters
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
@@ -323,41 +309,34 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         # Concentration without domain passes
         c = pybamm.Variable("c")
         m = pybamm.standard_parameters.m_n
-        pybamm.interface.exchange_current_density(m, c, domain=["negative electrode"])
-        pybamm.interface.exchange_current_density(m, c, domain=["positive electrode"])
+        pybamm.interface.exchange_current_density(c, domain=["negative electrode"])
+        pybamm.interface.exchange_current_density(c, domain=["positive electrode"])
 
         # Concentration with correct domain passes
-        j0n = pybamm.interface.exchange_current_density(m, self.cn)
-        j0p = pybamm.interface.exchange_current_density(m, self.cp)
+        j0n = pybamm.interface.exchange_current_density(self.cn)
+        j0p = pybamm.interface.exchange_current_density(self.cp)
         self.assertEqual(j0n.domain, ["negative electrode"])
         self.assertEqual(j0p.domain, ["positive electrode"])
 
         # Concentration with wrong domain fails
         with self.assertRaises(pybamm.DomainError):
             pybamm.interface.exchange_current_density(
-                m, self.cp, domain=["negative electrode"]
+                self.cp, domain=["negative electrode"]
             )
         with self.assertRaises(pybamm.DomainError):
             pybamm.interface.exchange_current_density(
-                m, self.cn, domain=["positive electrode"]
+                self.cn, domain=["positive electrode"]
             )
         c = pybamm.Variable("concentration", domain=[])
         with self.assertRaises(ValueError):
-            pybamm.interface.exchange_current_density(m, c)
-
-    def test_failure(self):
-        m = pybamm.standard_parameters.m_n
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.interface.exchange_current_density(m, None, domain=["not a domain"])
+            pybamm.interface.exchange_current_density(c)
 
     def test_set_parameters(self):
         param = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv", {"Typical current density": 1}
         )
-        m_n = pybamm.standard_parameters.m_n
-        m_p = pybamm.standard_parameters.m_p
-        j0n = pybamm.interface.exchange_current_density(m_n, self.cn)
-        j0p = pybamm.interface.exchange_current_density(m_p, self.cp)
+        j0n = pybamm.interface.exchange_current_density(self.cn)
+        j0p = pybamm.interface.exchange_current_density(self.cp)
         proc_j0n = param.process_symbol(j0n)
         proc_j0p = param.process_symbol(j0p)
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_j0n.pre_order()]
@@ -365,10 +344,8 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
     def test_discretisation(self):
         # create exchange-current densities
-        m_n = pybamm.standard_parameters.m_n
-        m_p = pybamm.standard_parameters.m_p
-        j0n = pybamm.interface.exchange_current_density(m_n, self.cn)
-        j0p = pybamm.interface.exchange_current_density(m_p, self.cp)
+        j0n = pybamm.interface.exchange_current_density(self.cn)
+        j0p = pybamm.interface.exchange_current_density(self.cp)
 
         # process parameters
         param = pybamm.ParameterValues(
