@@ -71,21 +71,24 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         def rootfn(t, y, ydot, return_root):
             return_root[:] = [event(t, y) for event in events]
 
-        algebraic_vars_idx = np.where(~self.mass_matrix.any(axis=1))[0]
-        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol,
-                         "algebraic_vars_idx": algebraic_vars_idx}
+        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
 
         # If no Jacobian provided (default), use autograd to compute the
         # Jacbian. If autograd not installed, the solver will approximate the
         # Jacobain (see SUNDIALS documentation).
         # TO DO: check here if autograd installed
         if jacobian is None:
-            jacobian_rhs_alg = autograd.jacobian(residuals, 1)
+            self.auto_jac(residuals)
+            mass_matrix = -self.jac_ydot(0.0, y0, ydot0)
+            algebraic_vars_idx = np.where(~mass_matrix.any(axis=1))[0]
+            jac_rhs_alg = self.jacobian_rhs_alg
 
-            def jacfn(t, y, ydot, cj, return_jacobian):
-                return_jacobian[:][:] = jacobian_rhs_alg(t, y) - cj * self.mass_matrix
+            def jacfn(self, t, y, ydot, cj, return_jacobian):
+                return_jacobian[:][:] = jac_rhs_alg(t, y, ydot) - cj * mass_matrix
 
-            extra_options.update({"jacfn": jacfn})
+            extra_options.update(
+                {"jacfn": jacfn, "algebraic_vars_idx": algebraic_vars_idx}
+            )
 
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
@@ -95,3 +98,12 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
 
         # return solution, we need to tranpose y to match scipy's interface
         return sol.values.t, np.transpose(sol.values.y)
+
+    def auto_jac(self, residuals):
+        self.jac_ydot = autograd.jacobian(residuals, 2)
+        self.jacobian_rhs_alg = autograd.jacobian(residuals, 1)
+
+    def jacobian(self, t, y, ydot):
+        mass_matrix_eval = -self.jac_ydot(t, y, ydot)
+        jac_rhs_alg_eval = self.jacobian_rhs_alg(t, y, ydot)
+        return (mass_matrix_eval, jac_rhs_alg_eval)

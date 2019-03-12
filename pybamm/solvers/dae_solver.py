@@ -5,7 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
 import pybamm
-import numpy as np
+import autograd.numpy as np
 
 
 class DaeSolver(pybamm.BaseSolver):
@@ -35,6 +35,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         def residuals(t, y, ydot):
             rhs_eval = model.concatenated_rhs.evaluate(t, y)
+            # print(rhs_eval)
             return np.concatenate(
                 (
                     rhs_eval - ydot[: rhs_eval.shape[0]],
@@ -53,16 +54,6 @@ class DaeSolver(pybamm.BaseSolver):
             "Shape of initial condition y0 {} is different from the shape of residual "
             "function {}".format(y0.shape, residuals(0, y0, ydot0).shape)
         )
-
-        def get_mass_matrix(y):
-            N_rhs = np.size(model.concatenated_rhs.evaluate(0, y))
-            N_alg = np.size(model.concatenated_algebraic.evaluate(0, y))
-
-            return np.block([
-                [np.eye(N_rhs), np.zeros((N_rhs, N_alg))],
-                [np.zeros((N_alg, N_rhs)), np.zeros((N_alg, N_alg))]])
-
-        self.mass_matrix = self.get_mass_matrix(y0)
 
         self.t, self.y = self.integrate(residuals, y0, ydot0, t_eval)
 

@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import copy
-import numpy as np
+import autograd.numpy as np
 
 
 class Discretisation(object):
