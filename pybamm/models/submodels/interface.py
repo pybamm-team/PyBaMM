@@ -144,7 +144,9 @@ def butler_volmer(param, c_e, Delta_phi, ck_surf=None, domain=None):
             Delta_phi_n, Delta_phi_s, Delta_phi_p = Delta_phi.orphans
         else:
             raise TypeError(
-                "c_e and Delta_phi must both be Concatenations, not '{}' and '{}'".format(
+                """
+                c_e and Delta_phi must both be Concatenations, not '{}' and '{}'
+                """.format(
                     type(c_e), type(Delta_phi)
                 )
             )

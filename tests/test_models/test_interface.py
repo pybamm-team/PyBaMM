@@ -405,7 +405,6 @@ class TestButlerVolmer(unittest.TestCase):
 
         # discretise
         disc = get_discretisation_for_testing()
-        mesh = disc.mesh
 
         variables = [self.c, self.Delta_phi]
         disc.set_variable_slices(variables)
@@ -486,7 +485,6 @@ class TestExchangeCurrentDensity(unittest.TestCase):
     def test_creation(self):
         # Concentration without domain passes
         c = pybamm.Variable("c")
-        m = pybamm.standard_parameters.m_n
         pybamm.interface.exchange_current_density(c, domain=["negative electrode"])
         pybamm.interface.exchange_current_density(c, domain=["positive electrode"])
 
