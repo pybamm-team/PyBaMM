@@ -20,6 +20,7 @@ setup(
         "scipy>=1.0",
         "pandas>=0.23",
         "anytree>=2.4.3",
+        "autograd>=1.2",
         # Note: Matplotlib is loaded for debug plots, but to ensure pints runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.

@@ -5,7 +5,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
+import autograd.numpy as np
+import autograd
 import importlib
 
 scikits_odes_spec = importlib.util.find_spec("scikits")
@@ -43,7 +44,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, residuals, y0, ydot0, t_eval, events=None):
+    def integrate(self, residuals, y0, ydot0, t_eval, jacobian=None, events=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0 and ydot_0.
 
@@ -56,6 +57,8 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
+        jacobian : method, optional
+        A function that takes in t, y and ydot and returns the Jacobian
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
@@ -68,7 +71,22 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         def rootfn(t, y, ydot, return_root):
             return_root[:] = [event(t, y) for event in events]
 
-        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
+        algebraic_vars_idx = np.where(~self.mass_matrix.any(axis=1))[0]
+        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol,
+                         "algebraic_vars_idx": algebraic_vars_idx}
+
+        # If no Jacobian provided (default), use autograd to compute the
+        # Jacbian. If autograd not installed, the solver will approximate the
+        # Jacobain (see SUNDIALS documentation).
+        # TO DO: check here if autograd installed
+        if jacobian is None:
+            jacobian_rhs_alg = autograd.jacobian(residuals, 1)
+
+            def jacfn(t, y, ydot, cj, return_jacobian):
+                return_jacobian[:][:] = jacobian_rhs_alg(t, y) - cj * self.mass_matrix
+
+            extra_options.update({"jacfn": jacfn})
+
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
 
