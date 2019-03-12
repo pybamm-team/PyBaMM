@@ -172,7 +172,8 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_allclose(1.0 * t_sol, y_sol[1])
         mass = np.array([[1.0, 0.0], [0.0, 0.0]])
         jac = np.array([[0.0, 0.0], [2.0, -1.0]])
-        automass, autojac = solver.jacobian(0.0, y0, ydot0)
+        automass = -solver.jacobian_ydot(0.0, y0, ydot0)
+        autojac = solver.jacobian_rhs_alg(0.0, y0, ydot0)
         np.testing.assert_allclose(automass, mass)
         np.testing.assert_allclose(autojac, jac)
 
@@ -300,7 +301,8 @@ class TestScikitsSolver(unittest.TestCase):
                 [2.0 * np.eye(N_alg), -1.0 * np.eye(N_alg)],
             ]
         )
-        automass, autojac = solver.jacobian(0.0, y0, ydot0)
+        automass = -solver.jacobian_ydot(0.0, y0, ydot0)
+        autojac = solver.jacobian_rhs_alg(0.0, y0, ydot0)
         np.testing.assert_allclose(automass, mass)
         np.testing.assert_allclose(autojac, jac)
 

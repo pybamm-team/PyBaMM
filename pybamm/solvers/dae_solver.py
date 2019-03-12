@@ -70,7 +70,7 @@ class DaeSolver(pybamm.BaseSolver):
         t_eval : numeric type
             The times at which to compute the solution
         jacobian : method, optional
-        A function that takes in t, y and ydot and returns the Jacobian
+            A function that takes in t, y and ydot and returns the Jacobian
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
