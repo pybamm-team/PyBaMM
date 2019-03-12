@@ -74,14 +74,13 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
 
         # If no Jacobian provided (default), use autograd to compute the
-        # Jacbian. If autograd not installed, the solver will approximate the
-        # Jacobain (see SUNDIALS documentation).
+        # Jacobian. If autograd not installed, the solver will approximate the
+        # Jacobian (see SUNDIALS documentation).
         # TO DO: check here if autograd installed
         if jacobian is None:
-            self.auto_jac(residuals)
-            mass_matrix = -self.jac_ydot(0.0, y0, ydot0)
+            jac_ydot, jac_rhs_alg = self.auto_jac(residuals)
+            mass_matrix = -jac_ydot(0.0, y0, ydot0)
             algebraic_vars_idx = np.where(~mass_matrix.any(axis=1))[0]
-            jac_rhs_alg = self.jacobian_rhs_alg
 
             def jacfn(self, t, y, ydot, cj, return_jacobian):
                 return_jacobian[:][:] = jac_rhs_alg(t, y, ydot) - cj * mass_matrix
@@ -110,9 +109,9 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
             equations
 
         """
-
-        self.jac_ydot = autograd.jacobian(residuals, 2)
+        self.jacobian_ydot = autograd.jacobian(residuals, 2)
         self.jacobian_rhs_alg = autograd.jacobian(residuals, 1)
+        return self.jacobian_ydot, self.jacobian_rhs_alg
 
     def jacobian(self, t, y, ydot):
         """
@@ -130,6 +129,6 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         ydot : numeric type
             The values of the discretised time derivatives used to evaluate the Jacobian
         """
-        mass_matrix_eval = -self.jac_ydot(t, y, ydot)
+        mass_matrix_eval = -self.jacobian_ydot(t, y, ydot)
         jac_rhs_alg_eval = self.jacobian_rhs_alg(t, y, ydot)
         return (mass_matrix_eval, jac_rhs_alg_eval)

@@ -35,7 +35,6 @@ class DaeSolver(pybamm.BaseSolver):
 
         def residuals(t, y, ydot):
             rhs_eval = model.concatenated_rhs.evaluate(t, y)
-            # print(rhs_eval)
             return np.concatenate(
                 (
                     rhs_eval - ydot[: rhs_eval.shape[0]],
