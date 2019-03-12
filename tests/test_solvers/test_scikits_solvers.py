@@ -263,8 +263,9 @@ class TestScikitsSolver(unittest.TestCase):
     def test_model_solver_dae_autograd(self):
         # Create simple test model
         model = pybamm.BaseModel()
-        var1 = pybamm.Variable("var1", domain=[])
-        var2 = pybamm.Variable("var2", domain=[])
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
@@ -281,10 +282,24 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_allclose(solver.y[-1], 2 * np.exp(0.1 * solver.t))
 
         # Check Jacobian and mass matrix
-        mass = np.array([[1.0, 0.0], [0.0, 0.0]])
-        jac = np.array([[0.1, 0.0], [2.0, -1.0]])
         y0 = model.concatenated_initial_conditions
         ydot0 = model.concatenated_initial_conditions_ydot
+        N_rhs = np.size(model.concatenated_rhs.evaluate(0.0, y0))
+        N_alg = np.size(model.concatenated_algebraic.evaluate(0.0, y0))
+        # Equal number of algebraic and differential equations
+        np.testing.assert_array_equal(N_rhs, N_alg)
+        mass = np.block(
+            [
+                [np.eye(N_rhs), np.zeros((N_rhs, N_alg))],
+                [np.zeros((N_alg, N_rhs)), np.zeros((N_alg, N_alg))],
+            ]
+        )
+        jac = np.block(
+            [
+                [0.1 * np.eye(N_rhs), np.zeros((N_rhs, N_alg))],
+                [2.0 * np.eye(N_alg), -1.0 * np.eye(N_alg)],
+            ]
+        )
         automass, autojac = solver.jacobian(0.0, y0, ydot0)
         np.testing.assert_allclose(automass, mass)
         np.testing.assert_allclose(autojac, jac)
