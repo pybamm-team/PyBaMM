@@ -100,10 +100,36 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         return sol.values.t, np.transpose(sol.values.y)
 
     def auto_jac(self, residuals):
+        """
+        Compute Jacobian of DAE model using autograd.
+
+        Parameters
+        ----------
+        residuals : method
+            A function that takes in t, y and ydot and returns the residuals of the
+            equations
+
+        """
+
         self.jac_ydot = autograd.jacobian(residuals, 2)
         self.jacobian_rhs_alg = autograd.jacobian(residuals, 1)
 
     def jacobian(self, t, y, ydot):
+        """
+        Returns the Jacobian of DAE model at given t, y and ydot.
+
+        Parameters
+        ----------
+        residuals : method
+            A function that takes in t, y and ydot and returns the residuals of the
+            equations
+        t : numeric type
+            The time at which to evaluate the Jacobian
+        y : numeric type
+            The values of the discretised variables used to evaluate the Jacobian
+        ydot : numeric type
+            The values of the discretised time derivatives used to evaluate the Jacobian
+        """
         mass_matrix_eval = -self.jac_ydot(t, y, ydot)
         jac_rhs_alg_eval = self.jacobian_rhs_alg(t, y, ydot)
         return (mass_matrix_eval, jac_rhs_alg_eval)
