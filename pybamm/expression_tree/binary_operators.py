@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numbers
+import autograd.numpy as np
 
 
 class BinaryOperator(pybamm.Symbol):
@@ -69,6 +70,18 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("**", left, right)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # apply chain rule and power rule
+            base, exponent = self.orphans
+            return base ** (exponent - 1) * (
+                exponent * base.diff(variable)
+                + base * pybamm.Function(np.log, base) * exponent.diff(variable)
+            )
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) ** self.children[1].evaluate(t, y)
@@ -83,6 +96,13 @@ class Addition(BinaryOperator):
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("+", left, right)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return self.children[0].diff(variable) + self.children[1].diff(variable)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -100,6 +120,13 @@ class Subtraction(BinaryOperator):
 
         super().__init__("-", left, right)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return self.children[0].diff(variable) - self.children[1].diff(variable)
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) - self.children[1].evaluate(t, y)
@@ -115,6 +142,15 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
 
         super().__init__("*", left, right)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # apply product rule
+            left, right = self.orphans
+            return left.diff(variable) * right + left * right.diff(variable)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -132,6 +168,11 @@ class MatrixMultiplication(BinaryOperator):
 
         super().__init__("*", left, right)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        # We shouldn't need this
+        raise NotImplementedError
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
@@ -146,6 +187,17 @@ class Division(BinaryOperator):
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("/", left, right)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # apply quotient rule
+            top, bottom = self.orphans
+            return (
+                top.diff(variable) * bottom - top * bottom.diff(variable)
+            ) / bottom ** 2
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

@@ -296,6 +296,23 @@ class Symbol(anytree.NodeMixin):
         """return an :class:`AbsoluteValue` object"""
         return pybamm.AbsoluteValue(self)
 
+    def diff(self, variable):
+        """
+        Differentiate a symbol with respect to a variable. Default behaviour is to
+        return `1` if differentiating with respect to yourself and zero otherwise.
+        Binary and Unary Operators override this.
+
+        Parameters
+        ----------
+        variable : :class:`pybamm.Symbol`
+            The variable with respect to which to differentiate
+
+        """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return pybamm.Scalar(0)
+
     def evaluate(self, t=None, y=None):
         """evaluate expression tree
 
