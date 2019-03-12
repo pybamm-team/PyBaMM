@@ -68,11 +68,10 @@ class FirstOrderPotential(pybamm.BaseModel):
         )
         U_0n = param.U_n(c_e_0)
         U_0p = param.U_p(c_e_0)
-        # TODO: replace these with symbolically differentiated objects
-        j0_1n = c_e_1n * j0_0n  # j0_0n.diff(c_e_0)
-        j0_1p = c_e_1p * j0_0p  # j0_0p.diff(c_e_0)
-        dU_0n__dc0 = U_0n  # U_0n.diff(c_e_0)
-        dU_0p__dc0 = U_0p  # U_0p.diff(c_e_0)
+        j0_1n = c_e_1n * j0_0n.diff(c_e_0)
+        j0_1p = c_e_1p * j0_0p.diff(c_e_0)
+        dU_0n__dc0 = U_0n.diff(c_e_0)
+        dU_0p__dc0 = U_0p.diff(c_e_0)
 
         # Potential
         cbar_1n = pybamm.Integral(c_e_1n, x_n) / param.l_n
