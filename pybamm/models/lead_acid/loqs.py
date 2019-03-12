@@ -57,10 +57,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         # Variables
         j0_n = pybamm.interface.exchange_current_density(
-            sp.m_n, c_e, domain=["negative electrode"]
+            c_e, domain=["negative electrode"]
         )
         j0_p = pybamm.interface.exchange_current_density(
-            sp.m_p, c_e, domain=["positive electrode"]
+            c_e, domain=["positive electrode"]
         )
         Phi = -spla.U_n(c_e) - pybamm.Function(np.arcsinh, j_n / (2 * j0_n * sp.l_n))
         V = Phi + spla.U_p(c_e) - pybamm.Function(np.arcsinh, j_p / (2 * j0_p * sp.l_p))

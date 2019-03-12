@@ -61,10 +61,10 @@ class FirstOrderPotential(pybamm.BaseModel):
         kappa_0s = param.kappa_e(c_e_0) * eps_0s ** param.b
         kappa_0p = param.kappa_e(c_e_0) * eps_0p ** param.b
         j0_0n = pybamm.interface.exchange_current_density(
-            param.m_n, c_e_0, domain=["negative electrode"]
+            c_e_0, domain=["negative electrode"]
         )
         j0_0p = pybamm.interface.exchange_current_density(
-            param.m_p, c_e_0, domain=["positive electrode"]
+            c_e_0, domain=["positive electrode"]
         )
         U_0n = param.U_n(c_e_0)
         U_0p = param.U_p(c_e_0)

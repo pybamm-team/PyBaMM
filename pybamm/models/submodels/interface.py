@@ -83,8 +83,6 @@ def exchange_current_density(c_e, ck_surf=None, domain=None):
         elif domain == ["positive electrode"]:
             c_w = (1 - c_e * sp.V_e) / sp.V_w
             return sp.m_p * c_e ** 2 * c_w
-        else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
 
 def butler_volmer(param, c_e, Delta_phi, ck_surf=None, domain=None):
@@ -121,7 +119,8 @@ def butler_volmer(param, c_e, Delta_phi, ck_surf=None, domain=None):
                 "domain cannot be None if c_e.domain and Delta_phi.domain are empty"
             )
 
-    # Get the OCP based on ck_surf
+    # Get the concentration for ocp (either surface concentration, if given, or
+    # electrolyte concentration otherwise)
     if ck_surf:
         c_ocp = ck_surf
     else:
@@ -144,20 +143,29 @@ def butler_volmer(param, c_e, Delta_phi, ck_surf=None, domain=None):
             c_e_n, c_e_s, c_e_p = c_e.orphans
             Delta_phi_n, Delta_phi_s, Delta_phi_p = Delta_phi.orphans
         else:
-            raise ValueError(
+            raise TypeError(
                 "c_e and Delta_phi must both be Concatenations, not '{}' and '{}'".format(
                     type(c_e), type(Delta_phi)
                 )
             )
+        if ck_surf:
+            if isinstance(ck_surf, pybamm.Concatenation):
+                cn_surf, cp_surf = ck_surf.orphans
+            else:
+                raise TypeError(
+                    "ck_surf must be a Concatenation, not '{}'".format(type(ck_surf))
+                )
+        else:
+            cn_surf, cp_surf = None, None
         # Negative electrode
         current_neg = butler_volmer(
-            param, c_e_n, Delta_phi_n, ck_surf, ["negative electrode"]
+            param, c_e_n, Delta_phi_n, cn_surf, ["negative electrode"]
         )
         # Separator
         current_sep = pybamm.Broadcast(0, ["separator"])
         # Positive electrode
         current_pos = butler_volmer(
-            param, c_e_p, Delta_phi_p, ck_surf, ["positive electrode"]
+            param, c_e_p, Delta_phi_p, cp_surf, ["positive electrode"]
         )
         # Concatenate
         return pybamm.Concatenation(current_neg, current_sep, current_pos)
