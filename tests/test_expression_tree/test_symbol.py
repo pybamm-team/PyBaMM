@@ -7,6 +7,7 @@ import pybamm
 
 import unittest
 import numpy as np
+import os
 
 
 class TestSymbol(unittest.TestCase):
@@ -14,6 +15,35 @@ class TestSymbol(unittest.TestCase):
         sym = pybamm.Symbol("a symbol")
         self.assertEqual(sym.name, "a symbol")
         self.assertEqual(str(sym), "a symbol")
+
+    def test_symbol_simplify(self):
+        a = pybamm.Scalar(0)
+        b = pybamm.Scalar(1)
+        self.assertIsInstance((a+b).simplify(), pybamm.Scalar)
+        self.assertEqual((a+b).simplify().evaluate(), 1)
+        self.assertIsInstance((b+a).simplify(), pybamm.Scalar)
+        self.assertEqual((b+a).simplify().evaluate(), 1)
+        self.assertIsInstance((a*b).simplify(), pybamm.Scalar)
+        self.assertEqual((a*b).simplify().evaluate(), 0)
+        self.assertIsInstance((b*a).simplify(), pybamm.Scalar)
+        self.assertEqual((b*a).simplify().evaluate(), 0)
+        c = pybamm.Parameter('c')
+        self.assertIsInstance((a+c).simplify(), pybamm.Parameter)
+        self.assertIsInstance((c+a).simplify(), pybamm.Parameter)
+        self.assertIsInstance((a*c).simplify(), pybamm.Scalar)
+        self.assertEqual((a*c).simplify().evaluate(), 0)
+        self.assertIsInstance((c*a).simplify(), pybamm.Scalar)
+        self.assertEqual((c*a).simplify().evaluate(), 0)
+
+        self.assertIsInstance((a+b+a).simplify(), pybamm.Scalar)
+        self.assertEqual((a+b+a).simplify().evaluate(), 1)
+        self.assertIsInstance((b+a+a).simplify(), pybamm.Scalar)
+        self.assertEqual((b+a+a).simplify().evaluate(), 1)
+        self.assertIsInstance((a*b*b).simplify(), pybamm.Scalar)
+        self.assertEqual((a*b*b).simplify().evaluate(), 0)
+        self.assertIsInstance((b*a*b).simplify(), pybamm.Scalar)
+        self.assertEqual((b*a*b).simplify().evaluate(), 0)
+
 
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])
@@ -233,7 +263,10 @@ class TestSymbol(unittest.TestCase):
         model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
         c_e = list(model.rhs.keys())[0]
         rhs = model.rhs[c_e]
-        rhs.visualise("StefanMaxwell_test", test=True)
+        rhs.visualise("StefanMaxwell_test.png")
+        self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
+        with self.assertRaises(ValueError):
+            rhs.visualise("StefanMaxwell_test")
 
     def test_has_spatial_derivatives(self):
         var = pybamm.Variable("var")

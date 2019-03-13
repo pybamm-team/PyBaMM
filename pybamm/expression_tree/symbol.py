@@ -120,19 +120,28 @@ class Symbol(anytree.NodeMixin):
         for pre, _, node in anytree.RenderTree(self):
             print("%s%s" % (pre, str(node)))
 
-    def visualise(self, filename, test=False):
-        """Produces a .png file of the tree (this node and its children) with the
-        name filename"""
+    def visualise(self, filename):
+        """
+        Produces a .png file of the tree (this node and its children) with the
+        name filename
+
+        Parameters
+        ----------
+
+        filename : str
+            filename to output, must end in ".png"
+
+        """
+
+        # check that filename ends in .png.
+        if filename[-4:] != ".png":
+            raise ValueError("filename should end in .png")
 
         new_node, counter = self.relabel_tree(self, 0)
 
-        # check that filename ends in .png.
-        filename = "view_tree/" + filename + ".png"
-
-        if test is False:
-            DotExporter(
-                new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
-            ).to_picture(filename)
+        DotExporter(
+            new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
+        ).to_picture(filename)
 
     def relabel_tree(self, symbol, counter):
         """ Finds all children of a symbol and assigns them a new id so that they can be
@@ -396,3 +405,32 @@ class Symbol(anytree.NodeMixin):
         return any(
             [isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order()]
         )
+
+    def simplify(self):
+        # helper function to test if a node evaluates to zero
+        def is_zero(node):
+            return node.evaluates_to_number() and node.evaluate() == 0
+
+        # recurse through the rest of the tree, simplifying
+        if isinstance(self, pybamm.BinaryOperator):
+            left = self.children[0].simplify()
+            right = self.children[1].simplify()
+            if isinstance(self, pybamm.Multiplication):
+                # anything multiplied by a scalar zero returns a scalar zero
+                if is_zero(left) or is_zero(right):
+                    return pybamm.Scalar(0)
+            elif isinstance(self, pybamm.Addition):
+                # anything added by a scalar zero returns the other child
+                if is_zero(left):
+                    return right
+                if is_zero(right):
+                    return left
+            else:
+                return self.__class__(self.children[0].simplify(), self.children[1].simplify())
+        elif isinstance(self, pybamm.UnaryOperator):
+            return symbol.__class__(self.children[0].simplify())
+
+        new_symbol = copy.deepcopy(self)
+        new_symbol.parent = None
+        return new_symbol
+
