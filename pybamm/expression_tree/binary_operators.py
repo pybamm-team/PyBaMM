@@ -183,18 +183,9 @@ class Multiplication(BinaryOperator):
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
-        # helper function to see if node evaluates to zero
-        def is_zero(node):
-            return node.evaluates_to_number() and node.evaluate() == 0
-
         left = self.children[0].simplify()
         right = self.children[1].simplify()
-
-        # anything multiplied by a scalar zero returns a scalar zero
-        if is_zero(left) or is_zero(right):
-            return pybamm.Scalar(0)
-        else:
-            return self.__class__(left, right)
+        return self.__class__(left, right)
 
 
 class MatrixMultiplication(BinaryOperator):

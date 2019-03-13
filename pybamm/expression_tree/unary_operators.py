@@ -33,6 +33,11 @@ class UnaryOperator(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}({!s})".format(self.name, self.children[0])
 
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        child = self.children[0].simplify()
+        return self.__class__(child)
+
 
 class Negate(UnaryOperator):
     """A node in the expression tree representing a `-` negation operator
