@@ -28,10 +28,8 @@ For more advanced usage, new sets of parameters, discretisations and solvers can
 
 ## Expression tree structure
 
-PyBaMM is built around an expression tree structure, similar to FEniCS/Firedrake's
-[UFL](https://fenics.readthedocs.io/projects/ufl/en/latest/).
-[This](expression-tree.ipynb) notebook explains how this works, from
-model creation to solution.
+PyBaMM is built around an expression tree structure, [this](expression-tree.ipynb)
+notebook explains how this works, from model creation to solution.
 
 ### Models
 
