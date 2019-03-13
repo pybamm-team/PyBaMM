@@ -7,6 +7,7 @@ import pybamm
 
 import unittest
 import numpy as np
+import autograd.numpy as auto_np
 from tests import get_mesh_for_testing
 
 
@@ -73,6 +74,46 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_array_less(t_sol, 6)
         np.testing.assert_array_less(y_sol, 5)
 
+    def test_ode_integrate_with_autograd(self):
+        # Linear
+        solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
+
+        def linear_ode(t, y):
+            return auto_np.array([0.5 * np.ones_like(y[0]), 2.0 - y[0]])
+
+        y0 = np.array([0.0, 0.0])
+        t_eval = np.linspace(0, 1, 100)
+        t_sol, y_sol = solver.integrate(linear_ode, y0, t_eval)
+        np.testing.assert_array_equal(t_sol, t_eval)
+        np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
+        np.testing.assert_allclose(2.0 * t_sol - 0.25 * t_sol ** 2, y_sol[1], rtol=1e-4)
+        jac = np.array([[0.0, 0.0], [-1.0, 0.0]])
+        autojac = solver.jacobian(0.0, y0)
+        np.testing.assert_allclose(autojac, jac)
+
+        # Nonlinear exponential grwoth
+        solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
+
+        def exponential_growth(t, y):
+            return auto_np.array([y[0], (1.0 - y[0]) * y[1]])
+
+        y0 = np.array([1.0, 1.0])
+        t_eval = np.linspace(0, 1, 100)
+        t_sol, y_sol = solver.integrate(exponential_growth, y0, t_eval)
+        np.testing.assert_array_equal(t_sol, t_eval)
+        np.testing.assert_allclose(np.exp(t_sol), y_sol[0], rtol=1e-4)
+        np.testing.assert_allclose(
+            np.exp(1 + t_sol - np.exp(t_sol)), y_sol[1], rtol=1e-4
+        )
+
+        def jac(y):
+            return np.array([[1.0, 0.0], [-y[1], 1 - y[0]]])
+
+        np.testing.assert_allclose(solver.jacobian(0.0, y0), jac(y0))
+        np.testing.assert_allclose(
+            solver.jacobian(t_sol[-1], y_sol[:, -1]), jac(y_sol[:, -1])
+        )
+
     def test_model_solver(self):
         # Create model
         model = pybamm.BaseModel()
@@ -116,6 +157,34 @@ class TestScipySolver(unittest.TestCase):
         self.assertLess(len(solver.t), len(t_eval))
         np.testing.assert_array_equal(solver.t, t_eval[: len(solver.t)])
         np.testing.assert_allclose(solver.y[0], np.exp(-0.1 * solver.t))
+
+    def test_model_solver_ode_autograd(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.rhs = {var1: var1, var2: 1 - var1}
+        model.initial_conditions = {var1: 1.0, var2: -1.0}
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScipySolver(tol=1e-9)
+        t_eval = np.linspace(0, 1, 100)
+        solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solver.t, t_eval)
+        np.testing.assert_allclose(solver.y[0], np.exp(solver.t))
+        np.testing.assert_allclose(solver.y[-1], solver.t - np.exp(solver.t))
+        N = int(np.size(solver.y[:, 0]) / 2)
+        jac = np.block(
+            [[np.eye(N), np.zeros((N, N))], [-1.0 * np.eye(N), np.zeros((N, N))]]
+        )
+        np.testing.assert_allclose(solver.jacobian(0.0, solver.y[:, 0]), jac)
 
 
 if __name__ == "__main__":

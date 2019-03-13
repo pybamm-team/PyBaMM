@@ -6,6 +6,13 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import scipy.integrate as it
+import numpy as np
+import importlib
+
+autograd_spec = importlib.util.find_spec("autograd")
+if autograd_spec is not None:
+    autograd = importlib.util.module_from_spec(autograd_spec)
+    autograd_spec.loader.exec_module(autograd)
 
 
 class ScipySolver(pybamm.OdeSolver):
@@ -32,7 +39,7 @@ class ScipySolver(pybamm.OdeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, derivs, y0, t_eval, events=None):
+    def integrate(self, derivs, y0, t_eval, jacobian=None, events=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -45,6 +52,11 @@ class ScipySolver(pybamm.OdeSolver):
             The initial conditions
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
+        jacobian : method, optional
+            A function that takes in t and y and returns the Jacobian. If
+            no Jacobian provided (default), autograd is used to compute the
+            Jacobian. If autograd not installed, the solver will approximate the
+            Jacobian (see scipy_ documentation).
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
@@ -54,11 +66,34 @@ class ScipySolver(pybamm.OdeSolver):
         object
             An object containing the times and values of the solution, as well as
             various diagnostic messages.
+
+        .. _scipy: https://docs.scipy.org/doc/scipy-1.1.0/reference/generated/scipy.integrate.solve_ivp.html
         """
+        extra_options = {"rtol": self.tol, "atol": self.tol}
+
+        # check for user-supplied Jacobian
+        implicit_methods = ["Radau", "BDF", "LSODA"]
+        if np.any([self.method in implicit_methods]):
+            if jacobian is None:
+                if autograd_spec is None:
+                    print(
+                        "autograd is not installed. "
+                        "scipy will approximate the Jacobian."
+                    )
+                else:
+                    # Set automatic jacobian function
+                    self.set_auto_jac(derivs)
+
+                    def jacobian(t, y):
+                        return self.jacobian(t, y)
+
+                    extra_options.update({"jac": jacobian})
+
         # make events terminal so that the solver stops when they are reached
         if events:
             for event in events:
                 event.terminal = True
+            extra_options.update({"events": events})
 
         sol = it.solve_ivp(
             derivs,
@@ -66,9 +101,19 @@ class ScipySolver(pybamm.OdeSolver):
             y0,
             t_eval=t_eval,
             method=self.method,
-            rtol=self.tol,
-            atol=self.tol,
-            events=events,
+            **extra_options
         )
 
         return sol.t, sol.y
+
+    def set_auto_jac(self, derivs):
+        """
+        Sets the Jacobian function for the ODE model using autograd
+
+        Parameters
+        ----------
+        derivs : method
+            A function that takes in t and y and returns the time-derivative dydt
+
+        """
+        self.jacobian = autograd.jacobian(derivs, 1)

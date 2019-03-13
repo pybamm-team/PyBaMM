@@ -17,7 +17,7 @@ class TestLiIonSPM(unittest.TestCase):
 
         modeltest.test_all()
 
-    def test_surface_concentrartion(self):
+    def test_surface_concentration(self):
         model = pybamm.li_ion.SPM()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

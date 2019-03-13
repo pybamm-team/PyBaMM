@@ -92,15 +92,16 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
                 # Set automatic jacobian function
                 self.set_auto_jac(residuals)
 
+                # Constant mass matrix
                 mass_matrix = -self.jacobian_ydot(0.0, y0, ydot0)
                 algebraic_vars_idx = np.where(~mass_matrix.any(axis=1))[0]
 
-                # Can't pass self.jacobian_rhs_alg into jacfn
-                # - is the a better way of doing this?
-                jac_rhs_alg = self.jacobian_rhs_alg
+                # Can't pass self.jacobian_y into jacfn
+                # - is there a better way of doing this?
+                jac_y = self.jacobian_y
 
                 def jacfn(self, t, y, ydot, cj, return_jacobian):
-                    return_jacobian[:][:] = jac_rhs_alg(t, y, ydot) - cj * mass_matrix
+                    return_jacobian[:][:] = jac_y(t, y, ydot) - cj * mass_matrix
 
                 extra_options.update(
                     {"jacfn": jacfn, "algebraic_vars_idx": algebraic_vars_idx}
@@ -127,4 +128,4 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
 
         """
         self.jacobian_ydot = autograd.jacobian(residuals, 2)
-        self.jacobian_rhs_alg = autograd.jacobian(residuals, 1)
+        self.jacobian_y = autograd.jacobian(residuals, 1)

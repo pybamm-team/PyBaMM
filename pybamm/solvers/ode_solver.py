@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
+
 import pybamm
 
 
@@ -38,9 +39,10 @@ class OdeSolver(pybamm.BaseSolver):
         events = [lambda t, y: event.evaluate(t, y) for event in model.events]
 
         y0 = model.concatenated_initial_conditions
+
         self.t, self.y = self.integrate(dydt, y0, t_eval, events=events)
 
-    def integrate(self, derivs, y0, t_eval, events=None):
+    def integrate(self, derivs, y0, t_eval, jacobian=None, events=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -52,6 +54,8 @@ class OdeSolver(pybamm.BaseSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
+        jacobian : method, optional
+            A function that takes in t and y and returns the Jacobian
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
