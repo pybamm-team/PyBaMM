@@ -28,7 +28,7 @@ For more advanced usage, new sets of parameters, discretisations and solvers can
 
 ## Expression tree structure
 
-PyBaMM is built around an expression tree structure, [this](expression-tree.ipynb)
+PyBaMM is built around an expression tree structure. [This](expression-tree.ipynb)
 notebook explains how this works, from model creation to solution.
 
 ### Models
