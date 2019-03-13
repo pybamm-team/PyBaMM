@@ -426,9 +426,9 @@ class Symbol(anytree.NodeMixin):
                 if is_zero(right):
                     return left
             else:
-                return self.__class__(self.children[0].simplify(), self.children[1].simplify())
+                return self.__class__(left, right)
         elif isinstance(self, pybamm.UnaryOperator):
-            return symbol.__class__(self.children[0].simplify())
+            return self.__class__(self.children[0].simplify())
 
         new_symbol = copy.deepcopy(self)
         new_symbol.parent = None
