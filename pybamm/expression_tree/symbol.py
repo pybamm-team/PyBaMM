@@ -407,28 +407,13 @@ class Symbol(anytree.NodeMixin):
         )
 
     def simplify(self):
-        # helper function to test if a node evaluates to zero
-        def is_zero(node):
-            return node.evaluates_to_number() and node.evaluate() == 0
+        """
+        Simplify the expression tree.
 
-        # recurse through the rest of the tree, simplifying
-        if isinstance(self, pybamm.BinaryOperator):
-            left = self.children[0].simplify()
-            right = self.children[1].simplify()
-            if isinstance(self, pybamm.Multiplication):
-                # anything multiplied by a scalar zero returns a scalar zero
-                if is_zero(left) or is_zero(right):
-                    return pybamm.Scalar(0)
-            elif isinstance(self, pybamm.Addition):
-                # anything added by a scalar zero returns the other child
-                if is_zero(left):
-                    return right
-                if is_zero(right):
-                    return left
-            else:
-                return self.__class__(left, right)
-        elif isinstance(self, pybamm.UnaryOperator):
-            return self.__class__(self.children[0].simplify())
+        This function recurses down the tree, applying any simplifications defined in
+        classes derived from pybamm.Symbol. E.g. any expression multiplied by a
+        pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0)
+        """
 
         new_symbol = copy.deepcopy(self)
         new_symbol.parent = None

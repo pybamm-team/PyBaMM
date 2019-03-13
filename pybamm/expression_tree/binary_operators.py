@@ -59,6 +59,13 @@ class BinaryOperator(pybamm.Symbol):
         else:
             raise pybamm.DomainError("""children must have same (or empty) domains""")
 
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        left = self.children[0].simplify()
+        right = self.children[1].simplify()
+        return self.__class__(left, right)
+
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
@@ -108,6 +115,24 @@ class Addition(BinaryOperator):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) + self.children[1].evaluate(t, y)
 
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+
+        # helper function to see if node evaluates to zero
+        def is_zero(node):
+            return node.evaluates_to_number() and node.evaluate() == 0
+
+        left = self.children[0].simplify()
+        right = self.children[1].simplify()
+
+        # anything added by a scalar zero returns the other child
+        if is_zero(left):
+            return right
+        if is_zero(right):
+            return left
+        else:
+            return self.__class__(left, right)
+
 
 class Subtraction(BinaryOperator):
     """A node in the expression tree representing a subtraction operator
@@ -155,6 +180,21 @@ class Multiplication(BinaryOperator):
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
+
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        # helper function to see if node evaluates to zero
+        def is_zero(node):
+            return node.evaluates_to_number() and node.evaluate() == 0
+
+        left = self.children[0].simplify()
+        right = self.children[1].simplify()
+
+        # anything multiplied by a scalar zero returns a scalar zero
+        if is_zero(left) or is_zero(right):
+            return pybamm.Scalar(0)
+        else:
+            return self.__class__(left, right)
 
 
 class MatrixMultiplication(BinaryOperator):
