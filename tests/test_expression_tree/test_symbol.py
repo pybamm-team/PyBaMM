@@ -229,8 +229,14 @@ class TestSymbol(unittest.TestCase):
         )
 
     def test_symbol_visualise(self):
-        G = pybamm.Symbol("G")
-        model = pybamm.electrolyte.StefanMaxwellDiffusion(G)
+        param = pybamm.standard_parameters
+        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", whole_cell)
+        eps = pybamm.Variable("epsilon", whole_cell)
+        j = pybamm.Variable("j", whole_cell)
+        model = pybamm.electrolyte_diffusion.StefanMaxwell(c, eps, j, param)
         c_e = list(model.rhs.keys())[0]
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test", test=True)

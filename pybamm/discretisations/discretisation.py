@@ -212,22 +212,22 @@ class Discretisation(object):
         if isinstance(symbol, pybamm.Gradient):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[symbol.domain[0]].gradient(
+            return self._spatial_methods[child.domain[0]].gradient(
                 child, discretised_child, self._bcs
             )
 
         elif isinstance(symbol, pybamm.Divergence):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[symbol.domain[0]].divergence(
+            return self._spatial_methods[child.domain[0]].divergence(
                 child, discretised_child, self._bcs
             )
 
         elif isinstance(symbol, pybamm.Integral):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[symbol.domain[0]].integral(
-                child, discretised_child
+            return self._spatial_methods[child.domain[0]].integral(
+                child.domain, discretised_child
             )
 
         elif isinstance(symbol, pybamm.Broadcast):

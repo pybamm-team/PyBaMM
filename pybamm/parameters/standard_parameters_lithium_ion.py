@@ -205,6 +205,7 @@ C_p = tau_discharge / tau_diffusion_p  # diffusional C-rate in positive electrod
 # Electrolyte Properties
 C_e = sp.tau_diffusion_e / tau_discharge  # diffusional C-rate in electrolyte
 gamma_hat_e = sp.c_e_typ / c_n_max
+beta_surf = 0
 
 # Electrochemical Reactions
 C_dl_n = (

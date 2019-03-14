@@ -3,5 +3,7 @@ Submodels
 
 .. toctree::
 
-  electrolyte
+  electrolyte_current
+  electrolyte_diffusion
   interface
+  porosity

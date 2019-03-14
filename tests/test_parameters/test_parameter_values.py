@@ -71,6 +71,16 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_mul.children[0].value, 1)
         self.assertEqual(processed_mul.children[1].value, 34)
 
+        # process integral
+        aa = pybamm.Parameter("a", domain=["negative electrode"])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+        integ = pybamm.Integral(aa, x)
+        processed_integ = parameter_values.process_symbol(integ)
+        self.assertIsInstance(processed_integ, pybamm.Integral)
+        self.assertIsInstance(processed_integ.children[0], pybamm.Scalar)
+        self.assertEqual(processed_integ.children[0].value, 1)
+        self.assertEqual(processed_integ.integration_variable.id, x.id)
+
         # process unary operation
         grad = pybamm.Gradient(a)
         processed_grad = parameter_values.process_symbol(grad)

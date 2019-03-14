@@ -168,6 +168,10 @@ class ParameterValues(dict):
             new_child = self.process_symbol(symbol.children[0])
             return pybamm.Function(symbol.func, new_child)
 
+        elif isinstance(symbol, pybamm.Integral):
+            new_child = self.process_symbol(symbol.children[0])
+            return pybamm.Integral(new_child, symbol.integration_variable)
+
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
             return symbol.__class__(new_child)
