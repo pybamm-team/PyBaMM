@@ -1,5 +1,5 @@
 #
-# Parameter class
+# Function Parameter class
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -23,5 +23,13 @@ class FunctionParameter(pybamm.UnaryOperator):
 
     """
 
-    def __init__(self, name, child):
+    def __init__(self, name, child, diff_variable=None):
         super().__init__(name, child)
+        # assign diff variable
+        self.diff_variable = diff_variable
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        # return a new FunctionParameter, that knows it will need to be differentiated
+        # when the parameters are set
+        return FunctionParameter(self.name, self.orphans[0], diff_variable=variable)
