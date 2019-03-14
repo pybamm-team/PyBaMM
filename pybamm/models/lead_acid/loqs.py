@@ -71,7 +71,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # Phis = pybamm.Concatenation(Phis_n, pybamm.Scalar(0), Phis_p)
         # self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
         self.variables = {
-            "Concentration": pybamm.Broadcast(c_e, whole_cell),
+            "Electrolyte concentration": pybamm.Broadcast(c_e, whole_cell),
             "Porosity": pybamm.Concatenation(
                 pybamm.Broadcast(eps_n, ["negative electrode"]),
                 pybamm.Broadcast(eps_s, ["separator"]),

@@ -1,5 +1,5 @@
 Electrolyte Current Submodel
 ============================
 
-.. autoclass:: pybamm.electrolyte_current.FirstOrderPotential
+.. autoclass:: pybamm.electrolyte_current.StefanMaxwellFirstOrderPotential
     :members:

@@ -27,17 +27,24 @@ class TestLeadAcidComposite(unittest.TestCase):
         for idx in range(len(T) - 1):
             # Check concentration decreases
             np.testing.assert_array_less(
-                model.variables["c"].evaluate(T[idx + 1], Y[:, idx + 1]),
-                model.variables["c"].evaluate(T[idx], Y[:, idx]),
+                model.variables["Electrolyte concentration"].evaluate(
+                    T[idx + 1], Y[:, idx + 1]
+                ),
+                model.variables["Electrolyte concentration"].evaluate(
+                    T[idx], Y[:, idx]
+                ),
             )
             # Check cut-off
             np.testing.assert_array_less(
-                0, model.variables["c"].evaluate(T[idx + 1], Y[:, idx + 1])
+                0,
+                model.variables["Electrolyte concentration"].evaluate(
+                    T[idx + 1], Y[:, idx + 1]
+                ),
             )
             try:
                 self.assertLess(
-                    model.variables["V"].evaluate(T[idx + 1], Y[:, idx + 1]),
-                    model.variables["V"].evaluate(T[idx], Y[:, idx]),
+                    model.variables["Voltage"].evaluate(T[idx + 1], Y[:, idx + 1]),
+                    model.variables["Voltage"].evaluate(T[idx], Y[:, idx]),
                 )
             except AssertionError:
                 import ipdb

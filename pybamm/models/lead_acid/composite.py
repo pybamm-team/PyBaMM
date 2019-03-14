@@ -86,9 +86,9 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Porosity model
         porosity_model = pybamm.porosity.Standard(eps, j, param)
         # Electrolyte potential model (solve ODE analytically)
-        electrolyte_potential_model = pybamm.electrolyte_current.FirstOrderPotential(
+        elec_pot_model = pybamm.electrolyte_current.StefanMaxwellFirstOrderPotential(
             loqs_model, c_e, param
         )
 
         # Update own model with submodels
-        self.update(loqs_model, conc_model, porosity_model, electrolyte_potential_model)
+        self.update(loqs_model, conc_model, porosity_model, elec_pot_model)

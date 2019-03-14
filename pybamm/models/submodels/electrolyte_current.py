@@ -8,7 +8,7 @@ import pybamm
 import numpy as np
 
 
-class FirstOrderPotential(pybamm.BaseModel):
+class StefanMaxwellFirstOrderPotential(pybamm.BaseModel):
     """A class that generates the expression tree for Stefan-Maxwell Current in the
     electrolyte.
 
@@ -31,7 +31,7 @@ class FirstOrderPotential(pybamm.BaseModel):
         i_cell = param.current_with_time
 
         # Extract leading-order variables, taking orphans to remove domains
-        c_e_0 = leading_order_model.variables["Concentration"].orphans[0]
+        c_e_0 = leading_order_model.variables["Electrolyte concentration"].orphans[0]
         eps_0 = leading_order_model.variables["Porosity"]
         eps_0n, eps_0s, eps_0p = [e.orphans[0] for e in eps_0.orphans]
         eta_0n = leading_order_model.variables[
@@ -112,7 +112,6 @@ class FirstOrderPotential(pybamm.BaseModel):
 
         # Variables
         self.variables = {
-            "c": c_e,
-            "Phi": Phi_0 + param.C_e * Phi_1,
-            "V": V_0 + param.C_e * V_1,
+            "Electrolyte potential": Phi_0 + param.C_e * Phi_1,
+            "Voltage": V_0 + param.C_e * V_1,
         }

@@ -47,7 +47,7 @@ class StefanMaxwell(pybamm.BaseModel):
         }
         self.initial_conditions = {c_e: param.c_e_init}
         self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
-        self.variables = {"c_e": c_e, "N_e": N_e}
+        self.variables = {"Electrolyte concentration": c_e, "Cation flux": N_e}
 
         # Cut off if concentration goes negative
         self.events = [pybamm.Function(np.min, c_e)]

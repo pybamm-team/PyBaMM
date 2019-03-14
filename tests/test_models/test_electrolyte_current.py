@@ -8,26 +8,6 @@ import pybamm
 import unittest
 
 
-@unittest.skip("not implemented")
-class TestStefanMaxwellCurrent(unittest.TestCase):
-    def test_make_tree(self):
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c_e = pybamm.Variable("c_e", domain=whole_cell)
-        phi_e = pybamm.Variable("phi_e", domain=whole_cell)
-        G = pybamm.Scalar(1)
-        pybamm.electrolyte_current.StefanMaxwell(c_e, phi_e, G)
-
-    def test_basic_processing(self):
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c_e = pybamm.Variable("c_e", domain=whole_cell)
-        phi_e = pybamm.Variable("phi_e", domain=whole_cell)
-        G = pybamm.Scalar(0.001)
-        model = pybamm.electrolyte_current.StefanMaxwell(c_e, phi_e, G)
-
-        param = model.default_parameter_values
-        param.process_model(model)
-
-
 class TestFirstOrderPotential(unittest.TestCase):
     def test_basic_processing(self):
         loqs_model = pybamm.lead_acid.LOQS()
@@ -43,7 +23,9 @@ class TestFirstOrderPotential(unittest.TestCase):
         param = pybamm.standard_parameters
         param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
 
-        model = pybamm.electrolyte_current.FirstOrderPotential(loqs_model, c_e, param)
+        model = pybamm.electrolyte_current.StefanMaxwellFirstOrderPotential(
+            loqs_model, c_e, param
+        )
 
         parameter_values = loqs_model.default_parameter_values
         parameter_values.process_model(model)
