@@ -127,7 +127,9 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return auto_np.array([0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+            return auto_np.array(
+                [0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
+            )
 
         y0 = np.array([0.0, 0.0])
         ydot0 = np.array([0.5, 1.0])
@@ -155,7 +157,9 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return auto_np.array([0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+            return auto_np.array(
+                [0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
+            )
 
         def y0_eq_2(t, y):
             return y[0] - 2
@@ -205,7 +209,9 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return auto_np.array([0.5 * auto_np.ones_like(y[0]) - ydot[0], 2.0 * y[0] - y[1]])
+            return auto_np.array(
+                [0.5 * auto_np.ones_like(y[0]) - ydot[0], 2.0 * y[0] - y[1]]
+            )
 
         y0 = np.array([0.0, 0.0])
         ydot0 = np.array([0.5, 1.0])

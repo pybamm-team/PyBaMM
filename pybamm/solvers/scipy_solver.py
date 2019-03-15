@@ -54,9 +54,9 @@ class ScipySolver(pybamm.OdeSolver):
             The times at which to compute the solution
         jacobian : method, optional
             A function that takes in t and y and returns the Jacobian. If
-            no Jacobian provided (default), autograd is used to compute the
+            no Jacobian is provided (default), autograd is used to compute the
             Jacobian. If autograd not installed, the solver will approximate the
-            Jacobian (see scipy_ documentation).
+            Jacobian.
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
@@ -67,7 +67,6 @@ class ScipySolver(pybamm.OdeSolver):
             An object containing the times and values of the solution, as well as
             various diagnostic messages.
 
-        .. _scipy: https://docs.scipy.org/doc/scipy-1.1.0/reference/generated/scipy.integrate.solve_ivp.html
         """
         extra_options = {"rtol": self.tol, "atol": self.tol}
 

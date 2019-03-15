@@ -67,15 +67,14 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             The times at which to compute the solution
         jacobian : method, optional
             A function that takes in t and y and returns the Jacobian. If
-            no Jacobian provided (default), autograd is used to compute the
+            no Jacobian is provided (default), autograd is used to compute the
             Jacobian. If autograd not installed, the solver will approximate the
-            Jacobian (see SUNDIALS_ documentation).
+            Jacobian. If autograd not installed, the solver will approximate the
+            Jacobian.
+            (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
-
-        .. _SUNDIALS: https://computation.llnl.gov/sites/default/files/public/cv_guide.pdf
-
 
         """
 
@@ -94,8 +93,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             extra_options.update({"jacfn": jacfn})
         elif autograd_spec is None:
             print(
-                "autograd is not installed. "
-                "SUNDIALS will approximate the Jacobian."
+                "autograd is not installed. " "SUNDIALS will approximate the Jacobian."
             )
         else:
             # Calculate the Jacobian using autograd
