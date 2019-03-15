@@ -317,7 +317,7 @@ class TestScikitsSolver(unittest.TestCase):
             return model.concatenated_rhs.evaluate(t, y)
 
         jacfn = pybamm.JacobianFunctionCV()
-        jacfn.set_jacobian(dydt)
+        jacfn.set_jacobian(derivs=dydt)
         np.testing.assert_allclose(jacfn.jacobian(0.0, solver.y[:, 0]), jac)
 
     def test_model_solver_dae(self):
