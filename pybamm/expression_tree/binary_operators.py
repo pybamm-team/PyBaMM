@@ -66,7 +66,6 @@ class BinaryOperator(pybamm.Symbol):
         return self.__class__(left, right)
 
 
-
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
 
