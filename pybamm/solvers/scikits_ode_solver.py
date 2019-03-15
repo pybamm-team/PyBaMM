@@ -14,6 +14,11 @@ if scikits_odes_spec is not None:
     if scikits_odes_spec is not None:
         scikits_odes = importlib.util.module_from_spec(scikits_odes_spec)
         scikits_odes_spec.loader.exec_module(scikits_odes)
+        # NOTE: Gives error module 'scikits.odes' has no attribute 'sundials'
+        # if you try to make the Jacobian class using
+        # scikits_odes.sundials.cvode.CV_JacRhsFunction
+        # but is OK if you import cvode here?
+        from scikits.odes.sundials import cvode
 
 autograd_spec = importlib.util.find_spec("autograd")
 if autograd_spec is not None:
@@ -82,24 +87,21 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
 
         extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
 
-        if jacobian is None:
-            if autograd_spec is None:
-                print(
-                    "autograd is not installed. "
-                    "SUNDIALS will approximate the Jacobian."
-                )
-            else:
-                # Set automatic jacobian function
-                self.set_auto_jac(derivs)
-
-                # Can't pass self.jacobian into jacfn
-                # - is there a better way of doing this?
-                jac = self.jacobian
-
-                def jacfn(self, t, y, return_jacobian):
-                    return_jacobian[:][:] = jac(t, y)
-
-                extra_options.update({"jacfn": jacfn})
+        if jacobian:
+            # Put the user-supplied Jacobian into the SUNDIALS Class
+            jacfn = JacobianFunctionCV()
+            jacfn.set_jacobian(jacobian=jacobian)
+            extra_options.update({"jacfn": jacfn})
+        elif autograd_spec is None:
+            print(
+                "autograd is not installed. "
+                "SUNDIALS will approximate the Jacobian."
+            )
+        else:
+            # Calculate the Jacobian using autograd
+            jacfn = JacobianFunctionCV()
+            jacfn.set_jacobian(derivs=derivs)
+            extra_options.update({"jacfn": jacfn})
 
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
@@ -110,9 +112,13 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         # return solution, we need to tranpose y to match scipy's ivp interface
         return sol.values.t, np.transpose(sol.values.y)
 
-    def set_auto_jac(self, derivs):
+
+class JacobianFunctionCV(cvode.CV_JacRhsFunction):
+    def set_jacobian(self, jacobian=None, derivs=None):
         """
-        Sets the Jacobian function for the ODE model using autograd
+        Sets the user supplied Jacobian function for the ODE model. If no
+        Jacobian is supplied, the user must supply the function derivs so
+        that the Jacobian may be calculated using autograd.
 
         Parameters
         ----------
@@ -120,4 +126,11 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             A function that takes in t and y and returns the time-derivative dydt
 
         """
-        self.jacobian = autograd.jacobian(derivs, 1)
+        if jacobian:
+            self.jacobian = jacobian
+        else:
+            self.jacobian = autograd.jacobian(derivs, 1)
+
+    def evaluate(self, t, y, fy, return_jacobian):
+        return_jacobian[:][:] = self.jacobian(t, y)
+        return 0

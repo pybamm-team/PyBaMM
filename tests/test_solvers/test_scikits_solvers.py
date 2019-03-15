@@ -19,9 +19,9 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
 
         def constant_growth(t, y):
-            return 0.5 * np.ones_like(y)
+            return 0.5 * auto_np.ones_like(y)
 
-        y0 = np.array([0])
+        y0 = np.array([0.0])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(constant_growth, y0, t_eval)
         np.testing.assert_array_equal(t_sol, t_eval)
@@ -33,7 +33,7 @@ class TestScikitsSolver(unittest.TestCase):
         def exponential_decay(t, y):
             return -0.1 * y
 
-        y0 = np.array([1])
+        y0 = np.array([1.0])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(exponential_decay, y0, t_eval)
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
@@ -43,12 +43,12 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
 
         def constant_decay(t, y):
-            return -2 * np.ones_like(y)
+            return -2 * auto_np.ones_like(y)
 
         def y_equal_0(t, y):
             return y[0]
 
-        y0 = np.array([1])
+        y0 = np.array([1.0])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(constant_decay, y0, t_eval, events=[y_equal_0])
         np.testing.assert_allclose(1 - 2 * t_sol, y_sol[0])
@@ -68,7 +68,7 @@ class TestScikitsSolver(unittest.TestCase):
         def ysq_eq_7(t, y):
             return y ** 2 - 7
 
-        y0 = np.array([1])
+        y0 = np.array([1.0])
         t_eval = np.linspace(0, 3, 100)
         t_sol, y_sol = solver.integrate(
             exponential_growth, y0, t_eval, events=[y_eq_9, ysq_eq_7]
@@ -83,7 +83,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
 
         def linear_ode(t, y):
-            return auto_np.array([0.5 * np.ones_like(y[0]), 2.0 - y[0]])
+            return auto_np.array([0.5 * auto_np.ones_like(y[0]), 2 - y[0]])
 
         y0 = np.array([0.0, 0.0])
         t_eval = np.linspace(0, 1, 100)
@@ -91,9 +91,11 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_array_equal(t_sol, t_eval)
         np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
         np.testing.assert_allclose(2.0 * t_sol - 0.25 * t_sol ** 2, y_sol[1], rtol=1e-4)
-        jac = np.array([[0.0, 0.0], [-1.0, 0.0]])
-        autojac = solver.jacobian(0.0, y0)
-        np.testing.assert_allclose(autojac, jac)
+
+        jacobian = np.array([[0.0, 0.0], [-1.0, 0.0]])
+        jacfn = pybamm.JacobianFunctionCV()
+        jacfn.set_jacobian(derivs=linear_ode)
+        np.testing.assert_allclose(jacfn.jacobian(0.0, y0), jacobian)
 
         # Nonlinear exponential grwoth
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
@@ -113,9 +115,11 @@ class TestScikitsSolver(unittest.TestCase):
         def jac(y):
             return np.array([[1.0, 0.0], [-y[1], 1 - y[0]]])
 
-        np.testing.assert_allclose(solver.jacobian(0.0, y0), jac(y0))
+        jacfn = pybamm.JacobianFunctionCV()
+        jacfn.set_jacobian(derivs=exponential_growth)
+        np.testing.assert_allclose(jacfn.jacobian(0.0, y0), jac(y0))
         np.testing.assert_allclose(
-            solver.jacobian(t_sol[-1], y_sol[:, -1]), jac(y_sol[:, -1])
+            jacfn.jacobian(t_sol[-1], y_sol[:, -1]), jac(y_sol[:, -1])
         )
 
     def test_dae_integrate(self):
@@ -123,9 +127,9 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return auto_np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+            return auto_np.array([0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
 
-        y0 = np.array([0, 0])
+        y0 = np.array([0.0, 0.0])
         ydot0 = np.array([0.5, 1.0])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(constant_growth_dae, y0, ydot0, t_eval)
@@ -139,7 +143,7 @@ class TestScikitsSolver(unittest.TestCase):
         def exponential_decay_dae(t, y, ydot):
             return auto_np.array([-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]])
 
-        y0 = np.array([1, 2])
+        y0 = np.array([1.0, 2.0])
         ydot0 = np.array([-0.1, -0.2])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(exponential_decay_dae, y0, ydot0, t_eval)
@@ -151,7 +155,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return auto_np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+            return auto_np.array([0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
 
         def y0_eq_2(t, y):
             return y[0] - 2
@@ -159,7 +163,7 @@ class TestScikitsSolver(unittest.TestCase):
         def y1_eq_5(t, y):
             return y[1] - 5
 
-        y0 = np.array([0, 0])
+        y0 = np.array([0.0, 0.0])
         ydot0 = np.array([0.5, 1.0])
         t_eval = np.linspace(0, 7, 100)
         t_sol, y_sol = solver.integrate(
@@ -183,7 +187,7 @@ class TestScikitsSolver(unittest.TestCase):
         def t_eq_0pt5(t, y):
             return t - 0.5
 
-        y0 = np.array([1, 2])
+        y0 = np.array([1.0, 2.0])
         ydot0 = np.array([-0.1, -0.2])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(
@@ -201,7 +205,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return auto_np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+            return auto_np.array([0.5 * auto_np.ones_like(y[0]) - ydot[0], 2.0 * y[0] - y[1]])
 
         y0 = np.array([0.0, 0.0])
         ydot0 = np.array([0.5, 1.0])
@@ -210,23 +214,21 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_array_equal(t_sol, t_eval)
         np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
         np.testing.assert_allclose(1.0 * t_sol, y_sol[1])
+
         mass = np.array([[1.0, 0.0], [0.0, 0.0]])
         jac = np.array([[0.0, 0.0], [2.0, -1.0]])
-        automass = -solver.jacobian_ydot(0.0, y0, ydot0)
-        autojac = solver.jacobian_y(0.0, y0, ydot0)
-        np.testing.assert_allclose(automass, mass)
-        np.testing.assert_allclose(autojac, jac)
+        jacfn = pybamm.AutoJacobianFunctionIDA()
+        jacfn.set_jacobian(constant_growth_dae, y0)
+        np.testing.assert_allclose(jacfn.mass_matrix, mass)
+        np.testing.assert_allclose(jacfn.jacobian_y(0.0, y0, ydot0), jac)
 
         # Nonlinear (tests when Jacobian a function of y)
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def nonlinear_dae(t, y, ydot):
             return auto_np.array(
-                [0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] ** 2 - y[1]]
+                [0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] ** 2 - y[1]]
             )
-
-        def jac(y):
-            return np.array([[0.0, 0.0], [4.0 * y[0], -1.0]])
 
         y0 = np.array([0.0, 0.0])
         ydot0 = np.array([0.5, 1.0])
@@ -235,12 +237,18 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_array_equal(t_sol, t_eval)
         np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
         np.testing.assert_allclose(0.5 * t_sol ** 2, y_sol[1])
+
         mass = np.array([[1.0, 0.0], [0.0, 0.0]])
-        automass = -solver.jacobian_ydot(0.0, y0, ydot0)
-        np.testing.assert_allclose(automass, mass)
-        np.testing.assert_allclose(solver.jacobian_y(0.0, y0, ydot0), jac(y0))
+
+        def jac(y):
+            return np.array([[0.0, 0.0], [4.0 * y[0], -1.0]])
+
+        jacfn = pybamm.AutoJacobianFunctionIDA()
+        jacfn.set_jacobian(nonlinear_dae, y0)
+        np.testing.assert_allclose(jacfn.mass_matrix, mass)
+        np.testing.assert_allclose(jacfn.jacobian_y(0.0, y0, ydot0), jac(y0))
         np.testing.assert_allclose(
-            solver.jacobian_y(t_sol[-1], y_sol[:, -1], ydot0), jac(y_sol[:, -1])
+            jacfn.jacobian_y(t_sol[-1], y_sol[:, -1], ydot0), jac(y_sol[:, -1])
         )
 
     def test_model_solver_ode(self):
@@ -249,7 +257,7 @@ class TestScikitsSolver(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
-        model.initial_conditions = {var: 1}
+        model.initial_conditions = {var: 1.0}
         model.initial_conditions_ydot = {var: 0.1}
         disc = StandardModelTest(model).disc
         disc.process_model(model)
@@ -267,7 +275,7 @@ class TestScikitsSolver(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
-        model.initial_conditions = {var: 1}
+        model.initial_conditions = {var: 1.0}
         model.initial_conditions_ydot = {var: 0.1}
         model.events = [pybamm.Function(np.min, var - 1.5)]
         disc = StandardModelTest(model).disc
@@ -298,11 +306,19 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_array_equal(solver.t, t_eval)
         np.testing.assert_allclose(solver.y[0], np.exp(solver.t))
         np.testing.assert_allclose(solver.y[-1], solver.t - np.exp(solver.t))
+
+        # Test Jacobian
         N = int(np.size(solver.y[:, 0]) / 2)
         jac = np.block(
             [[np.eye(N), np.zeros((N, N))], [-1.0 * np.eye(N), np.zeros((N, N))]]
         )
-        np.testing.assert_allclose(solver.jacobian(0.0, solver.y[:, 0]), jac)
+
+        def dydt(t, y):
+            return model.concatenated_rhs.evaluate(t, y)
+
+        jacfn = pybamm.JacobianFunctionCV()
+        jacfn.set_jacobian(dydt)
+        np.testing.assert_allclose(jacfn.jacobian(0.0, solver.y[:, 0]), jac)
 
     def test_model_solver_dae(self):
         # Create model
@@ -312,7 +328,7 @@ class TestScikitsSolver(unittest.TestCase):
         var2 = pybamm.Variable("var2", domain=whole_cell)
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
-        model.initial_conditions = {var1: 1, var2: 2}
+        model.initial_conditions = {var1: 1.0, var2: 2.0}
         model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
         disc = StandardModelTest(model).disc
         disc.process_model(model)
@@ -333,7 +349,7 @@ class TestScikitsSolver(unittest.TestCase):
         var2 = pybamm.Variable("var2", domain=whole_cell)
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
-        model.initial_conditions = {var1: 1, var2: 2}
+        model.initial_conditions = {var1: 1.0, var2: 2.0}
         model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
         model.events = [
             pybamm.Function(np.min, var1 - 1.5),
@@ -359,7 +375,7 @@ class TestScikitsSolver(unittest.TestCase):
         var2 = pybamm.Variable("var2", domain=whole_cell)
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
-        model.initial_conditions = {var1: 1, var2: 2}
+        model.initial_conditions = {var1: 1.0, var2: 2.0}
         model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
         disc = StandardModelTest(model).disc
         disc.process_model(model)
@@ -391,10 +407,20 @@ class TestScikitsSolver(unittest.TestCase):
                 [2.0 * np.eye(N_alg), -1.0 * np.eye(N_alg)],
             ]
         )
-        automass = -solver.jacobian_ydot(0.0, y0, ydot0)
-        autojac = solver.jacobian_y(0.0, y0, ydot0)
-        np.testing.assert_allclose(automass, mass)
-        np.testing.assert_allclose(autojac, jac)
+
+        def residuals(t, y, ydot):
+            rhs_eval = model.concatenated_rhs.evaluate(t, y)
+            return auto_np.concatenate(
+                (
+                    rhs_eval - ydot[: rhs_eval.shape[0]],
+                    model.concatenated_algebraic.evaluate(t, y),
+                )
+            )
+
+        jacfn = pybamm.AutoJacobianFunctionIDA()
+        jacfn.set_jacobian(residuals, y0)
+        np.testing.assert_allclose(jacfn.mass_matrix, mass)
+        np.testing.assert_allclose(jacfn.jacobian_y(0.0, y0, ydot0), jac)
 
 
 if __name__ == "__main__":
