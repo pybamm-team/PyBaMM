@@ -1,7 +1,7 @@
 #
 # Open-circuit voltage in the positive (lead-dioxide) electrode
 #
-import numpy as np
+import autograd.numpy as np
 
 
 def lead_dioxide_electrode_ocv_Bode1977(m):
