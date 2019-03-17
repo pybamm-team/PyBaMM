@@ -8,6 +8,46 @@ import pybamm
 import numpy as np
 
 
+class StefanMaxwell(pybamm.BaseModel):
+    """MacInnes equation for the current in the electrolyte, derived from the
+    Stefan-Maxwell equations.
+
+    Parameters
+    ----------
+    c_e : :class:`pybamm.Symbol`
+        The electrolyte concentration
+    epsilon : :class:`pybamm.Symbol`
+        The (electrolyte/liquid phase) porosity (can be Variable or Parameter)
+    phi_e : :class:`pybamm.Symbol`
+        The electric potential in the electrolyte ("electrolyte potential")
+    j : :class:`pybamm.Symbol`
+        An expression tree that represents the interfacial current density at the
+        electrode-electrolyte interface
+    param : parameter class
+        The parameters to use for this submodel
+
+    *Extends:* :class:`BaseModel`
+    """
+
+    def __init__(self, c_e, eps, phi_e, j, param):
+        super().__init__()
+
+        # functions
+
+        i_e = (
+            param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_hat_e
+        ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e))
+
+        # Equations (algebraic only)
+        self.algebraic = {phi_e: pybamm.grad(i_e) - j}
+        self.boundary_conditions = {i_e: {"left": 0, "right": 0}}
+        # no differential equations (and hence no initial conditions)
+        self.rhs = {}
+        self.initial_conditions = {}
+        # Variables
+        self.variables = {"Electrolyte potential": phi_e, "Electrolyte current": i_e}
+
+
 class StefanMaxwellFirstOrderPotential(pybamm.BaseModel):
     """A class that generates the expression tree for Stefan-Maxwell Current in the
     electrolyte.

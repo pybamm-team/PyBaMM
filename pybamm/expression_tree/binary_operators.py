@@ -41,7 +41,15 @@ class BinaryOperator(pybamm.Symbol):
             left = pybamm.Scalar(left)
         if isinstance(right, numbers.Number):
             right = pybamm.Scalar(right)
-
+        if isinstance(left, pybamm.Concatenation) and isinstance(
+            right, pybamm.Concatenation
+        ):
+            return pybamm.Concatenation(
+                *[
+                    self.__class__(name, left.orphans[i], right.orphans[i])
+                    for i in range(len(left.orphans))
+                ]
+            )
         domain = self.get_children_domains(left.domain, right.domain)
         super().__init__(name, children=[left, right], domain=domain)
 
