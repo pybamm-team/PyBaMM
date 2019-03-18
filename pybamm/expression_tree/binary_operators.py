@@ -117,17 +117,13 @@ class Addition(BinaryOperator):
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
 
-        # helper function to see if node evaluates to zero
-        def is_zero(node):
-            return node.evaluates_to_number() and node.evaluate() == 0
-
         left = self.children[0].simplify()
         right = self.children[1].simplify()
 
         # anything added by a scalar zero returns the other child
-        if is_zero(left):
+        if left.evaluates_to_value(0):
             return right
-        if is_zero(right):
+        if right.evaluates_to_value(0):
             return left
         else:
             return self.__class__(left, right)
@@ -182,15 +178,12 @@ class Multiplication(BinaryOperator):
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
-        # helper function to see if node evaluates to zero
-        def is_zero(node):
-            return node.evaluates_to_number() and node.evaluate() == 0
 
         left = self.children[0].simplify()
         right = self.children[1].simplify()
 
         # anything multiplied by a scalar zero returns a scalar zero
-        if is_zero(left) or is_zero(right):
+        if left.evaluates_to_value(0) or right.evaluates_to_value(0):
             return pybamm.Scalar(0)
         else:
             return self.__class__(left, right)

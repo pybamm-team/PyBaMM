@@ -362,8 +362,29 @@ class Symbol(anytree.NodeMixin):
         # do the search, return true if no relevent nodes are found
         return all([not isinstance(n, search_types) for n in self.pre_order()])
 
+
+    def evaluates_to_value(self, value):
+        """
+        Returns True if evaluating the expression returns a given constant value.
+        Returns False otherwise, including if NotImplementedError or TyperError
+        is raised.
+        !Not to be confused with isinstance(self, pybamm.Scalar)!
+
+        Parameters
+        ----------
+        value: Number
+            the value to compare against
+
+        See Also
+        --------
+        evaluate : evaluate the expression
+
+        """
+        return self.evaluates_to_number() and self.evaluate() == value
+
     def evaluates_to_number(self):
-        """Returns True if evaluating the expression returns a number.
+        """
+        Returns True if evaluating the expression returns a number.
         Returns False otherwise, including if NotImplementedError or TyperError
         is raised.
         !Not to be confused with isinstance(self, pybamm.Scalar)!
