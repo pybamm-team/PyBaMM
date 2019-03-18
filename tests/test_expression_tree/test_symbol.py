@@ -40,6 +40,17 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((a * b).simplify().evaluate(), 0)
         self.assertIsInstance((b * a).simplify(), pybamm.Scalar)
         self.assertEqual((b * a).simplify().evaluate(), 0)
+        self.assertIsInstance((b * b).simplify(), pybamm.Scalar)
+        self.assertEqual((b * b).simplify().evaluate(), 1)
+        self.assertIsInstance((a * a).simplify(), pybamm.Scalar)
+        self.assertEqual((a * a).simplify().evaluate(), 0)
+
+        # matrix multiplication
+        A = pybamm.Matrix(np.array([[1, 0],[0, 1]]))
+        self.assertIsInstance((a @ A).simplify(), pybamm.Scalar)
+        self.assertEqual((a @ A).simplify().evaluate(), 0)
+        self.assertIsInstance((A @ a).simplify(), pybamm.Scalar)
+        self.assertEqual((A @ a).simplify().evaluate(), 0)
 
         # test when other node is a parameter
         c = pybamm.Parameter('c')
@@ -51,6 +62,7 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((a * c).simplify().evaluate(), 0)
         self.assertIsInstance((c * a).simplify(), pybamm.Scalar)
         self.assertEqual((c * a).simplify().evaluate(), 0)
+        self.assertIsInstance((A @ c).simplify(), pybamm.MatrixMultiplication)
 
         self.assertIsInstance((a + b + a).simplify(), pybamm.Scalar)
         self.assertEqual((a + b + a).simplify().evaluate(), 1)
@@ -74,6 +86,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((b / a).simplify().evaluate(), np.inf)
         self.assertIsInstance((a / a).simplify(), pybamm.Scalar)
         self.assertTrue(np.isnan((a / a).simplify().evaluate()))
+        self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
+        self.assertEqual((b / b).simplify().evaluate(), 1)
 
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])
