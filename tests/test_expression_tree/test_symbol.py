@@ -19,17 +19,34 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_simplify(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
+        # addition
         self.assertIsInstance((a + b).simplify(), pybamm.Scalar)
         self.assertEqual((a + b).simplify().evaluate(), 1)
+        self.assertIsInstance((b + b).simplify(), pybamm.Scalar)
+        self.assertEqual((b + b).simplify().evaluate(), 2)
         self.assertIsInstance((b + a).simplify(), pybamm.Scalar)
         self.assertEqual((b + a).simplify().evaluate(), 1)
+
+        # subtraction
+        self.assertIsInstance((a - b).simplify(), pybamm.Scalar)
+        self.assertEqual((a - b).simplify().evaluate(), -1)
+        self.assertIsInstance((b - b).simplify(), pybamm.Scalar)
+        self.assertEqual((b - b).simplify().evaluate(), 0)
+        self.assertIsInstance((b - a).simplify(), pybamm.Scalar)
+        self.assertEqual((b - a).simplify().evaluate(), 1)
+
+        # multiplication
         self.assertIsInstance((a * b).simplify(), pybamm.Scalar)
         self.assertEqual((a * b).simplify().evaluate(), 0)
         self.assertIsInstance((b * a).simplify(), pybamm.Scalar)
         self.assertEqual((b * a).simplify().evaluate(), 0)
+
+        # test when other node is a parameter
         c = pybamm.Parameter('c')
         self.assertIsInstance((a + c).simplify(), pybamm.Parameter)
         self.assertIsInstance((c + a).simplify(), pybamm.Parameter)
+        self.assertIsInstance((c + b).simplify(), pybamm.Addition)
+        self.assertIsInstance((b + c).simplify(), pybamm.Addition)
         self.assertIsInstance((a * c).simplify(), pybamm.Scalar)
         self.assertEqual((a * c).simplify().evaluate(), 0)
         self.assertIsInstance((c * a).simplify(), pybamm.Scalar)
@@ -43,6 +60,22 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((a * b * b).simplify().evaluate(), 0)
         self.assertIsInstance((b * a * b).simplify(), pybamm.Scalar)
         self.assertEqual((b * a * b).simplify().evaluate(), 0)
+
+        # power simplification
+        self.assertIsInstance((c ** a).simplify(), pybamm.Scalar)
+        self.assertEqual((c ** a).simplify().evaluate(), 1)
+        d = pybamm.Scalar(2)
+        self.assertIsInstance((c ** d).simplify(), pybamm.Power)
+
+        # division
+        self.assertIsInstance((a / b).simplify(), pybamm.Scalar)
+        self.assertEqual((a / b).simplify().evaluate(), 0)
+        self.assertIsInstance((b / a).simplify(), pybamm.Scalar)
+        self.assertEqual((b / a).simplify().evaluate(), np.inf)
+        self.assertIsInstance((a / a).simplify(), pybamm.Scalar)
+        self.assertTrue(np.isnan((a / a).simplify().evaluate()))
+
+
 
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])
