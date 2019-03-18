@@ -75,8 +75,6 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance((a / a).simplify(), pybamm.Scalar)
         self.assertTrue(np.isnan((a / a).simplify().evaluate()))
 
-
-
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])
         self.assertEqual(a.domain, [pybamm.KNOWN_DOMAINS[0]])
