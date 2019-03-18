@@ -46,7 +46,7 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((a * a).simplify().evaluate(), 0)
 
         # matrix multiplication
-        A = pybamm.Matrix(np.array([[1, 0],[0, 1]]))
+        A = pybamm.Matrix(np.array([[1, 0], [0, 1]]))
         self.assertIsInstance((a @ A).simplify(), pybamm.Scalar)
         self.assertEqual((a @ A).simplify().evaluate(), 0)
         self.assertIsInstance((A @ a).simplify(), pybamm.Scalar)
