@@ -362,7 +362,6 @@ class Symbol(anytree.NodeMixin):
         # do the search, return true if no relevent nodes are found
         return all([not isinstance(n, search_types) for n in self.pre_order()])
 
-
     def evaluates_to_value(self, value):
         """
         Returns True if evaluating the expression returns a given constant value.
@@ -439,4 +438,3 @@ class Symbol(anytree.NodeMixin):
         new_symbol = copy.deepcopy(self)
         new_symbol.parent = None
         return new_symbol
-
