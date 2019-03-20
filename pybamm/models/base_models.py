@@ -223,7 +223,7 @@ class BaseModel(object):
         )
         dict1.update(dict2)
 
-    def check_well_posedness(self):
+    def check_well_posedness(self, post_discretisation=False):
         """
         Check that the model is well-posed by executing the following tests:
         - Model is not over- or underdetermined, by comparing keys and equations in rhs
@@ -233,6 +233,11 @@ class BaseModel(object):
         variable/equation pair in self.rhs
         - There are appropriate boundary conditions in self.boundary_conditions for each
         variable/equation pair in self.rhs and self.algebraic
+
+        Parameters
+        ----------
+        post_discretisation : boolean
+            A flag indicating tests to be skipped after discretisation
         """
         # Equations (differential and algebraic)
         # Get all the variables from differential and algebraic equations
@@ -264,8 +269,10 @@ class BaseModel(object):
         # If any algebraic keys don't appear in the eqns then the model is
         # overdetermined (but rhs keys can be absent from the eqns, e.g. dcdt = -1 is
         # fine)
+        # Skip this step after discretisation, as any variables in the equations will
+        # have been discretised to slices but keys will still be variables
         extra_algebraic_keys = vars_in_algebraic_keys.difference(vars_in_eqns)
-        if extra_algebraic_keys:
+        if extra_algebraic_keys and not post_discretisation:
             raise pybamm.ModelError("model is overdetermined (extra algebraic keys)")
         # If any variables in the equations don't appear in the keys then the model is
         # underdetermined
