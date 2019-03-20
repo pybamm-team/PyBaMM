@@ -197,8 +197,7 @@ class TestParameterValues(unittest.TestCase):
         var2 = pybamm.Variable("var2")
         model.rhs = {var1: a * pybamm.grad(var1)}
         model.algebraic = {var2: c * var2}
-        model.initial_conditions = {var1: b}
-        model.initial_conditions_ydot = {var1: c}
+        model.initial_conditions = {var1: b, var2: d}
         model.boundary_conditions = {var1: {"left": c, "right": d}}
         model.variables = {
             "var1": var1,
@@ -221,8 +220,6 @@ class TestParameterValues(unittest.TestCase):
         # initial conditions
         self.assertIsInstance(model.initial_conditions[var1], pybamm.Scalar)
         self.assertEqual(model.initial_conditions[var1].value, 2)
-        self.assertIsInstance(model.initial_conditions_ydot[var1], pybamm.Scalar)
-        self.assertEqual(model.initial_conditions_ydot[var1].value, 3)
         # boundary conditions
         bc_key = list(model.boundary_conditions.keys())[0]
         self.assertIsInstance(bc_key, pybamm.Variable)
