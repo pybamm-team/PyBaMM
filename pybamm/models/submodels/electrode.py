@@ -35,18 +35,20 @@ class Ohm(pybamm.BaseModel):
         # different bounday conditions in each electrode
         if phi_s.domain == ["negative electrode"]:
             i_n = -param.sigma_n * (1 - eps) ** param.b * pybamm.grad(phi_s)
-            self.algebraic = {phi_s: pybamm.grad(i_n) + j}
+            self.algebraic = {phi_s: pybamm.div(i_n) + j}
             self.boundary_conditions = {i_n: {"left": current, "right": 0}}
             self.initial_conditions = {phi_s: 0}
+            self.initial_conditions_ydot = {phi_s: 0}
             self.variables = {
                 "Negative electrode solid potential": phi_s,
                 "Negative electrode solid current": i_n,
             }
         elif phi_s.domain == ["positive electrode"]:
             i_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
-            self.algebraic = {phi_s: pybamm.grad(i_p) + j}
+            self.algebraic = {phi_s: pybamm.div(i_p) + j}
             self.boundary_conditions = {i_p: {"left": 0, "right": current}}
             self.initial_conditions = {phi_s: 0}
+            self.initial_conditions_ydot = {phi_s: 0}
             self.variables = {
                 "Positive electrode solid potential": phi_s,
                 "Positive electrode solid current": i_p,
@@ -61,3 +63,6 @@ class Ohm(pybamm.BaseModel):
             self.update(neg_model, pos_model)
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(phi_s.domain))
+
+        # Set default solver to DAE
+        self.default_solver = pybamm.ScikitsDaeSolver()

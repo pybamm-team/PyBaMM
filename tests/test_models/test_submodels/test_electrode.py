@@ -19,7 +19,7 @@ class TestOhm(unittest.TestCase):
         phi_s_n = pybamm.Variable(
             "Negative electrode solid potential", domain=["negative electrode"]
         )
-        phi_s_s = pybamm.Variable("Separator solid potential", domain=["separator"])
+        phi_s_s = pybamm.Broadcast(pybamm.Scalar(0), ["separator"])
         phi_s_p = pybamm.Variable(
             "Positive electrode solid potential", domain=["positive electrode"]
         )
@@ -30,11 +30,21 @@ class TestOhm(unittest.TestCase):
         j = pybamm.interface.homogeneous_reaction(
             ["negative electrode", "separator", "positive electrode"]
         )
+        eps_n, eps_s, eps_p = eps.orphans
+        j_n, j_s, j_p = j.orphans
 
         # Set up model and test
-        model = pybamm.electrode.Ohm(phi_s, eps, j, param)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+        model_n = pybamm.electrode.Ohm(phi_s_n, eps_n, j_n, param)
+        model_n_test = tests.StandardModelTest(model_n)
+        model_n_test.test_all()
+
+        model_p = pybamm.electrode.Ohm(phi_s_p, eps_p, j_p, param)
+        model_p_test = tests.StandardModelTest(model_p)
+        model_p_test.test_all()
+
+        model_whole = pybamm.electrode.Ohm(phi_s, eps, j, param)
+        model_whole_test = tests.StandardModelTest(model_whole)
+        model_whole_test.test_all()
 
 
 if __name__ == "__main__":

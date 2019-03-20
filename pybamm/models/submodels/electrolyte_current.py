@@ -39,9 +39,10 @@ class MacInnesStefanMaxwell(pybamm.BaseModel):
         ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e))
 
         # Equations (algebraic only)
-        self.algebraic = {phi_e: pybamm.grad(i_e) - j}
+        self.algebraic = {phi_e: pybamm.div(i_e) - j}
         self.boundary_conditions = {i_e: {"left": 0, "right": 0}}
         self.initial_conditions = {phi_e: 0}
+        self.initial_conditions_ydot = {phi_e: 0}
         # no differential equations
         self.rhs = {}
         # Variables

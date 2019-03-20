@@ -39,9 +39,6 @@ class StandardModelTest(object):
                     for x in eqn.pre_order()
                 ]
             ):
-                import ipdb
-
-                ipdb.set_trace()
                 raise TypeError(
                     "Not all Parameter and FunctionParameter objects processed"
                 )
@@ -52,7 +49,7 @@ class StandardModelTest(object):
             self.disc = disc
         self.disc.process_model(self.model)
         # Model should still be well-posed after processing
-        self.model.check_well_posedness()
+        self.model.check_well_posedness(post_discretisation=True)
 
     def test_solving(self, solver=None, t_eval=None):
         # Overwrite solver if given

@@ -121,5 +121,5 @@ class PorousElectrode(pybamm.LeadAcidBaseModel):
             solid_potential_model,
         )
 
-        # Set model solver to DAE
+        # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
