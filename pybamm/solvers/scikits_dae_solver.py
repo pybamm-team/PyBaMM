@@ -43,9 +43,9 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, residuals, y0, ydot0, t_eval, events=None):
+    def integrate(self, residuals, y0, t_eval, events=None):
         """
-        Solve a DAE model defined by residuals with initial conditions y0 and ydot_0.
+        Solve a DAE model defined by residuals with initial conditions y0.
 
         Parameters
         ----------
@@ -72,6 +72,10 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
 
+        # solver works with ydot0 set to zero
+        ydot0 = np.zeros_like(y0)
+
+        # set up and solve
         dae_solver = scikits_odes.dae(self.method, eqsres, **extra_options)
         sol = dae_solver.solve(t_eval, y0, ydot0)
 

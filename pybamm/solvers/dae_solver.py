@@ -52,9 +52,8 @@ class DaeSolver(pybamm.BaseSolver):
         y0 = self.calculate_consistent_initial_conditions(
             rhs, algebraic, model.concatenated_initial_conditions
         )
-        ydot0 = np.zeros_like(y0)
 
-        self.t, self.y = self.integrate(residuals, y0, ydot0, t_eval)
+        self.t, self.y = self.integrate(residuals, y0, t_eval)
 
     def calculate_consistent_initial_conditions(self, rhs, algebraic, y0_guess):
         """
@@ -95,9 +94,9 @@ class DaeSolver(pybamm.BaseSolver):
 
         return y0_consistent
 
-    def integrate(self, residuals, y0, ydot0, t_eval, events=None):
+    def integrate(self, residuals, y0, t_eval, events=None):
         """
-        Solve a DAE model defined by residuals with initial conditions y0 and ydot0.
+        Solve a DAE model defined by residuals with initial conditions y0.
 
         Parameters
         ----------
