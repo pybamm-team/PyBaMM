@@ -105,6 +105,46 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
         np.testing.assert_allclose(y_sol[1], 2 * np.exp(-0.1 * t_sol))
 
+    def test_dae_integrate_bad_ics(self):
+        # Constant
+        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+
+        def constant_growth_dae(t, y, ydot):
+            return [0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
+
+        def constant_growth_dae_rhs(t, y):
+            return np.array([constant_growth_dae(t, y, [0])[0]])
+
+        def constant_growth_dae_algebraic(t, y):
+            return np.array([constant_growth_dae(t, y, [0])[1]])
+
+        y0_guess = np.array([0, 1])
+        ydot0 = np.array([0, 0])
+        t_eval = np.linspace(0, 1, 100)
+        y0 = solver.calculate_consistent_initial_conditions(
+            constant_growth_dae_rhs, constant_growth_dae_algebraic, y0_guess
+        )
+        # check y0
+        np.testing.assert_array_equal(y0, [0, 0])
+        # check dae solutions
+        t_sol, y_sol = solver.integrate(constant_growth_dae, y0, ydot0, t_eval)
+        np.testing.assert_array_equal(t_sol, t_eval)
+        np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
+        np.testing.assert_allclose(1.0 * t_sol, y_sol[1])
+
+        # Exponential decay
+        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+
+        def exponential_decay_dae(t, y, ydot):
+            return [-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]]
+
+        y0 = np.array([1, 2])
+        ydot0 = np.array([-0.1, -0.2])
+        t_eval = np.linspace(0, 1, 100)
+        t_sol, y_sol = solver.integrate(exponential_decay_dae, y0, ydot0, t_eval)
+        np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
+        np.testing.assert_allclose(y_sol[1], 2 * np.exp(-0.1 * t_sol))
+
     def test_dae_integrate_with_event(self):
         # Constant
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
@@ -201,6 +241,27 @@ class TestScikitsSolver(unittest.TestCase):
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
+        model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
+        disc = StandardModelTest(model).disc
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+        t_eval = np.linspace(0, 1, 100)
+        solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solver.t, t_eval)
+        np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
+        np.testing.assert_allclose(solver.y[-1], 2 * np.exp(0.1 * solver.t))
+
+    def test_model_solver_dae_bad_ics(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 3}
         model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
         disc = StandardModelTest(model).disc
         disc.process_model(model)
