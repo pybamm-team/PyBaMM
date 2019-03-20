@@ -201,6 +201,15 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "overdetermined"):
             model.check_well_posedness()
 
+        # After discretisation, don't check for overdetermined from extra algebraic keys
+        model = pybamm.BaseModel()
+        model.algebraic = {c: 5 * pybamm.StateVector(slice(0, 15)) - 1}
+        # passes with post_discretisation=True
+        model.check_well_posedness(post_discretisation=True)
+        # fails with post_discretisation=False (default)
+        with self.assertRaisesRegex(pybamm.ModelError, "extra algebraic keys"):
+            model.check_well_posedness()
+
     def test_check_well_posedness_initial_boundary_conditions(self):
         # Well-posed model - Dirichlet
         whole_cell = ["negative electrode", "separator", "positive electrode"]

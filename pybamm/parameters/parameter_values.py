@@ -91,6 +91,9 @@ class ParameterValues(dict):
         for variable, equation in model.rhs.items():
             model.rhs[variable] = self.process_symbol(equation)
 
+        for variable, equation in model.algebraic.items():
+            model.algebraic[variable] = self.process_symbol(equation)
+
         for variable, equation in model.initial_conditions.items():
             model.initial_conditions[variable] = self.process_symbol(equation)
 
