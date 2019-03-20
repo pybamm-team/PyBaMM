@@ -27,8 +27,8 @@ Cation transference number,0.4,-,,
 Typical lithium ion diffusivity,5.34E-10,m2/s,Scott Moura,
 ,,,,
 # Electrode properties,,,,
-Conductivity of graphite,100,S.m-1,Scott Moura,
-Conductivity of Lithium Cobalt Oxide,10,S.m-1,Scott Moura,
+Negative electrode conductivity,100,S.m-1,Scott Moura,grpahite
+Positive electrode conductivity,10,S.m-1,Scott Moura,lithium cobalt oxide
 Maximum concentration in negative electrode,24983.2619938437,mol.m-3,Scott Moura,
 Maximum concentration in positive electrode,51217.9257309275,mol.m-3,Scott Moura,
 Negative electrode diffusion coefficient,3.9E-14,m2/s,Scott Moura,

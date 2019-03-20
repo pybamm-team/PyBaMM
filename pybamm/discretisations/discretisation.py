@@ -238,9 +238,14 @@ class Discretisation(object):
             if symbol.domain == []:
                 symbol = pybamm.NumpyBroadcast(new_child, symbol.domain, {})
             else:
-                symbol = self._spatial_methods[symbol.domain[0]].broadcast(
-                    new_child, symbol.domain
-                )
+                try:
+                    symbol = self._spatial_methods[symbol.domain[0]].broadcast(
+                        new_child, symbol.domain
+                    )
+                except TypeError:
+                    import ipdb
+
+                    ipdb.set_trace()
             return symbol
 
         elif isinstance(symbol, pybamm.SurfaceValue):

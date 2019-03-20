@@ -8,7 +8,7 @@ import pybamm
 import numpy as np
 
 
-class StefanMaxwell(pybamm.BaseModel):
+class MacInnesStefanMaxwell(pybamm.BaseModel):
     """MacInnes equation for the current in the electrolyte, derived from the
     Stefan-Maxwell equations.
 
@@ -41,9 +41,9 @@ class StefanMaxwell(pybamm.BaseModel):
         # Equations (algebraic only)
         self.algebraic = {phi_e: pybamm.grad(i_e) - j}
         self.boundary_conditions = {i_e: {"left": 0, "right": 0}}
-        # no differential equations (and hence no initial conditions)
+        self.initial_conditions = {phi_e: 0}
+        # no differential equations
         self.rhs = {}
-        self.initial_conditions = {}
         # Variables
         self.variables = {"Electrolyte potential": phi_e, "Electrolyte current": i_e}
 

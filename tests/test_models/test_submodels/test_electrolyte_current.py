@@ -11,14 +11,10 @@ import unittest
 class TestFirstOrderPotential(unittest.TestCase):
     def test_basic_processing(self):
         loqs_model = pybamm.lead_acid.LOQS()
-        c_e_n = pybamm.Variable(
-            "Negative electrode concentration", domain=["negative electrode"]
+        c_e = pybamm.Broadcast(
+            pybamm.Scalar(1),
+            domain=["negative electrode", "separator", "positive electrode"],
         )
-        c_e_s = pybamm.Variable("Separator concentration", domain=["separator"])
-        c_e_p = pybamm.Variable(
-            "Positive electrode concentration", domain=["positive electrode"]
-        )
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
         param = pybamm.standard_parameters
         param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)

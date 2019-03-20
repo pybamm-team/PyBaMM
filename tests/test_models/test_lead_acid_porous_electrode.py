@@ -10,15 +10,15 @@ import unittest
 import numpy as np
 
 
-class TestLeadAcidComposite(unittest.TestCase):
+class TestLeadAcidPorousElectrode(unittest.TestCase):
     def test_basic_processing(self):
-        model = pybamm.lead_acid.Composite()
+        model = pybamm.lead_acid.PorousElectrode()
 
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_solution(self):
-        model = pybamm.lead_acid.Composite()
+        model = pybamm.lead_acid.PorousElectrode()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
         T, Y = modeltest.solver.t, modeltest.solver.y

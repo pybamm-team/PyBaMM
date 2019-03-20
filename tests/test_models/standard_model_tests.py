@@ -31,6 +31,20 @@ class StandardModelTest(object):
         self.param.process_model(self.model)
         # Model should still be well-posed after processing
         self.model.check_well_posedness()
+        # No Parameter or FunctionParameter nodes in the model
+        for eqn in {**self.model.rhs, **self.model.algebraic}.values():
+            if any(
+                [
+                    isinstance(x, (pybamm.Parameter, pybamm.FunctionParameter))
+                    for x in eqn.pre_order()
+                ]
+            ):
+                import ipdb
+
+                ipdb.set_trace()
+                raise TypeError(
+                    "Not all Parameter and FunctionParameter objects processed"
+                )
 
     def test_processing_disc(self, disc=None):
         # Overwrite discretisation if given

@@ -75,7 +75,6 @@ class PorousElectrode(pybamm.LeadAcidBaseModel):
             "Positive electrode porosity", domain=["positive electrode"]
         )
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
-        eps = pybamm.Variable("Electrode porosity", domain=whole_cell)
         # Potential variables
         phi_e_n = pybamm.Variable(
             "Negative electrode electrolyte potential", domain=["negative electrode"]
@@ -87,41 +86,40 @@ class PorousElectrode(pybamm.LeadAcidBaseModel):
             "Positive electrode electrolyte potential", domain=["positive electrode"]
         )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
-        phi_n = pybamm.Variable(
+        phi_s_n = pybamm.Variable(
             "Negative electrode potential", domain=["negative electrode"]
         )
-        phi_s = pybamm.Broadcast(pybamm.Scalar(0), ["separator"])
-        phi_p = pybamm.Variable(
+        phi_s_s = pybamm.Broadcast(pybamm.Scalar(0), ["separator"])
+        phi_s_p = pybamm.Variable(
             "Positive electrode potential", domain=["positive electrode"]
         )
-        phi = pybamm.Concatenation(phi_n, phi_s, phi_p)
-
+        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+        Delta_phi = pybamm.Concatenation(
+            phi_s_n - phi_e_n, phi_s_s - phi_e_s, phi_s_p - phi_e_p
+        )
         #
         # Submodels
         #
         # Interfacial current density
-        j = pybamm.interface.butler_volmer(whole_cell)
+        j = pybamm.interface.butler_volmer(param, c_e, Delta_phi, domain=whole_cell)
         # Concentration model (reaction diffusion with butler volmer)
         conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, eps, j, param)
         # Porosity model
         porosity_model = pybamm.porosity.Standard(eps, j, param)
         # Electrolyte potential model (conservation of current and MacInnes)
-        electrolyte_potential_model = pybamm.electrolyte_current.MacInnes(
+        electrolyte_potential_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
             c_e, eps, phi_e, j, param
         )
         # Solid potential model (conservation of current and MacInnes)
-        solid_potential_model_neg = pybamm.electrolyte_current.Ohm(
-            phi_n, eps_n, j_n, param
-        )
-        solid_potential_model_pos = pybamm.electrolyte_current.Ohm(
-            phi_p, eps_p, j_p, param
-        )
+        solid_potential_model = pybamm.electrode.Ohm(phi_s, eps, j, param)
 
         # Update own model with submodels
         self.update(
             conc_model,
             porosity_model,
             electrolyte_potential_model,
-            solid_potential_model_neg,
-            solid_potential_model_pos,
+            solid_potential_model,
         )
+
+        # Set model solver to DAE
+        self.default_solver = pybamm.ScikitsDaeSolver()
