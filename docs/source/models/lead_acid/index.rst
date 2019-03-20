@@ -5,3 +5,4 @@ Lead-acid models
 
   loqs
   composite
+  porous_electrode
