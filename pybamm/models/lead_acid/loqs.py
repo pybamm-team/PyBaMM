@@ -52,6 +52,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
             eps_s: spla.eps_s_init,
             eps_p: spla.eps_p_init,
         }
+        self.initial_conditions_ydot = {c_e: 0, eps_n: 0, eps_s: 0, eps_p: 0}
         # ODE model -> no boundary conditions
         self.boundary_conditions = {}
 
