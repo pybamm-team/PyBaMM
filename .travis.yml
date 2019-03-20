@@ -12,6 +12,7 @@ addons:
     - gcc
     - libopenblas-dev
     - liblapack-dev
+    - graphviz
 
 matrix:
     include:

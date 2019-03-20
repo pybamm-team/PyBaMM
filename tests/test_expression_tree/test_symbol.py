@@ -7,6 +7,7 @@ import pybamm
 
 import unittest
 import numpy as np
+import os
 
 
 class TestSymbol(unittest.TestCase):
@@ -14,6 +15,79 @@ class TestSymbol(unittest.TestCase):
         sym = pybamm.Symbol("a symbol")
         self.assertEqual(sym.name, "a symbol")
         self.assertEqual(str(sym), "a symbol")
+
+    def test_symbol_simplify(self):
+        a = pybamm.Scalar(0)
+        b = pybamm.Scalar(1)
+        # addition
+        self.assertIsInstance((a + b).simplify(), pybamm.Scalar)
+        self.assertEqual((a + b).simplify().evaluate(), 1)
+        self.assertIsInstance((b + b).simplify(), pybamm.Scalar)
+        self.assertEqual((b + b).simplify().evaluate(), 2)
+        self.assertIsInstance((b + a).simplify(), pybamm.Scalar)
+        self.assertEqual((b + a).simplify().evaluate(), 1)
+
+        # subtraction
+        self.assertIsInstance((a - b).simplify(), pybamm.Scalar)
+        self.assertEqual((a - b).simplify().evaluate(), -1)
+        self.assertIsInstance((b - b).simplify(), pybamm.Scalar)
+        self.assertEqual((b - b).simplify().evaluate(), 0)
+        self.assertIsInstance((b - a).simplify(), pybamm.Scalar)
+        self.assertEqual((b - a).simplify().evaluate(), 1)
+
+        # multiplication
+        self.assertIsInstance((a * b).simplify(), pybamm.Scalar)
+        self.assertEqual((a * b).simplify().evaluate(), 0)
+        self.assertIsInstance((b * a).simplify(), pybamm.Scalar)
+        self.assertEqual((b * a).simplify().evaluate(), 0)
+        self.assertIsInstance((b * b).simplify(), pybamm.Scalar)
+        self.assertEqual((b * b).simplify().evaluate(), 1)
+        self.assertIsInstance((a * a).simplify(), pybamm.Scalar)
+        self.assertEqual((a * a).simplify().evaluate(), 0)
+
+        # matrix multiplication
+        A = pybamm.Matrix(np.array([[1, 0], [0, 1]]))
+        self.assertIsInstance((a @ A).simplify(), pybamm.Scalar)
+        self.assertEqual((a @ A).simplify().evaluate(), 0)
+        self.assertIsInstance((A @ a).simplify(), pybamm.Scalar)
+        self.assertEqual((A @ a).simplify().evaluate(), 0)
+
+        # test when other node is a parameter
+        c = pybamm.Parameter('c')
+        self.assertIsInstance((a + c).simplify(), pybamm.Parameter)
+        self.assertIsInstance((c + a).simplify(), pybamm.Parameter)
+        self.assertIsInstance((c + b).simplify(), pybamm.Addition)
+        self.assertIsInstance((b + c).simplify(), pybamm.Addition)
+        self.assertIsInstance((a * c).simplify(), pybamm.Scalar)
+        self.assertEqual((a * c).simplify().evaluate(), 0)
+        self.assertIsInstance((c * a).simplify(), pybamm.Scalar)
+        self.assertEqual((c * a).simplify().evaluate(), 0)
+        self.assertIsInstance((A @ c).simplify(), pybamm.MatrixMultiplication)
+
+        self.assertIsInstance((a + b + a).simplify(), pybamm.Scalar)
+        self.assertEqual((a + b + a).simplify().evaluate(), 1)
+        self.assertIsInstance((b + a + a).simplify(), pybamm.Scalar)
+        self.assertEqual((b + a + a).simplify().evaluate(), 1)
+        self.assertIsInstance((a * b * b).simplify(), pybamm.Scalar)
+        self.assertEqual((a * b * b).simplify().evaluate(), 0)
+        self.assertIsInstance((b * a * b).simplify(), pybamm.Scalar)
+        self.assertEqual((b * a * b).simplify().evaluate(), 0)
+
+        # power simplification
+        self.assertIsInstance((c ** a).simplify(), pybamm.Scalar)
+        self.assertEqual((c ** a).simplify().evaluate(), 1)
+        d = pybamm.Scalar(2)
+        self.assertIsInstance((c ** d).simplify(), pybamm.Power)
+
+        # division
+        self.assertIsInstance((a / b).simplify(), pybamm.Scalar)
+        self.assertEqual((a / b).simplify().evaluate(), 0)
+        self.assertIsInstance((b / a).simplify(), pybamm.Scalar)
+        self.assertEqual((b / a).simplify().evaluate(), np.inf)
+        self.assertIsInstance((a / a).simplify(), pybamm.Scalar)
+        self.assertTrue(np.isnan((a / a).simplify().evaluate()))
+        self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
+        self.assertEqual((b / b).simplify().evaluate(), 1)
 
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])
@@ -239,7 +313,10 @@ class TestSymbol(unittest.TestCase):
         model = pybamm.electrolyte_diffusion.StefanMaxwell(c, eps, j, param)
         c_e = list(model.rhs.keys())[0]
         rhs = model.rhs[c_e]
-        rhs.visualise("StefanMaxwell_test", test=True)
+        rhs.visualise("StefanMaxwell_test.png")
+        self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
+        with self.assertRaises(ValueError):
+            rhs.visualise("StefanMaxwell_test")
 
     def test_has_spatial_derivatives(self):
         var = pybamm.Variable("var")

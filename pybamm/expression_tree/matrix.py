@@ -23,5 +23,5 @@ class Matrix(pybamm.Array):
 
     def __init__(self, entries, name=None, domain=[]):
         if name is None:
-            name = "Matrix of shape {!s}".format(entries.shape)
+            name = "Matrix {!s}".format(entries.shape)
         super().__init__(entries, name=name, domain=domain)

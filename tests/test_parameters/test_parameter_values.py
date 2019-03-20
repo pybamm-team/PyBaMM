@@ -145,13 +145,18 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_func, pybamm.Function)
         self.assertEqual(processed_func.evaluate(), 369)
 
+        # process differentiated function parameter
+        diff_func = func.diff(a)
+        processed_diff_func = parameter_values.process_symbol(diff_func)
+        self.assertEqual(processed_diff_func.evaluate(), 123)
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
         par1 = pybamm.Parameter("par1")
         par2 = pybamm.Parameter("par2")
-        scal1 = pybamm.Scalar("scal1")
-        scal2 = pybamm.Scalar("scal2")
+        scal1 = pybamm.Scalar(3)
+        scal2 = pybamm.Scalar(4)
         expression = (scal1 * (par1 + var2)) / ((var1 - par2) + scal2)
 
         param = pybamm.ParameterValues(base_parameters={"par1": 1, "par2": 2})
