@@ -149,10 +149,10 @@ class TestDiscretise(unittest.TestCase):
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
-        scal1 = pybamm.Scalar("scal1")
-        scal2 = pybamm.Scalar("scal2")
-        scal3 = pybamm.Scalar("scal3")
-        scal4 = pybamm.Scalar("scal4")
+        scal1 = pybamm.Scalar(1)
+        scal2 = pybamm.Scalar(2)
+        scal3 = pybamm.Scalar(3)
+        scal4 = pybamm.Scalar(4)
         expression = (scal1 * (scal3 + var2)) / ((var1 - scal4) + scal2)
 
         # create discretisation
