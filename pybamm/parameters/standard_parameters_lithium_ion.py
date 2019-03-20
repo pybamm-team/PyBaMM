@@ -82,9 +82,6 @@ R_n = pybamm.Parameter("Negative particle radius")
 R_p = pybamm.Parameter("Positive particle radius")
 
 # Electrolyte properties
-# QUESTION: should this be (1-2*t_plus) or 2*(1-t_plus)? See
-# Bizeray et al (2016) "Resolving a discrepancy ..."
-chi = 1 - 2 * sp.t_plus
 
 # Electrode properties
 c_n_max = pybamm.Parameter("Maximum concentration in negative electrode")
@@ -119,6 +116,11 @@ def D_p(c_p):
     "Dimensionless positive particle diffusivity"
     c_p_dimensional = c_p * c_p_max
     return D_p_dimensional(c_p_dimensional) / D_p_dimensional(c_p_max)
+
+
+def chi(c_e):
+    "Dimensionless factor in MacInnes equation"
+    return 1 - 2 * sp.t_plus
 
 
 def U_n_dimensional(c):

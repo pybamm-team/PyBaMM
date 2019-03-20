@@ -73,7 +73,7 @@ class BaseModel(object):
                     input_path, "electrolyte_diffusivity.py"
                 ),
                 "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conducivity.py"
+                    input_path, "electrolyte_conductivity.py"
                 ),
             },
         )

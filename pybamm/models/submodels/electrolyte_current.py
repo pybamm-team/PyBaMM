@@ -8,7 +8,7 @@ import pybamm
 import numpy as np
 
 
-class MacInnesStefanMaxwell(pybamm.BaseModel):
+class MacInnesStefanMaxwell(pybamm.LeadAcidBaseModel):
     """MacInnes equation for the current in the electrolyte, derived from the
     Stefan-Maxwell equations.
 
@@ -47,6 +47,9 @@ class MacInnesStefanMaxwell(pybamm.BaseModel):
         self.rhs = {}
         # Variables
         self.variables = {"Electrolyte potential": phi_e, "Electrolyte current": i_e}
+
+        # Set default solver to DAE
+        self.default_solver = pybamm.ScikitsDaeSolver()
 
 
 class StefanMaxwellFirstOrderPotential(pybamm.BaseModel):
