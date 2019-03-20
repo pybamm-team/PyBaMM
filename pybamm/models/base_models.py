@@ -25,7 +25,9 @@ class BaseModel(object):
         `rhs` or `algebraic`.
     initial_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions for the state variables y
+        the initial conditions for the state variables y. The initial conditions for
+        algebraic variables are provided as initial guesses to a root finding algorithm
+        that calculates consistent initial conditions.
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions
