@@ -5,6 +5,7 @@ Expression Tree
 
   symbol
   parameter
+  function_parameter
   variable
   independent_variable
   scalar

@@ -9,7 +9,7 @@ import pybamm
 class FunctionParameter(pybamm.UnaryOperator):
     """A node in the expression tree representing a function parameter
 
-    This node will be replaced by a :class:`.Function` node
+    This node will be replaced by a :class:`pybamm.Function` node
 
     Parameters
     ----------
@@ -18,8 +18,10 @@ class FunctionParameter(pybamm.UnaryOperator):
         name of the node
     child : :class:`Symbol`
         child node
-    domain : iterable of str, optional
-        list of domains the parameter is valid over, defaults to empty list
+    diff_variable : :class:`pybamm.Symbol`, optional
+        if diff_variable is specified, the FunctionParameter node will be replaced by a
+        :class:`pybamm.Function` and then differentiated with respect to diff_variable.
+        Default is None.
 
     """
 
