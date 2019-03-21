@@ -147,37 +147,46 @@ class FiniteVolume(pybamm.SpatialMethod):
             assert isinstance(key, int), TypeError(
                 "boundary condition keys should be hashes, not {}".format(type(key))
             )
-        # Add Neumann boundary conditions if defined
-        if symbol.id in boundary_conditions:
-            # for the particles there will be a "negative particle" "left" and "right"
-            # and also a "positive particle" left and right.
-
-            # TODO: put the gradient boundary conditions in the correct place
-            lbc = boundary_conditions[symbol.id]["left"]
-            rbc = boundary_conditions[symbol.id]["right"]
-            discretised_symbol = pybamm.NumpyConcatenation(lbc, discretised_symbol, rbc)
-
-            # Could we implement the boundary conditions as a separate + vector?
-            # - only need the correct matrix locations (i.e. npts)
-
-            # from symbol.domain do self.mesh[domain]
-            # then have primary and secondary meshes and therefore all
-            # points information
-
-            # create a vector witht the boundary conditoins of this length
-
-            # remove the correct entries from the div_matrix
-
-            # return div_mat @ discrete_sym + boundary_conditoins
 
         domain = symbol.domain
+        submesh_list = self.mesh.combine_submeshes(*domain)
+        # create a bc vector of length equal to the number variables
+        # (only has non zero entries for neumann bcs)
+        total_pts = 1
+        for i in range(len(submesh_list)):
+            total_pts *= submesh_list[i].npts
+        bcs_vec = [0] * total_pts
+
+        # Add Neumann boundary conditions if defined
+        if symbol.id in boundary_conditions:
+            # TODO:these are symbols so need to check them
+            lbc = boundary_conditions[symbol.id]["left"]
+            rbc = boundary_conditions[symbol.id]["right"]
+
+            left_idx = 0
+            right_idx = -1
+            for i in range(len(submesh_list)):
+                npts = submesh_list[i].npts
+                bcs_vec[left_idx] = -lbc / submesh_list[i].d_edges[0]
+                left_idx += npts
+                right_idx += npts
+                bcs_vec[right_idx] = rbc / submesh_list[i].d_edges[-1]
+
+            # now we must create a matrix of size (npts * (npts -1) )
+            # this is a different size to the one created when we have
+            # flux boundary conditions so need a flag
+            divergence_matrix = self.divergence_matrix(domain, bc_type="neumann")
+
+            # only need interior edges for spherical neumann
+            edges = submesh_list[0].edges[1:-1]
+
+        else:
+            divergence_matrix = self.divergence_matrix(domain)
+            # need all edges for spherical dirichlet
+            edges = submesh_list[0].edges
+
         # check for particle domain
-        divergence_matrix = self.divergence_matrix(domain)
-
         if ("negative particle" or "positive particle") in domain:
-            submesh_list = self.mesh.combine_submeshes(*domain)
-            # TODO: sort what happens with r etc
-
             prim_dim = submesh_list[0].npts
             second_dim = len(submesh_list)
 
@@ -186,7 +195,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             # create np.array of repeated submesh[0].nodes
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
-            r_edges_numpy = np.kron(np.ones(second_dim), submesh_list[0].edges)
+            r_edges_numpy = np.kron(np.ones(second_dim), edges)
 
             r = pybamm.Vector(r_numpy)
             r_edges = pybamm.Vector(r_edges_numpy)
@@ -194,12 +203,15 @@ class FiniteVolume(pybamm.SpatialMethod):
             out = (1 / (r ** 2)) * (
                 divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
             )
+
+            # TODO: put in the radial boundary conditions (does this change anything)
         else:
-            divergence_matrix = self.divergence_matrix(domain)
-            out = divergence_matrix @ discretised_symbol
+            bcs_symbol = pybamm.Vector(bcs_vec)
+            out = divergence_matrix @ discretised_symbol + bcs_symbol
+
         return out
 
-    def divergence_matrix(self, domain):
+    def divergence_matrix(self, domain, bc_type="dirichlet"):
         """
         Divergence matrix for finite volumes in the appropriate domain.
         Equivalent to div(N) = (N[1:] - N[:-1])/dx
@@ -227,9 +239,19 @@ class FiniteVolume(pybamm.SpatialMethod):
             [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
         )
         diags = np.array([0, 1])
-        sub_matrix = spdiags(data, diags, n - 1, n)
 
-        # second dim length
+        if bc_type == "dirichlet":
+            sub_matrix = spdiags(data, diags, n - 1, n)
+        elif bc_type == "neumann":
+            # we don't have to act on bc fluxes which are now in
+            # the bc vector
+            sub_matrix = spdiags(data, diags, n - 1, n - 2)
+        else:
+            raise NotImplementedError(
+                "Can only process Neumann or Dirichlet boundary conditions"
+            )
+
+        # repeat matrix for each node in secondary dimensions
         second_dim_len = len(submesh_list)
         # generate full matrix from the submatrix
         matrix = kron(eye(second_dim_len), sub_matrix)
