@@ -157,10 +157,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             rbc = boundary_conditions[symbol.id]["right"]
             discretised_symbol = pybamm.NumpyConcatenation(lbc, discretised_symbol, rbc)
 
-            import ipdb
-
-            ipdb.set_trace()
-
             # Could we implement the boundary conditions as a separate + vector?
             # - only need the correct matrix locations (i.e. npts)
 
@@ -177,6 +173,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         domain = symbol.domain
         # check for particle domain
         divergence_matrix = self.divergence_matrix(domain)
+
         if ("negative particle" or "positive particle") in domain:
             submesh_list = self.mesh.combine_submeshes(*domain)
             # TODO: sort what happens with r etc
