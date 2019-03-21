@@ -233,11 +233,11 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # can just use 1st entry of list to obtain the point etc
         submesh = submesh_list[0]
+        e = 1 / submesh.d_edges
 
         # Create matrix using submesh
         n = submesh.npts + 1
         if bc_type == "dirichlet":
-            e = 1 / submesh.d_edges
             data = np.vstack(
                 [
                     np.concatenate([-e, np.array([0])]),
@@ -249,7 +249,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif bc_type == "neumann":
             # we don't have to act on bc fluxes which are now in
             # the bc vector
-            data = np.vstack([-e, e])
+            data = np.vstack([-e[1:], e[:-1]])
             diags = np.array([-1, 0])
             sub_matrix = spdiags(data, diags, n - 1, n - 2)
         else:
@@ -363,7 +363,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         y_left = y[0]
         y_right = y[-1]
 
-        new_discretised_symbol = None
+        new_discretised_symbol = pybamm.Vector(np.array([]))  # starts empty
 
         for i in range(len(submesh_list)):
             y_slice_start = y_left[i]
@@ -375,19 +375,16 @@ class FiniteVolume(pybamm.SpatialMethod):
             # middle symbol
             sub_disc_symbol = pybamm.StateVector(slice(y_slice_start, y_slice_stop + 1))
             # right ghost cell
-            last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
+            last_node = pybamm.StateVector(slice(y_slice_stop, y_slice_stop + 1))
             right_ghost_cell = 2 * rbc - last_node
 
             concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
                 left_ghost_cell, sub_disc_symbol, right_ghost_cell
             )
 
-            if new_discretised_symbol is None:
-                new_discretised_symbol = concatenated_sub_disc_symbol
-            else:
-                new_discretised_symbol = pybamm.NumpyConcatenation(
-                    new_discretised_symbol, concatenated_sub_disc_symbol
-                )
+            new_discretised_symbol = pybamm.NumpyConcatenation(
+                new_discretised_symbol, concatenated_sub_disc_symbol
+            )
 
         return new_discretised_symbol
 

@@ -253,7 +253,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # div: test on linear r^2
         # div (grad r^2) = 6
-        const = 6 * np.ones(combined_submesh.npts)
+        const = 6 * np.ones(combined_submesh[0].npts)
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -263,7 +263,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
-            div_eqn_disc.evaluate(None, const), np.zeros_like(combined_submesh.nodes)
+            div_eqn_disc.evaluate(None, const), np.zeros_like(combined_submesh[0].nodes)
         )
 
     def test_grad_div_shapes_Neumann_bcs(self):
@@ -636,9 +636,6 @@ class TestFiniteVolume(unittest.TestCase):
 
         # Get rates: expect h**1.5 convergence
         rates = np.log2(errs[:-1] / errs[1:])
-        import ipdb
-
-        ipdb.set_trace()
         np.testing.assert_array_less(1.49 * np.ones_like(rates), rates)
 
     def test_div_convergence_internal(self):
