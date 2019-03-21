@@ -152,10 +152,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         submesh_list = self.mesh.combine_submeshes(*domain)
         # create a bc vector of length equal to the number variables
         # (only has non zero entries for neumann bcs)
-        total_pts = 1
-        for i in range(len(submesh_list)):
-            total_pts *= submesh_list[i].npts
-        bcs_vec = [0] * total_pts
+
+        prim_dim = submesh_list[0].npts
+        second_dim = len(submesh_list)
+        total_pts = prim_dim * second_dim
 
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
@@ -163,14 +163,16 @@ class FiniteVolume(pybamm.SpatialMethod):
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
 
-            left_idx = 0
-            right_idx = -1
+            # doing via loop so that it is easier to implement x varing bcs
+            bcs_symbol = pybamm.Vector(np.array([]))  # empty vector
             for i in range(len(submesh_list)):
-                npts = submesh_list[i].npts
-                bcs_vec[left_idx] = -lbc / submesh_list[i].d_edges[0]
-                left_idx += npts
-                right_idx += npts
-                bcs_vec[right_idx] = rbc / submesh_list[i].d_edges[-1]
+                # only the interior equations:
+                interior = pybamm.Vector(np.zeros(prim_dim - 2))
+                left = -lbc / pybamm.Vector(np.array([submesh_list[i].d_edges[0]]))
+                right = rbc / pybamm.Vector(np.array([submesh_list[i].d_edges[-1]]))
+                bcs_symbol = pybamm.NumpyConcatenation(
+                    bcs_symbol, left, interior, right
+                )
 
             # now we must create a matrix of size (npts * (npts -1) )
             # this is a different size to the one created when we have
@@ -182,13 +184,13 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         else:
             divergence_matrix = self.divergence_matrix(domain)
+            bcs_vec = np.zeros(total_pts)
+            bcs_symbol = pybamm.Vector(bcs_vec)
             # need all edges for spherical dirichlet
             edges = submesh_list[0].edges
 
         # check for particle domain
         if ("negative particle" or "positive particle") in domain:
-            prim_dim = submesh_list[0].npts
-            second_dim = len(submesh_list)
 
             if prim_dim > 1:
                 NotImplementedError("Only supports 1D primary dimensions")
@@ -200,13 +202,13 @@ class FiniteVolume(pybamm.SpatialMethod):
             r = pybamm.Vector(r_numpy)
             r_edges = pybamm.Vector(r_edges_numpy)
 
+            # for clarity, we are implicitly multiplying the the lbc by r^2=0
+            # and the rbc by r^2=1. But lbc is 0 so we don't need to do
+            # any r_edges^2 operations on bcs_symbol
             out = (1 / (r ** 2)) * (
-                divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
+                divergence_matrix @ ((r_edges ** 2) * discretised_symbol) + bcs_symbol
             )
-
-            # TODO: put in the radial boundary conditions (does this change anything)
         else:
-            bcs_symbol = pybamm.Vector(bcs_vec)
             out = divergence_matrix @ discretised_symbol + bcs_symbol
 
         return out
@@ -234,17 +236,21 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Create matrix using submesh
         n = submesh.npts + 1
-        e = 1 / submesh.d_edges
-        data = np.vstack(
-            [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
-        )
-        diags = np.array([0, 1])
-
         if bc_type == "dirichlet":
+            e = 1 / submesh.d_edges
+            data = np.vstack(
+                [
+                    np.concatenate([-e, np.array([0])]),
+                    np.concatenate([np.array([0]), e]),
+                ]
+            )
+            diags = np.array([0, 1])
             sub_matrix = spdiags(data, diags, n - 1, n)
         elif bc_type == "neumann":
             # we don't have to act on bc fluxes which are now in
             # the bc vector
+            data = np.vstack([-e, e])
+            diags = np.array([-1, 0])
             sub_matrix = spdiags(data, diags, n - 1, n - 2)
         else:
             raise NotImplementedError(

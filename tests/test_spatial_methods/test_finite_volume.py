@@ -636,6 +636,9 @@ class TestFiniteVolume(unittest.TestCase):
 
         # Get rates: expect h**1.5 convergence
         rates = np.log2(errs[:-1] / errs[1:])
+        import ipdb
+
+        ipdb.set_trace()
         np.testing.assert_array_less(1.49 * np.ones_like(rates), rates)
 
     def test_div_convergence_internal(self):
