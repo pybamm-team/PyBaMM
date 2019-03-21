@@ -11,13 +11,14 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
 
     def __init__(self, mesh):
         for dom in mesh.keys():
-            mesh[dom].npts_for_broadcast = mesh[dom].npts
+            for i in range(len(mesh[dom])):
+                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
         super().__init__(mesh)
 
     def spatial_variable(self, symbol):
         # for finite volume we use the cell centres
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        return pybamm.Vector(symbol_mesh.nodes)
+        return pybamm.Vector(symbol_mesh[0].nodes)
 
     def broadcast(self, symbol, domain):
         # for finite volume we send variables to cells and so use number_of_cells
@@ -35,14 +36,14 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
-            n += self.mesh[domain].npts
+            n += self.mesh[domain][0].npts
         gradient_matrix = pybamm.Matrix(np.eye(n))
         return gradient_matrix @ discretised_symbol
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
-            n += self.mesh[domain].npts
+            n += self.mesh[domain][0].npts
         divergence_matrix = pybamm.Matrix(np.eye(n))
         return divergence_matrix @ discretised_symbol
 
