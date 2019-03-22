@@ -87,8 +87,10 @@ class TestMesh(unittest.TestCase):
         # create mesh
         mesh = mesh_type(geometry, submesh_types, submesh_pts)
         for domain in mesh:
-            self.assertEqual(mesh[domain].npts, submesh_pts[domain]["x"])
-            self.assertEqual(len(mesh[domain].edges) - 1, submesh_pts[domain]["x"])
+            # ignore ghost cells for this test
+            if "ghost" not in domain:
+                self.assertEqual(mesh[domain].npts, submesh_pts[domain]["x"])
+                self.assertEqual(len(mesh[domain].edges) - 1, submesh_pts[domain]["x"])
 
     def test_combine_submeshes(self):
         param = pybamm.ParameterValues(
