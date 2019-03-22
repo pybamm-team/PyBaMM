@@ -104,14 +104,14 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def integral(self, symbol, discretised_symbol):
+    def integral(self, domain, discretised_symbol):
         """
         Implements the integral for a spatial method.
 
         Parameters
         ----------
-        symbol: :class:`pybamm.Symbol`
-            The symbol that we will take the gradient of.
+        domain: iterable of strings
+            The domain in which to integrate
         discretised_symbol: class: pybamm.Array
             The discretised symbol of the correct size
 

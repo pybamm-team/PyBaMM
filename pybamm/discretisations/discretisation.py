@@ -126,21 +126,12 @@ class Discretisation(object):
         """
         # Discretise initial conditions
         model.initial_conditions = self.process_dict(model.initial_conditions)
-        model.initial_conditions_ydot = self.process_dict(model.initial_conditions_ydot)
 
         # Concatenate initial conditions into a single vector
         # check that all initial conditions are set
         model.concatenated_initial_conditions = self._concatenate_init(
             model.initial_conditions
         ).evaluate(0, None)
-
-        # evaluate initial conditions for ydot if they exist
-        if len(model.initial_conditions_ydot) > 0:
-            model.concatenated_initial_conditions_ydot = self._concatenate_init(
-                model.initial_conditions_ydot
-            ).evaluate(0, None)
-        else:
-            model.concatenated_initial_conditions_ydot = np.array([])
 
     def process_rhs_and_algebraic(self, model):
         """Discretise model equations - differential ('rhs') and algebraic.
@@ -213,22 +204,22 @@ class Discretisation(object):
         if isinstance(symbol, pybamm.Gradient):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[symbol.domain[0]].gradient(
+            return self._spatial_methods[child.domain[0]].gradient(
                 child, discretised_child, self._bcs
             )
 
         elif isinstance(symbol, pybamm.Divergence):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[symbol.domain[0]].divergence(
+            return self._spatial_methods[child.domain[0]].divergence(
                 child, discretised_child, self._bcs
             )
 
         elif isinstance(symbol, pybamm.Integral):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[symbol.domain[0]].integral(
-                child, discretised_child
+            return self._spatial_methods[child.domain[0]].integral(
+                child.domain, child, discretised_child
             )
 
         elif isinstance(symbol, pybamm.Broadcast):

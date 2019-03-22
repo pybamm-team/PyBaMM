@@ -263,21 +263,28 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = kron(eye(second_dim_len), sub_matrix)
         return pybamm.Matrix(matrix)
 
-    def integral(self, symbol, discretised_symbol):
+    def integral(self, domain, symbol, discretised_symbol):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.BaseDiscretisation.integral`
         """
         # Calculate integration vector
-        integration_vector = self.definite_integral_vector(symbol.domain)
+        integration_vector = self.definite_integral_vector(domain)
         # Check for particle domain
+        # <<<<<<< HEAD
         if ("negative particle" or "positive particle") in symbol.domain:
             submesh_list = self.mesh.combine_submeshes(*symbol.domain)
             second_dim = len(submesh_list)
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
             r = pybamm.Vector(r_numpy)
+            # =======
+            #         if ("negative particle" or "positive particle") in domain:
+            #             submesh = self.mesh.combine_submeshes(*domain)
+            #             r = pybamm.Vector(submesh.nodes)
+            # >>>>>>> master
             out = 2 * np.pi * integration_vector @ (discretised_symbol * r)
         else:
             out = integration_vector @ discretised_symbol
+        out.domain = []
         return out
 
     def definite_integral_vector(self, domain):

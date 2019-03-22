@@ -91,11 +91,11 @@ class ParameterValues(dict):
         for variable, equation in model.rhs.items():
             model.rhs[variable] = self.process_symbol(equation)
 
+        for variable, equation in model.algebraic.items():
+            model.algebraic[variable] = self.process_symbol(equation)
+
         for variable, equation in model.initial_conditions.items():
             model.initial_conditions[variable] = self.process_symbol(equation)
-
-        for variable, equation in model.initial_conditions_ydot.items():
-            model.initial_conditions_ydot[variable] = self.process_symbol(equation)
 
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
         new_boundary_conditions = {}
@@ -153,7 +153,13 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_child = self.process_symbol(symbol.children[0])
             function_name = self.get_parameter_value(symbol)
-            return pybamm.Function(pybamm.load_function(function_name), new_child)
+            function = pybamm.Function(pybamm.load_function(function_name), new_child)
+            if symbol.diff_variable is None:
+                return function
+            else:
+                # return differentiated function
+                new_diff_variable = self.process_symbol(symbol.children[0])
+                return function.diff(new_diff_variable)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
@@ -168,6 +174,10 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.Function):
             new_child = self.process_symbol(symbol.children[0])
             return pybamm.Function(symbol.func, new_child)
+
+        elif isinstance(symbol, pybamm.Integral):
+            new_child = self.process_symbol(symbol.children[0])
+            return pybamm.Integral(new_child, symbol.integration_variable)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])

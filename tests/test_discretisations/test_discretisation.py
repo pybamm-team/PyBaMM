@@ -149,10 +149,10 @@ class TestDiscretise(unittest.TestCase):
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
-        scal1 = pybamm.Scalar("scal1")
-        scal2 = pybamm.Scalar("scal2")
-        scal3 = pybamm.Scalar("scal3")
-        scal4 = pybamm.Scalar("scal4")
+        scal1 = pybamm.Scalar(1)
+        scal2 = pybamm.Scalar(2)
+        scal3 = pybamm.Scalar(3)
+        scal4 = pybamm.Scalar(4)
         expression = (scal1 * (scal3 + var2)) / ((var1 - scal4) + scal2)
 
         # create discretisation
@@ -405,7 +405,6 @@ class TestDiscretise(unittest.TestCase):
         model.rhs = {c: pybamm.div(N)}
         model.algebraic = {d: d - 2 * c}
         model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
-        model.initial_conditions_ydot = {d: pybamm.Scalar(2), c: pybamm.Scalar(1)}
 
         model.boundary_conditions = {
             N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
@@ -429,16 +428,6 @@ class TestDiscretise(unittest.TestCase):
                 ]
             ),
         )
-        ydot0 = model.concatenated_initial_conditions_ydot
-        np.testing.assert_array_equal(
-            ydot0,
-            np.concatenate(
-                [
-                    1 * np.ones_like(combined_submesh[0].nodes),
-                    2 * np.ones_like(combined_submesh[0].nodes),
-                ]
-            ),
-        )
 
         # grad and div are identity operators here
         np.testing.assert_array_equal(
@@ -449,19 +438,6 @@ class TestDiscretise(unittest.TestCase):
             model.concatenated_algebraic.evaluate(None, y0),
             np.zeros_like(combined_submesh[0].nodes),
         )
-
-        # test that not enough initial conditions for ydot raises an error
-        model = pybamm.BaseModel()
-        model.rhs = {c: pybamm.div(N)}
-        model.algebraic = {d: d - 2 * c}
-        model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
-        model.initial_conditions_ydot = {c: pybamm.Scalar(1)}
-
-        model.boundary_conditions = {}
-        model.variables = {"c": c, "N": N, "d": d}
-
-        with self.assertRaises(pybamm.ModelError):
-            disc.process_model(model)
 
     def test_process_model_concatenation(self):
         # concatenation of variables as the key

@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid models
+# Tests for the lead-acid LOQS model
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -27,15 +27,17 @@ class TestLeadAcidLOQS(unittest.TestCase):
         # make sure concentration and voltage are monotonically decreasing
         # for a discharge
         np.testing.assert_array_less(
-            model.variables["c"].evaluate(T, Y)[:, 1:],
-            model.variables["c"].evaluate(T, Y)[:, :-1],
+            model.variables["Electrolyte concentration"].evaluate(T, Y)[:, 1:],
+            model.variables["Electrolyte concentration"].evaluate(T, Y)[:, :-1],
         )
         np.testing.assert_array_less(
-            model.variables["V"].evaluate(T, Y)[1:],
-            model.variables["V"].evaluate(T, Y)[:-1],
+            model.variables["Voltage"].evaluate(T, Y)[1:],
+            model.variables["Voltage"].evaluate(T, Y)[:-1],
         )
         # Make sure the concentration is always positive (cut-off event working)
-        np.testing.assert_array_less(0, model.variables["c"].evaluate(T, Y))
+        np.testing.assert_array_less(
+            0, model.variables["Electrolyte concentration"].evaluate(T, Y)
+        )
 
 
 if __name__ == "__main__":

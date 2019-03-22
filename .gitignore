@@ -1,6 +1,7 @@
 *.txt
 *.pdf
 *.tmp
+*.png
 /local/
 
 # don't ignore important .txt files

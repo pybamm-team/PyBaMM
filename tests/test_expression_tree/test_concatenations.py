@@ -246,6 +246,12 @@ class TestConcatenations(unittest.TestCase):
             ),
         )
 
+    def test_domain_error(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        with self.assertRaisesRegex(pybamm.DomainError, "domain cannot be empty"):
+            pybamm.DomainConcatenation([a, b], None)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

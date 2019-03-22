@@ -67,7 +67,6 @@ from .expression_tree.concatenations import (
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
-from .expression_tree.parameter import Parameter
 from .expression_tree.unary_operators import (
     UnaryOperator,
     Negate,
@@ -82,8 +81,8 @@ from .expression_tree.unary_operators import (
     div,
     surf,
 )
+from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
-from .expression_tree.function_parameter import FunctionParameter
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import (
@@ -99,7 +98,7 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 # Model classes
 #
-from .models.base_model import BaseModel
+from .models.base_models import BaseModel, LeadAcidBaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
@@ -108,7 +107,12 @@ from .models import li_ion
 #
 # Submodel classes
 #
-from .models.submodels import electrolyte, interface
+from .models.submodels import (
+    electrolyte_current,
+    electrolyte_diffusion,
+    interface,
+    porosity,
+)
 
 #
 # Parameters class and methods

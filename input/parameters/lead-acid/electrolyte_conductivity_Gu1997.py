@@ -1,7 +1,7 @@
 #
 # Electrolyte conductivity
 #
-import numpy as np
+import autograd.numpy as np
 
 
 def electrolyte_conductivity_Gu1997(c_e):

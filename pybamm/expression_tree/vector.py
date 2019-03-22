@@ -53,7 +53,10 @@ class StateVector(pybamm.Symbol):
 
     def __init__(self, y_slice, name=None, domain=[]):
         if name is None:
-            name = "StateVector with slice '{!s}'".format(y_slice)
+            if y_slice.start is None:
+                name = "y[:{:d}]".format(y_slice.stop)
+            else:
+                name = "y[{:d}:{:d}]".format(y_slice.start, y_slice.stop)
         super().__init__(name=name, domain=domain)
         self._y_slice = y_slice
 
