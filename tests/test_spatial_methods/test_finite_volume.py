@@ -2,7 +2,7 @@
 # Test for the operator class
 #
 import pybamm
-from tests import get_mesh_for_testing
+from tests import get_mesh_for_testing, get_p2d_mesh_for_testing
 
 import numpy as np
 import unittest
@@ -152,6 +152,77 @@ class TestFiniteVolume(unittest.TestCase):
             3,
         )
 
+    def test_p2d_add_ghost_nodes(self):
+        # create discretisation
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # add ghost nodes
+        c_s_n = pybamm.Variable("c_s_n", domain=["negative particle"])
+        c_s_p = pybamm.Variable("c_s_p", domain=["positive particle"])
+
+        disc.set_variable_slices([c_s_n])
+        disc_c_s_n = pybamm.StateVector(disc._y_slices[c_s_n.id])
+
+        disc.set_variable_slices([c_s_p])
+        disc_c_s_p = pybamm.StateVector(disc._y_slices[c_s_p.id])
+        lbc = pybamm.Scalar(0)
+        rbc = pybamm.Scalar(3)
+        c_s_n_plus_ghost = pybamm.FiniteVolume(mesh).add_ghost_nodes(
+            c_s_n, disc_c_s_n, lbc, rbc
+        )
+        c_s_p_plus_ghost = pybamm.FiniteVolume(mesh).add_ghost_nodes(
+            c_s_p, disc_c_s_p, lbc, rbc
+        )
+
+        mesh_s_n = mesh["negative particle"]
+        mesh_s_p = mesh["positive particle"]
+
+        n_prim_pts = mesh_s_n[0].npts
+        n_sec_pts = len(mesh_s_n)
+
+        p_prim_pts = mesh_s_p[0].npts
+        p_sec_pts = len(mesh_s_p)
+
+        y_s_n_test = np.kron(np.ones(n_sec_pts), np.ones(n_prim_pts))
+        y_s_p_test = np.kron(np.ones(p_sec_pts), np.ones(p_prim_pts))
+
+        # evaluate with and without ghost points
+        c_s_n_eval = disc_c_s_n.evaluate(None, y_s_n_test)
+        c_s_n_ghost_eval = c_s_n_plus_ghost.evaluate(None, y_s_n_test)
+
+        c_s_p_eval = disc_c_s_p.evaluate(None, y_s_p_test)
+        c_s_p_ghost_eval = c_s_p_plus_ghost.evaluate(None, y_s_p_test)
+
+        # reshape to make easy to deal with
+        c_s_n_eval = np.reshape(c_s_n_eval, [n_sec_pts, n_prim_pts])
+        c_s_n_ghost_eval = np.reshape(c_s_n_ghost_eval, [n_sec_pts, n_prim_pts + 2])
+
+        c_s_p_eval = np.reshape(c_s_p_eval, [p_sec_pts, p_prim_pts])
+        c_s_p_ghost_eval = np.reshape(c_s_p_ghost_eval, [p_sec_pts, p_prim_pts + 2])
+
+        np.testing.assert_array_equal(c_s_n_ghost_eval[:, 1:-1], c_s_n_eval)
+        np.testing.assert_array_equal(c_s_p_ghost_eval[:, 1:-1], c_s_p_eval)
+
+        np.testing.assert_array_equal(
+            (c_s_n_ghost_eval[:, 0] + c_s_n_ghost_eval[:, 1]) / 2, 0
+        )
+        np.testing.assert_array_equal(
+            (c_s_p_ghost_eval[:, 0] + c_s_p_ghost_eval[:, 1]) / 2, 0
+        )
+
+        np.testing.assert_array_equal(
+            (c_s_n_ghost_eval[:, -2] + c_s_n_ghost_eval[:, -1]) / 2, 3
+        )
+        np.testing.assert_array_equal(
+            (c_s_p_ghost_eval[:, -2] + c_s_p_ghost_eval[:, -1]) / 2, 3
+        )
+
     def test_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions (applied by grad on var)
@@ -266,6 +337,60 @@ class TestFiniteVolume(unittest.TestCase):
             div_eqn_disc.evaluate(None, const), np.zeros_like(combined_submesh[0].nodes)
         )
 
+    def test_p2d_spherical_grad_div_shapes_Dirichlet_bcs(self):
+        """
+        Test grad and div with Dirichlet boundary conditions (applied by grad on var)
+        in the pseudo 2-dimensional case
+        """
+
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        n_mesh = mesh["negative particle"]
+
+        mesh.add_ghost_meshes()
+        disc.mesh.add_ghost_meshes()
+
+        var = pybamm.Variable("var", domain=["negative particle"])
+        grad_eqn = pybamm.grad(var)
+        boundary_conditions = {
+            var.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(1)}
+        }
+        disc._bcs = boundary_conditions
+
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+
+        prim_pts = n_mesh[0].npts
+        sec_pts = len(n_mesh)
+        constant_y = np.kron(np.ones(sec_pts), np.ones(prim_pts))
+
+        grad_eval = grad_eqn_disc.evaluate(None, constant_y)
+        grad_eval = np.reshape(grad_eval, [sec_pts, prim_pts + 1])
+
+        np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts + 1]))
+
+        # div: test on linear r^2
+        # div (grad r^2) = 6
+        const = 6 * np.ones(sec_pts * prim_pts)
+
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var.id: {"left": pybamm.Scalar(6), "right": pybamm.Scalar(6)}
+        }
+        disc._bcs = boundary_conditions
+
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        div_eval = div_eqn_disc.evaluate(None, const)
+        div_eval = np.reshape(div_eval, [sec_pts, prim_pts])
+        np.testing.assert_array_almost_equal(div_eval, np.zeros([sec_pts, prim_pts]))
+
     def test_grad_div_shapes_Neumann_bcs(self):
         """Test grad and div with Neumann boundary conditions (applied by div on N)"""
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -352,6 +477,51 @@ class TestFiniteVolume(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, const), np.zeros_like(combined_submesh[0].nodes)
         )
+
+    def test_p2d_spherical_grad_div_shapes_Neumann_bcs(self):
+        """
+        Test grad and div with Dirichlet boundary conditions (applied by grad on var)
+        in the pseudo 2-dimensional case
+        """
+
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        n_mesh = mesh["negative particle"]
+
+        mesh.add_ghost_meshes()
+        disc.mesh.add_ghost_meshes()
+
+        # test grad
+        var = pybamm.Variable("var", domain=["negative particle"])
+        grad_eqn = pybamm.grad(var)
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+
+        prim_pts = n_mesh[0].npts
+        sec_pts = len(n_mesh)
+        constant_y = np.kron(np.ones(sec_pts), np.ones(prim_pts))
+
+        grad_eval = grad_eqn_disc.evaluate(None, constant_y)
+        grad_eval = np.reshape(grad_eval, [sec_pts, prim_pts - 1])
+
+        np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts - 1]))
+
+        # div
+        # div (grad r^2) = 6, N_left = N_right = 0
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+        }
+        disc._bcs = boundary_conditions
+        div_eqn_disc = disc.process_symbol(div_eqn)
+
+        const = 6 * np.ones(sec_pts * prim_pts)
+        div_eval = div_eqn_disc.evaluate(None, const)
+        div_eval = np.reshape(div_eval, [sec_pts, prim_pts])
+        np.testing.assert_array_almost_equal(div_eval, np.zeros([sec_pts, prim_pts]))
 
     def test_grad_div_shapes_mixed_domain(self):
         """
@@ -756,6 +926,56 @@ class TestFiniteVolume(unittest.TestCase):
             disc.set_variable_slices(variables)
             eqn_disc = disc.process_symbol(eqn)
             approx_internal = eqn_disc.evaluate(None, y)[1:-1]
+
+            # error
+            error = np.linalg.norm(approx_internal - exact_internal) / np.linalg.norm(
+                exact_internal
+            )
+            return error
+
+        # Get errors
+        ns = 10 * (2 ** np.arange(2, 7))
+        errs = np.array([get_l2_error(int(n)) for n in ns])
+
+        # Get rates: expect h**1.5 convergence because of boundary conditions
+        rates = np.log2(errs[:-1] / errs[1:])
+        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
+
+    def test_p2d_spherical_operators(self):
+        # test div( grad( sin(r) )) == (2/r)*cos(r) - *sin(r)
+
+        domain = ["negative particle"]
+        c = pybamm.Variable("c", domain=domain)
+        N = pybamm.grad(c)
+        eqn = pybamm.div(N)
+        boundary_conditions = {
+            N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
+        }
+
+        def get_l2_error(m):
+            mesh = get_p2d_mesh_for_testing(3, m)
+            spatial_methods = {"negative particle": pybamm.FiniteVolume}
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc._bcs = boundary_conditions
+            mesh = disc.mesh["negative particle"]
+            r = mesh[0].nodes
+
+            prim_pts = mesh[0].npts
+            sec_pts = len(mesh)
+
+            # exact solution
+            y = np.kron(np.ones(sec_pts), np.sin(r))
+            exact = (2 / r) * np.cos(r) - np.sin(r)
+            exact_internal = np.kron(np.ones(sec_pts), exact[1:-1])
+
+            # discretise and evaluate
+            variables = [c]
+            disc.set_variable_slices(variables)
+            eqn_disc = disc.process_symbol(eqn)
+            approx_eval = eqn_disc.evaluate(None, y)
+            approx_eval = np.reshape(approx_eval, [sec_pts, prim_pts])
+            approx_internal = approx_eval[:, 1:-1]
+            approx_internal = np.reshape(approx_internal, [sec_pts * (prim_pts - 2)])
 
             # error
             error = np.linalg.norm(approx_internal - exact_internal) / np.linalg.norm(

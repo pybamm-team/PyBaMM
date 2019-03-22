@@ -358,10 +358,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         submesh_list = self.mesh.combine_submeshes(*symbol.domain)
         if isinstance(submesh_list[0].npts, list):
             NotImplementedError("Can only take in 1D primary directions")
-        size = [submesh_list[0].npts, len(submesh_list)]
+        # size = [submesh_list[0].npts, len(submesh_list)]
+        size = [len(submesh_list), submesh_list[0].npts]
         y = np.reshape(y, size)
-        y_left = y[0]
-        y_right = y[-1]
+        y_left = y[:, 0]
+        y_right = y[:, -1]
 
         new_discretised_symbol = pybamm.Vector(np.array([]))  # starts empty
 
