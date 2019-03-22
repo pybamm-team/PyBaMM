@@ -172,8 +172,6 @@ class TestMesh(unittest.TestCase):
         # create mesh
         mesh = mesh_type(geometry, submesh_types, submesh_pts)
 
-        mesh.add_ghost_meshes()
-
         np.testing.assert_array_equal(
             mesh["negative electrode_left ghost cell"].edges[1],
             mesh["negative electrode"].edges[0],

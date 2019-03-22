@@ -83,14 +83,20 @@ class FiniteVolume(pybamm.SpatialMethod):
         domain = symbol.domain
         # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
-            lbc = boundary_conditions[symbol.id]["left"]
-            rbc = boundary_conditions[symbol.id]["right"]
+            bcs = boundary_conditions[symbol.id]
+            # get boundary conditions and edit domain
+            if "left" in bcs.keys():
+                lbc = bcs["left"]
+                domain = [domain[0] + "_left ghost cell"] + domain
+            else:
+                lbc = None
+            if "right" in bcs.keys():
+                rbc = bcs["right"]
+                domain = domain + [domain[-1] + "_right ghost cell"]
+            else:
+                rbc = None
+            # add ghost nodes
             discretised_symbol = self.add_ghost_nodes(discretised_symbol, lbc, rbc)
-            domain = (
-                [domain[0] + "_left ghost cell"]
-                + domain
-                + [domain[-1] + "_right ghost cell"]
-            )
 
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
@@ -135,11 +141,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
-            # for the particles there will be a "negative particle" "left" and "right"
-            # and also a "positive particle" left and right.
-            lbc = boundary_conditions[symbol.id]["left"]
-            rbc = boundary_conditions[symbol.id]["right"]
-            discretised_symbol = pybamm.NumpyConcatenation(lbc, discretised_symbol, rbc)
+            bcs = boundary_conditions[symbol.id]
+            # get boundary conditions and edit domain
+            if "left" in bcs.keys():
+                lbc = bcs["left"]
+                discretised_symbol = pybamm.NumpyConcatenation(lbc, discretised_symbol)
+            if "right" in bcs.keys():
+                rbc = bcs["right"]
+                discretised_symbol = pybamm.NumpyConcatenation(discretised_symbol, rbc)
 
         domain = symbol.domain
         # check for particle domain
@@ -228,7 +237,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return pybamm.Vector(vector)
 
-    def add_ghost_nodes(self, discretised_symbol, lbc, rbc):
+    def add_ghost_nodes(self, discretised_symbol, lbc=None, rbc=None):
         """
         Add Dirichlet boundary conditions via ghost nodes.
 
@@ -250,13 +259,13 @@ class FiniteVolume(pybamm.SpatialMethod):
         discretised_symbol : :class:`pybamm.StateVector` (size n)
             The discretised variable (a state vector) to which to add ghost nodes
         lbc : :class:`pybamm.Scalar`
-            Dirichlet bouncary condition on the left-hand side
+            Dirichlet boundary condition on the left-hand side. Default is None.
         rbc : :class:`pybamm.Scalar`
-            Dirichlet bouncary condition on the right-hand side
+            Dirichlet boundary condition on the right-hand side. Default is None.
 
         Returns
         -------
-        :class:`pybamm.Concatenation` (size n+2)
+        :class:`pybamm.Concatenation` (size n+1 or n+2)
             Concatenation of the variable (a state vector) and ghost nodes
 
         """
@@ -265,18 +274,28 @@ class FiniteVolume(pybamm.SpatialMethod):
                 type(discretised_symbol)
             )
         )
-        # left ghost cell
         y_slice_start = discretised_symbol.y_slice.start
         first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
-        left_ghost_cell = 2 * lbc - first_node
-        # right ghost cell
         y_slice_stop = discretised_symbol.y_slice.stop
         last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
-        right_ghost_cell = 2 * rbc - last_node
-        # concatenate
-        return pybamm.NumpyConcatenation(
-            left_ghost_cell, discretised_symbol, right_ghost_cell
-        )
+        if lbc is not None and rbc is not None:
+            # both ghost cells
+            left_ghost_cell = 2 * lbc - first_node
+            right_ghost_cell = 2 * rbc - last_node
+            # concatenate
+            return pybamm.NumpyConcatenation(
+                left_ghost_cell, discretised_symbol, right_ghost_cell
+            )
+        elif lbc is not None:
+            # left ghost cell only
+            left_ghost_cell = 2 * lbc - first_node
+            return pybamm.NumpyConcatenation(left_ghost_cell, discretised_symbol)
+        elif rbc is not None:
+            # right ghost cell only
+            right_ghost_cell = 2 * rbc - last_node
+            return pybamm.NumpyConcatenation(discretised_symbol, right_ghost_cell)
+        else:
+            raise ValueError("at least one boundary condition must be provided")
 
     def surface_value(self, discretised_symbol):
         """
