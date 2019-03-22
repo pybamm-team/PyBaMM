@@ -270,17 +270,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Calculate integration vector
         integration_vector = self.definite_integral_vector(domain)
         # Check for particle domain
-        # <<<<<<< HEAD
         if ("negative particle" or "positive particle") in symbol.domain:
             submesh_list = self.mesh.combine_submeshes(*symbol.domain)
             second_dim = len(submesh_list)
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
             r = pybamm.Vector(r_numpy)
-            # =======
-            #         if ("negative particle" or "positive particle") in domain:
-            #             submesh = self.mesh.combine_submeshes(*domain)
-            #             r = pybamm.Vector(submesh.nodes)
-            # >>>>>>> master
             out = 2 * np.pi * integration_vector @ (discretised_symbol * r)
         else:
             out = integration_vector @ discretised_symbol
