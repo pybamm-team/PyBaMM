@@ -97,6 +97,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 rbc = None
             # add ghost nodes
             discretised_symbol = self.add_ghost_nodes(discretised_symbol, lbc, rbc)
+            import ipdb
+
+            ipdb.set_trace()
 
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
@@ -281,7 +284,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         if lbc is not None and rbc is not None:
             # both ghost cells
             left_ghost_cell = 2 * lbc - first_node
+            left_ghost_cell.domain = [discretised_symbol.domain[0] + "_left ghost cell"]
             right_ghost_cell = 2 * rbc - last_node
+            right_ghost_cell.domain = [
+                discretised_symbol.domain[-1] + "_right ghost cell"
+            ]
             # concatenate
             return pybamm.NumpyConcatenation(
                 left_ghost_cell, discretised_symbol, right_ghost_cell
@@ -289,10 +296,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif lbc is not None:
             # left ghost cell only
             left_ghost_cell = 2 * lbc - first_node
+            left_ghost_cell.domain = [discretised_symbol.domain[0] + "_left ghost cell"]
             return pybamm.NumpyConcatenation(left_ghost_cell, discretised_symbol)
         elif rbc is not None:
             # right ghost cell only
             right_ghost_cell = 2 * rbc - last_node
+            right_ghost_cell.domain = [
+                discretised_symbol.domain[-1] + "_right ghost cell"
+            ]
             return pybamm.NumpyConcatenation(discretised_symbol, right_ghost_cell)
         else:
             raise ValueError("at least one boundary condition must be provided")
