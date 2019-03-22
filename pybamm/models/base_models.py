@@ -25,10 +25,9 @@ class BaseModel(object):
         `rhs` or `algebraic`.
     initial_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions for the state variables y
-    initial_conditions_ydot: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions for the time derivative of y
+        the initial conditions for the state variables y. The initial conditions for
+        algebraic variables are provided as initial guesses to a root finding algorithm
+        that calculates consistent initial conditions.
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions
@@ -46,7 +45,6 @@ class BaseModel(object):
         self._rhs = {}
         self._algebraic = {}
         self._initial_conditions = {}
-        self._initial_conditions_ydot = {}
         self._boundary_conditions = {}
         self._variables = {}
         self._events = []
@@ -145,16 +143,6 @@ class BaseModel(object):
     def initial_conditions(self, initial_conditions):
         self._initial_conditions = self._set_dict(
             initial_conditions, "initial_conditions"
-        )
-
-    @property
-    def initial_conditions_ydot(self):
-        return self._initial_conditions_ydot
-
-    @initial_conditions_ydot.setter
-    def initial_conditions_ydot(self, initial_conditions):
-        self._initial_conditions_ydot = self._set_dict(
-            initial_conditions, "initial_conditions_ydot"
         )
 
     @property
