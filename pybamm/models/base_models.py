@@ -50,7 +50,6 @@ class BaseModel(object):
         self._events = []
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
-        self._concatenated_initial_conditions_ydot = None
 
         # Default parameter values, geometry, submesh, spatial methods and solver
         input_path = os.path.join(
@@ -191,14 +190,6 @@ class BaseModel(object):
     def concatenated_initial_conditions(self, concatenated_initial_conditions):
         self._concatenated_initial_conditions = concatenated_initial_conditions
 
-    @property
-    def concatenated_initial_conditions_ydot(self):
-        return self._concatenated_initial_conditions_ydot
-
-    @concatenated_initial_conditions_ydot.setter
-    def concatenated_initial_conditions_ydot(self, init_ydot):
-        self._concatenated_initial_conditions_ydot = init_ydot
-
     def __getitem__(self, key):
         return self.rhs[key]
 
@@ -218,9 +209,6 @@ class BaseModel(object):
             self.check_and_combine_dict(self._algebraic, submodel.algebraic)
             self.check_and_combine_dict(
                 self._initial_conditions, submodel.initial_conditions
-            )
-            self.check_and_combine_dict(
-                self._initial_conditions_ydot, submodel.initial_conditions_ydot
             )
             self.check_and_combine_dict(
                 self._boundary_conditions, submodel.boundary_conditions
