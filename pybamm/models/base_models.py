@@ -25,10 +25,9 @@ class BaseModel(object):
         `rhs` or `algebraic`.
     initial_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions for the state variables y
-    initial_conditions_ydot: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions for the time derivative of y
+        the initial conditions for the state variables y. The initial conditions for
+        algebraic variables are provided as initial guesses to a root finding algorithm
+        that calculates consistent initial conditions.
     boundary_conditions: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the boundary conditions
@@ -46,13 +45,11 @@ class BaseModel(object):
         self._rhs = {}
         self._algebraic = {}
         self._initial_conditions = {}
-        self._initial_conditions_ydot = {}
         self._boundary_conditions = {}
         self._variables = {}
         self._events = []
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
-        self._concatenated_initial_conditions_ydot = None
 
         # Default parameter values, geometry, submesh, spatial methods and solver
         input_path = os.path.join(
@@ -148,16 +145,6 @@ class BaseModel(object):
         )
 
     @property
-    def initial_conditions_ydot(self):
-        return self._initial_conditions_ydot
-
-    @initial_conditions_ydot.setter
-    def initial_conditions_ydot(self, initial_conditions):
-        self._initial_conditions_ydot = self._set_dict(
-            initial_conditions, "initial_conditions_ydot"
-        )
-
-    @property
     def boundary_conditions(self):
         return self._boundary_conditions
 
@@ -203,14 +190,6 @@ class BaseModel(object):
     def concatenated_initial_conditions(self, concatenated_initial_conditions):
         self._concatenated_initial_conditions = concatenated_initial_conditions
 
-    @property
-    def concatenated_initial_conditions_ydot(self):
-        return self._concatenated_initial_conditions_ydot
-
-    @concatenated_initial_conditions_ydot.setter
-    def concatenated_initial_conditions_ydot(self, init_ydot):
-        self._concatenated_initial_conditions_ydot = init_ydot
-
     def __getitem__(self, key):
         return self.rhs[key]
 
@@ -230,9 +209,6 @@ class BaseModel(object):
             self.check_and_combine_dict(self._algebraic, submodel.algebraic)
             self.check_and_combine_dict(
                 self._initial_conditions, submodel.initial_conditions
-            )
-            self.check_and_combine_dict(
-                self._initial_conditions_ydot, submodel.initial_conditions_ydot
             )
             self.check_and_combine_dict(
                 self._boundary_conditions, submodel.boundary_conditions

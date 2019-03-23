@@ -38,7 +38,6 @@ class Ohm(pybamm.BaseModel):
             self.algebraic = {phi_s: pybamm.div(i_n) + j}
             self.boundary_conditions = {i_n: {"left": current, "right": 0}}
             self.initial_conditions = {phi_s: 0}
-            self.initial_conditions_ydot = {phi_s: 0}
             self.variables = {
                 "Negative electrode solid potential": phi_s,
                 "Negative electrode solid current": i_n,
@@ -47,8 +46,9 @@ class Ohm(pybamm.BaseModel):
             i_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_p) + j}
             self.boundary_conditions = {i_p: {"left": 0, "right": current}}
-            self.initial_conditions = {phi_s: 0}
-            self.initial_conditions_ydot = {phi_s: 0}
+            self.initial_conditions = {
+                phi_s: param.U_p(param.c_e_init) - param.U_n(param.c_e_init)
+            }
             self.variables = {
                 "Positive electrode solid potential": phi_s,
                 "Positive electrode solid current": i_p,

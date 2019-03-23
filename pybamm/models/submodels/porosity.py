@@ -27,4 +27,3 @@ class Standard(pybamm.BaseModel):
 
         self.rhs = {epsilon: -param.beta_surf * j}
         self.initial_conditions = {epsilon: param.eps_init}
-        self.initial_conditions_ydot = {epsilon: 0}

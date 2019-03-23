@@ -41,8 +41,7 @@ class MacInnesStefanMaxwell(pybamm.LeadAcidBaseModel):
         # Equations (algebraic only)
         self.algebraic = {phi_e: pybamm.div(i_e) - j}
         self.boundary_conditions = {i_e: {"left": 0, "right": 0}}
-        self.initial_conditions = {phi_e: 0}
-        self.initial_conditions_ydot = {phi_e: 0}
+        self.initial_conditions = {phi_e: param.U_n(param.c_e_init)}
         # no differential equations
         self.rhs = {}
         # Variables

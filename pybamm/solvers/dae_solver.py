@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 
 import pybamm
 import numpy as np
+from scipy import optimize
 
 
 class DaeSolver(pybamm.BaseSolver):
@@ -42,23 +43,60 @@ class DaeSolver(pybamm.BaseSolver):
                 )
             )
 
-        y0 = model.concatenated_initial_conditions
-        ydot0 = model.concatenated_initial_conditions_ydot
+        def rhs(t, y):
+            return model.concatenated_rhs.evaluate(t, y)
 
-        assert y0.shape == ydot0.shape, pybamm.ModelError(
-            "Shape of initial condition y0 {} is different from the shape of initial "
-            "condition ydot0 {}".format(y0.shape, ydot0.shape)
-        )
-        assert y0.shape == residuals(0, y0, ydot0).shape, pybamm.ModelError(
-            "Shape of initial condition y0 {} is different from the shape of residual "
-            "function {}".format(y0.shape, residuals(0, y0, ydot0).shape)
+        def algebraic(t, y):
+            return model.concatenated_algebraic.evaluate(t, y)
+
+        y0 = self.calculate_consistent_initial_conditions(
+            rhs, algebraic, model.concatenated_initial_conditions
         )
 
-        self.t, self.y = self.integrate(residuals, y0, ydot0, t_eval)
+        self.t, self.y = self.integrate(residuals, y0, t_eval)
 
-    def integrate(self, residuals, y0, ydot0, t_eval, events=None):
+    def calculate_consistent_initial_conditions(self, rhs, algebraic, y0_guess):
         """
-        Solve a DAE model defined by residuals with initial conditions y0 and ydot0.
+        Calculate consistent initial conditions for the algebraic equations through
+        root-finding
+
+        Parameters
+        ----------
+        rhs : method
+            Function that takes in t and y and returns the value of the differential
+            equations
+        algebraic : method
+            Function that takes in t and y and returns the value of the algebraic
+            equations
+        y0_guess : array-like
+            Array of the user's guess for the initial conditions, used to initialise
+            the root finding algorithm
+
+        Returns
+        -------
+        y0_consistent : array-like, same shape as y0_guess
+            Initial conditions that are consistent with the algebraic equations (roots
+            of the algebraic equations)
+        """
+        # Split y0_guess into differential and algebraic
+        len_rhs = rhs(0, y0_guess).shape[0]
+        y0_diff, y0_alg_guess = np.split(y0_guess, [len_rhs])
+
+        def root_fun(y0_alg):
+            "Evaluates algebraic using y0_diff (fixed) and y0_alg (changed by algo)"
+            y0 = np.concatenate([y0_diff, y0_alg])
+            return algebraic(0, y0)
+
+        # Find the values of y0_alg that are roots of the algebraic equations
+        sol = optimize.root(root_fun, y0_alg_guess, method="hybr")
+        # Return full set of consistent initial conditions (y0_diff unchanged)
+        y0_consistent = np.concatenate([y0_diff, sol.x])
+
+        return y0_consistent
+
+    def integrate(self, residuals, y0, t_eval, events=None):
+        """
+        Solve a DAE model defined by residuals with initial conditions y0.
 
         Parameters
         ----------
