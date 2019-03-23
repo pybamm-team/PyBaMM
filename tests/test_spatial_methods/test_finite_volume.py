@@ -84,29 +84,46 @@ class TestFiniteVolume(unittest.TestCase):
             # Check that the equation can be evaluated
             eqn_disc.evaluate(None, y_test)
 
-        # more testing, with boundary conditions
+        # test boundary conditions
         for flux, eqn in zip(
             [
                 pybamm.grad(var),
                 pybamm.grad(var),
                 pybamm.grad(var),
-                2 * pybamm.grad(var),
-                2 * pybamm.grad(var),
-                var * pybamm.grad(var) + 2 * pybamm.grad(var),
+                # 2 * pybamm.grad(var),
+                # 2 * pybamm.grad(var),
+                # var * pybamm.grad(var) + 2 * pybamm.grad(var),
             ],
             [
                 pybamm.div(pybamm.grad(var)),
                 pybamm.div(pybamm.grad(var)) + 2,
                 pybamm.div(pybamm.grad(var)) + var,
-                pybamm.div(2 * pybamm.grad(var)),
-                pybamm.div(2 * pybamm.grad(var)) + 3 * var,
-                -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
+                # pybamm.div(2 * pybamm.grad(var)),
+                # pybamm.div(2 * pybamm.grad(var)) + 3 * var,
+                # -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
             ],
         ):
-            disc._bcs = {flux.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}}
-
+            # Check that the equation can be evaluated in each case
+            # Dirichlet
+            disc._bcs = {var.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}}
             eqn_disc = disc.process_symbol(eqn)
-            # Check that the equation can be evaluated
+            eqn_disc.evaluate(None, y_test)
+            # Neumann
+            disc._bcs = {flux.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(1)}}
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.evaluate(None, y_test)
+            # One of each
+            disc._bcs = {
+                var.id: {"left": pybamm.Scalar(0)},
+                flux.id: {"right": pybamm.Scalar(1)},
+            }
+            eqn_disc = disc.process_symbol(eqn)
+            eqn_disc.evaluate(None, y_test)
+            disc._bcs = {
+                flux.id: {"left": pybamm.Scalar(0)},
+                var.id: {"right": pybamm.Scalar(1)},
+            }
+            eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, y_test)
 
     def test_add_ghost_nodes(self):
