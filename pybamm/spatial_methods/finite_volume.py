@@ -97,9 +97,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 rbc = None
             # add ghost nodes
             discretised_symbol = self.add_ghost_nodes(discretised_symbol, lbc, rbc)
-            import ipdb
-
-            ipdb.set_trace()
 
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
@@ -166,6 +163,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             divergence_matrix = self.divergence_matrix(domain)
             out = divergence_matrix @ discretised_symbol
+
+        # taking divergence removes ghost cells
+        out.has_left_ghost_cell = False
+        out.has_right_ghost_cell = False
+
         return out
 
     def divergence_matrix(self, domain):
@@ -284,27 +286,28 @@ class FiniteVolume(pybamm.SpatialMethod):
         if lbc is not None and rbc is not None:
             # both ghost cells
             left_ghost_cell = 2 * lbc - first_node
-            left_ghost_cell.domain = [discretised_symbol.domain[0] + "_left ghost cell"]
             right_ghost_cell = 2 * rbc - last_node
-            right_ghost_cell.domain = [
-                discretised_symbol.domain[-1] + "_right ghost cell"
-            ]
-            # concatenate
-            return pybamm.NumpyConcatenation(
+            # concatenate and flag ghost cells
+            concat = pybamm.NumpyConcatenation(
                 left_ghost_cell, discretised_symbol, right_ghost_cell
             )
+            concat.has_left_ghost_cell = True
+            concat.has_right_ghost_cell = True
+            return concat
         elif lbc is not None:
             # left ghost cell only
             left_ghost_cell = 2 * lbc - first_node
-            left_ghost_cell.domain = [discretised_symbol.domain[0] + "_left ghost cell"]
-            return pybamm.NumpyConcatenation(left_ghost_cell, discretised_symbol)
+            # concatenate and flag ghost cells
+            concat = pybamm.NumpyConcatenation(left_ghost_cell, discretised_symbol)
+            concat.has_left_ghost_cell = True
+            return concat
         elif rbc is not None:
             # right ghost cell only
             right_ghost_cell = 2 * rbc - last_node
-            right_ghost_cell.domain = [
-                discretised_symbol.domain[-1] + "_right ghost cell"
-            ]
-            return pybamm.NumpyConcatenation(discretised_symbol, right_ghost_cell)
+            # concatenate and flag ghost cells
+            concat = pybamm.NumpyConcatenation(discretised_symbol, right_ghost_cell)
+            concat.has_right_ghost_cell = True
+            return concat
         else:
             raise ValueError("at least one boundary condition must be provided")
 
@@ -339,7 +342,9 @@ class FiniteVolume(pybamm.SpatialMethod):
     # Can probably be moved outside of the spatial method
     ######################################################
 
-    def compute_diffusivity(self, symbol):
+    def compute_diffusivity(
+        self, symbol, extrapolate_left=False, extrapolate_right=False
+    ):
         """
         Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
         For now we just take the arithemtic mean, though it may be better to take the
@@ -354,6 +359,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             Symbol to be averaged. When evaluated, this symbol returns either a scalar
             or an array of shape (n,), where n is the number of points in the mesh for
             the symbol's domain (n = self.mesh[symbol.domain].npts)
+        extrapolate_left : boolean
+            Whether to extrapolate one node to the left when computing the
+            diffusivity, to account for ghost cells. Default is False
+        extrapolate_right : boolean
+            Whether to extrapolate one node to the right when computing the
+            diffusivity, to account for ghost cells. Default is False
 
         Returns
         -------
@@ -364,7 +375,12 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         def arithmetic_mean(array):
             """Calculate the arithemetic mean of an array"""
-            return (array[1:] + array[:-1]) / 2
+            mean_array = (array[1:] + array[:-1]) / 2
+            if extrapolate_left:
+                mean_array = mean_array
+            if extrapolate_right:
+                mean_array = mean_array
+            return mean_array
 
         return pybamm.NodeToEdge(symbol, arithmetic_mean)
 
@@ -399,7 +415,6 @@ class NodeToEdge(pybamm.SpatialOperator):
         evaluated_child = self.children[0].evaluate(t, y)
         # If the evaluated child is a numpy array of shape (n,), do the averaging
         # NOTE: Doing this check every time might be slow?
-        # NOTE: Will need to deal with 2D arrays at some point
         if isinstance(evaluated_child, np.ndarray) and len(evaluated_child.shape) == 1:
             return self._node_to_edge_function(evaluated_child)
         # If not, no need to average

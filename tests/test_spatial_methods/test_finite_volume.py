@@ -215,6 +215,10 @@ class TestFiniteVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
 
+        # test ghost cells
+        self.assertTrue(grad_eqn_disc.has_left_ghost_cell)
+        self.assertTrue(grad_eqn_disc.has_right_ghost_cell)
+
         constant_y = np.ones_like(combined_submesh.nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
@@ -369,6 +373,10 @@ class TestFiniteVolume(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         div_eqn_disc = disc.process_symbol(div_eqn)
 
+        # test ghost cells
+        self.assertTrue(grad_eqn_disc.has_left_ghost_cell)
+        self.assertFalse(grad_eqn_disc.has_right_ghost_cell)
+
         # Constant y should have gradient and laplacian zero
         constant_y = np.ones_like(combined_submesh.nodes)
         np.testing.assert_array_equal(
@@ -387,6 +395,11 @@ class TestFiniteVolume(unittest.TestCase):
         disc._bcs = boundary_conditions
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         div_eqn_disc = disc.process_symbol(div_eqn)
+
+        # test ghost cells
+        self.assertFalse(grad_eqn_disc.has_left_ghost_cell)
+        self.assertTrue(grad_eqn_disc.has_right_ghost_cell)
+
         # Linear y should have gradient one and laplacian zero
         linear_y = combined_submesh.nodes
         np.testing.assert_array_almost_equal(

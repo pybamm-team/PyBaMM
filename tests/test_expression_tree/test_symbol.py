@@ -53,7 +53,7 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((A @ a).simplify().evaluate(), 0)
 
         # test when other node is a parameter
-        c = pybamm.Parameter('c')
+        c = pybamm.Parameter("c")
         self.assertIsInstance((a + c).simplify(), pybamm.Parameter)
         self.assertIsInstance((c + a).simplify(), pybamm.Parameter)
         self.assertIsInstance((c + b).simplify(), pybamm.Addition)
@@ -347,6 +347,19 @@ class TestSymbol(unittest.TestCase):
         self.assertIsNone(b_orp.parent)
         self.assertEqual(a.id, a_orp.id)
         self.assertEqual(b.id, b_orp.id)
+
+    def test_ghost_cell_flaf(self):
+        a = pybamm.Symbol("a")
+        self.assertFalse(a.has_left_ghost_cell)
+        self.assertFalse(a.has_right_ghost_cell)
+
+        a.has_left_ghost_cell = True
+        self.assertTrue(a.has_left_ghost_cell)
+        self.assertFalse(a.has_right_ghost_cell)
+
+        a.has_right_ghost_cell = True
+        self.assertTrue(a.has_left_ghost_cell)
+        self.assertTrue(a.has_right_ghost_cell)
 
 
 if __name__ == "__main__":

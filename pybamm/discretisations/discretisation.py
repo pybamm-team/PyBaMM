@@ -307,16 +307,18 @@ class Discretisation(object):
             left.has_gradient_and_not_divergence()
             and not right.has_gradient_and_not_divergence()
         ):
+            # Extrapolate at either end depending on the ghost cells (from gradient)
             new_right = self._spatial_methods[bin_op.domain[0]].compute_diffusivity(
-                new_right
+                new_right, left.has_left_ghost_cell, left.has_right_ghost_cell
             )
         # If only right child has gradient, compute diffusivity for left child
         elif (
             right.has_gradient_and_not_divergence()
             and not left.has_gradient_and_not_divergence()
         ):
+            # Extrapolate at either end depending on the ghost cells (from gradient)
             new_left = self._spatial_methods[bin_op.domain[0]].compute_diffusivity(
-                new_left
+                new_left, right.has_left_ghost_cell, right.has_right_ghost_cell
             )
         # Return new binary operator with appropriate class
         return bin_op.__class__(new_left, new_right)
