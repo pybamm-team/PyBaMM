@@ -279,14 +279,21 @@ class FiniteVolume(pybamm.SpatialMethod):
             Concatenation of the variable (a state vector) and ghost nodes
 
         """
-        assert isinstance(discretised_symbol, pybamm.StateVector), NotImplementedError(
-            """discretised_symbol must be a StateVector, not {}""".format(
-                type(discretised_symbol)
+        if isinstance(discretised_symbol, pybamm.StateVector):
+            y_slice_start = discretised_symbol.y_slice.start
+            y_slice_stop = discretised_symbol.y_slice.stop
+        elif isinstance(discretised_symbol, pybamm.Concatenation):
+            y_slice_start = discretised_symbol.children[0].y_slice.start
+            y_slice_stop = discretised_symbol.children[-1].y_slice.stop
+        else:
+            raise TypeError(
+                """
+                discretised_symbol must be a StateVector or Concatenation, not {}
+                """.format(
+                    type(discretised_symbol)
+                )
             )
-        )
-        y_slice_start = discretised_symbol.y_slice.start
         first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
-        y_slice_stop = discretised_symbol.y_slice.stop
         last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
         if lbc is not None and rbc is not None:
             # both ghost cells

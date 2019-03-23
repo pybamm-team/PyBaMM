@@ -209,6 +209,54 @@ class TestFiniteVolume(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at least one"):
             pybamm.FiniteVolume(mesh).add_ghost_nodes(discretised_symbol, None, None)
 
+    def test_add_ghost_nodes_concatenation(self):
+        # Set up
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Add ghost nodes
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var_n = pybamm.Variable("var", domain=["negative electrode"])
+        var_s = pybamm.Variable("var", domain=["separator"])
+        var_p = pybamm.Variable("var", domain=["positive electrode"])
+        var = pybamm.Concatenation(var_n, var_s, var_p)
+        disc.set_variable_slices([var])
+        discretised_symbol = disc.process_symbol(var)
+        lbc = pybamm.Scalar(0)
+        rbc = pybamm.Scalar(3)
+
+        # Test
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        y_test = np.ones_like(combined_submesh.nodes)
+
+        # both
+        symbol_plus_ghost_both = pybamm.FiniteVolume(mesh).add_ghost_nodes(
+            discretised_symbol, lbc, rbc
+        )
+        np.testing.assert_array_equal(
+            symbol_plus_ghost_both.evaluate(None, y_test)[1:-1],
+            discretised_symbol.evaluate(None, y_test),
+        )
+        self.assertEqual(
+            (
+                symbol_plus_ghost_both.evaluate(None, y_test)[0]
+                + symbol_plus_ghost_both.evaluate(None, y_test)[1]
+            )
+            / 2,
+            0,
+        )
+        self.assertEqual(
+            (
+                symbol_plus_ghost_both.evaluate(None, y_test)[-2]
+                + symbol_plus_ghost_both.evaluate(None, y_test)[-1]
+            )
+            / 2,
+            3,
+        )
+
     def test_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions (applied by grad on var)
