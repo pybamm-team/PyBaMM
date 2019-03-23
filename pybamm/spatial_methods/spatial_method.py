@@ -144,7 +144,7 @@ class SpatialMethod:
     # We could possibly move the following outside of SpatialMethod
     # depending on the requirements of the FiniteVolume
 
-    def compute_diffusivity(self):
+    def compute_diffusivity(self, extrapolate_left=False, extrapolate_right=False):
         """Compute the diffusivity at edges of cells.
         Could interpret this as: find diffusivity as
         off grid locations

@@ -44,7 +44,6 @@ class BinaryOperator(pybamm.Symbol):
 
         domain = self.get_children_domains(left.domain, right.domain)
         super().__init__(name, children=[left, right], domain=domain)
-        self.set_ghost_cells()
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -59,20 +58,6 @@ class BinaryOperator(pybamm.Symbol):
             return ldomain
         else:
             raise pybamm.DomainError("""children must have same (or empty) domains""")
-
-    def set_ghost_cells(self):
-        """set ghost cells based on the children's ghost cells"""
-        if self.children[0].has_left_ghost_cell == self.children[1].has_left_ghost_cell:
-            self.has_left_ghost_cell = self.children[0].has_left_ghost_cell
-        else:
-            raise ValueError("""children must have same ghost cells""")
-        if (
-            self.children[0].has_right_ghost_cell
-            == self.children[1].has_right_ghost_cell
-        ):
-            self.has_right_ghost_cell = self.children[0].has_right_ghost_cell
-        else:
-            raise ValueError("""children must have same ghost cells""")
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """

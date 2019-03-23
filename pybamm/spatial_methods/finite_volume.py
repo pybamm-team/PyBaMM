@@ -382,9 +382,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             """Calculate the arithemetic mean of an array"""
             mean_array = (array[1:] + array[:-1]) / 2
             if extrapolate_left:
-                mean_array = mean_array
+                left_node = array[0] - (array[1] - array[0]) / 2
+                mean_array = np.concatenate([np.array([left_node]), mean_array])
             if extrapolate_right:
-                mean_array = mean_array
+                right_node = array[-1] - (array[-2] - array[-1]) / 2
+                mean_array = np.concatenate([mean_array, np.array([right_node])])
             return mean_array
 
         return pybamm.NodeToEdge(symbol, arithmetic_mean)

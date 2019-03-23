@@ -28,9 +28,6 @@ class UnaryOperator(pybamm.Symbol):
 
     def __init__(self, name, child):
         super().__init__(name, children=[child], domain=child.domain)
-        # inherit ghost cells from children
-        self.has_left_ghost_cell = child.has_left_ghost_cell
-        self.has_right_ghost_cell = child.has_right_ghost_cell
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """

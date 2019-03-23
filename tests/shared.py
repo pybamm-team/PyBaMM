@@ -46,7 +46,9 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         divergence_matrix = pybamm.Matrix(np.eye(n))
         return divergence_matrix @ discretised_symbol
 
-    def compute_diffusivity(self, symbol):
+    def compute_diffusivity(
+        self, symbol, extrapolate_left=None, extrapolate_right=None
+    ):
         return symbol
 
 

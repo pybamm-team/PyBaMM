@@ -90,17 +90,17 @@ class TestFiniteVolume(unittest.TestCase):
                 pybamm.grad(var),
                 pybamm.grad(var),
                 pybamm.grad(var),
-                # 2 * pybamm.grad(var),
-                # 2 * pybamm.grad(var),
-                # var * pybamm.grad(var) + 2 * pybamm.grad(var),
+                2 * pybamm.grad(var),
+                2 * pybamm.grad(var),
+                var * pybamm.grad(var) + 2 * pybamm.grad(var),
             ],
             [
                 pybamm.div(pybamm.grad(var)),
                 pybamm.div(pybamm.grad(var)) + 2,
                 pybamm.div(pybamm.grad(var)) + var,
-                # pybamm.div(2 * pybamm.grad(var)),
-                # pybamm.div(2 * pybamm.grad(var)) + 3 * var,
-                # -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
+                pybamm.div(2 * pybamm.grad(var)),
+                pybamm.div(2 * pybamm.grad(var)) + 3 * var,
+                -2 * pybamm.div(var * pybamm.grad(var) + 2 * pybamm.grad(var)),
             ],
         ):
             # Check that the equation can be evaluated in each case
@@ -233,8 +233,8 @@ class TestFiniteVolume(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
 
         # test ghost cells
-        self.assertTrue(grad_eqn_disc.has_left_ghost_cell)
-        self.assertTrue(grad_eqn_disc.has_right_ghost_cell)
+        self.assertTrue(grad_eqn_disc.children[1].has_left_ghost_cell)
+        self.assertTrue(grad_eqn_disc.children[1].has_right_ghost_cell)
 
         constant_y = np.ones_like(combined_submesh.nodes)
         np.testing.assert_array_equal(
@@ -391,8 +391,8 @@ class TestFiniteVolume(unittest.TestCase):
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         # test ghost cells
-        self.assertTrue(grad_eqn_disc.has_left_ghost_cell)
-        self.assertFalse(grad_eqn_disc.has_right_ghost_cell)
+        self.assertTrue(grad_eqn_disc.children[1].has_left_ghost_cell)
+        self.assertFalse(grad_eqn_disc.children[1].has_right_ghost_cell)
 
         # Constant y should have gradient and laplacian zero
         constant_y = np.ones_like(combined_submesh.nodes)
@@ -414,8 +414,8 @@ class TestFiniteVolume(unittest.TestCase):
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         # test ghost cells
-        self.assertFalse(grad_eqn_disc.has_left_ghost_cell)
-        self.assertTrue(grad_eqn_disc.has_right_ghost_cell)
+        self.assertFalse(grad_eqn_disc.children[1].has_left_ghost_cell)
+        self.assertTrue(grad_eqn_disc.children[1].has_right_ghost_cell)
 
         # Linear y should have gradient one and laplacian zero
         linear_y = combined_submesh.nodes
