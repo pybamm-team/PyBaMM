@@ -100,6 +100,11 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
+
+        # set ghost cells
+        gradient_matrix.has_left_ghost_cell = discretised_symbol.has_left_ghost_cell
+        gradient_matrix.has_right_ghost_cell = discretised_symbol.has_right_ghost_cell
+
         return gradient_matrix @ discretised_symbol
 
     def gradient_matrix(self, domain):
@@ -150,6 +155,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                 rbc = bcs["right"]
                 discretised_symbol = pybamm.NumpyConcatenation(discretised_symbol, rbc)
 
+        # taking divergence removes ghost cells
+        discretised_symbol.has_left_ghost_cell = False
+        discretised_symbol.has_right_ghost_cell = False
+
         domain = symbol.domain
         # check for particle domain
         divergence_matrix = self.divergence_matrix(domain)
@@ -163,10 +172,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             divergence_matrix = self.divergence_matrix(domain)
             out = divergence_matrix @ discretised_symbol
-
-        # taking divergence removes ghost cells
-        out.has_left_ghost_cell = False
-        out.has_right_ghost_cell = False
 
         return out
 

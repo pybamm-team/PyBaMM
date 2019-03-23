@@ -21,6 +21,14 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(un.children[0].name, a.name)
         self.assertEqual(un.domain, a.domain)
 
+    def test_ghost_cells(self):
+        a = pybamm.Symbol("a")
+        a.has_left_ghost_cell = True
+        a.has_right_ghost_cell = True
+        un = pybamm.UnaryOperator("unary test", a)
+        self.assertTrue(un.has_left_ghost_cell)
+        self.assertTrue(un.has_right_ghost_cell)
+
     def test_negation(self):
         a = pybamm.Symbol("a")
         nega = pybamm.Negate(a)

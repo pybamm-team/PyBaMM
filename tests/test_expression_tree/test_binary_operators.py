@@ -34,6 +34,25 @@ class TestBinaryOperators(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             pybamm.BinaryOperator("binary test", a, d)
 
+    def test_binary_operator_ghost_cells(self):
+        # same domain
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        a.has_left_ghost_cell = True
+        a.has_right_ghost_cell = True
+        b.has_left_ghost_cell = True
+        b.has_right_ghost_cell = True
+
+        bin1 = pybamm.BinaryOperator("binary test", a, b)
+        self.assertTrue(bin1.has_left_ghost_cell)
+        self.assertTrue(bin1.has_right_ghost_cell)
+        # mismatched domains
+        c = pybamm.Symbol("c")
+        c.has_right_ghost_cell = False
+        c.has_right_ghost_cell = False
+        with self.assertRaises(ValueError):
+            pybamm.BinaryOperator("binary test", a, c)
+
     def test_addition(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
