@@ -202,7 +202,7 @@ class TestMesh(unittest.TestCase):
         # provide mesh properties
         submesh_pts = {
             "negative particle": {"r": 5, "x": 10},
-            "positive particle": {"r": 6, "x": 11},
+            "positive particle": {"r": 6, "x": 10},
         }
         submesh_types = {
             "negative particle": pybamm.Uniform1DSubMesh,
@@ -215,9 +215,9 @@ class TestMesh(unittest.TestCase):
         self.assertIsInstance(mesh["negative particle"], list)
         self.assertIsInstance(mesh["positive particle"], list)
         self.assertEqual(len(mesh["negative particle"]), 10)
-        self.assertEqual(len(mesh["positive particle"]), 11)
+        self.assertEqual(len(mesh["positive particle"]), 10)
 
-        for i in range(1):
+        for i in range(10):
             self.assertIsInstance(mesh["negative particle"][i], pybamm.Uniform1DSubMesh)
             self.assertIsInstance(mesh["positive particle"][i], pybamm.Uniform1DSubMesh)
             self.assertEqual(mesh["negative particle"][i].npts, 5)
