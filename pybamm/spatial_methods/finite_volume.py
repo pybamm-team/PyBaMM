@@ -303,7 +303,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             elif side == "right":
                 return array[-1] + (array[-1] - array[-2]) / 2
 
-        return BoundaryValue(discretised_symbol, linear_extrapolation)
+        return BoundaryValueEvaluated(discretised_symbol, linear_extrapolation)
 
     #######################################################
     # Can probably be moved outside of the spatial method
@@ -339,7 +339,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         return pybamm.NodeToEdge(discretised_symbol, arithmetic_mean)
 
 
-class BoundaryValue(pybamm.SpatialOperator):
+class BoundaryValueEvaluated(pybamm.SpatialOperator):
     """A node in the expression tree representing a unary operator that evaluates the
     value of its child at a boundary.
 
@@ -359,6 +359,9 @@ class BoundaryValue(pybamm.SpatialOperator):
             "boundary value ({})".format(boundary_function.__name__), child
         )
         self._boundary_function = boundary_function
+        # Domain of BoundaryValue must be ([]) so that expressions can be formed
+        # of boundary values of variables in different domains
+        self.domain = []
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

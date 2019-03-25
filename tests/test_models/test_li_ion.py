@@ -17,7 +17,7 @@ class TestLiIonSPM(unittest.TestCase):
 
         modeltest.test_all()
 
-    def test_surface_concentrartion(self):
+    def test_surface_concentration(self):
         model = pybamm.li_ion.SPM()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -26,12 +26,12 @@ class TestLiIonSPM(unittest.TestCase):
         # check surface concentration decreases in negative particle and
         # increases in positive particle for discharge
         np.testing.assert_array_less(
-            model.variables["cn_surf"].evaluate(T, Y)[:, 1:],
-            model.variables["cn_surf"].evaluate(T, Y)[:, :-1],
+            model.variables["cn_surf"].evaluate(T, Y)[1:],
+            model.variables["cn_surf"].evaluate(T, Y)[:-1],
         )
         np.testing.assert_array_less(
-            model.variables["cp_surf"].evaluate(T, Y)[:, :-1],
-            model.variables["cp_surf"].evaluate(T, Y)[:, 1:],
+            model.variables["cp_surf"].evaluate(T, Y)[:-1],
+            model.variables["cp_surf"].evaluate(T, Y)[1:],
         )
 
 

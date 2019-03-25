@@ -216,7 +216,7 @@ class BoundaryValue(SpatialOperator):
         The variable whose boundary value to take
     side : string
         Which side to take the boundary value on ("left" or "right")
-        
+
     **Extends:** :class:`SpatialOperator`
     """
 
@@ -292,4 +292,4 @@ def surf(variable):
         the surface value of ``variable``
     """
 
-    return Boundary(variable, "right")
+    return BoundaryValue(variable, "right")

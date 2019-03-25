@@ -50,21 +50,20 @@ class TestFiniteVolume(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         # boundary value should work with something more complicated than a variable
         extrap_left = pybamm.BoundaryValue(2 * var, "left")
-        extrap_right = pybamm.BoundaryValue(3 - var, "right")
+        extrap_right = pybamm.BoundaryValue(4 - var, "right")
         disc.set_variable_slices([var])
         extrap_left_disc = disc.process_symbol(extrap_left)
         extrap_right_disc = disc.process_symbol(extrap_right)
 
         # check constant extrapolates to constant
-        constant_y = np.ones_like(micro_submesh.nodes)
+        constant_y = np.ones_like(macro_submesh.nodes)
         self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 2)
-        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 2)
+        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 3)
 
         # check linear variable extrapolates correctly
-        linear_y = micro_submesh.nodes
-        y_left = micro_submesh.nodes[-1] + micro_submesh.d_nodes[-1] / 2
-        self.assertEqual(extrap_left_disc.evaluate(None, linear_y), y_surf)
-        self.assertEqual(extrap_right_disc.evaluate(None, linear_y), y_surf)
+        linear_y = macro_submesh.nodes
+        self.assertEqual(extrap_left_disc.evaluate(None, linear_y), 0)
+        self.assertEqual(extrap_right_disc.evaluate(None, linear_y), 3)
 
         # Microscale
         # create variable
