@@ -286,7 +286,7 @@ class TestScikitsSolver(unittest.TestCase):
 
         # Solve
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
-        t_eval = np.linspace(0, 1, 100)
+        t_eval = np.linspace(0, 5, 100)
         solver.solve(model, t_eval)
         np.testing.assert_array_less(solver.y[0], 1.5)
         np.testing.assert_array_less(solver.y[-1], 2.5)
