@@ -70,7 +70,7 @@ class TestScikitsSolver(unittest.TestCase):
         y0 = np.array([1])
         t_eval = np.linspace(0, 3, 100)
         t_sol, y_sol = solver.integrate(
-            exponential_growth, y0, t_eval, events=[y_eq_9, ysq_eq_7]
+            exponential_growth, y0, t_eval, events=[ysq_eq_7, y_eq_9]
         )
         self.assertLess(len(t_sol), len(t_eval))
         np.testing.assert_allclose(np.exp(t_sol), y_sol[0], rtol=1e-4)
@@ -213,7 +213,10 @@ class TestScikitsSolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
-        model.events = [pybamm.Function(np.min, var - 1.5)]
+        model.events = [
+            pybamm.Function(np.min, 2 * var - 2.5),
+            pybamm.Function(np.min, var - 1.5),
+        ]
         disc = StandardModelTest(model).disc
         disc.process_model(model)
 
@@ -223,6 +226,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver.solve(model, t_eval)
         np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
         np.testing.assert_array_less(solver.y[0], 1.5)
+        np.testing.assert_array_less(solver.y[0], 1.25)
 
     def test_model_solver_dae(self):
         # Create model

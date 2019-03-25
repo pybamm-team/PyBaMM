@@ -65,7 +65,6 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             return_ydot[:] = derivs(t, y)
 
         def rootfn(t, y, return_root):
-            print([event(t, y) for event in events])
             return_root[:] = [event(t, y) for event in events]
 
         extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
