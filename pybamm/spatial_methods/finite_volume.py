@@ -288,7 +288,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             raise TypeError(
                 """
-                discretised_symbol must be a StateVector or Concatenation, not {}
+                discretised_symbol must be a StateVector or Concatenation, not '{}'
                 """.format(
                     type(discretised_symbol)
                 )

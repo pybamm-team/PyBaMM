@@ -205,9 +205,14 @@ class TestFiniteVolume(unittest.TestCase):
             3,
         )
 
-        # test error
+        # test errors
         with self.assertRaisesRegex(ValueError, "at least one"):
             pybamm.FiniteVolume(mesh).add_ghost_nodes(discretised_symbol, None, None)
+
+        with self.assertRaisesRegex(
+            TypeError, "discretised_symbol must be a StateVector or Concatenation"
+        ):
+            pybamm.FiniteVolume(mesh).add_ghost_nodes(pybamm.Scalar(1), None, None)
 
     def test_add_ghost_nodes_concatenation(self):
         # Set up
