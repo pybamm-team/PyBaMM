@@ -33,6 +33,9 @@ class TestLiIonSPM(unittest.TestCase):
             model.variables["cp_surf"].evaluate(T, Y)[:, :-1],
             model.variables["cp_surf"].evaluate(T, Y)[:, 1:],
         )
+        import ipdb
+
+        ipdb.set_trace()
 
 
 if __name__ == "__main__":
