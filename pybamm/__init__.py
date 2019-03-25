@@ -75,7 +75,7 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
-    SurfaceValue,
+    BoundaryValue,
     Integral,
     grad,
     div,
