@@ -359,17 +359,7 @@ class Symbol(anytree.NodeMixin):
         search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
 
         # do the search, return true if no relevent nodes are found
-        # a Scalar with a name different to its is not constant, for parameter changing
-        # purposes
-        return all(
-            [
-                not (
-                    isinstance(n, search_types)
-                    or (isinstance(n, pybamm.Scalar) and n.name != str(n.value))
-                )
-                for n in self.pre_order()
-            ]
-        )
+        return all([not (isinstance(n, search_types)) for n in self.pre_order()])
 
     def evaluates_to_value(self, value):
         """

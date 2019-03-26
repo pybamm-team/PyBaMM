@@ -226,6 +226,7 @@ class ParameterValues(dict):
             if isinstance(symbol, pybamm.DomainConcatenation):
                 return pybamm.DomainConcatenation(new_children, symbol.mesh)
             else:
+                # Concatenation or NumpyConcatenation
                 return symbol.__class__(*new_children)
 
         else:

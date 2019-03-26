@@ -224,9 +224,6 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Scalar(1) * pybamm.Vector(np.zeros(10))
         self.assertTrue(a.is_constant())
 
-        a = pybamm.Scalar(1, name="a scalar")
-        self.assertFalse(a.is_constant())
-
     def test_symbol_evaluates_to_number(self):
         a = pybamm.Scalar(3)
         self.assertTrue(a.evaluates_to_number())
