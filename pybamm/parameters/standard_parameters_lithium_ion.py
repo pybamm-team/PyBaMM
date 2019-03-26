@@ -13,7 +13,6 @@ sp.F
 sp.T
     Reference temperature
 
-
 Microscale Geometry
 -------------------
 R_n, R_p
