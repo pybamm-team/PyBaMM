@@ -387,38 +387,38 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_discretised_symbol
 
-    def surface_value(self, discretised_symbol):
+    def boundary_value(self, discretised_symbol, side):
         """
-        Uses linear extrapolation to get the surface value of a variable in the
+        Uses linear extrapolation to get the boundary value of a variable in the
         Finite Volume Method.
 
         Parameters
         -----------
         discretised_symbol : :class:`pybamm.StateVector`
-            The discretised variable (a state vector) from which to calculate
-            the surface value.
+            The discretised variable from which to calculate the boundary value
+        side : string
+            Which side to take the boundary value on ("left" or "right")
 
         Returns
         -------
-        :class:`pybamm.Variable`
-            The variable representing the surface value.
+        :class:`pybamm.Symbol`
+            The variable representing the boundary value.
         """
-        # Better to make class similar NodeToEdge and pass function?
-        # def surface_value(array):
-        #     "Linear extrapolation for surface value"
-        #     array[-1] + (array[-1] - array[-2]) / 2
-        # ... or make StateVector and add?
-        y_slice_stop = discretised_symbol.y_slice.stop
-        last_node = pybamm.StateVector(slice(y_slice_stop - 1, y_slice_stop))
-        penultimate_node = pybamm.StateVector(slice(y_slice_stop - 2, y_slice_stop - 1))
-        surface_value = last_node + (last_node - penultimate_node) / 2
-        return surface_value
+
+        def linear_extrapolation(array):
+            """Linearly extrapolates an array"""
+            if side == "left":
+                return array[0] + (array[0] - array[1]) / 2
+            elif side == "right":
+                return array[-1] + (array[-1] - array[-2]) / 2
+
+        return BoundaryValueEvaluated(discretised_symbol, linear_extrapolation)
 
     #######################################################
     # Can probably be moved outside of the spatial method
     ######################################################
 
-    def compute_diffusivity(self, symbol):
+    def compute_diffusivity(self, discretised_symbol):
         """
         Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
         For now we just take the arithemtic mean, though it may be better to take the
@@ -429,7 +429,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Parameters
         ----------
-        symbol : :class:`pybamm.Symbol`
+        discretised_symbol : :class:`pybamm.Symbol`
             Symbol to be averaged. When evaluated, this symbol returns either a scalar
             or an array of shape (n,), where n is the number of points in the mesh for
             the symbol's domain (n = self.mesh[symbol.domain].npts)
@@ -445,7 +445,37 @@ class FiniteVolume(pybamm.SpatialMethod):
             """Calculate the arithemetic mean of an array"""
             return (array[1:] + array[:-1]) / 2
 
-        return pybamm.NodeToEdge(symbol, arithmetic_mean)
+        return pybamm.NodeToEdge(discretised_symbol, arithmetic_mean)
+
+
+class BoundaryValueEvaluated(pybamm.SpatialOperator):
+    """A node in the expression tree representing a unary operator that evaluates the
+    value of its child at a boundary.
+
+    Parameters
+    ----------
+    child : :class:`Symbol`
+        child node
+    boundary_function : method
+        the function used to calculate the boundary value
+
+    **Extends:** :class:`pybamm.SpatialOperator`
+    """
+
+    def __init__(self, child, boundary_function):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__(
+            "boundary value ({})".format(boundary_function.__name__), child
+        )
+        self._boundary_function = boundary_function
+        # Domain of BoundaryValue must be ([]) so that expressions can be formed
+        # of boundary values of variables in different domains
+        self.domain = []
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        evaluated_child = self.children[0].evaluate(t, y)
+        return self._boundary_function(evaluated_child)
 
 
 class NodeToEdge(pybamm.SpatialOperator):
@@ -455,8 +485,6 @@ class NodeToEdge(pybamm.SpatialOperator):
     Parameters
     ----------
 
-    name : str
-        name of the node
     child : :class:`Symbol`
         child node
     node_to_edge_function : method
@@ -478,7 +506,6 @@ class NodeToEdge(pybamm.SpatialOperator):
         evaluated_child = self.children[0].evaluate(t, y)
         # If the evaluated child is a numpy array of shape (n,), do the averaging
         # NOTE: Doing this check every time might be slow?
-        # NOTE: Will need to deal with 2D arrays at some point
         if isinstance(evaluated_child, np.ndarray) and len(evaluated_child.shape) == 1:
             return self._node_to_edge_function(evaluated_child)
         # If not, no need to average

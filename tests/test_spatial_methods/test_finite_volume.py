@@ -32,14 +32,40 @@ class TestFiniteVolume(unittest.TestCase):
         avd = pybamm.NodeToEdge(d, arithmetic_mean)
         np.testing.assert_array_equal(avd.evaluate(None, y_test), np.ones(9))
 
-    def test_surface_value(self):
+    def test_extrapolate_left_right(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+        }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        combined_submesh = mesh.combine_submeshes("negative particle")
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        macro_submesh = mesh.combine_submeshes(*whole_cell)
+        micro_submesh = mesh["negative particle"]
 
+        # Macroscale
+        # create variable
+        var = pybamm.Variable("var", domain=whole_cell)
+        # boundary value should work with something more complicated than a variable
+        extrap_left = pybamm.BoundaryValue(2 * var, "left")
+        extrap_right = pybamm.BoundaryValue(4 - var, "right")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+
+        # check constant extrapolates to constant
+        constant_y = np.ones_like(macro_submesh[0].nodes)
+        self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 2)
+        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 3)
+
+        # check linear variable extrapolates correctly
+        linear_y = macro_submesh[0].nodes
+        self.assertEqual(extrap_left_disc.evaluate(None, linear_y), 0)
+        self.assertEqual(extrap_right_disc.evaluate(None, linear_y), 3)
+
+        # Microscale
         # create variable
         var = pybamm.Variable("var", domain="negative particle")
         surf_eqn = pybamm.surf(var)
@@ -47,12 +73,12 @@ class TestFiniteVolume(unittest.TestCase):
         surf_eqn_disc = disc.process_symbol(surf_eqn)
 
         # check constant extrapolates to constant
-        constant_y = np.ones_like(combined_submesh[0].nodes)
+        constant_y = np.ones_like(micro_submesh[0].nodes)
         self.assertEqual(surf_eqn_disc.evaluate(None, constant_y), 1)
 
         # check linear variable extrapolates correctly
-        linear_y = combined_submesh[0].nodes
-        y_surf = combined_submesh[0].nodes[-1] + combined_submesh[0].d_nodes[-1] / 2
+        linear_y = micro_submesh[0].nodes
+        y_surf = micro_submesh[0].nodes[-1] + micro_submesh[0].d_nodes[-1] / 2
         self.assertEqual(surf_eqn_disc.evaluate(None, linear_y), y_surf)
 
     def test_discretise_diffusivity_times_spatial_operator(self):

@@ -235,11 +235,11 @@ class Discretisation(object):
                 )
             return symbol
 
-        elif isinstance(symbol, pybamm.SurfaceValue):
+        elif isinstance(symbol, pybamm.BoundaryValue):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[child.domain[0]].surface_value(
-                discretised_child
+            return self._spatial_methods[child.domain[0]].boundary_value(
+                discretised_child, symbol.side
             )
 
         elif isinstance(symbol, pybamm.BinaryOperator):
