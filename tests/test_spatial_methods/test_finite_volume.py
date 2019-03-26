@@ -1029,9 +1029,9 @@ class TestFiniteVolume(unittest.TestCase):
             r_disc.evaluate(), 3 * disc.mesh["negative particle"][0].nodes
         )
 
-    def test_mass_matrix_Dirichlet_bcs(self):
+    def test_mass_matrix_shape(self):
         """
-        Test mass matrix with Dirichlet boundary conditions
+        Test mass matrix shape
         """
         # one equation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -1057,41 +1057,9 @@ class TestFiniteVolume(unittest.TestCase):
         mass = np.eye(combined_submesh[0].npts)
         np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
 
-    def test_mass_matrix_Neumann_bcs(self):
-        """
-        Test mass matrix with Neumann boundary conditions
-        """
-        # one equation
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c = pybamm.Variable("c", domain=whole_cell)
-        N = pybamm.grad(c)
-        model = pybamm.BaseModel()
-        model.rhs = {c: pybamm.div(N)}
-        model.initial_conditions = {c: pybamm.Scalar(0)}
-        model.boundary_conditions = {
-            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
-        }
-        model.variables = {"c": c, "N": N}
-
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
-        mesh.add_ghost_meshes()
-        disc.mesh.add_ghost_meshes()
-
-        disc.process_model(model)
-
-        # mass matrix
-        mass = np.eye(combined_submesh[0].npts)
-        np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
-
     def test_p2d_mass_matrix_shape(self):
         """
-        Test grad and div with Dirichlet boundary conditions (applied by grad on var)
-        in the pseudo 2-dimensional case
+        Test mass matrix shape in the pseudo 2-dimensional case
         """
         c = pybamm.Variable("c", domain=["negative particle"])
         N = pybamm.grad(c)

@@ -78,8 +78,8 @@ class Discretisation(object):
             model.events[idx] = self.process_symbol(event)
         model.concatenated_events = self.concatenate(*model.events)
 
-        # Process mass matrix
-        self.process_mass_matrix(model)
+        # Create mass matrix
+        self.create_mass_matrix(model)
 
         # Check that resulting model makes sense
         self.check_model(model)
@@ -158,7 +158,7 @@ class Discretisation(object):
         model.algebraic = self.process_dict(model.algebraic)
         model.concatenated_algebraic = self.concatenate(*model.algebraic.values())
 
-    def process_mass_matrix(self, model):
+    def create_mass_matrix(self, model):
         """Creates mass matrix of the discretised model.
 
         Parameters
