@@ -67,35 +67,22 @@ class Mesh(dict):
         """
         # Check that the final edge of each submesh is the same as the first edge of the
         # next submesh
-
-        edges_aligned = [None] * (len(submeshnames) - 1)
         for i in range(len(submeshnames) - 1):
-
-            edges_aligned[i] = all(
-                [
+            for j in range(len(self[submeshnames[i]])):
+                if (
                     self[submeshnames[i]][j].edges[-1]
-                    == self[submeshnames[i + 1]][j].edges[0]
-                    for j in range(len(self[submeshnames[i]]))
-                ]
-            )
-        edges_aligned = all(edges_aligned)
+                    != self[submeshnames[i + 1]][j].edges[0]
+                ):
+                    raise pybamm.DomainError("submesh edges are not aligned")
 
-        if edges_aligned:
-            # Combine submeshes, being careful not to double-count repeated edges at the
-            # intersection of submeshes
-            submeshes = [None] * len(self[submeshnames[0]])
-            for i in range(len(self[submeshnames[0]])):
-                combined_submesh_edges = np.concatenate(
-                    [self[submeshnames[0]][i].edges]
-                    + [
-                        self[submeshname][i].edges[1:]
-                        for submeshname in submeshnames[1:]
-                    ]
-                )
-                submeshes[i] = pybamm.SubMesh1D(combined_submesh_edges)
-            return submeshes
-        else:
-            raise pybamm.DomainError("submesh edges are not aligned")
+        submeshes = [None] * len(self[submeshnames[0]])
+        for i in range(len(self[submeshnames[0]])):
+            combined_submesh_edges = np.concatenate(
+                [self[submeshnames[0]][i].edges]
+                + [self[submeshname][i].edges[1:] for submeshname in submeshnames[1:]]
+            )
+            submeshes[i] = pybamm.SubMesh1D(combined_submesh_edges)
+        return submeshes
 
     def add_ghost_meshes(self):
         """
