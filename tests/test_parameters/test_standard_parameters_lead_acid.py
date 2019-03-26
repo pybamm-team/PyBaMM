@@ -74,7 +74,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         combined_submeshes = disc.mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
-        self.assertEqual(processed_s.shape, combined_submeshes.nodes.shape)
+        self.assertEqual(processed_s.shape, combined_submeshes[0].nodes.shape)
 
     def test_current_functions(self):
         # create current functions
