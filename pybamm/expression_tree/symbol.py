@@ -354,13 +354,22 @@ class Symbol(anytree.NodeMixin):
         evaluate : evaluate the expression
 
         """
-
         # if any of the nodes are instances of any of these types, then the whole
         # expression depends on either t or y
         search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
 
         # do the search, return true if no relevent nodes are found
-        return all([not isinstance(n, search_types) for n in self.pre_order()])
+        # a Scalar with a name different to its is not constant, for parameter changing
+        # purposes
+        return all(
+            [
+                not (
+                    isinstance(n, search_types)
+                    or (isinstance(n, pybamm.Scalar) and n.name != str(n.value))
+                )
+                for n in self.pre_order()
+            ]
+        )
 
     def evaluates_to_value(self, value):
         """

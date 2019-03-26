@@ -102,6 +102,9 @@ class TestConcatenations(unittest.TestCase):
                 [np.full(mesh[a_dom[0]].npts, 2), np.full(mesh[b_dom[0]].npts, 1)]
             ),
         )
+        # test size and shape
+        self.assertEqual(conc.size, mesh[a_dom[0]].npts + mesh[b_dom[0]].npts)
+        self.assertEqual(conc.shape, (mesh[a_dom[0]].npts + mesh[b_dom[0]].npts,))
 
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
@@ -124,6 +127,14 @@ class TestConcatenations(unittest.TestCase):
                     np.full(mesh[b_dom[1]].npts, 3),
                 ]
             ),
+        )
+        # test size and shape
+        self.assertEqual(
+            conc.size, mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts
+        )
+        self.assertEqual(
+            conc.shape,
+            (mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts,),
         )
 
     def test_concatenation_orphans(self):

@@ -39,7 +39,7 @@ class TestUpdateParameters(unittest.TestCase):
         model1 = pybamm.ReactionDiffusionModel()
         modeltest1 = tests.StandardModelTest(model1)
         modeltest1.test_all()
-        T1, Y1 = modeltest1.solver.t, modeltest1.solver.y
+        Y1 = modeltest1.solver.y
 
         # double initial conditions
         model2 = pybamm.ReactionDiffusionModel()
@@ -53,7 +53,7 @@ class TestUpdateParameters(unittest.TestCase):
         )
         modeltest2.test_update_parameters(parameter_values_update)
         modeltest2.test_solving()
-        T2, Y2 = modeltest2.solver.t, modeltest2.solver.y
+        Y2 = modeltest2.solver.y
 
         # results should be different
         self.assertNotEqual(np.linalg.norm(Y1 - Y2), 0)

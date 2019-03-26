@@ -25,7 +25,7 @@ class TestBroadcasts(unittest.TestCase):
         broad_a = pybamm.Broadcast(1, ["negative electrode"])
         self.assertEqual(broad_a.name, "broadcast")
         self.assertIsInstance(broad_a.children[0], pybamm.Symbol)
-        self.assertEqual(broad_a.children[0].name, str(1))
+        self.assertEqual(broad_a.children[0].name, str(1.0))
         self.assertEqual(broad_a.domain, ["negative electrode"])
 
         b = pybamm.Symbol("b", domain=["negative electrode"])

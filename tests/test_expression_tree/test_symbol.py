@@ -53,7 +53,7 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((A @ a).simplify().evaluate(), 0)
 
         # test when other node is a parameter
-        c = pybamm.Parameter('c')
+        c = pybamm.Parameter("c")
         self.assertIsInstance((a + c).simplify(), pybamm.Parameter)
         self.assertIsInstance((c + a).simplify(), pybamm.Parameter)
         self.assertIsInstance((c + b).simplify(), pybamm.Addition)
@@ -223,6 +223,9 @@ class TestSymbol(unittest.TestCase):
 
         a = pybamm.Scalar(1) * pybamm.Vector(np.zeros(10))
         self.assertTrue(a.is_constant())
+
+        a = pybamm.Scalar(1, name="a scalar")
+        self.assertFalse(a.is_constant())
 
     def test_symbol_evaluates_to_number(self):
         a = pybamm.Scalar(3)

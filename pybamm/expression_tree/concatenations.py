@@ -139,6 +139,14 @@ class DomainConcatenation(Concatenation):
     def mesh(self):
         return self._mesh
 
+    @property
+    def size(self):
+        return self._size
+
+    @property
+    def shape(self):
+        return (self.size,)
+
     def create_slices(self, node):
         slices = {}
         start = 0
