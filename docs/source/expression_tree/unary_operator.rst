@@ -19,7 +19,7 @@ Unary Operators
 .. autoclass:: pybamm.Divergence
   :members:
 
-.. autoclass:: pybamm.SurfaceValue
+.. autoclass:: pybamm.BoundaryValue
   :members:
 
 .. autoclass:: pybamm.Integral

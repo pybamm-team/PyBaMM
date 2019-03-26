@@ -43,7 +43,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, residuals, y0, t_eval, events=None):
+    def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -59,7 +59,8 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
-
+        mass_matrix : array_like
+            The (sparse) mass matrix for the chosen spatial method.
         """
 
         def eqsres(t, y, ydot, return_residuals):
