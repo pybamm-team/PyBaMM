@@ -37,6 +37,7 @@ class StandardModelTest(object):
         if disc is not None:
             self.disc = disc
         self.disc.process_model(self.model)
+
         # Model should still be well-posed after processing
         self.model.check_well_posedness()
 

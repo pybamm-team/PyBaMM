@@ -165,6 +165,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             # doing via loop so that it is easier to implement x varing bcs
             bcs_symbol = pybamm.Vector(np.array([]))  # empty vector
             for i in range(len(submesh_list)):
+
                 if not lbc.evaluates_to_number():
                     lbc_i = pybamm.Extract(lbc, i)
                 else:

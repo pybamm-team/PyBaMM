@@ -52,7 +52,10 @@ class Discretisation(object):
 
         """
         # set boundary conditions (only need key ids for boundary_conditions)
-        self._bcs = {key.id: value for key, value in model.boundary_conditions.items()}
+        self._bcs = {
+            key.id: self.process_dict(value)
+            for key, value in model.boundary_conditions.items()
+        }
         # set variables (we require the full variable not just id)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
 
