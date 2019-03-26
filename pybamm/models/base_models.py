@@ -50,6 +50,7 @@ class BaseModel(object):
         self._events = []
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
+        self._mass_matrix = None
 
         # Default parameter values, geometry, submesh, spatial methods and solver
         input_path = os.path.join(
@@ -189,6 +190,14 @@ class BaseModel(object):
     @concatenated_initial_conditions.setter
     def concatenated_initial_conditions(self, concatenated_initial_conditions):
         self._concatenated_initial_conditions = concatenated_initial_conditions
+
+    @property
+    def mass_matrix(self):
+        return self._mass_matrix
+
+    @mass_matrix.setter
+    def mass_matrix(self, mass_matrix):
+        self._mass_matrix = mass_matrix
 
     def __getitem__(self, key):
         return self.rhs[key]

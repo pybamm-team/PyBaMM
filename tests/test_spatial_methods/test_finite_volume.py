@@ -802,6 +802,68 @@ class TestFiniteVolume(unittest.TestCase):
             r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes
         )
 
+    def test_mass_matrix_Dirichlet_bcs(self):
+        """
+        Test mass matrix with Dirichlet boundary conditions
+        """
+        # one equation
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        N = pybamm.grad(c)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.initial_conditions = {c: pybamm.Scalar(0)}
+        model.boundary_conditions = {
+            c: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+        }
+        model.variables = {"c": c, "N": N}
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        mesh.add_ghost_meshes()
+        disc.mesh.add_ghost_meshes()
+
+        disc.process_model(model)
+
+        # mass matrix
+        mass = np.eye(np.size(combined_submesh.nodes) + 2)
+        np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
+
+    def test_mass_matrix_Neumann_bcs(self):
+        """
+        Test mass matrix with Neumann boundary conditions
+        """
+        # one equation
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        N = pybamm.grad(c)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.initial_conditions = {c: pybamm.Scalar(0)}
+        model.boundary_conditions = {
+            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+        }
+        model.variables = {"c": c, "N": N}
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        mesh.add_ghost_meshes()
+        disc.mesh.add_ghost_meshes()
+
+        disc.process_model(model)
+
+        # mass matrix
+        mass = np.eye(np.size(combined_submesh.nodes))
+        np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

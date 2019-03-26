@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-from scipy.sparse import spdiags
+from scipy.sparse import spdiags, eye
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -304,6 +304,43 @@ class FiniteVolume(pybamm.SpatialMethod):
         penultimate_node = pybamm.StateVector(slice(y_slice_stop - 2, y_slice_stop - 1))
         surface_value = last_node + (last_node - penultimate_node) / 2
         return surface_value
+
+    def mass_matrix(self, symbol, boundary_conditions):
+        """
+        Calculates the mass matrix for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Variable`
+            The variable corresponding to the equation for which we are
+            calculating the mass matrix.
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) mass matrix for the spatial method.
+        """
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*symbol.domain)
+
+        # Get size of matrix
+        n = submesh.npts
+
+        # NOTE: for different spatial methods the matrix may need to be adjusted
+        # to account for Dirichlet boundary conditions. Here, we just have that
+        # the mass matrix is the identity, and add extra rows and columnds due
+        # to the added ghost nodes.
+        if symbol.id in boundary_conditions:
+            # NOTE: will need to check for left/right boundary conditions when
+            # we allow for mixed Dirichlet and Neumann left/right
+            n += 2
+
+        # Create matrix
+        matrix = eye(n)
+        return pybamm.Matrix(matrix)
 
     #######################################################
     # Can probably be moved outside of the spatial method
