@@ -8,7 +8,14 @@ import pybamm
 
 
 class Geometry(dict):
-    """A geometry class to store the details features of the cell geometry
+    """A geometry class to store the details features of the cell geometry.
+    Geometry extends the class dictionary and uses the key words:
+    "negative electrode", "positive electrode", etc to indicate the subdomain.
+    Within each subdomain, there are "primary" and "secondary" dimensions.
+    "primary" dimensions correspond to dimensiones on which spatial
+    operators will be applied (e.g. the gradient and divergence). In contrast,
+    spatial operators do not act along "secondary" dimensions. This allows for
+    multiple independent particles to be included into a model.
 
      **Extends**: :class:`dict`
 

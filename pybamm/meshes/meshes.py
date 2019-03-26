@@ -19,7 +19,7 @@ KNOWN_DOMAINS = [
 
 class Mesh(dict):
     """
-    Mesh contains the submeshes
+    Mesh contains a list of submeshes on each subdomain.
 
     **Extends**: dict
 
@@ -27,7 +27,7 @@ class Mesh(dict):
     ----------
 
     geometry : :class: `Geometry`
-        contains the geometry of the problem
+        contains the geometry of the problem.
     submesh_types: dict
         contains the types of submeshes to use (e.g. Uniform1DSubMesh)
     submesh_pts: dict

@@ -192,9 +192,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         # check for particle domain
         if ("negative particle" or "positive particle") in domain:
 
-            if prim_dim > 1:
-                NotImplementedError("Only supports 1D primary dimensions")
-
             # create np.array of repeated submesh[0].nodes
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
             r_edges_numpy = np.kron(np.ones(second_dim), edges)
