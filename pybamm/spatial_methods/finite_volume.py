@@ -161,23 +161,25 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         domain = symbol.domain
         submesh_list = self.mesh.combine_submeshes(*domain)
+
         # create a bc vector of length equal to the number variables
         # (only has non zero entries for neumann bcs)
-
         prim_dim = submesh_list[0].npts
         second_dim = len(submesh_list)
         total_pts = prim_dim * second_dim
 
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
+            # get boundary conditions
             bcs = boundary_conditions[symbol.id]
-            # get boundary conditions and edit domain
             if "left" in bcs.keys():
                 lbc = bcs["left"]
-                discretised_symbol = pybamm.NumpyConcatenation(lbc, discretised_symbol)
+            else:
+                lbc = pybamm.Scalar(0)
             if "right" in bcs.keys():
                 rbc = bcs["right"]
-                discretised_symbol = pybamm.NumpyConcatenation(discretised_symbol, rbc)
+            else:
+                rbc = pybamm.Scalar(0)
 
             # taking divergence removes ghost cells
             discretised_symbol.has_left_ghost_cell = False

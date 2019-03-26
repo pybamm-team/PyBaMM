@@ -609,7 +609,7 @@ class TestFiniteVolume(unittest.TestCase):
         constant_y = np.ones_like(combined_submesh[0].nodes)
         np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
-            np.zeros_like(combined_submesh.edges[:-1]),
+            np.zeros_like(combined_submesh[0].edges[:-1]),
         )
         np.testing.assert_array_equal(
             div_eqn_disc.evaluate(None, constant_y),
