@@ -147,7 +147,8 @@ class ParameterValues(dict):
         """
         if isinstance(symbol, pybamm.Parameter):
             value = self.get_parameter_value(symbol)
-            return pybamm.Scalar(value, domain=symbol.domain)
+            # Scalar inherits name (for updating parameters) and domain (for Broadcast)
+            return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_child = self.process_symbol(symbol.children[0])
@@ -159,6 +160,15 @@ class ParameterValues(dict):
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.children[0])
                 return function.diff(new_diff_variable)
+
+        elif isinstance(symbol, pybamm.Scalar):
+            # update any Scalar nodes if their name is in the parameter dict
+            try:
+                value = self.get_parameter_value(symbol)
+            except KeyError:
+                # KeyError -> name not in parameter dict, don't update, return old value
+                value = symbol.value
+            return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
