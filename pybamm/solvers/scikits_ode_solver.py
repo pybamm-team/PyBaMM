@@ -120,7 +120,9 @@ class JacobianFunctionCV(cvode.CV_JacRhsFunction):
 
         Parameters
         ----------
-        derivs : method
+        jacobian : method, optional
+            A function that takes in t and y and returns the Jacobian
+        derivs : method, optional
             A function that takes in t and y and returns the time-derivative dydt
 
         """
