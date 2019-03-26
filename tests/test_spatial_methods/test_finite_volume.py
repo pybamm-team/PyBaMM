@@ -5,6 +5,7 @@ import pybamm
 from tests import get_mesh_for_testing, get_p2d_mesh_for_testing
 
 import numpy as np
+from scipy.sparse import kron, eye
 import unittest
 
 
@@ -693,10 +694,10 @@ class TestFiniteVolume(unittest.TestCase):
         integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
-        constant_y = np.ones_like(combined_submesh.nodes)
-        constant_y_edges = np.ones_like(combined_submesh.edges)
-        linear_y = combined_submesh.nodes
-        linear_y_edges = combined_submesh.edges
+        constant_y = np.ones_like(combined_submesh[0].nodes)
+        constant_y_edges = np.ones_like(combined_submesh[0].edges)
+        linear_y = combined_submesh[0].nodes
+        linear_y_edges = combined_submesh[0].edges
         np.testing.assert_array_equal(
             integral_eqn_disc.evaluate(None, constant_y_edges), linear_y
         )
@@ -723,7 +724,7 @@ class TestFiniteVolume(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, linear_y), (linear_y ** 2 - (ln) ** 2) / 2
         )
-        cos_y = np.cos(combined_submesh.nodes)
+        cos_y = np.cos(combined_submesh[0].nodes)
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, cos_y),
             np.sin(linear_y) - np.sin(ln),
@@ -737,15 +738,15 @@ class TestFiniteVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         integral_eqn_disc = disc.process_symbol(integral_eqn)
 
-        constant_y = np.ones_like(mesh["negative particle"].nodes)
+        constant_y = np.ones_like(mesh["negative particle"][0].nodes)
         np.testing.assert_array_equal(
             integral_eqn_disc.evaluate(None, constant_y), np.pi
         )
-        linear_y = mesh["negative particle"].nodes
+        linear_y = mesh["negative particle"][0].nodes
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, linear_y), 2 * np.pi / 3, places=4
         )
-        one_over_y = 1 / mesh["negative particle"].nodes
+        one_over_y = 1 / mesh["negative particle"][0].nodes
         np.testing.assert_array_equal(
             integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi
         )
@@ -1052,6 +1053,60 @@ class TestFiniteVolume(unittest.TestCase):
         self.assertIsInstance(r_disc.children[1], pybamm.Vector)
         np.testing.assert_array_equal(
             r_disc.evaluate(), 3 * disc.mesh["negative particle"][0].nodes
+        )
+
+    def test_mass_matrix_shape(self):
+        """
+        Test mass matrix shape
+        """
+        # one equation
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        N = pybamm.grad(c)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.initial_conditions = {c: pybamm.Scalar(0)}
+        model.boundary_conditions = {
+            c: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+        }
+        model.variables = {"c": c, "N": N}
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+        disc.process_model(model)
+
+        # mass matrix
+        mass = np.eye(combined_submesh[0].npts)
+        np.testing.assert_array_equal(mass, model.mass_matrix.entries.toarray())
+
+    def test_p2d_mass_matrix_shape(self):
+        """
+        Test mass matrix shape in the pseudo 2-dimensional case
+        """
+        c = pybamm.Variable("c", domain=["negative particle"])
+        N = pybamm.grad(c)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.initial_conditions = {c: pybamm.Scalar(0)}
+        model.boundary_conditions = {
+            c: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+        }
+        model.variables = {"c": c, "N": N}
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        prim_pts = mesh["negative particle"][0].npts
+        sec_pts = len(mesh["negative particle"])
+        mass_local = eye(prim_pts)
+        mass = kron(eye(sec_pts), mass_local)
+        np.testing.assert_array_equal(
+            mass.toarray(), model.mass_matrix.entries.toarray()
         )
 
 
