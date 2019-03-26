@@ -391,42 +391,48 @@ class FiniteVolume(pybamm.SpatialMethod):
         for i in range(len(submesh_list)):
             y_slice_start = y_left[i]
             y_slice_stop = y_right[i]
-            # both ghost cells
-            left_ghost_cell = 2 * lbc - first_node
-            right_ghost_cell = 2 * rbc - last_node
             # left ghost cell
             first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
-            left_ghost_cell = 2 * lbc - first_node
             # middle symbol
             sub_disc_symbol = pybamm.StateVector(slice(y_slice_start, y_slice_stop + 1))
             # right ghost cell
             last_node = pybamm.StateVector(slice(y_slice_stop, y_slice_stop + 1))
-            right_ghost_cell = 2 * rbc - last_node
             if lbc is not None and rbc is not None:
+                left_ghost_cell = 2 * lbc - first_node
+                right_ghost_cell = 2 * rbc - last_node
                 # concatenate and flag ghost cells
                 concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
                     left_ghost_cell, sub_disc_symbol, right_ghost_cell
                 )
-                concat.has_left_ghost_cell = True
-                concat.has_right_ghost_cell = True
+                new_discretised_symbol = pybamm.NumpyConcatenation(
+                    new_discretised_symbol, concatenated_sub_disc_symbol
+                )
+                new_discretised_symbol.has_left_ghost_cell = True
+                new_discretised_symbol.has_right_ghost_cell = True
             elif lbc is not None:
+                # left ghost cell only
+                left_ghost_cell = 2 * lbc - first_node
                 # concatenate and flag ghost cells
                 concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
                     left_ghost_cell, sub_disc_symbol
                 )
-                concat.has_left_ghost_cell = True
+                new_discretised_symbol = pybamm.NumpyConcatenation(
+                    new_discretised_symbol, concatenated_sub_disc_symbol
+                )
+                new_discretised_symbol.has_left_ghost_cell = True
             elif rbc is not None:
                 # right ghost cell only
+                right_ghost_cell = 2 * rbc - last_node
                 # concatenate and flag ghost cells
                 concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
                     sub_disc_symbol, right_ghost_cell
                 )
-                concat.has_right_ghost_cell = True
+                new_discretised_symbol = pybamm.NumpyConcatenation(
+                    new_discretised_symbol, concatenated_sub_disc_symbol
+                )
+                new_discretised_symbol.has_right_ghost_cell = True
             else:
                 raise ValueError("at least one boundary condition must be provided")
-            new_discretised_symbol = pybamm.NumpyConcatenation(
-                new_discretised_symbol, concatenated_sub_disc_symbol
-            )
 
         return new_discretised_symbol
 
