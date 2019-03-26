@@ -4,14 +4,14 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-import autograd.numpy as np
-import os
+
+import numpy as np
 
 
-class LOQS(pybamm.BaseModel):
+class LOQS(pybamm.LeadAcidBaseModel):
     """Leading-Order Quasi-Static model for lead-acid.
 
-    **Extends**: :class:`pybamm.BaseModel`
+    **Extends**: :class:`pybamm.LeadAcidBaseModel`
 
     """
 
@@ -56,8 +56,12 @@ class LOQS(pybamm.BaseModel):
         self.boundary_conditions = {}
 
         # Variables
-        j0_n = pybamm.interface.exchange_current_density(c_e, ["negative electrode"])
-        j0_p = pybamm.interface.exchange_current_density(c_e, ["positive electrode"])
+        j0_n = pybamm.interface.exchange_current_density(
+            c_e, domain=["negative electrode"]
+        )
+        j0_p = pybamm.interface.exchange_current_density(
+            c_e, domain=["positive electrode"]
+        )
         Phi = -spla.U_n(c_e) - pybamm.Function(np.arcsinh, j_n / (2 * j0_n * sp.l_n))
         V = Phi + spla.U_p(c_e) - pybamm.Function(np.arcsinh, j_p / (2 * j0_p * sp.l_p))
         # Phis_n = pybamm.Scalar(0)
@@ -67,43 +71,21 @@ class LOQS(pybamm.BaseModel):
         # Phis = pybamm.Concatenation(Phis_n, pybamm.Scalar(0), Phis_p)
         # self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
         self.variables = {
-            "c": pybamm.Broadcast(c_e, whole_cell),
-            "Phi": pybamm.Broadcast(Phi, whole_cell),
-            "V": V,
-            "int(epsilon_times_c)dx": (sp.l_n * eps_n + sp.l_s * eps_s + sp.l_p * eps_p)
-            * c_e,
+            "Electrolyte concentration": pybamm.Broadcast(c_e, whole_cell),
+            "Porosity": pybamm.Concatenation(
+                pybamm.Broadcast(eps_n, ["negative electrode"]),
+                pybamm.Broadcast(eps_s, ["separator"]),
+                pybamm.Broadcast(eps_p, ["positive electrode"]),
+            ),
+            "Negative electrode overpotential": pybamm.Broadcast(
+                Phi, ["negative electrode"]
+            ),
+            "Positive electrode overpotential": pybamm.Broadcast(
+                V, ["positive electrode"]
+            ),
+            "Electrolyte potential": pybamm.Broadcast(Phi, whole_cell),
+            "Voltage": V,
         }
 
         # Terminate if concentration goes below zero
         self.events = [c_e]
-
-        # Overwrite default parameter values
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
-        self.default_parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
-            {
-                "Typical current density": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Gu1997.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Gu1997.py"
-                ),
-                "Darken thermodynamic factor": os.path.join(
-                    input_path, "darken_thermodynamic_factor_Chapman1968.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
-                ),
-            },
-        )

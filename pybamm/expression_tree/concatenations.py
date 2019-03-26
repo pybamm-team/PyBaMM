@@ -111,6 +111,16 @@ class DomainConcatenation(Concatenation):
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
 
+        # Check that there is a domain, otherwise the functionality won't work and we
+        # should raise a DomainError
+        if self.domain == []:
+            raise pybamm.DomainError(
+                """
+                domain cannot be empty for a DomainConcatenation.
+                Perhaps the children should have been Broadcasted first?
+                """
+            )
+
         # create dict of domain => slice of final vector
         self._slices = self.create_slices(self, mesh)
 
@@ -127,7 +137,9 @@ class DomainConcatenation(Concatenation):
         start = 0
         end = 0
         for dom in node.domain:
-            end += mesh[dom].npts
+            prim_pts = mesh[dom][0].npts
+            second_pts = len(mesh[dom])
+            end += prim_pts * second_pts
             slices[dom] = slice(start, end)
             start = end
         return slices

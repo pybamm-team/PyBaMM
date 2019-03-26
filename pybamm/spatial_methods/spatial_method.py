@@ -104,14 +104,14 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def integral(self, symbol, discretised_symbol):
+    def integral(self, domain, discretised_symbol):
         """
         Implements the integral for a spatial method.
 
         Parameters
         ----------
-        symbol: :class:`pybamm.Symbol`
-            The symbol that we will take the gradient of.
+        domain: iterable of strings
+            The domain in which to integrate
         discretised_symbol: class: pybamm.Array
             The discretised symbol of the correct size
 
@@ -138,6 +138,26 @@ class SpatialMethod:
         -------
         :class:`pybamm.Variable`
             The variable representing the surface value.
+        """
+        raise NotImplementedError
+
+    def mass_matrix(self, symbol, boundary_conditions):
+        """
+        Calculates the mass matrix for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Variable`
+            The variable corresponding to the equation for which we are
+            calculating the mass matrix.
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) mass matrix for the spatial method.
         """
         raise NotImplementedError
 

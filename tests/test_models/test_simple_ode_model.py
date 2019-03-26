@@ -32,13 +32,13 @@ class TestSimpleODEModel(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(
             model.variables["b broadcasted"].evaluate(T, Y),
-            np.ones((combined_submesh.npts, T.size)),
+            np.ones((combined_submesh[0].npts, T.size)),
         )
         np.testing.assert_array_almost_equal(
             model.variables["c broadcasted"].evaluate(T, Y),
-            np.ones(sum([mesh[d].npts for d in ["negative electrode", "separator"]]))[
-                :, np.newaxis
-            ]
+            np.ones(
+                sum([mesh[d][0].npts for d in ["negative electrode", "separator"]])
+            )[:, np.newaxis]
             * np.exp(-T),
         )
 

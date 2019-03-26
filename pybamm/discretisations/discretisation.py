@@ -6,7 +6,8 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import copy
-import autograd.numpy as np
+import numpy as np
+from scipy.sparse import block_diag, csr_matrix
 
 
 class Discretisation(object):
@@ -35,6 +36,8 @@ class Discretisation(object):
         }
         self._bcs = {}
         self._y_slices = {}
+
+        mesh.add_ghost_meshes()
 
     @property
     def mesh(self):
@@ -75,6 +78,9 @@ class Discretisation(object):
             model.events[idx] = self.process_symbol(event)
         model.concatenated_events = self.concatenate(*model.events)
 
+        # Create mass matrix
+        self.create_mass_matrix(model)
+
         # Check that resulting model makes sense
         self.check_model(model)
 
@@ -103,7 +109,8 @@ class Discretisation(object):
             # Otherwise, add up the size of all the domains in variable.domain
             else:
                 for dom in variable.domain:
-                    end += self._spatial_methods[dom].mesh[dom].npts_for_broadcast
+                    for submesh in self._spatial_methods[dom].mesh[dom]:
+                        end += submesh.npts_for_broadcast
             y_slices[variable.id] = slice(start, end)
             start = end
         self._y_slices = y_slices
@@ -125,21 +132,12 @@ class Discretisation(object):
         """
         # Discretise initial conditions
         model.initial_conditions = self.process_dict(model.initial_conditions)
-        model.initial_conditions_ydot = self.process_dict(model.initial_conditions_ydot)
 
         # Concatenate initial conditions into a single vector
         # check that all initial conditions are set
         model.concatenated_initial_conditions = self._concatenate_init(
             model.initial_conditions
         ).evaluate(0, None)
-
-        # evaluate initial conditions for ydot if they exist
-        if len(model.initial_conditions_ydot) > 0:
-            model.concatenated_initial_conditions_ydot = self._concatenate_init(
-                model.initial_conditions_ydot
-            ).evaluate(0, None)
-        else:
-            model.concatenated_initial_conditions_ydot = np.array([])
 
     def process_rhs_and_algebraic(self, model):
         """Discretise model equations - differential ('rhs') and algebraic.
@@ -159,6 +157,43 @@ class Discretisation(object):
         # Discretise and concatenate algebraic equations
         model.algebraic = self.process_dict(model.algebraic)
         model.concatenated_algebraic = self.concatenate(*model.algebraic.values())
+
+    def create_mass_matrix(self, model):
+        """Creates mass matrix of the discretised model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+        """
+        # Create list of mass matrices for each equation to be put into block
+        # diagonal mass matrix for the model
+        mass_list = []
+
+        # Process mass matrices for the differential equations
+        for var in model.rhs.keys():
+            if var.domain == []:
+                # If variable domain empty then mass matrix is just 1
+                mass_list.append(1.0)
+            else:
+                mass_list.append(
+                    self._spatial_methods[var.domain[0]]
+                    .mass_matrix(var, self._bcs)
+                    .entries
+                )
+
+        # Create lumped mass matrix (of zeros) of the correct shape for the
+        # discretised algebraic equations
+        if model.algebraic.keys():
+            y0 = model.concatenated_initial_conditions
+            mass_algebraic_size = model.concatenated_algebraic.evaluate(0, y0).shape[0]
+            mass_algebraic = csr_matrix((mass_algebraic_size, mass_algebraic_size))
+            mass_list.append(mass_algebraic)
+
+        # Create block diagonal (sparse) mass matrix
+        mass_matrix = block_diag(mass_list)
+        model.mass_matrix = pybamm.Matrix(mass_matrix)
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
@@ -212,22 +247,22 @@ class Discretisation(object):
         if isinstance(symbol, pybamm.Gradient):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[symbol.domain[0]].gradient(
+            return self._spatial_methods[child.domain[0]].gradient(
                 child, discretised_child, self._bcs
             )
 
         elif isinstance(symbol, pybamm.Divergence):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[symbol.domain[0]].divergence(
+            return self._spatial_methods[child.domain[0]].divergence(
                 child, discretised_child, self._bcs
             )
 
         elif isinstance(symbol, pybamm.Integral):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[symbol.domain[0]].integral(
-                child, discretised_child
+            return self._spatial_methods[child.domain[0]].integral(
+                child.domain, child, discretised_child
             )
 
         elif isinstance(symbol, pybamm.Broadcast):

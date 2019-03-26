@@ -120,19 +120,28 @@ class Symbol(anytree.NodeMixin):
         for pre, _, node in anytree.RenderTree(self):
             print("%s%s" % (pre, str(node)))
 
-    def visualise(self, filename, test=False):
-        """Produces a .png file of the tree (this node and its children) with the
-        name filename"""
+    def visualise(self, filename):
+        """
+        Produces a .png file of the tree (this node and its children) with the
+        name filename
+
+        Parameters
+        ----------
+
+        filename : str
+            filename to output, must end in ".png"
+
+        """
+
+        # check that filename ends in .png.
+        if filename[-4:] != ".png":
+            raise ValueError("filename should end in .png")
 
         new_node, counter = self.relabel_tree(self, 0)
 
-        # check that filename ends in .png.
-        filename = "view_tree/" + filename + ".png"
-
-        if test is False:
-            DotExporter(
-                new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
-            ).to_picture(filename)
+        DotExporter(
+            new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
+        ).to_picture(filename)
 
     def relabel_tree(self, symbol, counter):
         """ Finds all children of a symbol and assigns them a new id so that they can be
@@ -296,6 +305,23 @@ class Symbol(anytree.NodeMixin):
         """return an :class:`AbsoluteValue` object"""
         return pybamm.AbsoluteValue(self)
 
+    def diff(self, variable):
+        """
+        Differentiate a symbol with respect to a variable. Default behaviour is to
+        return `1` if differentiating with respect to yourself and zero otherwise.
+        Binary and Unary Operators override this.
+
+        Parameters
+        ----------
+        variable : :class:`pybamm.Symbol`
+            The variable with respect to which to differentiate
+
+        """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return pybamm.Scalar(0)
+
     def evaluate(self, t=None, y=None):
         """evaluate expression tree
 
@@ -336,8 +362,28 @@ class Symbol(anytree.NodeMixin):
         # do the search, return true if no relevent nodes are found
         return all([not isinstance(n, search_types) for n in self.pre_order()])
 
+    def evaluates_to_value(self, value):
+        """
+        Returns True if evaluating the expression returns a given constant value.
+        Returns False otherwise, including if NotImplementedError or TyperError
+        is raised.
+        !Not to be confused with isinstance(self, pybamm.Scalar)!
+
+        Parameters
+        ----------
+        value: Number
+            the value to compare against
+
+        See Also
+        --------
+        evaluate : evaluate the expression
+
+        """
+        return self.evaluates_to_number() and self.evaluate() == value
+
     def evaluates_to_number(self):
-        """Returns True if evaluating the expression returns a number.
+        """
+        Returns True if evaluating the expression returns a number.
         Returns False otherwise, including if NotImplementedError or TyperError
         is raised.
         !Not to be confused with isinstance(self, pybamm.Scalar)!
@@ -379,3 +425,16 @@ class Symbol(anytree.NodeMixin):
         return any(
             [isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order()]
         )
+
+    def simplify(self):
+        """
+        Simplify the expression tree.
+
+        This function recurses down the tree, applying any simplifications defined in
+        classes derived from pybamm.Symbol. E.g. any expression multiplied by a
+        pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0)
+        """
+
+        new_symbol = copy.deepcopy(self)
+        new_symbol.parent = None
+        return new_symbol

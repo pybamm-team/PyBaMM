@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numbers
+import autograd.numpy as np
 
 
 class BinaryOperator(pybamm.Symbol):
@@ -58,6 +59,20 @@ class BinaryOperator(pybamm.Symbol):
         else:
             raise pybamm.DomainError("""children must have same (or empty) domains""")
 
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        left = self.children[0].simplify()
+        right = self.children[1].simplify()
+
+        # _binary_simplify defined in derived classes for specific rules
+        new_node = self._binary_simplify(left, right)
+
+        # any tree that evaluates to a number replaced by a pybamm.Scalar node
+        if new_node.evaluates_to_number():
+            return pybamm.Scalar(new_node.evaluate())
+
+        return new_node
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
@@ -69,9 +84,34 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("**", left, right)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # apply chain rule and power rule
+            base, exponent = self.orphans
+            return base ** (exponent - 1) * (
+                exponent * base.diff(variable)
+                + base * pybamm.Function(np.log, base) * exponent.diff(variable)
+            )
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) ** self.children[1].evaluate(t, y)
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+
+        # anything to the power of zero is one
+        if right.evaluates_to_value(0):
+            return pybamm.Scalar(1)
+
+        # anything to the power of one is itself
+        if right.evaluates_to_value(1):
+            return left
+
+        return self.__class__(left, right)
 
 
 class Addition(BinaryOperator):
@@ -84,9 +124,27 @@ class Addition(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("+", left, right)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return self.children[0].diff(variable) + self.children[1].diff(variable)
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) + self.children[1].evaluate(t, y)
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+
+        # anything added by a scalar zero returns the other child
+        if left.evaluates_to_value(0):
+            return right
+        if right.evaluates_to_value(0):
+            return left
+
+        return self.__class__(left, right)
 
 
 class Subtraction(BinaryOperator):
@@ -100,9 +158,27 @@ class Subtraction(BinaryOperator):
 
         super().__init__("-", left, right)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return self.children[0].diff(variable) - self.children[1].diff(variable)
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) - self.children[1].evaluate(t, y)
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+
+        # anything added by a scalar zero returns the other child
+        if left.evaluates_to_value(0):
+            return -right
+        if right.evaluates_to_value(0):
+            return left
+
+        return self.__class__(left, right)
 
 
 class Multiplication(BinaryOperator):
@@ -116,9 +192,27 @@ class Multiplication(BinaryOperator):
 
         super().__init__("*", left, right)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # apply product rule
+            left, right = self.orphans
+            return left.diff(variable) * right + left * right.diff(variable)
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+
+        # anything multiplied by a scalar zero returns a scalar zero
+        if left.evaluates_to_value(0) or right.evaluates_to_value(0):
+            return pybamm.Scalar(0)
+
+        return self.__class__(left, right)
 
 
 class MatrixMultiplication(BinaryOperator):
@@ -132,9 +226,24 @@ class MatrixMultiplication(BinaryOperator):
 
         super().__init__("*", left, right)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        # We shouldn't need this
+        raise NotImplementedError
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
+
         return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+
+        # anything multiplied by a scalar zero returns a scalar zero
+        if left.evaluates_to_value(0) or right.evaluates_to_value(0):
+            return pybamm.Scalar(0)
+
+        return self.__class__(left, right)
 
 
 class Division(BinaryOperator):
@@ -147,6 +256,34 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("/", left, right)
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # apply quotient rule
+            top, bottom = self.orphans
+            return (
+                top.diff(variable) * bottom - top * bottom.diff(variable)
+            ) / bottom ** 2
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y) / self.children[1].evaluate(t, y)
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+
+        # zero divided by zero returns nan scalar
+        if left.evaluates_to_value(0) and right.evaluates_to_value(0):
+            return pybamm.Scalar(np.nan)
+
+        # zero divided by anything returns zero
+        if left.evaluates_to_value(0):
+            return pybamm.Scalar(0)
+
+        # anything divided by zero returns inf
+        if right.evaluates_to_value(0):
+            return pybamm.Scalar(np.inf)
+
+        return self.__class__(left, right)
