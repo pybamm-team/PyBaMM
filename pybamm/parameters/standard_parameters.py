@@ -26,8 +26,6 @@ l_n, l_s, l_p
 
 Microscale Geometry
 -------------------
-R_n, R_p
-    Negative and positive particle radii
 a_n, a_p
     Negative and positive electrode surface area densities
 

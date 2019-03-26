@@ -13,8 +13,11 @@ import os
 
 class TestHomogeneousReaction(unittest.TestCase):
     def test_set_parameters(self):
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
         param = pybamm.ParameterValues(
-            "input/parameters/lithium-ion/parameters/LCO.csv",
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
             {
                 "Typical current density": 1,
                 "Current function": os.path.join(
@@ -55,8 +58,11 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertEqual(processed_rxn.children[2].domain, ["positive electrode"])
 
     def test_discretisation(self):
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
         param = pybamm.ParameterValues(
-            "input/parameters/lithium-ion/parameters/LCO.csv",
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
             {
                 "Typical current density": 1,
                 "Current function": os.path.join(
@@ -100,8 +106,11 @@ class TestHomogeneousReaction(unittest.TestCase):
         )
 
     def test_disc_for_scalars(self):
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
         param = pybamm.ParameterValues(
-            "input/parameters/lithium-ion/parameters/LCO.csv",
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
             {
                 "Typical current density": 1,
                 "Current function": os.path.join(

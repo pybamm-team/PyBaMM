@@ -62,6 +62,8 @@ def chi_dimensional(c_e):
     return pybamm.FunctionParameter("Darken thermodynamic factor", c_e)
 
 
+# (1-2*sp.t_plus) is for Nernst-Planck
+# 2*(1-sp.t_plus) for Stefan-Maxwell
 def chi(c_e):
     c_e_dimensional = c_e * sp.c_e_typ
     alpha = (sp.nu * sp.V_w - sp.V_e) * sp.c_e_typ
