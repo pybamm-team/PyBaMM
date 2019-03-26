@@ -60,10 +60,18 @@ class TestUpdateParameters(unittest.TestCase):
         modeltest1.test_all()
         T1, Y1 = modeltest1.solver.t, modeltest1.solver.y
 
-        # double initial conditions
-        model2 = pybamm.ReactionDiffusionModel()
-        modeltest2 = tests.StandardModelTest(model2)
-        modeltest2.test_all()
+        # results should be different
+        # for idx in range(len(T1)):
+        #     j1 = modeltest1.model.variables["Interfacial current density"].evaluate(
+        #         T1[idx], Y1[:, idx]
+        #     )
+        #     j2 = modeltest2.model.variables["Interfacial current density"].evaluate(
+        #         T2[idx], Y2[:, idx]
+        #     )
+        #     self.assertNotEqual(np.linalg.norm(j1 - j2), 0)
+        # self.assertNotEqual(np.linalg.norm(Y1 - Y2), 0)
+
+        # trying to update the model fails
         parameter_values_update = pybamm.ParameterValues(
             {
                 "Negative electrode width": 0.5,
@@ -71,20 +79,8 @@ class TestUpdateParameters(unittest.TestCase):
                 "Positive electrode width": 0.2,
             }
         )
-        modeltest2.test_processing_parameters(param=parameter_values_update)
-        modeltest2.test_solving()
-        T2, Y2 = modeltest2.solver.t, modeltest2.solver.y
-
-        # results should be different
-        for idx in range(len(T1)):
-            j1 = modeltest1.model.variables["Interfacial current density"].evaluate(
-                T1[idx], Y1[:, idx]
-            )
-            j2 = modeltest2.model.variables["Interfacial current density"].evaluate(
-                T2[idx], Y2[:, idx]
-            )
-            self.assertNotEqual(np.linalg.norm(j1 - j2), 0)
-        # self.assertNotEqual(np.linalg.norm(Y1 - Y2), 0)
+        with self.assertRaisesRegex(ValueError, "geometry has changed"):
+            modeltest1.test_update_parameters(parameter_values_update)
 
 
 if __name__ == "__main__":
