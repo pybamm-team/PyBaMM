@@ -49,11 +49,20 @@ class DaeSolver(pybamm.BaseSolver):
         def algebraic(t, y):
             return model.concatenated_algebraic.evaluate(t, y)
 
+        # Create event-dependent function to evaluate events
+        def event_fun(event):
+            def eval_event(t, y):
+                return event.evaluate(t, y)
+
+            return eval_event
+
+        events = [event_fun(event) for event in model.events]
+
         y0 = self.calculate_consistent_initial_conditions(
             rhs, algebraic, model.concatenated_initial_conditions
         )
 
-        self.t, self.y = self.integrate(residuals, y0, t_eval)
+        self.t, self.y = self.integrate(residuals, y0, t_eval, events=events)
 
     def calculate_consistent_initial_conditions(self, rhs, algebraic, y0_guess):
         """
