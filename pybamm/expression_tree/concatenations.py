@@ -152,7 +152,9 @@ class DomainConcatenation(Concatenation):
         start = 0
         end = 0
         for dom in node.domain:
-            end += self.mesh[dom].npts
+            prim_pts = self.mesh[dom][0].npts
+            second_pts = len(self.mesh[dom])
+            end += prim_pts * second_pts
             slices[dom] = slice(start, end)
             start = end
         return slices

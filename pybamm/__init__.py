@@ -132,6 +132,7 @@ from .geometry.geometry import (
     Geometry,
     Geometry1DMacro,
     Geometry1DMicro,
+    Geometry1p1DMicro,
     Geometry3DMacro,
 )
 

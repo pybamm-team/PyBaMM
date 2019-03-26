@@ -92,19 +92,19 @@ class TestConcatenations(unittest.TestCase):
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
         a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
-        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
 
         # concatenate them the "wrong" way round to check they get reordered correctly
         conc = pybamm.DomainConcatenation([b, a], mesh)
         np.testing.assert_array_equal(
             conc.evaluate(),
             np.concatenate(
-                [np.full(mesh[a_dom[0]].npts, 2), np.full(mesh[b_dom[0]].npts, 1)]
+                [np.full(mesh[a_dom[0]][0].npts, 2), np.full(mesh[b_dom[0]][0].npts, 1)]
             ),
         )
         # test size and shape
-        self.assertEqual(conc.size, mesh[a_dom[0]].npts + mesh[b_dom[0]].npts)
-        self.assertEqual(conc.shape, (mesh[a_dom[0]].npts + mesh[b_dom[0]].npts,))
+        self.assertEqual(conc.size, mesh[a_dom[0]][0].npts + mesh[b_dom[0]][0].npts)
+        self.assertEqual(conc.shape, (mesh[a_dom[0]][0].npts + mesh[b_dom[0]][0].npts,))
 
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
@@ -112,7 +112,7 @@ class TestConcatenations(unittest.TestCase):
         a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
         b = pybamm.Vector(
             np.concatenate(
-                [np.full(mesh[b_dom[0]].npts, 1), np.full(mesh[b_dom[1]].npts, 3)]
+                [np.full(mesh[b_dom[0]][0].npts, 1), np.full(mesh[b_dom[1]][0].npts, 3)]
             ),
             domain=b_dom,
         )
@@ -122,19 +122,20 @@ class TestConcatenations(unittest.TestCase):
             conc.evaluate(),
             np.concatenate(
                 [
-                    np.full(mesh[b_dom[0]].npts, 1),
-                    np.full(mesh[a_dom[0]].npts, 2),
-                    np.full(mesh[b_dom[1]].npts, 3),
+                    np.full(mesh[b_dom[0]][0].npts, 1),
+                    np.full(mesh[a_dom[0]][0].npts, 2),
+                    np.full(mesh[b_dom[1]][0].npts, 3),
                 ]
             ),
         )
         # test size and shape
         self.assertEqual(
-            conc.size, mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts
+            conc.size,
+            mesh[b_dom[0]][0].npts + mesh[a_dom[0]][0].npts + mesh[b_dom[1]][0].npts,
         )
         self.assertEqual(
             conc.shape,
-            (mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts,),
+            (mesh[b_dom[0]][0].npts + mesh[a_dom[0]][0].npts + mesh[b_dom[1]][0].npts,),
         )
 
     def test_concatenation_orphans(self):
@@ -177,9 +178,9 @@ class TestConcatenations(unittest.TestCase):
             processed_conc.evaluate(),
             np.concatenate(
                 [
-                    np.ones(mesh["negative electrode"].npts),
-                    2 * np.ones(mesh["separator"].npts),
-                    3 * np.ones(mesh["positive electrode"].npts),
+                    np.ones(mesh["negative electrode"][0].npts),
+                    2 * np.ones(mesh["separator"][0].npts),
+                    3 * np.ones(mesh["positive electrode"][0].npts),
                 ]
             ),
         )
@@ -202,9 +203,9 @@ class TestConcatenations(unittest.TestCase):
             processed_conc.evaluate(t=2),
             np.concatenate(
                 [
-                    2 * np.ones(mesh["negative electrode"].npts),
-                    4 * np.ones(mesh["separator"].npts),
-                    6 * np.ones(mesh["positive electrode"].npts),
+                    2 * np.ones(mesh["negative electrode"][0].npts),
+                    4 * np.ones(mesh["separator"][0].npts),
+                    6 * np.ones(mesh["positive electrode"][0].npts),
                 ]
             ),
         )
@@ -228,9 +229,9 @@ class TestConcatenations(unittest.TestCase):
             processed_conc.evaluate(y=y),
             np.concatenate(
                 [
-                    np.ones(mesh["negative electrode"].npts),
-                    2 * np.ones(mesh["separator"].npts),
-                    3 * np.ones(mesh["positive electrode"].npts),
+                    np.ones(mesh["negative electrode"][0].npts),
+                    2 * np.ones(mesh["separator"][0].npts),
+                    3 * np.ones(mesh["positive electrode"][0].npts),
                 ]
             ),
         )
@@ -250,9 +251,9 @@ class TestConcatenations(unittest.TestCase):
             processed_conc.evaluate(t=2, y=y),
             np.concatenate(
                 [
-                    np.ones(mesh["negative electrode"].npts),
-                    4 * np.ones(mesh["separator"].npts),
-                    3 * np.ones(mesh["positive electrode"].npts),
+                    np.ones(mesh["negative electrode"][0].npts),
+                    4 * np.ones(mesh["separator"][0].npts),
+                    3 * np.ones(mesh["positive electrode"][0].npts),
                 ]
             ),
         )
