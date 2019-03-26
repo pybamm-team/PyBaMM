@@ -159,17 +159,24 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
-            # TODO:these are symbols so need to check them
             lbc = boundary_conditions[symbol.id]["left"]
             rbc = boundary_conditions[symbol.id]["right"]
 
             # doing via loop so that it is easier to implement x varing bcs
             bcs_symbol = pybamm.Vector(np.array([]))  # empty vector
             for i in range(len(submesh_list)):
+                if not lbc.evaluates_to_number():
+                    lbc_i = pybamm.Extract(lbc, i)
+                else:
+                    lbc_i = lbc
+                if not rbc.evaluates_to_number():
+                    rbc_i = pybamm.Extract(lbc, i)
+                else:
+                    rbc_i = rbc
                 # only the interior equations:
                 interior = pybamm.Vector(np.zeros(prim_dim - 2))
-                left = -lbc / pybamm.Vector(np.array([submesh_list[i].d_edges[0]]))
-                right = rbc / pybamm.Vector(np.array([submesh_list[i].d_edges[-1]]))
+                left = -lbc_i / pybamm.Vector(np.array([submesh_list[i].d_edges[0]]))
+                right = rbc_i / pybamm.Vector(np.array([submesh_list[i].d_edges[-1]]))
                 bcs_symbol = pybamm.NumpyConcatenation(
                     bcs_symbol, left, interior, right
                 )
@@ -368,14 +375,23 @@ class FiniteVolume(pybamm.SpatialMethod):
             y_slice_start = y_left[i]
             y_slice_stop = y_right[i]
 
+            if not lbc.evaluates_to_number():
+                lbc_i = pybamm.Extract(lbc, i)
+            else:
+                lbc_i = lbc
+            if not rbc.evaluates_to_number():
+                rbc_i = pybamm.Extract(lbc, i)
+            else:
+                rbc_i = rbc
+
             # left ghost cell
             first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
-            left_ghost_cell = 2 * lbc - first_node
+            left_ghost_cell = 2 * lbc_i - first_node
             # middle symbol
             sub_disc_symbol = pybamm.StateVector(slice(y_slice_start, y_slice_stop + 1))
             # right ghost cell
             last_node = pybamm.StateVector(slice(y_slice_stop, y_slice_stop + 1))
-            right_ghost_cell = 2 * rbc - last_node
+            right_ghost_cell = 2 * rbc_i - last_node
 
             concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
                 left_ghost_cell, sub_disc_symbol, right_ghost_cell

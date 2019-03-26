@@ -1054,6 +1054,66 @@ class TestFiniteVolume(unittest.TestCase):
             r_disc.evaluate(), 3 * disc.mesh["negative particle"][0].nodes
         )
 
+    def test_p2d_with_x_dep_bcs_spherical_operators(self):
+        # test div( grad( sin(r) )) == (2/r)*cos(r) - *sin(r)
+
+        xn = pybamm.SpatialVariable("x", ["negative electrode"])
+        c = pybamm.Variable("c", domain=["negative particle"])
+        N = pybamm.grad(c)
+        eqn = pybamm.div(N)
+        boundary_conditions = {
+            N: {
+                "left": pybamm.Scalar(np.cos(0)) * xn,
+                "right": pybamm.Scalar(np.cos(1)) * xn,
+            }
+        }
+
+        def get_l2_error(m):
+            mesh = get_p2d_mesh_for_testing(6, m)
+            spatial_methods = {
+                "negative particle": pybamm.FiniteVolume,
+                "negative electrode": pybamm.FiniteVolume,
+            }
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            mesh = disc.mesh["negative particle"]
+            disc._bcs = {
+                key.id: disc.process_dict(value)
+                for key, value in boundary_conditions.items()
+            }
+            r = mesh[0].nodes
+            xn_disc = disc.process_symbol(xn)
+
+            prim_pts = mesh[0].npts
+            sec_pts = len(mesh)
+
+            # exact solution
+            y = np.kron(xn_disc.entries, np.sin(r))
+            exact = (2 / r) * np.cos(r) - np.sin(r)
+            exact_internal = np.kron(xn_disc.entries, exact[1:-1])
+
+            # discretise and evaluate
+            variables = [c]
+            disc.set_variable_slices(variables)
+            eqn_disc = disc.process_symbol(eqn)
+            approx_eval = eqn_disc.evaluate(None, y)
+            approx_eval = np.reshape(approx_eval, [sec_pts, prim_pts])
+            approx_internal = approx_eval[:, 1:-1]
+            approx_internal = np.reshape(approx_internal, [sec_pts * (prim_pts - 2)])
+
+            # error
+            error = np.linalg.norm(approx_internal - exact_internal) / np.linalg.norm(
+                exact_internal
+            )
+            return error
+
+        # Get errors
+        ns = 10 * (2 ** np.arange(2, 7))
+        errs = np.array([get_l2_error(int(n)) for n in ns])
+
+        # Get rates: expect h**1.5 convergence because of boundary conditions
+        rates = np.log2(errs[:-1] / errs[1:])
+        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
