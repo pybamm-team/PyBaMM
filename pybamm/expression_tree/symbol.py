@@ -379,7 +379,11 @@ class Symbol(anytree.NodeMixin):
         evaluate : evaluate the expression
 
         """
-        return self.evaluates_to_number() and self.evaluate() == value
+        return (
+            self.is_constant()
+            and self.evaluates_to_number()
+            and self.evaluate() == value
+        )
 
     def evaluates_to_number(self):
         """

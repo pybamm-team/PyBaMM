@@ -53,3 +53,8 @@ class StandardModelTest(object):
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
+
+    def test_update_parameters(self, param):
+        param.process_discretised_model(self.model, self.disc)
+        # Model should still be well-posed after processing
+        self.model.check_well_posedness()

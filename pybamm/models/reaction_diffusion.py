@@ -38,3 +38,6 @@ class ReactionDiffusionModel(pybamm.BaseModel):
 
         # Create own model from diffusion model
         self.update(diffusion_model)
+
+        # Add j to variables dict
+        self.variables.update({"Interfacial current density": j})

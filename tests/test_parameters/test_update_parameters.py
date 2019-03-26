@@ -45,19 +45,46 @@ class TestUpdateParameters(unittest.TestCase):
         model2 = pybamm.ReactionDiffusionModel()
         modeltest2 = tests.StandardModelTest(model2)
         modeltest2.test_all()
+        parameter_values_update = pybamm.ParameterValues({"Typical current density": 2})
+        modeltest2.test_update_parameters(parameter_values_update)
+        modeltest2.test_solving()
+        T2, Y2 = modeltest2.solver.t, modeltest2.solver.y
+
+        # results should be different
+        self.assertNotEqual(np.linalg.norm(Y1 - Y2), 0)
+
+    def test_update_geometry(self):
+        # standard model
+        model1 = pybamm.ReactionDiffusionModel()
+        modeltest1 = tests.StandardModelTest(model1)
+        modeltest1.test_all()
+        T1, Y1 = modeltest1.solver.t, modeltest1.solver.y
+
+        # double initial conditions
+        model2 = pybamm.ReactionDiffusionModel()
+        modeltest2 = tests.StandardModelTest(model2)
+        modeltest2.test_all()
         parameter_values_update = pybamm.ParameterValues(
             {
-                "Initial concentration in electrolyte": 2
-                * model2.default_parameter_values[
-                    "Initial concentration in electrolyte"
-                ]
+                "Negative electrode width": 0.5,
+                "Separator width": 0.3,
+                "Positive electrode width": 0.2,
             }
         )
-        parameter_values_update.process_model(model2)
-        modeltest2.test_all()
+        modeltest2.test_processing_parameters(param=parameter_values_update)
+        modeltest2.test_solving()
         T2, Y2 = modeltest2.solver.t, modeltest2.solver.y
-        np.testing.assert_array_equal(T1, T2)
-        np.testing.assert_array_equal(Y1, Y2)
+
+        # results should be different
+        for idx in range(len(T1)):
+            j1 = modeltest1.model.variables["Interfacial current density"].evaluate(
+                T1[idx], Y1[:, idx]
+            )
+            j2 = modeltest2.model.variables["Interfacial current density"].evaluate(
+                T2[idx], Y2[:, idx]
+            )
+            self.assertNotEqual(np.linalg.norm(j1 - j2), 0)
+        # self.assertNotEqual(np.linalg.norm(Y1 - Y2), 0)
 
 
 if __name__ == "__main__":

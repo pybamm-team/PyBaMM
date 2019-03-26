@@ -364,6 +364,10 @@ class NodeToEdge(pybamm.SpatialOperator):
         )
         self._node_to_edge_function = node_to_edge_function
 
+    @property
+    def node_to_edge_function(self):
+        return self._node_to_edge_function
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         evaluated_child = self.children[0].evaluate(t, y)
