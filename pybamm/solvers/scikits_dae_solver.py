@@ -25,7 +25,7 @@ if autograd_spec is not None:
     autograd = importlib.util.module_from_spec(autograd_spec)
     autograd_spec.loader.exec_module(autograd)
 
-
+    
 class ScikitsDaeSolver(pybamm.DaeSolver):
     """Solve a discretised model, using scikits.odes.
 
@@ -53,7 +53,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None):
+    def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -66,17 +66,17 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
+        events : method, optional
+            A function that takes in t and y and returns conditions for the solver to
+            stop
+        mass_matrix : array_like
+            The (sparse) mass matrix for the chosen spatial method.
         jacobian : method, optional
             A function that takes in t, y, ydot and cj and returns the Jacobian. If
             no Jacobian is provided (default), autograd is used to compute the
             Jacobian. If autograd not installed, the solver will approximate the
             Jacobian.
             (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
-        events : method, optional
-            A function that takes in t and y and returns conditions for the solver to
-            stop
-        mass_matrix : array_like
-            The (sparse) mass matrix for the chosen spatial method.
         """
 
         def eqsres(t, y, ydot, return_residuals):

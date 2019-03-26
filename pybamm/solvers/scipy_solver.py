@@ -39,7 +39,7 @@ class ScipySolver(pybamm.OdeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, derivs, y0, t_eval, events=None, mass_matrix=None):
+    def integrate(self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -52,17 +52,16 @@ class ScipySolver(pybamm.OdeSolver):
             The initial conditions
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        jacobian : method, optional
-            A function that takes in t and y and returns the Jacobian. If
-            no Jacobian is provided (default), autograd is used to compute the
-            Jacobian. If autograd not installed, the solver will approximate the
-            Jacobian.
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
         mass_matrix : array_like
             The (sparse) mass matrix for the chosen spatial method.
-
+        jacobian : method, optional
+            A function that takes in t and y and returns the Jacobian. If
+            no Jacobian is provided (default), autograd is used to compute the
+            Jacobian. If autograd not installed, the solver will approximate the
+            Jacobian.
         Returns
         -------
         object

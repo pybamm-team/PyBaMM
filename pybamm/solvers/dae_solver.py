@@ -94,7 +94,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         return y0_consistent
 
-    def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None):
+    def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -107,12 +107,12 @@ class DaeSolver(pybamm.BaseSolver):
             The initial conditions
         t_eval : numeric type
             The times at which to compute the solution
-        jacobian : method, optional
-            A function that takes in t, y and ydot and returns the Jacobian
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
         mass_matrix : array_like
             The (sparse) mass matrix for the chosen spatial method.
+        jacobian : method, optional
+            A function that takes in t, y and ydot and returns the Jacobian
         """
         raise NotImplementedError
