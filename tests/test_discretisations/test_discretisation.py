@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 import unittest
 from tests import get_mesh_for_testing, get_discretisation_for_testing
+from scipy.sparse import block_diag
 
 
 class TestDiscretise(unittest.TestCase):
@@ -343,9 +344,16 @@ class TestDiscretise(unittest.TestCase):
         y0 = model.concatenated_initial_conditions
         np.testing.assert_array_equal(y0, 3 * np.ones_like(combined_submesh[0].nodes))
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
+
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.variables["c"].evaluate(None, y0))
         np.testing.assert_array_equal(y0, model.variables["N"].evaluate(None, y0))
+
+        # mass matrix is identity
+        np.testing.assert_array_equal(
+            np.eye(combined_submesh[0].nodes.shape[0]),
+            model.mass_matrix.entries.toarray(),
+        )
 
         # several equations
         T = pybamm.Variable("T", domain=["negative electrode"])
@@ -385,6 +393,11 @@ class TestDiscretise(unittest.TestCase):
             np.cumsum([combined_submesh[0].npts, mesh["negative electrode"][0].npts]),
         )
         np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
+
+        # mass matrix is identity
+        np.testing.assert_array_equal(
+            np.eye(np.size(y0)), model.mass_matrix.entries.toarray()
+        )
 
         # test that not enough initial conditions raises an error
         model = pybamm.BaseModel()
@@ -437,6 +450,22 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(
             model.concatenated_algebraic.evaluate(None, y0),
             np.zeros_like(combined_submesh[0].nodes),
+        )
+
+        # mass matrix is identity upper left, zeros elsewhere
+        mass = block_diag(
+            (
+                np.eye(np.size(combined_submesh[0].nodes)),
+                np.zeros(
+                    (
+                        np.size(combined_submesh[0].nodes),
+                        np.size(combined_submesh[0].nodes),
+                    )
+                ),
+            )
+        )
+        np.testing.assert_array_equal(
+            mass.toarray(), model.mass_matrix.entries.toarray()
         )
 
     def test_process_model_concatenation(self):

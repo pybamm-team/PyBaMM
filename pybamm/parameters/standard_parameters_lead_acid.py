@@ -62,6 +62,8 @@ def chi_dimensional(c_e):
     return pybamm.FunctionParameter("Darken thermodynamic factor", c_e)
 
 
+# (1-2*sp.t_plus) is for Nernst-Planck
+# 2*(1-sp.t_plus) for Stefan-Maxwell
 def chi(c_e):
     c_e_dimensional = c_e * sp.c_e_typ
     alpha = (sp.nu * sp.V_w - sp.V_e) * sp.c_e_typ
@@ -157,7 +159,7 @@ pi_os = (
     mu_dimensional(sp.c_e_typ)
     * velocity_scale
     * sp.L_x
-    / (d ** 2 * sp.R * sp.T * sp.c_e_typ)
+    / (d ** 2 * sp.R * sp.T_ref * sp.c_e_typ)
 )  # Ratio of viscous pressure scale to osmotic pressure scale
 gamma_hat_e = 1  # ratio of electrolyte concentration to electrode concentration, undef.
 

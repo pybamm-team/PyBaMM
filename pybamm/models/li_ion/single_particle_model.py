@@ -7,7 +7,7 @@ import pybamm
 import numpy as np
 
 
-class SPM(pybamm.BaseModel):
+class SPM(pybamm.LithiumIonBaseModel):
     """Single Particle Model for li-ion.
 
     **Extends**: :class:`pybamm.BaseModel`

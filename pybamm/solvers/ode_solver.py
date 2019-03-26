@@ -45,9 +45,10 @@ class OdeSolver(pybamm.BaseSolver):
         events = [event_fun(event) for event in model.events]
 
         y0 = model.concatenated_initial_conditions
+
         self.t, self.y = self.integrate(dydt, y0, t_eval, events=events)
 
-    def integrate(self, derivs, y0, t_eval, events=None):
+    def integrate(self, derivs, y0, t_eval, events=None, mass_matrix=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -62,6 +63,7 @@ class OdeSolver(pybamm.BaseSolver):
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
-
+        mass_matrix : :class:`pybamm.Matrix`
+            The (sparse) mass matrix for the chosen spatial method.
         """
         raise NotImplementedError

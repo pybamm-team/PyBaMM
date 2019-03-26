@@ -52,6 +52,13 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
     ):
         return symbol
 
+    def mass_matrix(self, symbol, boundary_conditions):
+        n = 0
+        for domain in symbol.domain:
+            n += self.mesh[domain][0].npts
+        mass_matrix = pybamm.Matrix(np.eye(n))
+        return mass_matrix
+
 
 def get_mesh_for_testing(npts=None):
     param = pybamm.ParameterValues(

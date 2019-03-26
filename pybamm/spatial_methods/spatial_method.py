@@ -141,6 +141,26 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def mass_matrix(self, symbol, boundary_conditions):
+        """
+        Calculates the mass matrix for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Variable`
+            The variable corresponding to the equation for which we are
+            calculating the mass matrix.
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) mass matrix for the spatial method.
+        """
+        raise NotImplementedError
+
     # We could possibly move the following outside of SpatialMethod
     # depending on the requirements of the FiniteVolume
 

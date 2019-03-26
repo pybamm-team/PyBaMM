@@ -207,17 +207,24 @@ class Integral(SpatialOperator):
         return self._integration_variable
 
 
-class SurfaceValue(SpatialOperator):
-    """A node in the expression tree which gets the surface value of a variable.
+class BoundaryValue(SpatialOperator):
+    """A node in the expression tree which gets the boundary value of a variable.
+
+    Parameters
+    ----------
+    child : `pybamm.Symbol`
+        The variable whose boundary value to take
+    side : string
+        Which side to take the boundary value on ("left" or "right")
 
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child):
-        super().__init__("surf", child)
-
-        # Domain of SurfaceValue must be ([]) so that expressions can be formed
-        # of surface values of variables in different domains
+    def __init__(self, child, side):
+        super().__init__("boundary", child)
+        self.side = side
+        # Domain of BoundaryValue must be ([]) so that expressions can be formed
+        # of boundary values of variables in different domains
         self.domain = []
 
 
@@ -285,4 +292,4 @@ def surf(variable):
         the surface value of ``variable``
     """
 
-    return SurfaceValue(variable)
+    return BoundaryValue(variable, "right")
