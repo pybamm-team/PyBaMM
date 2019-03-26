@@ -37,6 +37,8 @@ class Discretisation(object):
         self._bcs = {}
         self._y_slices = {}
 
+        mesh.add_ghost_meshes()
+
     @property
     def mesh(self):
         return self._mesh
@@ -107,7 +109,8 @@ class Discretisation(object):
             # Otherwise, add up the size of all the domains in variable.domain
             else:
                 for dom in variable.domain:
-                    end += self._spatial_methods[dom].mesh[dom].npts_for_broadcast
+                    for submesh in self._spatial_methods[dom].mesh[dom]:
+                        end += submesh.npts_for_broadcast
             y_slices[variable.id] = slice(start, end)
             start = end
         self._y_slices = y_slices
@@ -259,7 +262,7 @@ class Discretisation(object):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
             return self._spatial_methods[child.domain[0]].integral(
-                child.domain, discretised_child
+                child.domain, child, discretised_child
             )
 
         elif isinstance(symbol, pybamm.Broadcast):

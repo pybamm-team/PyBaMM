@@ -80,15 +80,14 @@ class TestHomogeneousReaction(unittest.TestCase):
 
         submesh = disc.mesh.combine_submeshes(*whole_cell)
 
-        # processed_rxn should be a concatenation with the right shape
         self.assertIsInstance(processed_rxn, pybamm.Concatenation)
-        self.assertEqual(processed_rxn.evaluate(0, None).shape, submesh.nodes.shape)
+        self.assertEqual(processed_rxn.evaluate(0, None).shape, submesh[0].nodes.shape)
 
         # test values
         l_n = param.process_symbol(pybamm.standard_parameters.l_n)
         l_p = param.process_symbol(pybamm.standard_parameters.l_p)
-        npts_n = mesh["negative electrode"].npts
-        npts_s = mesh["separator"].npts
+        npts_n = mesh["negative electrode"][0].npts
+        npts_s = mesh["separator"][0].npts
         np.testing.assert_array_equal(
             (l_n * processed_rxn).evaluate(0, None)[:npts_n], 1
         )
@@ -315,18 +314,18 @@ class TestButlerVolmer(unittest.TestCase):
         processed_bv_p = disc.process_symbol(param_bv_p)
 
         submesh = np.concatenate(
-            [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
+            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
         )
         y = np.concatenate([submesh ** 2, submesh ** 3])
 
         # should evaluate to vectors with the right shape
         self.assertEqual(
             processed_bv_n.evaluate(None, y).shape,
-            mesh["negative electrode"].nodes.shape,
+            mesh["negative electrode"][0].nodes.shape,
         )
         self.assertEqual(
             processed_bv_p.evaluate(None, y).shape,
-            mesh["positive electrode"].nodes.shape,
+            mesh["positive electrode"][0].nodes.shape,
         )
 
     def test_discretisation_with_particles(self):
@@ -370,18 +369,18 @@ class TestButlerVolmer(unittest.TestCase):
         processed_bv_p = disc.process_symbol(param_bv_p)
 
         submesh = np.concatenate(
-            [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
+            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
         )
         y = np.concatenate([submesh ** 2, submesh ** 3, submesh])
 
         # should evaluate to vectors with the right shape
         self.assertEqual(
             processed_bv_n.evaluate(None, y).shape,
-            mesh["negative electrode"].nodes.shape,
+            mesh["negative electrode"][0].nodes.shape,
         )
         self.assertEqual(
             processed_bv_p.evaluate(None, y).shape,
-            mesh["positive electrode"].nodes.shape,
+            mesh["positive electrode"][0].nodes.shape,
         )
 
     def test_discretisation_whole(self):
@@ -413,9 +412,11 @@ class TestButlerVolmer(unittest.TestCase):
         # test
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
-        y = np.concatenate([whole_cell_mesh.nodes ** 2, whole_cell_mesh.nodes ** 3])
+        y = np.concatenate(
+            [whole_cell_mesh[0].nodes ** 2, whole_cell_mesh[0].nodes ** 3]
+        )
         self.assertEqual(
-            processed_bv_whole.evaluate(None, y).shape, whole_cell_mesh.nodes.shape
+            processed_bv_whole.evaluate(None, y).shape, whole_cell_mesh[0].nodes.shape
         )
 
     def test_discretisation_whole_with_particles(self):
@@ -451,13 +452,13 @@ class TestButlerVolmer(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
         submesh = np.concatenate(
-            [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
+            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
         )
         y = np.concatenate(
-            [whole_cell_mesh.nodes ** 2, whole_cell_mesh.nodes ** 3, submesh]
+            [whole_cell_mesh[0].nodes ** 2, whole_cell_mesh[0].nodes ** 3, submesh]
         )
         self.assertEqual(
-            processed_bv_whole.evaluate(None, y).shape, whole_cell_mesh.nodes.shape
+            processed_bv_whole.evaluate(None, y).shape, whole_cell_mesh[0].nodes.shape
         )
 
 
@@ -548,15 +549,15 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         processed_j0p = disc.process_symbol(param_j0p)
 
         submesh = np.concatenate(
-            [mesh["negative electrode"].nodes, mesh["positive electrode"].nodes]
+            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
         )
         y = submesh ** 2
         # should evaluate to vectors with the right shape
         self.assertEqual(
-            processed_j0n.evaluate(y=y).shape, mesh["negative electrode"].nodes.shape
+            processed_j0n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
         )
         self.assertEqual(
-            processed_j0p.evaluate(y=y).shape, mesh["positive electrode"].nodes.shape
+            processed_j0p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
         )
 
     def test_discretisation_surface_conc(self):
@@ -582,19 +583,19 @@ class TestExchangeCurrentDensity(unittest.TestCase):
 
         submesh = np.concatenate(
             [
-                mesh["negative electrode"].nodes,
-                mesh["positive electrode"].nodes,
-                mesh["negative electrode"].nodes,
-                mesh["positive electrode"].nodes,
+                mesh["negative electrode"][0].nodes,
+                mesh["positive electrode"][0].nodes,
+                mesh["negative electrode"][0].nodes,
+                mesh["positive electrode"][0].nodes,
             ]
         )
         y = submesh ** 2
         # should evaluate to vectors with the right shape
         self.assertEqual(
-            processed_j0n.evaluate(y=y).shape, mesh["negative electrode"].nodes.shape
+            processed_j0n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
         )
         self.assertEqual(
-            processed_j0p.evaluate(y=y).shape, mesh["positive electrode"].nodes.shape
+            processed_j0p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
         )
 
 

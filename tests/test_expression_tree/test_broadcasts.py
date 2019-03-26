@@ -37,7 +37,7 @@ class TestBroadcasts(unittest.TestCase):
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
         for dom in mesh.keys():
-            mesh[dom].npts_for_broadcast = mesh[dom].npts
+            mesh[dom][0].npts_for_broadcast = mesh[dom][0].npts
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         combined_submeshes = mesh.combine_submeshes(*whole_cell)
 
@@ -45,7 +45,7 @@ class TestBroadcasts(unittest.TestCase):
         a = pybamm.Scalar(7)
         broad = pybamm.NumpyBroadcast(a, whole_cell, mesh)
         np.testing.assert_array_equal(
-            broad.evaluate(), 7 * np.ones_like(combined_submeshes.nodes)
+            broad.evaluate(), 7 * np.ones_like(combined_submeshes[0].nodes)
         )
         self.assertEqual(broad.domain, whole_cell)
 
@@ -54,13 +54,13 @@ class TestBroadcasts(unittest.TestCase):
         broad = pybamm.NumpyBroadcast(t, whole_cell, mesh)
         self.assertEqual(broad.domain, whole_cell)
         np.testing.assert_array_equal(
-            broad.evaluate(t=3), 13 * np.ones_like(combined_submeshes.nodes)
+            broad.evaluate(t=3), 13 * np.ones_like(combined_submeshes[0].nodes)
         )
         np.testing.assert_array_equal(
             broad.evaluate(t=np.linspace(0, 1)),
             (
                 (3 * np.linspace(0, 1) + 4)[:, np.newaxis]
-                * np.ones_like(combined_submeshes.nodes)
+                * np.ones_like(combined_submeshes[0].nodes)
             ).T,
         )
 
@@ -69,7 +69,8 @@ class TestBroadcasts(unittest.TestCase):
         broad = pybamm.NumpyBroadcast(state_vec, whole_cell, mesh)
         y = np.vstack([np.linspace(0, 1), np.linspace(0, 2)])
         np.testing.assert_array_equal(
-            broad.evaluate(y=y), (y[1:2].T * np.ones_like(combined_submeshes.nodes)).T
+            broad.evaluate(y=y),
+            (y[1:2].T * np.ones_like(combined_submeshes[0].nodes)).T,
         )
 
         # state vector - bad input
