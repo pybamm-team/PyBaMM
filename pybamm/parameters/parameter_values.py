@@ -126,7 +126,7 @@ class ParameterValues(dict):
             The class that was used to discretise
 
         """
-        # process model
+        # process parameter values for the model
         self.process_model(model)
 
         # update discretised quantities using disc
