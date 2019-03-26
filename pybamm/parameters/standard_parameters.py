@@ -10,7 +10,7 @@ R
     Ideal gas constant
 F
     Faraday's constant
-T
+T_ref
     Reference temperature
 
 Macroscale Geometry
@@ -76,7 +76,7 @@ import pybamm
 # Physical constants
 R = pybamm.Parameter("Ideal gas constant")
 F = pybamm.Parameter("Faraday's constant")
-T = pybamm.Parameter("Reference temperature")
+T_ref = pybamm.Parameter("Reference temperature")
 
 # Macroscale geometry
 L_n = pybamm.Parameter("Negative electrode width")
@@ -156,7 +156,7 @@ def kappa_e_dimensional(c_e):
 def kappa_e(c_e):
     "Dimensionless electrolyte conductivity"
     c_e_dimensional = c_e * c_e_typ
-    kappa_scale = F ** 2 * D_e_dimensional(c_e_typ) * c_e_typ / (R * T)
+    kappa_scale = F ** 2 * D_e_dimensional(c_e_typ) * c_e_typ / (R * T_ref)
     return kappa_e_dimensional(c_e_dimensional) / kappa_scale
 
 
@@ -164,7 +164,7 @@ def kappa_e(c_e):
 """Scales"""
 concentration_scale = c_e_typ
 length_scale = L_x
-potential_scale = R * T / F
+potential_scale = R * T_ref / F
 current_scale = i_typ
 interfacial_current_scale_n = i_typ / (a_n * L_x)
 interfacial_current_scale_p = i_typ / (a_p * L_x)

@@ -10,7 +10,7 @@ sp.R
     Ideal gas constant
 sp.F
     Faraday's constant
-sp.T
+sp.T_ref
     Reference temperature
 
 Microscale Geometry
