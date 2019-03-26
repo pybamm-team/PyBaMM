@@ -6,3 +6,6 @@ Base Models
 
 .. autoclass:: pybamm.LeadAcidBaseModel
     :members:
+
+.. autoclass:: pybamm.LithiumIonBaseModel
+    :members:
