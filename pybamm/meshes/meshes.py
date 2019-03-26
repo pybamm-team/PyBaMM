@@ -43,12 +43,9 @@ class Mesh(dict):
             if "secondary" in geometry[domain].keys():
                 for var in geometry[domain]["secondary"].keys():
                     repeats = submesh_pts[domain][var.name]  # note (specific to FV)
-
-            self[domain] = [None] * repeats
-            for i in range(repeats):
-                self[domain][i] = submesh_types[domain](
-                    geometry[domain]["primary"], submesh_pts[domain]
-                )
+            self[domain] = [
+                submesh_types[domain](geometry[domain]["primary"], submesh_pts[domain])
+            ] * repeats
 
     def combine_submeshes(self, *submeshnames):
         """Combine submeshes into a new submesh, using self.submeshclass
