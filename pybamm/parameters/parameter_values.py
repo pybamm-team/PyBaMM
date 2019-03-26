@@ -186,7 +186,7 @@ class ParameterValues(dict):
                 return function.diff(new_diff_variable)
 
         elif isinstance(symbol, pybamm.Scalar):
-            # update any Scalar nodes if their name is in the parameter dict
+            # update any Scalar nodes if their name is in the parameter dict (no error)
             try:
                 value = self.get_parameter_value(symbol)
             except KeyError:
