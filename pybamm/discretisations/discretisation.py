@@ -6,14 +6,8 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import copy
-import autograd.numpy as np
-import importlib
+import numpy as np
 from scipy.sparse import block_diag, csr_matrix
-
-autograd_spec = importlib.util.find_spec("autograd")
-if autograd_spec is not None:
-    autograd = importlib.util.module_from_spec(autograd_spec)
-    autograd_spec.loader.exec_module(autograd)
 
 
 class Discretisation(object):
