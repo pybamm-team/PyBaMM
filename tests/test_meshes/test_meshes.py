@@ -41,18 +41,18 @@ class TestMesh(unittest.TestCase):
         mesh = mesh_type(geometry, submesh_types, submesh_pts)
 
         # check boundary locations
-        self.assertEqual(mesh["negative electrode"].edges[0], 0)
-        self.assertEqual(mesh["positive electrode"].edges[-1], 1)
+        self.assertEqual(mesh["negative electrode"][0].edges[0], 0)
+        self.assertEqual(mesh["positive electrode"][0].edges[-1], 1)
 
         # check internal boundary locations
         self.assertEqual(
-            mesh["negative electrode"].edges[-1], mesh["separator"].edges[0]
+            mesh["negative electrode"][0].edges[-1], mesh["separator"][0].edges[0]
         )
         self.assertEqual(
-            mesh["positive electrode"].edges[0], mesh["separator"].edges[-1]
+            mesh["positive electrode"][0].edges[0], mesh["separator"][0].edges[-1]
         )
         for domain in mesh:
-            self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
+            self.assertEqual(len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1)
 
     def test_mesh_sizes(self):
         param = pybamm.ParameterValues(
@@ -87,8 +87,12 @@ class TestMesh(unittest.TestCase):
         # create mesh
         mesh = mesh_type(geometry, submesh_types, submesh_pts)
         for domain in mesh:
-            self.assertEqual(mesh[domain].npts, submesh_pts[domain]["x"])
-            self.assertEqual(len(mesh[domain].edges) - 1, submesh_pts[domain]["x"])
+            # ignore ghost cells for this test
+            if "ghost" not in domain:
+                self.assertEqual(mesh[domain][0].npts, submesh_pts[domain]["x"])
+                self.assertEqual(
+                    len(mesh[domain][0].edges) - 1, submesh_pts[domain]["x"]
+                )
 
     def test_combine_submeshes(self):
         param = pybamm.ParameterValues(
@@ -125,13 +129,13 @@ class TestMesh(unittest.TestCase):
 
         # create submesh
         submesh = mesh.combine_submeshes("negative electrode", "separator")
-        self.assertEqual(submesh.edges[0], 0)
-        self.assertEqual(submesh.edges[-1], mesh["separator"].edges[-1])
+        self.assertEqual(submesh[0].edges[0], 0)
+        self.assertEqual(submesh[0].edges[-1], mesh["separator"][0].edges[-1])
         self.assertAlmostEqual(
             np.linalg.norm(
-                submesh.nodes
+                submesh[0].nodes
                 - np.concatenate(
-                    [mesh["negative electrode"].nodes, mesh["separator"].nodes]
+                    [mesh["negative electrode"][0].nodes, mesh["separator"][0].nodes]
                 )
             ),
             0,
@@ -175,17 +179,53 @@ class TestMesh(unittest.TestCase):
         mesh.add_ghost_meshes()
 
         np.testing.assert_array_equal(
-            mesh["negative electrode_left ghost cell"].edges[1],
-            mesh["negative electrode"].edges[0],
+            mesh["negative electrode_left ghost cell"][0].edges[1],
+            mesh["negative electrode"][0].edges[0],
         )
         np.testing.assert_array_equal(
-            mesh["negative electrode_left ghost cell"].edges[0],
-            -mesh["negative electrode"].edges[1],
+            mesh["negative electrode_left ghost cell"][0].edges[0],
+            -mesh["negative electrode"][0].edges[1],
         )
         np.testing.assert_array_equal(
-            mesh["positive electrode_right ghost cell"].edges[0],
-            mesh["positive electrode"].edges[-1],
+            mesh["positive electrode_right ghost cell"][0].edges[0],
+            mesh["positive electrode"][0].edges[-1],
         )
+
+    def test_multiple_meshes(self):
+        param = pybamm.ParameterValues(
+            base_parameters={
+                "Negative electrode width": 0.1,
+                "Separator width": 0.2,
+                "Positive electrode width": 0.3,
+            }
+        )
+
+        geometry = pybamm.Geometry("1+1D micro")
+        param.process_geometry(geometry)
+
+        # provide mesh properties
+        submesh_pts = {
+            "negative particle": {"r": 5, "x": 10},
+            "positive particle": {"r": 6, "x": 10},
+        }
+        submesh_types = {
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+        }
+
+        mesh = pybamm.Mesh(geometry, submesh_types, submesh_pts)
+
+        # check types
+        self.assertIsInstance(mesh["negative particle"], list)
+        self.assertIsInstance(mesh["positive particle"], list)
+        self.assertEqual(len(mesh["negative particle"]), 10)
+        self.assertEqual(len(mesh["positive particle"]), 10)
+
+        for i in range(10):
+            self.assertIsInstance(mesh["negative particle"][i], pybamm.Uniform1DSubMesh)
+            self.assertIsInstance(mesh["positive particle"][i], pybamm.Uniform1DSubMesh)
+            self.assertEqual(mesh["negative particle"][i].npts, 5)
+            self.assertEqual(mesh["positive particle"][i].npts, 6)
 
 
 if __name__ == "__main__":

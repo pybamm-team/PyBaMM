@@ -29,11 +29,11 @@ class Scalar(pybamm.Symbol):
 
         """
         # set default name if not provided
+        self.value = value
         if name is None:
-            name = str(value)
+            name = str(self.value)
 
         super().__init__(name, domain=domain)
-        self.value = value
 
     @property
     def id(self):

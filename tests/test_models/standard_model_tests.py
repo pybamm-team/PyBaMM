@@ -64,3 +64,24 @@ class StandardModelTest(object):
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
+
+    def test_update_parameters(self, param):
+        # check if geometry has changed, throw error if so (need to re-discretise)
+        if any(
+            [
+                length in param.keys() and param[length] != self.param[length]
+                for length in [
+                    "Negative electrode width",
+                    "Separator width",
+                    "Positive electrode width",
+                ]
+            ]
+        ):
+            raise ValueError(
+                "geometry has changed, the orginal model needs to be re-discretised"
+            )
+        # otherwise update self.param and change the parameters in the discretised model
+        self.param = param
+        param.process_discretised_model(self.model, self.disc)
+        # Model should still be well-posed after processing
+        self.model.check_well_posedness()

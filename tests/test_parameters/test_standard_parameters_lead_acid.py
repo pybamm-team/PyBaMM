@@ -69,12 +69,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         processed_s = disc.process_symbol(parameter_values.process_symbol(s))
 
         # test output
-        self.assertIsInstance(processed_s, pybamm.Vector)
-
         combined_submeshes = disc.mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
-        self.assertEqual(processed_s.shape, combined_submeshes.nodes.shape)
+        self.assertEqual(processed_s.shape, combined_submeshes[0].nodes.shape)
 
     def test_current_functions(self):
         # create current functions

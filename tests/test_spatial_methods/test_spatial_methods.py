@@ -24,6 +24,8 @@ class TestSpatialMethod(unittest.TestCase):
             spatial_method.surface_value(None)
         with self.assertRaises(NotImplementedError):
             spatial_method.compute_diffusivity()
+        with self.assertRaises(NotImplementedError):
+            spatial_method.mass_matrix(None, None)
 
 
 if __name__ == "__main__":

@@ -1,28 +1,17 @@
 #
-# Standard parameters for battery models
+# Standard parameters for lithium-ion battery models
 #
 """
 Standard pybamm.Parameters for battery models
 
 Physical Constants
 ------------------
-R
+sp.R
     Ideal gas constant
 sp.F
     Faraday's constant
-T
+sp.T_ref
     Reference temperature
-
-Macroscale Geometry
--------------------
-
-L_n, L_s, L_p
-    The widths of the negative electrode, separator and positive electrode, respectively
-L_x
-    The width of a single cell
-l_n, l_s, l_p
-    The dimesionless widths of the negative electrode, separator and positive
-    electrode respectively
 
 Microscale Geometry
 -------------------
@@ -81,8 +70,6 @@ sp = pybamm.standard_parameters
 R_n = pybamm.Parameter("Negative particle radius")
 R_p = pybamm.Parameter("Positive particle radius")
 
-# Electrolyte properties
-
 # Electrode properties
 c_n_max = pybamm.Parameter("Maximum concentration in negative electrode")
 c_p_max = pybamm.Parameter("Maximum concentration in positive electrode")
@@ -120,44 +107,10 @@ def D_p(c_p):
 
 def chi(c_e):
     "Dimensionless factor in MacInnes equation"
+    # (1-2*t_plus) is for Nernst-Planck
+    # 2*(1-t_plus) for Stefan-Maxwell
+    # Bizeray et al (2016) "Resolving a discrepancy ..."
     return 1 - 2 * sp.t_plus
-
-
-def U_n_dimensional(c):
-    "Dimensionless open circuit potential in the negative electrode"
-    #  out = (0.194 + 1.5 * np.exp(-120.0 * c)
-    #       + 0.0351 * np.tanh((c - 0.286) / 0.083)
-    #       - 0.0045 * np.tanh((c - 0.849) / 0.119)
-    #       - 0.035 * np.tanh((c - 0.9233) / 0.05)
-    #       - 0.0147 * np.tanh((c - 0.5) / 0.034)
-    #       - 0.102 * np.tanh((c - 0.194) / 0.142)
-    #       - 0.022 * np.tanh((c - 0.9) / 0.0164)
-    #       - 0.011 * np.tanh((c - 0.124) / 0.0226)
-    #       + 0.0155 * np.tanh((c - 0.105) / 0.029))
-    # Set constant until functions implemented correctly
-    out = 0.2230
-    return out
-
-
-U_n_ref = U_n_dimensional(1)
-
-
-def U_p_dimensional(c):
-    "Dimensionless open circuit potential in the positive electrode"
-    # stretch = 1.062
-    # sto = stretch * c
-    # out = (2.16216 + 0.07645 * np.tanh(30.834 - 54.4806 * sto)
-    #       + 2.1581 * np.tanh(52.294 - 50.294 * sto)
-    #       - 0.14169 * np.tanh(11.0923 - 19.8543 * sto)
-    #       + 0.2051 * np.tanh(1.4684 - 5.4888 * sto)
-    #       + 0.2531 * np.tanh((-sto + 0.56478) / 0.1316)
-    #       - 0.02167 * np.tanh((sto - 0.525) / 0.006))
-    # Set constant until functions implemented correctly
-    out = 4.1212
-    return out
-
-
-U_p_ref = U_p_dimensional(1)
 
 
 def U_n(c_n):

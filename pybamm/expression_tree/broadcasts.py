@@ -76,12 +76,22 @@ class NumpyBroadcast(Broadcast):
         if domain == []:
             self.broadcasting_vector_size = 1
         else:
-            self.broadcasting_vector_size = sum(
-                [mesh[dom].npts_for_broadcast for dom in domain]
-            )
+            vector_size = 0
+            for dom in domain:
+                # just create a vector of the points even in 2 and 3D
+                for i in range(len(mesh[dom])):
+                    vector_size += mesh[dom][i].npts_for_broadcast
+            self.broadcasting_vector_size = vector_size
         # create broadcasting vector (vector of ones with shape determined by the
         # domain)
         self.broadcasting_vector = np.ones(self.broadcasting_vector_size)
+
+        # store mesh
+        self._mesh = mesh
+
+    @property
+    def mesh(self):
+        return self._mesh
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

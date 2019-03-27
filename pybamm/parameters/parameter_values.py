@@ -114,6 +114,28 @@ class ParameterValues(dict):
         for idx, equation in enumerate(model.events):
             model.events[idx] = self.process_symbol(equation)
 
+    def process_discretised_model(self, model, disc):
+        """Process a discretised model.
+        Currently inplace, could be changed to return a new model.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.models.core.BaseModel` (or subclass) instance
+            Model to assign parameter values for
+        disc : :class:`pybamm.Discretisation`
+            The class that was used to discretise
+
+        """
+        # process parameter values for the model
+        self.process_model(model)
+
+        # update discretised quantities using disc
+        model.concatenated_rhs = disc.concatenate(*model.rhs.values())
+        model.concatenated_algebraic = disc.concatenate(*model.algebraic.values())
+        model.concatenated_initial_conditions = disc._concatenate_init(
+            model.initial_conditions
+        ).evaluate(0, None)
+
     def process_geometry(self, geometry):
         """Assign parameter values to a geometry.
             Currently inplace, could be changed to return a new model.
@@ -125,14 +147,16 @@ class ParameterValues(dict):
             """
 
         for domain in geometry:
-            for spatial_variable, spatial_limits in geometry[domain].items():
-                for lim, sym in spatial_limits.items():
-                    geometry[domain][spatial_variable][lim] = self.process_symbol(
-                        sym
-                    ).evaluate()
+            for prim_sec, variables in geometry[domain].items():
+                for spatial_variable, spatial_limits in variables.items():
+                    for lim, sym in spatial_limits.items():
+                        geometry[domain][prim_sec][spatial_variable][
+                            lim
+                        ] = self.process_symbol(sym).evaluate()
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
+        Can process a model either before or after discretisation
 
         Parameters
         ----------
@@ -147,7 +171,8 @@ class ParameterValues(dict):
         """
         if isinstance(symbol, pybamm.Parameter):
             value = self.get_parameter_value(symbol)
-            return pybamm.Scalar(value, domain=symbol.domain)
+            # Scalar inherits name (for updating parameters) and domain (for Broadcast)
+            return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_child = self.process_symbol(symbol.children[0])
@@ -160,34 +185,49 @@ class ParameterValues(dict):
                 new_diff_variable = self.process_symbol(symbol.children[0])
                 return function.diff(new_diff_variable)
 
+        elif isinstance(symbol, pybamm.Scalar):
+            # update any Scalar nodes if their name is in the parameter dict (no error)
+            try:
+                value = self.get_parameter_value(symbol)
+            except KeyError:
+                # KeyError -> name not in parameter dict, don't update, return old value
+                value = symbol.value
+            return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
+
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
             new_left = self.process_symbol(left)
             new_right = self.process_symbol(right)
             return symbol.__class__(new_left, new_right)
 
-        elif isinstance(symbol, pybamm.Broadcast):
-            new_child = self.process_symbol(symbol.children[0])
-            return pybamm.Broadcast(new_child, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Function):
-            new_child = self.process_symbol(symbol.children[0])
-            return pybamm.Function(symbol.func, new_child)
-
-        elif isinstance(symbol, pybamm.Integral):
-            new_child = self.process_symbol(symbol.children[0])
-            return pybamm.Integral(new_child, symbol.integration_variable)
-
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
-            return symbol.__class__(new_child)
+            if isinstance(symbol, pybamm.NumpyBroadcast):
+                return pybamm.NumpyBroadcast(new_child, symbol.domain, symbol.mesh)
+            if isinstance(symbol, pybamm.Broadcast):
+                return pybamm.Broadcast(new_child, symbol.domain)
+            elif isinstance(symbol, pybamm.Function):
+                return pybamm.Function(symbol.func, new_child)
+            elif isinstance(symbol, pybamm.Integral):
+                return pybamm.Integral(new_child, symbol.integration_variable)
+            elif isinstance(symbol, pybamm.NodeToEdge):
+                return pybamm.NodeToEdge(new_child, symbol.node_to_edge_function)
+            elif isinstance(symbol, pybamm.BoundaryValue):
+                return pybamm.BoundaryValue(new_child, symbol.side)
+            else:
+                return symbol.__class__(new_child)
 
+        # Concatenations
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = []
             for child in symbol.children:
                 new_child = self.process_symbol(child)
                 new_children.append(new_child)
-            return pybamm.Concatenation(*new_children)
+            if isinstance(symbol, pybamm.DomainConcatenation):
+                return pybamm.DomainConcatenation(new_children, symbol.mesh)
+            else:
+                # Concatenation or NumpyConcatenation
+                return symbol.__class__(*new_children)
 
         else:
             new_symbol = copy.deepcopy(symbol)

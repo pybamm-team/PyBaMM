@@ -32,7 +32,7 @@ class ScipySolver(pybamm.OdeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, derivs, y0, t_eval, events=None):
+    def integrate(self, derivs, y0, t_eval, events=None, mass_matrix=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -48,6 +48,8 @@ class ScipySolver(pybamm.OdeSolver):
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
+        mass_matrix : array_like
+            The (sparse) mass matrix for the chosen spatial method.
 
         Returns
         -------

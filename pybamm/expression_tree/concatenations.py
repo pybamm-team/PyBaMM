@@ -111,6 +111,9 @@ class DomainConcatenation(Concatenation):
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
 
+        # store mesh
+        self._mesh = mesh
+
         # Check that there is a domain, otherwise the functionality won't work and we
         # should raise a DomainError
         if self.domain == []:
@@ -122,7 +125,7 @@ class DomainConcatenation(Concatenation):
             )
 
         # create dict of domain => slice of final vector
-        self._slices = self.create_slices(self, mesh)
+        self._slices = self.create_slices(self)
 
         # store size of final vector
         self._size = self._slices[self.domain[-1]].stop
@@ -130,14 +133,28 @@ class DomainConcatenation(Concatenation):
         # create disc of domain => slice for each child
         self._children_slices = []
         for child in self.children:
-            self._children_slices.append(self.create_slices(child, mesh))
+            self._children_slices.append(self.create_slices(child))
 
-    def create_slices(self, node, mesh):
+    @property
+    def mesh(self):
+        return self._mesh
+
+    @property
+    def size(self):
+        return self._size
+
+    @property
+    def shape(self):
+        return (self.size,)
+
+    def create_slices(self, node):
         slices = {}
         start = 0
         end = 0
         for dom in node.domain:
-            end += mesh[dom].npts
+            prim_pts = self.mesh[dom][0].npts
+            second_pts = len(self.mesh[dom])
+            end += prim_pts * second_pts
             slices[dom] = slice(start, end)
             start = end
         return slices
