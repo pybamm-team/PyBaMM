@@ -217,12 +217,6 @@ class Discretisation(object):
         """
         # TO DO: create jacobian by differentiating tree wrt StateVector
 
-        # Use autograd
-        # def derivs(t, y):
-        #    return model.concatenated_rhs.evaluate(t, y)
-
-        # model.jacobian = autograd.jacobian(derivs, 1)
-
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
         (can be model.rhs, model.initial_conditions or model.variables).
