@@ -54,11 +54,13 @@ class BaseModel(object):
         self._jacobian = None
 
         # Default parameter values, geometry, submesh, spatial methods and solver
-        input_path = os.path.join(
-            os.getcwd(), "input", "parameters", "lithium-ion", "experimental_functions"
-        )
+
+        # Lion parameters left as default parameter set for tests
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
         self.default_parameter_values = pybamm.ParameterValues(
-            "input/parameters/lithium-ion/parameters/LCO.csv",
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
             {
                 "Typical current density": 1,
                 "Current function": os.path.join(
@@ -69,10 +71,10 @@ class BaseModel(object):
                     "constant_current.py",
                 ),
                 "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity.py"
+                    input_path, "electrolyte_diffusivity_Capiglia1999.py"
                 ),
                 "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conducivity.py"
+                    input_path, "electrolyte_conductivity_Capiglia1999.py"
                 ),
             },
         )
@@ -368,6 +370,47 @@ class LeadAcidBaseModel(BaseModel):
                 ),
                 "Positive electrode OCV": os.path.join(
                     input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
+                ),
+            },
+        )
+
+
+class LithiumIonBaseModel(BaseModel):
+    """
+    Overwrites default parameters from Base Model with default parameters for
+    lead-acid models
+
+    **Extends:** :class:`BaseModel`
+
+    """
+
+    def __init__(self):
+        super().__init__()
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
+        self.default_parameter_values = pybamm.ParameterValues(
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
+            {
+                "Typical current density": 1,
+                "Current function": os.path.join(
+                    os.getcwd(),
+                    "pybamm",
+                    "parameters",
+                    "standard_current_functions",
+                    "constant_current.py",
+                ),
+                "Electrolyte diffusivity": os.path.join(
+                    input_path, "electrolyte_diffusivity_Capiglia1999.py"
+                ),
+                "Electrolyte conductivity": os.path.join(
+                    input_path, "electrolyte_conductivity_Capiglia1999.py"
+                ),
+                "Negative electrode OCV": os.path.join(
+                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lico2_ocp_Dualfoil.py"
                 ),
             },
         )

@@ -43,8 +43,6 @@ class Discretisation(object):
         self._bcs = {}
         self._y_slices = {}
 
-        mesh.add_ghost_meshes()
-
     @property
     def mesh(self):
         return self._mesh
@@ -308,11 +306,11 @@ class Discretisation(object):
                 )
             return symbol
 
-        elif isinstance(symbol, pybamm.SurfaceValue):
+        elif isinstance(symbol, pybamm.BoundaryValue):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[child.domain[0]].surface_value(
-                discretised_child
+            return self._spatial_methods[child.domain[0]].boundary_value(
+                discretised_child, symbol.side
             )
 
         elif isinstance(symbol, pybamm.BinaryOperator):
@@ -335,10 +333,6 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
-
-            if new_symbol.is_constant():
-                value = new_symbol.evaluate()
-                return pybamm.Vector(value)
             return new_symbol
 
         else:

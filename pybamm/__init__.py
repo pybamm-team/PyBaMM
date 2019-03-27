@@ -75,7 +75,7 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
-    SurfaceValue,
+    BoundaryValue,
     Integral,
     grad,
     div,
@@ -98,7 +98,7 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 # Model classes
 #
-from .models.base_models import BaseModel, LeadAcidBaseModel
+from .models.base_models import BaseModel, LeadAcidBaseModel, LithiumIonBaseModel
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid

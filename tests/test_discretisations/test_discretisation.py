@@ -512,15 +512,13 @@ class TestDiscretise(unittest.TestCase):
 
         # scalar
         broad = disc._spatial_methods[whole_cell[0]].broadcast(a, whole_cell)
-        self.assertIsInstance(broad, pybamm.Array)
         np.testing.assert_array_equal(
             broad.evaluate(), 7 * np.ones_like(combined_submesh[0].nodes)
         )
         self.assertEqual(broad.domain, whole_cell)
 
         broad_disc = disc.process_symbol(broad)
-        # type of broad will be array as broad is constant
-        self.assertIsInstance(broad_disc, pybamm.Array)
+        self.assertIsInstance(broad_disc, pybamm.NumpyBroadcast)
 
         # process Broadcast variable
         disc._y_slices = {var.id: slice(53)}
@@ -554,7 +552,6 @@ class TestDiscretise(unittest.TestCase):
 
         eqn = pybamm.Concatenation(a, b)
         eqn_disc = disc.process_symbol(eqn)
-        self.assertIsInstance(eqn_disc, pybamm.Vector)
         expected_vector = np.concatenate(
             [
                 5 * np.ones_like(mesh["negative electrode"][0].nodes),

@@ -46,6 +46,7 @@ class Mesh(dict):
             self[domain] = [
                 submesh_types[domain](geometry[domain]["primary"], submesh_pts[domain])
             ] * repeats
+        self.add_ghost_meshes()
 
     def combine_submeshes(self, *submeshnames):
         """Combine submeshes into a new submesh, using self.submeshclass
