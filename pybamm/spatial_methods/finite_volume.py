@@ -166,14 +166,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             bcs_symbol = pybamm.Vector(np.array([]))  # empty vector
             for i in range(len(submesh_list)):
 
-                if not lbc.evaluates_to_number():
-                    lbc_i = pybamm.Extract(lbc, i)
-                else:
+                if lbc.evaluates_to_number():
                     lbc_i = lbc
-                if not rbc.evaluates_to_number():
-                    rbc_i = pybamm.Extract(lbc, i)
                 else:
+                    lbc_i = pybamm.Extract(lbc, i)
+                if rbc.evaluates_to_number():
                     rbc_i = rbc
+                else:
+                    rbc_i = pybamm.Extract(rbc, i)
                 # only the interior equations:
                 interior = pybamm.Vector(np.zeros(prim_dim - 2))
                 left = -lbc_i / pybamm.Vector(np.array([submesh_list[i].d_edges[0]]))
@@ -376,14 +376,14 @@ class FiniteVolume(pybamm.SpatialMethod):
             y_slice_start = y_left[i]
             y_slice_stop = y_right[i]
 
-            if not lbc.evaluates_to_number():
-                lbc_i = pybamm.Extract(lbc, i)
-            else:
+            if lbc.evaluates_to_number():
                 lbc_i = lbc
-            if not rbc.evaluates_to_number():
-                rbc_i = pybamm.Extract(lbc, i)
             else:
+                lbc_i = pybamm.Extract(lbc, i)
+            if rbc.evaluates_to_number():
                 rbc_i = rbc
+            else:
+                rbc_i = pybamm.Extract(rbc, i)
 
             # left ghost cell
             first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))

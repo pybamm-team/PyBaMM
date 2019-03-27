@@ -10,6 +10,9 @@ Unary Operators
 .. autoclass:: pybamm.AbsoluteValue
   :members:
 
+.. autoclass:: pybamm.Extract
+  :members:
+
 .. autoclass:: pybamm.SpatialOperator
   :members:
 

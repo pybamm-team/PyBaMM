@@ -117,7 +117,7 @@ class Extract(UnaryOperator):
 
     def __init__(self, child, index, name=None):
         if name is None:
-            name = child.name + " at y[" + str(index) + "]"
+            name = child.name + "[" + str(index) + "]"
         super().__init__(name, child)
         self.index = index
 
