@@ -1153,7 +1153,7 @@ class TestFiniteVolume(unittest.TestCase):
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(0)}
         model.boundary_conditions = {
-            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+            c: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
         }
         model.variables = {"c": c, "N": N}
         mesh = get_p2d_mesh_for_testing()
