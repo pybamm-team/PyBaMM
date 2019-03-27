@@ -46,11 +46,6 @@ class OdeSolver(pybamm.BaseSolver):
         events = [event_fun(event) for event in model.events]
 
         y0 = model.concatenated_initial_conditions
-<<<<<<< HEAD
-=======
-
-        self.t, self.y = self.integrate(dydt, y0, t_eval, events=events)
->>>>>>> master
 
         self.t, self.y = self.integrate(
             dydt,
