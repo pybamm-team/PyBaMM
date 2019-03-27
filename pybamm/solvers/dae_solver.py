@@ -53,7 +53,13 @@ class DaeSolver(pybamm.BaseSolver):
             rhs, algebraic, model.concatenated_initial_conditions
         )
 
-        self.t, self.y = self.integrate(residuals, y0, t_eval)
+        self.t, self.y = self.integrate(
+            residuals,
+            y0,
+            t_eval,
+            mass_matrix=model.mass_matrix.entries,
+            jacobian=model.jacobian,
+        )
 
     def calculate_consistent_initial_conditions(self, rhs, algebraic, y0_guess):
         """
@@ -94,7 +100,9 @@ class DaeSolver(pybamm.BaseSolver):
 
         return y0_consistent
 
-    def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
+    def integrate(
+        self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None
+    ):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -110,7 +118,7 @@ class DaeSolver(pybamm.BaseSolver):
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
-        mass_matrix : array_like
+        mass_matrix : array_like, optional
             The (sparse) mass matrix for the chosen spatial method.
         jacobian : method, optional
             A function that takes in t, y and ydot and returns the Jacobian

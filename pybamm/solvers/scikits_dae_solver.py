@@ -20,12 +20,7 @@ if scikits_odes_spec is not None:
         # but is OK if you import ida here?
         from scikits.odes.sundials import ida
 
-autograd_spec = importlib.util.find_spec("autograd")
-if autograd_spec is not None:
-    autograd = importlib.util.module_from_spec(autograd_spec)
-    autograd_spec.loader.exec_module(autograd)
 
-    
 class ScikitsDaeSolver(pybamm.DaeSolver):
     """Solve a discretised model, using scikits.odes.
 
@@ -53,7 +48,9 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
+    def integrate(
+        self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None
+    ):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -69,13 +66,11 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
-        mass_matrix : array_like
+        mass_matrix : array_like, optional
             The (sparse) mass matrix for the chosen spatial method.
         jacobian : method, optional
-            A function that takes in t, y, ydot and cj and returns the Jacobian. If
-            no Jacobian is provided (default), autograd is used to compute the
-            Jacobian. If autograd not installed, the solver will approximate the
-            Jacobian.
+            A function that takes in t and y and returns the Jacobian. If
+            None, the solver will approximate the Jacobian.
             (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
         """
 
@@ -90,20 +85,8 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         if jacobian:
             # Put the user-supplied Jacobian into the SUNDIALS Class
             jacfn = JacobianFunctionIDA()
-            jacfn.set_jacobian(jacobian)
+            jacfn.set_jacobian(mass_matrix, jacobian)
             extra_options.update({"jacfn": jacfn})
-        elif autograd_spec is None:
-            print(
-                "autograd is not installed. " "SUNDIALS will approximate the Jacobian."
-            )
-        else:
-            # Calculate the Jacobian using autograd
-            jacfn = AutoJacobianFunctionIDA()
-            jacfn.set_jacobian(residuals, y0)
-            algebraic_vars_idx = np.where(~jacfn.mass_matrix.any(axis=1))[0]
-            extra_options.update(
-                {"jacfn": jacfn, "algebraic_vars_idx": algebraic_vars_idx}
-            )
 
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
@@ -120,42 +103,21 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
 
 
 class JacobianFunctionIDA(ida.IDA_JacRhsFunction):
-    def set_jacobian(self, jacobian):
+    def set_jacobian(self, mass_matrix, jacobian):
         """
-        Sets the user supplied Jacobian function for the DAE model.
+        Sets the user supplied mass matrix and Jacobian function for the DAE model.
 
         Parameters
         ----------
+        mass_matrix : array_like
+            The (sparse) mass matrix for the chosen spatial method.
         jacobian : method
-            A function that takes in t, y, ydot and cj and returns the Jacobian.
+            A function that takes in t and y and returns the Jacobian.
 
         """
+        self.mass_matrix = mass_matrix
         self.jacobian = jacobian
 
     def evaluate(self, t, y, ydot, residuals, cj, return_jacobian):
-        return_jacobian[:][:] = self.jacobian(t, y, ydot, cj)
-        return 0
-
-
-class AutoJacobianFunctionIDA(ida.IDA_JacRhsFunction):
-    def set_jacobian(self, residuals, y0):
-        """
-        Calculates the Jacobian function for the DAE model using autograd.
-
-        Parameters
-        ----------
-        residuals : method
-            A function that takes in t, y and ydot and returns the residuals of the
-            equations
-        y0 : numeric type
-            The initial conditions
-
-        """
-        self.jacobian_y = autograd.jacobian(residuals, 1)
-        self.jacobian_ydot = autograd.jacobian(residuals, 2)
-        # Note: PyBaMM models written so that mass matrix is constant
-        self.mass_matrix = -self.jacobian_ydot(0.0, y0, y0)
-
-    def evaluate(self, t, y, ydot, residuals, cj, return_jacobian):
-        return_jacobian[:][:] = self.jacobian_y(t, y, ydot) - cj * self.mass_matrix
+        return_jacobian[:][:] = self.jacobian(t, y) - cj * self.mass_matrix
         return 0

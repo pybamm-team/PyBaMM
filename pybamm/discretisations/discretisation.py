@@ -6,8 +6,14 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import copy
-import numpy as np
+import autograd.numpy as np
+import importlib
 from scipy.sparse import block_diag, csr_matrix
+
+autograd_spec = importlib.util.find_spec("autograd")
+if autograd_spec is not None:
+    autograd = importlib.util.module_from_spec(autograd_spec)
+    autograd_spec.loader.exec_module(autograd)
 
 
 class Discretisation(object):
@@ -212,6 +218,12 @@ class Discretisation(object):
             boundary_conditions (all dicts of {variable: equation})
         """
         # TO DO: create jacobian by differentiating tree wrt StateVector
+
+        # Use autograd
+        # def derivs(t, y):
+        #    return model.concatenated_rhs.evaluate(t, y)
+
+        # model.jacobian = autograd.jacobian(derivs, 1)
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary

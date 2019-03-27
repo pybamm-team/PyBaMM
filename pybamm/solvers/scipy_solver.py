@@ -39,7 +39,9 @@ class ScipySolver(pybamm.OdeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
+    def integrate(
+        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
+    ):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -55,13 +57,11 @@ class ScipySolver(pybamm.OdeSolver):
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
-        mass_matrix : array_like
+        mass_matrix : array_like, optional
             The (sparse) mass matrix for the chosen spatial method.
         jacobian : method, optional
             A function that takes in t and y and returns the Jacobian. If
-            no Jacobian is provided (default), autograd is used to compute the
-            Jacobian. If autograd not installed, the solver will approximate the
-            Jacobian.
+            None, the solver will approximate the Jacobian.
         Returns
         -------
         object
@@ -74,20 +74,8 @@ class ScipySolver(pybamm.OdeSolver):
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
         if np.any([self.method in implicit_methods]):
-            if jacobian is None:
-                if autograd_spec is None:
-                    print(
-                        "autograd is not installed. "
-                        "scipy will approximate the Jacobian."
-                    )
-                else:
-                    # Set automatic jacobian function
-                    self.set_auto_jac(derivs)
-
-                    def jacobian(t, y):
-                        return self.jacobian(t, y)
-
-                    extra_options.update({"jac": jacobian})
+            if jacobian:
+                extra_options.update({"jac": jacobian})
 
         # make events terminal so that the solver stops when they are reached
         if events:
@@ -105,15 +93,3 @@ class ScipySolver(pybamm.OdeSolver):
         )
 
         return sol.t, sol.y
-
-    def set_auto_jac(self, derivs):
-        """
-        Sets the Jacobian function for the ODE model using autograd
-
-        Parameters
-        ----------
-        derivs : method
-            A function that takes in t and y and returns the time-derivative dydt
-
-        """
-        self.jacobian = autograd.jacobian(derivs, 1)
