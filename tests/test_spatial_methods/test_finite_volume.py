@@ -632,7 +632,7 @@ class TestFiniteVolume(unittest.TestCase):
         linear_y = combined_submesh[0].nodes
         np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, linear_y),
-            np.ones_like(combined_submesh.edges[:-1]),
+            np.ones_like(combined_submesh[0].edges[:-1]),
         )
         np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, linear_y),

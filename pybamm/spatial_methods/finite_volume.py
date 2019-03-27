@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-from scipy.sparse import spdiags
+from scipy.sparse import diags
 from scipy.sparse import eye
 from scipy.sparse import kron
 
@@ -135,11 +135,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Create 1D matrix using submesh
         n = submesh.npts
         e = 1 / submesh.d_nodes
-        data = np.vstack(
-            [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
-        )
-        diags = np.array([0, 1])
-        sub_matrix = spdiags(data, diags, n - 1, n)
+        sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
 
         # second dim length
         second_dim_len = len(submesh_list)
@@ -172,14 +168,36 @@ class FiniteVolume(pybamm.SpatialMethod):
         if symbol.id in boundary_conditions:
             # get boundary conditions
             bcs = boundary_conditions[symbol.id]
-            if "left" in bcs.keys():
+            if set(bcs.keys()) == set(["left", "right"]):
+                # neumann on both sides
                 lbc = bcs["left"]
-            else:
-                lbc = pybamm.Scalar(0)
-            if "right" in bcs.keys():
                 rbc = bcs["right"]
-            else:
+                # now we must create a matrix of size (npts * (npts -1) )
+                # this is a different size to the one created when we have
+                # flux boundary conditions so need a flag
+                divergence_matrix = self.divergence_matrix(
+                    domain, bc_type="neumann_neumann"
+                )
+                # only need interior edges (for spherical neumann_neumann)
+                edges = submesh_list[0].edges[1:-1]
+            elif set(bcs.keys()) == set(["left"]):
+                # neumann on left, dirichlet on right
+                lbc = bcs["left"]
                 rbc = pybamm.Scalar(0)
+                # divergence matrix and edges
+                divergence_matrix = self.divergence_matrix(
+                    domain, bc_type="neumann_dirichlet"
+                )
+                edges = submesh_list[0].edges[1:]
+            elif set(bcs.keys()) == set(["right"]):
+                # neumann on right, dirichlet on left
+                lbc = pybamm.Scalar(0)
+                rbc = bcs["right"]
+                # divergence matrix and edges
+                divergence_matrix = self.divergence_matrix(
+                    domain, bc_type="dirichlet_neumann"
+                )
+                edges = submesh_list[0].edges[:-1]
 
             # taking divergence removes ghost cells
             discretised_symbol.has_left_ghost_cell = False
@@ -196,16 +214,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                     bcs_symbol, left, interior, right
                 )
 
-            # now we must create a matrix of size (npts * (npts -1) )
-            # this is a different size to the one created when we have
-            # flux boundary conditions so need a flag
-            divergence_matrix = self.divergence_matrix(domain, bc_type="neumann")
-
-            # only need interior edges for spherical neumann
-            edges = submesh_list[0].edges[1:-1]
-
         else:
-            divergence_matrix = self.divergence_matrix(domain)
+            divergence_matrix = self.divergence_matrix(
+                domain, bc_type="dirichlet_dirichlet"
+            )
             bcs_vec = np.zeros(total_pts)
             bcs_symbol = pybamm.Vector(bcs_vec)
             # need all edges for spherical dirichlet
@@ -232,7 +244,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def divergence_matrix(self, domain, bc_type="dirichlet"):
+    def divergence_matrix(self, domain, bc_type="dirichlet_dirichlet"):
         """
         Divergence matrix for finite volumes in the appropriate domain.
         Equivalent to div(N) = (N[1:] - N[:-1])/dx
@@ -241,6 +253,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         ----------
         domain : list
             The domain(s) in which to compute the divergence matrix
+        bc_type : string
+            What type of boundary condition to apply. Affects the size of the resulting
+            matrix
 
         Returns
         -------
@@ -256,21 +271,17 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Create matrix using submesh
         n = submesh.npts + 1
-        if bc_type == "dirichlet":
-            data = np.vstack(
-                [
-                    np.concatenate([-e, np.array([0])]),
-                    np.concatenate([np.array([0]), e]),
-                ]
-            )
-            diags = np.array([0, 1])
-            sub_matrix = spdiags(data, diags, n - 1, n)
-        elif bc_type == "neumann":
-            # we don't have to act on bc fluxes which are now in
-            # the bc vector
-            data = np.vstack([-e[1:], e[:-1]])
-            diags = np.array([-1, 0])
-            sub_matrix = spdiags(data, diags, n - 1, n - 2)
+        if bc_type == "dirichlet_dirichlet":
+            sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
+        elif bc_type == "dirichlet_neumann":
+            # we don't have to act on right bc flux which is now in the bc vector
+            sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n - 1))
+        elif bc_type == "neumann_dirichlet":
+            # we don't have to act on left bc flux which is now in the bc vector
+            sub_matrix = diags([-e[1:], e], [-1, 0], shape=(n - 1, n - 1))
+        elif bc_type == "neumann_neumann":
+            # we don't have to act on bc fluxes which are now in the bc vector
+            sub_matrix = diags([-e[1:], e], [-1, 0], shape=(n - 1, n - 2))
         else:
             raise NotImplementedError(
                 "Can only process Neumann or Dirichlet boundary conditions"
