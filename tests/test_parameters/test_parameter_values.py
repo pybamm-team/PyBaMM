@@ -234,7 +234,9 @@ class TestParameterValues(unittest.TestCase):
         self.assertTrue(
             isinstance(model.variables["grad_var1"].children[0], pybamm.Variable)
         )
-        self.assertEqual(model.variables["d_var1"].id, (42 * var1).id)
+        self.assertEqual(
+            model.variables["d_var1"].id, (pybamm.Scalar(42, name="d") * var1).id
+        )
         self.assertIsInstance(model.variables["d_var1"].children[0], pybamm.Scalar)
         self.assertTrue(
             isinstance(model.variables["d_var1"].children[1], pybamm.Variable)

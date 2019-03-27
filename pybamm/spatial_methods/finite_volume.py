@@ -60,17 +60,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         See :meth: `pybamm.SpatialMethod.broadcast`
         """
-
-        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
-
-        # if the broadcasted symbol evaluates to a constant value, replace the
-        # symbol-Vector multiplication with a single array
-        if broadcasted_symbol.is_constant():
-            broadcasted_symbol = pybamm.Array(
-                broadcasted_symbol.evaluate(), domain=broadcasted_symbol.domain
-            )
-
-        return broadcasted_symbol
+        return pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -537,6 +527,10 @@ class NodeToEdge(pybamm.SpatialOperator):
             "node to edge ({})".format(node_to_edge_function.__name__), child
         )
         self._node_to_edge_function = node_to_edge_function
+
+    @property
+    def node_to_edge_function(self):
+        return self._node_to_edge_function
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

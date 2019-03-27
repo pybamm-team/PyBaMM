@@ -37,8 +37,6 @@ class Discretisation(object):
         self._bcs = {}
         self._y_slices = {}
 
-        mesh.add_ghost_meshes()
-
     @property
     def mesh(self):
         return self._mesh
@@ -305,10 +303,6 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
-
-            if new_symbol.is_constant():
-                value = new_symbol.evaluate()
-                return pybamm.Vector(value)
             return new_symbol
 
         else:
