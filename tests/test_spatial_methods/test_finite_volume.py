@@ -964,7 +964,7 @@ class TestFiniteVolume(unittest.TestCase):
         ns = 10 * (2 ** np.arange(2, 7))
         errs = np.array([get_l2_error(int(n)) for n in ns])
 
-        # Get rates: expect h**1.5 convergence because of boundary conditions
+        # Get rates: expect h**2
         rates = np.log2(errs[:-1] / errs[1:])
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
@@ -1014,7 +1014,7 @@ class TestFiniteVolume(unittest.TestCase):
         ns = 10 * (2 ** np.arange(2, 7))
         errs = np.array([get_l2_error(int(n)) for n in ns])
 
-        # Get rates: expect h**1.5 convergence because of boundary conditions
+        # Get rates: expect h**2
         rates = np.log2(errs[:-1] / errs[1:])
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
@@ -1111,7 +1111,7 @@ class TestFiniteVolume(unittest.TestCase):
         ns = 10 * (2 ** np.arange(2, 7))
         errs = np.array([get_l2_error(int(n)) for n in ns])
 
-        # Get rates: expect h**1.5 convergence because of boundary conditions
+        # Get rates: expect h**2
         rates = np.log2(errs[:-1] / errs[1:])
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
