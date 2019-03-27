@@ -53,7 +53,7 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((A @ a).simplify().evaluate(), 0)
 
         # test when other node is a parameter
-        c = pybamm.Parameter('c')
+        c = pybamm.Parameter("c")
         self.assertIsInstance((a + c).simplify(), pybamm.Parameter)
         self.assertIsInstance((c + a).simplify(), pybamm.Parameter)
         self.assertIsInstance((c + b).simplify(), pybamm.Addition)

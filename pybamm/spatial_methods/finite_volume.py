@@ -60,17 +60,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         See :meth: `pybamm.SpatialMethod.broadcast`
         """
-
-        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
-
-        # if the broadcasted symbol evaluates to a constant value, replace the
-        # symbol-Vector multiplication with a single array
-        if broadcasted_symbol.is_constant():
-            broadcasted_symbol = pybamm.Array(
-                broadcasted_symbol.evaluate(), domain=broadcasted_symbol.domain
-            )
-
-        return broadcasted_symbol
+        return pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -431,6 +421,43 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return BoundaryValueEvaluated(discretised_symbol, linear_extrapolation)
 
+    def mass_matrix(self, symbol, boundary_conditions):
+        """
+        Calculates the mass matrix for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Variable`
+            The variable corresponding to the equation for which we are
+            calculating the mass matrix.
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) mass matrix for the spatial method.
+        """
+        # NOTE: for different spatial methods the matrix may need to be adjusted
+        # to account for Dirichlet boundary conditions. Here, we just have that
+        # the mass matrix is the identity.
+
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*symbol.domain)
+
+        # Get number of points in primary dimension
+        n = submesh[0].npts
+
+        # Create mass matrix for primary dimension
+        prim_mass = eye(n)
+
+        # Get number of points in secondary dimension
+        sec_pts = len(submesh)
+
+        mass = kron(eye(sec_pts), prim_mass)
+        return pybamm.Matrix(mass)
+
     #######################################################
     # Can probably be moved outside of the spatial method
     ######################################################
@@ -517,6 +544,10 @@ class NodeToEdge(pybamm.SpatialOperator):
             "node to edge ({})".format(node_to_edge_function.__name__), child
         )
         self._node_to_edge_function = node_to_edge_function
+
+    @property
+    def node_to_edge_function(self):
+        return self._node_to_edge_function
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

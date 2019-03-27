@@ -86,6 +86,13 @@ class NumpyBroadcast(Broadcast):
         # domain)
         self.broadcasting_vector = np.ones(self.broadcasting_vector_size)
 
+        # store mesh
+        self._mesh = mesh
+
+    @property
+    def mesh(self):
+        return self._mesh
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         child = self.children[0]

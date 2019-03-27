@@ -21,17 +21,7 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         return pybamm.Vector(symbol_mesh[0].nodes)
 
     def broadcast(self, symbol, domain):
-        # for finite volume we send variables to cells and so use number_of_cells
-        broadcasted_symbol = pybamm.NumpyBroadcast(symbol, domain, self.mesh)
-
-        # if the broadcasted symbol evaluates to a constant value, replace the
-        # symbol-Vector multiplication with a single array
-        if broadcasted_symbol.is_constant():
-            broadcasted_symbol = pybamm.Array(
-                broadcasted_symbol.evaluate(), domain=broadcasted_symbol.domain
-            )
-
-        return broadcasted_symbol
+        return pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
@@ -46,6 +36,13 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
             n += self.mesh[domain][0].npts
         divergence_matrix = pybamm.Matrix(np.eye(n))
         return divergence_matrix @ discretised_symbol
+
+    def mass_matrix(self, symbol, boundary_conditions):
+        n = 0
+        for domain in symbol.domain:
+            n += self.mesh[domain][0].npts
+        mass_matrix = pybamm.Matrix(np.eye(n))
+        return mass_matrix
 
     def compute_diffusivity(self, symbol):
         return symbol
