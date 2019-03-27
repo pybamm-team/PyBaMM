@@ -9,7 +9,6 @@ from tests import StandardModelTest
 
 import unittest
 import numpy as np
-import autograd.numpy as auto_np
 
 
 @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
@@ -19,7 +18,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
 
         def constant_growth(t, y):
-            return 0.5 * auto_np.ones_like(y)
+            return 0.5 * np.ones_like(y)
 
         y0 = np.array([0.0])
         t_eval = np.linspace(0, 1, 100)
@@ -43,7 +42,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
 
         def constant_decay(t, y):
-            return -2 * auto_np.ones_like(y)
+            return -2 * np.ones_like(y)
 
         def y_equal_0(t, y):
             return y[0]
@@ -83,7 +82,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
 
         def linear_ode(t, y):
-            return auto_np.array([0.5 * auto_np.ones_like(y[0]), 2 - y[0]])
+            return np.array([0.5 * np.ones_like(y[0]), 2 - y[0]])
 
         def jacobian(t, y):
             return np.array([[0.0, 0.0], [-1.0, 0.0]])
@@ -99,7 +98,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
 
         def exponential_growth(t, y):
-            return auto_np.array([y[0], (1.0 - y[0]) * y[1]])
+            return np.array([y[0], (1.0 - y[0]) * y[1]])
 
         def jacobian(t, y):
             return np.array([[1.0, 0.0], [-y[1], 1 - y[0]]])
@@ -120,9 +119,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return auto_np.array(
-                [0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
-            )
+            return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
 
         y0 = np.array([0, 0])
         t_eval = np.linspace(0, 1, 100)
@@ -135,7 +132,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def exponential_decay_dae(t, y, ydot):
-            return auto_np.array([-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]])
+            return np.array([-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]])
 
         y0 = np.array([1, 2])
         t_eval = np.linspace(0, 1, 100)
@@ -186,9 +183,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return auto_np.array(
-                [0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
-            )
+            return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
 
         def y0_eq_2(t, y):
             return y[0] - 2
@@ -211,7 +206,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def exponential_decay_dae(t, y, ydot):
-            return auto_np.array([-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]])
+            return np.array([-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]])
 
         def y0_eq_0pt9(t, y):
             return y[0] - 0.9
@@ -236,9 +231,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return auto_np.array(
-                [0.5 * auto_np.ones_like(y[0]) - ydot[0], 2.0 * y[0] - y[1]]
-            )
+            return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2.0 * y[0] - y[1]])
 
         mass_matrix = np.array([[1.0, 0.0], [0.0, 0.0]])
 
@@ -258,9 +251,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def nonlinear_dae(t, y, ydot):
-            return auto_np.array(
-                [0.5 * auto_np.ones_like(y[0]) - ydot[0], 2 * y[0] ** 2 - y[1]]
-            )
+            return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] ** 2 - y[1]])
 
         mass_matrix = np.array([[1.0, 0.0], [0.0, 0.0]])
 
