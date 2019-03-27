@@ -5,7 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import autograd.numpy as np
+import numpy as np
 import importlib
 
 scikits_odes_spec = importlib.util.find_spec("scikits")
