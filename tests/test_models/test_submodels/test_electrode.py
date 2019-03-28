@@ -39,10 +39,22 @@ class TestOhm(unittest.TestCase):
         model_n_test.test_all()
 
         model_p = pybamm.electrode.Ohm(phi_s_p, eps_p, j_p, param)
+        # overwrite boundary conditions for purposes of the test
+        i_s_p = model_p.variables["Positive electrode solid current"]
+        model_p.boundary_conditions = {phi_s_p: {"right": 0}, i_s_p: {"left": 0}}
         model_p_test = tests.StandardModelTest(model_p)
         model_p_test.test_all()
 
         model_whole = pybamm.electrode.Ohm(phi_s, eps, j, param)
+        # overwrite boundary conditions for purposes of the test
+        i_s_n = model_whole.variables["Negative electrode solid current"]
+        i_s_p = model_whole.variables["Positive electrode solid current"]
+        model_whole.boundary_conditions = {
+            phi_s_n: {"left": 0},
+            i_s_n: {"right": 0},
+            phi_s_p: {"right": 0},
+            i_s_p: {"left": 0},
+        }
         model_whole_test = tests.StandardModelTest(model_whole)
         model_whole_test.test_all()
 

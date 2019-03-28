@@ -70,6 +70,12 @@ sp = pybamm.standard_parameters
 R_n = pybamm.Parameter("Negative particle radius")
 R_p = pybamm.Parameter("Positive particle radius")
 
+# Electrolyte properties
+# (1-2*t_plus) is for Nernst-Planck
+# 2*(1-t_plus) for Stefan-Maxwell
+# Bizeray et al (2016) "Resolving a discrepancy ..."
+chi = 2 * (1 - sp.t_plus)
+
 # Electrode properties
 c_n_max = pybamm.Parameter("Maximum concentration in negative electrode")
 c_p_max = pybamm.Parameter("Maximum concentration in positive electrode")
@@ -105,12 +111,24 @@ def D_p(c_p):
     return D_p_dimensional(c_p_dimensional) / D_p_dimensional(c_p_max)
 
 
-def chi(c_e):
-    "Dimensionless factor in MacInnes equation"
-    # (1-2*t_plus) is for Nernst-Planck
-    # 2*(1-t_plus) for Stefan-Maxwell
-    # Bizeray et al (2016) "Resolving a discrepancy ..."
-    return 1 - 2 * sp.t_plus
+def U_n_dimensional(c_s_n):
+    "Dimensional open-circuit voltage in the negative electrode [V]"
+    return pybamm.FunctionParameter("Negative electrode OCV", c_s_n)
+
+
+# Because stochiometries vary over different ranges, it is not obvious what this
+# scaling should be in general, without evaluating the OCV. Left at c=0.5 for now
+U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(0.5))
+
+
+def U_p_dimensional(c_s_p):
+    "Dimensional open-circuit voltage of of the positive electrode [V]"
+    return pybamm.FunctionParameter("Positive electrode OCV", c_s_p)
+
+
+# Because stochiometries vary over different ranges, it is not obvious what this
+# scaling should be in general, without evaluating the OCV. Left at c=0.5 for now
+U_p_ref = pybamm.FunctionParameter("Positive electrode OCV", pybamm.Scalar(0.5))
 
 
 def U_n(c_n):
