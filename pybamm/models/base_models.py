@@ -293,6 +293,20 @@ class BaseModel(object):
         extra_variables = vars_in_eqns.difference(vars_in_keys)
         if extra_variables:
             raise pybamm.ModelError("model is underdetermined (too many variables)")
+        # There must be at least one Variable in each algebraic equation
+        for eqn in self.algebraic.values():
+            if not any(
+                [
+                    isinstance(x, (pybamm.Variable, pybamm.StateVector))
+                    for x in eqn.pre_order()
+                ]
+            ):
+                raise pybamm.ModelError(
+                    """
+                    each algebraic equation must contain
+                    at least one Variable or StateVector
+                    """
+                )
 
         # Initial conditions
         for var in self.rhs.keys():

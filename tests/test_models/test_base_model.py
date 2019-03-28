@@ -208,6 +208,14 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "extra algebraic keys"):
             model.check_well_posedness()
 
+        # algebraic equation without a variable fails
+        model = pybamm.BaseModel()
+        model.algebraic = {c: 1, d: d - c}
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "each algebraic equation must contain"
+        ):
+            model.check_well_posedness()
+
     def test_check_well_posedness_initial_boundary_conditions(self):
         # Well-posed model - Dirichlet
         whole_cell = ["negative electrode", "separator", "positive electrode"]
