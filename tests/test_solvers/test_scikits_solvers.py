@@ -319,9 +319,7 @@ class TestScikitsSolver(unittest.TestCase):
 
         # Add user-supplied Jacobian to model
         mesh = pybamm.Mesh(
-            model.default_geometry,
-            model.default_submesh_types,
-            model.default_submesh_pts,
+            model.default_geometry, model.default_submesh_types, model.default_var_pts
         )
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
@@ -423,9 +421,7 @@ class TestScikitsSolver(unittest.TestCase):
 
         # Add user-supplied Jacobian to model
         mesh = pybamm.Mesh(
-            model.default_geometry,
-            model.default_submesh_types,
-            model.default_submesh_pts,
+            model.default_geometry, model.default_submesh_types, model.default_var_pts
         )
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
