@@ -3,4 +3,4 @@
 #
 from .loqs import LOQS
 from .composite import Composite
-from .porous_electrode import PorousElectrode
+from .newman_tiedemann import NewmanTiedemann

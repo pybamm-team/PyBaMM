@@ -61,6 +61,11 @@ class Ohm(pybamm.BaseModel):
             neg_model = Ohm(phi_s_n, eps_n, j_n, param)
             pos_model = Ohm(phi_s_p, eps_p, j_p, param)
             self.update(neg_model, pos_model)
+            # Voltage variable
+            voltage = pybamm.BoundaryValue(phi_s, "right") - pybamm.BoundaryValue(
+                phi_s, "left"
+            )
+            self.variables.update({"Voltage": voltage})
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(phi_s.domain))
 

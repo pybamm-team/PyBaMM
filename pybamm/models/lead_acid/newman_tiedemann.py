@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class PorousElectrode(pybamm.LeadAcidBaseModel):
+class NewmanTiedemann(pybamm.LeadAcidBaseModel):
     """Porous electrode model for lead-acid, from [1]_.
 
     .. math::
