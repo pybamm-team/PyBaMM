@@ -75,3 +75,10 @@ class StateVector(pybamm.Symbol):
             )
         else:
             return y[self._y_slice]
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return -self.children[0].diff(variable)
