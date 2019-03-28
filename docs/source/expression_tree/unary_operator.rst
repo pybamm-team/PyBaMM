@@ -10,7 +10,7 @@ Unary Operators
 .. autoclass:: pybamm.AbsoluteValue
   :members:
 
-.. autoclass:: pybamm.Extract
+.. autoclass:: pybamm.Index
   :members:
 
 .. autoclass:: pybamm.SpatialOperator

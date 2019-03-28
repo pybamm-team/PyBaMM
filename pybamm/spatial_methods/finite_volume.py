@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-from scipy.sparse import spdiags
+from scipy.sparse import diags
 from scipy.sparse import eye
 from scipy.sparse import kron
 
@@ -75,19 +75,30 @@ class FiniteVolume(pybamm.SpatialMethod):
         domain = symbol.domain
         # Add Dirichlet boundary conditions, if defined
         if symbol.id in boundary_conditions:
-            lbc = boundary_conditions[symbol.id]["left"]
-            rbc = boundary_conditions[symbol.id]["right"]
+            bcs = boundary_conditions[symbol.id]
+            # get boundary conditions and edit domain
+            if "left" in bcs.keys():
+                lbc = bcs["left"]
+                domain = [domain[0] + "_left ghost cell"] + domain
+            else:
+                lbc = None
+            if "right" in bcs.keys():
+                rbc = bcs["right"]
+                domain = domain + [domain[-1] + "_right ghost cell"]
+            else:
+                rbc = None
+            # add ghost nodes
             discretised_symbol = self.add_ghost_nodes(
                 symbol, discretised_symbol, lbc, rbc
-            )
-            domain = (
-                [domain[0] + "_left ghost cell"]
-                + domain
-                + [domain[-1] + "_right ghost cell"]
             )
 
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
+
+        # set ghost cells
+        gradient_matrix.has_left_ghost_cell = discretised_symbol.has_left_ghost_cell
+        gradient_matrix.has_right_ghost_cell = discretised_symbol.has_right_ghost_cell
+
         return gradient_matrix @ discretised_symbol
 
     def gradient_matrix(self, domain):
@@ -114,11 +125,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Create 1D matrix using submesh
         n = submesh.npts
         e = 1 / submesh.d_nodes
-        data = np.vstack(
-            [np.concatenate([-e, np.array([0])]), np.concatenate([np.array([0]), e])]
-        )
-        diags = np.array([0, 1])
-        sub_matrix = spdiags(data, diags, n - 1, n)
+        sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
 
         # second dim length
         second_dim_len = len(submesh_list)
@@ -140,17 +147,52 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         domain = symbol.domain
         submesh_list = self.mesh.combine_submeshes(*domain)
+
         # create a bc vector of length equal to the number variables
         # (only has non zero entries for neumann bcs)
-
         prim_dim = submesh_list[0].npts
         second_dim = len(submesh_list)
         total_pts = prim_dim * second_dim
 
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
-            lbc = boundary_conditions[symbol.id]["left"]
-            rbc = boundary_conditions[symbol.id]["right"]
+
+            # get boundary conditions
+            bcs = boundary_conditions[symbol.id]
+            if set(bcs.keys()) == set(["left", "right"]):
+                # neumann on both sides
+                lbc = bcs["left"]
+                rbc = bcs["right"]
+                # now we must create a matrix of size (npts * (npts -1) )
+                # this is a different size to the one created when we have
+                # flux boundary conditions so need a flag
+                divergence_matrix = self.divergence_matrix(
+                    domain, bc_type="neumann_neumann"
+                )
+                # only need interior edges (for spherical neumann_neumann)
+                edges = submesh_list[0].edges[1:-1]
+            elif set(bcs.keys()) == set(["left"]):
+                # neumann on left, dirichlet on right
+                lbc = bcs["left"]
+                rbc = pybamm.Scalar(0)
+                # divergence matrix and edges
+                divergence_matrix = self.divergence_matrix(
+                    domain, bc_type="neumann_dirichlet"
+                )
+                edges = submesh_list[0].edges[1:]
+            elif set(bcs.keys()) == set(["right"]):
+                # neumann on right, dirichlet on left
+                lbc = pybamm.Scalar(0)
+                rbc = bcs["right"]
+                # divergence matrix and edges
+                divergence_matrix = self.divergence_matrix(
+                    domain, bc_type="dirichlet_neumann"
+                )
+                edges = submesh_list[0].edges[:-1]
+
+            # taking divergence removes ghost cells
+            discretised_symbol.has_left_ghost_cell = False
+            discretised_symbol.has_right_ghost_cell = False
 
             # doing via loop so that it is easier to implement x varing bcs
             bcs_symbol = pybamm.Vector(np.array([]))  # empty vector
@@ -159,11 +201,11 @@ class FiniteVolume(pybamm.SpatialMethod):
                 if lbc.evaluates_to_number():
                     lbc_i = lbc
                 else:
-                    lbc_i = pybamm.Extract(lbc, i)
+                    lbc_i = pybamm.Index(lbc, i)
                 if rbc.evaluates_to_number():
                     rbc_i = rbc
                 else:
-                    rbc_i = pybamm.Extract(rbc, i)
+                    rbc_i = pybamm.Index(rbc, i)
                 # only the interior equations:
                 interior = pybamm.Vector(np.zeros(prim_dim - 2))
                 left = -lbc_i / pybamm.Vector(np.array([submesh_list[i].d_edges[0]]))
@@ -172,16 +214,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                     bcs_symbol, left, interior, right
                 )
 
-            # now we must create a matrix of size (npts * (npts -1) )
-            # this is a different size to the one created when we have
-            # flux boundary conditions so need a flag
-            divergence_matrix = self.divergence_matrix(domain, bc_type="neumann")
-
-            # only need interior edges for spherical neumann
-            edges = submesh_list[0].edges[1:-1]
-
         else:
-            divergence_matrix = self.divergence_matrix(domain)
+            divergence_matrix = self.divergence_matrix(
+                domain, bc_type="dirichlet_dirichlet"
+            )
             bcs_vec = np.zeros(total_pts)
             bcs_symbol = pybamm.Vector(bcs_vec)
             # need all edges for spherical dirichlet
@@ -208,7 +244,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def divergence_matrix(self, domain, bc_type="dirichlet"):
+    def divergence_matrix(self, domain, bc_type="dirichlet_dirichlet"):
         """
         Divergence matrix for finite volumes in the appropriate domain.
         Equivalent to div(N) = (N[1:] - N[:-1])/dx
@@ -217,6 +253,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         ----------
         domain : list
             The domain(s) in which to compute the divergence matrix
+        bc_type : string
+            What type of boundary condition to apply. Affects the size of the resulting
+            matrix
 
         Returns
         -------
@@ -232,21 +271,17 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Create matrix using submesh
         n = submesh.npts + 1
-        if bc_type == "dirichlet":
-            data = np.vstack(
-                [
-                    np.concatenate([-e, np.array([0])]),
-                    np.concatenate([np.array([0]), e]),
-                ]
-            )
-            diags = np.array([0, 1])
-            sub_matrix = spdiags(data, diags, n - 1, n)
-        elif bc_type == "neumann":
-            # we don't have to act on bc fluxes which are now in
-            # the bc vector
-            data = np.vstack([-e[1:], e[:-1]])
-            diags = np.array([-1, 0])
-            sub_matrix = spdiags(data, diags, n - 1, n - 2)
+        if bc_type == "dirichlet_dirichlet":
+            sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
+        elif bc_type == "dirichlet_neumann":
+            # we don't have to act on right bc flux which is now in the bc vector
+            sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n - 1))
+        elif bc_type == "neumann_dirichlet":
+            # we don't have to act on left bc flux which is now in the bc vector
+            sub_matrix = diags([-e[1:], e], [-1, 0], shape=(n - 1, n - 1))
+        elif bc_type == "neumann_neumann":
+            # we don't have to act on bc fluxes which are now in the bc vector
+            sub_matrix = diags([-e[1:], e], [-1, 0], shape=(n - 1, n - 2))
         else:
             raise NotImplementedError(
                 "Can only process Neumann or Dirichlet boundary conditions"
@@ -306,7 +341,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return pybamm.Vector(vector)
 
-    def add_ghost_nodes(self, symbol, discretised_symbol, lbc, rbc):
+    def add_ghost_nodes(self, symbol, discretised_symbol, lbc=None, rbc=None):
         """
         Add Dirichlet boundary conditions via ghost nodes.
 
@@ -328,33 +363,37 @@ class FiniteVolume(pybamm.SpatialMethod):
         discretised_symbol : :class:`pybamm.StateVector` (size n)
             The discretised variable (a state vector) to which to add ghost nodes
         lbc : :class:`pybamm.Scalar`
-            Dirichlet bouncary condition on the left-hand side
+            Dirichlet boundary condition on the left-hand side. Default is None.
         rbc : :class:`pybamm.Scalar`
-            Dirichlet bouncary condition on the right-hand side
+            Dirichlet boundary condition on the right-hand side. Default is None.
 
         Returns
         -------
-        :class:`pybamm.Concatenation` (size n+2)
+        :class:`pybamm.Concatenation` (size n+1 or n+2)
             Concatenation of the variable (a state vector) and ghost nodes
 
         """
-        assert isinstance(discretised_symbol, pybamm.StateVector), NotImplementedError(
-            """discretised_symbol must be a StateVector, not {}""".format(
-                type(discretised_symbol)
+        if isinstance(discretised_symbol, pybamm.StateVector):
+            y_slice_start = discretised_symbol.y_slice.start
+            y_slice_stop = discretised_symbol.y_slice.stop
+        elif isinstance(discretised_symbol, pybamm.Concatenation):
+            y_slice_start = discretised_symbol.children[0].y_slice.start
+            y_slice_stop = discretised_symbol.children[-1].y_slice.stop
+        else:
+            raise TypeError(
+                """
+                discretised_symbol must be a StateVector or Concatenation, not '{}'
+                """.format(
+                    type(discretised_symbol)
+                )
             )
-        )
-
-        # determine the y_slice sizes
-        y_slice_start = discretised_symbol.y_slice.start
-        y_slice_stop = discretised_symbol.y_slice.stop
-
         y = np.arange(y_slice_start, y_slice_stop)
 
         # reshape y_slices into more helpful form
         submesh_list = self.mesh.combine_submeshes(*symbol.domain)
         if isinstance(submesh_list[0].npts, list):
             NotImplementedError("Can only take in 1D primary directions")
-        # size = [submesh_list[0].npts, len(submesh_list)]
+
         size = [len(submesh_list), submesh_list[0].npts]
         y = np.reshape(y, size)
         y_left = y[:, 0]
@@ -366,31 +405,69 @@ class FiniteVolume(pybamm.SpatialMethod):
             y_slice_start = y_left[i]
             y_slice_stop = y_right[i]
 
-            if lbc.evaluates_to_number():
-                lbc_i = lbc
-            else:
-                lbc_i = pybamm.Extract(lbc, i)
-            if rbc.evaluates_to_number():
-                rbc_i = rbc
-            else:
-                rbc_i = pybamm.Extract(rbc, i)
-
             # left ghost cell
             first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
-            left_ghost_cell = 2 * lbc_i - first_node
+
             # middle symbol
             sub_disc_symbol = pybamm.StateVector(slice(y_slice_start, y_slice_stop + 1))
+
             # right ghost cell
             last_node = pybamm.StateVector(slice(y_slice_stop, y_slice_stop + 1))
-            right_ghost_cell = 2 * rbc_i - last_node
 
-            concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
-                left_ghost_cell, sub_disc_symbol, right_ghost_cell
-            )
+            if lbc is not None and rbc is not None:
+                if lbc.evaluates_to_number():
+                    lbc_i = lbc
+                else:
+                    lbc_i = pybamm.Index(lbc, i)
+                if rbc.evaluates_to_number():
+                    rbc_i = rbc
+                else:
+                    rbc_i = pybamm.Index(rbc, i)
 
-            new_discretised_symbol = pybamm.NumpyConcatenation(
-                new_discretised_symbol, concatenated_sub_disc_symbol
-            )
+                left_ghost_cell = 2 * lbc_i - first_node
+                right_ghost_cell = 2 * rbc_i - last_node
+                # concatenate and flag ghost cells
+                concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
+                    left_ghost_cell, sub_disc_symbol, right_ghost_cell
+                )
+                new_discretised_symbol = pybamm.NumpyConcatenation(
+                    new_discretised_symbol, concatenated_sub_disc_symbol
+                )
+                new_discretised_symbol.has_left_ghost_cell = True
+                new_discretised_symbol.has_right_ghost_cell = True
+            elif lbc is not None:
+                if lbc.evaluates_to_number():
+                    lbc_i = lbc
+                else:
+                    lbc_i = pybamm.Index(lbc, i)
+
+                # left ghost cell only
+                left_ghost_cell = 2 * lbc_i - first_node
+                # concatenate and flag ghost cells
+                concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
+                    left_ghost_cell, sub_disc_symbol
+                )
+                new_discretised_symbol = pybamm.NumpyConcatenation(
+                    new_discretised_symbol, concatenated_sub_disc_symbol
+                )
+                new_discretised_symbol.has_left_ghost_cell = True
+            elif rbc is not None:
+                if rbc.evaluates_to_number():
+                    rbc_i = rbc
+                else:
+                    rbc_i = pybamm.Index(rbc, i)
+                # right ghost cell only
+                right_ghost_cell = 2 * rbc_i - last_node
+                # concatenate and flag ghost cells
+                concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
+                    sub_disc_symbol, right_ghost_cell
+                )
+                new_discretised_symbol = pybamm.NumpyConcatenation(
+                    new_discretised_symbol, concatenated_sub_disc_symbol
+                )
+                new_discretised_symbol.has_right_ghost_cell = True
+            else:
+                raise ValueError("at least one boundary condition must be provided")
 
         return new_discretised_symbol
 
@@ -462,7 +539,9 @@ class FiniteVolume(pybamm.SpatialMethod):
     # Can probably be moved outside of the spatial method
     ######################################################
 
-    def compute_diffusivity(self, discretised_symbol):
+    def compute_diffusivity(
+        self, discretised_symbol, extrapolate_left=False, extrapolate_right=False
+    ):
         """
         Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
         For now we just take the arithemtic mean, though it may be better to take the
@@ -477,6 +556,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             Symbol to be averaged. When evaluated, this symbol returns either a scalar
             or an array of shape (n,), where n is the number of points in the mesh for
             the symbol's domain (n = self.mesh[symbol.domain].npts)
+        extrapolate_left : boolean
+            Whether to extrapolate one node to the left when computing the
+            diffusivity, to account for ghost cells. Default is False
+        extrapolate_right : boolean
+            Whether to extrapolate one node to the right when computing the
+            diffusivity, to account for ghost cells. Default is False
 
         Returns
         -------
@@ -487,7 +572,14 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         def arithmetic_mean(array):
             """Calculate the arithemetic mean of an array"""
-            return (array[1:] + array[:-1]) / 2
+            mean_array = (array[1:] + array[:-1]) / 2
+            if extrapolate_left:
+                left_node = array[0] - (array[1] - array[0]) / 2
+                mean_array = np.concatenate([np.array([left_node]), mean_array])
+            if extrapolate_right:
+                right_node = array[-1] - (array[-2] - array[-1]) / 2
+                mean_array = np.concatenate([mean_array, np.array([right_node])])
+            return mean_array
 
         return pybamm.NodeToEdge(discretised_symbol, arithmetic_mean)
 

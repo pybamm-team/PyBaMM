@@ -110,7 +110,7 @@ class Function(UnaryOperator):
         return self.func(self.children[0].evaluate(t, y))
 
 
-class Extract(UnaryOperator):
+class Index(UnaryOperator):
     """A node in the expression tree, which stores the index that should be
     extracted from its child after the child has been evaluated.
     """

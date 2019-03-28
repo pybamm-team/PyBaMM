@@ -72,7 +72,7 @@ from .expression_tree.unary_operators import (
     Negate,
     AbsoluteValue,
     Function,
-    Extract,
+    Index,
     SpatialOperator,
     Gradient,
     Divergence,
