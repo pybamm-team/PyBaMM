@@ -14,10 +14,6 @@ if scikits_odes_spec is not None:
     if scikits_odes_spec is not None:
         scikits_odes = importlib.util.module_from_spec(scikits_odes_spec)
         scikits_odes_spec.loader.exec_module(scikits_odes)
-        # NOTE: Gives error module 'scikits.odes' has no attribute 'sundials'
-        # if you try to make the Jacobian class using
-        # scikits_odes.sundials.ida.IDA_JacRhsFunction
-        # but is OK if you import ida here?
         from scikits.odes.sundials import ida
 
 

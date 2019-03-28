@@ -5,6 +5,9 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import numpy as np
+from scipy.sparse import csr_matrix
+
 
 class Vector(pybamm.Array):
     """node in the expression tree that holds a vector type (e.g. :class:`numpy.array`)
@@ -77,8 +80,36 @@ class StateVector(pybamm.Symbol):
             return y[self._y_slice]
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
+        """
+        Differentiate a slice of a StateVector of size m with respect to another
+        slice of a StateVector of size n. This returns a (sparse) matrix of size
+        m x n with ones where the y slices match, and zeros elsewhere.
+
+        Parameters
+        ----------
+        variable : :class:`pybamm.Symbol`
+            The variable with respect to which to differentiate
+
+        """
+
+        # Get slices of state vectors
+        self_y_slices = np.arange(self.y_slice.start, self.y_slice.stop)
+        variable_y_slices = np.arange(variable.y_slice.start, variable.y_slice.stop)
+
+        # Return zeros of correct size if no entries match
+        if np.size(np.intersect1d(self_y_slices, variable_y_slices)) == 0:
+            jac = csr_matrix((np.size(self_y_slices), np.size(variable_y_slices)))
         else:
-            return -self.children[0].diff(variable)
+            # Populate entries corresponding to matching y slices, and shift so
+            # that the matrix is the correct size
+            row = np.intersect1d(self_y_slices, variable_y_slices) - self.y_slice.start
+            col = (
+                np.intersect1d(self_y_slices, variable_y_slices)
+                - variable.y_slice.start
+            )
+            data = np.ones_like(row)
+            jac = csr_matrix(
+                (data, (row, col)),
+                shape=(np.size(self_y_slices), np.size(variable_y_slices)),
+            )
+        return pybamm.Matrix(jac)
