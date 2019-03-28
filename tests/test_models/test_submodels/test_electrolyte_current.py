@@ -20,14 +20,25 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         phi_e = pybamm.Variable("potential", whole_cell)
 
         # Other
-        c_e = pybamm.Broadcast(pybamm.Scalar(1), whole_cell)
+        c_e = pybamm.Variable("concentration", whole_cell)
         eps = pybamm.Broadcast(pybamm.Scalar(1), whole_cell)
         j = pybamm.interface.homogeneous_reaction(whole_cell)
 
-        # Set up model and test
+        # Set up model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
             c_e, eps, phi_e, j, param
         )
+        # some small changes so that tests pass
+        i_e = model.variables["Electrolyte current"]
+        model.algebraic.update({c_e: c_e - pybamm.Scalar(1)})
+        model.initial_conditions.update({c_e: pybamm.Scalar(1)})
+        model.boundary_conditions = {
+            c_e: {"left": 1},
+            phi_e: {"left": 0},
+            i_e: {"right": 0},
+        }
+
+        # Test
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
