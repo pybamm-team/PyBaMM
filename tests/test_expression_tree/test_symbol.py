@@ -348,6 +348,19 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(a.id, a_orp.id)
         self.assertEqual(b.id, b_orp.id)
 
+    def test_ghost_cell_flaf(self):
+        a = pybamm.Symbol("a")
+        self.assertFalse(a.has_left_ghost_cell)
+        self.assertFalse(a.has_right_ghost_cell)
+
+        a.has_left_ghost_cell = True
+        self.assertTrue(a.has_left_ghost_cell)
+        self.assertFalse(a.has_right_ghost_cell)
+
+        a.has_right_ghost_cell = True
+        self.assertTrue(a.has_left_ghost_cell)
+        self.assertTrue(a.has_right_ghost_cell)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
