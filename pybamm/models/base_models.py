@@ -51,6 +51,7 @@ class BaseModel(object):
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
+        self._jacobian = None
 
         # Default parameter values, geometry, submesh, spatial methods and solver
 
@@ -200,6 +201,14 @@ class BaseModel(object):
     @mass_matrix.setter
     def mass_matrix(self, mass_matrix):
         self._mass_matrix = mass_matrix
+
+    @property
+    def jacobian(self):
+        return self._jacobian
+
+    @jacobian.setter
+    def jacobian(self, jacobian):
+        self._jacobian = jacobian
 
     def __getitem__(self, key):
         return self.rhs[key]
