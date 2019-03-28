@@ -47,28 +47,38 @@ class SpatialVariable(IndependentVariable):
     Parameters
     ----------
     name : str
-        name of the node ("x", "y", "z" or "r")
+        name of the node (e.g. "x_n")
     domain : iterable of str
         list of domains that this variable is valid over
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain):
-        if name not in ["x", "y", "z", "r"]:
+    def __init__(self, name, domain=[], coord_sys=None):
+        self.coord_sys = coord_sys
+        super().__init__(name, domain=domain)
+
+        known_var_names = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
+
+        if name not in known_var_names:
             raise ValueError(
-                "name must be 'x', 'y', 'z' or 'r' but is '{}'".format(name)
+                "name must be 'x', 'y', 'z', or 'r' (or sub k)  but is '{}'".format(
+                    name
+                )
             )
         if domain == []:
             raise ValueError("domain must be provided")
-        if name == "r" and domain not in [["negative particle"], ["positive particle"]]:
+        if name in ["r", "r_n", "r_p"] and domain not in [
+            ["negative particle"],
+            ["positive particle"],
+        ]:
             raise pybamm.DomainError("domain must be particle if name is 'r'")
-        elif name in ["x", "y", "z"] and any(["particle" in dom for dom in domain]):
+        elif name in ["x", "y", "z", "x_n", "x_s", "x_p"] and any(
+            ["particle" in dom for dom in domain]
+        ):
             raise pybamm.DomainError(
                 "domain cannot be particle if name is '{}'".format(name)
             )
-
-        super().__init__(name, domain=domain)
 
 
 # the independent variable time

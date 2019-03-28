@@ -35,14 +35,33 @@ class Mesh(dict):
 
     """
 
-    def __init__(self, geometry, submesh_types, submesh_pts):
+    def __init__(self, geometry, submesh_types, var_pts):
         super().__init__()
+        # convert var_pts to an id dict
+        var_id_pts = {}
+        for var, pts in var_pts.items():
+            var_id_pts[var.id] = pts
+
+        # create submesh_pts from var_pts
+        submesh_pts = {}
+        for domain in list(geometry.keys()):
+            submesh_pts[domain] = {}
+            for prim_sec in list(geometry[domain].keys()):
+                for var in list(geometry[domain][prim_sec].keys()):
+                    if var.id not in var_id_pts.keys():
+                        raise KeyError(
+                            "Points not given for a variable in domain {}".format(
+                                domain
+                            )
+                        )
+                    submesh_pts[domain][var.id] = var_id_pts[var.id]
         self.submesh_pts = submesh_pts
+
         for domain in geometry:
             repeats = 1
             if "secondary" in geometry[domain].keys():
                 for var in geometry[domain]["secondary"].keys():
-                    repeats = submesh_pts[domain][var.name]  # note (specific to FV)
+                    repeats = submesh_pts[domain][var.id]  # note (specific to FV)
             self[domain] = [
                 submesh_types[domain](geometry[domain]["primary"], submesh_pts[domain])
             ] * repeats
@@ -79,7 +98,13 @@ class Mesh(dict):
                 [self[submeshnames[0]][i].edges]
                 + [self[submeshname][i].edges[1:] for submeshname in submeshnames[1:]]
             )
-            submeshes[i] = pybamm.SubMesh1D(combined_submesh_edges)
+            coord_sys = self[submeshnames[0]][i].coord_sys
+            coord_sys_r = self[submeshnames[0]][i].coord_sys
+            if coord_sys != coord_sys_r:
+                raise pybamm.DomainError(
+                    "trying to combine two meshes in different coordinate systems"
+                )
+            submeshes[i] = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
         return submeshes
 
     def add_ghost_meshes(self):
@@ -103,9 +128,13 @@ class Mesh(dict):
 
                 # left ghost cell: two edges, one node, to the left of existing submesh
                 lgs_edges = np.array([2 * edges[0] - edges[1], edges[0]])
-                self[domain + "_left ghost cell"][i] = pybamm.SubMesh1D(lgs_edges)
+                self[domain + "_left ghost cell"][i] = pybamm.SubMesh1D(
+                    lgs_edges, submesh.coord_sys
+                )
 
                 # right ghost cell: two edges, one node, to the right of
                 # existing submesh
                 rgs_edges = np.array([edges[-1], 2 * edges[-1] - edges[-2]])
-                self[domain + "_right ghost cell"][i] = pybamm.SubMesh1D(rgs_edges)
+                self[domain + "_right ghost cell"][i] = pybamm.SubMesh1D(
+                    rgs_edges, submesh.coord_sys
+                )

@@ -180,7 +180,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             edges = submesh_list[0].edges
 
         # check for particle domain
-        if ("negative particle" or "positive particle") in domain:
+        if submesh_list[0].coord_sys == "spherical polar":
 
             # create np.array of repeated submesh[0].nodes
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
