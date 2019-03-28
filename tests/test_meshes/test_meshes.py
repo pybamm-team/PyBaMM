@@ -5,8 +5,6 @@ import pybamm
 import numpy as np
 import unittest
 
-from tests.shared import keys_to_ids
-
 
 class TestMesh(unittest.TestCase):
     def test_mesh_creation(self):
@@ -79,7 +77,7 @@ class TestMesh(unittest.TestCase):
         # create mesh
         mesh = mesh_type(geometry, submesh_types, var_pts)
 
-        var_id_pts = keys_to_ids(var_pts)
+        var_id_pts = {var.id: pts for var, pts in var_pts.items()}
 
         self.assertEqual(mesh["negative electrode"][0].npts, var_id_pts[var.x_n.id])
         self.assertEqual(mesh["separator"][0].npts, var_id_pts[var.x_s.id])

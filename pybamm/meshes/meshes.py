@@ -38,9 +38,7 @@ class Mesh(dict):
     def __init__(self, geometry, submesh_types, var_pts):
         super().__init__()
         # convert var_pts to an id dict
-        var_id_pts = {}
-        for var, pts in var_pts.items():
-            var_id_pts[var.id] = pts
+        var_id_pts = {var.id: pts for var, pts in var_pts.items()}
 
         # create submesh_pts from var_pts
         submesh_pts = {}
@@ -58,10 +56,11 @@ class Mesh(dict):
         self.submesh_pts = submesh_pts
 
         for domain in geometry:
-            repeats = 1
             if "secondary" in geometry[domain].keys():
                 for var in geometry[domain]["secondary"].keys():
                     repeats = submesh_pts[domain][var.id]  # note (specific to FV)
+            else:
+                repeats = 1
             self[domain] = [
                 submesh_types[domain](geometry[domain]["primary"], submesh_pts[domain])
             ] * repeats

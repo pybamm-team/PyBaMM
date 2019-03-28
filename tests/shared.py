@@ -50,13 +50,6 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         return mass_matrix
 
 
-def keys_to_ids(dictionary):
-    new_dictionary = {}
-    for var in dictionary.keys():
-        new_dictionary[var.id] = dictionary[var]
-    return new_dictionary
-
-
 def get_mesh_for_testing(npts=None):
     param = pybamm.ParameterValues(
         base_parameters={
