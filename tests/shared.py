@@ -37,15 +37,17 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         divergence_matrix = pybamm.Matrix(np.eye(n))
         return divergence_matrix @ discretised_symbol
 
+    def compute_diffusivity(
+        self, symbol, extrapolate_left=None, extrapolate_right=None
+    ):
+        return symbol
+
     def mass_matrix(self, symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain][0].npts
         mass_matrix = pybamm.Matrix(np.eye(n))
         return mass_matrix
-
-    def compute_diffusivity(self, symbol):
-        return symbol
 
 
 def get_mesh_for_testing(npts=None):
