@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import scipy.integrate as it
+import numpy as np
 
 
 class ScipySolver(pybamm.OdeSolver):
@@ -32,7 +33,9 @@ class ScipySolver(pybamm.OdeSolver):
     def method(self, value):
         self._method = value
 
-    def integrate(self, derivs, y0, t_eval, events=None, mass_matrix=None):
+    def integrate(
+        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
+    ):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -48,19 +51,31 @@ class ScipySolver(pybamm.OdeSolver):
         events : method, optional
             A function that takes in t and y and returns conditions for the solver to
             stop
-        mass_matrix : array_like
+        mass_matrix : array_like, optional
             The (sparse) mass matrix for the chosen spatial method.
-
+        jacobian : method, optional
+            A function that takes in t and y and returns the Jacobian. If
+            None, the solver will approximate the Jacobian.
         Returns
         -------
         object
             An object containing the times and values of the solution, as well as
             various diagnostic messages.
+
         """
+        extra_options = {"rtol": self.tol, "atol": self.tol}
+
+        # check for user-supplied Jacobian
+        implicit_methods = ["Radau", "BDF", "LSODA"]
+        if np.any([self.method in implicit_methods]):
+            if jacobian:
+                extra_options.update({"jac": jacobian})
+
         # make events terminal so that the solver stops when they are reached
         if events:
             for event in events:
                 event.terminal = True
+            extra_options.update({"events": events})
 
         sol = it.solve_ivp(
             derivs,
@@ -68,9 +83,7 @@ class ScipySolver(pybamm.OdeSolver):
             y0,
             t_eval=t_eval,
             method=self.method,
-            rtol=self.tol,
-            atol=self.tol,
-            events=events,
+            **extra_options
         )
 
         return sol.t, sol.y

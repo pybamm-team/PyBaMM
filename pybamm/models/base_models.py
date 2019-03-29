@@ -51,6 +51,7 @@ class BaseModel(object):
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
+        self._jacobian = None
 
         # Default parameter values, geometry, submesh, spatial methods and solver
 
@@ -74,6 +75,12 @@ class BaseModel(object):
                 ),
                 "Electrolyte conductivity": os.path.join(
                     input_path, "electrolyte_conductivity_Capiglia1999.py"
+                ),
+                "Negative electrode OCV": os.path.join(
+                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lico2_ocp_Dualfoil.py"
                 ),
             },
         )
@@ -201,6 +208,14 @@ class BaseModel(object):
     def mass_matrix(self, mass_matrix):
         self._mass_matrix = mass_matrix
 
+    @property
+    def jacobian(self):
+        return self._jacobian
+
+    @jacobian.setter
+    def jacobian(self, jacobian):
+        self._jacobian = jacobian
+
     def __getitem__(self, key):
         return self.rhs[key]
 
@@ -293,6 +308,28 @@ class BaseModel(object):
         extra_variables = vars_in_eqns.difference(vars_in_keys)
         if extra_variables:
             raise pybamm.ModelError("model is underdetermined (too many variables)")
+        # Before discretisation, each algebraic equation key must appear in the equation
+        # After discretisation, there must be at least one StateVector in each algebraic
+        # equation
+        if not post_discretisation:
+            # After the model has been defined, each algebraic equation key should
+            # appear in that algebraic equation
+            for var, eqn in self.algebraic.items():
+                if not any([x.id == var.id for x in eqn.pre_order()]):
+                    raise pybamm.ModelError(
+                        "each variable in the algebraic eqn keys must appear in the eqn"
+                    )
+        else:
+            # variables in keys don't get discretised so they will no longer match
+            # with the state vectors in the algebraic equations. Instead, we check
+            # that each algebraic equation contains some StateVector
+            for eqn in self.algebraic.values():
+                if not any(
+                    [isinstance(x, pybamm.StateVector) for x in eqn.pre_order()]
+                ):
+                    raise pybamm.ModelError(
+                        "each algebraic equation must contain at least one StateVector"
+                    )
 
         # Initial conditions
         for var in self.rhs.keys():

@@ -131,9 +131,7 @@ class DomainConcatenation(Concatenation):
         self._size = self._slices[self.domain[-1]].stop
 
         # create disc of domain => slice for each child
-        self._children_slices = []
-        for child in self.children:
-            self._children_slices.append(self.create_slices(child))
+        self._children_slices = [self.create_slices(child) for child in self.children]
 
     @property
     def mesh(self):
@@ -171,3 +169,4 @@ class DomainConcatenation(Concatenation):
                 vector[self._slices[dom]] = child_vector[slices[dom]]
 
         return vector
+

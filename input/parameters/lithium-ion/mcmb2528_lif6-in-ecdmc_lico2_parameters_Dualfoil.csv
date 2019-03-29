@@ -27,8 +27,8 @@ Cation transference number,0.4,-,Scott Moura FastDFN,
 Typical lithium ion diffusivity,5.34E-10,m2/s,Scott Moura FastDFN,
 ,,,,
 # Electrode properties,,,,
-Conductivity of Graphite,100,S.m-1,Scott Moura FastDFN,
-Conductivity of Lithium Cobalt Oxide,10,S.m-1,Scott Moura FastDFN,
+Negative electrode conductivity,100,S.m-1,Scott Moura FastDFN,graphite
+Positive electrode conductivity,10,S.m-1,Scott Moura FastDFN,lithium cobalt oxide
 Maximum concentration in negative electrode,24983.2619938437,mol.m-3,Scott Moura FastDFN,
 Maximum concentration in positive electrode,51217.9257309275,mol.m-3,Scott Moura FastDFN,
 Negative electrode diffusion coefficient,3.9E-14,m2/s,Scott Moura FastDFN,

@@ -53,7 +53,10 @@ class Discretisation(object):
 
         """
         # set boundary conditions (only need key ids for boundary_conditions)
-        self._bcs = {key.id: value for key, value in model.boundary_conditions.items()}
+        self._bcs = {
+            key.id: self.process_dict(value)
+            for key, value in model.boundary_conditions.items()
+        }
         # set variables (we require the full variable not just id)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
 
@@ -78,6 +81,9 @@ class Discretisation(object):
 
         # Create mass matrix
         self.create_mass_matrix(model)
+
+        # Create Jacobian
+        self.create_jacobian(model)
 
         # Check that resulting model makes sense
         self.check_model(model)
@@ -158,6 +164,8 @@ class Discretisation(object):
 
     def create_mass_matrix(self, model):
         """Creates mass matrix of the discretised model.
+        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
+        M is the (possibly singular) mass matrix.
 
         Parameters
         ----------
@@ -193,6 +201,19 @@ class Discretisation(object):
         mass_matrix = block_diag(mass_list)
         model.mass_matrix = pybamm.Matrix(mass_matrix)
 
+    def create_jacobian(self, model):
+        """Creates jacobian of the discretised model.
+        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
+        M is the (possibly singular) mass matrix. The Jacobian is df/dy.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel` (or subclass)
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+        """
+        # TO DO: create jacobian by differentiating tree wrt StateVector
+
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
         (can be model.rhs, model.initial_conditions or model.variables).
@@ -213,14 +234,13 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
             if eqn.evaluates_to_number():
-                if isinstance(eqn_key, str):
-                    eqn = pybamm.Broadcast(eqn, [])
-                elif eqn_key.domain == []:
-                    eqn = pybamm.Broadcast(eqn, eqn_key.domain)
-                else:
-                    eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(
-                        eqn, eqn_key.domain
-                    )
+                if not isinstance(eqn_key, str):
+                    if eqn_key.domain == []:
+                        eqn = pybamm.Broadcast(eqn, eqn_key.domain)
+                    else:
+                        eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(
+                            eqn, eqn_key.domain
+                        )
 
             # Process symbol (original or broadcasted)
             var_eqn_dict[eqn_key] = self.process_symbol(eqn)
