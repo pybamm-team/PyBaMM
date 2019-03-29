@@ -86,7 +86,7 @@ from .expression_tree.unary_operators import (
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable, ProcessedVariable
+from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import (
     IndependentVariable,
     Time,
@@ -165,6 +165,11 @@ from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
+
+#
+# other
+#
+from .processed_variable import ProcessedVariable
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
