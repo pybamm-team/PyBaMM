@@ -50,10 +50,7 @@ from .util import load_function
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import (
-    Symbol,
-    simplify_if_constant,
-)
+from .expression_tree.symbol import Symbol, simplify_if_constant
 from .expression_tree.binary_operators import (
     BinaryOperator,
     Addition,
@@ -89,7 +86,7 @@ from .expression_tree.unary_operators import (
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable
+from .expression_tree.variable import Variable, ProcessedVariable
 from .expression_tree.independent_variable import (
     IndependentVariable,
     Time,
