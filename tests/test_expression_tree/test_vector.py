@@ -66,7 +66,7 @@ class TestStateVector(unittest.TestCase):
         ):
             sv.evaluate(y=y2)
 
-    def test_diff(self):
+    def test_jacobian(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
         v = pybamm.StateVector(slice(2, 4))
@@ -75,15 +75,14 @@ class TestStateVector(unittest.TestCase):
         y0 = np.ones(4)
         np.testing.assert_array_equal(
             np.hstack((3 * np.eye(2), 7 * np.eye(2))),
-            func.diff(y).simplify().evaluate(y=y0).toarray(),
+            func.jacobian(y).simplify().evaluate(y=y0).toarray(),
         )
 
         func = 3 * u + 7 * v ** 2
         y0 = 2 * np.ones(4)
-        import ipdb; ipdb.set_trace()
         np.testing.assert_array_equal(
             np.hstack((3 * np.eye(2), 28 * np.eye(2))),
-            func.diff(y).simplify().evaluate(y=y0),
+            func.jacobian(y).simplify().evaluate(y=y0),
         )
 
 

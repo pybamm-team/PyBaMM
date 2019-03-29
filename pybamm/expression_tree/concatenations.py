@@ -80,13 +80,13 @@ class NumpyConcatenation(pybamm.Symbol):
         else:
             return np.concatenate([child.evaluate(t, y) for child in self.children])
 
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
         if len(self.children) == 0:
             # NOTE: need to think about if this is the right thing to do here
             return np.array([])
         else:
-            return np.concatenate([child.diff(variable) for child in self.children])
+            return np.concatenate([child.jac(variable) for child in self.children])
 
 
 class DomainConcatenation(Concatenation):

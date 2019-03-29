@@ -7,6 +7,7 @@ import pybamm
 
 import autograd
 import numpy as np
+from scipy.sparse import diags
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -55,6 +56,13 @@ class Negate(UnaryOperator):
         else:
             return -self.children[0].diff(variable)
 
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return -self.children[0].jac(variable)
+
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}{!s}".format(self.name, self.children[0])
@@ -72,6 +80,11 @@ class AbsoluteValue(UnaryOperator):
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
+        # Derivative is not well-defined
+        raise NotImplementedError("Derivative of absolute function is not defined")
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
         # Derivative is not well-defined
         raise NotImplementedError("Derivative of absolute function is not defined")
 
@@ -105,9 +118,49 @@ class Function(UnaryOperator):
                 # otherwise the derivative of the function is zero
                 return pybamm.Scalar(0)
 
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            child = self.orphans[0]
+            if variable.id in [symbol.id for symbol in child.pre_order()]:
+                # if variable appears in the function,use autograd to differentiate
+                # function, and apply chain rule
+                return child.jac(variable) * Function(autograd.jacobian(self.func), child)
+            else:
+                # otherwise the derivative of the function is zero
+                return pybamm.Scalar(0)
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.func(self.children[0].evaluate(t, y))
+
+
+class Diagonal(UnaryOperator):
+    """A node in the expression tree representing an operator which creates a
+    diagonal matrix from a vector
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("diag", child)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        # We shouldn't need this
+        raise NotImplementedError
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        # We shouldn't need this
+        raise NotImplementedError
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return diags(self.children[0].evaluate(t, y), 0)
 
 
 class SpatialOperator(UnaryOperator):
@@ -136,6 +189,11 @@ class SpatialOperator(UnaryOperator):
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
+        # We shouldn't need this
+        raise NotImplementedError
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
         # We shouldn't need this
         raise NotImplementedError
 

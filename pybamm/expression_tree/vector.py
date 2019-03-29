@@ -79,7 +79,7 @@ class StateVector(pybamm.Symbol):
         else:
             return y[self._y_slice]
 
-    def diff(self, variable):
+    def jac(self, variable):
         """
         Differentiate a slice of a StateVector of size m with respect to another
         slice of a StateVector of size n. This returns a (sparse) matrix of size

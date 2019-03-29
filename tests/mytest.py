@@ -15,6 +15,8 @@ y = pybamm.StateVector(slice(0, 4))
 #diff = func.diff(y).simplify().evaluate(y=y0)
 
 a = pybamm.StateVector(slice(0, 2))
+print(a.id)
+print(y.id)
 y0 = np.array([1,2,3,4])
 func = a ** 2
 func.diff(y).simplify().evaluate(y=y0)
