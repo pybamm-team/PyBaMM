@@ -133,6 +133,22 @@ class Function(UnaryOperator):
         return pybamm.simplify_if_constant(new_node)
 
 
+class Index(UnaryOperator):
+    """A node in the expression tree, which stores the index that should be
+    extracted from its child after the child has been evaluated.
+    """
+
+    def __init__(self, child, index, name=None):
+        if name is None:
+            name = child.name + "[" + str(index) + "]"
+        super().__init__(name, child)
+        self.index = index
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        return self.children[0].evaluate(t, y)[self.index]
+
+
 class SpatialOperator(UnaryOperator):
     """A node in the expression tree representing a unary spatial operator
     (e.g. grad, div)

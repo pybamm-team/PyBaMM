@@ -57,6 +57,10 @@ class Symbol(anytree.NodeMixin):
             copy.copy(child).parent = self
         self.domain = domain
 
+        # useful flags
+        self._has_left_ghost_cell = False
+        self._has_right_ghost_cell = False
+
     @property
     def name(self):
         """name of the node"""
@@ -456,3 +460,21 @@ class Symbol(anytree.NodeMixin):
         new_symbol = copy.deepcopy(self)
         new_symbol.parent = None
         return simplify_if_constant(new_symbol)
+
+    @property
+    def has_left_ghost_cell(self):
+        return self._has_left_ghost_cell
+
+    @has_left_ghost_cell.setter
+    def has_left_ghost_cell(self, value):
+        assert isinstance(value, bool)
+        self._has_left_ghost_cell = value
+
+    @property
+    def has_right_ghost_cell(self):
+        return self._has_right_ghost_cell
+
+    @has_right_ghost_cell.setter
+    def has_right_ghost_cell(self, value):
+        assert isinstance(value, bool)
+        self._has_right_ghost_cell = value
