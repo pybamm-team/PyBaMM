@@ -19,7 +19,7 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         processed_var = pybamm.ProcessedVariable(var, t_sol, y_sol)
-        np.testing.assert_array_equal(processed_var.entries, t_sol * y_sol)
+        np.testing.assert_array_equal(processed_var._entries, t_sol * y_sol)
 
     def test_processed_var_space(self):
         t = pybamm.t
@@ -29,7 +29,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_discretisation_for_testing()
         disc.set_variable_slices([var])
-        x_sol = disc.process_symbol(x).entries
+        x_sol = disc.process_symbol(x)._entries
         var_sol = disc.process_symbol(var)
         eqn_sol = disc.process_symbol(eqn)
         t_sol = np.linspace(0, 1)
@@ -38,10 +38,10 @@ class TestProcessedVariable(unittest.TestCase):
         ] * np.linspace(0, 5)
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, x_sol=x_sol)
-        np.testing.assert_array_equal(processed_var.entries, y_sol)
+        np.testing.assert_array_equal(processed_var._entries, y_sol)
         processed_eqn = pybamm.ProcessedVariable(eqn_sol, t_sol, y_sol, x_sol=x_sol)
         np.testing.assert_array_equal(
-            processed_eqn.entries, t_sol * y_sol + x_sol[:, np.newaxis]
+            processed_eqn._entries, t_sol * y_sol + x_sol[:, np.newaxis]
         )
 
     def test_processed_var_interpolation(self):
@@ -51,12 +51,14 @@ class TestProcessedVariable(unittest.TestCase):
         # without space
         model = pybamm.BaseModel()
         c = pybamm.Variable("conc")
-        model.rhs = {c: 1}
+        model.rhs = {c: -c}
         model.initial_conditions = {c: 1}
         model.variables = {"c": c}
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
+        processed_var = pybamm.ProcessedVariable(model.variables["c"], t_sol, y_sol)
+        np.testing.assert_array_almost_equal(processed_var._entries[0], np.exp(-t_sol))
 
 
 if __name__ == "__main__":

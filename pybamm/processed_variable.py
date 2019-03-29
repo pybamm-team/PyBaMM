@@ -34,6 +34,6 @@ class ProcessedVariable(object):
             entries[:, idx] = base_variable.evaluate(t_sol[idx], y_sol[:, idx])
 
         # assign attributes
-        self.entries = entries
-        self.x_sol = x_sol
-        self.t_sol = t_sol
+        self._entries = entries
+        self._x_sol = x_sol
+        self._t_sol = t_sol
