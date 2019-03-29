@@ -21,6 +21,7 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
         d = pybamm.Scalar(-1)
+        e = pybamm.Scalar(2)
 
         # negate
         self.assertIsInstance((-a).simplify(), pybamm.Scalar)
@@ -103,6 +104,13 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((a * c).simplify().evaluate(), 0)
         self.assertIsInstance((c * a).simplify(), pybamm.Scalar)
         self.assertEqual((c * a).simplify().evaluate(), 0)
+        self.assertIsInstance((b * c).simplify(), pybamm.Parameter)
+        self.assertIsInstance((e * c).simplify(), pybamm.Multiplication)
+        self.assertIsInstance((c * e).simplify(), pybamm.Multiplication)
+        self.assertIsInstance((e / c).simplify(), pybamm.Division)
+        self.assertIsInstance((c / e).simplify(), pybamm.Division)
+        self.assertIsInstance((c / b).simplify(), pybamm.Parameter)
+        self.assertIsInstance((c * b).simplify(), pybamm.Parameter)
         self.assertIsInstance((A @ c).simplify(), pybamm.MatrixMultiplication)
 
         # negation with parameter
