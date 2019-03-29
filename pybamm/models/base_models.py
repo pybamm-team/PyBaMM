@@ -293,20 +293,28 @@ class BaseModel(object):
         extra_variables = vars_in_eqns.difference(vars_in_keys)
         if extra_variables:
             raise pybamm.ModelError("model is underdetermined (too many variables)")
-        # There must be at least one Variable in each algebraic equation
-        for eqn in self.algebraic.values():
-            if not any(
-                [
-                    isinstance(x, (pybamm.Variable, pybamm.StateVector))
-                    for x in eqn.pre_order()
-                ]
-            ):
-                raise pybamm.ModelError(
-                    """
-                    each algebraic equation must contain
-                    at least one Variable or StateVector
-                    """
-                )
+        # Before discretisation, each algebraic equation key must appear in the equation
+        # After discretisation, there must be at least one StateVector in each algebraic
+        # equation
+        if not post_discretisation:
+            # After the model has been defined, each algebraic equation key should
+            # appear in that algebraic equation
+            for var, eqn in self.algebraic.items():
+                if not any([x.id == var.id for x in eqn.pre_order()]):
+                    raise pybamm.ModelError(
+                        "each variable in the algebraic eqn keys must appear in the eqn"
+                    )
+        else:
+            # variables in keys don't get discretised so they will no longer match
+            # with the state vectors in the algebraic equations. Instead, we check
+            # that each algebraic equation contains some StateVector
+            for eqn in self.algebraic.values():
+                if not any(
+                    [isinstance(x, pybamm.StateVector) for x in eqn.pre_order()]
+                ):
+                    raise pybamm.ModelError(
+                        "each algebraic equation must contain at least one StateVector"
+                    )
 
         # Initial conditions
         for var in self.rhs.keys():
