@@ -103,6 +103,9 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((a * c).simplify().evaluate(), 0)
         self.assertIsInstance((c * a).simplify(), pybamm.Scalar)
         self.assertEqual((c * a).simplify().evaluate(), 0)
+        self.assertIsInstance((b * c).simplify(), pybamm.Parameter)
+        self.assertIsInstance((c / b).simplify(), pybamm.Parameter)
+        self.assertIsInstance((c * b).simplify(), pybamm.Parameter)
         self.assertIsInstance((A @ c).simplify(), pybamm.MatrixMultiplication)
 
         # negation with parameter
