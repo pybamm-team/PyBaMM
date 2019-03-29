@@ -10,24 +10,35 @@ import unittest
 
 class TestStandardParticle(unittest.TestCase):
     def test_make_tree(self):
+        param = pybamm.standard_parameters
+        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+
         c_n = pybamm.Variable("c_n", domain=["negative particle"])
         c_p = pybamm.Variable("c_p", domain=["positive particle"])
 
-        G_n = pybamm.Scalar(1, domain=["negative particle"])
-        G_p = pybamm.Scalar(1, domain=["positive particle"])
+        j_n = pybamm.Scalar(1)
+        j_p = pybamm.Scalar(1)
 
-        pybamm.models.submodels.particle.Standard(c_n, G_n)
-        pybamm.models.submodels.particle.Standard(c_p, G_p)
+        pybamm.models.submodels.particle.Standard(c_n, j_n, param)
+        pybamm.models.submodels.particle.Standard(c_p, j_p, param)
 
     def test_basic_processing(self):
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c_e = pybamm.Variable("c_e", domain=whole_cell)
-        phi_e = pybamm.Variable("phi_e", domain=whole_cell)
-        G = pybamm.Scalar(0.001)
-        model = pybamm.electrolyte_current.StefanMaxwell(c_e, phi_e, G)
+        param = pybamm.standard_parameters
+        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
 
-        param = model.default_parameter_values
-        param.process_model(model)
+        c_n = pybamm.Variable("c_n", domain=["negative particle"])
+        c_p = pybamm.Variable("c_p", domain=["positive particle"])
+
+        j_n = pybamm.Scalar(1)
+        j_p = pybamm.Scalar(1)
+
+        model_n = pybamm.models.submodels.particle.Standard(c_n, j_n, param)
+        model_p = pybamm.models.submodels.particle.Standard(c_p, j_p, param)
+
+        param = model_n.default_parameter_values
+        param = model_p.default_parameter_values
+        param.process_model(model_n)
+        param.process_model(model_p)
 
 
 if __name__ == "__main__":

@@ -165,6 +165,7 @@ epsilon = pybamm.Concatenation(
     pybamm.Broadcast(epsilon_s, ["separator"]),
     pybamm.Broadcast(epsilon_p, ["positive electrode"]),
 )
+
 # QUESTION: can we call these something different? they clash with the betas in Pb-acid
 beta_n = sp.a_n * R_n
 beta_p = sp.a_p * R_p

@@ -14,8 +14,8 @@ class Standard(pybamm.BaseModel):
     ----------
     c: :class:`pybamm.Variable`
         A variable representing the lithium concentration in the particle
-    G : :class:`pybamm.Concatenation`
-        An expression tree that represents the concentration flux at the
+    j : :class:`pybamm.Concatenation`
+        An expression tree that represents the current density at the
         electrode-electrolyte interface
 
     Attributes
@@ -37,7 +37,7 @@ class Standard(pybamm.BaseModel):
     *Extends:* :class:`BaseModel`
     """
 
-    def __init__(self, c, G):
+    def __init__(self, c, j, param):
         super().__init__()
 
         if len(c.domain) != 1:
@@ -46,29 +46,25 @@ class Standard(pybamm.BaseModel):
             )
 
         if c.domain[0] == "negative particle":
-            gamma = pybamm.standard_parameters.gamma_n
-            beta = pybamm.standard_parameters.beta_n
-            C = pybamm.standard_parameters.C_n
-            c0 = pybamm.standard_parameters.cn0
-
+            N = -(1 / param.C_n) * pybamm.grad(c)
+            self.rhs = {c: -pybamm.div(N)}
+            self.algebraic = {}
+            self.initial_conditions = {c: param.c_n_init}
+            self.boundary_conditions = {
+                N: {"left": pybamm.Scalar(0), "right": j / param.beta_n}
+            }
+            self.variables = {"c_s_n": c, "N_s_n": N}
         elif c.domain[0] == "positive particle":
-            gamma = pybamm.standard_parameters.gamma_p
-            beta = pybamm.standard_parameters.beta_p
-            C = pybamm.standard_parameters.C_p
-            c0 = pybamm.standard_parameters.cp0
+            N = -(1 / param.C_p) * pybamm.grad(c)
+            self.rhs = {c: -pybamm.div(N)}
+            self.algebraic = {}
+            self.initial_conditions = {c: param.c_p_init}
+            self.boundary_conditions = {
+                N: {
+                    "left": pybamm.Scalar(0),
+                    "right": j / param.beta_p / param.gamma_hat_p,
+                }
+            }
+            self.variables = {"c_s_p": c, "N_s_p": N}
         else:
             raise pybamm.ModelError("Domain not valid for the particle equations")
-
-        N = -gamma * pybamm.grad(c)
-
-        self.rhs = {c: -pybamm.div(N)}
-        self.algebraic = {}
-        self.initial_conditions = {c: c0}
-        self.boundary_conditions = {
-            N: {"left": pybamm.Scalar(0), "right": G / beta / C}
-        }
-
-        if c.domain[0] == "negative electrode":
-            self.variables = {"c_n": c, "N_n": N}
-        elif c.domain[0] == "positive electrode":
-            self.variables = {"c_p": c, "N_p": N}
