@@ -7,8 +7,8 @@ import scipy.interpolate as interp
 
 class ProcessedVariable(object):
     """
-    An object that can be evaluated at arbitrary (scalars or vectors) x and t, and
-    returns the (interpolated) value of the base variable at that x and t.
+    An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
+    returns the (interpolated) value of the base variable at that t and x.
 
     Parameters
     ----------
@@ -56,13 +56,14 @@ class ProcessedVariable(object):
             self._interpolation_function = interp.interp1d(
                 t_sol, entries, kind=interp_kind
             )
-        # self._interpolation_function = interp.interp2d(
-        #     x_sol, t_sol, entries, kind=interp_kind
-        # )
+        else:
+            self._interpolation_function = interp.interp2d(
+                t_sol, x_sol, entries, kind=interp_kind
+            )
 
     def evaluate(self, t, x=None):
-        "Evaluate the variable at arbitrary (x and) t, using interpolation"
+        "Evaluate the variable at arbitrary t (and x), using interpolation"
         if self.x_sol is None:
             return self._interpolation_function(t)
         else:
-            return self._interpolation_function(x, t)
+            return self._interpolation_function(t, x)
