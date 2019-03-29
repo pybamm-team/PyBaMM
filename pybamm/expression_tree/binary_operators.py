@@ -20,6 +20,17 @@ def is_zero(expr):
         return False
 
 
+def is_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar one
+    """
+    if expr.is_constant():
+        result = expr.evaluate_ignoring_errors()
+        return isinstance(result, numbers.Number) and result == 1
+    else:
+        return False
+
+
 class BinaryOperator(pybamm.Symbol):
     """A node in the expression tree representing a binary operator (e.g. `+`, `*`)
 
@@ -220,6 +231,12 @@ class Multiplication(BinaryOperator):
         if is_zero(left) or is_zero(right):
             return pybamm.Scalar(0)
 
+        # anything multiplied by a scalar one returns itself
+        if is_one(left):
+            return right
+        if is_one(right):
+            return left
+
         return self.__class__(left, right)
 
 
@@ -293,5 +310,9 @@ class Division(BinaryOperator):
         # anything divided by zero returns inf
         if is_zero(right):
             return pybamm.Scalar(np.inf)
+
+        # anything divided by one is itself
+        if is_one(right):
+            return left
 
         return self.__class__(left, right)
