@@ -33,6 +33,20 @@ class UnaryOperator(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}({!s})".format(self.name, self.children[0])
 
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        child = self.children[0].simplify()
+
+        # _binary_simplify defined in derived classes for specific rules
+        new_node = self._unary_simplify(child)
+
+        return pybamm.simplify_if_constant(new_node)
+
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+
+        return self.__class__(child)
+
 
 class Negate(UnaryOperator):
     """A node in the expression tree representing a `-` negation operator
@@ -109,6 +123,15 @@ class Function(UnaryOperator):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.func(self.children[0].evaluate(t, y))
 
+    # Function needs its own simplify as it has a different __init__ signature
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        child = self.children[0].simplify()
+
+        new_node = pybamm.Function(self.func, child)
+
+        return pybamm.simplify_if_constant(new_node)
+
 
 class Index(UnaryOperator):
     """A node in the expression tree, which stores the index that should be
@@ -154,6 +177,19 @@ class SpatialOperator(UnaryOperator):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # We shouldn't need this
         raise NotImplementedError
+
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+
+        # if there are none of these nodes in the child tree, then this expression
+        # does not depend on space, and therefore the spatial operator result is zero
+        search_types = (pybamm.Variable, pybamm.StateVector, pybamm.SpatialVariable)
+
+        # do the search, return a scalar zero node if no relevent nodes are found
+        if all([not (isinstance(n, search_types)) for n in self.pre_order()]):
+            return pybamm.Scalar(0)
+        else:
+            return self.__class__(child)
 
 
 class Gradient(SpatialOperator):
@@ -222,6 +258,11 @@ class Integral(SpatialOperator):
     def integration_variable(self):
         return self._integration_variable
 
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+
+        return self.__class__(child, self.integration_variable)
+
 
 class BoundaryValue(SpatialOperator):
     """A node in the expression tree which gets the boundary value of a variable.
@@ -242,6 +283,11 @@ class BoundaryValue(SpatialOperator):
         # Domain of BoundaryValue must be ([]) so that expressions can be formed
         # of boundary values of variables in different domains
         self.domain = []
+
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+
+        return self.__class__(child, self.side)
 
 
 #
@@ -309,3 +355,24 @@ def surf(variable):
     """
 
     return BoundaryValue(variable, "right")
+
+
+def integrate(expression, variable):
+    """convenience function for creating a :class:`Integral`
+
+    Parameters
+    ----------
+
+    expression : :class:`pybamm.Symbol`
+        The function to be integrated
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
+
+    Returns
+    -------
+
+    :class:`Integral`
+        the new integrated expression tree
+    """
+
+    return Integral(expression, variable)
