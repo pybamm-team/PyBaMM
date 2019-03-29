@@ -52,10 +52,17 @@ class ProcessedVariable(object):
         self.t_sol = t_sol
 
         # set up interpolation
+        if x_sol is None:
+            self._interpolation_function = interp.interp1d(
+                t_sol, entries, kind=interp_kind
+            )
         # self._interpolation_function = interp.interp2d(
         #     x_sol, t_sol, entries, kind=interp_kind
         # )
 
-    def evaluate(self, x, t):
-        "Evaluate the variable at arbitrary x and t, using interpolation"
-        return self._interpolation_function(x, t)
+    def evaluate(self, t, x=None):
+        "Evaluate the variable at arbitrary (x and) t, using interpolation"
+        if self.x_sol is None:
+            return self._interpolation_function(t)
+        else:
+            return self._interpolation_function(x, t)
