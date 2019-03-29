@@ -208,6 +208,30 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "extra algebraic keys"):
             model.check_well_posedness()
 
+        # before discretisation, fail if the algebraic eqn keys don't appear in the eqns
+        model = pybamm.BaseModel()
+        model.algebraic = {c: d - 2, d: d - c}
+        with self.assertRaisesRegex(
+            pybamm.ModelError,
+            "each variable in the algebraic eqn keys must appear in the eqn",
+        ):
+            model.check_well_posedness()
+        # passes when we switch the equations around
+        model.algebraic = {c: d - c, d: d - 2}
+        model.check_well_posedness()
+
+        # after discretisation, algebraic equation without a StateVector fails
+        model = pybamm.BaseModel()
+        model.algebraic = {
+            c: 1,
+            d: pybamm.StateVector(slice(0, 15)) - pybamm.StateVector(slice(15, 25)),
+        }
+        with self.assertRaisesRegex(
+            pybamm.ModelError,
+            "each algebraic equation must contain at least one StateVector",
+        ):
+            model.check_well_posedness(post_discretisation=True)
+
     def test_check_well_posedness_initial_boundary_conditions(self):
         # Well-posed model - Dirichlet
         whole_cell = ["negative electrode", "separator", "positive electrode"]

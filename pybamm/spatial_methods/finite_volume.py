@@ -156,6 +156,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Add Neumann boundary conditions if defined
         if symbol.id in boundary_conditions:
+
             # get boundary conditions
             bcs = boundary_conditions[symbol.id]
             if set(bcs.keys()) == set(["left", "right"]):
@@ -196,10 +197,19 @@ class FiniteVolume(pybamm.SpatialMethod):
             # doing via loop so that it is easier to implement x varing bcs
             bcs_symbol = pybamm.Vector(np.array([]))  # empty vector
             for i in range(len(submesh_list)):
+
+                if lbc.evaluates_to_number():
+                    lbc_i = lbc
+                else:
+                    lbc_i = pybamm.Index(lbc, i)
+                if rbc.evaluates_to_number():
+                    rbc_i = rbc
+                else:
+                    rbc_i = pybamm.Index(rbc, i)
                 # only the interior equations:
                 interior = pybamm.Vector(np.zeros(prim_dim - 2))
-                left = -lbc / pybamm.Vector(np.array([submesh_list[i].d_edges[0]]))
-                right = rbc / pybamm.Vector(np.array([submesh_list[i].d_edges[-1]]))
+                left = -lbc_i / pybamm.Vector(np.array([submesh_list[i].d_edges[0]]))
+                right = rbc_i / pybamm.Vector(np.array([submesh_list[i].d_edges[-1]]))
                 bcs_symbol = pybamm.NumpyConcatenation(
                     bcs_symbol, left, interior, right
                 )
@@ -395,15 +405,28 @@ class FiniteVolume(pybamm.SpatialMethod):
         for i in range(len(submesh_list)):
             y_slice_start = y_left[i]
             y_slice_stop = y_right[i]
+
             # left ghost cell
             first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
+
             # middle symbol
             sub_disc_symbol = pybamm.StateVector(slice(y_slice_start, y_slice_stop + 1))
+
             # right ghost cell
             last_node = pybamm.StateVector(slice(y_slice_stop, y_slice_stop + 1))
+
             if lbc is not None and rbc is not None:
-                left_ghost_cell = 2 * lbc - first_node
-                right_ghost_cell = 2 * rbc - last_node
+                if lbc.evaluates_to_number():
+                    lbc_i = lbc
+                else:
+                    lbc_i = pybamm.Index(lbc, i)
+                if rbc.evaluates_to_number():
+                    rbc_i = rbc
+                else:
+                    rbc_i = pybamm.Index(rbc, i)
+
+                left_ghost_cell = 2 * lbc_i - first_node
+                right_ghost_cell = 2 * rbc_i - last_node
                 # concatenate and flag ghost cells
                 concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
                     left_ghost_cell, sub_disc_symbol, right_ghost_cell
@@ -414,8 +437,13 @@ class FiniteVolume(pybamm.SpatialMethod):
                 new_discretised_symbol.has_left_ghost_cell = True
                 new_discretised_symbol.has_right_ghost_cell = True
             elif lbc is not None:
+                if lbc.evaluates_to_number():
+                    lbc_i = lbc
+                else:
+                    lbc_i = pybamm.Index(lbc, i)
+
                 # left ghost cell only
-                left_ghost_cell = 2 * lbc - first_node
+                left_ghost_cell = 2 * lbc_i - first_node
                 # concatenate and flag ghost cells
                 concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
                     left_ghost_cell, sub_disc_symbol
@@ -425,8 +453,12 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
                 new_discretised_symbol.has_left_ghost_cell = True
             elif rbc is not None:
+                if rbc.evaluates_to_number():
+                    rbc_i = rbc
+                else:
+                    rbc_i = pybamm.Index(rbc, i)
                 # right ghost cell only
-                right_ghost_cell = 2 * rbc - last_node
+                right_ghost_cell = 2 * rbc_i - last_node
                 # concatenate and flag ghost cells
                 concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
                     sub_disc_symbol, right_ghost_cell
