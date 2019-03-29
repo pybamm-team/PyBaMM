@@ -113,6 +113,7 @@ from .models import li_ion
 # Submodel classes
 #
 from .models.submodels import (
+    electrode,
     electrolyte_current,
     electrolyte_diffusion,
     interface,

@@ -63,7 +63,6 @@ class BinaryOperator(pybamm.Symbol):
             left = pybamm.Scalar(left)
         if isinstance(right, numbers.Number):
             right = pybamm.Scalar(right)
-
         domain = self.get_children_domains(left.domain, right.domain)
         super().__init__(name, children=[left, right], domain=domain)
 

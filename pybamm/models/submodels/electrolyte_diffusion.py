@@ -37,8 +37,7 @@ class StefanMaxwell(pybamm.BaseModel):
 
         # Model
         self.rhs = {
-            c_e: 1
-            / epsilon
+            c_e: (1 / epsilon)
             * (
                 -pybamm.div(N_e) / param.C_e
                 + param.s / param.gamma_hat_e * j

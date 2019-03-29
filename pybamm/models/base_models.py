@@ -76,6 +76,12 @@ class BaseModel(object):
                 "Electrolyte conductivity": os.path.join(
                     input_path, "electrolyte_conductivity_Capiglia1999.py"
                 ),
+                "Negative electrode OCV": os.path.join(
+                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lico2_ocp_Dualfoil.py"
+                ),
             },
         )
         self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
