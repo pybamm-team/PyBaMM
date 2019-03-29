@@ -59,11 +59,15 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         #
         # Concentration variables
         c_e_n = pybamm.Variable(
-            "Negative electrode concentration", domain=["negative electrode"]
+            "Negative electrode electrolyte concentration",
+            domain=["negative electrode"],
         )
-        c_e_s = pybamm.Variable("Separator concentration", domain=["separator"])
+        c_e_s = pybamm.Variable(
+            "Separator electrolyte concentration", domain=["separator"]
+        )
         c_e_p = pybamm.Variable(
-            "Positive electrode concentration", domain=["positive electrode"]
+            "Positive electrode electrolyte concentration",
+            domain=["positive electrode"],
         )
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
         # Porosity variables
