@@ -50,10 +50,7 @@ from .util import load_function
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import (
-    Symbol,
-    simplify_if_constant,
-)
+from .expression_tree.symbol import Symbol, simplify_if_constant
 from .expression_tree.binary_operators import (
     BinaryOperator,
     Addition,
@@ -108,6 +105,7 @@ from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
 from .models import li_ion
+from .models import lithium_ion
 
 #
 # Submodel classes

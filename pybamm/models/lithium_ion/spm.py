@@ -32,52 +32,49 @@ class SPM(pybamm.BaseModel):
 
         "Model Variables"
         # Particle concentration
-        c_n = pybamm.Variable("c_n", ["negative particle"])
-        c_p = pybamm.Variable("c_p", ["positive particle"])
+        c_s_n = pybamm.Variable(
+            "Negative particle concentration", domain="negative particle"
+        )
+        c_s_p = pybamm.Variable(
+            "Positive particle concentration", domain="positive particle"
+        )
 
         "Model Parameters and functions"
-        m_n = pybamm.standard_parameters.m_n
-        m_p = pybamm.standard_parameters.m_p
-        U_n = pybamm.standard_parameters.U_n
-        U_p = pybamm.standard_parameters.U_p
-        Lambda = pybamm.standard_parameters.Lambda
-        C_hat_p = pybamm.standard_parameters.C_hat_p
-        ln = pybamm.standard_parameters.ln
-        lp = pybamm.standard_parameters.lp
-        current = pybamm.standard_parameters.current
+        sp = pybamm.standard_parameters
+        spli = pybamm.standard_parameters_lithium_ion
+        # Current function
+        # i_cell = sp.current_with_time
 
         "Interface Conditions"
-        G_n = pybamm.interface.homogeneous_reaction(current, ["negative electrode"])
-        G_p = pybamm.interface.homogeneous_reaction(current, ["positive electrode"])
+        G_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
+        G_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
 
         "Model Equations"
         self.update(
-            pybamm.particle.Standard(c_n, G_n), pybamm.particle.Standard(c_p, G_p)
+            pybamm.particle.Standard(c_s_n, G_n), pybamm.particle.Standard(c_s_p, G_p)
         )
 
         "Additional Conditions"
-        # phi is only determined to a constant so set phi_n = 0 on left boundary
         additional_bcs = {}
         self._boundary_conditions.update(additional_bcs)
 
         "Additional Model Variables"
-        cn_surf = pybamm.surf(c_n)
-        cp_surf = pybamm.surf(c_p)
-        gn = m_n * cn_surf ** 0.5 * (1 - cn_surf) ** 0.5
-        gp = m_p * C_hat_p * cp_surf ** 0.5 * (1 - cp_surf) ** 0.5
+        c_s_n_surf = pybamm.surf(c_s_n)
+        c_s_p_surf = pybamm.surf(c_s_p)
+        j0_n = sp.m_n * c_s_n_surf ** 0.5 * (1 - c_s_n_surf) ** 0.5
+        j0_p = sp.m_p * spli.gamma_hat_p * c_s_p_surf ** 0.5 * (1 - c_s_p_surf) ** 0.5
+
         # linearise BV for now
-        ocp = U_p(cp_surf) - U_n(cn_surf)
-        reaction_overpotential = -(2 / Lambda) * (1 / (gp * lp)) - (2 / Lambda) * (
-            1 / (gn * ln)
+        ocp = spli.U_p(c_s_p_surf) - spli.U_n(c_s_n_surf)
+        Lambda = 38  # TODO: change this
+        reaction_overpotential = -(2 / Lambda) * (1 / (j0_p * sp.lp)) - (2 / Lambda) * (
+            1 / (j0_n * sp.ln)
         )
         voltage = ocp + reaction_overpotential
 
-        # TODO: add ocp and overpot once domain issue fixed
-        # "opc": ocp,
-        # "reaction overpotential": reaction_overpotential,
         additional_variables = {
-            "cn_surf": cn_surf,
-            "cp_surf": cp_surf,
+            "negative particle surface concentration": c_s_n_surf,
+            "positive particle surface concentration": c_s_p_surf,
             "voltage": voltage,
         }
         self._variables.update(additional_variables)
