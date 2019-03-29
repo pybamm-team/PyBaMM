@@ -19,6 +19,7 @@ def is_zero(expr):
     else:
         return False
 
+
 def is_one(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar one
