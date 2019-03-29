@@ -6,14 +6,8 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import copy
-import autograd.numpy as np
-import importlib
+import numpy as np
 from scipy.sparse import block_diag, csr_matrix
-
-autograd_spec = importlib.util.find_spec("autograd")
-if autograd_spec is not None:
-    autograd = importlib.util.module_from_spec(autograd_spec)
-    autograd_spec.loader.exec_module(autograd)
 
 
 class Discretisation(object):
@@ -215,13 +209,41 @@ class Discretisation(object):
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
-        # TO DO: create jacobian by differentiating tree wrt StateVector
+        # Get number points in model
+        # QUESTION: is there a better way to access this directly from here?
+        # N = model.concatenated_initial_conditions.shape[0]
 
-        # Use autograd
-        # def derivs(t, y):
-        #    return model.concatenated_rhs.evaluate(t, y)
+        # Create StateVector to differentiate model with respect to
+        # y = pybamm.StateVector(slice(0, N))
 
-        # model.jacobian = autograd.jacobian(derivs, 1)
+        # Differentiate concatenated rhs and algebraic equations w.r.t. the
+        # entire StateVector
+        # if model.algebraic.keys():
+        #    jacobian = np.concatenate(
+        #        model.concatenated_rhs.diff(y), model.concatenated_algebraic.diff(y)
+        #    )
+        # else:
+        #    jacobian = model.concatenated_rhs.diff(y)
+
+        ## # Differentiate concatenated rhs and algebraic equations w.r.t. the
+        ## # entire StateVector
+        ## jac_rhs = dict.fromkeys(model.rhs.keys())
+        ## for eqn_key, eqn in model.rhs.items():
+        ##     jac_rhs[eqn_key] = eqn.diff(y)
+
+        ## jac_algebraic = dict.fromkeys(model.algebraic.keys())
+        ## for eqn_key, eqn in model.algebraic.items():
+        ##     jac_algebraic[eqn_key] = eqn.diff(y)
+
+        ## jacobian = np.concatenate(
+        ##     self.concatenate(*jac_rhs.values()),
+        ##     self.concatenate(*jac_algebraic.values()),
+        ## )
+
+        # def jacfn(t, y):
+        #    return jacobian.evaluate(t, y)
+
+        # model.jacobian = jacfn
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary

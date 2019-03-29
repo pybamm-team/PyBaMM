@@ -80,6 +80,14 @@ class NumpyConcatenation(pybamm.Symbol):
         else:
             return np.concatenate([child.evaluate(t, y) for child in self.children])
 
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        if len(self.children) == 0:
+            # NOTE: need to think about if this is the right thing to do here
+            return np.array([])
+        else:
+            return np.concatenate([child.diff(variable) for child in self.children])
+
 
 class DomainConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of symbols, being
