@@ -46,7 +46,7 @@ class TestSymbol(unittest.TestCase):
         # Gradient
         self.assertIsInstance((pybamm.grad(a)).simplify(), pybamm.Scalar)
         self.assertEqual((pybamm.grad(a)).simplify().evaluate(), 0)
-        v = pybamm.Variable('v')
+        v = pybamm.Variable("v")
         self.assertIsInstance((pybamm.grad(v)).simplify(), pybamm.Gradient)
 
         # Divergence
@@ -55,8 +55,9 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance((pybamm.div(v)).simplify(), pybamm.Divergence)
 
         # Integral
-        self.assertIsInstance((pybamm.integrate(a, pybamm.t)
-                               ).simplify(), pybamm.Integral)
+        self.assertIsInstance(
+            (pybamm.integrate(a, pybamm.t)).simplify(), pybamm.Integral
+        )
 
         # BoundaryValue
         self.assertIsInstance((pybamm.surf(v)).simplify(), pybamm.BoundaryValue)
@@ -360,9 +361,8 @@ class TestSymbol(unittest.TestCase):
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         c = pybamm.Variable("c", whole_cell)
-        eps = pybamm.Variable("epsilon", whole_cell)
         j = pybamm.Variable("j", whole_cell)
-        model = pybamm.electrolyte_diffusion.StefanMaxwell(c, eps, j, param)
+        model = pybamm.electrolyte_diffusion.StefanMaxwell(c, j, param)
         c_e = list(model.rhs.keys())[0]
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test.png")

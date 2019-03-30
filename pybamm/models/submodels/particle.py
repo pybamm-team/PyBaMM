@@ -69,6 +69,10 @@ class Standard(pybamm.BaseModel):
                     "right": j / param.beta_p / param.gamma_hat_p,
                 }
             }
-            self.variables = {"c_s_p": c, "N_s_p": N}
+            self.variables = {
+                "Positive particle concentration": c,
+                "Positive particle surface concentration": pybamm.surf(c),
+                "Positive particle flux": N,
+            }
         else:
             raise pybamm.ModelError("Domain not valid for the particle equations")

@@ -70,11 +70,15 @@ sp = pybamm.standard_parameters
 R_n = pybamm.Parameter("Negative particle radius")
 R_p = pybamm.Parameter("Positive particle radius")
 
+
 # Electrolyte properties
 # (1-2*t_plus) is for Nernst-Planck
 # 2*(1-t_plus) for Stefan-Maxwell
 # Bizeray et al (2016) "Resolving a discrepancy ..."
-chi = 2 * (1 - sp.t_plus)
+# note: this is a function for consistancy with lead-acid
+def chi(c_e):
+    return 2 * (1 - sp.t_plus)
+
 
 # Electrode properties
 c_n_max = pybamm.Parameter("Maximum concentration in negative electrode")
