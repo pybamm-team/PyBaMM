@@ -107,7 +107,9 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         # Interfacial current density
         j = pybamm.interface.butler_volmer(param, c_e, Delta_phi, domain=whole_cell)
         # Concentration model (reaction diffusion with butler volmer)
-        conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, eps, j, param)
+        conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(
+            c_e, j, param, epsilon=eps
+        )
         # Porosity model
         porosity_model = pybamm.porosity.Standard(eps, j, param)
         # Electrolyte potential model (conservation of current and MacInnes)

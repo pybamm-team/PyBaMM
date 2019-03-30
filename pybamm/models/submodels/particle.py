@@ -53,7 +53,11 @@ class Standard(pybamm.BaseModel):
             self.boundary_conditions = {
                 N: {"left": pybamm.Scalar(0), "right": j / param.beta_n}
             }
-            self.variables = {"c_s_n": c, "N_s_n": N}
+            self.variables = {
+                "Negative particle concentration": c,
+                "Negative particle surface concentration": pybamm.surf(c),
+                "Negative particle flux": N,
+            }
         elif c.domain[0] == "positive particle":
             N = -(1 / param.C_p) * pybamm.grad(c)
             self.rhs = {c: -pybamm.div(N)}

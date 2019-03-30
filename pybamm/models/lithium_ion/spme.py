@@ -5,6 +5,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+import numpy as np
+
 
 class SPMe(pybamm.BaseModel):
     """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery.
@@ -30,118 +32,147 @@ class SPMe(pybamm.BaseModel):
     def __init__(self):
         super().__init__()
 
+        "Parameters"
+        param = pybamm.standard_parameters
+        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+
         "Model Variables"
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-
         # Electrolyte concentration
-
-        # TODO: change once checkwellposedness changes
-        # c_en = pybamm.Variable("c_en", ["negative electrode"])
-        # c_es = pybamm.Variable("c_es", ["separator"])
-        # c_ep = pybamm.Variable("c_ep", ["positive electrode"])
-        # c_e = pybamm.Concatenation(c_en, c_es, c_ep)
-        c_e = pybamm.Variable("c_e", whole_cell)
+        c_e_n = pybamm.Variable("c_e_n", ["negative electrode"])
+        c_e_s = pybamm.Variable("c_e_s", ["separator"])
+        c_e_p = pybamm.Variable("c_e_p", ["positive electrode"])
+        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
         # Particle concentration
-        c_n = pybamm.Variable("c_n", ["negative particle"])
-        c_p = pybamm.Variable("c_p", ["positive particle"])
+        c_s_n = pybamm.Variable("c_s_n", ["negative particle"])
+        c_s_p = pybamm.Variable("c_s_p", ["positive particle"])
 
-        "Model Parameters and functions"
-        # NOTE: is it better to just from standard_parameters import *?
-        m_n = pybamm.standard_parameters.m_n
-        m_p = pybamm.standard_parameters.m_p
-        U_n = pybamm.standard_parameters.U_n
-        U_p = pybamm.standard_parameters.U_p
-        Lambda = pybamm.standard_parameters.Lambda
-        C_hat_p = pybamm.standard_parameters.C_hat_p
-        ln = pybamm.standard_parameters.ln
-        ls = pybamm.standard_parameters.ls
-        lp = pybamm.standard_parameters.lp
-        delta = pybamm.standard_parameters.delta
-        nu = pybamm.standard_parameters.nu
-        epsilon_n = pybamm.standard_parameters.epsilon_n
-        epsilon_s = pybamm.standard_parameters.epsilon_s
-        epsilon_p = pybamm.standard_parameters.epsilon_p
-        b = pybamm.standard_parameters.b
-        sigma_e = pybamm.standard_parameters.sigma_e
-        t_plus = pybamm.standard_parameters.t_plus
-        sigma_n = pybamm.standard_parameters.sigma_n
-        sigma_p = pybamm.standard_parameters.sigma_p
-        current = pybamm.standard_parameters.current
+        "Submodels"
+        # Interfacial current density
+        j_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
+        j_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
+        j = pybamm.interface.homogeneous_reaction(
+            ["negative electrode", "separator", "positive electrode"]
+        )
 
-        "Interface Conditions"
-        G_n = pybamm.interface.homogeneous_reaction(current, ["negative electrode"])
-        G_p = pybamm.interface.homogeneous_reaction(current, ["positive electrode"])
-        G = pybamm.interface.homogeneous_reaction(current, whole_cell)
+        # Particle models
+        negative_particle_model = pybamm.particle.Standard(c_s_n, j_n, param)
+        positive_particle_model = pybamm.particle.Standard(c_s_p, j_p, param)
 
-        "Model Equations"
+        # Electrolyte models
+        electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(
+            c_e, j, param
+        )
+
+        "Combine Submodels"
         self.update(
-            pybamm.electrolyte_diffusion.StefanMaxwell(c_e, G),
-            pybamm.particle.Standard(c_n, G_n),
-            pybamm.particle.Standard(c_p, G_p),
+            negative_particle_model,
+            positive_particle_model,
+            electrolyte_diffusion_model,
         )
 
         "Additional Conditions"
-        # phi is only determined to a constant so set phi_n = 0 on left boundary
         additional_bcs = {}
         self._boundary_conditions.update(additional_bcs)
 
         "Additional Model Variables"
-        cn_surf = pybamm.surf(c_n)
-        cp_surf = pybamm.surf(c_p)
+        # current
+        i_cell = param.current_with_time
 
-        # TODO: put in proper expression for cen and cep
-        cen = pybamm.Scalar(0)
-        cep = pybamm.Scalar(0)
-        gn = m_n * cn_surf ** 0.5 * (1 - cn_surf) ** 0.5 * (1 + delta * cen) ** 0.5
-        gp = (
-            m_p
-            * C_hat_p
-            * cp_surf ** 0.5
-            * (1 - cp_surf) ** 0.5
-            * (1 + delta * cep) ** 0.5
-        )
-        # TODO: put in proper averaging
-        gn_av = gn
-        gp_av = gp
+        # surface concentrations
+        c_s_n_surf = pybamm.surf(c_s_n)
+        c_s_p_surf = pybamm.surf(c_s_p)
 
-        # linearise BV for now
-        ocp = U_p(cp_surf) - U_n(cn_surf)
-        reaction_overpotential = -(2 / Lambda) * (1 / (gp_av * lp)) - (2 / Lambda) * (
-            1 / (gn_av * ln)
-        )
+        # open circuit voltage
+        ocp_n = param.U_n(c_s_n_surf)
+        ocp_p = param.U_p(c_s_p_surf)
+        ocv = ocp_p - ocp_n
 
-        # TODO: add the proper expressions for the averages
-        cep_av = pybamm.Scalar(0)
-        cen_av = pybamm.Scalar(0)
-        concentration_overpotential = (
-            2 * delta * (1 - t_plus) / Lambda * (cep_av - cen_av)
-        )
-        electrolyte_ohmic_losses = (
-            -delta
-            * current
-            * nu
-            / Lambda
-            / sigma_e(c_e)
+        # reaction overpotentials
+        # j0_n = (
+        #     param.m_n
+        #     * c_s_n_surf ** 0.5
+        #     * (1 - c_s_n_surf) ** 0.5
+        #     * (1 + param.C_e * c_e_n) ** 0.5
+        # )
+        # j0_p = (
+        #     param.m_p
+        #     * param.gamma_hat_p
+        #     * c_s_p_surf ** 0.5
+        #     * (1 - c_s_p_surf) ** 0.5
+        #     * (1 + param.C_e * c_e_p) ** 0.5
+        # )
+
+        # TODO: electrode average j0_n, j0_p
+        j0_n_av = pybamm.Scalar(1) + 0
+        j0_p_av = pybamm.Scalar(1) + 0
+
+        eta_r_n = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_p_av * param.l_p))
+        eta_r_p = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_n_av * param.l_n))
+        eta_r = eta_r_n + eta_r_p
+
+        # electrolyte potentials
+        # TODO: add the expressions for these
+
+        # TODO: electrode average c_e_p and c_e_n
+        c_e_p_av = pybamm.Scalar(0)
+        c_e_n_av = pybamm.Scalar(0)
+
+        # combined electrolyte concentrations
+        c_e_n_combined = 1 + param.C_e * c_e_n
+        c_e_s_combined = 1 + param.C_e * c_e_s
+        c_e_p_combined = 1 + param.C_e * c_e_p
+        c_e_combined = 1 + param.C_e * c_e
+
+        # concentration overpotential
+        eta_c = 2 * param.C_e * (1 - param.t_plus) * (c_e_p_av - c_e_n_av)
+
+        # electrolyte ohmic losses
+        Delta_Phi_elec = (
+            -param.C_e
+            * i_cell
+            * (1 / param.gamma_hat_e)
+            / param.kappa_e(c_e)
             * (
-                ln / (3 * epsilon_n ** b)
-                + ls / (epsilon_s ** b)
-                + lp / (3 * epsilon_p ** b)
+                param.l_n / (3 * param.epsilon_n ** param.b)
+                + param.l_s / (param.epsilon_s ** param.b)
+                + param.l_p / (3 * param.epsilon_p ** param.b)
             )
         )
 
-        electrode_ohmic_losses = -current / 3 * (lp / sigma_p + ln / sigma_n)
-
-        voltage = (
-            ocp
-            + reaction_overpotential
-            + concentration_overpotential
-            + electrolyte_ohmic_losses
-            + electrode_ohmic_losses
+        # solid phase ohmic losses
+        Delta_Phi_solid = (
+            -i_cell / 3 * (param.l_p / param.sigma_p + param.l_n / param.sigma_n)
         )
+
+        # terminal voltage
+        v = ocv + eta_r + eta_c + Delta_Phi_elec + Delta_Phi_solid
+
         additional_variables = {
-            "cn_surf": cn_surf,
-            "cp_surf": cp_surf,
-            "voltage": voltage,
+            "current": i_cell,
+            "Negative interfacial current density": j_n,
+            "Positive interfacial current density": j_p,
+            "Negative electrode open circuit potential": ocp_n,
+            "Positive electrode open circuit potential": ocp_p,
+            "Open circuit voltage": ocv,
+            "Negative reaction overpotential": eta_r_n,
+            "Positive reaction overpotential": eta_r_p,
+            "Reaction overpotential": eta_r,
+            "Concentration overpotential": eta_c,
+            "Electrolyte ohmic losses": Delta_Phi_elec,
+            "Solid phase ohmic losses": Delta_Phi_solid,
+            "Terminal voltage": v,
+            "Leading order electrolyte concentration": pybamm.Scalar(0),
+            "First order negative electrolyte concentration": c_e_n,
+            "First order separator electrolyte concentration": c_e_s,
+            "First order positive electrolyte concentration": c_e_p,
+            "Negative electrolyte concentration": c_e_n_combined,
+            "Separator electrolyte concentration": c_e_s_combined,
+            "Positive electrolyte concentration": c_e_p_combined,
+            "Electrolyte concentration": c_e_combined,
         }
         self._variables.update(additional_variables)
+
+        "Termination Conditions"
+        # Cut-off if either concentration goes negative
+        self.events = [pybamm.Function(np.min, c_s_n), pybamm.Function(np.min, c_s_p)]

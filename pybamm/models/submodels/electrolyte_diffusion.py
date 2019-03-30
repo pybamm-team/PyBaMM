@@ -16,25 +16,31 @@ class StefanMaxwell(pybamm.BaseModel):
     ----------
     c_e : :class:`pybamm.Symbol`
         The electrolyte concentration
-    epsilon : :class:`pybamm.Symbol`
-        The (electrolyte/liquid phase) porosity (can be Variable or Parameter)
     j : :class:`pybamm.Symbol`
         An expression tree that represents the interfacial current density at the
         electrode-electrolyte interface
     param : parameter class
         The parameters to use for this submodel
+    epsilon : :class:`pybamm.Symbol`
+        The (electrolyte/liquid phase) porosity  (only supply if a variable)
 
     *Extends:* :class:`BaseModel`
     """
 
-    def __init__(self, c_e, epsilon, j, param):
+    def __init__(self, c_e, j, param, epsilon=None):
         super().__init__()
+
+        # set porosity to parameter if its not supplied
+        # as a variable
+        if epsilon is None:
+            epsilon = param.epsilon
 
         # Flux
         N_e = -(epsilon ** param.b) * pybamm.grad(c_e)
-        # Porosity change
-        deps_dt = -param.beta_surf * j
 
+        # porosity change (note beta_surf must be 0
+        # if epsilon is not supplied as a variable)
+        deps_dt = -param.beta_surf * j
         # Model
         self.rhs = {
             c_e: (1 / epsilon)
