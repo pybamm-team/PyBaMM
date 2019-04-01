@@ -103,10 +103,23 @@ class Power(BinaryOperator):
         else:
             # apply chain rule and power rule
             base, exponent = self.orphans
-            return pybamm.Diagonal(base) ** (exponent - 1) * (
-                exponent * base.jac(variable)
-                + base * pybamm.Function(np.log, pybamm.Diagional(base)) * exponent.jac(variable)
-            )
+            if isinstance(exponent, pybamm.Scalar):
+                return (
+                    exponent
+                    * pybamm.Diagonal(base) ** (exponent - 1)
+                    @ base.jac(variable)
+                )
+            elif isinstance(base, pybamm.Scalar):
+                return pybamm.Diagonal(
+                    base ** exponent * pybamm.Function(np.log, base)
+                ) @ exponent.jac(variable)
+            else:
+                return pybamm.Diagonal(base) ** (exponent - 1) @ (
+                    exponent @ base.jac(variable)
+                    + pybamm.Diagonal(base)
+                    @ pybamm.Diagonal(pybamm.Function(np.log, base))
+                    @ exponent.jac(variable)
+                )
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -234,7 +247,14 @@ class Multiplication(BinaryOperator):
         else:
             # apply product rule
             left, right = self.orphans
-            return pybamm.Diagonal(right) * left.jac(variable)  + pybamm.Diagonal(left) * right.jac(variable)
+            if isinstance(left, pybamm.Scalar):
+                return left * right.jac(variable)
+            elif isinstance(right, pybamm.Scalar):
+                return right * left.jac(variable)
+            else:
+                return pybamm.Diagonal(right) @ left.jac(variable) + pybamm.Diagonal(
+                    left
+                ) @ right.jac(variable)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -268,8 +288,17 @@ class MatrixMultiplication(BinaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        # We shouldn't need this
-        raise NotImplementedError
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # I think we only need the case where left is a matrix and right
+            # is a (slice of) a state vector, e.g. for discretised spatial
+            # operators of the form D @ u
+            left, right = self.orphans
+            if isinstance(left, pybamm.Matrix):
+                return left @ right.jac(variable)
+            else:
+                raise NotImplementedError
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -313,8 +342,15 @@ class Division(BinaryOperator):
         else:
             # apply quotient rule
             top, bottom = self.orphans
-            return (
-                pybamm.Diagonal(bottom) * top.jac(variable) - pybamm.Diagonal(top / bottom ** 2)* bottom.jac(variable))
+            if isinstance(top, pybamm.Scalar):
+                return -pybamm.Diagonal(top / bottom ** 2) @ bottom.jac(variable)
+            elif isinstance(bottom, pybamm.Scalar):
+                return top.jac(variable) / bottom
+            else:
+                return pybamm.Diagonal(1 / bottom ** 2) @ (
+                    pybamm.Diagonal(bottom) @ top.jac(variable)
+                    - pybamm.Diagonal(top) @ bottom.jac(variable)
+                )
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

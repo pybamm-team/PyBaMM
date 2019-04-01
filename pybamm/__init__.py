@@ -80,6 +80,7 @@ from .expression_tree.unary_operators import (
     grad,
     div,
     surf,
+    Diagonal
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast

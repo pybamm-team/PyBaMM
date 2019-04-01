@@ -124,13 +124,15 @@ class Function(UnaryOperator):
             return pybamm.Scalar(1)
         else:
             child = self.orphans[0]
-            if variable.id in [symbol.id for symbol in child.pre_order()]:
+            if np.size(np.intersect1d(child.y_range, variable.y_range)) == 0:
+                # Return zero if no entries match
+                return pybamm.Scalar(0)
+            else:
                 # if variable appears in the function,use autograd to differentiate
                 # function, and apply chain rule
-                return child.jac(variable) * Function(autograd.jacobian(self.func), child)
-            else:
-                # otherwise the derivative of the function is zero
-                return pybamm.Scalar(0)
+                return Function(autograd.jacobian(self.func), child) @ child.jac(
+                    variable
+                )
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

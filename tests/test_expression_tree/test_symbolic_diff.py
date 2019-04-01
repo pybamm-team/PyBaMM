@@ -55,6 +55,9 @@ class TestSymbolicDifferentiation(unittest.TestCase):
             func.diff(b).evaluate(y=y),
             -4 / 3 * np.exp(1) * np.sin(4 * np.exp(1)) * np.sin(np.cos(20) / 2),
         )
+        #
+        func = pybamm.Function(np.sin, a * b)
+        self.assertEqual(func.diff(a).evaluate(y=y), 3 * np.cos(15))
 
 
 if __name__ == "__main__":
