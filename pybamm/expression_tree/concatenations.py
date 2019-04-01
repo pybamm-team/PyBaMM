@@ -84,7 +84,7 @@ class NumpyConcatenation(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.jac()`. """
         if len(self.children) == 0:
             # NOTE: need to think about if this is the right thing to do here
-            return np.array([])
+            return pybamm.Scalar(0)
         else:
             return np.concatenate([child.jac(variable) for child in self.children])
 
@@ -179,3 +179,12 @@ class DomainConcatenation(Concatenation):
                 vector[self._slices[dom]] = child_vector[slices[dom]]
 
         return vector
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        if len(self.children) == 0:
+            # NOTE: need to think about if this is the right thing to do here
+            return pybamm.Scalar(0)
+        else:
+            new_children = [child.jac(variable) for child in self.children]
+            return DomainConcatenation(new_children, self.mesh)

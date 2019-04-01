@@ -209,25 +209,34 @@ class Discretisation(object):
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
+        # Get number points in model
+        # QUESTION: is there a better way to access this directly from here?
+        N = model.concatenated_initial_conditions.shape[0]
+
+        # Create StateVector to differentiate model with respect to
+        y = pybamm.StateVector(slice(0, N))
+
         # Differentiate concatenated rhs and algebraic equations w.r.t. the
         # entire StateVector
-        # jac_rhs = dict.fromkeys(model.rhs.keys())
-        # for eqn_key, eqn in model.rhs.items():
-        #     jac_rhs[eqn_key] = eqn.diff(y).simplify()
+        jac_rhs = dict.fromkeys(model.rhs.keys())
+        for eqn_key, eqn in model.rhs.items():
+            jac_rhs[eqn_key] = eqn.jac(y).simplify()
 
-        # jac_algebraic = dict.fromkeys(model.algebraic.keys())
-        # for eqn_key, eqn in model.algebraic.items():
-        #     jac_algebraic[eqn_key] = eqn.diff(y).simplify()
+        jac_algebraic = dict.fromkeys(model.algebraic.keys())
+        for eqn_key, eqn in model.algebraic.items():
+            jac_algebraic[eqn_key] = eqn.jac(y).simplify()
 
-        # jacobian = np.concatenate(
-        #     self.concatenate(*jac_rhs.values()),
-        #     self.concatenate(*jac_algebraic.values()),
-        # )
+        import ipdb; ipdb.set_trace()
 
-        # def jacfn(t, y):
-        #    return jacobian.evaluate(t, y)
+        jacobian = np.concatenate(
+            self.concatenate(*jac_rhs.values()),
+            self.concatenate(*jac_algebraic.values()),
+        )
 
-        # model.jacobian = jacfn
+        def jacfn(t, y):
+            return jacobian.evaluate(t, y)
+
+        model.jacobian = jacfn
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
