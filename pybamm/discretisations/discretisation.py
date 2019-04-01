@@ -209,6 +209,25 @@ class Discretisation(object):
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
+        # Differentiate concatenated rhs and algebraic equations w.r.t. the
+        # entire StateVector
+        # jac_rhs = dict.fromkeys(model.rhs.keys())
+        # for eqn_key, eqn in model.rhs.items():
+        #     jac_rhs[eqn_key] = eqn.diff(y).simplify()
+
+        # jac_algebraic = dict.fromkeys(model.algebraic.keys())
+        # for eqn_key, eqn in model.algebraic.items():
+        #     jac_algebraic[eqn_key] = eqn.diff(y).simplify()
+
+        # jacobian = np.concatenate(
+        #     self.concatenate(*jac_rhs.values()),
+        #     self.concatenate(*jac_algebraic.values()),
+        # )
+
+        # def jacfn(t, y):
+        #    return jacobian.evaluate(t, y)
+
+        # model.jacobian = jacfn
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary

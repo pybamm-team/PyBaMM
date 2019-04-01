@@ -68,11 +68,6 @@ class StateVector(pybamm.Symbol):
         """Slice of an external y to read"""
         return self._y_slice
 
-    @ property
-    def y_range(self):
-        """Returns y_slice as a range"""
-        return np.arange(self.y_slice.start, self.y_slice.stop)
-
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if y is None:
@@ -96,20 +91,27 @@ class StateVector(pybamm.Symbol):
             The variable with respect to which to differentiate
 
         """
+
+        # Get inices of state vectors
+        self_y_indices = np.arange(self.y_slice.start, self.y_slice.stop)
+        variable_y_indices = np.arange(variable.y_slice.start, variable.y_slice.stop)
+
         # Return zeros of correct size if no entries match
-        if np.size(np.intersect1d(self.y_range, variable.y_range)) == 0:
-            jac = csr_matrix((np.size(self.y_range), np.size(variable.y_range)))
+        if np.size(np.intersect1d(self_y_indices, variable_y_indices)) == 0:
+            jac = csr_matrix((np.size(self_y_indices), np.size(variable_y_indices)))
         else:
             # Populate entries corresponding to matching y slices, and shift so
             # that the matrix is the correct size
-            row = np.intersect1d(self.y_range, variable.y_range) - self.y_slice.start
+            row = (
+                np.intersect1d(self_y_indices, variable_y_indices) - self.y_slice.start
+            )
             col = (
-                np.intersect1d(self.y_range, variable.y_range)
+                np.intersect1d(self_y_indices, variable_y_indices)
                 - variable.y_slice.start
             )
             data = np.ones_like(row)
             jac = csr_matrix(
                 (data, (row, col)),
-                shape=(np.size(self.y_range), np.size(variable.y_range)),
+                shape=(np.size(self_y_indices), np.size(variable_y_indices)),
             )
         return pybamm.Matrix(jac)

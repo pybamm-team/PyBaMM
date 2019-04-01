@@ -292,7 +292,7 @@ class MatrixMultiplication(BinaryOperator):
             return pybamm.Scalar(1)
         else:
             # I think we only need the case where left is a matrix and right
-            # is a (slice of) a state vector, e.g. for discretised spatial
+            # is a (slice of a) state vector, e.g. for discretised spatial
             # operators of the form D @ u
             left, right = self.orphans
             if isinstance(left, pybamm.Matrix):

@@ -94,7 +94,7 @@ class TestJacobian(unittest.TestCase):
         u = pybamm.StateVector(slice(0, 2))
         v = pybamm.StateVector(slice(2, 4))
 
-        y0 = np.array([1., 2., 3., 4.])
+        y0 = np.array([1.0, 2.0, 3.0, 4.0])
 
         func = pybamm.Function(auto_np.sin, u)
         jacobian = np.array([[np.cos(1), 0, 0, 0], [0, np.cos(2), 0, 0]])
@@ -103,6 +103,36 @@ class TestJacobian(unittest.TestCase):
 
         func = pybamm.Function(auto_np.cos, v)
         jacobian = np.array([[0, 0, -np.sin(3), 0], [0, 0, 0, -np.sin(4)]])
+        dfunc_dy = func.jac(y).evaluate(y=y0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy)
+
+        func = pybamm.Function(auto_np.sin, 3 * u * v)
+        jacobian = np.array(
+            [
+                [9 * np.cos(9), 0, 3 * np.cos(9), 0],
+                [0, 12 * np.cos(24), 0, 6 * np.cos(24)],
+            ]
+        )
+        dfunc_dy = func.jac(y).evaluate(y=y0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy)
+
+        func = pybamm.Function(auto_np.cos, 5 * pybamm.Function(auto_np.exp, u + v))
+        jacobian = np.array(
+            [
+                [
+                    -5 * np.exp(4) * np.sin(5 * np.exp(4)),
+                    0,
+                    -5 * np.exp(4) * np.sin(5 * np.exp(4)),
+                    0,
+                ],
+                [
+                    0,
+                    -5 * np.exp(6) * np.sin(5 * np.exp(6)),
+                    0,
+                    -5 * np.exp(6) * np.sin(5 * np.exp(6)),
+                ],
+            ]
+        )
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy)
 
