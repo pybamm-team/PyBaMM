@@ -4,7 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
-import autograd.numpy as np
+import numpy as np
 import pybamm
 
 KNOWN_DOMAINS = [
@@ -46,6 +46,9 @@ class Mesh(dict):
             self[domain] = [
                 submesh_types[domain](geometry[domain]["primary"], submesh_pts[domain])
             ] * repeats
+        self.add_ghost_meshes()
+
+        # add ghost meshes
         self.add_ghost_meshes()
 
     def combine_submeshes(self, *submeshnames):

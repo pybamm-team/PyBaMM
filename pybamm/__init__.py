@@ -50,7 +50,7 @@ from .util import load_function
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import Symbol
+from .expression_tree.symbol import Symbol, simplify_if_constant
 from .expression_tree.binary_operators import (
     BinaryOperator,
     Addition,
@@ -72,6 +72,7 @@ from .expression_tree.unary_operators import (
     Negate,
     AbsoluteValue,
     Function,
+    Index,
     SpatialOperator,
     Gradient,
     Divergence,
@@ -80,7 +81,8 @@ from .expression_tree.unary_operators import (
     grad,
     div,
     surf,
-    Diagonal
+    Diagonal,
+    integrate
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
@@ -109,6 +111,7 @@ from .models import li_ion
 # Submodel classes
 #
 from .models.submodels import (
+    electrode,
     electrolyte_current,
     electrolyte_diffusion,
     interface,
@@ -164,6 +167,14 @@ from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
+<<<<<<< HEAD
+=======
+
+#
+# other
+#
+from .processed_variable import ProcessedVariable
+>>>>>>> master
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

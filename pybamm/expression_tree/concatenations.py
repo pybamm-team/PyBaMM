@@ -5,7 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import autograd.numpy as np
+import numpy as np
 
 
 class Concatenation(pybamm.Symbol):
@@ -139,9 +139,7 @@ class DomainConcatenation(Concatenation):
         self._size = self._slices[self.domain[-1]].stop
 
         # create disc of domain => slice for each child
-        self._children_slices = []
-        for child in self.children:
-            self._children_slices.append(self.create_slices(child))
+        self._children_slices = [self.create_slices(child) for child in self.children]
 
     @property
     def mesh(self):
@@ -180,6 +178,7 @@ class DomainConcatenation(Concatenation):
 
         return vector
 
+<<<<<<< HEAD
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         if len(self.children) == 0:
@@ -188,3 +187,5 @@ class DomainConcatenation(Concatenation):
         else:
             new_children = [child.jac(variable) for child in self.children]
             return DomainConcatenation(new_children, self.mesh)
+=======
+>>>>>>> master

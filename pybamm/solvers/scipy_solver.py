@@ -7,12 +7,6 @@ import pybamm
 
 import scipy.integrate as it
 import numpy as np
-import importlib
-
-autograd_spec = importlib.util.find_spec("autograd")
-if autograd_spec is not None:
-    autograd = importlib.util.module_from_spec(autograd_spec)
-    autograd_spec.loader.exec_module(autograd)
 
 
 class ScipySolver(pybamm.OdeSolver):

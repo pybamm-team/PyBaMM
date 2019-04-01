@@ -8,6 +8,7 @@ import pybamm
 import unittest
 import numpy as np
 import os
+import math
 
 
 class TestSymbol(unittest.TestCase):
@@ -19,6 +20,47 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_simplify(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
+        d = pybamm.Scalar(-1)
+        e = pybamm.Scalar(2)
+
+        # negate
+        self.assertIsInstance((-a).simplify(), pybamm.Scalar)
+        self.assertEqual((-a).simplify().evaluate(), 0)
+        self.assertIsInstance((-b).simplify(), pybamm.Scalar)
+        self.assertEqual((-b).simplify().evaluate(), -1)
+
+        # absolute value
+        self.assertIsInstance((abs(a)).simplify(), pybamm.Scalar)
+        self.assertEqual((abs(a)).simplify().evaluate(), 0)
+        self.assertIsInstance((abs(d)).simplify(), pybamm.Scalar)
+        self.assertEqual((abs(d)).simplify().evaluate(), 1)
+
+        # function
+        def sin(x):
+            return math.sin(x)
+
+        f = pybamm.Function(sin, b)
+        self.assertIsInstance((f).simplify(), pybamm.Scalar)
+        self.assertEqual((f).simplify().evaluate(), math.sin(1))
+
+        # Gradient
+        self.assertIsInstance((pybamm.grad(a)).simplify(), pybamm.Scalar)
+        self.assertEqual((pybamm.grad(a)).simplify().evaluate(), 0)
+        v = pybamm.Variable('v')
+        self.assertIsInstance((pybamm.grad(v)).simplify(), pybamm.Gradient)
+
+        # Divergence
+        self.assertIsInstance((pybamm.div(a)).simplify(), pybamm.Scalar)
+        self.assertEqual((pybamm.div(a)).simplify().evaluate(), 0)
+        self.assertIsInstance((pybamm.div(v)).simplify(), pybamm.Divergence)
+
+        # Integral
+        self.assertIsInstance((pybamm.integrate(a, pybamm.t)
+                               ).simplify(), pybamm.Integral)
+
+        # BoundaryValue
+        self.assertIsInstance((pybamm.surf(v)).simplify(), pybamm.BoundaryValue)
+
         # addition
         self.assertIsInstance((a + b).simplify(), pybamm.Scalar)
         self.assertEqual((a + b).simplify().evaluate(), 1)
@@ -62,7 +104,17 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((a * c).simplify().evaluate(), 0)
         self.assertIsInstance((c * a).simplify(), pybamm.Scalar)
         self.assertEqual((c * a).simplify().evaluate(), 0)
+        self.assertIsInstance((b * c).simplify(), pybamm.Parameter)
+        self.assertIsInstance((e * c).simplify(), pybamm.Multiplication)
+        self.assertIsInstance((c * e).simplify(), pybamm.Multiplication)
+        self.assertIsInstance((e / c).simplify(), pybamm.Division)
+        self.assertIsInstance((c / e).simplify(), pybamm.Division)
+        self.assertIsInstance((c / b).simplify(), pybamm.Parameter)
+        self.assertIsInstance((c * b).simplify(), pybamm.Parameter)
         self.assertIsInstance((A @ c).simplify(), pybamm.MatrixMultiplication)
+
+        # negation with parameter
+        self.assertIsInstance((-c).simplify(), pybamm.Negate)
 
         self.assertIsInstance((a + b + a).simplify(), pybamm.Scalar)
         self.assertEqual((a + b + a).simplify().evaluate(), 1)
@@ -347,6 +399,19 @@ class TestSymbol(unittest.TestCase):
         self.assertIsNone(b_orp.parent)
         self.assertEqual(a.id, a_orp.id)
         self.assertEqual(b.id, b_orp.id)
+
+    def test_ghost_cell_flaf(self):
+        a = pybamm.Symbol("a")
+        self.assertFalse(a.has_left_ghost_cell)
+        self.assertFalse(a.has_right_ghost_cell)
+
+        a.has_left_ghost_cell = True
+        self.assertTrue(a.has_left_ghost_cell)
+        self.assertFalse(a.has_right_ghost_cell)
+
+        a.has_right_ghost_cell = True
+        self.assertTrue(a.has_left_ghost_cell)
+        self.assertTrue(a.has_right_ghost_cell)
 
 
 if __name__ == "__main__":

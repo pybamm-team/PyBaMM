@@ -20,7 +20,7 @@ class TestScikitsSolver(unittest.TestCase):
         def constant_growth(t, y):
             return 0.5 * np.ones_like(y)
 
-        y0 = np.array([0.0])
+        y0 = np.array([0])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(constant_growth, y0, t_eval)
         np.testing.assert_array_equal(t_sol, t_eval)
@@ -32,7 +32,7 @@ class TestScikitsSolver(unittest.TestCase):
         def exponential_decay(t, y):
             return -0.1 * y
 
-        y0 = np.array([1.0])
+        y0 = np.array([1])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(exponential_decay, y0, t_eval)
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
@@ -47,7 +47,7 @@ class TestScikitsSolver(unittest.TestCase):
         def y_equal_0(t, y):
             return y[0]
 
-        y0 = np.array([1.0])
+        y0 = np.array([1])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(constant_decay, y0, t_eval, events=[y_equal_0])
         np.testing.assert_allclose(1 - 2 * t_sol, y_sol[0])
@@ -67,7 +67,7 @@ class TestScikitsSolver(unittest.TestCase):
         def ysq_eq_7(t, y):
             return y ** 2 - 7
 
-        y0 = np.array([1.0])
+        y0 = np.array([1])
         t_eval = np.linspace(0, 3, 100)
         t_sol, y_sol = solver.integrate(
             exponential_growth, y0, t_eval, events=[ysq_eq_7, y_eq_9]
@@ -119,7 +119,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+            return [0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
 
         y0 = np.array([0, 0])
         t_eval = np.linspace(0, 1, 100)
@@ -132,7 +132,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def exponential_decay_dae(t, y, ydot):
-            return np.array([-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]])
+            return [-0.1 * y[0] - ydot[0], 2 * y[0] - y[1]]
 
         y0 = np.array([1, 2])
         t_eval = np.linspace(0, 1, 100)
@@ -183,7 +183,7 @@ class TestScikitsSolver(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):
-            return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+            return [0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
 
         def y0_eq_2(t, y):
             return y[0] - 2
