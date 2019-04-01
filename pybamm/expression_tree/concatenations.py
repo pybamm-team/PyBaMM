@@ -178,7 +178,6 @@ class DomainConcatenation(Concatenation):
 
         return vector
 
-<<<<<<< HEAD
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         if len(self.children) == 0:
@@ -186,6 +185,5 @@ class DomainConcatenation(Concatenation):
             return pybamm.Scalar(0)
         else:
             new_children = [child.jac(variable) for child in self.children]
-            return DomainConcatenation(new_children, self.mesh)
-=======
->>>>>>> master
+            import ipdb; ipdb.set_trace()
+            return NumpyConcatenation(*new_children)
