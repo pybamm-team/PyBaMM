@@ -50,10 +50,7 @@ from .util import load_function
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import (
-    Symbol,
-    simplify_if_constant,
-)
+from .expression_tree.symbol import Symbol, simplify_if_constant
 from .expression_tree.binary_operators import (
     BinaryOperator,
     Addition,
@@ -169,6 +166,11 @@ from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
+
+#
+# other
+#
+from .processed_variable import ProcessedVariable
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
