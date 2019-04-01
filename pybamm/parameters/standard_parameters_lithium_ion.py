@@ -17,7 +17,7 @@ Microscale Geometry
 -------------------
 R_n, R_p
     Negative and positive particle radii
-sp.a_n, sp.a_p
+sp.a_n_dim, sp.a_p_dim
     Negative and positive electrode surface area densities
 
 Electrolyte Properties
@@ -122,7 +122,7 @@ def U_n_dimensional(c_s_n):
 
 # Because stochiometries vary over different ranges, it is not obvious what this
 # scaling should be in general, without evaluating the OCV. Left at c=0.5 for now
-U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(0.5))
+U_n_ref = U_n_dimensional(pybamm.Scalar(0.7))
 
 
 def U_p_dimensional(c_s_p):
@@ -132,19 +132,19 @@ def U_p_dimensional(c_s_p):
 
 # Because stochiometries vary over different ranges, it is not obvious what this
 # scaling should be in general, without evaluating the OCV. Left at c=0.5 for now
-U_p_ref = pybamm.FunctionParameter("Positive electrode OCV", pybamm.Scalar(0.5))
+U_p_ref = U_p_dimensional(pybamm.Scalar(0.7))
 
 
 def U_n(c_n):
     "Dimensionless open-circuit sp.potential in the negative electrode"
-    c_n_dimensional = c_n * c_n_max
-    return (U_n_dimensional(c_n_dimensional) - U_n_ref) / sp.potential_scale
+    sto = c_n
+    return (U_n_dimensional(sto) - U_n_ref) / sp.potential_scale
 
 
 def U_p(c_p):
     "Dimensionless open-circuit sp.potential in the positive electrode"
-    c_p_dimensional = c_p * c_p_max
-    return (U_p_dimensional(c_p_dimensional) - U_p_ref) / sp.potential_scale
+    sto = c_p
+    return (U_p_dimensional(sto) - U_p_ref) / sp.potential_scale
 
 
 # --------------------------------------------------------------------------------------
@@ -153,12 +153,26 @@ def U_p(c_p):
 # Timescales
 # Discharge timescale
 tau_discharge = sp.F * c_n_max * sp.L_x / sp.i_typ
+
 # Particle diffusion timescales
 tau_diffusion_n = R_n ** 2 / D_n_dimensional(c_n_max)
 tau_diffusion_p = R_n ** 2 / D_p_dimensional(c_p_max)
 
+# Electrolyte Diffusion timescale
+tau_diffusion_e = sp.L_x ** 2 / sp.D_e_dimensional(sp.c_e_typ)
+
+# reaction timescales
+tau_r_n = 1 / (sp.m_n_dimensional * sp.a_n_dim * sp.c_e_typ ** 0.5)
+tau_r_p = 1 / (sp.m_p_dimensional * sp.a_p_dim * sp.c_e_typ ** 0.5)
+
 # --------------------------------------------------------------------------------------
 """Dimensionless Parameters"""
+# Timescale ratios
+C_n = tau_diffusion_n / tau_discharge  # diffusional C-rate in negative electrode
+C_p = tau_diffusion_p / tau_discharge  # diffusional C-rate in positive electrode
+C_e = tau_diffusion_e / tau_discharge
+C_r_n = tau_r_n / tau_discharge
+C_r_p = tau_r_p / tau_discharge
 
 # Microscale geometry
 epsilon_n = pybamm.Parameter("Negative electrode porosity")
@@ -170,20 +184,18 @@ epsilon = pybamm.Concatenation(
     pybamm.Broadcast(epsilon_p, ["positive electrode"]),
 )
 
-# QUESTION: can we call these something different? they clash with the betas in Pb-acid
-beta_n = sp.a_n * R_n
-beta_p = sp.a_p * R_p
+a_n = sp.a_n_dim * R_n
+a_p = sp.a_p_dim * R_p
 
 # Microscale properties
-# Note: gamma_hat_n == 1, so not needed
-gamma_hat_p = c_p_max / c_n_max
-C_n = tau_discharge / tau_diffusion_n  # diffusional C-rate in negative electrode
-C_p = tau_discharge / tau_diffusion_p  # diffusional C-rate in positive electrode
+# Note: gamma_n == 1, so not needed
+gamma_p = c_p_max / c_n_max
 
 # Electrolyte Properties
 C_e = sp.tau_diffusion_e / tau_discharge  # diffusional C-rate in electrolyte
-gamma_hat_e = sp.c_e_typ / c_n_max
+gamma_e = sp.c_e_typ / c_n_max
 beta_surf = 0
+s = 1
 
 # Electrochemical Reactions
 C_dl_n = (

@@ -76,9 +76,7 @@ class SPM(pybamm.BaseModel):
 
         # reaction overpotentials
         j0_n = param.m_n * c_s_n_surf ** 0.5 * (1 - c_s_n_surf) ** 0.5
-        j0_p = (
-            param.m_p * param.gamma_hat_p * c_s_p_surf ** 0.5 * (1 - c_s_p_surf) ** 0.5
-        )
+        j0_p = param.m_p * param.gamma_p * c_s_p_surf ** 0.5 * (1 - c_s_p_surf) ** 0.5
         eta_r_n = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_p * param.l_p))
         eta_r_p = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_n * param.l_n))
         eta_r = eta_r_n + eta_r_p

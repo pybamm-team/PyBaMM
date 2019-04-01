@@ -77,11 +77,11 @@ class DFN(pybamm.BaseModel):
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
         j_n = pybamm.interface.butler_volmer(
-            param, c_e_n, phi_s_n - phi_e_n, ck_surf=c_s_n_surf
+            param, c_e_n, phi_s_n - phi_e_n, c_s_k_surf=c_s_n_surf
         )
         j_s = pybamm.Broadcast(0, ["separator"])
         j_p = pybamm.interface.butler_volmer(
-            param, c_e_p, phi_s_p - phi_e_p, ck_surf=c_s_p_surf
+            param, c_e_p, phi_s_p - phi_e_p, c_s_k_surf=c_s_p_surf
         )
         j = pybamm.Concatenation(j_n, j_s, j_p)
 

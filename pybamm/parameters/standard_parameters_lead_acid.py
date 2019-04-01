@@ -161,7 +161,7 @@ pi_os = (
     * sp.L_x
     / (d ** 2 * sp.R * sp.T_ref * sp.c_e_typ)
 )  # Ratio of viscous pressure scale to osmotic pressure scale
-gamma_hat_e = 1  # ratio of electrolyte concentration to electrode concentration, undef.
+gamma_e = 1  # ratio of electrolyte concentration to electrode concentration, undef.
 
 # Electrochemical reactions
 C_dl_n = (
@@ -203,3 +203,7 @@ eps_init = pybamm.Concatenation(
     pybamm.Broadcast(eps_s_init, ["separator"]),
     pybamm.Broadcast(eps_p_init, ["positive electrode"]),
 )
+
+# hack to make consistent ic with lithium-ion
+c_n_init = c_e_init
+c_p_init = c_e_init

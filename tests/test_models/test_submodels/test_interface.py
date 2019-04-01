@@ -171,6 +171,9 @@ class TestButlerVolmer(unittest.TestCase):
         self.param = pybamm.standard_parameters
         self.param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
 
+        self.lion_param = pybamm.standard_parameters
+        self.lion_param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+
     def tearDown(self):
         del self.cn
         del self.cs
@@ -229,7 +232,7 @@ class TestButlerVolmer(unittest.TestCase):
                 self.Delta_phin,
                 domain=["negative electrode", "separator", "positive electrode"],
             )
-        with self.assertRaisesRegex(TypeError, "ck_surf must be a Concatenation"):
+        with self.assertRaisesRegex(TypeError, "c_s_k_surf must be a Concatenation"):
             pybamm.interface.butler_volmer(
                 self.param,
                 self.c,
@@ -247,21 +250,21 @@ class TestButlerVolmer(unittest.TestCase):
     def test_creation_with_particles(self):
         # negative electrode passes, returns Multiplication
         bv = pybamm.interface.butler_volmer(
-            self.param, self.cn, self.Delta_phin, self.cn_surf
+            self.lion_param, self.cn, self.Delta_phin, self.cn_surf
         )
         self.assertIsInstance(bv, pybamm.Multiplication)
         self.assertEqual(bv.domain, ["negative electrode"])
 
         # positive electrode passes, returns Multiplication
         bv = pybamm.interface.butler_volmer(
-            self.param, self.cp, self.Delta_phip, self.cp_surf
+            self.lion_param, self.cp, self.Delta_phip, self.cp_surf
         )
         self.assertIsInstance(bv, pybamm.Multiplication)
         self.assertEqual(bv.domain, ["positive electrode"])
 
         # whole cell domain passes, returns concatenation
         bv = pybamm.interface.butler_volmer(
-            self.param, self.c, self.Delta_phi, self.c_surf
+            self.lion_param, self.c, self.Delta_phi, self.c_surf
         )
         self.assertIsInstance(bv, pybamm.Concatenation)
         self.assertEqual(
@@ -269,7 +272,9 @@ class TestButlerVolmer(unittest.TestCase):
         )
 
     def test_set_parameters(self):
-        bv = pybamm.interface.butler_volmer(self.param, self.c, self.Delta_phi)
+        param = pybamm.standard_parameters
+        param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
+        bv = pybamm.interface.butler_volmer(param, self.c, self.Delta_phi)
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
         parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
@@ -287,15 +292,35 @@ class TestButlerVolmer(unittest.TestCase):
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_bv.pre_order()]
 
         # with particles
+        param = pybamm.standard_parameters
+        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
+        parameter_values = pybamm.ParameterValues(
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
+            {
+                "Typical current density": 1,
+                "Negative electrode OCV": os.path.join(
+                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lico2_ocp_Dualfoil.py"
+                ),
+            },
+        )
         bv = pybamm.interface.butler_volmer(
-            self.param, self.c, self.Delta_phi, self.c_surf
+            param, self.c, self.Delta_phi, c_s_k_surf=self.c_surf
         )
         proc_bv = parameter_values.process_symbol(bv)
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_bv.pre_order()]
 
     def test_discretisation(self):
-        bv_n = pybamm.interface.butler_volmer(self.param, self.cn, self.Delta_phin)
-        bv_p = pybamm.interface.butler_volmer(self.param, self.cp, self.Delta_phip)
+
+        param = pybamm.standard_parameters
+        param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
+        bv_n = pybamm.interface.butler_volmer(param, self.cn, self.Delta_phin)
+        bv_p = pybamm.interface.butler_volmer(param, self.cp, self.Delta_phip)
 
         # process parameters
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
@@ -346,16 +371,18 @@ class TestButlerVolmer(unittest.TestCase):
         )
 
         # process parameters
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
         parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
             {
                 "Typical current density": 1,
                 "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
+                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
                 ),
                 "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
+                    input_path, "lico2_ocp_Dualfoil.py"
                 ),
             },
         )
@@ -393,7 +420,10 @@ class TestButlerVolmer(unittest.TestCase):
         )
 
     def test_discretisation_whole(self):
-        bv_whole = pybamm.interface.butler_volmer(self.param, self.c, self.Delta_phi)
+        param = pybamm.standard_parameters
+        param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
+
+        bv_whole = pybamm.interface.butler_volmer(param, self.c, self.Delta_phi)
 
         # process parameters
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
@@ -430,20 +460,22 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_discretisation_whole_with_particles(self):
         bv_whole = pybamm.interface.butler_volmer(
-            self.param, self.c, self.Delta_phi, self.c_surf
+            self.param, self.c, self.Delta_phi, c_s_k_surf=self.c_surf
         )
 
         # process parameters
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
         parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
             {
                 "Typical current density": 1,
                 "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
+                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
                 ),
                 "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
+                    input_path, "lico2_ocp_Dualfoil.py"
                 ),
             },
         )
@@ -528,7 +560,15 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         proc_j0p = param.process_symbol(j0p)
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_j0n.pre_order()]
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_j0p.pre_order()]
+
         # with surface concentration
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
+        param = pybamm.ParameterValues(
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
+            {"Typical current density": 1},
+        )
         j0n = pybamm.interface.exchange_current_density(self.cn, self.cn_surf)
         j0p = pybamm.interface.exchange_current_density(self.cp, self.cp_surf)
         proc_j0n = param.process_symbol(j0n)
@@ -575,8 +615,12 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         j0p = pybamm.interface.exchange_current_density(self.cp, self.cp_surf)
 
         # process parameters
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
         param = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"Typical current density": 1}
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
+            {"Typical current density": 1},
         )
         param_j0n = param.process_symbol(j0n)
         param_j0p = param.process_symbol(j0p)

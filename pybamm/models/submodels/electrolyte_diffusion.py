@@ -46,10 +46,11 @@ class StefanMaxwell(pybamm.BaseModel):
             c_e: (1 / epsilon)
             * (
                 -pybamm.div(N_e) / param.C_e
-                + param.s / param.gamma_hat_e * j
+                + param.s / param.gamma_e * j
                 - c_e * deps_dt
             )
         }
+
         self.initial_conditions = {c_e: param.c_e_init}
         self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
         self.variables = {"Electrolyte concentration": c_e, "Cation flux": N_e}

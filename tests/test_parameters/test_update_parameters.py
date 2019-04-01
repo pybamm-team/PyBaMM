@@ -63,6 +63,7 @@ class TestUpdateParameters(unittest.TestCase):
         model1 = pybamm.ReactionDiffusionModel()
         modeltest1 = tests.StandardModelTest(model1)
         modeltest1.test_all()
+
         T1, Y1 = modeltest1.solver.t, modeltest1.solver.y
 
         # trying to update the geometry fails

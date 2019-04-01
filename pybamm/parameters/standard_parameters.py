@@ -26,7 +26,7 @@ l_n, l_s, l_p
 
 Microscale Geometry
 -------------------
-a_n, a_p
+a_n_dim, a_p_dim
     Negative and positive electrode surface area densities
 
 Electrolyte Properties
@@ -116,8 +116,8 @@ sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity")
 sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity")
 
 # Microstructure
-a_n = pybamm.Parameter("Negative electrode surface area density")
-a_p = pybamm.Parameter("Positive electrode surface area density")
+a_n_dim = pybamm.Parameter("Negative electrode surface area density")
+a_p_dim = pybamm.Parameter("Positive electrode surface area density")
 b = pybamm.Parameter("Bruggeman coefficient")
 
 # Electrochemical reactions
@@ -166,13 +166,13 @@ concentration_scale = c_e_typ
 length_scale = L_x
 potential_scale = R * T_ref / F
 current_scale = i_typ
-interfacial_current_scale_n = i_typ / (a_n * L_x)
-interfacial_current_scale_p = i_typ / (a_p * L_x)
+interfacial_current_scale_n = i_typ / (a_n_dim * L_x)
+interfacial_current_scale_p = i_typ / (a_p_dim * L_x)
 
 # Timescales
 # Reaction timescales
-tau_rxn_n = 1 / (m_n_dimensional * a_n * c_e_typ ** 0.5)
-tau_rxn_p = 1 / (m_p_dimensional * a_p * c_e_typ ** 0.5)
+tau_rxn_n = 1 / (m_n_dimensional * a_n_dim * c_e_typ ** 0.5)
+tau_rxn_p = 1 / (m_p_dimensional * a_p_dim * c_e_typ ** 0.5)
 # Diffusion timescale
 tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ)
 

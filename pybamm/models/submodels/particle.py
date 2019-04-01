@@ -51,7 +51,7 @@ class Standard(pybamm.BaseModel):
             self.algebraic = {}
             self.initial_conditions = {c: param.c_n_init}
             self.boundary_conditions = {
-                N: {"left": pybamm.Scalar(0), "right": j / param.beta_n}
+                N: {"left": pybamm.Scalar(0), "right": param.C_n * j / param.a_n}
             }
             self.variables = {
                 "Negative particle concentration": c,
@@ -66,7 +66,7 @@ class Standard(pybamm.BaseModel):
             self.boundary_conditions = {
                 N: {
                     "left": pybamm.Scalar(0),
-                    "right": j / param.beta_p / param.gamma_hat_p,
+                    "right": param.C_p * j / param.a_p / param.gamma_p,
                 }
             }
             self.variables = {

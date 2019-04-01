@@ -97,7 +97,7 @@ class SPMe(pybamm.BaseModel):
         # )
         # j0_p = (
         #     param.m_p
-        #     * param.gamma_hat_p
+        #     * param.gamma_p
         #     * c_s_p_surf ** 0.5
         #     * (1 - c_s_p_surf) ** 0.5
         #     * (1 + param.C_e * c_e_p) ** 0.5
@@ -131,7 +131,7 @@ class SPMe(pybamm.BaseModel):
         Delta_Phi_elec = (
             -param.C_e
             * i_cell
-            * (1 / param.gamma_hat_e)
+            * (1 / param.gamma_e)
             / param.kappa_e(c_e)
             * (
                 param.l_n / (3 * param.epsilon_n ** param.b)

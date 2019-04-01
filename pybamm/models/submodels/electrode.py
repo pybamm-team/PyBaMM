@@ -36,7 +36,8 @@ class Ohm(pybamm.BaseModel):
         if phi_s.domain == ["negative electrode"]:
             if eps is None:
                 eps = param.epsilon_n
-            i_s_n = -param.sigma_n * (1 - eps) ** param.b * pybamm.grad(phi_s)
+            # i_s_n = -param.sigma_n * (1 - eps) ** param.b * pybamm.grad(phi_s)
+            i_s_n = -param.sigma_n * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_n) + j}
             self.boundary_conditions = {phi_s: {"left": 0}, i_s_n: {"right": 0}}
             self.initial_conditions = {phi_s: 0}
@@ -47,11 +48,12 @@ class Ohm(pybamm.BaseModel):
         elif phi_s.domain == ["positive electrode"]:
             if eps is None:
                 eps = param.epsilon_p
-            i_s_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
+            # i_s_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
+            i_s_p = -param.sigma_p * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_p) + j}
             self.boundary_conditions = {i_s_p: {"left": 0, "right": current}}
             self.initial_conditions = {
-                phi_s: param.U_p(param.c_e_init) - param.U_n(param.c_e_init)
+                phi_s: param.U_p(param.c_p_init) - param.U_n(param.c_n_init)
             }
             self.variables = {
                 "Positive electrode solid potential": phi_s,
