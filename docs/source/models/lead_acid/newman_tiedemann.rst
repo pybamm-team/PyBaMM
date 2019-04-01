@@ -1,4 +1,4 @@
-Lead Acid Porous Electrode Model
+Lead Acid Newman-Tiedemann Model
 ================================
 
 .. autoclass:: pybamm.lead_acid.NewmanTiedemann

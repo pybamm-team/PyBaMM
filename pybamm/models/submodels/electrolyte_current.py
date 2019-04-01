@@ -21,8 +21,7 @@ class MacInnesStefanMaxwell(pybamm.LeadAcidBaseModel):
     phi_e : :class:`pybamm.Symbol`
         The electric potential in the electrolyte ("electrolyte potential")
     j : :class:`pybamm.Symbol`
-        An expression tree that represents the interfacial current density at the
-        electrode-electrolyte interface
+        The interfacial current density at the electrode-electrolyte interface
     param : parameter class
         The parameters to use for this submodel
 
@@ -49,6 +48,84 @@ class MacInnesStefanMaxwell(pybamm.LeadAcidBaseModel):
 
         # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
+
+
+class MacInnesStefanMaxwellCapacitance(pybamm.LeadAcidBaseModel):
+    """MacInnes equation for the current in the electrolyte, derived from the
+    Stefan-Maxwell equations, with capacitance effects included. The MacInnes equation
+    is rearranged to account for both solid and electrolyte potentials
+
+    Parameters
+    ----------
+    c_e : :class:`pybamm.Symbol`
+        The electrolyte concentration
+    epsilon : :class:`pybamm.Symbol`
+        The (electrolyte/liquid phase) porosity (can be Variable or Parameter)
+    Delta_phi : :class:`pybamm.Symbol`
+        The difference between the electric potential in the electrolyte and the
+        electric potential in the solid (Delta_phi = phi_s - phi_e)
+    j : :class:`pybamm.Symbol`
+        The interfacial current density at the electrode-electrolyte interface
+    param : parameter class
+        The parameters to use for this submodel
+
+    *Extends:* :class:`BaseModel`
+    """
+
+    def __init__(self, c_e, eps, Delta_phi, j, param):
+        super().__init__()
+        current = pybamm.standard_parameters.current_with_time
+
+        # ode model only
+        self.algebraic = {}
+        i_e = (
+            param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_hat_e
+        ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e + pybamm.grad(Delta_phi))
+
+        # different bounday conditions in each electrode
+        if Delta_phi.domain == ["negative electrode"]:
+            self.rhs = {Delta_phi: 1 / param.gamma_dl_n * (pybamm.div(i_e) - j)}
+            self.boundary_conditions = {Delta_phi: {"left": 0}, i_s_n: {"right": 0}}
+            self.boundary_conditions = {i_e: {"left": 0, "right": current}}
+            self.initial_conditions = {Delta_phi: param.U_n(param.c_e_init)}
+            self.variables = {
+                "Negative electrode potential difference": Delta_phi,
+                "Negative electrode electrolyte current": i_e,
+            }
+        elif Delta_phi.domain == ["positive electrode"]:
+            self.rhs = {Delta_phi: 1 / param.gamma_dl_p * (pybamm.div(i_e) - j)}
+            self.boundary_conditions = {i_e: {"left": current, "right": 0}}
+            self.initial_conditions = {Delta_phi: param.U_p(param.c_e_init)}
+            self.variables = {
+                "Positive electrode potential difference": Delta_phi,
+                "Positive electrode electrolyte current": i_e,
+            }
+        # for whole cell domain call both electrode models and ignore separator
+        elif Delta_phi.domain == [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]:
+            c_e_n, c_e_s, c_e_p = c_e.orphans
+            Delta_phi_n, Delta_phi_s, Delta_phi_p = Delta_phi.orphans
+            eps_n, eps_s, eps_p = eps.orphans
+            j_n, j_s, j_p = j.orphans
+            neg_model = MacInnesStefanMaxwellCapacitance(
+                c_e_n, Delta_phi_n, eps_n, j_n, param
+            )
+            pos_model = MacInnesStefanMaxwellCapacitance(
+                c_e_p, Delta_phi_p, eps_p, j_p, param
+            )
+            self.update(neg_model, pos_model)
+            # Voltage variable
+            voltage = pybamm.BoundaryValue(phi_s, "right") - pybamm.BoundaryValue(
+                phi_s, "left"
+            )
+            self.variables.update({"Voltage": voltage})
+        else:
+            raise pybamm.DomainError(
+                "domain '{}' not recognised".format(Delta_phi.domain)
+            )
 
 
 class StefanMaxwellFirstOrderPotential(pybamm.BaseModel):

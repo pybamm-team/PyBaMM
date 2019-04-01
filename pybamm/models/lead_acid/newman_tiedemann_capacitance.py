@@ -1,12 +1,12 @@
 #
-# Lead-acid Newman-Tiedemann model
+# Lead-acid Newman-Tiedemann model, including capacitance effects
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class NewmanTiedemann(pybamm.LeadAcidBaseModel):
+class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
     """Porous electrode model for lead-acid, from [1]_.
 
     .. math::
