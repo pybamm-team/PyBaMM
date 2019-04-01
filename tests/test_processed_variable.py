@@ -42,6 +42,11 @@ class TestProcessedVariable(unittest.TestCase):
             processed_eqn.entries, t_sol * y_sol + x_sol[:, np.newaxis]
         )
 
+    def test_failure(self):
+        var_with_domain = pybamm.Symbol("var", domain=["test"])
+        with self.assertRaisesRegex(ValueError, "mesh must be provided"):
+            pybamm.ProcessedVariable(var_with_domain, None, None)
+
     def test_processed_var_interpolation(self):
         # without spatial dependence
         t = pybamm.t

@@ -31,12 +31,19 @@ class ProcessedVariable(object):
     """
 
     def __init__(self, base_variable, t_sol, y_sol, mesh=None, interp_kind="linear"):
-        if mesh is not None and base_variable.domain != []:
-            # Process the discretisation to get x values
-            x_sol = np.concatenate([mesh[dom][0].nodes for dom in base_variable.domain])
-            len_x = len(x_sol)
+        if base_variable.domain != []:
+            if mesh is not None:
+                # Process the discretisation to get x values
+                x_sol = np.concatenate(
+                    [mesh[dom][0].nodes for dom in base_variable.domain]
+                )
+                len_x = len(x_sol)
+            else:
+                # We must provide a mesh for reference x values  for interpolation
+                raise ValueError("mesh must be provided for intepolation")
         else:
             # No discretisation provided, or variable has no domain (function of t only)
+            # We don't need x values for interpolation
             x_sol = None
             len_x = 1
 
