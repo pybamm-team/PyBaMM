@@ -34,20 +34,26 @@ class DaeSolver(pybamm.BaseSolver):
 
         """
 
+        # create simplified rhs and event expressions
+        concatenated_rhs = model.concatenated_rhs.simplify()
+        concatenated_algebraic = model.concatenated_algebraic.simplify()
+        events = [event.simplify() for event in model.events]
+
+
         def residuals(t, y, ydot):
-            rhs_eval = model.concatenated_rhs.evaluate(t, y)
+            rhs_eval = concatenated_rhs.evaluate(t, y)
             return np.concatenate(
                 (
                     rhs_eval - ydot[: rhs_eval.shape[0]],
-                    model.concatenated_algebraic.evaluate(t, y),
+                    concatenated_algebraic.evaluate(t, y),
                 )
             )
 
         def rhs(t, y):
-            return model.concatenated_rhs.evaluate(t, y)
+            return concatenated_rhs.evaluate(t, y)
 
         def algebraic(t, y):
-            return model.concatenated_algebraic.evaluate(t, y)
+            return concatenated_algebraic.evaluate(t, y)
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
@@ -56,7 +62,7 @@ class DaeSolver(pybamm.BaseSolver):
 
             return eval_event
 
-        events = [event_fun(event) for event in model.events]
+        events = [event_fun(event) for event in events]
 
         y0 = self.calculate_consistent_initial_conditions(
             rhs, algebraic, model.concatenated_initial_conditions
