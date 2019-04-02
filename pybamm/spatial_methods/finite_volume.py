@@ -224,7 +224,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             edges = submesh_list[0].edges
 
         # check for particle domain
-        if ("negative particle" or "positive particle") in domain:
+        if submesh_list[0].coord_sys == "spherical polar":
 
             # create np.array of repeated submesh[0].nodes
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
@@ -299,9 +299,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Calculate integration vector
         integration_vector = self.definite_integral_vector(domain)
-        # Check for particle domain
-        if ("negative particle" or "positive particle") in symbol.domain:
-            submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+
+        # Check for spherical domains
+        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        if submesh_list[0].coord_sys == "spherical polar":
             second_dim = len(submesh_list)
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
             r = pybamm.Vector(r_numpy)

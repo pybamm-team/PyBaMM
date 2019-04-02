@@ -139,6 +139,10 @@ from .geometry.geometry import (
     Geometry3DMacro,
 )
 
+from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS
+from .geometry import standard_spatial_vars
+from .geometry.standard_spatial_vars import KNOWN_COORD_SYS
+
 #
 # Mesh and Discretisation classes
 #

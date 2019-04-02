@@ -17,9 +17,7 @@ class StandardModelTest(object):
         self.param.process_geometry(model.default_geometry)
         geometry = model.default_geometry
         # Set default discretisation
-        mesh = pybamm.Mesh(
-            geometry, model.default_submesh_types, model.default_submesh_pts
-        )
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         self.disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         # Set default solver
         self.solver = model.default_solver

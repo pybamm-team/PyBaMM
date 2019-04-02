@@ -14,12 +14,13 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.NewmanTiedemann()
         # Make grid very coarse for quick test (note that r domain doesn't matter)
-        model.default_submesh_pts = {
-            "negative electrode": {"x": 3},
-            "separator": {"x": 3},
-            "positive electrode": {"x": 3},
-            "negative particle": {"r": 1},
-            "positive particle": {"r": 1},
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 3,
+            var.x_s: 3,
+            var.x_p: 3,
+            var.r_n: 1,
+            var.r_p: 1,
         }
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(t_eval=np.linspace(0, 0.1, 5))
@@ -27,12 +28,13 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
     def test_solution(self):
         model = pybamm.lead_acid.NewmanTiedemann()
         # Make grid very coarse for quick test (note that r domain doesn't matter)
-        model.default_submesh_pts = {
-            "negative electrode": {"x": 3},
-            "separator": {"x": 3},
-            "positive electrode": {"x": 3},
-            "negative particle": {"r": 1},
-            "positive particle": {"r": 1},
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 3,
+            var.x_s: 3,
+            var.x_p: 3,
+            var.r_n: 1,
+            var.r_p: 1,
         }
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(t_eval=np.linspace(0, 0.1, 5))
