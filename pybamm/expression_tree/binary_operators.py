@@ -7,6 +7,58 @@ import pybamm
 
 import numbers
 import autograd.numpy as np
+import copy
+
+
+def simplify_addition_subtraction(myclass, left, right):
+    """
+    some common simplifications for addition and subtraction
+
+    if children are associative (addition, subtraction, etc) then try to find
+    pairs of constant children and simplify them
+    """
+    for child1, child2 in zip([left, right], [right, left]):
+        if child1.is_constant():
+            if isinstance(child2, pybamm.Addition) or \
+                    isinstance(child2, pybamm.Subtraction):
+                # don't care about ordering
+                for i in range(2):
+                    if child2.children[i].is_constant():
+                        tmp = copy.deepcopy(child2.children[i])
+                        tmp.parent = None
+                        left = myclass(child1, tmp)
+                        left = pybamm.simplify_if_constant(left)
+                        right = copy.deepcopy(child2.children[1 - i])
+                        right.parent = None
+                        return child2.__class__(left, right)
+
+    return myclass(left, right)
+
+
+def simplify_multiplication_division(myclass, left, right):
+    """
+    some common simplifications for multiplication and division
+
+    if children are associative (multiply, division, etc) then try to find
+    pairs of constant children and simplify them
+    """
+    for child1, child2 in zip([left, right], [right, left]):
+        if child1.is_constant():
+            if isinstance(child2, pybamm.Multiplication) or \
+                    isinstance(child2, pybamm.Division) or \
+                    isinstance(child2, pybamm.MatrixMultiplication):
+                # don't care about ordering
+                for i in range(2):
+                    if child2.children[i].is_constant():
+                        tmp = copy.deepcopy(child2.children[i])
+                        tmp.parent = None
+                        left = myclass(child1, tmp)
+                        left = pybamm.simplify_if_constant(left)
+                        right = copy.deepcopy(child2.children[1 - i])
+                        right.parent = None
+                        return child2.__class__(left, right)
+
+    return myclass(left, right)
 
 
 def is_zero(expr):
@@ -161,7 +213,7 @@ class Addition(BinaryOperator):
         if is_zero(right):
             return left
 
-        return self.__class__(left, right)
+        return simplify_addition_subtraction(self.__class__, left, right)
 
 
 class Subtraction(BinaryOperator):
@@ -195,7 +247,7 @@ class Subtraction(BinaryOperator):
         if is_zero(right):
             return left
 
-        return self.__class__(left, right)
+        return simplify_addition_subtraction(self.__class__, left, right)
 
 
 class Multiplication(BinaryOperator):
@@ -236,7 +288,7 @@ class Multiplication(BinaryOperator):
         if is_one(right):
             return left
 
-        return self.__class__(left, right)
+        return simplify_multiplication_division(self.__class__, left, right)
 
 
 class MatrixMultiplication(BinaryOperator):
@@ -266,6 +318,31 @@ class MatrixMultiplication(BinaryOperator):
         # anything multiplied by a scalar zero returns a scalar zero
         if is_zero(left) or is_zero(right):
             return pybamm.Scalar(0)
+
+        # if children are associative (multiply, division, etc) then try to find
+        # pairs of constant children and simplify them
+        for child1, child2 in zip([left, right], [right, left]):
+            if child1.is_constant():
+                if isinstance(child2, pybamm.Multiplication) or \
+                        isinstance(child2, pybamm.Division) or \
+                        isinstance(child2, pybamm.MatrixMultiplication):
+                    # we care about ordering here
+                    if child1 == left and child2.children[0].is_constant():
+                        tmp = copy.deepcopy(child2.children[0])
+                        tmp.parent = None
+                        left = self.__class__(child1, tmp)
+                        left = pybamm.simplify_if_constant(left)
+                        right = copy.deepcopy(child2.children[1])
+                        right.parent = None
+                        return child2.__class__(left, right)
+                    elif child1 == right and child2.children[1].is_constant():
+                        tmp = copy.deepcopy(child2.children[1])
+                        tmp.parent = None
+                        left = copy.deepcopy(child2.children[0])
+                        left.parent = None
+                        right = self.__class__(tmp, child1)
+                        right = pybamm.simplify_if_constant(right)
+                        return child2.__class__(left, right)
 
         return self.__class__(left, right)
 
@@ -314,4 +391,4 @@ class Division(BinaryOperator):
         if is_one(right):
             return left
 
-        return self.__class__(left, right)
+        return simplify_multiplication_division(self.__class__, left, right)

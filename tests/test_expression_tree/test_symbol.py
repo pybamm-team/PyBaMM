@@ -106,6 +106,9 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((c * a).simplify().evaluate(), 0)
         self.assertIsInstance((b * c).simplify(), pybamm.Parameter)
         self.assertIsInstance((e * c).simplify(), pybamm.Multiplication)
+        expr = (e * (e * c)).simplify()
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
         self.assertIsInstance((c * e).simplify(), pybamm.Multiplication)
         self.assertIsInstance((e / c).simplify(), pybamm.Division)
         self.assertIsInstance((c / e).simplify(), pybamm.Division)
@@ -140,6 +143,42 @@ class TestSymbol(unittest.TestCase):
         self.assertTrue(np.isnan((a / a).simplify().evaluate()))
         self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
         self.assertEqual((b / b).simplify().evaluate(), 1)
+
+        # matrix * matrix
+        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
+        m2 = pybamm.Matrix(np.array([[3, 0], [0, 3]]))
+        v = pybamm.StateVector(slice(0, 2))
+
+        for expr in [((m2@m1)@v).simplify(), (m2@(m1@v)).simplify()]:
+            self.assertIsInstance(expr.children[0], pybamm.Matrix)
+            self.assertIsInstance(expr.children[1], pybamm.StateVector)
+            np.testing.assert_array_equal(
+                expr.children[0].entries,
+                np.array([[6, 0], [0, 6]])
+            )
+
+        # scalar * matrix
+        for expr in [((b * m1) @ v).simplify(),
+                     (b * (m1 @ v)).simplify(),
+                     ((m1 * b) @ v).simplify(),
+                     (m1 @ (b * v)).simplify()]:
+            self.assertIsInstance(expr.children[0], pybamm.Matrix)
+            self.assertIsInstance(expr.children[1], pybamm.StateVector)
+            np.testing.assert_array_equal(
+                expr.children[0].entries,
+                np.array([[2, 0], [0, 2]])
+            )
+
+        # matrix * vector
+        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
+        v1 = pybamm.Vector(np.array([1, 1]))
+
+        for expr in [(m1@v1).simplify()]:
+            self.assertIsInstance(expr, pybamm.Vector)
+            np.testing.assert_array_equal(
+                expr.entries,
+                np.array([2, 2])
+            )
 
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])
