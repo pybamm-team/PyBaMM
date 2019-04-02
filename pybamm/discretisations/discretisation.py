@@ -229,10 +229,7 @@ class Discretisation(object):
         for eqn_key, eqn in model.algebraic.items():
             jac_algebraic[eqn_key] = eqn.jac(y).simplify()
 
-        jacobian = np.concatenate(
-            self.concatenate(*jac_rhs.values()),
-            self.concatenate(*jac_algebraic.values()),
-        )
+        jacobian = self.sparse_stack(*jac_rhs.values(), *jac_algebraic.values())
 
         def jacfn(t, y):
             return jacobian.evaluate(t, y)
@@ -465,6 +462,9 @@ class Discretisation(object):
         sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
 
         return self.concatenate(*sorted_equations)
+
+    def sparse_stack(self, *symbols):
+        return pybamm.SparseStack(*symbols)
 
     def check_model(self, model):
         """ Perform some basic checks to make sure the discretised model makes sense."""

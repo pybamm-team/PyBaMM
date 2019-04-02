@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
+from scipy.sparse import csr_matrix, issparse, vstack
 
 
 class Concatenation(pybamm.Symbol):
@@ -86,7 +87,7 @@ class NumpyConcatenation(pybamm.Symbol):
             # NOTE: need to think about if this is the right thing to do here
             return pybamm.Scalar(0)
         else:
-            return np.concatenate([child.jac(variable) for child in self.children])
+            return SparseStack([child.jac(variable) for child in self.children])
 
 
 class DomainConcatenation(Concatenation):
@@ -113,7 +114,6 @@ class DomainConcatenation(Concatenation):
     def __init__(self, children, mesh):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
-
         children = list(children)
 
         # Allow the base class to sort the domains into the correct order
@@ -184,6 +184,42 @@ class DomainConcatenation(Concatenation):
             # NOTE: need to think about if this is the right thing to do here
             return pybamm.Scalar(0)
         else:
-            new_children = [child.jac(variable) for child in self.children]
-            import ipdb; ipdb.set_trace()
-            return NumpyConcatenation(*new_children)
+            return SparseStack([child.jac(variable) for child in self.children])
+
+
+class SparseStack(pybamm.Symbol):
+    """A node in the expression tree representing a concatenation of sparse
+    matrices. As with NumpyConcatenation, we *don't* care about domains.
+    The class :class:`pybamm.DomainConcatenation`, which *is* careful about
+    domains and uses broadcasting where appropriate, should be used whenever
+    possible instead.
+
+    **Extends**: :class:`pybamm.Symbol`
+
+    Parameters
+    ----------
+    children : iterable of :class:`pybamm.Symbol`
+        The equations to concatenate
+
+    """
+
+    def __init__(self, *children):
+        super().__init__("model concatenation", children, domain=[])
+
+    def evaluate(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        if len(self.children) == 0:
+            return np.array([])
+        else:
+            return vstack([self.evaluate_child(child, t, y) for child in self.children])
+
+    def evaluate_child(self, child, t, y):
+        # I think this probably a very hacky way of doing this, but need
+        # some way of concatenating sparse matrices with dense matrices that
+        # come from evaluate. The other way would be to make all the matrices
+        # dense and then do a NumpyConcatenation, but I fear this will be bad
+        # when the Jacobian is very large
+        evaluated_child = child.evaluate(t, y)
+        if issparse(evaluated_child) is False:
+            evaluated_child = csr_matrix(evaluated_child)
+        return evaluated_child

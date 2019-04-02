@@ -4,7 +4,7 @@
 import pybamm
 
 import numpy as np
-
+from scipy.sparse import eye
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
@@ -27,14 +27,14 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain][0].npts
-        gradient_matrix = pybamm.Matrix(np.eye(n))
+        gradient_matrix = pybamm.Matrix(eye(n))
         return gradient_matrix @ discretised_symbol
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain][0].npts
-        divergence_matrix = pybamm.Matrix(np.eye(n))
+        divergence_matrix = pybamm.Matrix(eye(n))
         return divergence_matrix @ discretised_symbol
 
     def compute_diffusivity(
@@ -46,7 +46,7 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain][0].npts
-        mass_matrix = pybamm.Matrix(np.eye(n))
+        mass_matrix = pybamm.Matrix(eye(n))
         return mass_matrix
 
 

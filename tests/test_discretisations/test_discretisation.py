@@ -355,6 +355,12 @@ class TestDiscretise(unittest.TestCase):
             model.mass_matrix.entries.toarray(),
         )
 
+        # jacobian is identity
+        np.testing.assert_array_equal(
+            np.eye(combined_submesh[0].nodes.shape[0]),
+            model.jacobian(0, y0).toarray()
+        )
+
         # several equations
         T = pybamm.Variable("T", domain=["negative electrode"])
         q = pybamm.grad(T)
@@ -397,6 +403,11 @@ class TestDiscretise(unittest.TestCase):
         # mass matrix is identity
         np.testing.assert_array_equal(
             np.eye(np.size(y0)), model.mass_matrix.entries.toarray()
+        )
+
+        # jacobian is identity
+        np.testing.assert_array_equal(
+            np.eye(np.size(y0)), model.jacobian(0, y0).toarray()
         )
 
         # test that not enough initial conditions raises an error
@@ -467,6 +478,23 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(
             mass.toarray(), model.mass_matrix.entries.toarray()
         )
+
+        # jacobian
+        jacobian = np.block(
+            [
+                [
+                    np.eye(np.size(combined_submesh[0].nodes)),
+                    np.zeros(
+                        (np.size(combined_submesh[0].nodes), np.size(combined_submesh[0].nodes))
+                    ),
+                ],
+                [
+                    -2 * np.eye(np.size(combined_submesh[0].nodes)),
+                    np.eye(np.size(combined_submesh[0].nodes)),
+                ],
+            ]
+        )
+        np.testing.assert_array_equal(jacobian, model.jacobian(0, y0).toarray())
 
     def test_process_model_concatenation(self):
         # concatenation of variables as the key
