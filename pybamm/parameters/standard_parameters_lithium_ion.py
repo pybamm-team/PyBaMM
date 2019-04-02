@@ -150,7 +150,7 @@ def U_p(c_p):
 # --------------------------------------------------------------------------------------
 """Scales"""
 # for purposes of testing dimensionless parameter sizes, we put i_typ = 24 A/m^2
-sp.i_typ = 24
+# sp.i_typ = 24
 
 # Timescales
 # Discharge timescale

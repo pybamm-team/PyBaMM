@@ -184,7 +184,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # C_e
         np.testing.assert_almost_equal(
-            values.process_symbol(param.C_e).evaluate(None, None), 0.008, 3
+            values.process_symbol(param.C_e / c_rate).evaluate(None, None), 0.008, 3
         )
 
         # electrolyte conductivity
