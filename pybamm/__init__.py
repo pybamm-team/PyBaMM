@@ -171,6 +171,11 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
 
 #
+# other
+#
+from .processed_variable import ProcessedVariable
+
+#
 # Remove any imported modules, so we don't expose them as part of pybamm
 #
 del (sys)
