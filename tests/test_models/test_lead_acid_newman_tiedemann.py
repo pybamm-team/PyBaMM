@@ -14,12 +14,13 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.NewmanTiedemann()
         # Make grid very coarse for quick test (note that r domain doesn't matter)
-        model.default_submesh_pts = {
-            "negative electrode": {"x": 3},
-            "separator": {"x": 3},
-            "positive electrode": {"x": 3},
-            "negative particle": {"r": 1},
-            "positive particle": {"r": 1},
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 3,
+            var.x_s: 3,
+            var.x_p: 3,
+            var.r_n: 1,
+            var.r_p: 1,
         }
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(t_eval=np.linspace(0, 0.1, 5))
@@ -27,39 +28,33 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
     def test_solution(self):
         model = pybamm.lead_acid.NewmanTiedemann()
         # Make grid very coarse for quick test (note that r domain doesn't matter)
-        model.default_submesh_pts = {
-            "negative electrode": {"x": 3},
-            "separator": {"x": 3},
-            "positive electrode": {"x": 3},
-            "negative particle": {"r": 1},
-            "positive particle": {"r": 1},
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 3,
+            var.x_s: 3,
+            var.x_p: 3,
+            var.r_n: 1,
+            var.r_p: 1,
         }
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(t_eval=np.linspace(0, 0.1, 5))
-        T, Y = modeltest.solver.t, modeltest.solver.y
+        t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
+
+        # Post-process variables
+        conc = pybamm.ProcessedVariable(
+            model.variables["Electrolyte concentration"],
+            t_sol,
+            y_sol,
+            mesh=modeltest.disc.mesh,
+        )
+        voltage = pybamm.ProcessedVariable(model.variables["Voltage"], t_sol, y_sol)
 
         # check output
-        for idx in range(len(T) - 1):
-            # Check concentration decreases
-            np.testing.assert_array_less(
-                model.variables["Electrolyte concentration"].evaluate(
-                    T[idx + 1], Y[:, idx + 1]
-                ),
-                model.variables["Electrolyte concentration"].evaluate(
-                    T[idx], Y[:, idx]
-                ),
-            )
-            # Check cut-off
-            np.testing.assert_array_less(
-                0,
-                model.variables["Electrolyte concentration"].evaluate(
-                    T[idx + 1], Y[:, idx + 1]
-                ),
-            )
-            self.assertLess(
-                model.variables["Voltage"].evaluate(T[idx + 1], Y[:, idx + 1]),
-                model.variables["Voltage"].evaluate(T[idx], Y[:, idx]),
-            )
+        # concentration and voltage should be monotonically decreasing for a discharge
+        np.testing.assert_array_less(conc.entries[:, 1:], conc.entries[:, :-1])
+        np.testing.assert_array_less(voltage.entries[1:], voltage.entries[:-1])
+        # Make sure the concentration is always positive (cut-off event working)
+        np.testing.assert_array_less(0, conc.entries)
 
 
 if __name__ == "__main__":

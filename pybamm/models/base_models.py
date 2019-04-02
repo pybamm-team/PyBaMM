@@ -91,12 +91,13 @@ class BaseModel(object):
             },
         )
         self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
-        self.default_submesh_pts = {
-            "negative electrode": {"x": 40},
-            "separator": {"x": 25},
-            "positive electrode": {"x": 35},
-            "negative particle": {"r": 10},
-            "positive particle": {"r": 10},
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 40,
+            var.x_s: 25,
+            var.x_p: 35,
+            var.r_n: 10,
+            var.r_p: 10,
         }
         self.default_submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,

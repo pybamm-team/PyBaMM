@@ -19,14 +19,9 @@ class TestMesh(unittest.TestCase):
         geometry = pybamm.Geometry1DMacro()
         param.process_geometry(geometry)
 
-        # provide mesh properties
-        submesh_pts = {
-            "negative electrode": {"x": 10},
-            "separator": {"x": 10},
-            "positive electrode": {"x": 12},
-            "negative particle": {"r": 5},
-            "positive particle": {"r": 6},
-        }
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
+
         submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
@@ -38,7 +33,7 @@ class TestMesh(unittest.TestCase):
         mesh_type = pybamm.Mesh
 
         # create mesh
-        mesh = mesh_type(geometry, submesh_types, submesh_pts)
+        mesh = mesh_type(geometry, submesh_types, var_pts)
 
         # check boundary locations
         self.assertEqual(mesh["negative electrode"][0].edges[0], 0)
@@ -67,13 +62,8 @@ class TestMesh(unittest.TestCase):
         param.process_geometry(geometry)
 
         # provide mesh properties
-        submesh_pts = {
-            "negative electrode": {"x": 10},
-            "separator": {"x": 10},
-            "positive electrode": {"x": 12},
-            "negative particle": {"r": 5},
-            "positive particle": {"r": 6},
-        }
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
         submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
@@ -85,14 +75,21 @@ class TestMesh(unittest.TestCase):
         mesh_type = pybamm.Mesh
 
         # create mesh
-        mesh = mesh_type(geometry, submesh_types, submesh_pts)
-        for domain in mesh:
-            # ignore ghost cells for this test
-            if "ghost" not in domain:
-                self.assertEqual(mesh[domain][0].npts, submesh_pts[domain]["x"])
-                self.assertEqual(
-                    len(mesh[domain][0].edges) - 1, submesh_pts[domain]["x"]
-                )
+        mesh = mesh_type(geometry, submesh_types, var_pts)
+
+        var_id_pts = {var.id: pts for var, pts in var_pts.items()}
+
+        self.assertEqual(mesh["negative electrode"][0].npts, var_id_pts[var.x_n.id])
+        self.assertEqual(mesh["separator"][0].npts, var_id_pts[var.x_s.id])
+        self.assertEqual(mesh["positive electrode"][0].npts, var_id_pts[var.x_p.id])
+
+        self.assertEqual(
+            len(mesh["negative electrode"][0].edges) - 1, var_id_pts[var.x_n.id]
+        )
+        self.assertEqual(len(mesh["separator"][0].edges) - 1, var_id_pts[var.x_s.id])
+        self.assertEqual(
+            len(mesh["positive electrode"][0].edges) - 1, var_id_pts[var.x_p.id]
+        )
 
     def test_combine_submeshes(self):
         param = pybamm.ParameterValues(
@@ -107,13 +104,8 @@ class TestMesh(unittest.TestCase):
         param.process_geometry(geometry)
 
         # provide mesh properties
-        submesh_pts = {
-            "negative electrode": {"x": 10},
-            "separator": {"x": 10},
-            "positive electrode": {"x": 12},
-            "negative particle": {"r": 5},
-            "positive particle": {"r": 6},
-        }
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
         submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
@@ -125,7 +117,7 @@ class TestMesh(unittest.TestCase):
         mesh_type = pybamm.Mesh
 
         # create mesh
-        mesh = mesh_type(geometry, submesh_types, submesh_pts)
+        mesh = mesh_type(geometry, submesh_types, var_pts)
 
         # create submesh
         submesh = mesh.combine_submeshes("negative electrode", "separator")
@@ -156,13 +148,8 @@ class TestMesh(unittest.TestCase):
         param.process_geometry(geometry)
 
         # provide mesh properties
-        submesh_pts = {
-            "negative electrode": {"x": 10},
-            "separator": {"x": 10},
-            "positive electrode": {"x": 12},
-            "negative particle": {"r": 5},
-            "positive particle": {"r": 6},
-        }
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
         submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
@@ -174,7 +161,7 @@ class TestMesh(unittest.TestCase):
         mesh_type = pybamm.Mesh
 
         # create mesh
-        mesh = mesh_type(geometry, submesh_types, submesh_pts)
+        mesh = mesh_type(geometry, submesh_types, var_pts)
 
         np.testing.assert_array_equal(
             mesh["negative electrode_left ghost cell"][0].edges[1],
@@ -202,16 +189,15 @@ class TestMesh(unittest.TestCase):
         param.process_geometry(geometry)
 
         # provide mesh properties
-        submesh_pts = {
-            "negative particle": {"r": 5, "x": 10},
-            "positive particle": {"r": 6, "x": 10},
-        }
+
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_p: 10, var.r_n: 5, var.r_p: 6}
         submesh_types = {
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
         }
 
-        mesh = pybamm.Mesh(geometry, submesh_types, submesh_pts)
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
         # check types
         self.assertIsInstance(mesh["negative particle"], list)
@@ -224,6 +210,38 @@ class TestMesh(unittest.TestCase):
             self.assertIsInstance(mesh["positive particle"][i], pybamm.Uniform1DSubMesh)
             self.assertEqual(mesh["negative particle"][i].npts, 5)
             self.assertEqual(mesh["positive particle"][i].npts, 6)
+
+    def test_mesh_coord_sys(self):
+        param = pybamm.ParameterValues(
+            base_parameters={
+                "Negative electrode width": 0.1,
+                "Separator width": 0.2,
+                "Positive electrode width": 0.3,
+            }
+        )
+
+        geometry = pybamm.Geometry1DMacro()
+        param.process_geometry(geometry)
+
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
+
+        submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+        }
+
+        mesh_type = pybamm.Mesh
+
+        # create mesh
+        mesh = mesh_type(geometry, submesh_types, var_pts)
+
+        for submeshlist in mesh.values():
+            for submesh in submeshlist:
+                self.assertTrue(submesh.coord_sys in pybamm.KNOWN_COORD_SYS)
 
 
 if __name__ == "__main__":

@@ -140,6 +140,10 @@ from .geometry.geometry import (
     Geometry3DMacro,
 )
 
+from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS
+from .geometry import standard_spatial_vars
+from .geometry.standard_spatial_vars import KNOWN_COORD_SYS
+
 #
 # Mesh and Discretisation classes
 #
@@ -167,6 +171,11 @@ from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
+
+#
+# other
+#
+from .processed_variable import ProcessedVariable
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
