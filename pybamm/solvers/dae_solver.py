@@ -34,11 +34,10 @@ class DaeSolver(pybamm.BaseSolver):
 
         """
 
-        # create simplified rhs and event expressions
+        # create simplified rhs algebraic and event expressions
         concatenated_rhs = model.concatenated_rhs.simplify()
         concatenated_algebraic = model.concatenated_algebraic.simplify()
         events = [event.simplify() for event in model.events]
-
 
         def residuals(t, y, ydot):
             rhs_eval = concatenated_rhs.evaluate(t, y)
