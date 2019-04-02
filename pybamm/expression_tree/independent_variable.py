@@ -5,6 +5,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+KNOWN_SPATIAL_VARS = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
+
 
 class IndependentVariable(pybamm.Symbol):
     """A node in the expression tree representing an independent variable
@@ -58,7 +60,7 @@ class SpatialVariable(IndependentVariable):
         self.coord_sys = coord_sys
         super().__init__(name, domain=domain)
 
-        if name not in pybamm.KNOWN_SPATIAL_VARS:
+        if name not in KNOWN_SPATIAL_VARS:
             raise ValueError(
                 "name must be KNOWN_SPATIAL_VARS  but is '{}'".format(name)
             )
