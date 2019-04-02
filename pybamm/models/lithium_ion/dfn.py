@@ -116,7 +116,6 @@ class DFN(pybamm.BaseModel):
         self._boundary_conditions.update(additional_bcs)
 
         "Additional Model Variables"
-        # TODO: add voltage and overpotentials to this
         additional_variables = {}
         self._variables.update(additional_variables)
 

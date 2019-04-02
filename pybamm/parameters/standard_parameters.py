@@ -201,5 +201,5 @@ m_p = m_p_dimensional / interfacial_current_scale_p
 
 
 # Electrode Properties
-sigma_n = sigma_n_dimensional * potential_scale / current_scale
-sigma_p = sigma_p_dimensional * potential_scale / current_scale
+sigma_n = sigma_n_dimensional * potential_scale / current_scale / L_x
+sigma_p = sigma_p_dimensional * potential_scale / current_scale / L_x

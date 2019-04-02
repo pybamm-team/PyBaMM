@@ -63,7 +63,7 @@ class TestDFN(unittest.TestCase):
             "positive particle": {"r": 3, "x": 3},
         }
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 0.1, 5))
+        modeltest.test_all(t_eval=np.linspace(0, 1, 100))
 
 
 if __name__ == "__main__":

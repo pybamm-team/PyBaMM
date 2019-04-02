@@ -95,7 +95,7 @@ c_p_init_dimensional = pybamm.Parameter("Initial concentration in positive elect
 
 def D_n_dimensional(c_n):
     "Dimensional diffusivity in negative particle"
-    return 1  # pybamm.FunctionParameter("Negative electrode diffusivity", c_n)
+    return pybamm.FunctionParameter("Negative electrode diffusivity", c_n)
 
 
 def D_n(c_n):
@@ -106,7 +106,7 @@ def D_n(c_n):
 
 def D_p_dimensional(c_p):
     "Dimensional diffusivity in positive particle"
-    return 1  # pybamm.FunctionParameter("Positive electrode diffusivity", c_p)
+    return pybamm.FunctionParameter("Positive electrode diffusivity", c_p)
 
 
 def D_p(c_p):
@@ -149,6 +149,8 @@ def U_p(c_p):
 
 # --------------------------------------------------------------------------------------
 """Scales"""
+# for purposes of testing dimensionless parameter sizes, we put i_typ = 24 A/m^2
+sp.i_typ = 24
 
 # Timescales
 # Discharge timescale
@@ -156,14 +158,14 @@ tau_discharge = sp.F * c_n_max * sp.L_x / sp.i_typ
 
 # Particle diffusion timescales
 tau_diffusion_n = R_n ** 2 / D_n_dimensional(c_n_max)
-tau_diffusion_p = R_n ** 2 / D_p_dimensional(c_p_max)
+tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max)
 
 # Electrolyte Diffusion timescale
 tau_diffusion_e = sp.L_x ** 2 / sp.D_e_dimensional(sp.c_e_typ)
 
 # reaction timescales
-tau_r_n = 1 / (sp.m_n_dimensional * sp.a_n_dim * sp.c_e_typ ** 0.5)
-tau_r_p = 1 / (sp.m_p_dimensional * sp.a_p_dim * sp.c_e_typ ** 0.5)
+tau_r_n = sp.F / (sp.m_n_dimensional * sp.a_n_dim * sp.c_e_typ ** 0.5)
+tau_r_p = sp.F / (sp.m_p_dimensional * sp.a_p_dim * sp.c_e_typ ** 0.5)
 
 # --------------------------------------------------------------------------------------
 """Dimensionless Parameters"""
@@ -186,6 +188,10 @@ epsilon = pybamm.Concatenation(
 
 a_n = sp.a_n_dim * R_n
 a_p = sp.a_p_dim * R_p
+
+# Electrode Properties
+sigma_n = sp.sigma_n_dimensional * sp.potential_scale / sp.i_typ / sp.L_x
+sigma_p = sp.sigma_p_dimensional * sp.potential_scale / sp.i_typ / sp.L_x
 
 # Microscale properties
 # Note: gamma_n == 1, so not needed

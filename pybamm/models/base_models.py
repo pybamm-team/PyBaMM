@@ -82,6 +82,12 @@ class BaseModel(object):
                 "Positive electrode OCV": os.path.join(
                     input_path, "lico2_ocp_Dualfoil.py"
                 ),
+                "Negative electrode diffusivity": os.path.join(
+                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
+                ),
+                "Positive electrode diffusivity": os.path.join(
+                    input_path, "lico2_diffusivity_Dualfoil.py"
+                ),
             },
         )
         self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
