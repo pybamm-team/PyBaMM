@@ -58,13 +58,9 @@ class SpatialVariable(IndependentVariable):
         self.coord_sys = coord_sys
         super().__init__(name, domain=domain)
 
-        known_var_names = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
-
-        if name not in known_var_names:
+        if name not in pybamm.KNOWN_SPATIAL_VARS:
             raise ValueError(
-                "name must be 'x', 'y', 'z', or 'r' (or sub k)  but is '{}'".format(
-                    name
-                )
+                "name must be KNOWN_SPATIAL_VARS  but is '{}'".format(name)
             )
         if domain == []:
             raise ValueError("domain must be provided")

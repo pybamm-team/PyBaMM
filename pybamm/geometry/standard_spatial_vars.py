@@ -1,6 +1,7 @@
 import pybamm
 
 KNOWN_COORD_SYS = ["cartesian", "spherical polar"]
+KNOWN_SPATIAL_VARS = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
 
 whole_cell = ["negative electrode", "separator", "positive electrode"]
 

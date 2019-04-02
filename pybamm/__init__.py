@@ -50,10 +50,7 @@ from .util import load_function
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import (
-    Symbol,
-    simplify_if_constant,
-)
+from .expression_tree.symbol import Symbol, simplify_if_constant
 from .expression_tree.binary_operators import (
     BinaryOperator,
     Addition,
@@ -143,7 +140,7 @@ from .geometry.geometry import (
 )
 
 from .geometry import standard_spatial_vars
-from .geometry.standard_spatial_vars import KNOWN_COORD_SYS
+from .geometry.standard_spatial_vars import KNOWN_COORD_SYS, KNOWN_SPATIAL_VARS
 
 #
 # Mesh and Discretisation classes
