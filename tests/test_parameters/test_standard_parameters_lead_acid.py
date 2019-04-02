@@ -55,7 +55,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_concatenated_parameters(self):
         # create
-        s_param = pybamm.standard_parameters.s
+        s_param = pybamm.standard_parameters_lead_acid.s
         self.assertIsInstance(s_param, pybamm.Concatenation)
         self.assertEqual(
             s_param.domain, ["negative electrode", "separator", "positive electrode"]
