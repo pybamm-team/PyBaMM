@@ -19,8 +19,7 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         j = pybamm.Scalar(1)
         c_e = pybamm.Variable("c_e", domain=whole_cell)
-        epsilon = pybamm.Scalar(1)
-        pybamm.electrolyte_diffusion.StefanMaxwell(c_e, epsilon, j, param)
+        pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
 
     def test_basic_processing(self):
         # Parameter values
@@ -31,8 +30,7 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         j = pybamm.Scalar(0.001)
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         c_e = pybamm.Variable("c_e", domain=whole_cell)
-        epsilon = pybamm.Scalar(1)
-        model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, epsilon, j, param)
+        model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
 
         modeltest = tests.StandardModelTest(model)
         # Either
@@ -44,6 +42,36 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         # Or
         # 2. run all the tests in one go
         modeltest.test_all()
+
+    def test_basic_processing_different_bcs(self):
+        "Change the boundary conditions and test"
+        # Parameter values
+        param = pybamm.standard_parameters
+        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+
+        # Variables and parameters
+        j = pybamm.Scalar(0.001)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c_e = pybamm.Variable("c_e", domain=whole_cell)
+        model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
+
+        # Dirichlet conditions
+        model.boundary_conditions = {c_e: {"left": 0, "right": 0}}
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+        # Dirichlet and Neumann conditions
+        model2 = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
+        N_e = model2.variables["Cation flux"]
+        model2.boundary_conditions = {c_e: {"left": 0}, N_e: {"right": 0}}
+        modeltest2 = tests.StandardModelTest(model2)
+        modeltest2.test_all()
+
+        model3 = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
+        N_e = model3.variables["Cation flux"]
+        model3.boundary_conditions = {N_e: {"left": 0}, c_e: {"right": 0}}
+        modeltest3 = tests.StandardModelTest(model3)
+        modeltest3.test_all()
 
 
 if __name__ == "__main__":

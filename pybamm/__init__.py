@@ -50,7 +50,7 @@ from .util import load_function
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import Symbol
+from .expression_tree.symbol import Symbol, simplify_if_constant
 from .expression_tree.binary_operators import (
     BinaryOperator,
     Addition,
@@ -72,6 +72,7 @@ from .expression_tree.unary_operators import (
     Negate,
     AbsoluteValue,
     Function,
+    Index,
     SpatialOperator,
     Gradient,
     Divergence,
@@ -80,6 +81,7 @@ from .expression_tree.unary_operators import (
     grad,
     div,
     surf,
+    integrate,
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
@@ -102,15 +104,17 @@ from .models.base_models import BaseModel, LeadAcidBaseModel, LithiumIonBaseMode
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
-from .models import li_ion
+from .models import lithium_ion
 
 #
 # Submodel classes
 #
 from .models.submodels import (
+    electrode,
     electrolyte_current,
     electrolyte_diffusion,
     interface,
+    particle,
     porosity,
 )
 
@@ -135,6 +139,10 @@ from .geometry.geometry import (
     Geometry1p1DMicro,
     Geometry3DMacro,
 )
+
+from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS
+from .geometry import standard_spatial_vars
+from .geometry.standard_spatial_vars import KNOWN_COORD_SYS
 
 #
 # Mesh and Discretisation classes
@@ -163,6 +171,11 @@ from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
+
+#
+# other
+#
+from .processed_variable import ProcessedVariable
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

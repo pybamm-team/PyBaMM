@@ -138,6 +138,27 @@ class TestConcatenations(unittest.TestCase):
             (mesh[b_dom[0]][0].npts + mesh[a_dom[0]][0].npts + mesh[b_dom[1]][0].npts,),
         )
 
+    def test_domain_concatenation_simplify(self):
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+
+        a_dom = ["negative electrode"]
+        b_dom = ["positive electrode"]
+        a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
+
+        conc = pybamm.DomainConcatenation([a, b], mesh)
+
+        # should be simplified to a vector
+        self.assertIsInstance(conc.simplify(), pybamm.Vector)
+        np.testing.assert_array_equal(
+            conc.simplify().evaluate(),
+            np.concatenate(
+                [np.full(mesh[a_dom[0]][0].npts, 2), np.full(mesh[b_dom[0]][0].npts, 1)]
+            ),
+        )
+
     def test_concatenation_orphans(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")

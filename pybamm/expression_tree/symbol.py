@@ -8,8 +8,27 @@ import pybamm
 import anytree
 import numbers
 import copy
+import autograd.numpy as np
 
 from anytree.exporter import DotExporter
+
+
+def simplify_if_constant(new_node):
+    """
+    Utility function to simplify an expression tree if it evalutes to a constant
+    scalar, vector or matrix
+    """
+    if new_node.is_constant():
+        result = new_node.evaluate_ignoring_errors()
+        if result is not None:
+            if isinstance(result, numbers.Number):
+                return pybamm.Scalar(result, domain=new_node.domain)
+            elif isinstance(result, np.ndarray):
+                if result.ndim == 1:
+                    return pybamm.Vector(result, domain=new_node.domain)
+                else:
+                    return pybamm.Matrix(result, domain=new_node.domain)
+    return new_node
 
 
 class Symbol(anytree.NodeMixin):
@@ -37,6 +56,10 @@ class Symbol(anytree.NodeMixin):
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
         self.domain = domain
+
+        # useful flags
+        self._has_left_ghost_cell = False
+        self._has_right_ghost_cell = False
 
     @property
     def name(self):
@@ -361,28 +384,32 @@ class Symbol(anytree.NodeMixin):
         # do the search, return true if no relevent nodes are found
         return all([not (isinstance(n, search_types)) for n in self.pre_order()])
 
-    def evaluates_to_value(self, value):
+    def evaluate_ignoring_errors(self):
         """
-        Returns True if evaluating the expression returns a given constant value.
-        Returns False otherwise, including if NotImplementedError or TyperError
-        is raised.
-        !Not to be confused with isinstance(self, pybamm.Scalar)!
-
-        Parameters
-        ----------
-        value: Number
-            the value to compare against
+        Evaluates the expression. If a node exists in the tree that cannot be evaluated
+        as a scalar or vectr (e.g. Parameter, Variable, StateVector), then None is
+        returned. Otherwise the result of the evaluation is given
 
         See Also
         --------
         evaluate : evaluate the expression
 
         """
-        return (
-            self.is_constant()
-            and self.evaluates_to_number()
-            and self.evaluate() == value
-        )
+        try:
+            result = self.evaluate(t=0)
+        except NotImplementedError:
+            # return false if NotImplementedError is raised
+            # (there is a e.g. Parameter, Variable, ... in the tree)
+            return None
+        except TypeError as error:
+            # return false if specific TypeError is raised
+            # (there is a e.g. StateVector in the tree)
+            if error.args[0] == "StateVector cannot evaluate input 'y=None'":
+                return None
+            else:
+                raise error
+
+        return result
 
     def evaluates_to_number(self):
         """
@@ -396,20 +423,12 @@ class Symbol(anytree.NodeMixin):
         evaluate : evaluate the expression
 
         """
-        try:
-            # return true if node evaluates to a number
-            return isinstance(self.evaluate(t=0), numbers.Number)
-        except NotImplementedError:
-            # return false if NotImplementedError is raised
-            # (there is a e.g. Parameter, Variable, ... in the tree)
+        result = self.evaluate_ignoring_errors()
+
+        if isinstance(result, numbers.Number):
+            return True
+        else:
             return False
-        except TypeError as error:
-            # return false if specific TypeError is raised
-            # (there is a e.g. StateVector in the tree)
-            if error.args[0] == "StateVector cannot evaluate input 'y=None'":
-                return False
-            else:
-                raise error
 
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""
@@ -440,4 +459,22 @@ class Symbol(anytree.NodeMixin):
 
         new_symbol = copy.deepcopy(self)
         new_symbol.parent = None
-        return new_symbol
+        return simplify_if_constant(new_symbol)
+
+    @property
+    def has_left_ghost_cell(self):
+        return self._has_left_ghost_cell
+
+    @has_left_ghost_cell.setter
+    def has_left_ghost_cell(self, value):
+        assert isinstance(value, bool)
+        self._has_left_ghost_cell = value
+
+    @property
+    def has_right_ghost_cell(self):
+        return self._has_right_ghost_cell
+
+    @has_right_ghost_cell.setter
+    def has_right_ghost_cell(self, value):
+        assert isinstance(value, bool)
+        self._has_right_ghost_cell = value

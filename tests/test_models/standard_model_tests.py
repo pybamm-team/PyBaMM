@@ -12,33 +12,43 @@ class StandardModelTest(object):
     def __init__(self, model):
         self.model = model
         # Set default parameters
-        self.param = model.default_parameter_values
+        self.parameter_values = model.default_parameter_values
         # Process geometry
-        self.param.process_geometry(model.default_geometry)
+        self.parameter_values.process_geometry(model.default_geometry)
         geometry = model.default_geometry
         # Set default discretisation
-        mesh = pybamm.Mesh(
-            geometry, model.default_submesh_types, model.default_submesh_pts
-        )
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         self.disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         # Set default solver
         self.solver = model.default_solver
 
-    def test_processing_parameters(self, param=None):
+    def test_processing_parameters(self, parameter_values=None):
         # Overwrite parameters if given
-        if param is not None:
-            self.param = param
-        self.param.process_model(self.model)
+        if parameter_values is not None:
+            self.parameter_values = parameter_values
+        self.parameter_values.process_model(self.model)
         # Model should still be well-posed after processing
         self.model.check_well_posedness()
+        # No Parameter or FunctionParameter nodes in the model
+        for eqn in {**self.model.rhs, **self.model.algebraic}.values():
+            if any(
+                [
+                    isinstance(x, (pybamm.Parameter, pybamm.FunctionParameter))
+                    for x in eqn.pre_order()
+                ]
+            ):
+                raise TypeError(
+                    "Not all Parameter and FunctionParameter objects processed"
+                )
 
     def test_processing_disc(self, disc=None):
         # Overwrite discretisation if given
         if disc is not None:
             self.disc = disc
         self.disc.process_model(self.model)
+
         # Model should still be well-posed after processing
-        self.model.check_well_posedness()
+        self.model.check_well_posedness(post_discretisation=True)
 
     def test_solving(self, solver=None, t_eval=None):
         # Overwrite solver if given
@@ -58,7 +68,8 @@ class StandardModelTest(object):
         # check if geometry has changed, throw error if so (need to re-discretise)
         if any(
             [
-                length in param.keys() and param[length] != self.param[length]
+                length in param.keys()
+                and param[length] != self.parameter_values[length]
                 for length in [
                     "Negative electrode width",
                     "Separator width",
