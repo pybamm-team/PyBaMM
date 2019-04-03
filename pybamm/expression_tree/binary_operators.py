@@ -15,24 +15,95 @@ def simplify_addition_subtraction(myclass, left, right):
     some common simplifications for addition and subtraction
 
     if children are associative (addition, subtraction, etc) then try to find
-    pairs of constant children and simplify them
-    """
-    for child1, child2 in zip([left, right], [right, left]):
-        if child1.is_constant():
-            if isinstance(child2, pybamm.Addition) or \
-                    isinstance(child2, pybamm.Subtraction):
-                # don't care about ordering
-                for i in range(2):
-                    if child2.children[i].is_constant():
-                        tmp = copy.deepcopy(child2.children[i])
-                        tmp.parent = None
-                        left = myclass(child1, tmp)
-                        left = pybamm.simplify_if_constant(left)
-                        right = copy.deepcopy(child2.children[1 - i])
-                        right.parent = None
-                        return child2.__class__(left, right)
+    pairs of constant children (that produce a value) and simplify them
 
-    return myclass(left, right)
+    """
+    numerator = []
+    numerator_types = []
+
+    # recursive function to flatten a term involving only additions or subtractions
+    def flatten(previous_class, this_class, left_child, right_child):
+        for child in [left_child, right_child]:
+            if isinstance(child, pybamm.Addition) \
+                    or isinstance(child, pybamm.Subtraction):
+                left = copy.deepcopy(child.children[0])
+                left.parent = None
+                right = copy.deepcopy(child.children[1])
+                right .parent = None
+                if child == left_child:
+                    flatten(previous_class, child.__class__, left, right)
+                else:
+                    flatten(this_class, child.__class__, left, right)
+
+            else:
+                numerator.append(child)
+                if child == left_child:
+                    numerator_types.append(previous_class)
+                else:
+                    numerator_types.append(this_class)
+
+    flatten(None, myclass, left, right)
+
+    # function to partition a source list of symbols into those that return a constant
+    # value, and those that do not
+    def partition_by_constant(source, types):
+        constant = []
+        nonconstant = []
+        constant_t = []
+        nonconstant_t = []
+
+        for child, t in zip(source, types):
+            if child.is_constant():
+                result = child.evaluate_ignoring_errors()
+                if result is not None:
+                    constant.append(child)
+                    constant_t.append(t)
+                else:
+                    nonconstant.append(child)
+                    nonconstant_t.append(t)
+            else:
+                nonconstant.append(child)
+                nonconstant_t.append(t)
+        return constant, nonconstant, constant_t, nonconstant_t
+
+    def fold_add_subtract(array, types):
+        ret = None
+        if len(array) > 0:
+            ret = array[0]
+            for child, t in zip(array[1:], types[1:]):
+                if t == pybamm.Addition:
+                    ret += child
+                else:
+                    ret -= child
+        return ret
+
+    # can reorder the numerator
+    (constant, nonconstant,
+     constant_t, nonconstant_t) = partition_by_constant(numerator, numerator_types)
+
+    constant_expr = fold_add_subtract(constant, constant_t)
+    nonconstant_expr = fold_add_subtract(nonconstant, nonconstant_t)
+
+    if constant_expr is not None and nonconstant_expr is None:
+        # might be no nonconstants
+        new_expression = pybamm.simplify_if_constant(constant_expr)
+    elif constant_expr is None and nonconstant_expr is not None:
+        # might be no constants
+        new_expression = nonconstant_expr
+    else:
+        # or mix of both
+        constant_expr = pybamm.simplify_if_constant(constant_expr)
+        if constant_t[0] is None and nonconstant_t[0] == pybamm.Addition:
+            new_expression = constant_expr + nonconstant_expr
+        elif constant_t[0] is None and nonconstant_t[0] == pybamm.Subtraction:
+            new_expression = constant_expr - nonconstant_expr
+        elif nonconstant_t[0] is None and constant_t[0] == pybamm.Addition:
+            new_expression = nonconstant_expr + constant_expr
+        else:
+            assert constant_t[0] == pybamm.Subtraction
+            new_expression = nonconstant_expr - constant_expr
+
+    return new_expression
 
 
 def simplify_multiplication_division(myclass, left, right):
@@ -40,60 +111,154 @@ def simplify_multiplication_division(myclass, left, right):
     some common simplifications for multiplication and division
 
     if children are associative (multiply, division, etc) then try to find
-    pairs of constant children and simplify them
+    pairs of constant children (that produce a value) and simplify them
+
+    can handle matrix multiplication. If there are any on the numerator, it will only
+    try to simplify pairs of neighbouring constant children. If there are any matrix
+    multiplications on the denominator an exception is raised
     """
-    numerator_constant = []
-    denominator_constant = []
-    numerator_nonconstant = []
-    denominator_nonconstant = []
-    matrix_multiplys = []
-    in_numerator = True
-    for child in [left, right]:
-        if isinstance(child, pybamm.Multiplication) or isinstance(child, pybamm.Division):
-            for i in range(2):
-                tmp = copy.deepcopy(child.children[i])
-                tmp.parent = None
-                if in_numerator:
-                    if tmp.is_constant():
-                        numerator_constant.append(tmp)
-                    else:
-                        numerator_nonconstant.append(tmp)
+    numerator = []
+    denominator = []
+    numerator_types = []
+
+    # recursive function to flatten a term involving only multiplications or divisions
+    def flatten(previous_class, this_class, left_child, right_child, in_numerator):
+        for child in [left_child, right_child]:
+
+            if isinstance(child, pybamm.Multiplication) \
+                    or isinstance(child, pybamm.Division) \
+                    or isinstance(child, pybamm.MatrixMultiplication):
+                left = copy.deepcopy(child.children[0])
+                left.parent = None
+                right = copy.deepcopy(child.children[1])
+                right .parent = None
+                if child == left_child:
+                    flatten(previous_class, child.__class__, left, right, in_numerator)
                 else:
-                    if tmp.is_constant():
-                        denominator_constant.append(tmp)
+                    flatten(this_class, child.__class__, left, right, in_numerator)
+            else:
+                if in_numerator:
+                    numerator.append(child)
+                    if child == left_child:
+                        numerator_types.append(previous_class)
                     else:
-                        denominator_nonconstant.append(tmp)
-                if i == 0 and isinstance(child, pybamm.Division):
-                    in_numerator = not in_numerator
-        if child == left and myclass == pybamm.Division:
-            in_numerator = not in_numerator
+                        numerator_types.append(this_class)
+                else:
+                    denominator.append(child)
+                    if this_class == pybamm.MatrixMultiplication:
+                        raise pybamm.ModelError(
+                            'matrix multiplication on the denominator')
 
-        elif isinstance(child, pybamm.MatrixMultiplication):
-            if not in_numerator:
-                raise pybamm.ModelError('matrix multiplication found on denominator!')
-            matrix_multiplys.append(child)
+            if child == left_child and this_class == pybamm.Division:
+                in_numerator = not in_numerator
 
+    flatten(None, myclass, left, right, True)
 
+    # check if there is a matrix multiply in the numerator (if so we can't reorder it)
+    has_matrix_multiply = False
+    for child in numerator_types:
+        has_matrix_multiply |= isinstance(child, pybamm.MatrixMultiplication)
 
-    new_numerator = pybamm.Scalar(1)
-    for child in numerator_constant:
-        new_numerator = new_numerator * child
-    new_numerator = pybamm.simplify_if_constant(new_numerator)
-    for child in numerator_nonconstant:
-        new_numerator = new_numerator * child
+    # function to partition a source list of symbols into those that return a constant
+    # value, and those that do not
+    def partition_by_constant(source, types=None):
+        constant = []
+        nonconstant = []
 
-    new_denominator = pybamm.Scalar(1)
-    for child in denominator_constant:
-        new_denominator = new_denominator * child
-    new_denominator= pybamm.simplify_if_constant(new_denominator)
-    for child in denominator_constant:
-        new_denominator = new_denominator * child
+        for child in source:
+            if child.is_constant():
+                result = child.evaluate_ignoring_errors()
+                if result is not None:
+                    constant.append(child)
+                else:
+                    nonconstant.append(child)
+            else:
+                nonconstant.append(child)
+        return constant, nonconstant
 
-    new_mat_muls = 1
+    # assume everything in denominator is a scalar so can reorder
+    denominator_constant, denominator_nonconstant = partition_by_constant(denominator)
 
-    new_expression = new_numerator / new_denominator
+    def fold_multiply(array, types=None):
+        ret = None
+        if len(array) > 0:
+            ret = array[0]
+            if types is None:
+                for child in array[1:]:
+                    ret *= child
+            else:
+                for child, t in zip(array[1:], types[1:]):
+                    if t == pybamm.MatrixMultiplication:
+                        ret = ret @ child
+                    else:
+                        ret *= child
+        return ret
 
+    # compact denominator_constant to a constant scalar
+    constant_denominator_expr = fold_multiply(denominator_constant)
 
+    # see if there is a constant term in the numerator.
+    # if so combine with constant denominator term
+    found_a_constant = False
+    for i, child in enumerate(numerator):
+        if child.is_constant():
+            result = child.evaluate_ignoring_errors()
+            if result is not None:
+                if constant_denominator_expr is not None:
+                    numerator[i] = \
+                        pybamm.simplify_if_constant(child / constant_denominator_expr)
+                found_a_constant = True
+
+    if not found_a_constant:
+        # not possible to simplify numerator, just return as is
+        new_numerator = fold_multiply(numerator, numerator_types)
+
+        # there has to be at least one numerator
+        if constant_denominator_expr is not None:
+            # better to invert the constant denominator to get rid of the divide
+            invert_constant_denom = \
+                pybamm.simplify_if_constant(1 / constant_denominator_expr)
+            new_numerator = invert_constant_denom * new_numerator
+
+    # here we have determined that there is at least one constant in the numerator and
+    # we've combined all the constants in the denominator with it
+    elif has_matrix_multiply:
+        # only consider neighbouring children for numerator as we can't reorder mat muls
+        new_numerator = numerator[0]
+        for child, t in zip(numerator[1:], numerator_types[1:]):
+            if new_numerator[-1].is_constant() and child.is_constant():
+                if t == pybamm.MatrixMultiplication:
+                    new_numerator[-1] = new_numerator[-1] @ child
+                else:
+                    new_numerator[-1] *= child
+                new_numerator[-1] = pybamm.simplify_if_constant(new_numerator[-1])
+            else:
+                new_numerator.append(child)
+
+    else:
+        # can reorder the numerator since no matrix multiplies
+        numerator_constant, numerator_nonconstant = partition_by_constant(numerator)
+
+        constant_numerator_expr = fold_multiply(numerator_constant)
+        nonconstant_numerator_expr = fold_multiply(numerator_nonconstant)
+
+        # there is at least one constant in the numerator
+        constant_numerator_expr = pybamm.simplify_if_constant(constant_numerator_expr)
+
+        # might be no nonconstant numerator terms
+        if nonconstant_numerator_expr is None:
+            new_numerator = constant_numerator_expr
+        else:
+            new_numerator = constant_numerator_expr * nonconstant_numerator_expr
+
+    # combine new numerator with the nonconstant denominator terms (if they exist) and
+    # return the simplified expression
+    new_expression = new_numerator
+    new_denominator = fold_multiply(denominator_nonconstant)
+    if new_denominator is not None:
+        new_expression /= new_denominator
+
+    return new_expression
 
 
 def is_zero(expr):
