@@ -12,10 +12,19 @@ import copy
 
 def simplify_addition_subtraction(myclass, left, right):
     """
-    some common simplifications for addition and subtraction
+    if children are associative (addition, subtraction, etc) then try to find pairs of
+    constant children (that produce a value) and simplify them to a single term
 
-    if children are associative (addition, subtraction, etc) then try to find
-    pairs of constant children (that produce a value) and simplify them
+    Parameters
+    ----------
+
+    myclass: class
+        the binary operator class (pybamm.Addition or pybamm.Subtraction) operating on
+        children left and right
+    left: derived from pybamm.Symbol
+        the left child of the binary operator
+    right: derived from pybamm.Symbol
+        the right child of the binary operator
 
     """
     numerator = []
@@ -108,14 +117,24 @@ def simplify_addition_subtraction(myclass, left, right):
 
 def simplify_multiplication_division(myclass, left, right):
     """
-    some common simplifications for multiplication and division
-
     if children are associative (multiply, division, etc) then try to find
     pairs of constant children (that produce a value) and simplify them
 
     can handle matrix multiplication. If there are any on the numerator, it will only
     try to simplify pairs of neighbouring constant children. If there are any matrix
     multiplications on the denominator an exception is raised
+
+    Parameters
+    ----------
+
+    myclass: class
+        the binary operator class (pybamm.Addition or pybamm.Subtraction) operating on
+        children left and right
+    left: derived from pybamm.Symbol
+        the left child of the binary operator
+    right: derived from pybamm.Symbol
+        the right child of the binary operator
+
     """
     numerator = []
     denominator = []
