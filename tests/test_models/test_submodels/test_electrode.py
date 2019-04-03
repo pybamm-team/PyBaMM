@@ -12,8 +12,7 @@ import unittest
 class TestOhm(unittest.TestCase):
     def test_basic_processing(self):
         # Parameters
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         # Variables
         phi_s_n = pybamm.Variable(
@@ -25,27 +24,25 @@ class TestOhm(unittest.TestCase):
         )
         phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
 
-        # Porosity and current
-        eps = param.epsilon
+        # Current density
         j = pybamm.interface.homogeneous_reaction(
             ["negative electrode", "separator", "positive electrode"]
         )
-        eps_n, eps_s, eps_p = eps.orphans
         j_n, j_s, j_p = j.orphans
 
         # Set up model and test
-        model_n = pybamm.electrode.Ohm(phi_s_n, eps_n, j_n, param)
+        model_n = pybamm.electrode.Ohm(phi_s_n, j_n, param)
         model_n_test = tests.StandardModelTest(model_n)
         model_n_test.test_all()
 
-        model_p = pybamm.electrode.Ohm(phi_s_p, eps_p, j_p, param)
+        model_p = pybamm.electrode.Ohm(phi_s_p, j_p, param)
         # overwrite boundary conditions for purposes of the test
         i_s_p = model_p.variables["Positive electrode solid current"]
         model_p.boundary_conditions = {phi_s_p: {"right": 0}, i_s_p: {"left": 0}}
         model_p_test = tests.StandardModelTest(model_p)
         model_p_test.test_all()
 
-        model_whole = pybamm.electrode.Ohm(phi_s, eps, j, param)
+        model_whole = pybamm.electrode.Ohm(phi_s, j, param)
         # overwrite boundary conditions for purposes of the test
         i_s_n = model_whole.variables["Negative electrode solid current"]
         i_s_p = model_whole.variables["Positive electrode solid current"]

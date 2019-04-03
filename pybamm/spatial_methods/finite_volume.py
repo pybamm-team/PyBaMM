@@ -223,7 +223,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             edges = submesh_list[0].edges
 
         # check for particle domain
-        if ("negative particle" or "positive particle") in domain:
+        if submesh_list[0].coord_sys == "spherical polar":
 
             # create np.array of repeated submesh[0].nodes
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
@@ -298,9 +298,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Calculate integration vector
         integration_vector = self.definite_integral_vector(domain)
-        # Check for particle domain
-        if ("negative particle" or "positive particle") in symbol.domain:
-            submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+
+        # Check for spherical domains
+        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        if submesh_list[0].coord_sys == "spherical polar":
             second_dim = len(submesh_list)
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
             r = pybamm.Vector(r_numpy)
@@ -495,7 +496,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             elif side == "right":
                 return array[-1] + (array[-1] - array[-2]) / 2
 
-        return BoundaryValueEvaluated(discretised_symbol, linear_extrapolation)
+        boundary_value = pybamm.Function(linear_extrapolation, discretised_symbol)
+        boundary_value.domain = []
+        return boundary_value
 
     def mass_matrix(self, symbol, boundary_conditions):
         """
@@ -534,10 +537,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         mass = kron(eye(sec_pts), prim_mass)
         return pybamm.Matrix(mass)
 
-    #######################################################
-    # Can probably be moved outside of the spatial method
-    ######################################################
-
     def compute_diffusivity(
         self, discretised_symbol, extrapolate_left=False, extrapolate_right=False
     ):
@@ -564,7 +563,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.NodeToEdge`
+        :class:`pybamm.Function`
             Averaged symbol. When evaluated, this returns either a scalar or an array of
             shape (n-1,) as appropriate.
         """
@@ -580,6 +579,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 mean_array = np.concatenate([mean_array, np.array([right_node])])
             return mean_array
 
+<<<<<<< HEAD
         return pybamm.NodeToEdge(discretised_symbol, arithmetic_mean)
 
 
@@ -668,3 +668,15 @@ class NodeToEdge(pybamm.SpatialOperator):
         # Return zeros of correct size
         jac = csr_matrix((np.size(variable_y_indices) - 1, np.size(variable_y_indices)))
         return pybamm.Matrix(jac)
+=======
+        def node_to_edge(symbol):
+            # If the symbol is a numpy array of shape (n,), do the averaging
+            # NOTE: Doing this check every time might be slow?
+            if isinstance(symbol, np.ndarray) and len(symbol.shape) == 1:
+                return arithmetic_mean(symbol)
+            # If not, no need to average
+            else:
+                return symbol
+
+        return pybamm.Function(node_to_edge, discretised_symbol)
+>>>>>>> master

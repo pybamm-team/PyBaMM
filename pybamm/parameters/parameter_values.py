@@ -214,8 +214,6 @@ class ParameterValues(dict):
                 return pybamm.Function(symbol.func, new_child)
             elif isinstance(symbol, pybamm.Integral):
                 return pybamm.Integral(new_child, symbol.integration_variable)
-            elif isinstance(symbol, pybamm.NodeToEdge):
-                return pybamm.NodeToEdge(new_child, symbol.node_to_edge_function)
             elif isinstance(symbol, pybamm.BoundaryValue):
                 return pybamm.BoundaryValue(new_child, symbol.side)
             else:

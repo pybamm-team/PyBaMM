@@ -106,7 +106,7 @@ from .models.base_models import BaseModel, LeadAcidBaseModel, LithiumIonBaseMode
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
-from .models import li_ion
+from .models import lithium_ion
 
 #
 # Submodel classes
@@ -116,6 +116,7 @@ from .models.submodels import (
     electrolyte_current,
     electrolyte_diffusion,
     interface,
+    particle,
     porosity,
 )
 
@@ -125,9 +126,8 @@ from .models.submodels import (
 from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard parameters
 from .parameters.parameter_values import ParameterValues
 from .parameters import standard_current_functions
-from .parameters import standard_parameters
-
-# The following modules call standard_parameters
+from .parameters import geometric_parameters
+from .parameters import electrical_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
 
 #
@@ -141,6 +141,10 @@ from .geometry.geometry import (
     Geometry3DMacro,
 )
 
+from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS
+from .geometry import standard_spatial_vars
+from .geometry.standard_spatial_vars import KNOWN_COORD_SYS
+
 #
 # Mesh and Discretisation classes
 #
@@ -152,7 +156,7 @@ from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
-from .spatial_methods.finite_volume import FiniteVolume, NodeToEdge
+from .spatial_methods.finite_volume import FiniteVolume
 
 #
 # Simulation class

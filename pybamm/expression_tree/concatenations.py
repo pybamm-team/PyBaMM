@@ -177,6 +177,7 @@ class DomainConcatenation(Concatenation):
                 vector[self._slices[dom]] = child_vector[slices[dom]]
 
         return vector
+<<<<<<< HEAD
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -232,3 +233,5 @@ class SparseStack(pybamm.Symbol):
             else:
                 evaluated_child = csr_matrix(evaluated_child)
         return evaluated_child
+=======
+>>>>>>> master
