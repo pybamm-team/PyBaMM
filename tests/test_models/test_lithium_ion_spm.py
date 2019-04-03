@@ -19,30 +19,34 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
-        T, Y = modeltest.solver.t, modeltest.solver.y
+        t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
 
         # check surface concentration decreases in negative particle and
         # increases in positive particle for discharge
-        np.testing.assert_array_less(
-            model.variables["Negative particle surface concentration"].evaluate(T, Y)[
-                1:
-            ],
-            model.variables["Negative particle surface concentration"].evaluate(T, Y)[
-                :-1
-            ],
+        c_s_n_surf = pybamm.ProcessedVariable(
+            model.variables["Negative particle surface concentration"],
+            t_sol,
+            y_sol,
+            mesh=modeltest.disc.mesh,
         )
-        np.testing.assert_array_less(
-            model.variables["Positive particle surface concentration"].evaluate(T, Y)[
-                :-1
-            ],
-            model.variables["Positive particle surface concentration"].evaluate(T, Y)[
-                1:
-            ],
+        c_s_p_surf = pybamm.ProcessedVariable(
+            model.variables["Positive particle surface concentration"],
+            t_sol,
+            y_sol,
+            mesh=modeltest.disc.mesh,
         )
+        # neg surf concentration should be monotonically decreasing for a discharge
+        np.testing.assert_array_less(
+            c_s_n_surf.entries[:, 1:], c_s_n_surf.entries[:, :-1]
+        )
+        # pos surf concentration should be monotonically increasing for a discharge
+        np.testing.assert_array_less(
+            c_s_p_surf.entries[:, :-1], c_s_p_surf.entries[:, 1:]
+        )
+
         # test that surface concentrations are all positive
-        np.testing.assert_array_less(
-            0, model.variables["Negative particle surface concentration"].evaluate(T, Y)
-        )
+        np.testing.assert_array_less(0, c_s_n_surf.entries)
+        np.testing.assert_array_less(0, c_s_p_surf.entries)
 
 
 if __name__ == "__main__":
