@@ -15,7 +15,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         model = pybamm.lead_acid.NewmanTiedemann()
         # Make grid very coarse for quick test (note that r domain doesn't matter)
         var = pybamm.standard_spatial_vars
-        self.default_var_pts = {
+        model.default_var_pts = {
             var.x_n: 3,
             var.x_s: 3,
             var.x_p: 3,
@@ -29,7 +29,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         model = pybamm.lead_acid.NewmanTiedemann()
         # Make grid very coarse for quick test (note that r domain doesn't matter)
         var = pybamm.standard_spatial_vars
-        self.default_var_pts = {
+        model.default_var_pts = {
             var.x_n: 3,
             var.x_s: 3,
             var.x_p: 3,
