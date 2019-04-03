@@ -155,7 +155,7 @@ def simplify_multiplication_division(myclass, left, right):
     flatten(None, myclass, left, right, True)
 
     # check if there is a matrix multiply in the numerator (if so we can't reorder it)
-    has_matrix_multiply = False
+    has_matrix_multiply = myclass == pybamm.MatrixMultiplication
     for t in numerator_types:
         has_matrix_multiply |= t == pybamm.MatrixMultiplication
 

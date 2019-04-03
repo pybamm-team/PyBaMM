@@ -158,8 +158,12 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
         self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
 
+        # check these don't simplify
         self.assertIsInstance((c * e).simplify(), pybamm.Multiplication)
         self.assertIsInstance((e / c).simplify(), pybamm.Division)
+        self.assertIsInstance((c).simplify(), pybamm.Parameter)
+        c1 = pybamm.Parameter("c1")
+        self.assertIsInstance((c1 * c).simplify(), pybamm.Multiplication)
 
         # should simplify division to multiply
         self.assertIsInstance((c / e).simplify(), pybamm.Multiplication)
@@ -183,6 +187,8 @@ class TestSymbol(unittest.TestCase):
         # power simplification
         self.assertIsInstance((c ** a).simplify(), pybamm.Scalar)
         self.assertEqual((c ** a).simplify().evaluate(), 1)
+        self.assertIsInstance((a ** c).simplify(), pybamm.Scalar)
+        self.assertEqual((a ** c).simplify().evaluate(), 0)
         d = pybamm.Scalar(2)
         self.assertIsInstance((c ** d).simplify(), pybamm.Power)
 
