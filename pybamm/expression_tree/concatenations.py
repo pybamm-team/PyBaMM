@@ -87,7 +87,7 @@ class NumpyConcatenation(pybamm.Symbol):
             # NOTE: need to think about if this is the right thing to do here
             return pybamm.Scalar(0)
         else:
-            return SparseStack([child.jac(variable) for child in self.children])
+            return SparseStack(*[child.jac(variable) for child in self.children])
 
 
 class DomainConcatenation(Concatenation):
@@ -184,7 +184,7 @@ class DomainConcatenation(Concatenation):
             # NOTE: need to think about if this is the right thing to do here
             return pybamm.Scalar(0)
         else:
-            return SparseStack([child.jac(variable) for child in self.children])
+            return SparseStack(*[child.jac(variable) for child in self.children])
 
 
 class SparseStack(pybamm.Symbol):
@@ -214,12 +214,21 @@ class SparseStack(pybamm.Symbol):
             return vstack([self.evaluate_child(child, t, y) for child in self.children])
 
     def evaluate_child(self, child, t, y):
-        # I think this probably a very hacky way of doing this, but need
+        """ Evaluates the child and, if the results is dense, converts the
+        result as a sparse matrix.
+        """
+        # NOTE: I think this probably a very hacky way of doing this, but need
         # some way of concatenating sparse matrices with dense matrices that
         # come from evaluate. The other way would be to make all the matrices
         # dense and then do a NumpyConcatenation, but I fear this will be bad
         # when the Jacobian is very large
         evaluated_child = child.evaluate(t, y)
+
         if issparse(evaluated_child) is False:
-            evaluated_child = csr_matrix(evaluated_child)
+            if evaluated_child == 0:
+                # If rhs or algebraic was a constant, then the result is scalar
+                # zero and should be replaced with a row of zeros
+                evaluated_child = csr_matrix((1, np.size(y)))
+            else:
+                evaluated_child = csr_matrix(evaluated_child)
         return evaluated_child

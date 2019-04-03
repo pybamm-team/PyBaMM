@@ -7,7 +7,7 @@ import pybamm
 
 import autograd
 import numpy as np
-from scipy.sparse import diags
+from scipy.sparse import csr_matrix, diags
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -72,10 +72,7 @@ class Negate(UnaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            return -self.children[0].jac(variable)
+        return -self.children[0].jac(variable)
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -134,13 +131,10 @@ class Function(UnaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            child = self.orphans[0]
-            return Function(autograd.jacobian(self.func), child) @ child.jac(
-                variable
-            )
+        child = self.orphans[0]
+        return Function(autograd.jacobian(self.func), child) @ child.jac(
+            variable
+        )
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -195,7 +189,11 @@ class Diagonal(UnaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return diags(self.children[0].evaluate(t, y), 0)
+        evaluated_child = self.children[0].evaluate(t, y)
+        if np.size(evaluated_child) == 1:
+            return csr_matrix(evaluated_child)
+        else:
+            return diags(evaluated_child, 0)
 
 
 class SpatialOperator(UnaryOperator):
@@ -229,7 +227,6 @@ class SpatialOperator(UnaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        # We shouldn't need this
         raise NotImplementedError
 
     def _unary_simplify(self, child):

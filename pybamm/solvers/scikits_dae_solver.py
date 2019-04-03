@@ -7,6 +7,7 @@ import pybamm
 
 import numpy as np
 import importlib
+from scipy.sparse import issparse
 
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:
@@ -115,5 +116,11 @@ class JacobianFunctionIDA(ida.IDA_JacRhsFunction):
         self.jacobian = jacobian
 
     def evaluate(self, t, y, ydot, residuals, cj, return_jacobian):
-        return_jacobian[:][:] = self.jacobian(t, y) - cj * self.mass_matrix
+        # scikits_odes requires the full (dense) jacobian
+        jac_eval = self.jacobian(t, y) - cj * self.mass_matrix
+        if issparse(jac_eval):
+            return_jacobian[:][:] = jac_eval.toarray()
+        else:
+            return_jacobian[:][:] = jac_eval
+
         return 0

@@ -6,9 +6,8 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-from scipy.sparse import diags
-from scipy.sparse import eye
-from scipy.sparse import kron
+from scipy.sparse import diags, eye, kron, csr_matrix
+import autograd
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -613,6 +612,10 @@ class BoundaryValueEvaluated(pybamm.SpatialOperator):
         evaluated_child = self.children[0].evaluate(t, y)
         return self._boundary_function(evaluated_child)
 
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        return NotImplementedError
+
 
 class NodeToEdge(pybamm.SpatialOperator):
     """A node in the expression tree representing a unary operator that evaluates the
@@ -651,3 +654,17 @@ class NodeToEdge(pybamm.SpatialOperator):
         # If not, no need to average
         else:
             return evaluated_child
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        # NOTE: for now we assume that the diffusivity (or other averaged property)
+        # can be considered as constant when calculating the Jacobian. This should
+        # give an OK approximation to the Jacobian provided the property doesn't
+        # change to rapidly in time. Note that most solvers use an outdated Jacobian
+        # until some convergence criteria fails, so it is often the case that even
+        # a crude approximation to the Jacobian results in a large speed-up.
+        variable_y_indices = np.arange(variable.y_slice.start, variable.y_slice.stop)
+
+        # Return zeros of correct size
+        jac = csr_matrix((np.size(variable_y_indices) - 1, np.size(variable_y_indices)))
+        return pybamm.Matrix(jac)

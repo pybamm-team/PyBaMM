@@ -357,8 +357,7 @@ class TestDiscretise(unittest.TestCase):
 
         # jacobian is identity
         np.testing.assert_array_equal(
-            np.eye(combined_submesh[0].nodes.shape[0]),
-            model.jacobian(0, y0).toarray()
+            np.eye(combined_submesh[0].nodes.shape[0]), model.jacobian(0, y0).toarray()
         )
 
         # several equations
@@ -485,7 +484,10 @@ class TestDiscretise(unittest.TestCase):
                 [
                     np.eye(np.size(combined_submesh[0].nodes)),
                     np.zeros(
-                        (np.size(combined_submesh[0].nodes), np.size(combined_submesh[0].nodes))
+                        (
+                            np.size(combined_submesh[0].nodes),
+                            np.size(combined_submesh[0].nodes),
+                        )
                     ),
                 ],
                 [

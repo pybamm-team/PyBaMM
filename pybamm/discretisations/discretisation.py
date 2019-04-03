@@ -223,11 +223,11 @@ class Discretisation(object):
         # entire StateVector
         jac_rhs = dict.fromkeys(model.rhs.keys())
         for eqn_key, eqn in model.rhs.items():
-            jac_rhs[eqn_key] = eqn.jac(y).simplify()
+            jac_rhs[eqn_key] = eqn.jac(y)
 
         jac_algebraic = dict.fromkeys(model.algebraic.keys())
         for eqn_key, eqn in model.algebraic.items():
-            jac_algebraic[eqn_key] = eqn.jac(y).simplify()
+            jac_algebraic[eqn_key] = eqn.jac(y)
 
         jacobian = self.sparse_stack(*jac_rhs.values(), *jac_algebraic.values())
 

@@ -6,6 +6,7 @@ import pybamm
 import numpy as np
 from scipy.sparse import eye
 
+
 class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
 
