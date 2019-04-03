@@ -156,8 +156,8 @@ def simplify_multiplication_division(myclass, left, right):
 
     # check if there is a matrix multiply in the numerator (if so we can't reorder it)
     has_matrix_multiply = False
-    for child in numerator_types:
-        has_matrix_multiply |= isinstance(child, pybamm.MatrixMultiplication)
+    for t in numerator_types:
+        has_matrix_multiply |= t == pybamm.MatrixMultiplication
 
     # function to partition a source list of symbols into those that return a constant
     # value, and those that do not
@@ -224,9 +224,12 @@ def simplify_multiplication_division(myclass, left, right):
     # we've combined all the constants in the denominator with it
     elif has_matrix_multiply:
         # only consider neighbouring children for numerator as we can't reorder mat muls
-        new_numerator = numerator[0]
+        new_numerator = [numerator[0]]
+        new_numerator_t = [numerator_types[0]]
         for child, t in zip(numerator[1:], numerator_types[1:]):
-            if new_numerator[-1].is_constant() and child.is_constant():
+            if new_numerator[-1].is_constant() and child.is_constant() \
+                    and new_numerator[-1].evaluate_ignoring_errors() is not None \
+                    and child.evaluate_ignoring_errors() is not None:
                 if t == pybamm.MatrixMultiplication:
                     new_numerator[-1] = new_numerator[-1] @ child
                 else:
@@ -234,6 +237,8 @@ def simplify_multiplication_division(myclass, left, right):
                 new_numerator[-1] = pybamm.simplify_if_constant(new_numerator[-1])
             else:
                 new_numerator.append(child)
+                new_numerator_t.append(t)
+        new_numerator = fold_multiply(new_numerator, new_numerator_t)
 
     else:
         # can reorder the numerator since no matrix multiplies
@@ -519,32 +524,7 @@ class MatrixMultiplication(BinaryOperator):
         if is_zero(left) or is_zero(right):
             return pybamm.Scalar(0)
 
-        # if children are associative (multiply, division, etc) then try to find
-        # pairs of constant children and simplify them
-        for child1, child2 in zip([left, right], [right, left]):
-            if child1.is_constant():
-                if isinstance(child2, pybamm.Multiplication) or \
-                        isinstance(child2, pybamm.Division) or \
-                        isinstance(child2, pybamm.MatrixMultiplication):
-                    # we care about ordering here
-                    if child1 == left and child2.children[0].is_constant():
-                        tmp = copy.deepcopy(child2.children[0])
-                        tmp.parent = None
-                        left = self.__class__(child1, tmp)
-                        left = pybamm.simplify_if_constant(left)
-                        right = copy.deepcopy(child2.children[1])
-                        right.parent = None
-                        return child2.__class__(left, right)
-                    elif child1 == right and child2.children[1].is_constant():
-                        tmp = copy.deepcopy(child2.children[1])
-                        tmp.parent = None
-                        left = copy.deepcopy(child2.children[0])
-                        left.parent = None
-                        right = self.__class__(tmp, child1)
-                        right = pybamm.simplify_if_constant(right)
-                        return child2.__class__(left, right)
-
-        return self.__class__(left, right)
+        return simplify_multiplication_division(self.__class__, left, right)
 
 
 class Division(BinaryOperator):
