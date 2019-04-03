@@ -12,8 +12,7 @@ import unittest
 class TestOhm(unittest.TestCase):
     def test_basic_processing(self):
         # Parameters
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         # Variables
         phi_s_n = pybamm.Variable(

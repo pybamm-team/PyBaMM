@@ -10,8 +10,7 @@ import unittest
 
 class TestStandardParticle(unittest.TestCase):
     def test_make_tree(self):
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         c_n = pybamm.Variable("c_n", domain=["negative particle"])
         c_p = pybamm.Variable("c_p", domain=["positive particle"])
@@ -23,8 +22,7 @@ class TestStandardParticle(unittest.TestCase):
         pybamm.models.submodels.particle.Standard(c_p, j_p, param)
 
     def test_basic_processing(self):
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         c_n = pybamm.Variable("c_n", domain=["negative particle"])
         c_p = pybamm.Variable("c_p", domain=["positive particle"])
