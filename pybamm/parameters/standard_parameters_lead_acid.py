@@ -161,7 +161,7 @@ pi_os = (
     * sp.L_x
     / (d ** 2 * sp.R * sp.T_ref * sp.c_e_typ)
 )  # Ratio of viscous pressure scale to osmotic pressure scale
-gamma_hat_e = 1  # ratio of electrolyte concentration to electrode concentration, undef.
+gamma_e = 1  # ratio of electrolyte concentration to electrode concentration, undef.
 
 # Electrochemical reactions
 C_dl_n = (
@@ -177,6 +177,17 @@ C_dl_p = (
     / tau_discharge
 )
 
+# Electrochemical Reactions
+s_n = -(sp.s_plus_n + sp.ne_n * sp.t_plus) / sp.ne_n  # Dimensionless rection rate (neg)
+s_p = -(sp.s_plus_p + sp.ne_p * sp.t_plus) / sp.ne_p  # Dimensionless rection rate (pos)
+s = pybamm.Concatenation(
+    pybamm.Broadcast(s_n, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(s_p, ["positive electrode"]),
+)
+m_n = sp.m_n_dimensional / sp.interfacial_current_scale_n
+m_p = sp.m_p_dimensional / sp.interfacial_current_scale_p
+
 # Electrical
 voltage_low_cut = (
     sp.voltage_low_cut_dimensional - (U_p_ref - U_n_ref)
@@ -190,7 +201,7 @@ q_init = pybamm.Parameter("Initial State of Charge")
 q_max = (
     (sp.L_n * eps_n_max + sp.L_s * eps_s_max + sp.L_p * eps_p_max)
     / sp.L_x
-    / (sp.s_p - sp.s_n)
+    / (s_p - s_n)
 )  # Dimensionless max capacity
 epsDelta_n = beta_surf_n / sp.L_n * q_max
 epsDelta_p = beta_surf_p / sp.L_p * q_max
@@ -203,3 +214,8 @@ eps_init = pybamm.Concatenation(
     pybamm.Broadcast(eps_s_init, ["separator"]),
     pybamm.Broadcast(eps_p_init, ["positive electrode"]),
 )
+
+
+# hack to make consistent ic with lithium-ion
+c_n_init = c_e_init
+c_p_init = c_e_init

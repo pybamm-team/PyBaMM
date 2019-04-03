@@ -29,19 +29,22 @@ class MacInnesStefanMaxwell(pybamm.LeadAcidBaseModel):
     *Extends:* :class:`BaseModel`
     """
 
-    def __init__(self, c_e, eps, phi_e, j, param):
+    def __init__(self, c_e, phi_e, j, param, eps=None):
         super().__init__()
 
-        # functions
+        # if porosity is not a variable, use the input parameter
+        if eps is None:
+            eps = param.epsilon
 
-        i_e = (
-            param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_hat_e
-        ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e))
+        # functions
+        i_e = (param.kappa_e(c_e) * (eps ** param.b) * param.gamma_e / param.C_e) * (
+            param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+        )
 
         # Equations (algebraic only)
         self.algebraic = {phi_e: pybamm.div(i_e) - j}
         self.boundary_conditions = {i_e: {"left": 0, "right": 0}}
-        self.initial_conditions = {phi_e: param.U_n(param.c_e_init)}
+        self.initial_conditions = {phi_e: -param.U_n(param.c_n_init)}
         # no differential equations
         self.rhs = {}
         # Variables

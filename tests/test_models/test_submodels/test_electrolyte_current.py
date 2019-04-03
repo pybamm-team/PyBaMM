@@ -26,7 +26,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
 
         # Set up model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
-            c_e, eps, phi_e, j, param
+            c_e, phi_e, j, param, eps=eps
         )
         # some small changes so that tests pass
         i_e = model.variables["Electrolyte current"]
