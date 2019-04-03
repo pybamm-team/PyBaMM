@@ -223,7 +223,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             edges = submesh_list[0].edges
 
         # check for particle domain
-        if ("negative particle" or "positive particle") in domain:
+        if submesh_list[0].coord_sys == "spherical polar":
 
             # create np.array of repeated submesh[0].nodes
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
@@ -298,9 +298,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Calculate integration vector
         integration_vector = self.definite_integral_vector(domain)
-        # Check for particle domain
-        if ("negative particle" or "positive particle") in symbol.domain:
-            submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+
+        # Check for spherical domains
+        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        if submesh_list[0].coord_sys == "spherical polar":
             second_dim = len(submesh_list)
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
             r = pybamm.Vector(r_numpy)
@@ -495,7 +496,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             elif side == "right":
                 return array[-1] + (array[-1] - array[-2]) / 2
 
-        return BoundaryValueEvaluated(discretised_symbol, linear_extrapolation)
+        boundary_value = pybamm.Function(linear_extrapolation, discretised_symbol)
+        boundary_value.domain = []
+        return boundary_value
 
     def mass_matrix(self, symbol, boundary_conditions):
         """
@@ -534,10 +537,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         mass = kron(eye(sec_pts), prim_mass)
         return pybamm.Matrix(mass)
 
-    #######################################################
-    # Can probably be moved outside of the spatial method
-    ######################################################
-
     def compute_diffusivity(
         self, discretised_symbol, extrapolate_left=False, extrapolate_right=False
     ):
@@ -564,7 +563,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.NodeToEdge`
+        :class:`pybamm.Function`
             Averaged symbol. When evaluated, this returns either a scalar or an array of
             shape (n-1,) as appropriate.
         """
@@ -580,91 +579,13 @@ class FiniteVolume(pybamm.SpatialMethod):
                 mean_array = np.concatenate([mean_array, np.array([right_node])])
             return mean_array
 
-        return pybamm.NodeToEdge(discretised_symbol, arithmetic_mean)
+        def node_to_edge(symbol):
+            # If the symbol is a numpy array of shape (n,), do the averaging
+            # NOTE: Doing this check every time might be slow?
+            if isinstance(symbol, np.ndarray) and len(symbol.shape) == 1:
+                return arithmetic_mean(symbol)
+            # If not, no need to average
+            else:
+                return symbol
 
-
-class BoundaryValueEvaluated(pybamm.SpatialOperator):
-    """A node in the expression tree representing a unary operator that evaluates the
-    value of its child at a boundary.
-
-    Parameters
-    ----------
-    child : :class:`Symbol`
-        child node
-    boundary_function : method
-        the function used to calculate the boundary value
-
-    **Extends:** :class:`pybamm.SpatialOperator`
-    """
-
-    def __init__(self, child, boundary_function):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__(
-            "boundary value ({})".format(boundary_function.__name__), child
-        )
-        self._boundary_function = boundary_function
-        # Domain of BoundaryValue must be ([]) so that expressions can be formed
-        # of boundary values of variables in different domains
-        self.domain = []
-
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        evaluated_child = self.children[0].evaluate(t, y)
-        return self._boundary_function(evaluated_child)
-
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
-        return NotImplementedError
-
-
-class NodeToEdge(pybamm.SpatialOperator):
-    """A node in the expression tree representing a unary operator that evaluates the
-    value of its child at cell edges by averaging the value at cell nodes.
-
-    Parameters
-    ----------
-
-    child : :class:`Symbol`
-        child node
-    node_to_edge_function : method
-        the function used to average; only acts if the child evaluates to a
-        one-dimensional numpy array
-
-    **Extends:** :class:`pybamm.SpatialOperator`
-    """
-
-    def __init__(self, child, node_to_edge_function):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__(
-            "node to edge ({})".format(node_to_edge_function.__name__), child
-        )
-        self._node_to_edge_function = node_to_edge_function
-
-    @property
-    def node_to_edge_function(self):
-        return self._node_to_edge_function
-
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        evaluated_child = self.children[0].evaluate(t, y)
-        # If the evaluated child is a numpy array of shape (n,), do the averaging
-        # NOTE: Doing this check every time might be slow?
-        if isinstance(evaluated_child, np.ndarray) and len(evaluated_child.shape) == 1:
-            return self._node_to_edge_function(evaluated_child)
-        # If not, no need to average
-        else:
-            return evaluated_child
-
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
-        # NOTE: for now we assume that the diffusivity (or other averaged property)
-        # can be considered as constant when calculating the Jacobian. This should
-        # give an OK approximation to the Jacobian provided the property doesn't
-        # change to rapidly in time. Note that most solvers use an outdated Jacobian
-        # until some convergence criteria fails, so it is often the case that even
-        # a crude approximation to the Jacobian results in a large speed-up.
-        variable_y_indices = np.arange(variable.y_slice.start, variable.y_slice.stop)
-
-        # Return zeros of correct size
-        jac = csr_matrix((np.size(variable_y_indices) - 1, np.size(variable_y_indices)))
-        return pybamm.Matrix(jac)
+        return pybamm.Function(node_to_edge, discretised_symbol)

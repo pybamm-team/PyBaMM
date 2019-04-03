@@ -59,15 +59,13 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         #
         # Concentration variables
         c_e_n = pybamm.Variable(
-            "Negative electrode electrolyte concentration",
-            domain=["negative electrode"],
+            "Negative electrolyte concentration", domain=["negative electrode"]
         )
         c_e_s = pybamm.Variable(
             "Separator electrolyte concentration", domain=["separator"]
         )
         c_e_p = pybamm.Variable(
-            "Positive electrode electrolyte concentration",
-            domain=["positive electrode"],
+            "Positive electrolyte concentration", domain=["positive electrode"]
         )
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
         # Porosity variables
@@ -81,13 +79,13 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
         # Potential variables
         phi_e_n = pybamm.Variable(
-            "Negative electrode electrolyte potential", domain=["negative electrode"]
+            "Negative electrolyte potential", domain=["negative electrode"]
         )
         phi_e_s = pybamm.Variable(
             "Separator electrolyte potential", domain=["separator"]
         )
         phi_e_p = pybamm.Variable(
-            "Positive electrode electrolyte potential", domain=["positive electrode"]
+            "Positive electrolyte potential", domain=["positive electrode"]
         )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
         phi_s_n = pybamm.Variable(
@@ -107,15 +105,17 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         # Interfacial current density
         j = pybamm.interface.butler_volmer(param, c_e, Delta_phi, domain=whole_cell)
         # Concentration model (reaction diffusion with butler volmer)
-        conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, eps, j, param)
+        conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(
+            c_e, j, param, epsilon=eps
+        )
         # Porosity model
         porosity_model = pybamm.porosity.Standard(eps, j, param)
         # Electrolyte potential model (conservation of current and MacInnes)
         electrolyte_potential_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
-            c_e, eps, phi_e, j, param
+            c_e, phi_e, j, param, eps=eps
         )
         # Solid potential model (conservation of current and MacInnes)
-        solid_potential_model = pybamm.electrode.Ohm(phi_s, eps, j, param)
+        solid_potential_model = pybamm.electrode.Ohm(phi_s, j, param, eps=eps)
 
         # Update own model with submodels
         self.update(

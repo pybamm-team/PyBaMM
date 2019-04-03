@@ -106,7 +106,7 @@ from .models.base_models import BaseModel, LeadAcidBaseModel, LithiumIonBaseMode
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
-from .models import li_ion
+from .models import lithium_ion
 
 #
 # Submodel classes
@@ -116,6 +116,7 @@ from .models.submodels import (
     electrolyte_current,
     electrolyte_diffusion,
     interface,
+    particle,
     porosity,
 )
 
@@ -141,6 +142,10 @@ from .geometry.geometry import (
     Geometry3DMacro,
 )
 
+from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS
+from .geometry import standard_spatial_vars
+from .geometry.standard_spatial_vars import KNOWN_COORD_SYS
+
 #
 # Mesh and Discretisation classes
 #
@@ -152,7 +157,7 @@ from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
-from .spatial_methods.finite_volume import FiniteVolume, NodeToEdge
+from .spatial_methods.finite_volume import FiniteVolume
 
 #
 # Simulation class

@@ -63,15 +63,16 @@ class TestUpdateParameters(unittest.TestCase):
         model1 = pybamm.ReactionDiffusionModel()
         modeltest1 = tests.StandardModelTest(model1)
         modeltest1.test_all()
+
         T1, Y1 = modeltest1.solver.t, modeltest1.solver.y
 
         # trying to update the geometry fails
         parameter_values_update = pybamm.ParameterValues(
             base_parameters=model1.default_parameter_values,
             optional_parameters={
-                "Negative electrode width": 0.0002,
-                "Separator width": 0.0003,
-                "Positive electrode width": 0.0004,
+                "Negative electrode width": 0.000002,
+                "Separator width": 0.000003,
+                "Positive electrode width": 0.000004,
             },
         )
         with self.assertRaisesRegex(ValueError, "geometry has changed"):
@@ -82,11 +83,12 @@ class TestUpdateParameters(unittest.TestCase):
         parameter_values_update = pybamm.ParameterValues(
             base_parameters=model2.default_parameter_values,
             optional_parameters={
-                "Negative electrode width": 0.0002,
-                "Separator width": 0.0003,
-                "Positive electrode width": 0.0004,
+                "Negative electrode width": 0.000002,
+                "Separator width": 0.000003,
+                "Positive electrode width": 0.000004,
             },
         )
+        # nb: need to be careful make parameters a reasonable size
         modeltest2 = tests.StandardModelTest(model2)
         modeltest2.test_all(param=parameter_values_update)
         T2, Y2 = modeltest2.solver.t, modeltest2.solver.y

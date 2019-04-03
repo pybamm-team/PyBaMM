@@ -55,10 +55,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_concatenated_parameters(self):
         # create
-        s = pybamm.standard_parameters.s
-        self.assertIsInstance(s, pybamm.Concatenation)
+        s_param = pybamm.standard_parameters_lead_acid.s
+        self.assertIsInstance(s_param, pybamm.Concatenation)
         self.assertEqual(
-            s.domain, ["negative electrode", "separator", "positive electrode"]
+            s_param.domain, ["negative electrode", "separator", "positive electrode"]
         )
 
         # process parameters and discretise
@@ -66,7 +66,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             "input/parameters/lead-acid/default.csv", {"Typical current density": 1}
         )
         disc = get_discretisation_for_testing()
-        processed_s = disc.process_symbol(parameter_values.process_symbol(s))
+        processed_s = disc.process_symbol(parameter_values.process_symbol(s_param))
 
         # test output
         combined_submeshes = disc.mesh.combine_submeshes(

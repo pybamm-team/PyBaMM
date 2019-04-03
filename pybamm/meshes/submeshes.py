@@ -20,12 +20,13 @@ class SubMesh1D:
             spatial variable
         """
 
-    def __init__(self, edges):
+    def __init__(self, edges, coord_sys):
         self.edges = edges
         self.nodes = (self.edges[1:] + self.edges[:-1]) / 2
         self.d_edges = np.diff(self.edges)
         self.d_nodes = np.diff(self.nodes)
         self.npts = self.nodes.size
+        self.coord_sys = coord_sys
 
 
 class Uniform1DSubMesh(SubMesh1D):
@@ -43,4 +44,7 @@ class Uniform1DSubMesh(SubMesh1D):
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
 
-        super().__init__(edges)
+        spatial_var = list(lims.keys())[0]
+        coord_sys = spatial_var.coord_sys
+
+        super().__init__(edges, coord_sys=coord_sys)
