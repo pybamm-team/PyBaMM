@@ -55,15 +55,17 @@ class TestSPMe(unittest.TestCase):
 class TestDFN(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lithium_ion.DFN()
-        model.default_submesh_pts = {
-            "negative electrode": {"x": 3},
-            "separator": {"x": 3},
-            "positive electrode": {"x": 3},
-            "negative particle": {"r": 3, "x": 3},
-            "positive particle": {"r": 3, "x": 3},
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 3,
+            var.x_s: 3,
+            var.x_p: 3,
+            var.r_n: 1,
+            var.r_p: 1,
         }
+
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 1, 100))
+        modeltest.test_all()
 
 
 if __name__ == "__main__":

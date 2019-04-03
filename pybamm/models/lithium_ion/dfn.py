@@ -7,25 +7,9 @@ import pybamm
 import numpy as np
 
 
-class DFN(pybamm.BaseModel):
+class DFN(pybamm.LithiumIonBaseModel):
     """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery.
-
-    Attributes
-    ----------
-
-    rhs: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the rhs
-    initial_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the initial conditions
-    boundary_conditions: dict
-        A dictionary that maps expressions (variables) to expressions that represent
-        the boundary conditions
-    variables: dict
-        A dictionary that maps strings to expressions that represent
-        the useful variables
-
+    **Extends:** :class:`pybamm.LithiumIonBaseModel`
     """
 
     def __init__(self):

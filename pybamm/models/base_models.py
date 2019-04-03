@@ -413,7 +413,7 @@ class LeadAcidBaseModel(BaseModel):
 class LithiumIonBaseModel(BaseModel):
     """
     Overwrites default parameters from Base Model with default parameters for
-    lead-acid models
+    lithium-ion models
 
     **Extends:** :class:`BaseModel`
 
@@ -446,6 +446,12 @@ class LithiumIonBaseModel(BaseModel):
                 ),
                 "Positive electrode OCV": os.path.join(
                     input_path, "lico2_ocp_Dualfoil.py"
+                ),
+                "Negative electrode diffusivity": os.path.join(
+                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
+                ),
+                "Positive electrode diffusivity": os.path.join(
+                    input_path, "lico2_diffusivity_Dualfoil.py"
                 ),
             },
         )
