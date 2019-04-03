@@ -497,7 +497,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             elif side == "right":
                 return array[-1] + (array[-1] - array[-2]) / 2
 
-        return BoundaryValueEvaluated(discretised_symbol, linear_extrapolation)
+        return pybamm.Function(linear_extrapolation, discretised_symbol)
 
     def mass_matrix(self, symbol, boundary_conditions):
         """
@@ -583,36 +583,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             return mean_array
 
         return pybamm.NodeToEdge(discretised_symbol, arithmetic_mean)
-
-
-class BoundaryValueEvaluated(pybamm.SpatialOperator):
-    """A node in the expression tree representing a unary operator that evaluates the
-    value of its child at a boundary.
-
-    Parameters
-    ----------
-    child : :class:`Symbol`
-        child node
-    boundary_function : method
-        the function used to calculate the boundary value
-
-    **Extends:** :class:`pybamm.SpatialOperator`
-    """
-
-    def __init__(self, child, boundary_function):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__(
-            "boundary value ({})".format(boundary_function.__name__), child
-        )
-        self._boundary_function = boundary_function
-        # Domain of BoundaryValue must be ([]) so that expressions can be formed
-        # of boundary values of variables in different domains
-        self.domain = []
-
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        evaluated_child = self.children[0].evaluate(t, y)
-        return self._boundary_function(evaluated_child)
 
 
 class NodeToEdge(pybamm.SpatialOperator):

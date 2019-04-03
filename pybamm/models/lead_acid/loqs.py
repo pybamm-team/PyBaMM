@@ -40,7 +40,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
             1
             / (sp.l_n * eps_n + sp.l_s * eps_s + sp.l_p * eps_p)
             * (
-                (sp.s_n - sp.s_p) * i_cell
+                (spla.s_n - spla.s_p) * i_cell
                 - c_e * (sp.l_n * deps_n_dt + sp.l_p * deps_p_dt)
             )
         )
