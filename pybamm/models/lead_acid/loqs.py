@@ -26,31 +26,30 @@ class LOQS(pybamm.LeadAcidBaseModel):
         eps_p = pybamm.Variable("Positive electrode porosity", domain=[])
 
         # Parameters
-        sp = pybamm.standard_parameters
-        spla = pybamm.standard_parameters_lead_acid
+        param = pybamm.standard_parameters_lead_acid
         # Current function
-        i_cell = sp.current_with_time
+        i_cell = param.current_with_time
 
         # ODEs
-        j_n = i_cell / sp.l_n
-        j_p = -i_cell / sp.l_p
-        deps_n_dt = -spla.beta_surf_n * j_n
-        deps_p_dt = -spla.beta_surf_p * j_p
+        j_n = i_cell / param.l_n
+        j_p = -i_cell / param.l_p
+        deps_n_dt = -param.beta_surf_n * j_n
+        deps_p_dt = -param.beta_surf_p * j_p
         dc_e_dt = (
             1
-            / (sp.l_n * eps_n + sp.l_s * eps_s + sp.l_p * eps_p)
+            / (param.l_n * eps_n + param.l_s * eps_s + param.l_p * eps_p)
             * (
-                (spla.s_n - spla.s_p) * i_cell
-                - c_e * (sp.l_n * deps_n_dt + sp.l_p * deps_p_dt)
+                (param.s_n - param.s_p) * i_cell
+                - c_e * (param.l_n * deps_n_dt + param.l_p * deps_p_dt)
             )
         )
         self.rhs = {c_e: dc_e_dt, eps_n: deps_n_dt, eps_s: 0, eps_p: deps_p_dt}
         # Initial conditions
         self.initial_conditions = {
-            c_e: spla.c_e_init,
-            eps_n: spla.eps_n_init,
-            eps_s: spla.eps_s_init,
-            eps_p: spla.eps_p_init,
+            c_e: param.c_e_init,
+            eps_n: param.eps_n_init,
+            eps_s: param.eps_s_init,
+            eps_p: param.eps_p_init,
         }
         # ODE model -> no boundary conditions
         self.boundary_conditions = {}
@@ -62,8 +61,14 @@ class LOQS(pybamm.LeadAcidBaseModel):
         j0_p = pybamm.interface.exchange_current_density(
             c_e, domain=["positive electrode"]
         )
-        Phi = -spla.U_n(c_e) - pybamm.Function(np.arcsinh, j_n / (2 * j0_n * sp.l_n))
-        V = Phi + spla.U_p(c_e) - pybamm.Function(np.arcsinh, j_p / (2 * j0_p * sp.l_p))
+        Phi = -param.U_n(c_e) - pybamm.Function(
+            np.arcsinh, j_n / (2 * j0_n * param.l_n)
+        )
+        V = (
+            Phi
+            + param.U_p(c_e)
+            - pybamm.Function(np.arcsinh, j_p / (2 * j0_p * param.l_p))
+        )
         # Phis_n = pybamm.Scalar(0)
         # Phis_p = V
         # Concatenate variables

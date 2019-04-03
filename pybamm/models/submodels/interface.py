@@ -22,14 +22,14 @@ def homogeneous_reaction(domain):
         will be processed into a vector upon discretisation.
 
     """
-    current = pybamm.standard_parameters.current_with_time
+    current = pybamm.electrical_parameters.current_with_time
 
     if domain == ["negative electrode"]:
-        exchange_current = current / pybamm.standard_parameters.l_n
+        exchange_current = current / pybamm.geometric_parameters.l_n
     elif domain == ["separator"]:
         exchange_current = pybamm.Scalar(0)
     elif domain == ["positive electrode"]:
-        exchange_current = -current / pybamm.standard_parameters.l_p
+        exchange_current = -current / pybamm.geometric_parameters.l_p
 
     elif domain == ["negative electrode", "separator", "positive electrode"]:
         return pybamm.Concatenation(
@@ -76,6 +76,7 @@ def exchange_current_density(c_e, c_s_k_surf=None, domain=None):
             raise KeyError("domain not in known domains")
 
     if c_s_k_surf:
+        # we need to make this less specific
         sp = pybamm.standard_parameters_lithium_ion
         if domain == ["negative electrode"]:
             return (
@@ -92,8 +93,8 @@ def exchange_current_density(c_e, c_s_k_surf=None, domain=None):
                 * (1 - c_s_k_surf) ** (1 / 2)
             )
     else:
-        sp = pybamm.standard_parameters
-        spla = pybamm.standard_parameters_lead_acid
+        # we need to make this less specific
+        sp = pybamm.standard_parameters_lead_acid
         if domain == ["negative electrode"]:
             return spla.m_n * c_e
         elif domain == ["positive electrode"]:

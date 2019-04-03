@@ -12,8 +12,7 @@ import unittest
 class TestStefanMaxwellDiffusion(unittest.TestCase):
     def test_make_tree(self):
         # Parameter values
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         # Variables and parameters
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -23,8 +22,7 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
 
     def test_basic_processing(self):
         # Parameter values
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         # Variables and parameters
         j = pybamm.Scalar(0.001)
@@ -46,8 +44,7 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
     def test_basic_processing_different_bcs(self):
         "Change the boundary conditions and test"
         # Parameter values
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         # Variables and parameters
         j = pybamm.Scalar(0.001)

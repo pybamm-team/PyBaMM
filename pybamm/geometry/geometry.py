@@ -47,8 +47,8 @@ class Geometry1DMacro(Geometry):
     def __init__(self, custom_geometry={}):
         super().__init__()
         var = pybamm.standard_spatial_vars
-        l_n = pybamm.standard_parameters.l_n
-        l_s = pybamm.standard_parameters.l_s
+        l_n = pybamm.geometric_parameters.l_n
+        l_s = pybamm.geometric_parameters.l_s
 
         self["negative electrode"] = {
             "primary": {var.x_n: {"min": pybamm.Scalar(0), "max": l_n}}
@@ -83,8 +83,8 @@ class Geometry1p1DMicro(Geometry):
         super().__init__()
 
         var = pybamm.standard_spatial_vars
-        l_n = pybamm.standard_parameters.l_n
-        l_s = pybamm.standard_parameters.l_s
+        l_n = pybamm.geometric_parameters.l_n
+        l_s = pybamm.geometric_parameters.l_s
 
         self["negative particle"] = {
             "primary": {var.r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
@@ -114,9 +114,9 @@ class Geometry3DMacro(Geometry1DMacro):
 
         var = pybamm.standard_spatial_vars
 
-        y_lim = {"min": pybamm.Scalar(0), "max": pybamm.standard_parameters.l_y}
+        y_lim = {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_y}
 
-        z_lim = {"min": pybamm.Scalar(0), "max": pybamm.standard_parameters.l_z}
+        z_lim = {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z}
 
         MACRO_DOMAINS = ["negative electrode", "separator", "positive electrode"]
         for domain in MACRO_DOMAINS:

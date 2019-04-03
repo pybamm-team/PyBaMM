@@ -17,8 +17,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
         super().__init__()
 
         "Parameters"
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         "Model Variables"
         # Electrolyte concentration
