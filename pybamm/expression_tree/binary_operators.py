@@ -42,23 +42,58 @@ def simplify_multiplication_division(myclass, left, right):
     if children are associative (multiply, division, etc) then try to find
     pairs of constant children and simplify them
     """
-    for child1, child2 in zip([left, right], [right, left]):
-        if child1.is_constant():
-            if isinstance(child2, pybamm.Multiplication) or \
-                    isinstance(child2, pybamm.Division) or \
-                    isinstance(child2, pybamm.MatrixMultiplication):
-                # don't care about ordering
-                for i in range(2):
-                    if child2.children[i].is_constant():
-                        tmp = copy.deepcopy(child2.children[i])
-                        tmp.parent = None
-                        left = myclass(child1, tmp)
-                        left = pybamm.simplify_if_constant(left)
-                        right = copy.deepcopy(child2.children[1 - i])
-                        right.parent = None
-                        return child2.__class__(left, right)
+    numerator_constant = []
+    denominator_constant = []
+    numerator_nonconstant = []
+    denominator_nonconstant = []
+    matrix_multiplys = []
+    in_numerator = True
+    for child in [left, right]:
+        if isinstance(child, pybamm.Multiplication) or isinstance(child, pybamm.Division):
+            for i in range(2):
+                tmp = copy.deepcopy(child.children[i])
+                tmp.parent = None
+                if in_numerator:
+                    if tmp.is_constant():
+                        numerator_constant.append(tmp)
+                    else:
+                        numerator_nonconstant.append(tmp)
+                else:
+                    if tmp.is_constant():
+                        denominator_constant.append(tmp)
+                    else:
+                        denominator_nonconstant.append(tmp)
+                if i == 0 and isinstance(child, pybamm.Division):
+                    in_numerator = not in_numerator
+        if child == left and myclass == pybamm.Division:
+            in_numerator = not in_numerator
 
-    return myclass(left, right)
+        elif isinstance(child, pybamm.MatrixMultiplication):
+            if not in_numerator:
+                raise pybamm.ModelError('matrix multiplication found on denominator!')
+            matrix_multiplys.append(child)
+
+
+
+    new_numerator = pybamm.Scalar(1)
+    for child in numerator_constant:
+        new_numerator = new_numerator * child
+    new_numerator = pybamm.simplify_if_constant(new_numerator)
+    for child in numerator_nonconstant:
+        new_numerator = new_numerator * child
+
+    new_denominator = pybamm.Scalar(1)
+    for child in denominator_constant:
+        new_denominator = new_denominator * child
+    new_denominator= pybamm.simplify_if_constant(new_denominator)
+    for child in denominator_constant:
+        new_denominator = new_denominator * child
+
+    new_mat_muls = 1
+
+    new_expression = new_numerator / new_denominator
+
+
 
 
 def is_zero(expr):

@@ -106,9 +106,30 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((c * a).simplify().evaluate(), 0)
         self.assertIsInstance((b * c).simplify(), pybamm.Parameter)
         self.assertIsInstance((e * c).simplify(), pybamm.Multiplication)
+
         expr = (e * (e * c)).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
+        expr = (e / (e * c)).simplify()
+        self.assertIsInstance(expr, pybamm.Division)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 1.0)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
+        expr = (e * (e / c)).simplify()
+        self.assertIsInstance(expr, pybamm.Division)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 4.0)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
+        expr = (e * (c / e)).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 1.0)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
         self.assertIsInstance((c * e).simplify(), pybamm.Multiplication)
         self.assertIsInstance((e / c).simplify(), pybamm.Division)
         self.assertIsInstance((c / e).simplify(), pybamm.Division)
