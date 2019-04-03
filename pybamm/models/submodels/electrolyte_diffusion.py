@@ -30,8 +30,7 @@ class StefanMaxwell(pybamm.BaseModel):
     def __init__(self, c_e, j, param, epsilon=None):
         super().__init__()
 
-        # set porosity to parameter if its not supplied
-        # as a variable
+        # if porosity is not a variable, use the input parameter
         if epsilon is None:
             epsilon = param.epsilon
 

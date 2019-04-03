@@ -32,6 +32,7 @@ class MacInnesStefanMaxwell(pybamm.LeadAcidBaseModel):
     def __init__(self, c_e, phi_e, j, param, eps=None):
         super().__init__()
 
+        # if porosity is not a variable, use the input parameter
         if eps is None:
             eps = param.epsilon
 

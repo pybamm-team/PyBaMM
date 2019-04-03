@@ -34,10 +34,11 @@ class Ohm(pybamm.BaseModel):
 
         # different bounday conditions in each electrode
         if phi_s.domain == ["negative electrode"]:
+            # if the porosity is not a variable, use the input parameter
             if eps is None:
                 eps = param.epsilon_n
-            # i_s_n = -param.sigma_n * (1 - eps) ** param.b * pybamm.grad(phi_s)
-            i_s_n = -param.sigma_n * pybamm.grad(phi_s)
+            # liion sigma_n may already account for porosity
+            i_s_n = -param.sigma_n * (1 - eps) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_n) + j}
             self.boundary_conditions = {phi_s: {"left": 0}, i_s_n: {"right": 0}}
             self.initial_conditions = {phi_s: 0}
@@ -46,10 +47,11 @@ class Ohm(pybamm.BaseModel):
                 "Negative electrode solid current": i_s_n,
             }
         elif phi_s.domain == ["positive electrode"]:
+            # if porosity is not a variable, use the input parameter
             if eps is None:
                 eps = param.epsilon_p
-            # i_s_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
-            i_s_p = -param.sigma_p * pybamm.grad(phi_s)
+            # liion sigma_p may already account for porosity
+            i_s_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_p) + j}
             self.boundary_conditions = {i_s_p: {"left": 0, "right": current}}
             self.initial_conditions = {
@@ -61,6 +63,7 @@ class Ohm(pybamm.BaseModel):
             }
         # for whole cell domain call both electrode models and ignore separator
         elif phi_s.domain == ["negative electrode", "separator", "positive electrode"]:
+            # if porosity is not a variable, use the input parameter
             if eps is None:
                 eps = param.epsilon
             phi_s_n, phi_s_s, phi_s_p = phi_s.orphans
