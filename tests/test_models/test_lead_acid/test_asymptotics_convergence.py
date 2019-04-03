@@ -67,23 +67,17 @@ class TestAsymptoticConvergence(unittest.TestCase):
             )
 
             # Compare
-            import ipdb
-
-            ipdb.set_trace()
-            return np.linalg.norm(voltage_loqs - voltage_full) / np.linalg.norm(
-                voltage_full
-            )
+            return np.linalg.norm(
+                voltage_loqs.evaluate(t) - voltage_full.evaluate(t)
+            ) / np.linalg.norm(voltage_full.evaluate(t))
 
         # Get errors
-        currents = 0.1 * (2 ** np.arange(3))
+        currents = 0.5 / (2 ** np.arange(3))
         errs = np.array([get_l2_error(current) for current in currents])
 
-        # Get rates: expect h**2 convergence
+        # Get rates: expect linear convergence
         rates = np.log2(errs[:-1] / errs[1:])
-        import ipdb
-
-        ipdb.set_trace()
-        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
+        np.testing.assert_array_less(0.99 * np.ones_like(rates), rates)
 
 
 if __name__ == "__main__":

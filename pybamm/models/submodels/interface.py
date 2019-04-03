@@ -96,10 +96,10 @@ def exchange_current_density(c_e, c_s_k_surf=None, domain=None):
         # we need to make this less specific
         sp = pybamm.standard_parameters_lead_acid
         if domain == ["negative electrode"]:
-            return spla.m_n * c_e
+            return sp.m_n * c_e
         elif domain == ["positive electrode"]:
             c_w = (1 - c_e * sp.V_e) / sp.V_w
-            return spla.m_p * c_e ** 2 * c_w
+            return sp.m_p * c_e ** 2 * c_w
 
 
 def butler_volmer(param, c_e, Delta_phi, c_s_k_surf=None, domain=None):

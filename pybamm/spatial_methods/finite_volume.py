@@ -499,9 +499,6 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         boundary_value = pybamm.Function(linear_extrapolation, discretised_symbol)
         boundary_value.domain = []
-        import ipdb
-
-        ipdb.set_trace()
         return boundary_value
 
     def mass_matrix(self, symbol, boundary_conditions):
