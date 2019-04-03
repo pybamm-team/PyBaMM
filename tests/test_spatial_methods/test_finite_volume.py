@@ -16,21 +16,17 @@ class TestFiniteVolume(unittest.TestCase):
         def arithmetic_mean(array):
             return (array[1:] + array[:-1]) / 2
 
-        ava = pybamm.NodeToEdge(a, arithmetic_mean)
-        self.assertEqual(ava.name, "node to edge (arithmetic_mean)")
+        ava = pybamm.Function(arithmetic_mean, a)
+        self.assertEqual(ava.name, "function (arithmetic_mean)")
         self.assertEqual(ava.children[0].name, a.name)
 
-        b = pybamm.Scalar(-4)
-        avb = pybamm.NodeToEdge(b, arithmetic_mean)
-        self.assertEqual(avb.evaluate(), -4)
-
         c = pybamm.Vector(np.ones(10))
-        avc = pybamm.NodeToEdge(c, arithmetic_mean)
+        avc = pybamm.Function(arithmetic_mean, c)
         np.testing.assert_array_equal(avc.evaluate(), np.ones(9))
 
         d = pybamm.StateVector(slice(0, 10))
         y_test = np.ones(10)
-        avd = pybamm.NodeToEdge(d, arithmetic_mean)
+        avd = pybamm.Function(arithmetic_mean, d)
         np.testing.assert_array_equal(avd.evaluate(None, y_test), np.ones(9))
 
     def test_extrapolate_left_right(self):
