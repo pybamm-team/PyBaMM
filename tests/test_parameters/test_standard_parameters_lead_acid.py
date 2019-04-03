@@ -15,9 +15,9 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         # Load parameters to be tested
         parameters = {
             "C_e": pybamm.standard_parameters_lead_acid.C_e,
-            "C_rate": pybamm.standard_parameters.C_rate,
-            "sigma_n": pybamm.standard_parameters.sigma_n,
-            "sigma_p": pybamm.standard_parameters.sigma_p,
+            "C_rate": pybamm.standard_parameters_lead_acid.C_rate,
+            "sigma_n": pybamm.standard_parameters_lead_acid.sigma_n,
+            "sigma_p": pybamm.standard_parameters_lead_acid.sigma_p,
             "C_dl_n": pybamm.standard_parameters_lead_acid.C_dl_n,
             "C_dl_p": pybamm.standard_parameters_lead_acid.C_dl_p,
             "DeltaVsurf_n": pybamm.standard_parameters_lead_acid.DeltaVsurf_n,
@@ -76,8 +76,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_current_functions(self):
         # create current functions
-        dimensional_current = pybamm.standard_parameters.dimensional_current_with_time
-        dimensionless_current = pybamm.standard_parameters.current_with_time
+        dimensional_current = (
+            pybamm.standard_parameters_lead_acid.dimensional_current_with_time
+        )
+        dimensionless_current = pybamm.standard_parameters_lead_acid.current_with_time
 
         # process
         parameter_values = pybamm.ParameterValues(
@@ -107,8 +109,8 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_functions_lead_acid(self):
         # Load parameters to be tested
         parameters = {
-            "D_e_1": pybamm.standard_parameters.D_e(pybamm.Scalar(1)),
-            "kappa_e_0": pybamm.standard_parameters.kappa_e(pybamm.Scalar(0)),
+            "D_e_1": pybamm.standard_parameters_lead_acid.D_e(pybamm.Scalar(1)),
+            "kappa_e_0": pybamm.standard_parameters_lead_acid.kappa_e(pybamm.Scalar(0)),
             "chi_1": pybamm.standard_parameters_lead_acid.chi(pybamm.Scalar(1)),
             "chi_0.5": pybamm.standard_parameters_lead_acid.chi(pybamm.Scalar(0.5)),
             "U_n_1": pybamm.standard_parameters_lead_acid.U_n(pybamm.Scalar(1)),

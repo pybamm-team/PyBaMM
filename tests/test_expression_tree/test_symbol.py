@@ -356,8 +356,7 @@ class TestSymbol(unittest.TestCase):
         )
 
     def test_symbol_visualise(self):
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         c = pybamm.Variable("c", whole_cell)
