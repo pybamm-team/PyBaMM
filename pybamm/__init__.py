@@ -154,7 +154,7 @@ from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
-from .spatial_methods.finite_volume import FiniteVolume, NodeToEdge
+from .spatial_methods.finite_volume import FiniteVolume
 
 #
 # Simulation class
