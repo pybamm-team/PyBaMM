@@ -19,7 +19,3 @@ voltage_low_cut_dimensional = pybamm.Parameter("Lower voltage cut-off")
 voltage_high_cut_dimensional = pybamm.Parameter("Upper voltage cut-off")
 current_with_time = pybamm.FunctionParameter("Current function", pybamm.t)
 dimensional_current_with_time = i_typ * current_with_time
-
-
-# --------------------------------------------------------------------------------------
-"Dimensionless Parameters"
