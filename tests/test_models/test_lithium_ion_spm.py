@@ -1,5 +1,5 @@
 #
-# Tests for the lithium-ion models
+# Tests for the lithium-ion SPM model
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -43,29 +43,6 @@ class TestSPM(unittest.TestCase):
         np.testing.assert_array_less(
             0, model.variables["Negative particle surface concentration"].evaluate(T, Y)
         )
-
-
-class TestSPMe(unittest.TestCase):
-    def test_basic_processing(self):
-        model = pybamm.lithium_ion.SPMe()
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-
-
-class TestDFN(unittest.TestCase):
-    def test_basic_processing(self):
-        model = pybamm.lithium_ion.DFN()
-        var = pybamm.standard_spatial_vars
-        self.default_var_pts = {
-            var.x_n: 3,
-            var.x_s: 3,
-            var.x_p: 3,
-            var.r_n: 1,
-            var.r_p: 1,
-        }
-
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
 
 
 if __name__ == "__main__":
