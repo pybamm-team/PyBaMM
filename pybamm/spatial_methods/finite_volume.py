@@ -497,7 +497,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             elif side == "right":
                 return array[-1] + (array[-1] - array[-2]) / 2
 
-        return pybamm.Function(linear_extrapolation, discretised_symbol)
+        boundary_value = pybamm.Function(linear_extrapolation, discretised_symbol)
+        boundary_value.domain = []
+        import ipdb
+
+        ipdb.set_trace()
+        return boundary_value
 
     def mass_matrix(self, symbol, boundary_conditions):
         """
@@ -536,10 +541,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         mass = kron(eye(sec_pts), prim_mass)
         return pybamm.Matrix(mass)
 
-    #######################################################
-    # Can probably be moved outside of the spatial method
-    ######################################################
-
     def compute_diffusivity(
         self, discretised_symbol, extrapolate_left=False, extrapolate_right=False
     ):
@@ -566,7 +567,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.NodeToEdge`
+        :class:`pybamm.Function`
             Averaged symbol. When evaluated, this returns either a scalar or an array of
             shape (n-1,) as appropriate.
         """
@@ -582,43 +583,13 @@ class FiniteVolume(pybamm.SpatialMethod):
                 mean_array = np.concatenate([mean_array, np.array([right_node])])
             return mean_array
 
-        return pybamm.NodeToEdge(discretised_symbol, arithmetic_mean)
+        def node_to_edge(symbol):
+            # If the symbol is a numpy array of shape (n,), do the averaging
+            # NOTE: Doing this check every time might be slow?
+            if isinstance(symbol, np.ndarray) and len(symbol.shape) == 1:
+                return arithmetic_mean(symbol)
+            # If not, no need to average
+            else:
+                return symbol
 
-
-class NodeToEdge(pybamm.SpatialOperator):
-    """A node in the expression tree representing a unary operator that evaluates the
-    value of its child at cell edges by averaging the value at cell nodes.
-
-    Parameters
-    ----------
-
-    child : :class:`Symbol`
-        child node
-    node_to_edge_function : method
-        the function used to average; only acts if the child evaluates to a
-        one-dimensional numpy array
-
-    **Extends:** :class:`pybamm.SpatialOperator`
-    """
-
-    def __init__(self, child, node_to_edge_function):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__(
-            "node to edge ({})".format(node_to_edge_function.__name__), child
-        )
-        self._node_to_edge_function = node_to_edge_function
-
-    @property
-    def node_to_edge_function(self):
-        return self._node_to_edge_function
-
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        evaluated_child = self.children[0].evaluate(t, y)
-        # If the evaluated child is a numpy array of shape (n,), do the averaging
-        # NOTE: Doing this check every time might be slow?
-        if isinstance(evaluated_child, np.ndarray) and len(evaluated_child.shape) == 1:
-            return self._node_to_edge_function(evaluated_child)
-        # If not, no need to average
-        else:
-            return evaluated_child
+        return pybamm.Function(node_to_edge, discretised_symbol)
