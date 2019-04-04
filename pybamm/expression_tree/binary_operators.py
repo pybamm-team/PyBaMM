@@ -239,7 +239,7 @@ def simplify_multiplication_division(myclass, left, right):
 
     # check if there is a matrix multiply in the numerator (if so we can't reorder it)
     has_matrix_multiply = any(
-        [t == pybamm.MatrixMultiplication for t in numerator_types+[myclass]]
+        [t == pybamm.MatrixMultiplication for t in numerator_types + [myclass]]
     )
 
     def partition_by_constant(source, types=None):
