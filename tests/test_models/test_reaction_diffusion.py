@@ -49,19 +49,16 @@ class TestReactionDiffusionModel(unittest.TestCase):
             }
             mesh = pybamm.Mesh(geometry, model.default_submesh_types, submesh_pts)
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-            import ipdb
-
-            ipdb.set_trace()
 
             # Discretise and solve
             disc.process_model(model)
             solver.solve(model, t_eval)
-            disc.set_variable_slices([var])
             c_approx = model.variables["Electrolyte concentration"].evaluate(
                 solver.t, solver.y
             )
 
             # Calculate errors
+            c_exact = 0
             return np.linalg.norm(c_approx - c_exact) / np.linalg.norm(c_exact)
 
         # Get errors

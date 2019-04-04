@@ -4,7 +4,6 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-import tests
 
 import numpy as np
 import unittest
@@ -80,22 +79,23 @@ class TestAsymptoticConvergence(unittest.TestCase):
 
             # Compare
             loqs_error = np.linalg.norm(
-                voltage_loqs.evaluate(t) - voltage_full.evaluate(t)
-            ) / np.linalg.norm(voltage_full.evaluate(t))
+                voltage_loqs(t) - voltage_full(t)
+            ) / np.linalg.norm(voltage_full(t))
             composite_error = np.linalg.norm(
-                voltage_comp.evaluate(t) - voltage_full.evaluate(t)
-            ) / np.linalg.norm(voltage_full.evaluate(t))
+                voltage_comp(t) - voltage_full(t)
+            ) / np.linalg.norm(voltage_full(t))
             return (loqs_error, composite_error)
 
         # Get errors
-        currents = 0.5 / (2 ** np.arange(2))
+        currents = 0.5 / (2 ** np.arange(3))
         errs = np.array([get_l2_error(current) for current in currents])
         loqs_errs, comp_errs = [np.array(err) for err in zip(*errs)]
 
         # Get rates: expect linear convergence for loqs, quadratic for composite
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
-        comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
+        # Composite not converging as expected
+        # comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
         # np.testing.assert_array_less(1.99 * np.ones_like(comp_rates), comp_rates)
 
 
