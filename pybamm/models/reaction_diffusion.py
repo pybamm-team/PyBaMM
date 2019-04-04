@@ -16,10 +16,8 @@ class ReactionDiffusionModel(pybamm.BaseModel):
     def __init__(self):
         super().__init__()
         # Parameters
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
-        #
         # Variables and parameters
         #
         # Define concentration variable

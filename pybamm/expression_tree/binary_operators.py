@@ -120,12 +120,11 @@ class Power(BinaryOperator):
         else:
             # apply chain rule and power rule
             base, exponent = self.orphans
-            if isinstance(exponent, pybamm.Scalar):
-                return (
-                    pybamm.Diagonal(exponent * base ** (exponent - 1))
-                    @ base.jac(variable)
+            if exponent.evaluates_to_number():
+                return pybamm.Diagonal(exponent * base ** (exponent - 1)) @ base.jac(
+                    variable
                 )
-            elif isinstance(base, pybamm.Scalar):
+            elif base.evaluates_to_number():
                 return pybamm.Diagonal(
                     base ** exponent * pybamm.Function(np.log, base)
                 ) @ exponent.jac(variable)
@@ -257,9 +256,9 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.Symbol.jac()`. """
         # apply product rule
         left, right = self.orphans
-        if isinstance(left, pybamm.Scalar):
+        if left.evaluates_to_number():
             return left * right.jac(variable)
-        elif isinstance(right, pybamm.Scalar):
+        elif right.evaluates_to_number():
             return right * left.jac(variable)
         else:
             return pybamm.Diagonal(right) @ left.jac(variable) + pybamm.Diagonal(
@@ -352,9 +351,9 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.Symbol.jac()`. """
         # apply quotient rule
         top, bottom = self.orphans
-        if isinstance(top, pybamm.Scalar):
+        if top.evaluates_to_number():
             return -pybamm.Diagonal(top / bottom ** 2) @ bottom.jac(variable)
-        elif isinstance(bottom, pybamm.Scalar):
+        elif bottom.evaluates_to_number():
             return top.jac(variable) / bottom
         else:
             return pybamm.Diagonal(1 / bottom ** 2) @ (

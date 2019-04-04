@@ -50,8 +50,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
             },
         )
 
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lithium_ion.__dict__)
+        param = pybamm.standard_parameters_lithium_ion
 
         c_rate = param.i_typ / 24  # roughly for the numbers I used before
 

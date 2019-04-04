@@ -59,3 +59,7 @@ class Scalar(pybamm.Symbol):
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self._value
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        return pybamm.Scalar(0)

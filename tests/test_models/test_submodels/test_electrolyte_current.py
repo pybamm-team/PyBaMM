@@ -12,8 +12,7 @@ import unittest
 class TestMacInnesStefanMaxwell(unittest.TestCase):
     def test_basic_processing(self):
         # Parameters
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
+        param = pybamm.standard_parameters_lead_acid
 
         # Variables
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -51,8 +50,7 @@ class TestFirstOrderPotential(unittest.TestCase):
         c_e_p = pybamm.Broadcast(pybamm.Scalar(1), ["positive electrode"])
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
+        param = pybamm.standard_parameters_lead_acid
 
         model = pybamm.electrolyte_current.StefanMaxwellFirstOrderPotential(
             loqs_model, c_e, param

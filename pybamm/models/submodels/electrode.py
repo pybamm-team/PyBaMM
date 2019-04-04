@@ -27,7 +27,7 @@ class Ohm(pybamm.BaseModel):
     def __init__(self, phi_s, j, param, eps=None):
         super().__init__()
 
-        current = pybamm.standard_parameters.current_with_time
+        current = pybamm.electrical_parameters.current_with_time
 
         # algebraic model only
         self.rhs = {}

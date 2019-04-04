@@ -48,8 +48,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         super().__init__()
 
         # Parameters
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
+        param = pybamm.standard_parameters_lead_acid
 
         #
         # Variables
