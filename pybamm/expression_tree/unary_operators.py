@@ -133,7 +133,9 @@ class Function(UnaryOperator):
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         child = self.orphans[0]
-        return Function(autograd.jacobian(self.func), child) @ child.jac(variable)
+        jac_fun = Function(autograd.jacobian(self.func), child) @ child.jac(variable)
+        jac_fun.domain = self.domain
+        return jac_fun
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

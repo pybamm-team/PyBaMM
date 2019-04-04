@@ -265,9 +265,14 @@ class Multiplication(BinaryOperator):
         elif right.evaluates_to_number():
             return right * left.jac(variable)
         else:
-            return pybamm.Diagonal(right) @ left.jac(variable) + pybamm.Diagonal(
-                left
-            ) @ right.jac(variable)
+            try:
+                return pybamm.Diagonal(right) @ left.jac(variable) + pybamm.Diagonal(
+                    left
+                ) @ right.jac(variable)
+            except pybamm.DomainError:
+                import ipdb
+
+                ipdb.set_trace()
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -320,7 +325,12 @@ class MatrixMultiplication(BinaryOperator):
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         left, right = self.orphans
-        return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
+        try:
+            return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
+        except ValueError:
+            import ipdb
+
+            ipdb.set_trace()
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """

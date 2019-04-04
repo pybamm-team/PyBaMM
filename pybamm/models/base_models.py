@@ -90,7 +90,7 @@ class BaseModel(object):
                 ),
             },
         )
-        self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
+        self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
         var = pybamm.standard_spatial_vars
         self.default_var_pts = {
             var.x_n: 40,
