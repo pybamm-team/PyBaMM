@@ -120,7 +120,9 @@ class Power(BinaryOperator):
         else:
             # apply chain rule and power rule
             base, exponent = self.orphans
-            if exponent.evaluates_to_number():
+            if base.evaluates_to_number() and exponent.evaluates_to_number():
+                return pybamm.Scalar(0)
+            elif exponent.evaluates_to_number():
                 return pybamm.Diagonal(exponent * base ** (exponent - 1)) @ base.jac(
                     variable
                 )
@@ -256,7 +258,9 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.Symbol.jac()`. """
         # apply product rule
         left, right = self.orphans
-        if left.evaluates_to_number():
+        if left.evaluates_to_number() and right.evaluates_to_number():
+            return pybamm.Scalar(0)
+        elif left.evaluates_to_number():
             return left * right.jac(variable)
         elif right.evaluates_to_number():
             return right * left.jac(variable)
@@ -315,6 +319,7 @@ class MatrixMultiplication(BinaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
+        left, right = self.orphans
         return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
 
     def _binary_simplify(self, left, right):
@@ -351,8 +356,10 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.Symbol.jac()`. """
         # apply quotient rule
         top, bottom = self.orphans
-        if top.evaluates_to_number():
-            return -pybamm.Diagonal(top / bottom ** 2) @ bottom.jac(variable)
+        if top.evaluates_to_number() and bottom.evaluates_to_number():
+            return pybamm.Scalar(0)
+        elif top.evaluates_to_number():
+            return -top * pybamm.Diagonal(1 / bottom ** 2) @ bottom.jac(variable)
         elif bottom.evaluates_to_number():
             return top.jac(variable) / bottom
         else:

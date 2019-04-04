@@ -132,9 +132,14 @@ class NumpyBroadcast(Broadcast):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        if isinstance(self.children[0], pybamm.Scalar):
-            variable_y_indices = np.arange(variable.y_slice.start, variable.y_slice.stop)
-            jac = csr_matrix((self.broadcasting_vector_size, np.size(variable_y_indices)))
+        child = self.orphans[0]
+        if child.evaluates_to_number():
+            variable_y_indices = np.arange(
+                variable.y_slice.start, variable.y_slice.stop
+            )
+            jac = csr_matrix(
+                (self.broadcasting_vector_size, np.size(variable_y_indices))
+            )
             return pybamm.Matrix(jac)
         else:
-            return self.children[0].jac(variable)
+            return child.jac(variable)

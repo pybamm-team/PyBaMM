@@ -223,9 +223,8 @@ class SparseStack(pybamm.Symbol):
         # dense and then do a NumpyConcatenation, but I fear this will be bad
         # when the Jacobian is very large
         evaluated_child = child.evaluate(t, y)
-
         if issparse(evaluated_child) is False:
-            if evaluated_child == 0:
+            if np.size(evaluated_child) == 1 and evaluated_child == 0:
                 # If rhs or algebraic was a constant, then the result is scalar
                 # zero and should be replaced with a row of zeros
                 evaluated_child = csr_matrix((1, np.size(y)))

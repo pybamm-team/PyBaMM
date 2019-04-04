@@ -7,6 +7,7 @@ import pybamm
 
 import autograd
 import numpy as np
+import numbers
 from scipy.sparse import csr_matrix, diags
 
 
@@ -132,9 +133,7 @@ class Function(UnaryOperator):
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         child = self.orphans[0]
-        return Function(autograd.jacobian(self.func), child) @ child.jac(
-            variable
-        )
+        return Function(autograd.jacobian(self.func), child) @ child.jac(variable)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -194,6 +193,21 @@ class Diagonal(UnaryOperator):
             return csr_matrix(evaluated_child)
         else:
             return diags(evaluated_child, 0)
+
+    def evaluates_to_number(self):
+        """ See :meth:`pybamm.Symbol.evaluates_to_number()`. """
+        result = self.evaluate_ignoring_errors()
+        import ipdb
+
+        ipdb.set_trace()
+        if isinstance(result, numbers.Number):
+            return True
+        elif isinstance(result, csr_matrix) and isinstance(
+            result.toarray()[0][0], numbers.Number
+        ):
+            return True
+        else:
+            return False
 
 
 class SpatialOperator(UnaryOperator):
