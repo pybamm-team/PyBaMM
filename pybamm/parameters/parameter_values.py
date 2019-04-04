@@ -207,22 +207,20 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
             if isinstance(symbol, pybamm.NumpyBroadcast):
-                new_symbol = pybamm.NumpyBroadcast(
-                    new_child, symbol.domain, symbol.mesh
-                )
+                return pybamm.NumpyBroadcast(new_child, symbol.domain, symbol.mesh)
             elif isinstance(symbol, pybamm.Broadcast):
-                new_symbol = pybamm.Broadcast(new_child, symbol.domain)
+                return pybamm.Broadcast(new_child, symbol.domain)
             elif isinstance(symbol, pybamm.Function):
-                new_symbol = pybamm.Function(symbol.func, new_child)
+                return pybamm.Function(symbol.func, new_child)
             elif isinstance(symbol, pybamm.Integral):
-                new_symbol = pybamm.Integral(new_child, symbol.integration_variable)
+                return pybamm.Integral(new_child, symbol.integration_variable)
             elif isinstance(symbol, pybamm.BoundaryValue):
                 new_symbol = pybamm.BoundaryValue(new_child, symbol.side)
+                # ensure domain remains the same
+                new_symbol.domain = symbol.domain
+                return new_symbol
             else:
-                new_symbol = symbol.__class__(new_child)
-            # ensure domain remains the same
-            new_symbol.domain = symbol.domain
-            return new_symbol
+                return symbol.__class__(new_child)
 
         # Concatenations
         elif isinstance(symbol, pybamm.Concatenation):

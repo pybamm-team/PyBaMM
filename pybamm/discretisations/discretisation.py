@@ -430,9 +430,6 @@ class Discretisation(object):
         ids = {v.id for v in unpacked_variables}
         if ids != self._y_slices.keys():
             given_variable_names = [v.name for v in var_eqn_dict.keys()]
-            import ipdb
-
-            ipdb.set_trace()
             raise pybamm.ModelError(
                 "Initial conditions are insufficient. Only "
                 "provided for {} ".format(given_variable_names)

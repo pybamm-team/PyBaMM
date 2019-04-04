@@ -18,15 +18,17 @@ class TestAsymptoticConvergence(unittest.TestCase):
         """
         # Create models
         leading_order_model = pybamm.lead_acid.LOQS()
+        composite_model = pybamm.lead_acid.Composite()
         full_model = pybamm.lead_acid.NewmanTiedemann()
         # Same parameters, same geometry
         parameter_values = full_model.default_parameter_values
         parameter_values.process_model(leading_order_model)
+        parameter_values.process_model(composite_model)
         parameter_values.process_model(full_model)
         geometry = full_model.default_geometry
         parameter_values.process_geometry(geometry)
 
-        # Discretise (same mesh, create two discretisations)
+        # Discretise (same mesh, create different discretisations)
         var_pts = {
             pybamm.standard_spatial_vars.x_n: 3,
             pybamm.standard_spatial_vars.x_s: 3,
@@ -37,6 +39,8 @@ class TestAsymptoticConvergence(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, full_model.default_submesh_types, var_pts)
         loqs_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
         loqs_disc.process_model(leading_order_model)
+        comp_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
+        comp_disc.process_model(composite_model)
         full_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
         full_disc.process_model(full_model)
 
@@ -47,37 +51,52 @@ class TestAsymptoticConvergence(unittest.TestCase):
                 optional_parameters={"Typical current density": current},
             )
             param.process_discretised_model(leading_order_model, loqs_disc)
+            param.process_discretised_model(composite_model, comp_disc)
             param.process_discretised_model(full_model, full_disc)
             # Solve, make sure times are the same
             t_eval = np.linspace(0, 0.1, 10)
             solver_loqs = leading_order_model.default_solver
             solver_loqs.solve(leading_order_model, t_eval)
+            solver_comp = composite_model.default_solver
+            solver_comp.solve(composite_model, t_eval)
             solver_full = full_model.default_solver
             solver_full.solve(full_model, t_eval)
+            np.testing.assert_array_equal(solver_loqs.t, solver_comp.t)
             np.testing.assert_array_equal(solver_loqs.t, solver_full.t)
 
             # Post-process variables
             t, y_loqs = solver_loqs.t, solver_loqs.y
+            y_comp = solver_comp.y
             y_full = solver_full.y
             voltage_loqs = pybamm.ProcessedVariable(
                 leading_order_model.variables["Voltage"], t, y_loqs
+            )
+            voltage_comp = pybamm.ProcessedVariable(
+                composite_model.variables["Voltage"], t, y_comp
             )
             voltage_full = pybamm.ProcessedVariable(
                 full_model.variables["Voltage"], t, y_full, mesh=full_disc.mesh
             )
 
             # Compare
-            return np.linalg.norm(
+            loqs_error = np.linalg.norm(
                 voltage_loqs.evaluate(t) - voltage_full.evaluate(t)
             ) / np.linalg.norm(voltage_full.evaluate(t))
+            composite_error = np.linalg.norm(
+                voltage_composite.evaluate(t) - voltage_full.evaluate(t)
+            ) / np.linalg.norm(voltage_full.evaluate(t))
+            return (loqs_error, composite_error)
 
         # Get errors
         currents = 0.5 / (2 ** np.arange(3))
         errs = np.array([get_l2_error(current) for current in currents])
+        loqs_errs, comp_errs = zip(*errs)
 
-        # Get rates: expect linear convergence
-        rates = np.log2(errs[:-1] / errs[1:])
-        np.testing.assert_array_less(0.99 * np.ones_like(rates), rates)
+        # Get rates: expect linear convergence for loqs, quadratic for composite
+        loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
+        np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
+        comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
+        np.testing.assert_array_less(1.99 * np.ones_like(comp_rates), comp_rates)
 
 
 if __name__ == "__main__":
