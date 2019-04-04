@@ -7,7 +7,6 @@ import pybamm
 
 import numbers
 import autograd.numpy as np
-import copy
 
 
 def simplify_addition_subtraction(myclass, left, right):
@@ -156,12 +155,27 @@ def simplify_multiplication_division(myclass, left, right):
     if children are associative (multiply, division, etc) then try to find
     groups of constant children (that produce a value) and simplify them
 
-    This function is used to simplify expressions of the type (1 * (2 * c), which should
-    simplify to (2 * c)
+    The purpose of this function is to simplify expressions of the type (2 * c / 2),
+    which should simplify to (0.5 * c). The former expression consists of a Divsion,
+    with a left child of a Multiplication containing a Scalar and a Parameter, and a
+    right child consisting of a Scalar. For this case, this function will first flatten
+    the expression to a list of the bottom level children on the numerator (i.e.
+    [Scalar(2), Parameter(c)]) and their operators (i.e. [None, Multiplication]), as
+    well as those children on the denominator (i.e. [Scalar(2)]. After this, all the
+    constant children on the numerator and denominator (i.e. Scalar(1) and Scalar(2))
+    will be combined appropriatly, in this case to Scalar(0.5), and combined with the
+    nonconstant children (i.e. Parameter(c))
 
-    can handle matrix multiplication. If there are any on the numerator, it will only
-    try to simplify pairs of neighbouring constant children. If there are any matrix
-    multiplications on the denominator an exception is raised
+    Note that this function will flatten the expression tree until a symbol is found
+    that is not either an Multiplication, Division or MatrixMultiplication, so this
+    function would simplify (3*(1 + d)*2) to (6 * (1 + d))
+
+    As well as Multiplication and Division, this function can handle
+    MatrixMultiplication in two different ways:
+    1. If any MatrixMultiplications are found on the denominator, an exception is raised
+    2. If any MatrixMultiplications are found on the numerator, no reordering of
+    children is done to find groups of constant children. In this case only neighbouring
+    constant children on the numerator are simplified
 
     Parameters
     ----------
@@ -181,6 +195,20 @@ def simplify_multiplication_division(myclass, left, right):
 
     # recursive function to flatten a term involving only multiplications or divisions
     def flatten(previous_class, this_class, left_child, right_child, in_numerator):
+        """
+        recursive function to flatten a term involving only Multiplication, Division or
+        MatrixMultiplication. keeps track of wether a term is on the numerator or
+        denominator. For those terms on the numerator, their operator type
+        (Multiplication or MatrixMultiplication) is stored
+
+        outputs to lists `numerator`, `denominator` and `numerator_types`
+
+        e.g.
+        expression     numerator  denominator  numerator_types
+        (1 * 2) / 3 ->  [1, 2]       [3]       [None, Multiplication]
+        (1 @ 2) / 3 ->  [1, 2]       [3]       [None, MatrixMultiplication]
+        1 / (c / 2) ->  [1, 2]       [c]       [None, Multiplication]
+        """
         for child in [left_child, right_child]:
 
             if isinstance(child, (pybamm.Multiplication,
@@ -214,19 +242,17 @@ def simplify_multiplication_division(myclass, left, right):
     for t in numerator_types:
         has_matrix_multiply |= t == pybamm.MatrixMultiplication
 
-    # function to partition a source list of symbols into those that return a constant
-    # value, and those that do not
     def partition_by_constant(source, types=None):
+        """
+        function to partition a source list of symbols into those that return a constant
+        value, and those that do not
+        """
         constant = []
         nonconstant = []
 
         for child in source:
-            if child.is_constant():
-                result = child.evaluate_ignoring_errors()
-                if result is not None:
-                    constant.append(child)
-                else:
-                    nonconstant.append(child)
+            if child.is_constant() and child.evaluate_ignoring_errors() is not None:
+                constant.append(child)
             else:
                 nonconstant.append(child)
         return constant, nonconstant
@@ -235,6 +261,16 @@ def simplify_multiplication_division(myclass, left, right):
     denominator_constant, denominator_nonconstant = partition_by_constant(denominator)
 
     def fold_multiply(array, types=None):
+        """
+        performs a fold operation on the children nodes in `array`, using the operator
+        types given in `types`
+
+        e.g. if the input was:
+        array = [1, 2, 3, 4]
+        types = [None, *, @, *]
+
+        the result would be 1 * 2 @ 3 * 4
+        """
         ret = None
         if len(array) > 0:
             ret = array[0]
@@ -256,13 +292,11 @@ def simplify_multiplication_division(myclass, left, right):
     # if so combine with constant denominator term
     found_a_constant = False
     for i, child in enumerate(numerator):
-        if child.is_constant():
-            result = child.evaluate_ignoring_errors()
-            if result is not None:
-                if constant_denominator_expr is not None:
-                    numerator[i] = \
-                        pybamm.simplify_if_constant(child / constant_denominator_expr)
-                found_a_constant = True
+        if child.is_constant() and child.evaluate_ignoring_errors() is not None:
+            if constant_denominator_expr is not None:
+                numerator[i] = \
+                    pybamm.simplify_if_constant(child / constant_denominator_expr)
+            found_a_constant = True
 
     if not found_a_constant:
         # not possible to simplify numerator, just return as is
