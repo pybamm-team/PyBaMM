@@ -169,4 +169,3 @@ class DomainConcatenation(Concatenation):
                 vector[self._slices[dom]] = child_vector[slices[dom]]
 
         return vector
-

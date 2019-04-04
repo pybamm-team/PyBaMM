@@ -82,15 +82,22 @@ class BaseModel(object):
                 "Positive electrode OCV": os.path.join(
                     input_path, "lico2_ocp_Dualfoil.py"
                 ),
+                "Negative electrode diffusivity": os.path.join(
+                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
+                ),
+                "Positive electrode diffusivity": os.path.join(
+                    input_path, "lico2_diffusivity_Dualfoil.py"
+                ),
             },
         )
         self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
-        self.default_submesh_pts = {
-            "negative electrode": {"x": 40},
-            "separator": {"x": 25},
-            "positive electrode": {"x": 35},
-            "negative particle": {"r": 10},
-            "positive particle": {"r": 10},
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 40,
+            var.x_s: 25,
+            var.x_p: 35,
+            var.r_n: 10,
+            var.r_p: 10,
         }
         self.default_submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
@@ -406,7 +413,7 @@ class LeadAcidBaseModel(BaseModel):
 class LithiumIonBaseModel(BaseModel):
     """
     Overwrites default parameters from Base Model with default parameters for
-    lead-acid models
+    lithium-ion models
 
     **Extends:** :class:`BaseModel`
 
@@ -439,6 +446,12 @@ class LithiumIonBaseModel(BaseModel):
                 ),
                 "Positive electrode OCV": os.path.join(
                     input_path, "lico2_ocp_Dualfoil.py"
+                ),
+                "Negative electrode diffusivity": os.path.join(
+                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
+                ),
+                "Positive electrode diffusivity": os.path.join(
+                    input_path, "lico2_diffusivity_Dualfoil.py"
                 ),
             },
         )
