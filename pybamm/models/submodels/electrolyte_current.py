@@ -176,9 +176,9 @@ def explicit_stefan_maxwell(param, c_e, ocp_n, eta_r_n_left, c_e_0=1, eps=None):
     c_e : :class:`pybamm.Concatenation`
         The electrolyte concentration (combined leading and first order)
     ocp_n : :class:`pybamm.Symbol`
-        Open circuit potential at the left-most point of the cell
+        Open circuit potential at the point of the cell
     eta_r_n : :class: `pybamm.Symbol`
-        Reaction overpotential at the left-most point of the cell
+        Reaction overpotential at the point of the cell
         (combined leading and first order)
     c_e_0 : :class: `pybamm.Symbol`
         Leading-order electrolyte concentration (=1 for lithium-ion)
@@ -192,9 +192,9 @@ def explicit_stefan_maxwell(param, c_e, ocp_n, eta_r_n_left, c_e_0=1, eps=None):
     i_e :class: `pybamm.Concatenation`
         The electrolyte current (leading order)
     Delta_Phi_e: `pybamm.Symbol`
-        Ohmic losses in the electrolyte
+        Average Ohmic losses in the electrolyte
     eta_c: `Pybamm.Symbol`
-        Concentration overpotential
+        Average Concentration overpotential
     """
 
     # import standard spatial vairables
@@ -222,15 +222,19 @@ def explicit_stefan_maxwell(param, c_e, ocp_n, eta_r_n_left, c_e_0=1, eps=None):
     kappa_s = param.kappa_e(c_e_0) * eps_s ** param.b
     kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
 
+    # get left-most ocp and overpotential
+    ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
+    eta_r_n_left = pybamm.BoundaryValue(eta_r_n, "left")
+
     # explicit expression for i_e (leading order)
     i_e_n = i_cell * x_n / l_n
-    i_e_s = i_cell
+    i_e_s = pybamm.Broadcast(i_cell, ["separator"])
     i_e_p = i_cell * (1 - x_p) / l_p
     i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
     # explicit expression for phi_e (combined leading and first order)
     phi_e_const = (
-        -ocp_n
+        -ocp_n_left
         - eta_r_n_left
         - param.C_e
         * i_cell

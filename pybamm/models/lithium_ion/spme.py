@@ -58,7 +58,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
         additional_bcs = {}
         self._boundary_conditions.update(additional_bcs)
 
-        "Additional Model Variables"
+        "Output Variables"
         # spatial variables
         spatial_vars = pybamm.standard_spatial_vars
 
@@ -90,41 +90,59 @@ class SPMe(pybamm.LithiumIonBaseModel):
         # and current (leading order)
         explicit_stefan_maxwell = pybamm.electrolyte_current.explicit_stefan_maxwell
         phi_e, i_e, Delta_Phi_e, eta_c = explicit_stefan_maxwell(
-            param, c_e, ocp_n, pybamm.BoundaryValue(eta_r_n, "left")
+            param, c_e, ocp_n, eta_r_n
         )
 
-        # solid phase ohmic losse
-        Delta_Phi_solid = (
-            -i_cell / 3 * (param.l_p / param.sigma_p + param.l_n / param.sigma_n)
+        # electrode potentials, current, and solid phase ohmic losses
+        phi_s, i_s, Delta_Phi_s = pybamm.electrode.explicit_solution_ohm(
+            param, phi_e, ocp_p, eta_r_p
         )
 
         # terminal voltage
-        v = ocv + eta_r + eta_c + Delta_Phi_elec + Delta_Phi_solid
+        v = ocv + eta_r + eta_c + Delta_Phi_e + Delta_Phi_s
 
-        additional_variables = {
-            "current": i_cell,
-            "Negative interfacial current density": j_n,
-            "Positive interfacial current density": j_p,
+        concentrations = {
+            "Negative particle concentration": c_s_n,
+            "Positive Particle concentration": c_s_p,
+            "Negative particle surface concentration": c_s_n_surf,
+            "Positive Particle surface concentration": c_s_p_surf,
+            "Electrolyte concentration": c_e,
+        }
+
+        fluxes = {
+            "Negative particle flux": N_s_n,
+            "Positive particle flux": N_s_p,
+            "Electrolyte flux": N_e,
+        }
+
+        potentials = {"Electrode potential": phi_s, "Electrolyte potential": phi_e}
+
+        currents = {
+            "Total current density": param.current_with_time,
+            "Electrode current density": i_s,
+            "Electrolyte current density": i_e,
+            "Interfacial current density": j,
+        }
+
+        voltages = {
             "Negative electrode open circuit potential": ocp_n,
-            "Positive electrode open circuit potential": ocp_p,
+            "Positive electrode open circuit potential": ocp_n,
             "Open circuit voltage": ocv,
+            "Terminal voltage": v,
+        }
+
+        overpotentials = {
             "Negative reaction overpotential": eta_r_n,
             "Positive reaction overpotential": eta_r_p,
             "Reaction overpotential": eta_r,
             "Concentration overpotential": eta_c,
-            "Electrolyte ohmic losses": Delta_Phi_elec,
-            "Solid phase ohmic losses": Delta_Phi_solid,
-            "Terminal voltage": v,
-            "Leading order electrolyte concentration": pybamm.Scalar(0),
-            "First order negative electrolyte concentration": c_e_n,
-            "First order separator electrolyte concentration": c_e_s,
-            "First order positive electrolyte concentration": c_e_p,
-            "Negative electrolyte concentration": c_e_n_combined,
-            "Separator electrolyte concentration": c_e_s_combined,
-            "Positive electrolyte concentration": c_e_p_combined,
-            "Electrolyte concentration": c_e_combined,
+            "Electrolyte ohmic losses": Delta_Phi_e,
+            "Solid phase ohmic losses": Delta_Phi_s,
         }
-        self._variables.update(additional_variables)
+
+        self._variables.update(
+            concentrations, fluxes, potentials, currents, voltages, overpotentials
+        )
 
         "Termination Conditions"
         # Cut-off if either concentration goes negative

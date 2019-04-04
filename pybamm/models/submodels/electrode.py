@@ -82,3 +82,80 @@ class Ohm(pybamm.BaseModel):
 
         # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
+
+
+def explicit_solution_ohm(param, phi_e, ocp_p, eta_r_p, eps=None):
+    # import standard spatial vairables
+    x_n = pybamm.standard_spatial_vars.x_n
+    x_p = pybamm.standard_spatial_vars.x_p
+
+    # import geometric parameters
+    l_n = pybamm.geometric_parameters.l_n
+    l_p = pybamm.geometric_parameters.l_p
+
+    # import current
+    i_cell = param.current_with_time
+
+    # if porosity is not passed in then use the parameter value
+    if eps is None:
+        eps = param.epsilon
+    eps_n, eps_s, eps_p = [e.orphans[0] for e in eps.orphans]
+
+    # extract right-most ocp, overpotential, and electrolyte potential
+    ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
+    eta_r_p_right = pybamm.BoundaryValue(eta_r_p, "right")
+    phi_e_right = pybamm.BoundaryValue(phi_e, "right")
+
+    # electrode potential
+    phi_s_n = i_cell * x_n * (2 * l_n - x_n) / (2 * param.sigma_n * (1 - eps_n) * l_n)
+    phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
+
+    phi_s_p = (
+        ocp_p_right
+        + eta_r_p_right
+        + phi_e_right
+        + i_cell
+        * (1 - x_p)
+        * (1 - 2 * l_p - x_p)
+        / (2 * param.sigma_p * (1 - eps_p) * l_p)
+    )
+    phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+
+    # electrode current
+    i_s_n = i_cell - i_cell * x_n / l_n
+    i_s_s = pybamm.Broadcast(0, ["separator"])
+    i_s_p = i_cell - i_cell * (1 - x_p) / l_p
+    i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
+
+    # average solid phase ohmic losses
+    Delta_Phi_s = (
+        -i_cell
+        / 3
+        * (l_p / param.sigma_p / (1 - eps_p) + l_n / param.sigma_n / (1 - eps_n))
+    )
+
+    return phi_s, i_s, Delta_Phi_s
+
+
+def explicit_leading_order_ohm(param, phi_e, ocp_p, eta_r_p):
+
+    # extract right-most ocp, overpotential, and electrolyte potential
+    ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
+    eta_r_p_right = pybamm.BoundaryValue(eta_r_p, "right")
+    phi_e_right = pybamm.BoundaryValue(phi_e, "right")
+
+    phi_s_n = pybamm.Scalar(0, ["negative electrode"])
+    phi_s_s = pybamm.Scalar(0, ["separator"])
+    phi_s_p = ocp_p_right + eta_r_p_right + phi_e_right
+    phi_s_p.domain = ["positive electrode"]
+    phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+
+    # electrode current
+    i_s_n = i_cell - i_cell * x_n / l_n
+    i_s_s = pybamm.Broadcast(0, ["separator"])
+    i_s_p = i_cell - i_cell * (1 - x_p) / l_p
+    i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
+
+    Delta_Phi_s = pybamm.Scalar(0)
+
+    return phi_s, i_s, Delta_Phi_s
