@@ -107,9 +107,73 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((c * a).simplify().evaluate(), 0)
         self.assertIsInstance((b * c).simplify(), pybamm.Parameter)
         self.assertIsInstance((e * c).simplify(), pybamm.Multiplication)
+
+        expr = (e * (e * c)).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
+        expr = (e / (e * c)).simplify()
+        self.assertIsInstance(expr, pybamm.Division)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 1.0)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
+        expr = (e * (e / c)).simplify()
+        self.assertIsInstance(expr, pybamm.Division)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 4.0)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
+        expr = (e * (c / e)).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 1.0)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
+        expr = ((e * c) * (c / e)).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 1.0)
+        self.assertIsInstance(expr.children[1], pybamm.Multiplication)
+        self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
+        self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
+
+        expr = (e + (e + c)).simplify()
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 4.0)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
+        expr = (e + (e - c)).simplify()
+        self.assertIsInstance(expr, pybamm.Subtraction)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 4.0)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+
+        expr = ((2 + c) + (c + 2)).simplify()
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 4.0)
+        self.assertIsInstance(expr.children[1], pybamm.Addition)
+        self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
+        self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
+
+        expr = ((-1 + c) - (c + 1) + (c - 1)).simplify()
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), -3.0)
+
+        # check these don't simplify
         self.assertIsInstance((c * e).simplify(), pybamm.Multiplication)
         self.assertIsInstance((e / c).simplify(), pybamm.Division)
-        self.assertIsInstance((c / e).simplify(), pybamm.Division)
+        self.assertIsInstance((c).simplify(), pybamm.Parameter)
+        c1 = pybamm.Parameter("c1")
+        self.assertIsInstance((c1 * c).simplify(), pybamm.Multiplication)
+
+        # should simplify division to multiply
+        self.assertIsInstance((c / e).simplify(), pybamm.Multiplication)
+
         self.assertIsInstance((c / b).simplify(), pybamm.Parameter)
         self.assertIsInstance((c * b).simplify(), pybamm.Parameter)
         self.assertIsInstance((A @ c).simplify(), pybamm.MatrixMultiplication)
@@ -129,6 +193,8 @@ class TestSymbol(unittest.TestCase):
         # power simplification
         self.assertIsInstance((c ** a).simplify(), pybamm.Scalar)
         self.assertEqual((c ** a).simplify().evaluate(), 1)
+        self.assertIsInstance((a ** c).simplify(), pybamm.Scalar)
+        self.assertEqual((a ** c).simplify().evaluate(), 0)
         d = pybamm.Scalar(2)
         self.assertIsInstance((c ** d).simplify(), pybamm.Power)
 
@@ -141,6 +207,45 @@ class TestSymbol(unittest.TestCase):
         self.assertTrue(np.isnan((a / a).simplify().evaluate()))
         self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
         self.assertEqual((b / b).simplify().evaluate(), 1)
+
+        # matrix * matrix
+        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
+        m2 = pybamm.Matrix(np.array([[3, 0], [0, 3]]))
+        v = pybamm.StateVector(slice(0, 2))
+
+        for expr in [((m2@m1)@v).simplify(), (m2@(m1@v)).simplify()]:
+            self.assertIsInstance(expr.children[0], pybamm.Matrix)
+            self.assertIsInstance(expr.children[1], pybamm.StateVector)
+            np.testing.assert_array_equal(
+                expr.children[0].entries,
+                np.array([[6, 0], [0, 6]])
+            )
+
+        # scalar * matrix
+        for expr in [((b * m1) @ v).simplify(),
+                     (b * (m1 @ v)).simplify(),
+                     ((m1 * b) @ v).simplify(),
+                     (m1 @ (b * v)).simplify()]:
+            self.assertIsInstance(expr.children[0], pybamm.Matrix)
+            self.assertIsInstance(expr.children[1], pybamm.StateVector)
+            np.testing.assert_array_equal(
+                expr.children[0].entries,
+                np.array([[2, 0], [0, 2]])
+            )
+
+        # matrix * vector
+        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
+        v1 = pybamm.Vector(np.array([1, 1]))
+
+        for expr in [(m1@v1).simplify()]:
+            self.assertIsInstance(expr, pybamm.Vector)
+            np.testing.assert_array_equal(
+                expr.entries,
+                np.array([2, 2])
+            )
+
+        with self.assertRaises(pybamm.ModelError):
+            (e / (m1@v)).simplify()
 
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])

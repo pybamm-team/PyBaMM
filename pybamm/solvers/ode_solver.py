@@ -32,8 +32,12 @@ class OdeSolver(pybamm.BaseSolver):
 
         """
 
+        # create simplified rhs and event expressions
+        concatenated_rhs = model.concatenated_rhs.simplify()
+        events = [event.simplify() for event in model.events]
+
         def dydt(t, y):
-            return model.concatenated_rhs.evaluate(t, y)
+            return concatenated_rhs.evaluate(t, y)
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
@@ -42,7 +46,7 @@ class OdeSolver(pybamm.BaseSolver):
 
             return eval_event
 
-        events = [event_fun(event) for event in model.events]
+        events = [event_fun(event) for event in events]
 
         y0 = model.concatenated_initial_conditions
 
