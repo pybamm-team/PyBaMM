@@ -20,6 +20,7 @@ nu
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+from scipy import constants
 
 # --------------------------------------------------------------------------------------
 "File Layout:"
@@ -33,8 +34,8 @@ import pybamm
 # --------------------------------------------------------------------------------------
 "1. Dimensional Parameters"
 # Physical constants
-R = pybamm.Parameter("Ideal gas constant")
-F = pybamm.Parameter("Faraday's constant")
+R = pybamm.Scalar(constants.R)
+F = pybamm.Scalar(constants.physical_constants["Faraday constant"][0])
 T_ref = pybamm.Parameter("Reference temperature")
 
 # Macroscale geometry
