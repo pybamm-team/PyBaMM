@@ -8,7 +8,7 @@ import pybamm
 import numpy as np
 
 
-class MacInnesStefanMaxwell(pybamm.LeadAcidBaseModel):
+class MacInnesStefanMaxwell(pybamm.BaseModel):
     """MacInnes equation for the current in the electrolyte, derived from the
     Stefan-Maxwell equations.
 
@@ -161,3 +161,114 @@ class StefanMaxwellFirstOrderPotential(pybamm.BaseModel):
             "Electrolyte potential": Phi_0 + param.C_e * Phi_1,
             "Voltage": V_0 + param.C_e * V_1,
         }
+
+
+def explicit_stefan_maxwell(param, c_e, ocp_n, eta_r_n_left, c_e_0=1, eps=None):
+    """
+    Explicit expression for the electrolyte potential and current, valid in the
+    limit of a fast electrolyte diffusion timescale relative to the timescale of
+    a discharge.
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+    c_e : :class:`pybamm.Concatenation`
+        The electrolyte concentration (combined leading and first order)
+    ocp_n : :class:`pybamm.Symbol`
+        Open circuit potential at the left-most point of the cell
+    eta_r_n : :class: `pybamm.Symbol`
+        Reaction overpotential at the left-most point of the cell
+        (combined leading and first order)
+    c_e_0 : :class: `pybamm.Symbol`
+        Leading-order electrolyte concentration (=1 for lithium-ion)
+    eps: :class: `pybamm.Symbol`
+        Electrode porosity. If not supplied, porosity values in param are used
+
+    Returns
+    -------
+    phi_e :class: `pybamm.Concatenation`
+        The electrolyte potential (combined leading and first order)
+    i_e :class: `pybamm.Concatenation`
+        The electrolyte current (leading order)
+    Delta_Phi_e: `pybamm.Symbol`
+        Ohmic losses in the electrolyte
+    eta_c: `Pybamm.Symbol`
+        Concentration overpotential
+    """
+
+    # import standard spatial vairables
+    x_n = pybamm.standard_spatial_vars.x_n
+    x_s = pybamm.standard_spatial_vars.x_s
+    x_p = pybamm.standard_spatial_vars.x_p
+
+    # import geometric parameters
+    l_n = pybamm.geometric_parameters.l_n
+    l_p = pybamm.geometric_parameters.l_p
+
+    # import current
+    i_cell = param.current_with_time
+
+    # extract c_e components
+    c_e_n, c_e_s, c_e_p = [c.orphans[0] for c in c_e.orphans]
+
+    # if porosity is not passed in then use the parameter value
+    if eps is None:
+        eps = param.epsilon
+    eps_n, eps_s, eps_p = [e.orphans[0] for e in eps.orphans]
+
+    # bulk conductivities (leading order)
+    kappa_n = param.kappa_e(c_e_0) * eps_n ** param.b
+    kappa_s = param.kappa_e(c_e_0) * eps_s ** param.b
+    kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
+
+    # explicit expression for i_e (leading order)
+    i_e_n = i_cell * x_n / l_n
+    i_e_s = i_cell
+    i_e_p = i_cell * (1 - x_p) / l_p
+    i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
+
+    # explicit expression for phi_e (combined leading and first order)
+    phi_e_const = (
+        -ocp_n
+        - eta_r_n_left
+        - param.C_e
+        * i_cell
+        / param.gamma_e
+        * (l_n ** 2 / (2 * kappa_n) - (l_n / kappa_s))
+    )
+
+    phi_e_n = phi_e_const + param.C_e * (
+        +2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n)
+        - (i_cell / param.gamma_e)
+        * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
+    )
+    phi_e_s = phi_e_const + param.C_e * (
+        +2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s)
+        - (i_cell / param.gamma_e) * (x_s / kappa_s)
+    )
+    phi_e_p = phi_e_const + param.C_e * (
+        +2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p)
+        - (i_cell / param.gamma_e)
+        * ((x_p * (2 - x_p) - l_p ** 2 - 1) / (2 * kappa_p * l_p) + (1 - l_p) / kappa_s)
+    )
+
+    phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+
+    "Ohmic losses and overpotentials"
+    # electrolyte ohmic losses
+    Delta_Phi_e = -(param.C_e * i_cell / param.gamma_e / param.kappa_e(c_e)) * (
+        param.l_n / (3 * param.epsilon_n ** param.b)
+        + param.l_s / (param.epsilon_s ** param.b)
+        + param.l_p / (3 * param.epsilon_p ** param.b)
+    )
+
+    # electrode-averaged electrolye concentrations (combined leading
+    # and first order)
+    c_e_n_av = pybamm.Integral(c_e_n, x_n) / l_n
+    c_e_p_av = pybamm.Integral(c_e_p, x_p) / l_p
+
+    # concentration overpotential (combined leading and first order)
+    eta_c = 2 * param.C_e * (1 - param.t_plus) * (c_e_p_av - c_e_n_av)
+
+    return phi_e, i_e, Delta_Phi_e, eta_c

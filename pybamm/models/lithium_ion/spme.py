@@ -20,7 +20,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
         param = pybamm.standard_parameters_lithium_ion
 
         "Model Variables"
-        # Electrolyte concentration
+        # Electrolyte concentration (combined leading and first order, nonlinear)
         c_e_n = pybamm.Variable("c_e_n", ["negative electrode"])
         c_e_s = pybamm.Variable("c_e_s", ["separator"])
         c_e_p = pybamm.Variable("c_e_p", ["positive electrode"])
@@ -59,71 +59,41 @@ class SPMe(pybamm.LithiumIonBaseModel):
         self._boundary_conditions.update(additional_bcs)
 
         "Additional Model Variables"
-        # current
-        i_cell = param.current_with_time
+        # spatial variables
+        spatial_vars = pybamm.standard_spatial_vars
 
         # surface concentrations
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
 
-        # open circuit voltage
+        # open circuit voltage (leading order)
         ocp_n = param.U_n(c_s_n_surf)
         ocp_p = param.U_p(c_s_p_surf)
         ocv = ocp_p - ocp_n
 
-        # reaction overpotentials
-        # j0_n = (
-        #     param.m_n
-        #     * c_s_n_surf ** 0.5
-        #     * (1 - c_s_n_surf) ** 0.5
-        #     * (1 + param.C_e * c_e_n) ** 0.5
-        # )
-        # j0_p = (
-        #     param.m_p
-        #     * param.gamma_p
-        #     * c_s_p_surf ** 0.5
-        #     * (1 - c_s_p_surf) ** 0.5
-        #     * (1 + param.C_e * c_e_p) ** 0.5
-        # )
+        # exchange current densities (combined leading and first order)
+        j0_n = pybamm.interface.exchange_current_density(c_e_n, c_s_n_surf)
+        j0_p = pybamm.interface.exchange_current_density(c_e_p, c_s_p_surf)
 
-        # TODO: electrode average j0_n, j0_p
-        j0_n_av = pybamm.Scalar(1) + 0
-        j0_p_av = pybamm.Scalar(1) + 0
+        # reaction overpotentials (combined leading and first order)
+        eta_r_n = pybamm.interface.inverse_butler_volmer(j_n, j0_n, param.ne_n)
+        eta_r_p = pybamm.interface.inverse_butler_volmer(j_p, j0_p, param.ne_p)
 
-        eta_r_n = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_p_av * param.l_p))
-        eta_r_p = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_n_av * param.l_n))
-        eta_r = eta_r_n + eta_r_p
+        # electrode-averaged reaction overpotentials (combined leading and first order)
+        eta_r_n_av = pybamm.Integral(eta_r_n, spatial_vars.x_n) / param.l_n
+        eta_r_p_av = pybamm.Integral(eta_r_p, spatial_vars.x_p) / param.l_p
 
-        # electrolyte potentials
-        # TODO: add the expressions for these
+        # total reaction overpotential (combined leading and first order)
+        eta_r = eta_r_p_av - eta_r_n_av
 
-        # TODO: electrode average c_e_p and c_e_n
-        c_e_p_av = pybamm.Scalar(0)
-        c_e_n_av = pybamm.Scalar(0)
-
-        # combined electrolyte concentrations
-        c_e_n_combined = 1 + param.C_e * c_e_n
-        c_e_s_combined = 1 + param.C_e * c_e_s
-        c_e_p_combined = 1 + param.C_e * c_e_p
-        c_e_combined = 1 + param.C_e * c_e
-
-        # concentration overpotential
-        eta_c = 2 * param.C_e * (1 - param.t_plus) * (c_e_p_av - c_e_n_av)
-
-        # electrolyte ohmic losses
-        Delta_Phi_elec = (
-            -param.C_e
-            * i_cell
-            * (1 / param.gamma_e)
-            / param.kappa_e(c_e)
-            * (
-                param.l_n / (3 * param.epsilon_n ** param.b)
-                + param.l_s / (param.epsilon_s ** param.b)
-                + param.l_p / (3 * param.epsilon_p ** param.b)
-            )
+        # electrolyte potentials (combinded leading and first order)
+        # and current (leading order)
+        explicit_stefan_maxwell = pybamm.electrolyte_current.explicit_stefan_maxwell
+        phi_e, i_e, Delta_Phi_e, eta_c = explicit_stefan_maxwell(
+            param, c_e, ocp_n, pybamm.BoundaryValue(eta_r_n, "left")
         )
 
-        # solid phase ohmic losses
+        # solid phase ohmic losse
         Delta_Phi_solid = (
             -i_cell / 3 * (param.l_p / param.sigma_p + param.l_n / param.sigma_n)
         )

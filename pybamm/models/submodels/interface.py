@@ -102,6 +102,29 @@ def exchange_current_density(c_e, c_s_k_surf=None, domain=None):
             return sp.m_p * c_e ** 2 * c_w
 
 
+def inverse_butler_volmer(j, j0, ne):
+    """
+    Inverts the Butler-Volmer relation to solve for the reaction overpotential.
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+    j : :class:`pybamm.Symbol`
+        The interfacial current density
+    j0 : :class:`pybamm.Symbol`
+        The exchange current density
+    ne : int
+        The number of electrons in the charge transfer reaction
+    Returns
+    -------
+    eta :class: `pybamm.Symbol`
+        The reaction overpotential
+    """
+    eta = (2 / ne) * pybamm.Function(np.arcsinh, j / j0)
+
+    return eta
+
+
 def butler_volmer(param, c_e, Delta_phi, c_s_k_surf=None, domain=None):
     """
     Butler-Volmer reactions for lead-acid chemistry
