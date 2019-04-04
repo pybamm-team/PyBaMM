@@ -23,13 +23,6 @@ class TestReactionDiffusionModel(unittest.TestCase):
         model = pybamm.ReactionDiffusionModel()
         # # Make ln and lp nicer for testing
         param = model.default_parameter_values
-        # param.update(
-        #     {
-        #         "Negative electrode width": 4e-4,
-        #         "Separator width": 2e-4,
-        #         "Positive electrode width": 4e-4,
-        #     }
-        # )
         # Process model and geometry
         param.process_model(model)
         geometry = model.default_geometry
