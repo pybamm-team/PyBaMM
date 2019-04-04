@@ -30,8 +30,6 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         "Submodels"
         # Interfacial current density
-        # j_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
-        # j_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
         j_n = param.current_with_time / param.l_n
         j_p = -param.current_with_time / param.l_p
 
