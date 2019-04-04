@@ -150,13 +150,18 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(expr.children[0].evaluate(), 4.0)
         self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
-        expr = ((e + c) + (c + e)).simplify()
+        expr = ((2 + c) + (c + 2)).simplify()
         self.assertIsInstance(expr, pybamm.Addition)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 4.0)
         self.assertIsInstance(expr.children[1], pybamm.Addition)
         self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
         self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
+
+        expr = ((-1 + c) - (c + 1) + (c - 1)).simplify()
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), -3.0)
 
         # check these don't simplify
         self.assertIsInstance((c * e).simplify(), pybamm.Multiplication)

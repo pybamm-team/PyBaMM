@@ -12,8 +12,25 @@ import copy
 
 def simplify_addition_subtraction(myclass, left, right):
     """
-    if children are associative (addition, subtraction, etc) then try to find pairs of
+    if children are associative (addition, subtraction, etc) then try to find groups of
     constant children (that produce a value) and simplify them to a single term
+
+    The purpose of this function is to simplify expressions like (1 + (1 + p)), which
+    should be simplified to (2 + p). The former expression consists of an Addition, with
+    a left child of Scalar type, and a right child of another Addition containing a
+    Scalar and a Parameter. For this case, this function will first flatten the
+    expression to a list of the bottom level children (i.e. [Scalar(1), Scalar(2),
+    Parameter(p)]), and their operators (i.e. [None, Addition, Addition]), and then
+    combine all the constant children (i.e. Scalar(1) and Scalar(1)) to a single child
+    (i.e. Scalar(2))
+
+    Note that this function will flatten the expression tree until a symbol is found
+    that is not either an Addition or a Subtraction, so this function would simplify
+    (3 - (2 + a*b*c)) to (1 + a*b*c)
+
+    This function is useful if different children expressions contain non-constant terms
+    that prevent them from being simplified, so for example (1 + a) + (b - 2) - (6 + c)
+    will be simplified to (-7 + a + b - c)
 
     Parameters
     ----------
@@ -30,52 +47,71 @@ def simplify_addition_subtraction(myclass, left, right):
     numerator = []
     numerator_types = []
 
-    # recursive function to flatten a term involving only additions or subtractions
-    def flatten(previous_class, this_class, left_child, right_child):
+    def flatten(this_class, left_child, right_child, in_subtraction):
+        """
+        recursive function to flatten a term involving only additions or subtractions
+
+        outputs to lists `numerator` and `numerator_types`
+
+        e.g.
+
+        (1 + 2) + 3       -> [1, 2, 3]    and [None, Addition, Addition]
+        1 + (2 - 3)       -> [1, 2, 3]    and [None, Addition, Subtraction]
+        1 - (2 + 3)       -> [1, 2, 3]    and [None, Subtraction, Subtraction]
+        (1 + 2) - (2 + 3) -> [1, 2, 2, 3] and [None, Addition, Subtraction, Subtraction]
+        """
         for child in [left_child, right_child]:
-            if isinstance(child, pybamm.Addition) \
-                    or isinstance(child, pybamm.Subtraction):
-                left = copy.deepcopy(child.children[0])
-                left.parent = None
-                right = copy.deepcopy(child.children[1])
-                right .parent = None
-                if child == left_child:
-                    flatten(previous_class, child.__class__, left, right)
-                else:
-                    flatten(this_class, child.__class__, left, right)
+            if isinstance(child, (pybamm.Addition, pybamm.Subtraction)):
+                left, right = child.orphans
+                flatten(child.__class__, left, right, in_subtraction)
 
             else:
                 numerator.append(child)
-                if child == left_child:
-                    numerator_types.append(previous_class)
+                if in_subtraction is None:
+                    numerator_types.append(None)
+                elif in_subtraction:
+                    numerator_types.append(pybamm.Subtraction)
                 else:
-                    numerator_types.append(this_class)
+                    numerator_types.append(pybamm.Addition)
 
-    flatten(None, myclass, left, right)
+            if child == left_child:
+                if in_subtraction is None:
+                    in_subtraction = this_class == pybamm.Subtraction
+                elif this_class == pybamm.Subtraction:
+                    in_subtraction = not in_subtraction
 
-    # function to partition a source list of symbols into those that return a constant
-    # value, and those that do not
+    flatten(myclass, left, right, None)
+
     def partition_by_constant(source, types):
+        """
+        function to partition a source list of symbols into those that return a constant
+        value, and those that do not
+        """
         constant = []
         nonconstant = []
-        constant_t = []
-        nonconstant_t = []
+        constant_types = []
+        nonconstant_types = []
 
-        for child, t in zip(source, types):
-            if child.is_constant():
-                result = child.evaluate_ignoring_errors()
-                if result is not None:
-                    constant.append(child)
-                    constant_t.append(t)
-                else:
-                    nonconstant.append(child)
-                    nonconstant_t.append(t)
+        for child, op_type in zip(source, types):
+            if child.is_constant() and child.evaluate_ignoring_errors() is not None:
+                constant.append(child)
+                constant_types.append(op_type)
             else:
                 nonconstant.append(child)
-                nonconstant_t.append(t)
-        return constant, nonconstant, constant_t, nonconstant_t
+                nonconstant_types.append(op_type)
+        return constant, nonconstant, constant_types, nonconstant_types
 
     def fold_add_subtract(array, types):
+        """
+        performs a fold operation on the children nodes in `array`, using the operator
+        types given in `types`
+
+        e.g. if the input was:
+        array = [1, 2, 3, 4]
+        types = [None, +, -, +]
+
+        the result would be 1 + 2 - 3 + 4
+        """
         ret = None
         if len(array) > 0:
             ret = array[0]
@@ -118,7 +154,10 @@ def simplify_addition_subtraction(myclass, left, right):
 def simplify_multiplication_division(myclass, left, right):
     """
     if children are associative (multiply, division, etc) then try to find
-    pairs of constant children (that produce a value) and simplify them
+    groups of constant children (that produce a value) and simplify them
+
+    This function is used to simplify expressions of the type (1 * (2 * c), which should
+    simplify to (2 * c)
 
     can handle matrix multiplication. If there are any on the numerator, it will only
     try to simplify pairs of neighbouring constant children. If there are any matrix
@@ -144,13 +183,10 @@ def simplify_multiplication_division(myclass, left, right):
     def flatten(previous_class, this_class, left_child, right_child, in_numerator):
         for child in [left_child, right_child]:
 
-            if isinstance(child, pybamm.Multiplication) \
-                    or isinstance(child, pybamm.Division) \
-                    or isinstance(child, pybamm.MatrixMultiplication):
-                left = copy.deepcopy(child.children[0])
-                left.parent = None
-                right = copy.deepcopy(child.children[1])
-                right .parent = None
+            if isinstance(child, (pybamm.Multiplication,
+                                  pybamm.Division,
+                                  pybamm.MatrixMultiplication)):
+                left, right = child.orphans
                 if child == left_child:
                     flatten(previous_class, child.__class__, left, right, in_numerator)
                 else:
