@@ -73,6 +73,12 @@ class NumpyConcatenation(pybamm.Symbol):
                 children[i] = pybamm.NumpyBroadcast(child, [], None)
         super().__init__("model concatenation", children, domain=[])
 
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        children_simp = [child.simplify() for child in self.children]
+
+        return NumpyConcatenation(*children_simp)
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if len(self.children) == 0:
