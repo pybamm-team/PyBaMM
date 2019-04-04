@@ -74,17 +74,14 @@ class TestAsymptoticConvergence(unittest.TestCase):
                 composite_model.variables["Voltage"], t, y_comp
             )
             voltage_full = pybamm.ProcessedVariable(
-                full_model.variables["Voltage"], t, y_full, mesh=full_disc.mesh
+                full_model.variables["Voltage"], t, y_full
             )
 
             # Compare
-            loqs_error = np.linalg.norm(
-                voltage_loqs(t) - voltage_full(t)
-            ) / np.linalg.norm(voltage_full(t))
-            composite_error = np.linalg.norm(
-                voltage_comp(t) - voltage_full(t)
-            ) / np.linalg.norm(voltage_full(t))
-            return (loqs_error, composite_error)
+            norm = np.linalg.norm
+            loqs_error = norm(voltage_loqs(t) - voltage_full(t)) / norm(voltage_full(t))
+            comp_error = norm(voltage_comp(t) - voltage_full(t)) / norm(voltage_full(t))
+            return (loqs_error, comp_error)
 
         # Get errors
         currents = 0.5 / (2 ** np.arange(3))
