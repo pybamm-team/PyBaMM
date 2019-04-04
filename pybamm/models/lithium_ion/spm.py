@@ -57,11 +57,15 @@ class SPM(pybamm.LithiumIonBaseModel):
         ocp_p = param.U_p(c_s_p_surf)
         ocv = ocp_p - ocp_n
 
-        # reaction overpotentials
-        j0_n = (1 / param.C_r_n) * c_s_n_surf ** 0.5 * (1 - c_s_n_surf) ** 0.5
-        j0_p = (
-            (param.gamma_p / param.C_r_p) * c_s_p_surf ** 0.5 * (1 - c_s_p_surf) ** 0.5
+        # exhange current density
+        j0_n = pybamm.interface.exchange_current_density(
+            1, c_s_n_surf, ["negative electrode"]
         )
+        j0_p = pybamm.interface.exchange_current_density(
+            1, c_s_p_surf, ["positive electrode"]
+        )
+
+        # reaction overpotentials
         eta_r_n = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_p * param.l_p))
         eta_r_p = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_n * param.l_n))
         eta_r = eta_r_n + eta_r_p
