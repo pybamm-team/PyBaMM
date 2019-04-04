@@ -30,8 +30,10 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         "Submodels"
         # Interfacial current density
-        j_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
-        j_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
+        # j_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
+        # j_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
+        j_n = param.current_with_time / param.l_n
+        j_p = -param.current_with_time / param.l_p
 
         # Particle models
         negative_particle_model = pybamm.particle.Standard(c_s_n, j_n, param)
@@ -45,12 +47,14 @@ class SPM(pybamm.LithiumIonBaseModel):
         self._boundary_conditions.update(additional_bcs)
 
         "Additional Useful Variables"
-        # current
-        i_cell = param.current_with_time
-
         # surface concentrations
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
+
+        # electrolyte concentration
+        c_e_n = pybamm.Scalar(1)
+        c_e_p = pybamm.Scalar(1)
+        c_e = pybamm.Scalar(1)
 
         # open circuit voltage
         ocp_n = param.U_n(c_s_n_surf)
@@ -59,19 +63,16 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         # exhange current density
         j0_n = pybamm.interface.exchange_current_density(
-            1, c_s_n_surf, ["negative electrode"]
+            c_e_n, c_s_n_surf, ["negative electrode"]
         )
         j0_p = pybamm.interface.exchange_current_density(
-            1, c_s_p_surf, ["positive electrode"]
+            c_e_p, c_s_p_surf, ["positive electrode"]
         )
 
         # reaction overpotentials
-        eta_r_n = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_p * param.l_p))
-        eta_r_p = -2 * pybamm.Function(np.arcsinh, i_cell / (j0_n * param.l_n))
-        eta_r = eta_r_n + eta_r_p
-
-        # electrolyte concentration
-        c_e = pybamm.Scalar(1)
+        eta_r_n = pybamm.interface.inverse_butler_volmer(j_n, j0_n, param.ne_n)
+        eta_r_p = pybamm.interface.inverse_butler_volmer(j_p, j0_p, param.ne_p)
+        eta_r = eta_r_p - eta_r_n
 
         # electrolyte potential
         phi_e = -ocp_n - eta_r_n
@@ -80,7 +81,7 @@ class SPM(pybamm.LithiumIonBaseModel):
         v = ocv + eta_r
 
         additional_variables = {
-            "current": i_cell,
+            "current": param.current_with_time,
             "Negative interfacial current density": j_n,
             "Positive interfacial current density": j_p,
             "Negative electrode open circuit potential": ocp_n,
