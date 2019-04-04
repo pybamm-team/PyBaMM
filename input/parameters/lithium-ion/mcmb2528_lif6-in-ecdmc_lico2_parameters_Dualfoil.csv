@@ -2,8 +2,6 @@ Name,Value,Units,Reference,Notes
 # Empty rows and rows starting with ‘#’ will be ignored,,,,
 ,,,,
 # Physical constants,,,,
-Ideal gas constant,8.314,J.K-1.mol-1,-,
-Faraday's constant,96487,C.mol-1,-,
 Reference temperature,298.15,K,25C,
 ,,,,
 # Macroscale geometry,,,,
