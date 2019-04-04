@@ -21,6 +21,8 @@ flux = var * pybamm.grad(var)
 eqn = pybamm.div(flux)
 disc._bcs = {flux.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(2)}}
 eqn_disc = disc.process_symbol(eqn)
+import ipdb
+
+ipdb.set_trace()
 eqn_jac = eqn_disc.jac(y)
-import ipdb; ipdb.set_trace()
 eqn_jac.evaluate(y=y_test)
