@@ -472,7 +472,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_discretised_symbol
 
-    def boundary_value(self, discretised_symbol, side):
+    def boundary_value(self, symbol, discretised_symbol, side):
         """
         Uses linear extrapolation to get the boundary value of a variable in the
         Finite Volume Method.
@@ -490,12 +490,24 @@ class FiniteVolume(pybamm.SpatialMethod):
             The variable representing the boundary value.
         """
 
+        # find the number of submeshs
+        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        if isinstance(submesh_list[0].npts, list):
+            NotImplementedError("Can only take in 1D primary directions")
+
+        prim_pts = submesh_list[0].npts
+        sec_pts = len(submesh_list)
+
         def linear_extrapolation(array):
             """Linearly extrapolates an array"""
+
+            # first reshape array for convenice with many particles
+            array = np.reshape(array, [sec_pts, prim_pts])
+
             if side == "left":
-                return array[0] + (array[0] - array[1]) / 2
+                return array[:, 0] + (array[:, 0] - array[:, 1]) / 2
             elif side == "right":
-                return array[-1] + (array[-1] - array[-2]) / 2
+                return array[:, -1] + (array[:, -1] - array[:, -2]) / 2
 
         boundary_value = pybamm.Function(linear_extrapolation, discretised_symbol)
         boundary_value.domain = []
