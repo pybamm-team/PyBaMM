@@ -133,7 +133,14 @@ class Function(UnaryOperator):
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         child = self.orphans[0]
-        jac_fun = Function(autograd.jacobian(self.func), child) @ child.jac(variable)
+        if child.evaluates_to_number():
+            jac_fun = Function(autograd.jacobian(self.func), child) * child.jac(
+                variable
+            )
+        else:
+            jac_fun = Function(autograd.jacobian(self.func), child) @ child.jac(
+                variable
+            )
         jac_fun.domain = self.domain
         return jac_fun
 
@@ -199,9 +206,6 @@ class Diagonal(UnaryOperator):
     def evaluates_to_number(self):
         """ See :meth:`pybamm.Symbol.evaluates_to_number()`. """
         result = self.evaluate_ignoring_errors()
-        import ipdb
-
-        ipdb.set_trace()
         if isinstance(result, numbers.Number):
             return True
         elif isinstance(result, csr_matrix) and isinstance(

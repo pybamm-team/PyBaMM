@@ -18,9 +18,6 @@ class StandardModelTest(object):
         geometry = model.default_geometry
         # Set default discretisation
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-        import ipdb
-
-        ipdb.set_trace()
         self.disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         # Set default solver
         self.solver = model.default_solver

@@ -216,9 +216,7 @@ class Discretisation(object):
         # Get number points in model
         # QUESTION: is there a better way to access this directly from here?
         N = model.concatenated_initial_conditions.shape[0]
-        import ipdb
 
-        ipdb.set_trace()
         # Create StateVector to differentiate model with respect to
         y = pybamm.StateVector(slice(0, N))
 
