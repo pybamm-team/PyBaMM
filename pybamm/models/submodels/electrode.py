@@ -209,9 +209,9 @@ def explicit_leading_order_ohm(param, phi_e, ocp_p, eta_r_p):
 
     # electode potential
     phi_s_n = pybamm.Broadcast(0, ["negative electrode"])
-    phi_s_p = pybamm.Broadcast(
-        ocp_p_right + eta_r_p_right + phi_e_right, ["positive electrode"]
-    )
+    phi_s_n = pybamm.Broadcast(0, ["separator"])
+    v = ocp_p_right + eta_r_p_right + phi_e_right
+    phi_s_p = v + pybamm.Broadcast(0, ["positive electrode"])
     phi_s = pybamm.Concatenation(phi_s_n, phi_s_p)
 
     # electrode current

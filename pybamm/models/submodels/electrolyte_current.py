@@ -226,6 +226,7 @@ def explicit_combined_stefan_maxwell(param, c_e, ocp_n, eta_r_n, c_e_0=1, eps=No
     # get left-most ocp and overpotential
     ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
     eta_r_n_left = pybamm.BoundaryValue(eta_r_n, "left")
+    c_e_n_left = pybamm.BoundaryValue(c_e_n, "left")
 
     # get explicit leading order current
     _, i_e, _, _ = pybamm.electrolyte_current.explicit_leading_order_stefan_maxwell(
@@ -236,23 +237,24 @@ def explicit_combined_stefan_maxwell(param, c_e, ocp_n, eta_r_n, c_e_0=1, eps=No
     phi_e_const = (
         -ocp_n_left
         - eta_r_n_left
-        - param.C_e
-        * i_cell
-        / param.gamma_e
-        * (l_n ** 2 / (2 * kappa_n) - (l_n / kappa_s))
+        - 2
+        * param.C_e
+        * (1 - param.t_plus)
+        * pybamm.Function(np.log, c_e_n_left / c_e_0)
+        + param.C_e * i_cell / param.gamma_e * (-l_n / (2 * kappa_n) + (l_n / kappa_s))
     )
 
     phi_e_n = phi_e_const + param.C_e * (
-        +2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n)
+        +2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n / c_e_0)
         - (i_cell / param.gamma_e)
         * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
     )
     phi_e_s = phi_e_const + param.C_e * (
-        +2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s)
+        +2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s / c_e_0)
         - (i_cell / param.gamma_e) * (x_s / kappa_s)
     )
     phi_e_p = phi_e_const + param.C_e * (
-        +2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p)
+        +2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p / c_e_0)
         - (i_cell / param.gamma_e)
         * ((x_p * (2 - x_p) - l_p ** 2 - 1) / (2 * kappa_p * l_p) + (1 - l_p) / kappa_s)
     )
@@ -261,7 +263,7 @@ def explicit_combined_stefan_maxwell(param, c_e, ocp_n, eta_r_n, c_e_0=1, eps=No
 
     "Ohmic losses and overpotentials"
     # average electrolyte ohmic losses
-    Delta_Phi_e_av = -(param.C_e * i_cell / param.gamma_e / param.kappa_e(c_e)) * (
+    Delta_Phi_e_av = -(param.C_e * i_cell / param.gamma_e / param.kappa_e(1)) * (
         param.l_n / (3 * param.epsilon_n ** param.b)
         + param.l_s / (param.epsilon_s ** param.b)
         + param.l_p / (3 * param.epsilon_p ** param.b)
@@ -328,9 +330,9 @@ def explicit_leading_order_stefan_maxwell(param, c_e, ocp_n, eta_r_n, eps=None):
     eta_r_n_left = pybamm.BoundaryValue(eta_r_n, "left")
 
     # electrolye potential
-    phi_e_n = pybamm.Broadcast(-ocp_n_left - eta_r_n_left, ["negative electrode"])
-    phi_e_s = pybamm.Broadcast(-ocp_n_left - eta_r_n_left, ["separator"])
-    phi_e_p = pybamm.Broadcast(-ocp_n_left - eta_r_n_left, ["positive electrode"])
+    phi_e_n = -ocp_n_left - eta_r_n_left + pybamm.Broadcast(0, ["negative electrode"])
+    phi_e_s = -ocp_n_left - eta_r_n_left + pybamm.Broadcast(0, ["separator"])
+    phi_e_p = -ocp_n_left - eta_r_n_left + pybamm.Broadcast(0, ["positive electrode"])
     phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
     # electrolyte current

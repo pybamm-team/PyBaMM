@@ -60,6 +60,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
+
         # spatial variables
         spatial_vars = pybamm.standard_spatial_vars
 
