@@ -84,7 +84,8 @@ class Discretisation(object):
         self.create_mass_matrix(model)
 
         # Create Jacobian
-        self.create_jacobian(model)
+        # Jacobian should probably be calculated after model simplify in the solver
+        # self.create_jacobian(model)
 
         # Check that resulting model makes sense
         self.check_model(model)

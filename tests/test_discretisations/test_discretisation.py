@@ -356,6 +356,7 @@ class TestDiscretise(unittest.TestCase):
         )
 
         # jacobian is identity
+        disc.create_jacobian(model)
         np.testing.assert_array_equal(
             np.eye(combined_submesh[0].nodes.shape[0]), model.jacobian(0, y0).toarray()
         )
@@ -405,6 +406,7 @@ class TestDiscretise(unittest.TestCase):
         )
 
         # jacobian is identity
+        disc.create_jacobian(model)
         np.testing.assert_array_equal(
             np.eye(np.size(y0)), model.jacobian(0, y0).toarray()
         )
@@ -479,6 +481,7 @@ class TestDiscretise(unittest.TestCase):
         )
 
         # jacobian
+        disc.create_jacobian(model)
         jacobian = np.block(
             [
                 [

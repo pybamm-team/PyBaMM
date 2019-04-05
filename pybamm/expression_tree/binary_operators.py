@@ -673,22 +673,7 @@ class MatrixMultiplication(BinaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        try:
-            return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
-        except ValueError:
-            left, right = self.orphans
-            # There seems to be cases in NewmanTiedemann and DFN which doesn't catch
-            # an evaluates_to_number() and results in an attempted matrix multiplication
-            # with a scalar 0. I *think* it might be to do with Function not cheking if
-            # it returns a sclar.
-            if is_zero(left):
-                # return zeros of correct size
-                return 0 * self.children[1].evaluate(t, y)
-            elif is_zero(right):
-                # return zeros of correct size
-                return 0 * self.children[0].evaluate(t, y)
-            else:
-                return ValueError
+        return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
