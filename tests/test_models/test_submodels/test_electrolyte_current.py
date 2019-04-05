@@ -12,7 +12,7 @@ import unittest
 class TestMacInnesStefanMaxwell(unittest.TestCase):
     def test_basic_processing(self):
         # Parameters
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.standard_parameters_lithium_ion
 
         # Variables
         whole_cell = ["negative electrode", "separator", "positive electrode"]

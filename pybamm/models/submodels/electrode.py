@@ -84,7 +84,35 @@ class Ohm(pybamm.BaseModel):
         self.default_solver = pybamm.ScikitsDaeSolver()
 
 
-def explicit_solution_ohm(param, phi_e, ocp_p, eta_r_p, eps=None):
+def explicit_combined_ohm(param, phi_e, ocp_p, eta_r_p, eps=None):
+    """
+    Provides an explicit combined leading and first order solution to solid phase
+    current conservation with ohm's law. Note that the returned current density is
+    only the leading order approximation.
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+    phi_e : :class:`pybamm.Symbol`
+        The electrolyte potential
+    ocp_p : :class:`pybamm.Symbol`
+        The positive electrode open circuit potential
+    eta_r_p : :class `pybamm.Symbol`
+        The positive reaction overpotential
+    eps : :class `pybamm.Symbol` (optional)
+        The electrode porosity
+
+    Returns
+    -------
+    phi_s : :class:`pybamm.Symbol`
+        The solid phase potential (combined leading and first order)
+    i_s : :class:`pybamm.Symbol`
+        The solid phase current density (leading order)
+    Delta_Phi_s : :class:`pybamm.Symbol`
+        Average solid phase ohmic losses (combined leading and first order)
+    """
+
     # import standard spatial vairables
     x_n = pybamm.standard_spatial_vars.x_n
     x_p = pybamm.standard_spatial_vars.x_p
@@ -109,7 +137,6 @@ def explicit_solution_ohm(param, phi_e, ocp_p, eta_r_p, eps=None):
     # electrode potential
     phi_s_n = i_cell * x_n * (2 * l_n - x_n) / (2 * param.sigma_n * (1 - eps_n) * l_n)
     phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
-
     phi_s_p = (
         ocp_p_right
         + eta_r_p_right
@@ -121,34 +148,71 @@ def explicit_solution_ohm(param, phi_e, ocp_p, eta_r_p, eps=None):
     )
     phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
 
-    # electrode current
-    i_s_n = i_cell - i_cell * x_n / l_n
-    i_s_s = pybamm.Broadcast(0, ["separator"])
-    i_s_p = i_cell - i_cell * (1 - x_p) / l_p
-    i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
+    # get explicit leading order current
+    _, i_s, _ = pybamm.electrode.explicit_leading_order_ohm(
+        param, phi_e, ocp_p, eta_r_p
+    )
 
     # average solid phase ohmic losses
-    Delta_Phi_s = (
+    Delta_Phi_s_av = (
         -i_cell
         / 3
         * (l_p / param.sigma_p / (1 - eps_p) + l_n / param.sigma_n / (1 - eps_n))
     )
 
-    return phi_s, i_s, Delta_Phi_s
+    return phi_s, i_s, Delta_Phi_s_av
 
 
 def explicit_leading_order_ohm(param, phi_e, ocp_p, eta_r_p):
+    """
+    Provides the leading order explicit solution to solid phase current
+    conservation with ohm's law.
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+    phi_e : :class:`pybamm.Symbol`
+        The electrolyte potential
+    ocp_p : :class:`pybamm.Symbol`
+        The positive electrode open circuit potential
+    eta_r_p : :class `pybamm.Symbol`
+        The positive reaction overpotential
+    eps : :class `pybamm.Symbol` (optional)
+        The electrode porosity
+
+    Returns
+    -------
+    phi_s : :class:`pybamm.Symbol`
+        The solid phase potential (leading order)
+    i_s : :class:`pybamm.Symbol`
+        The solid phase current density (leading order)
+    Delta_Phi_s : :class:`pybamm.Symbol`
+        Average solid phase ohmic losses (leading order)
+    """
+
+    # import standard spatial vairables
+    x_n = pybamm.standard_spatial_vars.x_n
+    x_p = pybamm.standard_spatial_vars.x_p
+
+    # import geometric parameters
+    l_n = pybamm.geometric_parameters.l_n
+    l_p = pybamm.geometric_parameters.l_p
+
+    # import current
+    i_cell = param.current_with_time
 
     # extract right-most ocp, overpotential, and electrolyte potential
     ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
     eta_r_p_right = pybamm.BoundaryValue(eta_r_p, "right")
     phi_e_right = pybamm.BoundaryValue(phi_e, "right")
 
-    phi_s_n = pybamm.Scalar(0, ["negative electrode"])
-    phi_s_s = pybamm.Scalar(0, ["separator"])
-    phi_s_p = ocp_p_right + eta_r_p_right + phi_e_right
-    phi_s_p.domain = ["positive electrode"]
-    phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+    # electode potential
+    phi_s_n = pybamm.Broadcast(0, ["negative electrode"])
+    phi_s_p = pybamm.Broadcast(
+        ocp_p_right + eta_r_p_right + phi_e_right, ["positive electrode"]
+    )
+    phi_s = pybamm.Concatenation(phi_s_n, phi_s_p)
 
     # electrode current
     i_s_n = i_cell - i_cell * x_n / l_n
@@ -156,6 +220,6 @@ def explicit_leading_order_ohm(param, phi_e, ocp_p, eta_r_p):
     i_s_p = i_cell - i_cell * (1 - x_p) / l_p
     i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
-    Delta_Phi_s = pybamm.Scalar(0)
+    Delta_Phi_s_av = pybamm.Scalar(0)
 
-    return phi_s, i_s, Delta_Phi_s
+    return phi_s, i_s, Delta_Phi_s_av

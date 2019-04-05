@@ -22,6 +22,7 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
+
         # Particle concentration
         c_s_n = pybamm.Variable(
             "Negative particle concentration", domain="negative particle"
@@ -32,6 +33,7 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Submodels"
+
         # Interfacial current density
         j_n = param.current_with_time / param.l_n
         j_p = -param.current_with_time / param.l_p
@@ -42,52 +44,59 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Combine Submodels"
+
         self.update(negative_particle_model, positive_particle_model)
 
         "-----------------------------------------------------------------------------"
-        "Additional Conditions"
-        additional_bcs = {}
-        self._boundary_conditions.update(additional_bcs)
-
-        "-----------------------------------------------------------------------------"
         "Post-Processing"
+        # spatial variables
+        spatial_vars = pybamm.standard_spatial_vars
+
         # electrolyte concentration
-        c_e = pybamm.Scalar(1)
+        c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
+        c_e_s = pybamm.Broadcast(1, domain=["separator"])
+        c_e_p = pybamm.Broadcast(1, domain=["positive electrode"])
+        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+
+        # interfacial current density
+        j_n = pybamm.Broadcast(j_n, ["negative electrode"])
+        j_s = pybamm.Broadcast(pybamm.Scalar(0), domain=["separator"])
+        j_p = pybamm.Broadcast(j_p, ["positive electrode"])
+        j = pybamm.Concatenation(j_n, j_s, j_p)
 
         # exhange current density
-        j0_n = pybamm.interface.exchange_current_density(
-            c_e, pybamm.surf(c_s_n), ["negative electrode"]
-        )
-        j0_s = pybamm.Scalar(0, ["separator"])
-        j0_p = pybamm.interface.exchange_current_density(
-            c_e, pybamm.surf(c_s_p), ["positive electrode"]
-        )
+        j0_n = pybamm.interface.exchange_current_density(c_e_n, pybamm.surf(c_s_n))
+        j0_s = pybamm.Broadcast(pybamm.Scalar(0), domain=["separator"])
+        j0_p = pybamm.interface.exchange_current_density(c_e_p, pybamm.surf(c_s_p))
         j0 = pybamm.Concatenation(j0_n, j0_s, j0_p)
 
         # reaction overpotentials
         eta_r_n = pybamm.interface.inverse_butler_volmer(j_n, j0_n, param.ne_n)
         eta_r_p = pybamm.interface.inverse_butler_volmer(j_p, j0_p, param.ne_p)
-        eta_r = eta_r_p - eta_r_n
+        eta_r_n_av = pybamm.Integral(eta_r_n, spatial_vars.x_n) / param.l_n
+        eta_r_p_av = pybamm.Integral(eta_r_p, spatial_vars.x_p) / param.l_p
+        eta_r_av = eta_r_p_av - eta_r_n_av
 
         # open circuit voltage
-        ocp_n = param.U_n(pybamm.surf(c_s_n))
-        ocp_p = param.U_p(pybamm.surf(c_s_p))
-        ocp_n_left = ocp_n
-        ocp_p_right = ocp_p
+        ocp_n = pybamm.Broadcast(param.U_n(pybamm.surf(c_s_n)), ["negative electrode"])
+        ocp_p = pybamm.Broadcast(param.U_p(pybamm.surf(c_s_p)), ["positive electrode"])
+        ocp_n_av = pybamm.Integral(ocp_n, spatial_vars.x_n) / param.l_n
+        ocp_p_av = pybamm.Integral(ocp_p, spatial_vars.x_p) / param.l_p
+        ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
+        ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
+        ocv_av = ocp_p_av - ocp_n_av
         ocv = ocp_p_right - ocp_n_left
 
-        # electrolyte potential
-        phi_e = -ocp_n - eta_r_n
-
         # electrolyte potential, current, ohmic losses, and concentration overpotential
+        elosm = pybamm.electrolyte_current.explicit_leading_order_stefan_maxwell
+        phi_e, i_e, Delta_Phi_e_av, eta_c_av = elosm(param, c_e, ocp_n, eta_r_n)
 
         # electrode potentials, current, and solid phase ohmic losses
-        phi_s, i_s, Delta_Phi_s = pybamm.electrode.explicit_solution_ohm(
-            param, phi_e, ocp_p, eta_r_p
-        )
+        eloo = pybamm.electrode.explicit_leading_order_ohm
+        phi_s, i_s, Delta_Phi_s_av = eloo(param, phi_e, ocp_p, eta_r_p)
 
         # terminal voltage
-        v = ocv + eta_r
+        v = ocv_av + eta_r_av
 
         "-----------------------------------------------------------------------------"
         "Standard Output Variables"
@@ -97,11 +106,11 @@ class SPM(pybamm.LithiumIonBaseModel):
         # in the output variable dict within submodels. We use different comment styles
         # to indicate which variables need to be inluded and which don't (note that
         # what is already included varies from model to model).  Variables which need
-        # to still be included are commented using:
+        # to be included now are commented using:
 
         "- variable still to be included"
 
-        # and those which have already been included are commented using:
+        # and those which have already been included in submodels are commented using:
 
         # variable that is included by a submodel
 
@@ -127,6 +136,7 @@ class SPM(pybamm.LithiumIonBaseModel):
                 "Exchange current density": j0,
             }
         )
+
         # -----------------------------------------------------------------------------
         # Standard voltage outputs:
         #
@@ -134,16 +144,18 @@ class SPM(pybamm.LithiumIonBaseModel):
         " - Positive open circuit potential"
         " - Average negative open circuit potential"
         " - Average positive open circuit potential"
-        " - Open circuit voltage"
+        " - Average open circuit voltage"
+        " - Measured open circuit voltage"
         " - Terminal voltage"
 
         self._variables.update(
             {
                 "Negative electrode open circuit potential": ocp_n,
-                "Positive electrode open circuit potential": ocp_n,
-                "Left-most negative electrode open circuit potential": ocp_n_left,
-                "Right-most positive electrode open circuit potential": ocp_p_right,
-                "Open circuit voltage": ocv,
+                "Positive electrode open circuit potential": ocp_p,
+                "Average negative electrode open circuit potential": ocp_n_av,
+                "Average positive electrode open circuit potential": ocp_p_av,
+                "Average open circuit voltage": ocv_av,
+                "Measured open circuit voltage": ocv,
                 "Terminal voltage": v,
             }
         )
@@ -179,15 +191,6 @@ class SPM(pybamm.LithiumIonBaseModel):
         " - Electrolyte concentraction"
 
         self._variables.update({"Electrolyte concentration": c_e})
-
-        # -----------------------------------------------------------------------------
-        # Standard flux outputs:
-        #
-        # - Negative particle flux
-        # - Positive particle flux
-        " - Electrolyte flux"
-
-        self._variables.update({"Electrolyte flux": N_e})
 
         # -----------------------------------------------------------------------------
         # Standard potential outputs:
