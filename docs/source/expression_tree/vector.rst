@@ -6,5 +6,3 @@ Vector
 
 .. autoclass:: pybamm.StateVector
   :members:
-
-.
