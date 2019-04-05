@@ -122,8 +122,9 @@ def simplify_addition_subtraction(myclass, left, right):
         return ret
 
     # can reorder the numerator
-    (constant, nonconstant,
-     constant_t, nonconstant_t) = partition_by_constant(numerator, numerator_types)
+    (constant, nonconstant, constant_t, nonconstant_t) = partition_by_constant(
+        numerator, numerator_types
+    )
 
     constant_expr = fold_add_subtract(constant, constant_t)
     nonconstant_expr = fold_add_subtract(nonconstant, nonconstant_t)
@@ -211,9 +212,10 @@ def simplify_multiplication_division(myclass, left, right):
         """
         for child in [left_child, right_child]:
 
-            if isinstance(child, (pybamm.Multiplication,
-                                  pybamm.Division,
-                                  pybamm.MatrixMultiplication)):
+            if isinstance(
+                child,
+                (pybamm.Multiplication, pybamm.Division, pybamm.MatrixMultiplication),
+            ):
                 left, right = child.orphans
                 if child == left_child:
                     flatten(previous_class, child.__class__, left, right, in_numerator)
@@ -230,7 +232,8 @@ def simplify_multiplication_division(myclass, left, right):
                     denominator.append(child)
                     if this_class == pybamm.MatrixMultiplication:
                         raise pybamm.ModelError(
-                            'matrix multiplication on the denominator')
+                            "matrix multiplication on the denominator"
+                        )
 
             if child == left_child and this_class == pybamm.Division:
                 in_numerator = not in_numerator
@@ -294,8 +297,9 @@ def simplify_multiplication_division(myclass, left, right):
     for i, child in enumerate(numerator):
         if child.is_constant() and child.evaluate_ignoring_errors() is not None:
             if constant_denominator_expr is not None:
-                numerator[i] = \
-                    pybamm.simplify_if_constant(child / constant_denominator_expr)
+                numerator[i] = pybamm.simplify_if_constant(
+                    child / constant_denominator_expr
+                )
             found_a_constant = True
 
     if not found_a_constant:
@@ -305,8 +309,9 @@ def simplify_multiplication_division(myclass, left, right):
         # there has to be at least one numerator
         if constant_denominator_expr is not None:
             # better to invert the constant denominator to get rid of the divide
-            invert_constant_denom = \
-                pybamm.simplify_if_constant(1 / constant_denominator_expr)
+            invert_constant_denom = pybamm.simplify_if_constant(
+                1 / constant_denominator_expr
+            )
             new_numerator = invert_constant_denom * new_numerator
 
     # here we have determined that there is at least one constant in the numerator and
@@ -316,9 +321,12 @@ def simplify_multiplication_division(myclass, left, right):
         new_numerator = [numerator[0]]
         new_numerator_t = [numerator_types[0]]
         for child, t in zip(numerator[1:], numerator_types[1:]):
-            if new_numerator[-1].is_constant() and child.is_constant() \
-                    and new_numerator[-1].evaluate_ignoring_errors() is not None \
-                    and child.evaluate_ignoring_errors() is not None:
+            if (
+                new_numerator[-1].is_constant()
+                and child.is_constant()
+                and new_numerator[-1].evaluate_ignoring_errors() is not None
+                and child.evaluate_ignoring_errors() is not None
+            ):
                 if t == pybamm.MatrixMultiplication:
                     new_numerator[-1] = new_numerator[-1] @ child
                 else:
@@ -665,11 +673,23 @@ class MatrixMultiplication(BinaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        left, right = self.orphans
         try:
             return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
         except ValueError:
-            import ipdb; ipdb.set_trace()
+            left, right = self.orphans
+            # There seems to be cases in NewmanTiedemann and DFN which doesn't catch
+            # an evaluates_to_number() and results in an attempted matrix multiplication
+            # with a scalar 0. I *think* it might be to do with Function not cheking if
+            # it returns a sclar.
+            if is_zero(left):
+                # return zeros of correct size
+                return 0 * self.children[1].evaluate(t, y)
+            elif is_zero(right):
+                # return zeros of correct size
+                return 0 * self.children[0].evaluate(t, y)
+            else:
+                return ValueError
+
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
         # anything multiplied by a scalar zero returns a scalar zero
