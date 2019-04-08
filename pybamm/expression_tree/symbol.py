@@ -458,6 +458,10 @@ class Symbol(anytree.NodeMixin):
         """
 
         new_symbol = copy.deepcopy(self)
+        # strip out domain info by default, so that conflicting domains are not an issue
+        # during simplification. This should only be run after the model is discretised,
+        # after which domains are no longer an issue
+        new_symbol.domain = []
         new_symbol.parent = None
         return simplify_if_constant(new_symbol)
 

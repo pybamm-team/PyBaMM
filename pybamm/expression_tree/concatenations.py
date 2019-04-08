@@ -128,8 +128,8 @@ class DomainConcatenation(Concatenation):
             # store mesh
             self._mesh = mesh
 
-            # Check that there is a domain, otherwise the functionality won't work and we
-            # should raise a DomainError
+            # Check that there is a domain, otherwise the functionality won't work
+            # and we should raise a DomainError
             if self.domain == []:
                 raise pybamm.DomainError(
                     """
@@ -145,7 +145,8 @@ class DomainConcatenation(Concatenation):
             self._size = self._slices[self.domain[-1]].stop
 
             # create disc of domain => slice for each child
-            self._children_slices = [self.create_slices(child) for child in self.children]
+            self._children_slices = [self.create_slices(
+                child) for child in self.children]
         else:
             self._mesh = copy.copy(copy_this._mesh)
             self._slices = copy.copy(copy_this._slices)
@@ -176,17 +177,6 @@ class DomainConcatenation(Concatenation):
             start = end
         return slices
 
-    def simplify(self):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        children_simp = [child.simplify() for child in self.children]
-
-        try:
-            return DomainConcatenation(children_simp, self.mesh)
-        except pybamm.DomainError:
-            import ipdb
-
-            ipdb.set_trace()
-
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         # preallocate vector
@@ -207,5 +197,3 @@ class DomainConcatenation(Concatenation):
         new_node = self.__class__(children, self.mesh, self)
 
         return pybamm.simplify_if_constant(new_node)
-
-
