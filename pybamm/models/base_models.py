@@ -481,12 +481,12 @@ class LithiumIonBaseModel(BaseModel):
 
         self._variables.update(
             {
-                "Total current density (A m-2)": None,
-                "Negative electrode current density (A m-2)": None,
-                "Positive electrode current density (A m-2)": None,
-                "Electrolyte current density (A m-2)": None,
-                "Interfacial current density (A m-2)": None,
-                "Exchange current density (A m-2)": None,
+                "Total current density [A m-2]": None,
+                "Negative electrode current density [A m-2]": None,
+                "Positive electrode current density [A m-2]": None,
+                "Electrolyte current density [A m-2]": None,
+                "Interfacial current density [A m-2]": None,
+                "Exchange current density [A m-2]": None,
             }
         )
         # Voltage
@@ -504,13 +504,13 @@ class LithiumIonBaseModel(BaseModel):
 
         self._variables.update(
             {
-                "Negative electrode open circuit potential (V)": None,
-                "Positive electrode open circuit potential (V)": None,
-                "Average negative electrode open circuit potential (V)": None,
-                "Average positive electrode open circuit potential (V)": None,
-                "Average open circuit voltage (V)": None,
-                "Measured open circuit voltage (V)": None,
-                "Terminal voltage (V)": None,
+                "Negative electrode open circuit potential [V]": None,
+                "Positive electrode open circuit potential [V]": None,
+                "Average negative electrode open circuit potential [V]": None,
+                "Average positive electrode open circuit potential [V]": None,
+                "Average open circuit voltage [V]": None,
+                "Measured open circuit voltage [V]": None,
+                "Terminal voltage [V]": None,
             }
         )
 
@@ -529,13 +529,13 @@ class LithiumIonBaseModel(BaseModel):
 
         self._variables.update(
             {
-                "Negative reaction overpotential (V)": None,
-                "Positive reaction overpotential (V)": None,
-                "Average negative reaction overpotential (V)": None,
-                "Average positive reaction overpotential (V)": None,
-                "Average reaction overpotential (V)": None,
-                "Average electrolyte overpotential (V)": None,
-                "Average solid phase ohmic losses (V)": None,
+                "Negative reaction overpotential [V]": None,
+                "Positive reaction overpotential [V]": None,
+                "Average negative reaction overpotential [V]": None,
+                "Average positive reaction overpotential [V]": None,
+                "Average reaction overpotential [V]": None,
+                "Average electrolyte overpotential [V]": None,
+                "Average solid phase ohmic losses [V]": None,
             }
         )
         # Concentration
@@ -551,19 +551,19 @@ class LithiumIonBaseModel(BaseModel):
 
         self._variables.update(
             {
-                "Negative particle concentration (mols m-3)": None,
-                "Positive particle concentration (mols m-3)": None,
-                "Negative particle surface concentration (mols m-3)": None,
-                "Positive particle surface concentration (mols m-3)": None,
-                "Electrolyte concentration (mols m-3)": None,
+                "Negative particle concentration [mols m-3]": None,
+                "Positive particle concentration [mols m-3]": None,
+                "Negative particle surface concentration [mols m-3]": None,
+                "Positive particle surface concentration [mols m-3]": None,
+                "Electrolyte concentration [mols m-3]": None,
             }
         )
 
         # Potential
         self._variables.update(
             {
-                "Negative electrode potential (V)": None,
-                "Positive electrode potential (V)": None,
-                "Electrolyte potential (V)": None,
+                "Negative electrode potential [V]": None,
+                "Positive electrode potential [V]": None,
+                "Electrolyte potential [V]": None,
             }
         )

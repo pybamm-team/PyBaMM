@@ -159,12 +159,12 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         self._variables.update(
             {
-                "Total current density (A m-2)": current_dim,
-                "Negative electrode current density (A m-2)": i_s_n_dim,
-                "Positive electrode current density (A m-2)": i_s_p_dim,
-                "Electrolyte current density (A m-2)": i_e_dim,
-                "Interfacial current density (A m-2)": j_dim,
-                "Exchange current density (A m-2)": j0_dim,
+                "Total current density [A m-2]": current_dim,
+                "Negative electrode current density [A m-2]": i_s_n_dim,
+                "Positive electrode current density [A m-2]": i_s_p_dim,
+                "Electrolyte current density [A m-2]": i_e_dim,
+                "Interfacial current density [A m-2]": j_dim,
+                "Exchange current density [A m-2]": j0_dim,
             }
         )
 
@@ -183,13 +183,13 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         self._variables.update(
             {
-                "Negative electrode open circuit potential (V)": ocp_n_dim,
-                "Positive electrode open circuit potential (V)": ocp_p_dim,
-                "Average negative electrode open circuit potential (V)": ocp_n_av_dim,
-                "Average positive electrode open circuit potential (V)": ocp_p_av_dim,
-                "Average open circuit voltage (V)": ocv_av_dim,
-                "Measured open circuit voltage (V)": ocv_dim,
-                "Terminal voltage (V)": v_dim,
+                "Negative electrode open circuit potential [V]": ocp_n_dim,
+                "Positive electrode open circuit potential [V]": ocp_p_dim,
+                "Average negative electrode open circuit potential [V]": ocp_n_av_dim,
+                "Average positive electrode open circuit potential [V]": ocp_p_av_dim,
+                "Average open circuit voltage [V]": ocv_av_dim,
+                "Measured open circuit voltage [V]": ocv_dim,
+                "Terminal voltage [V]": v_dim,
             }
         )
 
@@ -208,20 +208,20 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         self._variables.update(
             {
-                "Negative reaction overpotential (V)": eta_r_n_dim,
-                "Positive reaction overpotential (V)": eta_r_p_dim,
-                "Average negative reaction overpotential (V)": eta_r_n_av_dim,
-                "Average positive reaction overpotential (V)": eta_r_p_av_dim,
-                "Average reaction overpotential (V)": eta_r_av_dim,
-                "Average electrolyte overpotential (V)": eta_e_av_dim,
-                "Average solid phase ohmic losses (V)": Delta_Phi_s_av_dim,
+                "Negative reaction overpotential [V]": eta_r_n_dim,
+                "Positive reaction overpotential [V]": eta_r_p_dim,
+                "Average negative reaction overpotential [V]": eta_r_n_av_dim,
+                "Average positive reaction overpotential [V]": eta_r_p_av_dim,
+                "Average reaction overpotential [V]": eta_r_av_dim,
+                "Average electrolyte overpotential [V]": eta_e_av_dim,
+                "Average solid phase ohmic losses [V]": Delta_Phi_s_av_dim,
             }
         )
 
         # Concentration
         self._variables.update({"Electrolyte concentration": c_e})
 
-        self._variables.update({"Electrolyte concentration (mols m-3)": c_e_dim})
+        self._variables.update({"Electrolyte concentration [mols m-3]": c_e_dim})
 
         # Potential
         self._variables.update(
@@ -234,9 +234,9 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         self._variables.update(
             {
-                "Negative electrode potential (V)": phi_s_n_dim,
-                "Positive electrode potential (V)": phi_s_p_dim,
-                "Electrolyte potential (V)": phi_e_dim,
+                "Negative electrode potential [V]": phi_s_n_dim,
+                "Positive electrode potential [V]": phi_s_p_dim,
+                "Electrolyte potential [V]": phi_e_dim,
             }
         )
 
@@ -252,8 +252,8 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         self._variables.update(
             {
-                "Average concentration overpotential (V)": eta_c_av_dim,
-                "Average electrolyte ohmic losses (V)": Delta_Phi_e_av_dim,
+                "Average concentration overpotential [V]": eta_c_av_dim,
+                "Average electrolyte ohmic losses [V]": Delta_Phi_e_av_dim,
             }
         )
 

@@ -55,7 +55,7 @@ class StefanMaxwell(pybamm.BaseModel):
         self.variables = {
             "Electrolyte concentration": c_e,
             "Reduced cation flux": N_e,
-            "Electrolyte concentration (mols m-3)": param.c_e_typ * c_e,
+            "Electrolyte concentration [mols m-3]": param.c_e_typ * c_e,
         }
 
         # Cut off if concentration goes negative

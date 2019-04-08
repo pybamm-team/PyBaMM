@@ -41,8 +41,8 @@ class Standard(pybamm.BaseModel):
                 "Negative particle concentration": c,
                 "Negative particle surface concentration": pybamm.surf(c),
                 "Negative particle flux": N,
-                "Negative particle concentration (mols m-3)": param.c_n_max * c,
-                "Negative particle surface concentration (mols m-3)": param.c_n_max
+                "Negative particle concentration [mols m-3]": param.c_n_max * c,
+                "Negative particle surface concentration [mols m-3]": param.c_n_max
                 * pybamm.surf(c),
             }
         elif c.domain[0] == "positive particle":
@@ -60,8 +60,8 @@ class Standard(pybamm.BaseModel):
                 "Positive particle concentration": c,
                 "Positive particle surface concentration": pybamm.surf(c),
                 "Positive particle flux": N,
-                "Positive particle concentration (mols m-3)": param.c_p_max * c,
-                "Positive particle surface concentration (mols m-3)": param.c_p_max
+                "Positive particle concentration [mols m-3]": param.c_p_max * c,
+                "Positive particle surface concentration [mols m-3]": param.c_p_max
                 * pybamm.surf(c),
             }
         else:
