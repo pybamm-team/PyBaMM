@@ -7,7 +7,7 @@ import pybamm
 
 import autograd.numpy as np
 import numbers
-import scipy
+from scipy.sparse import issparse
 
 
 def simplify_addition_subtraction(myclass, left, right):
@@ -556,7 +556,8 @@ class Subtraction(BinaryOperator):
 class Multiplication(BinaryOperator):
     """
     A node in the expression tree representing a multiplication operator
-    (Hadamard product).
+    (Hadamard product). Overloads cases where the "*" operator would usually return a
+    matrix multiplication (e.g. scipy.sparse.coo.coo_matrix)
 
     **Extends:** :class:`BinaryOperator`
     """
@@ -579,10 +580,10 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         left = self.children[0].evaluate(t, y)
         right = self.children[1].evaluate(t, y)
-        if isinstance(left, scipy.sparse.coo.coo_matrix):
+        if issparse(left):
             return left.multiply(right)
-        elif isinstance(left, scipy.sparse.coo.coo_matrix):
-            # Hadamard product is commutative
+        elif issparse(right):
+            # Hadamard product is commutative, so we can switch right and left
             return right.multiply(left)
         else:
             return left * right
