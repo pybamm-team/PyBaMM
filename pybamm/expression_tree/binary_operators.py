@@ -5,8 +5,9 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numbers
 import autograd.numpy as np
+import numbers
+import scipy
 
 
 def simplify_addition_subtraction(myclass, left, right):
@@ -122,8 +123,9 @@ def simplify_addition_subtraction(myclass, left, right):
         return ret
 
     # can reorder the numerator
-    (constant, nonconstant,
-     constant_t, nonconstant_t) = partition_by_constant(numerator, numerator_types)
+    (constant, nonconstant, constant_t, nonconstant_t) = partition_by_constant(
+        numerator, numerator_types
+    )
 
     constant_expr = fold_add_subtract(constant, constant_t)
     nonconstant_expr = fold_add_subtract(nonconstant, nonconstant_t)
@@ -211,9 +213,10 @@ def simplify_multiplication_division(myclass, left, right):
         """
         for child in [left_child, right_child]:
 
-            if isinstance(child, (pybamm.Multiplication,
-                                  pybamm.Division,
-                                  pybamm.MatrixMultiplication)):
+            if isinstance(
+                child,
+                (pybamm.Multiplication, pybamm.Division, pybamm.MatrixMultiplication),
+            ):
                 left, right = child.orphans
                 if child == left_child:
                     flatten(previous_class, child.__class__, left, right, in_numerator)
@@ -230,7 +233,8 @@ def simplify_multiplication_division(myclass, left, right):
                     denominator.append(child)
                     if this_class == pybamm.MatrixMultiplication:
                         raise pybamm.ModelError(
-                            'matrix multiplication on the denominator')
+                            "matrix multiplication on the denominator"
+                        )
 
             if child == left_child and this_class == pybamm.Division:
                 in_numerator = not in_numerator
@@ -294,8 +298,9 @@ def simplify_multiplication_division(myclass, left, right):
     for i, child in enumerate(numerator):
         if child.is_constant() and child.evaluate_ignoring_errors() is not None:
             if constant_denominator_expr is not None:
-                numerator[i] = \
-                    pybamm.simplify_if_constant(child / constant_denominator_expr)
+                numerator[i] = pybamm.simplify_if_constant(
+                    child / constant_denominator_expr
+                )
             found_a_constant = True
 
     if not found_a_constant:
@@ -305,8 +310,9 @@ def simplify_multiplication_division(myclass, left, right):
         # there has to be at least one numerator
         if constant_denominator_expr is not None:
             # better to invert the constant denominator to get rid of the divide
-            invert_constant_denom = \
-                pybamm.simplify_if_constant(1 / constant_denominator_expr)
+            invert_constant_denom = pybamm.simplify_if_constant(
+                1 / constant_denominator_expr
+            )
             new_numerator = invert_constant_denom * new_numerator
 
     # here we have determined that there is at least one constant in the numerator and
@@ -316,9 +322,12 @@ def simplify_multiplication_division(myclass, left, right):
         new_numerator = [numerator[0]]
         new_numerator_t = [numerator_types[0]]
         for child, t in zip(numerator[1:], numerator_types[1:]):
-            if new_numerator[-1].is_constant() and child.is_constant() \
-                    and new_numerator[-1].evaluate_ignoring_errors() is not None \
-                    and child.evaluate_ignoring_errors() is not None:
+            if (
+                new_numerator[-1].is_constant()
+                and child.is_constant()
+                and new_numerator[-1].evaluate_ignoring_errors() is not None
+                and child.evaluate_ignoring_errors() is not None
+            ):
                 if t == pybamm.MatrixMultiplication:
                     new_numerator[-1] = new_numerator[-1] @ child
                 else:
@@ -545,7 +554,9 @@ class Subtraction(BinaryOperator):
 
 
 class Multiplication(BinaryOperator):
-    """A node in the expression tree representing a multiplication operator
+    """
+    A node in the expression tree representing a multiplication operator
+    (Hadamard product).
 
     **Extends:** :class:`BinaryOperator`
     """
@@ -566,7 +577,15 @@ class Multiplication(BinaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
+        left = self.children[0].evaluate(t, y)
+        right = self.children[1].evaluate(t, y)
+        if isinstance(left, scipy.sparse.coo.coo_matrix):
+            return left.multiply(right)
+        elif isinstance(left, scipy.sparse.coo.coo_matrix):
+            # Hadamard product is commutative
+            return right.multiply(left)
+        else:
+            return left * right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
