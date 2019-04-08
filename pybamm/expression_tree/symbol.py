@@ -191,15 +191,11 @@ class Symbol(anytree.NodeMixin):
         new_node = anytree.Node(str(counter), label=name)
         counter += 1
 
-        if isinstance(symbol, pybamm.BinaryOperator):
-            left, right = symbol.children
-            new_left, counter = self.relabel_tree(left, counter)
-            new_right, counter = self.relabel_tree(right, counter)
-            new_node.children = [new_left, new_right]
-
-        elif isinstance(symbol, pybamm.UnaryOperator):
-            new_child, counter = self.relabel_tree(symbol.children[0], counter)
-            new_node.children = [new_child]
+        new_children = []
+        for child in symbol.children:
+            new_child, counter = self.relabel_tree(child, counter)
+            new_children.append(new_child)
+        new_node.children = new_children
 
         return new_node, counter
 

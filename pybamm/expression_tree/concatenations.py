@@ -47,14 +47,6 @@ class Concatenation(pybamm.Symbol):
 
         return domain
 
-    def simplify(self):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        children = [child.simplify() for child in self.children]
-
-        new_node = self.__class__(*children)
-
-        return pybamm.simplify_if_constant(new_node)
-
 
 class NumpyConcatenation(pybamm.Symbol):
     """A node in the expression tree representing a concatenation of equations, when we
@@ -88,6 +80,14 @@ class NumpyConcatenation(pybamm.Symbol):
             return np.array([])
         else:
             return np.concatenate([child.evaluate(t, y) for child in self.children])
+
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        children = [child.simplify() for child in self.children]
+
+        new_node = self.__class__(*children)
+
+        return pybamm.simplify_if_constant(new_node)
 
 
 class DomainConcatenation(Concatenation):
@@ -195,5 +195,9 @@ class DomainConcatenation(Concatenation):
         children = [child.simplify() for child in self.children]
 
         new_node = self.__class__(children, self.mesh, self)
+
+        # TODO: this should not be needed, but somehow we are still getting domains in
+        # the simplified children
+        new_node.domain = []
 
         return pybamm.simplify_if_constant(new_node)
