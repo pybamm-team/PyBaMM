@@ -46,6 +46,11 @@ class Broadcast(pybamm.SpatialOperator):
         # overwrite child domain ([]) with specified broadcasting domain
         self.domain = domain
 
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+
+        return self.__class__(child, self.domain)
+
 
 class NumpyBroadcast(Broadcast):
     """A node in the expression tree implementing a broadcasting operator using numpy.
@@ -127,3 +132,10 @@ class NumpyBroadcast(Broadcast):
             raise ValueError(
                 "cannot broadcast child with shape '{}'".format(child_eval.shape)
             )
+
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+
+        return self.__class__(child, self.domain, self.mesh)
+
+
