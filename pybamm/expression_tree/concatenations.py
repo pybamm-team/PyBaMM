@@ -176,6 +176,17 @@ class DomainConcatenation(Concatenation):
             start = end
         return slices
 
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        children_simp = [child.simplify() for child in self.children]
+
+        try:
+            return DomainConcatenation(children_simp, self.mesh)
+        except pybamm.DomainError:
+            import ipdb
+
+            ipdb.set_trace()
+
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         # preallocate vector
