@@ -149,11 +149,12 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
 
         conc = pybamm.DomainConcatenation([a, b], mesh)
+        conc_simp = conc.simplify()
 
         # should be simplified to a vector
-        self.assertIsInstance(conc.simplify(), pybamm.Vector)
+        self.assertIsInstance(conc_simp, pybamm.Vector)
         np.testing.assert_array_equal(
-            conc.simplify().evaluate(),
+            conc_simp.evaluate(),
             np.concatenate(
                 [np.full(mesh[a_dom[0]][0].npts, 2), np.full(mesh[b_dom[0]][0].npts, 1)]
             ),

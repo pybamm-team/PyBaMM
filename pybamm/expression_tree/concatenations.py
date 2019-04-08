@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
+import copy
 
 
 class Concatenation(pybamm.Symbol):
@@ -46,6 +47,14 @@ class Concatenation(pybamm.Symbol):
 
         return domain
 
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        children = [child.simplify() for child in self.children]
+
+        new_node = self.__class__(*children)
+
+        return pybamm.simplify_if_constant(new_node)
+
 
 class NumpyConcatenation(pybamm.Symbol):
     """A node in the expression tree representing a concatenation of equations, when we
@@ -72,12 +81,6 @@ class NumpyConcatenation(pybamm.Symbol):
             if child.evaluates_to_number():
                 children[i] = pybamm.NumpyBroadcast(child, [], None)
         super().__init__("model concatenation", children, domain=[])
-
-    def simplify(self):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        children_simp = [child.simplify() for child in self.children]
-
-        return NumpyConcatenation(*children_simp)
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -106,9 +109,13 @@ class DomainConcatenation(Concatenation):
         The underlying mesh for discretisation, used to obtain the number of mesh points
         in each domain.
 
+    copy_this : :class:`pybamm.DomainConcatenation` (optional)
+        if provided, this class is initialised by copying everything except the children
+        from `copy_this`. `mesh` is not used in this case
+
     """
 
-    def __init__(self, children, mesh):
+    def __init__(self, children, mesh, copy_this=None):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
 
@@ -117,27 +124,33 @@ class DomainConcatenation(Concatenation):
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
 
-        # store mesh
-        self._mesh = mesh
+        if copy_this is None:
+            # store mesh
+            self._mesh = mesh
 
-        # Check that there is a domain, otherwise the functionality won't work and we
-        # should raise a DomainError
-        if self.domain == []:
-            raise pybamm.DomainError(
-                """
-                domain cannot be empty for a DomainConcatenation.
-                Perhaps the children should have been Broadcasted first?
-                """
-            )
+            # Check that there is a domain, otherwise the functionality won't work and we
+            # should raise a DomainError
+            if self.domain == []:
+                raise pybamm.DomainError(
+                    """
+                    domain cannot be empty for a DomainConcatenation.
+                    Perhaps the children should have been Broadcasted first?
+                    """
+                )
 
-        # create dict of domain => slice of final vector
-        self._slices = self.create_slices(self)
+            # create dict of domain => slice of final vector
+            self._slices = self.create_slices(self)
 
-        # store size of final vector
-        self._size = self._slices[self.domain[-1]].stop
+            # store size of final vector
+            self._size = self._slices[self.domain[-1]].stop
 
-        # create disc of domain => slice for each child
-        self._children_slices = [self.create_slices(child) for child in self.children]
+            # create disc of domain => slice for each child
+            self._children_slices = [self.create_slices(child) for child in self.children]
+        else:
+            self._mesh = copy.copy(copy_this._mesh)
+            self._slices = copy.copy(copy_this._slices)
+            self._size = copy.copy(copy_this._size)
+            self._children_slices = copy.copy(copy_this._children_slices)
 
     @property
     def mesh(self):
@@ -171,7 +184,17 @@ class DomainConcatenation(Concatenation):
         # loop through domains of children writing subvectors to final vector
         for child, slices in zip(self.children, self._children_slices):
             child_vector = child.evaluate(t, y)
-            for dom in child.domain:
-                vector[self._slices[dom]] = child_vector[slices[dom]]
+            for child_dom, child_slice in slices.items():
+                vector[self._slices[child_dom]] = child_vector[child_slice]
 
         return vector
+
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        children = [child.simplify() for child in self.children]
+
+        new_node = self.__class__(children, self.mesh, self)
+
+        return pybamm.simplify_if_constant(new_node)
+
+
