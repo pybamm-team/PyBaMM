@@ -18,11 +18,11 @@ class TestOhm(unittest.TestCase):
 
         # Variables
         phi_s_n = pybamm.Variable(
-            "Negative electrode solid potential", domain=["negative electrode"]
+            "Negative electrode potential", domain=["negative electrode"]
         )
         phi_s_s = pybamm.Broadcast(pybamm.Scalar(0), ["separator"])
         phi_s_p = pybamm.Variable(
-            "Positive electrode solid potential", domain=["positive electrode"]
+            "Positive electrode potential", domain=["positive electrode"]
         )
         phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
 
@@ -39,15 +39,15 @@ class TestOhm(unittest.TestCase):
 
         model_p = pybamm.electrode.Ohm(phi_s_p, j_p, param)
         # overwrite boundary conditions for purposes of the test
-        i_s_p = model_p.variables["Positive electrode solid current"]
+        i_s_p = model_p.variables["Positive electrode current density"]
         model_p.boundary_conditions = {phi_s_p: {"right": 0}, i_s_p: {"left": 0}}
         model_p_test = tests.StandardModelTest(model_p)
         model_p_test.test_all()
 
         model_whole = pybamm.electrode.Ohm(phi_s, j, param)
         # overwrite boundary conditions for purposes of the test
-        i_s_n = model_whole.variables["Negative electrode solid current"]
-        i_s_p = model_whole.variables["Positive electrode solid current"]
+        i_s_n = model_whole.variables["Negative electrode current density"]
+        i_s_p = model_whole.variables["Positive electrode current density"]
         model_whole.boundary_conditions = {
             phi_s_n: {"left": 0},
             i_s_n: {"right": 0},

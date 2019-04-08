@@ -30,7 +30,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
             c_e, phi_e, j, param, eps=eps
         )
         # some small changes so that tests pass
-        i_e = model.variables["Electrolyte current"]
+        i_e = model.variables["Electrolyte current density"]
         model.algebraic.update({c_e: c_e - pybamm.Scalar(1)})
         model.initial_conditions.update({c_e: pybamm.Scalar(1)})
         model.boundary_conditions = {

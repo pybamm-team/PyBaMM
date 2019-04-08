@@ -43,8 +43,8 @@ class Ohm(pybamm.BaseModel):
             self.boundary_conditions = {phi_s: {"left": 0}, i_s_n: {"right": 0}}
             self.initial_conditions = {phi_s: 0}
             self.variables = {
-                "Negative electrode solid potential": phi_s,
-                "Negative electrode solid current": i_s_n,
+                "Negative electrode potential": phi_s,
+                "Negative electrode current density": i_s_n,
             }
         elif phi_s.domain == ["positive electrode"]:
             # if porosity is not a variable, use the input parameter
@@ -58,8 +58,8 @@ class Ohm(pybamm.BaseModel):
                 phi_s: param.U_p(param.c_p_init) - param.U_n(param.c_n_init)
             }
             self.variables = {
-                "Positive electrode solid potential": phi_s,
-                "Positive electrode solid current": i_s_p,
+                "Positive electrode potential": phi_s,
+                "Positive electrode current density": i_s_p,
             }
         # for whole cell domain call both electrode models and ignore separator
         elif phi_s.domain == ["negative electrode", "separator", "positive electrode"]:
@@ -209,10 +209,10 @@ def explicit_leading_order_ohm(param, phi_e, ocp_p, eta_r_p):
 
     # electode potential
     phi_s_n = pybamm.Broadcast(0, ["negative electrode"])
-    phi_s_n = pybamm.Broadcast(0, ["separator"])
+    phi_s_s = pybamm.Broadcast(0, ["separator"])
     v = ocp_p_right + eta_r_p_right + phi_e_right
     phi_s_p = v + pybamm.Broadcast(0, ["positive electrode"])
-    phi_s = pybamm.Concatenation(phi_s_n, phi_s_p)
+    phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
 
     # electrode current
     i_s_n = i_cell - i_cell * x_n / l_n

@@ -48,7 +48,10 @@ class MacInnesStefanMaxwell(pybamm.BaseModel):
         # no differential equations
         self.rhs = {}
         # Variables
-        self.variables = {"Electrolyte potential": phi_e, "Electrolyte current": i_e}
+        self.variables = {
+            "Electrolyte potential": phi_e,
+            "Electrolyte current density": i_e,
+        }
 
         # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()

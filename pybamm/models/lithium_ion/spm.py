@@ -49,6 +49,7 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
+
         # spatial variables
         spatial_vars = pybamm.standard_spatial_vars
 
@@ -90,64 +91,35 @@ class SPM(pybamm.LithiumIonBaseModel):
         # electrolyte potential, current, ohmic losses, and concentration overpotential
         elosm = pybamm.electrolyte_current.explicit_leading_order_stefan_maxwell
         phi_e, i_e, Delta_Phi_e_av, eta_c_av = elosm(param, c_e, ocp_n, eta_r_n)
+        eta_e_av = eta_c_av + Delta_Phi_e_av
 
         # electrode potentials, current, and solid phase ohmic losses
         eloo = pybamm.electrode.explicit_leading_order_ohm
         phi_s, i_s, Delta_Phi_s_av = eloo(param, phi_e, ocp_p, eta_r_p)
+        phi_s_n = phi_s.orphans[0]
+        phi_s_p = phi_s.orphans[2]
+        i_s_n = i_s.orphans[0]
+        i_s_p = i_s.orphans[2]
 
         # terminal voltage
         v = ocv_av + eta_r_av
 
         "-----------------------------------------------------------------------------"
         "Standard Output Variables"
-        # A standard set of output variables for each type of variable:
-        # concentrations, potentials, currents, voltages, and overpotentials is
-        # included in the comments below. Some output variables are already included
-        # in the output variable dict within submodels. We use different comment styles
-        # to indicate which variables need to be inluded and which don't (note that
-        # what is already included varies from model to model).  Variables which need
-        # to be included now are commented using:
 
-        "- variable still to be included"
-
-        # and those which have already been included in submodels are commented using:
-
-        # variable that is included by a submodel
-
-        # Please copy this standard output set along with this explanation into new
-        # models to ensure consistent outputs across models for testing and comparison
-        # purposes.
-
-        # -----------------------------------------------------------------------------
-        # Standard current outputs:
-        #
-        " - Total current density"
-        " - Electrode current density"
-        " - Electrolyte current density"
-        " - Interfacial current density"
-        " - Exchange current density"
-
+        # Current
         self._variables.update(
             {
                 "Total current density": param.current_with_time,
-                "Electrode current density": i_s,
+                "Negative electrode current density": i_s_n,
+                "Positive electrode current density": i_s_p,
                 "Electrolyte current density": i_e,
                 "Interfacial current density": j,
                 "Exchange current density": j0,
             }
         )
 
-        # -----------------------------------------------------------------------------
-        # Standard voltage outputs:
-        #
-        " - Negative open circuit potential"
-        " - Positive open circuit potential"
-        " - Average negative open circuit potential"
-        " - Average positive open circuit potential"
-        " - Average open circuit voltage"
-        " - Measured open circuit voltage"
-        " - Terminal voltage"
-
+        # Voltage
         self._variables.update(
             {
                 "Negative electrode open circuit potential": ocp_n,
@@ -160,55 +132,45 @@ class SPM(pybamm.LithiumIonBaseModel):
             }
         )
 
-        # -----------------------------------------------------------------------------
-        # Standard (electrode-averaged) overpotential outputs:
-        #
-        " - Average negative reaction overpotential"
-        " - Average positive reaction overpotential"
-        " - Average reaction overpotential"
-        " - Average concentration overpotential"
-        " - Average electrolyte ohmic losses"
-        " - Average solid phase ohmic losses"
-
+        # Overpotential
         self._variables.update(
             {
+                "Negative reaction overpotential": eta_r_n,
+                "Positive reaction overpotential": eta_r_p,
                 "Average negative reaction overpotential": eta_r_n_av,
                 "Average positive reaction overpotential": eta_r_p_av,
                 "Average reaction overpotential": eta_r_av,
-                "Average concentration overpotential": eta_c_av,
-                "Average electrolyte ohmic losses": Delta_Phi_e_av,
+                "Average electrolyte overpotential": eta_e_av,
                 "Average solid phase ohmic losses": Delta_Phi_s_av,
             }
         )
 
-        # -----------------------------------------------------------------------------
-        # Standard concentration outputs:
-        #
-        # - Negative particle concentration
-        # - Positive particle concentration
-        # - Negative particle surface concentration
-        # - Positive particle surface concentration
-        " - Electrolyte concentraction"
-
+        # Concentration
         self._variables.update({"Electrolyte concentration": c_e})
 
-        # -----------------------------------------------------------------------------
-        # Standard potential outputs:
-        #
-        " - Electrode Potential"
-        " - Electrolyte Potential"
-
+        # Potential
         self._variables.update(
-            {"Electrode potential": phi_s, "Electrolyte potential": phi_e}
+            {
+                "Negative electrode potential": phi_s_n,
+                "Positive electrode potential": phi_s_p,
+                "Electrolyte potential": phi_e,
+            }
         )
 
         "-----------------------------------------------------------------------------"
         "Additional Output Variables"
-        # Define any other output variables here
-        additional_ouput_vars = {}
-        self._variables.update(additional_ouput_vars)
+
+        self._variables.update(
+            {
+                "Average concentration overpotential": eta_c_av,
+                "Average electrolyte ohmic losses": Delta_Phi_e_av,
+            }
+        )
 
         "-----------------------------------------------------------------------------"
-        "Termination Conditions"
+        "Defaults and Solver Conditions"
+        # default geometry
+        self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
+
         # Cut-off if either concentration goes negative
         self.events = [pybamm.Function(np.min, c_s_n), pybamm.Function(np.min, c_s_p)]

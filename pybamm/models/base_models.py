@@ -365,6 +365,16 @@ class BaseModel(object):
                         )
                     )
 
+        # Standard Output Variables
+        for output, expression in self._variables.items():
+            if expression is None:
+                raise pybamm.ModelError(
+                    """The standard output variable '{}' which is
+                    required for testing has not been supplied.""".format(
+                        output
+                    )
+                )
+
 
 class LeadAcidBaseModel(BaseModel):
     """
@@ -454,4 +464,63 @@ class LithiumIonBaseModel(BaseModel):
                     input_path, "lico2_diffusivity_Dualfoil.py"
                 ),
             },
+        )
+
+        # Standard output variables
+        # Current
+        self._variables.update(
+            {
+                "Total current density": None,
+                "Negative electrode current density": None,
+                "Positive electrode current density": None,
+                "Electrolyte current density": None,
+                "Interfacial current density": None,
+                "Exchange current density": None,
+            }
+        )
+
+        # Voltage
+        self._variables.update(
+            {
+                "Negative electrode open circuit potential": None,
+                "Positive electrode open circuit potential": None,
+                "Average negative electrode open circuit potential": None,
+                "Average positive electrode open circuit potential": None,
+                "Average open circuit voltage": None,
+                "Measured open circuit voltage": None,
+                "Terminal voltage": None,
+            }
+        )
+
+        # Overpotentials
+        self._variables.update(
+            {
+                "Negative reaction overpotential": None,
+                "Positive reaction overpotential": None,
+                "Average negative reaction overpotential": None,
+                "Average positive reaction overpotential": None,
+                "Average reaction overpotential": None,
+                "Average electrolyte overpotential": None,
+                "Average solid phase ohmic losses": None,
+            }
+        )
+
+        # Concentration
+        self._variables.update(
+            {
+                "Negative particle concentration": None,
+                "Positive particle concentration": None,
+                "Negative particle surface concentration": None,
+                "Positive particle surface concentration": None,
+                "Electrolyte concentration": None,
+            }
+        )
+
+        # Potential
+        self._variables.update(
+            {
+                "Negative electrode potential": None,
+                "Positive electrode potential": None,
+                "Electrolyte potential": None,
+            }
         )
