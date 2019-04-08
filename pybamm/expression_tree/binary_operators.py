@@ -195,12 +195,16 @@ def simplify_multiplication_division(myclass, left, right):
     numerator_types = []
 
     # recursive function to flatten a term involving only multiplications or divisions
-    def flatten(previous_class, this_class, left_child, right_child, in_numerator):
+    def flatten(previous_class, this_class, left_child, right_child,
+                in_numerator, in_matrix_multiplication):
         """
         recursive function to flatten a term involving only Multiplication, Division or
         MatrixMultiplication. keeps track of wether a term is on the numerator or
         denominator. For those terms on the numerator, their operator type
         (Multiplication or MatrixMultiplication) is stored
+
+        Note that multiplication *within* matrix multiplications, e.g. a@(b*c), are not
+        flattened into a@b*c, as this would be incorrect (see #253)
 
         outputs to lists `numerator`, `denominator` and `numerator_types`
 
@@ -212,15 +216,23 @@ def simplify_multiplication_division(myclass, left, right):
         """
         for child in [left_child, right_child]:
 
-            if isinstance(
-                child,
-                (pybamm.Multiplication, pybamm.Division, pybamm.MatrixMultiplication),
-            ):
+            if isinstance(child, pybamm.MatrixMultiplication):
                 left, right = child.orphans
                 if child == left_child:
-                    flatten(previous_class, child.__class__, left, right, in_numerator)
+                    flatten(previous_class, child.__class__, left, right, in_numerator,
+                            True)
                 else:
-                    flatten(this_class, child.__class__, left, right, in_numerator)
+                    flatten(this_class, child.__class__, left, right, in_numerator,
+                            True)
+            elif isinstance(child, (pybamm.Multiplication, pybamm.Division)) \
+                    and not in_matrix_multiplication:
+                left, right = child.orphans
+                if child == left_child:
+                    flatten(previous_class, child.__class__, left, right, in_numerator,
+                            False)
+                else:
+                    flatten(this_class, child.__class__, left, right, in_numerator,
+                            False)
             else:
                 if in_numerator:
                     numerator.append(child)
@@ -238,7 +250,7 @@ def simplify_multiplication_division(myclass, left, right):
             if child == left_child and this_class == pybamm.Division:
                 in_numerator = not in_numerator
 
-    flatten(None, myclass, left, right, True)
+    flatten(None, myclass, left, right, True, myclass == pybamm.MatrixMultiplication)
 
     # check if there is a matrix multiply in the numerator (if so we can't reorder it)
     has_matrix_multiply = any(
@@ -574,12 +586,7 @@ class Multiplication(BinaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        try:
-            return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
-        except ValueError:
-            import ipdb
-
-            ipdb.set_trace()
+        return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -607,7 +614,7 @@ class MatrixMultiplication(BinaryOperator):
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
 
-        super().__init__("*", left, right)
+        super().__init__("@", left, right)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """

@@ -56,6 +56,7 @@ class StandardModelTest(object):
             self.solver = solver
         if t_eval is None:
             t_eval = np.linspace(0, 1, 100)
+
         self.solver.solve(self.model, t_eval)
 
     def test_all(self, param=None, disc=None, solver=None, t_eval=None):

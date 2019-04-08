@@ -66,12 +66,7 @@ class DaeSolver(pybamm.BaseSolver):
         y0 = self.calculate_consistent_initial_conditions(
             rhs, algebraic, model.concatenated_initial_conditions
         )
-        from IPython import embed
 
-        embed()
-        import ipdb
-
-        ipdb.set_trace()
         self.t, self.y = self.integrate(
             residuals,
             y0,

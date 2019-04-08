@@ -85,15 +85,13 @@ class TestMatrix(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             (e / (m1@v)).simplify()
 
-        # check matrix ordering is correct (issue #253)
-        m1 = pybamm.Matrix(np.ones((9,8)))
-        m2 = pybamm.Matrix(np.ones((8,9)))
-        v = pybamm.StateVector(slice(0,8))
+        # dont expant mult within mat-mult (issue #253)
+        m1 = pybamm.Matrix(np.ones((9, 8)))
+        m2 = pybamm.Matrix(np.ones((8, 9)))
+        v = pybamm.StateVector(slice(0, 8))
 
-        expr = (m1 @ (v @ m2)).simplify()
-        self.assertEqual(expr.evaluate(y=np.ones(8)).shape, (9,9))
-
-
+        expr = (m1 @ (v * m2)).simplify()
+        self.assertEqual(expr.evaluate(y=np.ones((8, 1))).shape, (9, 9))
 
     def test_matrix_modification(self):
         exp = self.mat @ self.mat + self.mat

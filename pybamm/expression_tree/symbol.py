@@ -141,7 +141,7 @@ class Symbol(anytree.NodeMixin):
         children)
         """
         for pre, _, node in anytree.RenderTree(self):
-            print("%s%s" % (pre, str(node)))
+            print("%s%s" % (pre, str(node.name)))
 
     def visualise(self, filename):
         """
