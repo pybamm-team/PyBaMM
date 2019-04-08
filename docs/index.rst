@@ -30,4 +30,4 @@ Contents
     source/discretisations/index
     source/spatial_methods/index
     source/solvers/index
-
+    source/processed_variable
