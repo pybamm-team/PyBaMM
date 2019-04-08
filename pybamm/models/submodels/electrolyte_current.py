@@ -51,6 +51,8 @@ class MacInnesStefanMaxwell(pybamm.BaseModel):
         self.variables = {
             "Electrolyte potential": phi_e,
             "Electrolyte current density": i_e,
+            "Electrolyte potential [V]": -param.U_n_ref + param.potential_scale * phi_e,
+            "Electrolyte current density [A m-2]": param.i_typ * i_e,
         }
 
         # Set default solver to DAE
