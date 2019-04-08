@@ -592,13 +592,35 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         left = self.children[0].evaluate(t, y)
         right = self.children[1].evaluate(t, y)
+
+        # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
+        # broadcasting is done correctly, see #253. This might be inefficient, so will
+        # need to revisit
+
+        def is_numpy_1d_vector(v):
+            return isinstance(v, np.ndarray) and len(v.shape) == 1
+
+        def is_numpy_2d_col_vector(v):
+            return isinstance(v, np.ndarray) and len(v.shape) == 2 and v.shape[1] == 1
+
+        if is_numpy_1d_vector(left):
+            left = left.reshape(-1, 1)
+
+        if is_numpy_1d_vector(right):
+            right = right.reshape(-1, 1)
+
         if issparse(left):
-            return left.multiply(right)
+            result = left.multiply(right)
         elif issparse(right):
             # Hadamard product is commutative, so we can switch right and left
-            return right.multiply(left)
+            result = right.multiply(left)
         else:
-            return left * right
+            result = left * right
+
+        if is_numpy_2d_col_vector(result):
+            result = result.reshape(-1)
+
+        return result
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
