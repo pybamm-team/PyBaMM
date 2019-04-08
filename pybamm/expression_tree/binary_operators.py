@@ -7,6 +7,7 @@ import pybamm
 
 import numbers
 import autograd.numpy as np
+import scipy
 
 
 def simplify_addition_subtraction(myclass, left, right):
@@ -586,7 +587,14 @@ class Multiplication(BinaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) * self.children[1].evaluate(t, y)
+        left = self.children[0].evaluate(t, y)
+        right = self.children[1].evaluate(t, y)
+        if isinstance(left, scipy.sparse.spmatrix):
+            return left.multiply(right)
+        elif isinstance(right, scipy.sparse.spmatrix):
+            return right.multiply(left)
+        else:
+            return left * right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
