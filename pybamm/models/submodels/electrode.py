@@ -45,6 +45,8 @@ class Ohm(pybamm.BaseModel):
             self.variables = {
                 "Negative electrode potential": phi_s,
                 "Negative electrode current density": i_s_n,
+                "Negative electrode potential (V)": param.potential_scale * phi_s,
+                "Negative electrode current density (A m-2)": param.i_typ * i_s_n,
             }
         elif phi_s.domain == ["positive electrode"]:
             # if porosity is not a variable, use the input parameter
@@ -60,6 +62,10 @@ class Ohm(pybamm.BaseModel):
             self.variables = {
                 "Positive electrode potential": phi_s,
                 "Positive electrode current density": i_s_p,
+                "Positive electrode potential (V)": param.U_p_ref
+                - param.U_n_ref
+                + param.potential_scale * phi_s,
+                "Positive electrode current density (A m-2)": param.i_typ * i_s_p,
             }
         # for whole cell domain call both electrode models and ignore separator
         elif phi_s.domain == ["negative electrode", "separator", "positive electrode"]:
