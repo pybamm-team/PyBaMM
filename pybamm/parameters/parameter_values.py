@@ -200,24 +200,33 @@ class ParameterValues(dict):
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
+            # process children
             new_left = self.process_symbol(left)
             new_right = self.process_symbol(right)
-            return symbol.__class__(new_left, new_right)
+            # make new symbol, ensure domain remains the same
+            new_symbol = symbol.__class__(new_left, new_right)
+            new_symbol.domain = symbol.domain
+            return new_symbol
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
             if isinstance(symbol, pybamm.NumpyBroadcast):
-                return pybamm.NumpyBroadcast(new_child, symbol.domain, symbol.mesh)
-            if isinstance(symbol, pybamm.Broadcast):
-                return pybamm.Broadcast(new_child, symbol.domain)
+                new_symbol = pybamm.NumpyBroadcast(
+                    new_child, symbol.domain, symbol.mesh
+                )
+            elif isinstance(symbol, pybamm.Broadcast):
+                new_symbol = pybamm.Broadcast(new_child, symbol.domain)
             elif isinstance(symbol, pybamm.Function):
-                return pybamm.Function(symbol.func, new_child)
+                new_symbol = pybamm.Function(symbol.func, new_child)
             elif isinstance(symbol, pybamm.Integral):
-                return pybamm.Integral(new_child, symbol.integration_variable)
+                new_symbol = pybamm.Integral(new_child, symbol.integration_variable)
             elif isinstance(symbol, pybamm.BoundaryValue):
-                return pybamm.BoundaryValue(new_child, symbol.side)
+                new_symbol = pybamm.BoundaryValue(new_child, symbol.side)
             else:
-                return symbol.__class__(new_child)
+                new_symbol = symbol.__class__(new_child)
+            # ensure domain remains the same
+            new_symbol.domain = symbol.domain
+            return new_symbol
 
         # Concatenations
         elif isinstance(symbol, pybamm.Concatenation):

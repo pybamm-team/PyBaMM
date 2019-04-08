@@ -58,14 +58,14 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = np.array([np.linspace(0, 5, 1000)])
         processed_var = pybamm.ProcessedVariable(var, t_sol, y_sol)
         # vector
-        np.testing.assert_array_equal(processed_var.evaluate(t_sol), y_sol)
+        np.testing.assert_array_equal(processed_var(t_sol), y_sol)
         # scalar
-        np.testing.assert_array_equal(processed_var.evaluate(0.5), 2.5)
-        np.testing.assert_array_equal(processed_var.evaluate(0.7), 3.5)
+        np.testing.assert_array_equal(processed_var(0.5), 2.5)
+        np.testing.assert_array_equal(processed_var(0.7), 3.5)
 
         processed_eqn = pybamm.ProcessedVariable(eqn, t_sol, y_sol)
-        np.testing.assert_array_equal(processed_eqn.evaluate(t_sol), t_sol * y_sol)
-        np.testing.assert_array_almost_equal(processed_eqn.evaluate(0.5), 0.5 * 2.5)
+        np.testing.assert_array_equal(processed_eqn(t_sol), t_sol * y_sol)
+        np.testing.assert_array_almost_equal(processed_eqn(0.5), 0.5 * 2.5)
 
         # with spatial dependence
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
@@ -82,30 +82,28 @@ class TestProcessedVariable(unittest.TestCase):
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
         # 2 vectors
-        np.testing.assert_array_almost_equal(
-            processed_var.evaluate(t_sol, x_sol), y_sol
-        )
+        np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
         # 1 vector, 1 scalar
         np.testing.assert_array_almost_equal(
-            processed_var.evaluate(0.5, x_sol)[:, 0], 2.5 * x_sol
+            processed_var(0.5, x_sol)[:, 0], 2.5 * x_sol
         )
         np.testing.assert_array_equal(
-            processed_var.evaluate(t_sol, x_sol[-1]), x_sol[-1] * np.linspace(0, 5)
+            processed_var(t_sol, x_sol[-1]), x_sol[-1] * np.linspace(0, 5)
         )
         # 2 scalars
         np.testing.assert_array_almost_equal(
-            processed_var.evaluate(0.5, x_sol[-1]), 2.5 * x_sol[-1]
+            processed_var(0.5, x_sol[-1]), 2.5 * x_sol[-1]
         )
         processed_eqn = pybamm.ProcessedVariable(eqn_sol, t_sol, y_sol, mesh=disc.mesh)
         # 2 vectors
         np.testing.assert_array_almost_equal(
-            processed_eqn.evaluate(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
+            processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
         )
         # 1 vector, 1 scalar
-        self.assertEqual(processed_eqn.evaluate(0.5, x_sol[10:30]).shape, (20, 1))
-        self.assertEqual(processed_eqn.evaluate(t_sol[4:9], x_sol[-1]).shape, (5,))
+        self.assertEqual(processed_eqn(0.5, x_sol[10:30]).shape, (20, 1))
+        self.assertEqual(processed_eqn(t_sol[4:9], x_sol[-1]).shape, (5,))
         # 2 scalars
-        self.assertEqual(processed_eqn.evaluate(0.5, x_sol[-1]).shape, (1,))
+        self.assertEqual(processed_eqn(0.5, x_sol[-1]).shape, (1,))
 
     def test_processed_variable_ode_pde_solution(self):
         # without space
