@@ -27,9 +27,19 @@ Partial molar volume of anions,3.15E-05,m3.mol-1,,
 Partial molar volume of cations,1.35E-05,m3.mol-1,,
 Cation stoichiometry,1,-,,Hydrogen cations
 Anion stoichiometry,1,-,,Hydrogen sulfate anions
-Molar mass of water,0.01801,m3.mol-1,,
-Molar mass of cations,,,,Hydrogen cations
-Molar mass of anions,,,,Hydrogen sulfate anions
+Molar mass of water,0.01801,kg.mol-1,,
+Molar mass of cations,0.01,kg.mol-1,lide1992crc,Hydrogen cations
+Molar mass of anions,0.097,kg.mol-1,lide1992crc,Hydrogen sulfate anions
+,,,,
+# Other species properties,,,,
+Typical oxygen molecule concentration,1000,mol.m-3,,
+Typical hydrogen molecule concentration,1000,mol.m-3,,
+Oxygen diffusivity,2.1e-9,m2.s-1,cussler2009diffusion
+Hydrogen diffusivity,4.5e-9,m2.s-1,cussler2009diffusion
+Partial molar volume of oxygen molecules,0,m3.mol-1,,
+Partial molar volume of hydrogen molecules,0,m3.mol-1,,
+Molar mass of oxygen molecules,0.032,kg.mol-1,lide1992crc,
+Molar mass of hydrogen molecules,0.002,kg.mol-1,lide1992crc,
 ,,,,
 # Electrode properties,,,,
 Negative electrode conductivity,4800000,S.m-1,,Lead
@@ -41,6 +51,8 @@ Maximum porosity of positive electrode,0.57,,,
 Molar volume of lead,1.82539682539683E-05,m3.mol-1,,Calculated as () divided by ()
 Molar volume of lead-dioxide,2.54797441364606E-05,m3.mol-1,,
 Molar volume of lead sulfate,4.81717011128776E-05,m3.mol-1,,
+Negative electrode volumetric capacity,3.473e9,C.m-3,bernardi1995mathematical,
+Positive electrode volumetric capacity,2.745e9,C.m-3,bernardi1995mathematical,
 ,,,,
 # Microstructure,,,,
 Negative electrode surface area density,2300000,m-1,,
