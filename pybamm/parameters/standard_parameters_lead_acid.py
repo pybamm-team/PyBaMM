@@ -93,12 +93,13 @@ s_plus_n_S_dim = pybamm.Parameter("Negative electrode cation signed stoichiometr
 s_plus_p_S_dim = pybamm.Parameter("Positive electrode cation signed stoichiometry")
 ne_n_S = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p_S = pybamm.Parameter("Positive electrode electrons in reaction")
-s_plus_Ox_dim = pybamm.Parameter("Cation signed stoichiometry (oxygen reaction)")
-s_ox_Ox_dim = pybamm.Parameter("Oxygen signed stoichiometry (oxygen reaction)")
+s_plus_Ox_dim = pybamm.Parameter("Signed stoichiometry of cations (oxygen reaction)")
+s_w_Ox_dim = pybamm.Parameter("Signed stoichiometry of water (oxygen reaction)")
+s_ox_Ox_dim = pybamm.Parameter("Signed stoichiometry of oxygen (oxygen reaction)")
 ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
 c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration")
-s_plus_Hy_dim = pybamm.Parameter("Cation signed stoichiometry (hydrogen reaction)")
-s_hy_Hy_dim = pybamm.Parameter("Hydrogen signed stoichiometry (hydrogen reaction)")
+s_plus_Hy_dim = pybamm.Parameter("Signed stoichiometry of cations (hydrogen reaction)")
+s_hy_Hy_dim = pybamm.Parameter("Signed stoichiometry of hydrogen (hydrogen reaction)")
 ne_Hy = pybamm.Parameter("Electrons in hydrogen reaction")
 C_dl_dimensional = pybamm.Parameter("Double-layer capacity")
 
@@ -242,21 +243,6 @@ l_p = pybamm.geometric_parameters.l_p
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
 
-# Electrolyte properties
-beta_surf_n = -c_e_typ * DeltaVsurf_n / ne_n_S  # Molar volume change (lead)
-beta_surf_p = -c_e_typ * DeltaVsurf_p / ne_p_S  # Molar volume change (lead dioxide)
-beta_surf = pybamm.Concatenation(
-    pybamm.Broadcast(beta_surf_n, ["negative electrode"]),
-    pybamm.Broadcast(0, ["separator"]),
-    pybamm.Broadcast(beta_surf_p, ["positive electrode"]),
-)
-beta_liq_n = -c_e_typ * DeltaVliq_n / ne_n_S  # Molar volume change (electrolyte, neg)
-beta_liq_p = -c_e_typ * DeltaVliq_p / ne_p_S  # Molar volume change (electrolyte, pos)
-beta_n = beta_surf_n + beta_liq_n  # Total molar volume change (neg)
-beta_p = beta_surf_p + beta_liq_p  # Total molar volume change (pos)
-beta_Ox = -c_e_typ * (s_plus_Ox * V_plus + s_wat_Ox * V_wat + s_ox_Ox * V_ox)
-beta_Hy = -c_e_typ * (s_plus_Hy * V_plus + s_hy_Hy * V_hy)
-
 # Diffusive kinematic relationship coefficient
 omega_i = c_e_typ * M_e / rho_typ * (t_plus + M_minus / M_e)
 # Migrative kinematic relationship coefficient (electrolyte)
@@ -284,17 +270,10 @@ Q_n_max = Q_n_max_dimensional / (c_e_typ * F)
 Q_p_max = Q_p_max_dimensional / (c_e_typ * F)
 
 # Electrochemical reactions
-C_dl_n = (
-    C_dl_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
-)
-C_dl_p = (
-    C_dl_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
-)
-
-# Electrochemical Reactions
 s_plus_n_S = s_plus_n_S_dim / ne_n_S
 s_plus_p_S = s_plus_p_S_dim / ne_p_S
 s_plus_Ox = s_plus_Ox_dim / ne_Ox
+s_w_Ox = s_w_Ox_dim / ne_Ox
 s_ox_Ox = s_ox_Ox_dim / ne_Ox
 s_plus_Hy = s_plus_Hy_dim / ne_Hy
 s_hy_Hy = s_hy_Hy_dim / ne_Hy
@@ -313,6 +292,27 @@ j0_n_Ox_ref = j0_n_Ox_ref_dimensional / interfacial_current_scale_n
 j0_p_Ox_ref = j0_p_Ox_ref_dimensional / interfacial_current_scale_p
 j0_n_Hy_ref = j0_n_Hy_ref_dimensional / interfacial_current_scale_n
 j0_p_Hy_ref = j0_p_Hy_ref_dimensional / interfacial_current_scale_p
+C_dl_n = (
+    C_dl_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
+)
+C_dl_p = (
+    C_dl_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
+)
+
+# Electrolyte properties
+beta_surf_n = -c_e_typ * DeltaVsurf_n / ne_n_S  # Molar volume change (lead)
+beta_surf_p = -c_e_typ * DeltaVsurf_p / ne_p_S  # Molar volume change (lead dioxide)
+beta_surf = pybamm.Concatenation(
+    pybamm.Broadcast(beta_surf_n, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(beta_surf_p, ["positive electrode"]),
+)
+beta_liq_n = -c_e_typ * DeltaVliq_n / ne_n_S  # Molar volume change (electrolyte, neg)
+beta_liq_p = -c_e_typ * DeltaVliq_p / ne_p_S  # Molar volume change (electrolyte, pos)
+beta_n = beta_surf_n + beta_liq_n  # Total molar volume change (neg)
+beta_p = beta_surf_p + beta_liq_p  # Total molar volume change (pos)
+beta_Ox = -c_e_typ * (s_plus_Ox * V_plus + s_w_Ox * V_w + s_ox_Ox * V_ox)
+beta_Hy = -c_e_typ * (s_plus_Hy * V_plus + s_hy_Hy * V_hy)
 
 # Electrical
 voltage_low_cut = (voltage_low_cut_dimensional - (U_p_ref - U_n_ref)) / potential_scale
