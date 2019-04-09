@@ -148,6 +148,11 @@ class Index(UnaryOperator):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.children[0].evaluate(t, y)[self.index]
 
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+
+        return self.__class__(child, self.index)
+
 
 class SpatialOperator(UnaryOperator):
     """A node in the expression tree representing a unary spatial operator

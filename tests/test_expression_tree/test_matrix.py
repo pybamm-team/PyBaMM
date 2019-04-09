@@ -31,6 +31,68 @@ class TestMatrix(unittest.TestCase):
             (self.mat @ self.vect).evaluate(), np.array([5, 2, 3])
         )
 
+    def test_matrix_simplifications(self):
+        a = pybamm.Scalar(0)
+        b = pybamm.Scalar(1)
+        c = pybamm.Parameter("c")
+        e = pybamm.Scalar(2)
+
+        # matrix multiplication
+        A = pybamm.Matrix(np.array([[1, 0], [0, 1]]))
+        self.assertIsInstance((a @ A).simplify(), pybamm.Scalar)
+        self.assertEqual((a @ A).simplify().evaluate(), 0)
+        self.assertIsInstance((A @ a).simplify(), pybamm.Scalar)
+        self.assertEqual((A @ a).simplify().evaluate(), 0)
+
+        self.assertIsInstance((A @ c).simplify(), pybamm.MatrixMultiplication)
+
+        # matrix * matrix
+        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
+        m2 = pybamm.Matrix(np.array([[3, 0], [0, 3]]))
+        v = pybamm.StateVector(slice(0, 2))
+
+        for expr in [((m2@m1)@v).simplify(), (m2@(m1@v)).simplify()]:
+            self.assertIsInstance(expr.children[0], pybamm.Matrix)
+            self.assertIsInstance(expr.children[1], pybamm.StateVector)
+            np.testing.assert_array_equal(
+                expr.children[0].entries,
+                np.array([[6, 0], [0, 6]])
+            )
+
+        # scalar * matrix
+        for expr in [((b * m1) @ v).simplify(),
+                     (b * (m1 @ v)).simplify(),
+                     ((m1 * b) @ v).simplify(),
+                     (m1 @ (b * v)).simplify()]:
+            self.assertIsInstance(expr.children[0], pybamm.Matrix)
+            self.assertIsInstance(expr.children[1], pybamm.StateVector)
+            np.testing.assert_array_equal(
+                expr.children[0].entries,
+                np.array([[2, 0], [0, 2]])
+            )
+
+        # matrix * vector
+        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
+        v1 = pybamm.Vector(np.array([1, 1]))
+
+        for expr in [(m1@v1).simplify()]:
+            self.assertIsInstance(expr, pybamm.Vector)
+            np.testing.assert_array_equal(
+                expr.entries,
+                np.array([2, 2])
+            )
+
+        with self.assertRaises(pybamm.ModelError):
+            (e / (m1@v)).simplify()
+
+        # dont expant mult within mat-mult (issue #253)
+        m1 = pybamm.Matrix(np.ones((9, 8)))
+        m2 = pybamm.Matrix(np.ones((8, 9)))
+        v = pybamm.StateVector(slice(0, 8))
+
+        expr = (m1 @ (v * m2)).simplify()
+        self.assertEqual(expr.evaluate(y=np.ones((8, 1))).shape, (9, 9))
+
     def test_matrix_modification(self):
         exp = self.mat @ self.mat + self.mat
         self.A[0, 0] = -1

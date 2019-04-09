@@ -14,7 +14,7 @@ from your local PyBaMM repository, or used online through [Binder](https://mybin
 ## Getting started
 
 The easiest way to start with PyBaMM is by running and comparing some of the inbuilt models:
-- [Run a pre-defined model](./run-model.ipynb)
+- [Run the Single Particle Model (SPM)](./models/SPM.ipynb)
 - [Compare models](./compare-models.ipynb)
 
 It is also easy to new models or change the setting that are used:
