@@ -1337,7 +1337,7 @@ class TestFiniteVolume(unittest.TestCase):
             mass.toarray(), model.mass_matrix.entries.toarray()
         )
 
-    def test_jacobian_can_evaluate(self):
+    def test_jacobian(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
         # create discretisation

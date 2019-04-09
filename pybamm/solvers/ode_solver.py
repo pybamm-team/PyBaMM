@@ -5,6 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
 import pybamm
+import numpy as np
 
 
 class OdeSolver(pybamm.BaseSolver):
@@ -50,13 +51,20 @@ class OdeSolver(pybamm.BaseSolver):
 
         y0 = model.concatenated_initial_conditions
 
+        # Create Jacobian from simplified rhs
+        y = pybamm.StateVector(slice(0, np.size(y0)))
+        jac_rhs = concatenated_rhs.jac(y)
+
+        def jacobian(t, y):
+            return jac_rhs.evaluate(t, y)
+
         self.t, self.y = self.integrate(
             dydt,
             y0,
             t_eval,
             events=events,
             mass_matrix=model.mass_matrix.entries,
-            jacobian=model.jacobian,
+            jacobian=jacobian,
         )
 
     def integrate(

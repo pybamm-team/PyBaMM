@@ -355,10 +355,13 @@ class TestDiscretise(unittest.TestCase):
             model.mass_matrix.entries.toarray(),
         )
 
+        # Create StateVector to differentiate model with respect to
+        y = pybamm.StateVector(slice(0, combined_submesh[0].npts))
+
         # jacobian is identity
-        disc.create_jacobian(model)
+        jacobian = model.concatenated_rhs.jac(y).evaluate(0, y0)
         np.testing.assert_array_equal(
-            np.eye(combined_submesh[0].nodes.shape[0]), model.jacobian(0, y0).toarray()
+            np.eye(combined_submesh[0].npts), jacobian.toarray()
         )
 
         # several equations
@@ -405,10 +408,13 @@ class TestDiscretise(unittest.TestCase):
             np.eye(np.size(y0)), model.mass_matrix.entries.toarray()
         )
 
+        # Create StateVector to differentiate model with respect to
+        y = pybamm.StateVector(slice(0, np.size(y0)))
+
         # jacobian is identity
-        disc.create_jacobian(model)
+        jacobian = model.concatenated_rhs.jac(y).evaluate(0, y0)
         np.testing.assert_array_equal(
-            np.eye(np.size(y0)), model.jacobian(0, y0).toarray()
+            np.eye(np.size(y0)), jacobian.toarray()
         )
 
         # test that not enough initial conditions raises an error
@@ -481,8 +487,13 @@ class TestDiscretise(unittest.TestCase):
         )
 
         # jacobian
+        y = pybamm.StateVector(slice(0, np.size(y0)))
         disc.create_jacobian(model)
-        jacobian = np.block(
+        jac_rhs = model.concatenated_rhs.jac(y)
+        jac_algebraic = model.concatenated_algebraic.jac(y)
+        jacobian = pybamm.SparseStack(jac_rhs, jac_algebraic).evaluate(0, y0)
+
+        jacobian_actual = np.block(
             [
                 [
                     np.eye(np.size(combined_submesh[0].nodes)),
@@ -499,7 +510,7 @@ class TestDiscretise(unittest.TestCase):
                 ],
             ]
         )
-        np.testing.assert_array_equal(jacobian, model.jacobian(0, y0).toarray())
+        np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
 
     def test_process_model_concatenation(self):
         # concatenation of variables as the key

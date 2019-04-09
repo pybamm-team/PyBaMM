@@ -83,10 +83,6 @@ class Discretisation(object):
         # Create mass matrix
         self.create_mass_matrix(model)
 
-        # Create Jacobian
-        # Jacobian should probably be calculated after model simplify in the solver
-        # self.create_jacobian(model)
-
         # Check that resulting model makes sense
         self.check_model(model)
 
@@ -172,7 +168,7 @@ class Discretisation(object):
         Parameters
         ----------
         model : :class:`pybamm.BaseModel` (or subclass)
-            Model to dicretise. Must have attributes rhs, initial_conditions and
+            Discretised model. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
         # Create list of mass matrices for each equation to be put into block
@@ -211,11 +207,10 @@ class Discretisation(object):
         Parameters
         ----------
         model : :class:`pybamm.BaseModel` (or subclass)
-            Model to dicretise. Must have attributes rhs, initial_conditions and
+            Discretised model. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
         # Get number points in model
-        # QUESTION: is there a better way to access this directly from here?
         N = model.concatenated_initial_conditions.shape[0]
 
         # Create StateVector to differentiate model with respect to
