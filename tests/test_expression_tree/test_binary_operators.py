@@ -7,6 +7,7 @@ import pybamm
 
 import numpy as np
 import unittest
+from scipy.sparse.coo import coo_matrix
 
 
 class TestBinaryOperators(unittest.TestCase):
@@ -128,6 +129,59 @@ class TestBinaryOperators(unittest.TestCase):
         prod = a * 3
         self.assertIsInstance(prod.children[1], pybamm.Scalar)
         self.assertEqual(prod.evaluate(), 12)
+
+    def test_sparse_multiply(self):
+        row = np.array([0, 3, 1, 0])
+        col = np.array([0, 3, 1, 2])
+        data = np.array([4, 5, 7, 9])
+        S1 = coo_matrix((data, (row, col)), shape=(4, 5))
+        S2 = coo_matrix((data, (row, col)), shape=(5, 4))
+        pybammS1 = pybamm.Matrix(S1)
+        pybammS2 = pybamm.Matrix(S2)
+        D1 = np.ones((4, 5))
+        D2 = np.ones((5, 4))
+        pybammD1 = pybamm.Matrix(D1)
+        pybammD2 = pybamm.Matrix(D2)
+
+        # Multiplication is elementwise
+        np.testing.assert_array_equal(
+            (pybammS1 * pybammS1).evaluate().toarray(), S1.multiply(S1).toarray()
+        )
+        np.testing.assert_array_equal(
+            (pybammS2 * pybammS2).evaluate().toarray(), S2.multiply(S2).toarray()
+        )
+        np.testing.assert_array_equal(
+            (pybammD1 * pybammS1).evaluate().toarray(), S1.toarray() * D1
+        )
+        np.testing.assert_array_equal(
+            (pybammS1 * pybammD1).evaluate().toarray(), S1.toarray() * D1
+        )
+        np.testing.assert_array_equal(
+            (pybammD2 * pybammS2).evaluate().toarray(), S2.toarray() * D2
+        )
+        np.testing.assert_array_equal(
+            (pybammS2 * pybammD2).evaluate().toarray(), S2.toarray() * D2
+        )
+        with self.assertRaisesRegex(ValueError, "inconsistent shapes"):
+            (pybammS1 * pybammS2).evaluate()
+        with self.assertRaisesRegex(ValueError, "inconsistent shapes"):
+            (pybammS2 * pybammS1).evaluate()
+
+        # Matrix multiplication is normal matrix multiplication
+        np.testing.assert_array_equal(
+            (pybammS1 @ pybammS2).evaluate().toarray(), (S1 * S2).toarray()
+        )
+        np.testing.assert_array_equal(
+            (pybammS2 @ pybammS1).evaluate().toarray(), (S2 * S1).toarray()
+        )
+        np.testing.assert_array_equal((pybammS1 @ pybammD2).evaluate(), S1 * D2)
+        np.testing.assert_array_equal((pybammD2 @ pybammS1).evaluate(), D2 * S1)
+        np.testing.assert_array_equal((pybammS2 @ pybammD1).evaluate(), S2 * D1)
+        np.testing.assert_array_equal((pybammD1 @ pybammS2).evaluate(), D1 * S2)
+        with self.assertRaisesRegex(ValueError, "dimension mismatch"):
+            (pybammS1 @ pybammS1).evaluate()
+        with self.assertRaisesRegex(ValueError, "dimension mismatch"):
+            (pybammS2 @ pybammS2).evaluate()
 
 
 if __name__ == "__main__":

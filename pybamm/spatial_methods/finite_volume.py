@@ -46,9 +46,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         # for finite volume we use the cell centres
-        if symbol.name in ["x", "r"]:
+        if symbol.name in ["x_n", "x_s", "x_p", "r_n", "r_p", "x", "r"]:
             symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-            return pybamm.Vector(symbol_mesh[0].nodes)
+            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
         else:
             raise NotImplementedError("3D meshes not yet implemented")
 

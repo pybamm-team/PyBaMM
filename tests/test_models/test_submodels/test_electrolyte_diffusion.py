@@ -59,13 +59,13 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
 
         # Dirichlet and Neumann conditions
         model2 = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
-        N_e = model2.variables["Cation flux"]
+        N_e = model2.variables["Reduced cation flux"]
         model2.boundary_conditions = {c_e: {"left": 0}, N_e: {"right": 0}}
         modeltest2 = tests.StandardModelTest(model2)
         modeltest2.test_all()
 
         model3 = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
-        N_e = model3.variables["Cation flux"]
+        N_e = model3.variables["Reduced cation flux"]
         model3.boundary_conditions = {N_e: {"left": 0}, c_e: {"right": 0}}
         modeltest3 = tests.StandardModelTest(model3)
         modeltest3.test_all()

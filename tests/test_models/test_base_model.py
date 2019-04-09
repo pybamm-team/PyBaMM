@@ -280,6 +280,21 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
 
+    def test_check_well_posedness_output_variables(self):
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        c = pybamm.Variable("c", domain=whole_cell)
+        d = pybamm.Variable("d", domain=whole_cell)
+        model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c}
+        model.initial_conditions = {c: 1, d: 2}
+        model.boundary_conditions = {
+            c: {"left": 0, "right": 0},
+            d: {"left": 0, "right": 0},
+        }
+        model._variables = {"something": None}
+        with self.assertRaisesRegex(pybamm.ModelError, "standard output variable"):
+            model.check_well_posedness()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

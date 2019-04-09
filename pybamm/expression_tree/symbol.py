@@ -141,7 +141,7 @@ class Symbol(anytree.NodeMixin):
         children)
         """
         for pre, _, node in anytree.RenderTree(self):
-            print("%s%s" % (pre, str(node)))
+            print("%s%s" % (pre, str(node.name)))
 
     def visualise(self, filename):
         """
@@ -191,15 +191,11 @@ class Symbol(anytree.NodeMixin):
         new_node = anytree.Node(str(counter), label=name)
         counter += 1
 
-        if isinstance(symbol, pybamm.BinaryOperator):
-            left, right = symbol.children
-            new_left, counter = self.relabel_tree(left, counter)
-            new_right, counter = self.relabel_tree(right, counter)
-            new_node.children = [new_left, new_right]
-
-        elif isinstance(symbol, pybamm.UnaryOperator):
-            new_child, counter = self.relabel_tree(symbol.children[0], counter)
-            new_node.children = [new_child]
+        new_children = []
+        for child in symbol.children:
+            new_child, counter = self.relabel_tree(child, counter)
+            new_children.append(new_child)
+        new_node.children = new_children
 
         return new_node, counter
 
@@ -475,6 +471,10 @@ class Symbol(anytree.NodeMixin):
         """
 
         new_symbol = copy.deepcopy(self)
+        # strip out domain info by default, so that conflicting domains are not an issue
+        # during simplification. This should only be run after the model is discretised,
+        # after which domains are no longer an issue
+        new_symbol.domain = []
         new_symbol.parent = None
         return simplify_if_constant(new_symbol)
 
