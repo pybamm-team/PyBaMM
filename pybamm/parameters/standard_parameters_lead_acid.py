@@ -71,16 +71,35 @@ a_p_dimensional = pybamm.Parameter("Positive electrode surface area density")
 b = pybamm.Parameter("Bruggeman coefficient")
 
 # Electrochemical reactions
-m_n_dimensional = pybamm.Parameter(
+j0_n_S_ref_dimensional = pybamm.Parameter(
     "Negative electrode reference exchange-current density"
 )
-m_p_dimensional = pybamm.Parameter(
+j0_p_S_ref_dimensional = pybamm.Parameter(
     "Positive electrode reference exchange-current density"
 )
-s_plus_n = pybamm.Parameter("Negative electrode cation signed stoichiometry")
-s_plus_p = pybamm.Parameter("Positive electrode cation signed stoichiometry")
-ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
-ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
+j0_n_Ox_ref_dimensional = pybamm.Parameter(
+    "Negative electrode reference exchange-current density (oxygen)"
+)
+j0_p_Ox_ref_dimensional = pybamm.Parameter(
+    "Positive electrode reference exchange-current density (oxygen)"
+)
+j0_n_Hy_ref_dimensional = pybamm.Parameter(
+    "Negative electrode reference exchange-current density (hydrogen)"
+)
+j0_p_Hy_ref_dimensional = pybamm.Parameter(
+    "Positive electrode reference exchange-current density (hydrogen)"
+)
+s_plus_n_S_dim = pybamm.Parameter("Negative electrode cation signed stoichiometry")
+s_plus_p_S_dim = pybamm.Parameter("Positive electrode cation signed stoichiometry")
+ne_n_S = pybamm.Parameter("Negative electrode electrons in reaction")
+ne_p_S = pybamm.Parameter("Positive electrode electrons in reaction")
+s_plus_Ox_dim = pybamm.Parameter("Cation signed stoichiometry (oxygen reaction)")
+s_ox_Ox_dim = pybamm.Parameter("Oxygen signed stoichiometry (oxygen reaction)")
+ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
+c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration")
+s_plus_Hy_dim = pybamm.Parameter("Cation signed stoichiometry (hydrogen reaction)")
+s_hy_Hy_dim = pybamm.Parameter("Hydrogen signed stoichiometry (hydrogen reaction)")
+ne_Hy = pybamm.Parameter("Electrons in hydrogen reaction")
 C_dl_dimensional = pybamm.Parameter("Double-layer capacity")
 
 
@@ -98,8 +117,6 @@ DeltaVliq_p = (
 )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
 
 # Other species properties
-c_ox_typ = pybamm.Parameter("Typical oxygen molecule concentration")
-c_hy_typ = pybamm.Parameter("Typical hydrogen molecule concentration")
 D_ox_dimensional = pybamm.Parameter("Oxygen diffusivity")
 D_hy_dimensional = pybamm.Parameter("Hydrogen diffusivity")
 V_ox = pybamm.Parameter("Partial molar volume of oxygen molecules")
@@ -138,19 +155,29 @@ def chi_dimensional(c_e):
     return pybamm.FunctionParameter("Darken thermodynamic factor", c_e)
 
 
-def rho_dimensional(c_e):
+def c_T(c_e, c_ox, c_hy):
     """
-    Dimensional density of electrolyte [kg.m-3], from thermodynamics. c_e in [mol.m-3].
+    Total liquid molarity [mol.m-3], from thermodynamics. c_k in [mol.m-3].
+    """
+    return (1 + (2 * V_w - V_e) * c_e + (V_w - V_ox) * c_ox + (V_w - V_hy) * c_hy) / V_w
 
+
+def rho_dimensional(c_e, c_ox, c_hy):
     """
-    return M_w / V_w * (1 + (M_e * V_w / M_w - V_e) * c_e)
+    Dimensional density of electrolyte [kg.m-3], from thermodynamics. c_k in [mol.m-3].
+    """
+    return (
+        M_w / V_w
+        + (M_e - V_e * M_w / V_w) * c_e
+        + (M_ox - V_ox * M_w / V_w) * c_ox
+        + (M_hy - V_hy * M_w / V_w) * c_hy
+    )
 
 
 def m_dimensional(c_e):
     """
     Dimensional electrolyte molar mass [mol.kg-1], from thermodynamics.
     c_e in [mol.m-3].
-
     """
     return c_e * V_w / ((1 - c_e * V_e) * M_w)
 
@@ -158,7 +185,6 @@ def m_dimensional(c_e):
 def mu_dimensional(c_e):
     """
     Dimensional viscosity of electrolyte [kg.m-1.s-1].
-
     """
     return pybamm.FunctionParameter("Electrolyte viscosity", c_e)
 
@@ -174,7 +200,7 @@ def U_p_dimensional(c_e):
 
 
 D_e_typ = D_e_dimensional(c_e_typ)
-rho_typ = rho_dimensional(c_e_typ)
+rho_typ = rho_dimensional(c_e_typ, 0, 0)
 mu_typ = mu_dimensional(c_e_typ)
 U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(1))
 U_p_ref = pybamm.FunctionParameter("Positive electrode OCV", pybamm.Scalar(1))
@@ -199,8 +225,8 @@ tau_discharge = F * c_e_typ * L_x / i_typ
 
 # Reaction timescales
 # should this be * F?
-tau_r_n = 1 / (m_n_dimensional * a_n_dimensional * c_e_typ ** 0.5)
-tau_r_p = 1 / (m_p_dimensional * a_p_dimensional * c_e_typ ** 0.5)
+tau_r_n = 1 / (j0_n_S_ref_dimensional * a_n_dimensional * c_e_typ ** 0.5)
+tau_r_p = 1 / (j0_p_S_ref_dimensional * a_p_dimensional * c_e_typ ** 0.5)
 
 # Electrolyte diffusion timescale
 tau_diffusion_e = L_x ** 2 / D_e_typ
@@ -217,17 +243,20 @@ l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
 
 # Electrolyte properties
-beta_surf_n = -c_e_typ * DeltaVsurf_n / ne_n  # Molar volume change (lead)
-beta_surf_p = -c_e_typ * DeltaVsurf_p / ne_p  # Molar volume change (lead dioxide)
+beta_surf_n = -c_e_typ * DeltaVsurf_n / ne_n_S  # Molar volume change (lead)
+beta_surf_p = -c_e_typ * DeltaVsurf_p / ne_p_S  # Molar volume change (lead dioxide)
 beta_surf = pybamm.Concatenation(
     pybamm.Broadcast(beta_surf_n, ["negative electrode"]),
     pybamm.Broadcast(0, ["separator"]),
     pybamm.Broadcast(beta_surf_p, ["positive electrode"]),
 )
-beta_liq_n = -c_e_typ * DeltaVliq_n / ne_n  # Molar volume change (electrolyte, neg)
-beta_liq_p = -c_e_typ * DeltaVliq_p / ne_p  # Molar volume change (electrolyte, pos)
+beta_liq_n = -c_e_typ * DeltaVliq_n / ne_n_S  # Molar volume change (electrolyte, neg)
+beta_liq_p = -c_e_typ * DeltaVliq_p / ne_p_S  # Molar volume change (electrolyte, pos)
 beta_n = beta_surf_n + beta_liq_n  # Total molar volume change (neg)
 beta_p = beta_surf_p + beta_liq_p  # Total molar volume change (pos)
+beta_Ox = -c_e_typ * (s_plus_Ox * V_plus + s_wat_Ox * V_wat + s_ox_Ox * V_ox)
+beta_Hy = -c_e_typ * (s_plus_Hy * V_plus + s_hy_Hy * V_hy)
+
 # Diffusive kinematic relationship coefficient
 omega_i = c_e_typ * M_e / rho_typ * (t_plus + M_minus / M_e)
 # Migrative kinematic relationship coefficient (electrolyte)
@@ -241,14 +270,10 @@ gamma_e = pybamm.Scalar(1)
 Re = rho_typ * velocity_scale * L_x / mu_typ
 
 # Other species properties
-zeta_ox = c_ox_typ / c_e_typ
-zeta_hy = c_hy_typ / c_e_typ
 curlyD_ox = D_ox_dimensional / D_e_typ
 curlyD_hy = D_hy_dimensional / D_e_typ
-pi_os_ox = pi_os_e / zeta_ox
-pi_os_hy = pi_os_e / zeta_hy
-omega_c_ox = c_ox_typ * M_ox / rho_typ * (1 - M_w * V_ox / V_w * M_ox)
-omega_c_hy = c_hy_typ * M_hy / rho_typ * (1 - M_w * V_hy / V_w * M_hy)
+omega_c_ox = c_e_typ * M_ox / rho_typ * (1 - M_w * V_ox / V_w * M_ox)
+omega_c_hy = c_e_typ * M_hy / rho_typ * (1 - M_w * V_hy / V_w * M_hy)
 
 # Electrode Properties
 sigma_n = sigma_n_dimensional * potential_scale / current_scale / L_x
@@ -267,15 +292,27 @@ C_dl_p = (
 )
 
 # Electrochemical Reactions
-s_n = -(s_plus_n + ne_n * t_plus) / ne_n  # Dimensionless rection rate (neg)
-s_p = -(s_plus_p + ne_p * t_plus) / ne_p  # Dimensionless rection rate (pos)
+s_plus_n_S = s_plus_n_S_dim / ne_n_S
+s_plus_p_S = s_plus_p_S_dim / ne_p_S
+s_plus_Ox = s_plus_Ox_dim / ne_Ox
+s_ox_Ox = s_ox_Ox_dim / ne_Ox
+s_plus_Hy = s_plus_Hy_dim / ne_Hy
+s_hy_Hy = s_hy_Hy_dim / ne_Hy
+s_n = -(s_plus_n_S + t_plus)  # Dimensionless rection rate (neg)
+s_p = -(s_plus_p_S + t_plus)  # Dimensionless rection rate (pos)
 s = pybamm.Concatenation(
     pybamm.Broadcast(s_n, ["negative electrode"]),
     pybamm.Broadcast(0, ["separator"]),
     pybamm.Broadcast(s_p, ["positive electrode"]),
 )
-m_n = m_n_dimensional / interfacial_current_scale_n
-m_p = m_p_dimensional / interfacial_current_scale_p
+j0_n_S_ref = j0_n_S_ref_dimensional / interfacial_current_scale_n
+j0_p_S_ref = j0_p_S_ref_dimensional / interfacial_current_scale_p
+m_n = j0_n_S_ref
+m_p = j0_p_S_ref
+j0_n_Ox_ref = j0_n_Ox_ref_dimensional / interfacial_current_scale_n
+j0_p_Ox_ref = j0_p_Ox_ref_dimensional / interfacial_current_scale_p
+j0_n_Hy_ref = j0_n_Hy_ref_dimensional / interfacial_current_scale_n
+j0_p_Hy_ref = j0_p_Hy_ref_dimensional / interfacial_current_scale_p
 
 # Electrical
 voltage_low_cut = (voltage_low_cut_dimensional - (U_p_ref - U_n_ref)) / potential_scale
@@ -329,9 +366,12 @@ def kappa_e(c_e):
 # (1-2*t_plus) is for Nernst-Planck
 # 2*(1-t_plus) for Stefan-Maxwell
 def chi(c_e):
-    c_e_dimensional = c_e * c_e_typ
-    alpha = (nu * V_w - V_e) * c_e_typ
-    return chi_dimensional(c_e_dimensional) * 2 * (1 - t_plus) / (1 - alpha * c_e)
+    return (
+        chi_dimensional(c_e_typ * c_e)
+        * 2
+        * (1 - t_plus)
+        / (V_w * c_T(c_e_typ * c_e, c_e_typ * c_ox, c_e_typ * c_hy))
+    )
 
 
 def U_n(c_en):
