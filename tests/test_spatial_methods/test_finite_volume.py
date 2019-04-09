@@ -844,8 +844,8 @@ class TestFiniteVolume(unittest.TestCase):
         one_over_y = 1 / mesh["negative particle"][0].nodes
         self.assertEqual(integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi)
 
-    @unittest.skip("indefinite integral not yet implemented")
     def test_indefinite_integral(self):
+
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {
@@ -854,73 +854,133 @@ class TestFiniteVolume(unittest.TestCase):
             "positive particle": pybamm.FiniteVolume,
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        # lengths
-        ln = mesh["negative electrode"].edges[-1]
 
-        # macroscale variable
-        var = pybamm.Variable("var", domain=["negative electrode", "separator"])
+        # input a phi, take grad, then integrate to recover phi approximation
+        phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
+        i = pybamm.grad(phi)  # create test current (variable on edges)
+
         x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
-        integral_eqn = pybamm.IndefiniteIntegral(var, x)
-        disc.set_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        phi_integral = pybamm.IndefiniteIntegral(i, x)
+        disc.set_variable_slices([phi])  # i is not a fundamental variable
+
+        phi_integral_disc = disc.process_symbol(phi_integral)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
-        constant_y = np.ones_like(combined_submesh[0].nodes)
-        constant_y_edges = np.ones_like(combined_submesh[0].edges)
-        linear_y = combined_submesh[0].nodes
-        linear_y_edges = combined_submesh[0].edges
-        np.testing.assert_array_equal(
-            integral_eqn_disc.evaluate(None, constant_y_edges), linear_y
-        )
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_y_edges), linear_y ** 2 / 2
-        )
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, np.cos(linear_y_edges)),
-            np.sin(linear_y),
-            places=4,
-        )
 
-        # domain not starting at zero
-        var = pybamm.Variable("var", domain=["separator", "positive electrode"])
+        # constant case
+        phi_exact = np.ones_like(combined_submesh[0].nodes)
+        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx += 1  # add constant of integration
+        np.testing.assert_array_equal(phi_exact, phi_approx)
+
+        # linear case
+        phi_exact = combined_submesh[0].nodes
+        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx += phi_exact[0]  # add constant of integration
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+
+        # sine case
+        phi_exact = np.sin(combined_submesh[0].nodes)
+        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx += phi_exact[0]  # add constant of integration
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+
+        # --------------------------------------------------------------------
+        # region which doesn't start at zero
+        phi = pybamm.Variable("phi", domain=["separator", "positive electrode"])
+        i = pybamm.grad(phi)  # create test current (variable on edges)
         x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
-        integral_eqn = pybamm.IndefiniteIntegral(var, x)
-        disc.set_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        phi_integral = pybamm.IndefiniteIntegral(i, x)
+        disc.set_variable_slices([phi])  # i is not a fundamental variable
 
+        phi_integral_disc = disc.process_symbol(phi_integral)
         combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
-        np.testing.assert_array_equal(
-            integral_eqn_disc.evaluate(None, constant_y), linear_y - ln
-        )
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_y), (linear_y ** 2 - (ln) ** 2) / 2
-        )
-        cos_y = np.cos(combined_submesh[0].nodes)
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, cos_y),
-            np.sin(linear_y) - np.sin(ln),
-            places=4,
-        )
 
-        # microscale variable
-        var = pybamm.Variable("var", domain=["negative particle"])
-        r = pybamm.SpatialVariable("r", ["negative particle"])
-        integral_eqn = pybamm.IndefiniteIntegral(var, r)
-        disc.set_variable_slices([var])
-        integral_eqn_disc = disc.process_symbol(integral_eqn)
+        # constant case
+        phi_exact = np.ones_like(combined_submesh[0].nodes)
+        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx += 1  # add constant of integration
+        np.testing.assert_array_equal(phi_exact, phi_approx)
 
-        constant_y = np.ones_like(mesh["negative particle"][0].nodes)
-        np.testing.assert_array_equal(
-            integral_eqn_disc.evaluate(None, constant_y), np.pi
-        )
-        linear_y = mesh["negative particle"][0].nodes
-        np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_y), 2 * np.pi / 3, places=4
-        )
-        one_over_y = 1 / mesh["negative particle"][0].nodes
-        np.testing.assert_array_equal(
-            integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi
-        )
+        # linear case
+        phi_exact = combined_submesh[0].nodes
+        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx += phi_exact[0]  # add constant of integration
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+
+        # sine case
+        phi_exact = np.sin(combined_submesh[0].nodes)
+        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx += phi_exact[0]  # add constant of integration
+        np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+
+        # --------------------------------------------------------------------
+        # micrsoscale case
+        c = pybamm.Variable("c", domain=["negative particle"])
+        N = pybamm.grad(c)  # create test current (variable on edges)
+        r_n = pybamm.SpatialVariable("r_n", ["negative particle"])
+        c_integral = pybamm.IndefiniteIntegral(N, r_n)
+        disc.set_variable_slices([c])  # N is not a fundamental variable
+
+        c_integral_disc = disc.process_symbol(c_integral)
+        combined_submesh = mesh["negative particle"]
+
+        # constant case
+        c_exact = np.ones_like(combined_submesh[0].nodes)
+        c_approx = c_integral_disc.evaluate(None, c_exact)
+        c_approx += 1  # add constant of integration
+        np.testing.assert_array_equal(c_exact, c_approx)
+
+        # linear case
+        c_exact = combined_submesh[0].nodes
+        c_approx = c_integral_disc.evaluate(None, c_exact)
+        c_approx += c_exact[0]  # add constant of integration
+        np.testing.assert_array_almost_equal(c_exact, c_approx)
+
+        # sine case
+        c_exact = np.sin(combined_submesh[0].nodes)
+        c_approx = c_integral_disc.evaluate(None, c_exact)
+        c_approx += c_exact[0]  # add constant of integration
+        np.testing.assert_array_almost_equal(c_exact, c_approx)
+
+        # ------------
+        # check raises error for variales not on mesh edges
+        phi = pybamm.Variable("phi", domain=["separator", "positive electrode"])
+        no_grad_or_div = phi
+        x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
+        phi_integral = pybamm.IndefiniteIntegral(no_grad_or_div, x)
+        disc.set_variable_slices([phi])
+
+        with self.assertRaisesRegex(pybamm.ModelError, "integrated"):
+            disc.process_symbol(phi_integral)
+
+        grad_and_div = pybamm.div(pybamm.grad(phi))
+        phi_integral = pybamm.IndefiniteIntegral(grad_and_div, x)
+        disc.set_variable_slices([phi])
+
+        with self.assertRaisesRegex(pybamm.ModelError, "integrated"):
+            disc.process_symbol(phi_integral)
+
+        # # microscale variable
+        # # microscale variable
+        # var = pybamm.Variable("var", domain=["negative particle"])
+        # r = pybamm.SpatialVariable("r", ["negative particle"])
+        # integral_eqn = pybamm.IndefiniteIntegral(var, r)
+        # disc.set_variable_slices([var])
+        # integral_eqn_disc = disc.process_symbol(integral_eqn)
+
+        # constant_y = np.ones_like(mesh["negative particle"][0].nodes)
+        # # np.testing.assert_array_equal(
+        #     integral_eqn_disc.evaluate(None, constant_y), np.pi
+        # )
+        # linear_y = mesh["negative particle"][0].nodes
+        # np.testing.assert_array_almost_equal(
+        #     integral_eqn_disc.evaluate(None, linear_y), 2 * np.pi / 3, places=4
+        # )
+        # one_over_y = 1 / mesh["negative particle"][0].nodes
+        # np.testing.assert_array_equal(
+        #     integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi
+        # )
 
     def test_grad_convergence_without_bcs(self):
         # Convergence
