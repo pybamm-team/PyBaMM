@@ -209,7 +209,10 @@ class Diagonal(UnaryOperator):
         if np.size(evaluated_child) == 1:
             return csr_matrix(evaluated_child)
         else:
-            return diags(evaluated_child, 0)
+            try:
+                return diags(evaluated_child, 0)
+            except TypeError:
+                import ipdb; ipdb.set_trace()
 
     def evaluates_to_number(self):
         """ See :meth:`pybamm.Symbol.evaluates_to_number()`. """

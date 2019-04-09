@@ -53,7 +53,7 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create Jacobian from simplified rhs
         y = pybamm.StateVector(slice(0, np.size(y0)))
-        jac_rhs = concatenated_rhs.jac(y)
+        jac_rhs = concatenated_rhs.jac(y).simplify()
 
         def jacobian(t, y):
             return jac_rhs.evaluate(t, y)

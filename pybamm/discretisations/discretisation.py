@@ -229,7 +229,7 @@ class Discretisation(object):
         jacobian = self.sparse_stack(*jac_rhs.values(), *jac_algebraic.values())
 
         def jacfn(t, y):
-            return jacobian.evaluate(t, y)
+            return jacobian.simplify().evaluate(t, y)
 
         model.jacobian = jacfn
 

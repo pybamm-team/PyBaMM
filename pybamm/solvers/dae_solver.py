@@ -71,7 +71,7 @@ class DaeSolver(pybamm.BaseSolver):
         y = pybamm.StateVector(slice(0, np.size(y0)))
         jac_rhs = concatenated_rhs.jac(y)
         jac_algebraic = concatenated_algebraic.jac(y)
-        jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
+        jac = pybamm.SparseStack(jac_rhs, jac_algebraic).simplify()
 
         def jacobian(t, y):
             return jac.evaluate(t, y)

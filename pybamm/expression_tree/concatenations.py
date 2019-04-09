@@ -254,6 +254,7 @@ class SparseStack(pybamm.Symbol):
         # come from evaluate. The other way would be to make all the matrices
         # dense and then do a NumpyConcatenation, but I fear this will be bad
         # when the Jacobian is very large
+        import ipdb; ipdb.set_trace()        
         evaluated_child = child.evaluate(t, y)
         if issparse(evaluated_child) is False:
             if np.size(evaluated_child) == 1 and evaluated_child == 0:
