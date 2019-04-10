@@ -961,27 +961,6 @@ class TestFiniteVolume(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "integrated"):
             disc.process_symbol(phi_integral)
 
-        # # microscale variable
-        # # microscale variable
-        # var = pybamm.Variable("var", domain=["negative particle"])
-        # r = pybamm.SpatialVariable("r", ["negative particle"])
-        # integral_eqn = pybamm.IndefiniteIntegral(var, r)
-        # disc.set_variable_slices([var])
-        # integral_eqn_disc = disc.process_symbol(integral_eqn)
-
-        # constant_y = np.ones_like(mesh["negative particle"][0].nodes)
-        # # np.testing.assert_array_equal(
-        #     integral_eqn_disc.evaluate(None, constant_y), np.pi
-        # )
-        # linear_y = mesh["negative particle"][0].nodes
-        # np.testing.assert_array_almost_equal(
-        #     integral_eqn_disc.evaluate(None, linear_y), 2 * np.pi / 3, places=4
-        # )
-        # one_over_y = 1 / mesh["negative particle"][0].nodes
-        # np.testing.assert_array_equal(
-        #     integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi
-        # )
-
     def test_grad_convergence_without_bcs(self):
         # Convergence
         whole_cell = ["negative electrode", "separator", "positive electrode"]

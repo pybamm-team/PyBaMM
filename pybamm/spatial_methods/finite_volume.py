@@ -389,15 +389,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         n = submesh.npts
         sec_pts = len(submesh_list)
 
-        # # case input i, output phi
-        # # note we have added a row of zeros at top for F(0) = 0
-        # du_e = submesh.d_edges
-        # du_entries = [du_e] * n
-        # offset = -np.arange(1, n + 1, 1)
-        # sub_matrix = diags(du_entries, offset, shape=(n + 1, n))
-        # matrix = kron(eye(sec_pts), sub_matrix)
-
-        # case input i, output phi
         # note we have added a row of zeros at top for F(0) = 0
         du_n = submesh.d_nodes
         du_entries = [du_n] * (n - 1)
