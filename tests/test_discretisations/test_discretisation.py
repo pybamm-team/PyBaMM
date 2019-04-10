@@ -244,7 +244,9 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.divergence(None, None, {})
         with self.assertRaises(NotImplementedError):
-            spatial_method.integral(None, None)
+            spatial_method.integral(None, None, None)
+        with self.assertRaises(NotImplementedError):
+            spatial_method.indefinite_integral(None, None, None)
 
     def test_process_dict(self):
         # one equation
