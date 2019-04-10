@@ -52,11 +52,11 @@ class UnaryOperator(pybamm.Symbol):
         if known_evals is not None:
             if self.id not in known_evals:
                 child, known_evals = self.children[0].evaluate(t, y, known_evals)
-                known_evals[self.id] = self._binary_evaluate(child)
+                known_evals[self.id] = self._unary_evaluate(child)
             return known_evals[self.id], known_evals
         else:
             child = self.children[0].evaluate(t, y)
-            return self._binary_evaluate(child)
+            return self._unary_evaluate(child)
 
 
 class Negate(UnaryOperator):
@@ -80,7 +80,7 @@ class Negate(UnaryOperator):
         else:
             return -self.children[0].diff(variable)
 
-    def evaluate(self, child):
+    def _unary_evaluate(self, child):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return -child
 
@@ -100,7 +100,7 @@ class AbsoluteValue(UnaryOperator):
         # Derivative is not well-defined
         raise NotImplementedError("Derivative of absolute function is not defined")
 
-    def evaluate(self, child):
+    def _unary_evaluate(self, child):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return np.abs(child)
 
@@ -130,7 +130,7 @@ class Function(UnaryOperator):
                 # otherwise the derivative of the function is zero
                 return pybamm.Scalar(0)
 
-    def evaluate(self, child):
+    def _unary_evaluate(self, child):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return self.func(child)
 
@@ -155,7 +155,7 @@ class Index(UnaryOperator):
         super().__init__(name, child)
         self.index = index
 
-    def evaluate(self, child):
+    def _unary_evaluate(self, child):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         return child[self.index]
 
