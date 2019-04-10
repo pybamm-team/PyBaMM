@@ -130,20 +130,26 @@ class TestParameterValues(unittest.TestCase):
 
     def test_process_function_parameter(self):
         parameter_values = pybamm.ParameterValues(
-            {"a": 3, "func": "process_symbol_test_function.py"}
+            {
+                "a": 3,
+                "func": "process_symbol_test_function.py",
+                "const": "process_symbol_test_constant.py",
+            }
         )
-
-        # process parameter
         a = pybamm.Parameter("a")
-        processed_a = parameter_values.process_symbol(a)
-        self.assertIsInstance(processed_a, pybamm.Scalar)
-        self.assertEqual(processed_a.value, 3)
 
         # process function
         func = pybamm.FunctionParameter("func", a)
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Function)
         self.assertEqual(processed_func.evaluate(), 369)
+
+        # process constant as a function ("process_symbol_test_constant.py" loads a
+        # number)
+        const = pybamm.FunctionParameter("const", a)
+        processed_const = parameter_values.process_symbol(const)
+        self.assertIsInstance(processed_const, pybamm.Scalar)
+        self.assertEqual(processed_const.evaluate(), 254)
 
         # process differentiated function parameter
         diff_func = func.diff(a)

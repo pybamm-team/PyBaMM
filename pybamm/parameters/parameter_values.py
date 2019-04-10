@@ -181,13 +181,21 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_child = self.process_symbol(symbol.children[0])
             function_name = self.get_parameter_value(symbol)
-            function = pybamm.Function(pybamm.load_function(function_name), new_child)
+            function = pybamm.load_function(function_name)
+            # It's possible to define a FunctionParameter with a function name that
+            # just returns a scalar (i.e. isn't really a function). For example, the
+            # constant current function is just equal to 1.
+            if not callable(function):
+                # If not callable then 'function' is a number and we return a Scalar
+                return pybamm.Scalar(function, name=function_name)
+            # Otherwise proceed as expected
+            function_symbol = pybamm.Function(function, new_child)
             if symbol.diff_variable is None:
-                return function
+                return function_symbol
             else:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.children[0])
-                return function.diff(new_diff_variable)
+                return function_symbol.diff(new_diff_variable)
 
         elif isinstance(symbol, pybamm.Scalar):
             # update any Scalar nodes if their name is in the parameter dict (no error)
