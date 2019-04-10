@@ -1356,7 +1356,9 @@ class TestFiniteVolume(unittest.TestCase):
         eqn = pybamm.grad(var)
         eqn_disc = disc.process_symbol(eqn)
         eqn_jac = eqn_disc.jac(y)
-        eqn_jac.evaluate(y=y_test)
+        jacobian = eqn_jac.evaluate(y=y_test)
+        grad_matrix = pybamm.FiniteVolume.gradient_matrix(disc, whole_cell).entries
+        np.testing.assert_array_equal(jacobian.toarray(), grad_matrix.toarray())
 
         # grad with averaging
         eqn = var * pybamm.grad(var)
@@ -1368,6 +1370,7 @@ class TestFiniteVolume(unittest.TestCase):
         flux = pybamm.grad(var)
         eqn = pybamm.div(flux)
         disc._bcs = {flux.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(2)}}
+        eqn_disc = disc.process_symbol(eqn)
         eqn_jac = eqn_disc.jac(y)
         eqn_jac.evaluate(y=y_test)
 

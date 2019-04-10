@@ -80,10 +80,18 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
 
         if jacobian:
-            # Put the user-supplied Jacobian into the SUNDIALS Class
-            jacfn = JacobianFunctionIDA()
-            jacfn.set_jacobian(mass_matrix, jacobian)
-            extra_options.update({"jacfn": jacfn})
+            # Note: having a problem with calcuting Jacobian of NewmanTiedemann
+            # model, which will hopefully be fixed once we can take the Jacobian
+            # of the simplified model. Putting try/except here for now to catch
+            # this case where evaluting the Jacobian gives a ValueError
+            try:
+                jacobian(0, y0)
+                # Put the user-supplied Jacobian into the SUNDIALS Class
+                jacfn = JacobianFunctionIDA()
+                jacfn.set_jacobian(mass_matrix, jacobian)
+                extra_options.update({"jacfn": jacfn})
+            except ValueError:
+                pass
 
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})

@@ -708,8 +708,14 @@ class MatrixMultiplication(BinaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
+        # I think we only need the case where left is a matrix and right
+        # is a (slice of a) state vector, e.g. for discretised spatial
+        # operators of the form D @ u
         left, right = self.orphans
-        return left @ right.jac(variable) + left.jac(variable) @ right
+        if isinstance(left, pybamm.Matrix):
+            return left @ right.jac(variable)
+        else:
+            raise NotImplementedError
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

@@ -184,7 +184,8 @@ class Index(UnaryOperator):
 
 class Diagonal(UnaryOperator):
     """A node in the expression tree representing an operator which creates a
-    diagonal matrix from a vector
+    diagonal matrix from a vector. If the child is already a matrix, it
+    simply returns the child.
 
     **Extends:** :class:`UnaryOperator`
     """
@@ -209,10 +210,7 @@ class Diagonal(UnaryOperator):
         if np.size(evaluated_child) == 1:
             return csr_matrix(evaluated_child)
         else:
-            try:
-                return diags(evaluated_child, 0)
-            except TypeError:
-                import ipdb; ipdb.set_trace()
+            return diags(evaluated_child, 0)
 
     def evaluates_to_number(self):
         """ See :meth:`pybamm.Symbol.evaluates_to_number()`. """
