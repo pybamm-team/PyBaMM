@@ -341,7 +341,7 @@ class Symbol(anytree.NodeMixin):
         else:
             return pybamm.Scalar(0)
 
-    def evaluate(self, t=None, y=None):
+    def _force_evaluate(self, t=None, y=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -364,6 +364,33 @@ class Symbol(anytree.NodeMixin):
                 self, type(self)
             )
         )
+
+    def evaluate(self, t=None, y=None):
+        """evaluate expression tree
+
+        will raise a ``NotImplementedError`` if this member function has not
+        been defined for the node. For example, :class:`Scalar` returns its
+        scalar value, but :class:`Variable` will raise ``NotImplementedError``
+
+        Parameters
+        ----------
+
+        t : float or numeric type, optional
+            time at which to evaluate (default None)
+
+        y : numpy.array, optional
+            array to evaluate when solving (default None)
+
+        """
+        if self.evaluated_at_t_y is not None and self.evaluated_at_t_y["(t,y)"] == (
+            t,
+            y,
+        ):
+            return self.evaluated_at_t_y["value"]
+        else:
+            value = self._force_evaluate(t, y)
+            self.evaluated_at_t_y = {"(t,y)": (t, y), "value": value}
+            return value
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
