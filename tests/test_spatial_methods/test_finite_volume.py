@@ -856,32 +856,34 @@ class TestFiniteVolume(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         # input a phi, take grad, then integrate to recover phi approximation
+        # (need to test this way as check evaluated on edges using if has grad
+        # and no div)
         phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
         i = pybamm.grad(phi)  # create test current (variable on edges)
 
         x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
-        phi_integral = pybamm.IndefiniteIntegral(i, x)
+        int_grad_phi = pybamm.IndefiniteIntegral(i, x)
         disc.set_variable_slices([phi])  # i is not a fundamental variable
 
-        phi_integral_disc = disc.process_symbol(phi_integral)
+        int_grad_phi_disc = disc.process_symbol(int_grad_phi)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
 
         # constant case
         phi_exact = np.ones_like(combined_submesh[0].nodes)
-        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_equal(phi_exact, phi_approx)
 
         # linear case
         phi_exact = combined_submesh[0].nodes
-        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
 
         # sine case
         phi_exact = np.sin(combined_submesh[0].nodes)
-        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
 
@@ -890,27 +892,27 @@ class TestFiniteVolume(unittest.TestCase):
         phi = pybamm.Variable("phi", domain=["separator", "positive electrode"])
         i = pybamm.grad(phi)  # create test current (variable on edges)
         x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
-        phi_integral = pybamm.IndefiniteIntegral(i, x)
+        int_grad_phi = pybamm.IndefiniteIntegral(i, x)
         disc.set_variable_slices([phi])  # i is not a fundamental variable
 
-        phi_integral_disc = disc.process_symbol(phi_integral)
+        int_grad_phi_disc = disc.process_symbol(int_grad_phi)
         combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
 
         # constant case
         phi_exact = np.ones_like(combined_submesh[0].nodes)
-        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_equal(phi_exact, phi_approx)
 
         # linear case
         phi_exact = combined_submesh[0].nodes
-        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
 
         # sine case
         phi_exact = np.sin(combined_submesh[0].nodes)
-        phi_approx = phi_integral_disc.evaluate(None, phi_exact)
+        phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
 
@@ -948,18 +950,18 @@ class TestFiniteVolume(unittest.TestCase):
         phi = pybamm.Variable("phi", domain=["separator", "positive electrode"])
         no_grad_or_div = phi
         x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
-        phi_integral = pybamm.IndefiniteIntegral(no_grad_or_div, x)
+        int_grad_phi = pybamm.IndefiniteIntegral(no_grad_or_div, x)
         disc.set_variable_slices([phi])
 
         with self.assertRaisesRegex(pybamm.ModelError, "integrated"):
-            disc.process_symbol(phi_integral)
+            disc.process_symbol(int_grad_phi)
 
         grad_and_div = pybamm.div(pybamm.grad(phi))
-        phi_integral = pybamm.IndefiniteIntegral(grad_and_div, x)
+        int_grad_phi = pybamm.IndefiniteIntegral(grad_and_div, x)
         disc.set_variable_slices([phi])
 
         with self.assertRaisesRegex(pybamm.ModelError, "integrated"):
-            disc.process_symbol(phi_integral)
+            disc.process_symbol(int_grad_phi)
 
     def test_grad_convergence_without_bcs(self):
         # Convergence
