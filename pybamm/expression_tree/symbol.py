@@ -341,7 +341,7 @@ class Symbol(anytree.NodeMixin):
         else:
             return pybamm.Scalar(0)
 
-    def _force_evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -365,7 +365,7 @@ class Symbol(anytree.NodeMixin):
             )
         )
 
-    def evaluate(self, t=None, y=None):
+    def evaluate(self, t=None, y=None, known_evals=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -382,15 +382,12 @@ class Symbol(anytree.NodeMixin):
             array to evaluate when solving (default None)
 
         """
-        if self.evaluated_at_t_y is not None and self.evaluated_at_t_y["(t,y)"] == (
-            t,
-            y,
-        ):
-            return self.evaluated_at_t_y["value"]
+        if known_evals is not None:
+            if self.id not in known_evals:
+                known_evals[self.id] = self._base_evaluate(t, y)
+            return known_evals[self.id], known_evals
         else:
-            value = self._force_evaluate(t, y)
-            self.evaluated_at_t_y = {"(t,y)": (t, y), "value": value}
-            return value
+            return self._base_evaluate(t, y)
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`

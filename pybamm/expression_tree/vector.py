@@ -65,7 +65,7 @@ class StateVector(pybamm.Symbol):
         """Slice of an external y to read"""
         return self._y_slice
 
-    def evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if y is None:
             raise TypeError("StateVector cannot evaluate input 'y=None'")

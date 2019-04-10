@@ -196,8 +196,14 @@ def simplify_multiplication_division(myclass, left, right):
     numerator_types = []
 
     # recursive function to flatten a term involving only multiplications or divisions
-    def flatten(previous_class, this_class, left_child, right_child,
-                in_numerator, in_matrix_multiplication):
+    def flatten(
+        previous_class,
+        this_class,
+        left_child,
+        right_child,
+        in_numerator,
+        in_matrix_multiplication,
+    ):
         """
         recursive function to flatten a term involving only Multiplication, Division or
         MatrixMultiplication. keeps track of wether a term is on the numerator or
@@ -220,20 +226,31 @@ def simplify_multiplication_division(myclass, left, right):
             if isinstance(child, pybamm.MatrixMultiplication):
                 left, right = child.orphans
                 if child == left_child:
-                    flatten(previous_class, child.__class__, left, right, in_numerator,
-                            True)
+                    flatten(
+                        previous_class, child.__class__, left, right, in_numerator, True
+                    )
                 else:
-                    flatten(this_class, child.__class__, left, right, in_numerator,
-                            True)
-            elif isinstance(child, (pybamm.Multiplication, pybamm.Division)) \
-                    and not in_matrix_multiplication:
+                    flatten(
+                        this_class, child.__class__, left, right, in_numerator, True
+                    )
+            elif (
+                isinstance(child, (pybamm.Multiplication, pybamm.Division))
+                and not in_matrix_multiplication
+            ):
                 left, right = child.orphans
                 if child == left_child:
-                    flatten(previous_class, child.__class__, left, right, in_numerator,
-                            False)
+                    flatten(
+                        previous_class,
+                        child.__class__,
+                        left,
+                        right,
+                        in_numerator,
+                        False,
+                    )
                 else:
-                    flatten(this_class, child.__class__, left, right, in_numerator,
-                            False)
+                    flatten(
+                        this_class, child.__class__, left, right, in_numerator, False
+                    )
             else:
                 if in_numerator:
                     numerator.append(child)
@@ -457,6 +474,19 @@ class BinaryOperator(pybamm.Symbol):
 
         return pybamm.simplify_if_constant(new_node)
 
+    def evaluate(self, t=None, y=None, known_evals=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        if known_evals is not None:
+            if self.id not in known_evals:
+                left, known_evals = self.children[0].evaluate(t, y, known_evals)
+                right, known_evals = self.children[1].evaluate(t, y, known_evals)
+                known_evals[self.id] = self._binary_evaluate(left, right)
+            return known_evals[self.id], known_evals
+        else:
+            left = self.children[0].evaluate(t, y)
+            right = self.children[1].evaluate(t, y)
+            return self._binary_evaluate(left, right)
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
@@ -480,9 +510,9 @@ class Power(BinaryOperator):
                 + base * pybamm.Function(np.log, base) * exponent.diff(variable)
             )
 
-    def evaluate(self, t=None, y=None):
+    def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) ** self.children[1].evaluate(t, y)
+        return left ** right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -515,9 +545,9 @@ class Addition(BinaryOperator):
         else:
             return self.children[0].diff(variable) + self.children[1].diff(variable)
 
-    def evaluate(self, t=None, y=None):
+    def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) + self.children[1].evaluate(t, y)
+        return left + right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -549,9 +579,9 @@ class Subtraction(BinaryOperator):
         else:
             return self.children[0].diff(variable) - self.children[1].diff(variable)
 
-    def evaluate(self, t=None, y=None):
+    def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) - self.children[1].evaluate(t, y)
+        return left - right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -588,11 +618,8 @@ class Multiplication(BinaryOperator):
             left, right = self.orphans
             return left.diff(variable) * right + left * right.diff(variable)
 
-    def evaluate(self, t=None, y=None):
+    def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        left = self.children[0].evaluate(t, y)
-        right = self.children[1].evaluate(t, y)
-
         # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
         # broadcasting is done correctly, see #253. This might be inefficient, so will
         # need to revisit
@@ -655,10 +682,9 @@ class MatrixMultiplication(BinaryOperator):
         # We shouldn't need this
         raise NotImplementedError
 
-    def evaluate(self, t=None, y=None):
+    def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-
-        return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
+        return left @ right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -691,9 +717,9 @@ class Division(BinaryOperator):
                 top.diff(variable) * bottom - top * bottom.diff(variable)
             ) / bottom ** 2
 
-    def evaluate(self, t=None, y=None):
+    def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) / self.children[1].evaluate(t, y)
+        return left / right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
