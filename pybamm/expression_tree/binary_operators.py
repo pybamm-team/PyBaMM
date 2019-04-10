@@ -115,8 +115,8 @@ def simplify_addition_subtraction(myclass, left, right):
         ret = None
         if len(array) > 0:
             ret = array[0]
-            for child, type in zip(array[1:], types[1:]):
-                if type == pybamm.Addition:
+            for child, typ in zip(array[1:], types[1:]):
+                if typ == pybamm.Addition:
                     ret += child
                 else:
                     ret -= child
@@ -157,12 +157,12 @@ def simplify_multiplication_division(myclass, left, right):
     if children are associative (multiply, division, etc) then try to find
     groups of constant children (that produce a value) and simplify them
 
-    The purpose of this function is to simplify expressions of the type (2 * c / 2),
+    The purpose of this function is to simplify expressions of the type (1 * c / 2),
     which should simplify to (0.5 * c). The former expression consists of a Divsion,
     with a left child of a Multiplication containing a Scalar and a Parameter, and a
     right child consisting of a Scalar. For this case, this function will first flatten
     the expression to a list of the bottom level children on the numerator (i.e.
-    [Scalar(2), Parameter(c)]) and their operators (i.e. [None, Multiplication]), as
+    [Scalar(1), Parameter(c)]) and their operators (i.e. [None, Multiplication]), as
     well as those children on the denominator (i.e. [Scalar(2)]. After this, all the
     constant children on the numerator and denominator (i.e. Scalar(1) and Scalar(2))
     will be combined appropriatly, in this case to Scalar(0.5), and combined with the
@@ -272,7 +272,7 @@ def simplify_multiplication_division(myclass, left, right):
 
     # check if there is a matrix multiply in the numerator (if so we can't reorder it)
     has_matrix_multiply = any(
-        [type == pybamm.MatrixMultiplication for type in numerator_types + [myclass]]
+        [typ == pybamm.MatrixMultiplication for typ in numerator_types + [myclass]]
     )
 
     def partition_by_constant(source, types=None):
@@ -314,8 +314,8 @@ def simplify_multiplication_division(myclass, left, right):
                 # work backwards through 'array' and 'types' so that multiplications
                 # and matrix multiplications are performed in the most efficient order
                 ret = array[-1]
-                for child, type in zip(reversed(array[:-1]), reversed(types[1:])):
-                    if type == pybamm.MatrixMultiplication:
+                for child, typ in zip(reversed(array[:-1]), reversed(types[1:])):
+                    if typ == pybamm.MatrixMultiplication:
                         ret = child @ ret
                     else:
                         ret = child * ret
@@ -353,21 +353,21 @@ def simplify_multiplication_division(myclass, left, right):
         # only consider neighbouring children for numerator as we can't reorder mat muls
         new_numerator = [numerator[0]]
         new_numerator_types = [numerator_types[0]]
-        for child, type in zip(numerator[1:], numerator_types[1:]):
+        for child, typ in zip(numerator[1:], numerator_types[1:]):
             if (
                 new_numerator[-1].is_constant()
                 and child.is_constant()
                 and new_numerator[-1].evaluate_ignoring_errors() is not None
                 and child.evaluate_ignoring_errors() is not None
             ):
-                if type == pybamm.MatrixMultiplication:
+                if typ == pybamm.MatrixMultiplication:
                     new_numerator[-1] = new_numerator[-1] @ child
                 else:
                     new_numerator[-1] *= child
                 new_numerator[-1] = pybamm.simplify_if_constant(new_numerator[-1])
             else:
                 new_numerator.append(child)
-                new_numerator_types.append(type)
+                new_numerator_types.append(typ)
         new_numerator = fold_multiply(new_numerator, new_numerator_types)
 
     else:
