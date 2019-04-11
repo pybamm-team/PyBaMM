@@ -290,6 +290,24 @@ class TestConcatenations(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.DomainError, "domain cannot be empty"):
             pybamm.DomainConcatenation([a, b], None)
 
+    def test_simplify_concatenation_state_vectors(self):
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+
+        a = pybamm.Variable("a", domain=["negative electrode"])
+        b = pybamm.Variable("b", domain=["separator"])
+        c = pybamm.Variable("c", domain=["positive electrode"])
+        conc = pybamm.Concatenation(a, b, c)
+        disc.set_variable_slices([a, b, c])
+        conc_disc = disc.process_symbol(conc)
+        conc_simp = conc_disc.simplify()
+
+        y = mesh.combine_submeshes(*conc.domain)[0].nodes ** 2
+        self.assertIsInstance(conc_simp, pybamm.StateVector)
+        self.assertEqual(conc_simp.y_slice.start, 0)
+        self.assertEqual(conc_simp.y_slice.stop, len(y))
+        np.testing.assert_array_equal(conc_disc.evaluate(y=y), conc_simp.evaluate(y=y))
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
