@@ -133,7 +133,7 @@ class TestParameterValues(unittest.TestCase):
             {
                 "a": 3,
                 "func": "process_symbol_test_function.py",
-                "const": "process_symbol_test_constant.py",
+                "const": "process_symbol_test_constant_function.py",
             }
         )
         a = pybamm.Parameter("a")
@@ -144,8 +144,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_func, pybamm.Function)
         self.assertEqual(processed_func.evaluate(), 369)
 
-        # process constant as a function ("process_symbol_test_constant.py" loads a
-        # number)
+        # process constant function
         const = pybamm.FunctionParameter("const", a)
         processed_const = parameter_values.process_symbol(const)
         self.assertIsInstance(processed_const, pybamm.Scalar)

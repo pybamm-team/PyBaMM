@@ -1,4 +1,5 @@
 #
-# Constant current "function" - returns the number 1
+# Constant current "function"
 #
-constant_current = 1
+def constant_current():
+    return 1
