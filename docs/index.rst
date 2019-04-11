@@ -35,7 +35,10 @@ Contents
 Examples
 ========
 
-Detailed examples can be found on GitHub, or run directly through Binder.
+Detailed examples can be viewed on
+`GitHub <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_, 
+and run locally using ``jupyter notebook``, or online through
+`Binder <https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master?filepath=examples%2Fnotebooks>`_.
 
 Contributing
 ============
