@@ -1,17 +1,44 @@
 Adding a Spatial Method
 =======================
 
-As with any contribution to PyBaMM, start by creating an issue to discuss what you want to do - this saves wasted coding hours
+As with any contribution to PyBaMM, please follow the workflow in `CONTRIBUTING.md <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.
+In particular, start by creating an issue to discuss what you want to do - this is a good way to avoid wasted coding hours!
 
-Creating a new Spatial Method class
------------------------------------
+The role of spatial methods
+---------------------------
 
-To add a new Spatial Method (My Fast Method), first create a new file (`my_fast_method.py`) in ``pybamm/spatial_methods``,
+All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_.
+After it has been created and parameters have been set, the model is passed to the :class:`pybamm.Discretisation` class,
+which converts it into a linear algebra form.
+For example, the object::
+
+    grad(u)
+
+might get converted to a Matrix-Vector multiplication::
+
+    Matrix(100,100) @ y[0:100]
+
+(in Python 3.5+, @ means matrix multiplication, while * is elementwise product).
+The :class:`pybamm.Discretisation` class is a wrapper that iterates through the different parts of the model,
+performing the trivial conversions (e.g. Addition --> Addition),
+and calls upon spatial methods to perform the harder conversions (e.g. grad(u) --> Matrix * StateVector, SpatialVariable --> Vector, etc).
+
+Hence SpatialMethod classes only need to worry about the specific conversions, and :class:`pybamm.Discretisation` deals with the rest.
+
+Implementing a new spatial method
+---------------------------------
+
+To add a new spatial method (e.g. My Fast Method), first create a new file (``my_fast_method.py``) in ``pybamm/spatial_methods``,
 with a single class that inherits from :class:`pybamm.SpatialMethod`, such as::
 
     def MyFastMethod(pybamm.SpatialMethod):
 
-This class must implement the following operations from :class:`pybamm.SpatialMethod`:
+and add the class to `pybamm/__init__.py`::
+
+    from .spatial_methods.my_fast_method import MyFastMethod
+
+You can then start implementing the spatial method by adding functions to the class.
+In particular, any spatial method *must* have the following functions (from the base class :class:`pybamm.SpatialMethod`):
 
 - :meth:`pybamm.SpatialMethod.spatial_variable()`
 - :meth:`pybamm.SpatialMethod.broadcast`
@@ -20,21 +47,23 @@ This class must implement the following operations from :class:`pybamm.SpatialMe
 - :meth:`pybamm.SpatialMethod.integral`
 - :meth:`pybamm.SpatialMethod.indefinite integral`
 
-Optionally, a new spatial method can also overwrite the default behaviour for the following operations:
+Optionally, a new spatial method can also overwrite the default behaviour for the following functions:
 
 - :meth:`pybamm.SpatialMethod.boundary_value`
 - :meth:`pybamm.SpatialMethod.mass_matrix`
 - :meth:`pybamm.SpatialMethod.compute_diffusivity`
 
-For an example of a spatial method implementation, see
-`Finite Volume <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_.
+For an example of an existing spatial method implementation, see the Finite Volume
+`API docs <https://pybamm.readthedocs.io/en/latest/source/spatial_methods/finite_volume.html>`_.
+and
+`notebook <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_.
 
 Unit tests for the new class
 ----------------------------
 
-For the new spatial method to be added to PyBaMM, you must add unit tests to demonstrate that it behaves as expected.
+For the new spatial method to be added to PyBaMM, you must add unit tests to demonstrate that it behaves as expected
 (see, for example, the `Finite Volume unit tests <https://github.com/pybamm-team/PyBaMM/blob/master/tests/test_spatial_methods/test_finite_volume.py>`_).
-The best way to get started would be to create a file `test_my_fast_method.py` in `tests/test_spatial_methods/` that performs the
+The best way to get started would be to create a file `test_my_fast_method.py` in `tests/test_spatial_methods/` that performs at least the
 following checks:
 
 - Operations return objects that have the expected shape
@@ -44,29 +73,23 @@ following checks:
 Test on the models
 ------------------
 
-In theory, all existing models can now be discretised using `MyFastMethod` instead of their default spatial methods, with no extra work from here.
+In theory, any existing model can now be discretised using `MyFastMethod` instead of their default spatial methods, with no extra work from here.
 To test this, add something like the following test to one of the model test files
 (e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/test_models/test_lithium_ion/test_lithium_ion_dfn.py>`_)::
 
     def test_my_fast_method(self):
         model = pybamm.lithium_ion.DFN()
-        var = pybamm.standard_spatial_vars
-        model.default_var_pts = {
-            var.x_n: 3,
-            var.x_s: 3,
-            var.x_p: 3,
-            var.r_n: 3,
-            var.r_p: 3,
+        spatial_methods = {
+            "macroscale": pybamm.MyFastMethod,
+            "negative particle": pybamm.MyFastMethod,
+            "positive particle": pybamm.MyFastMethod,
         }
 
-        modeltest = tests.StandardModelTest(model)
+        modeltest = tests.StandardModelTest(model, spatial_methods=spatial_methods)
         modeltest.test_all()
 
-Housekeeping
-------------
+This will check that the model can run with the new spatial method (but not that it gives a sensible answer!).
 
-Finally:
-
-- Add your spatial method to the API docs by copying and modifying `finite_volume.rst` as appropriate in `docs/source/spatial_methods`, and adding the appropriate line to the toctree in `docs/source/spatial_methods/index.rst`.
-- Check that all the tests pass
-- Create a Pull Request to merge your new spatial method into the core PyBaMM code.
+Once you have performed the above checks, you are almost ready to merge your code into the core PyBaMM - see
+`CONTRIBUTING.md <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md#c-merging-your-changes-with-pybamm>`_
+for how to do this.
