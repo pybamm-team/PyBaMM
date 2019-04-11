@@ -125,16 +125,11 @@ class Symbol(anytree.NodeMixin):
         However, implementing __hash__ requires also implementing __eq__,
         which would then mess with loop-checking in the anytree module
         """
-        try:
-            self._id = hash(
-                (self.__class__, self.name)
-                + tuple([child.id for child in self.children])
-                + tuple(self.domain)
-            )
-        except TypeError:
-            import ipdb
-
-            ipdb.set_trace()
+        self._id = hash(
+            (self.__class__, self.name)
+            + tuple([child.id for child in self.children])
+            + tuple(self.domain)
+        )
 
     @property
     def orphans(self):

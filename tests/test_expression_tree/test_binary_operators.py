@@ -66,21 +66,28 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(expr.evaluate(known_evals={})[1][(a + b).id], 6)
 
         # Matrices
-        a = pybamm.Matrix(np.random.rand(300, 300))
-        b = pybamm.Matrix(np.random.rand(300, 300))
-        expr2 = (a @ b) - (a @ b) * (a @ b) + (a @ b) - (a @ b)
+        a = pybamm.Matrix(np.random.rand(5, 5))
+        b = pybamm.Matrix(np.random.rand(5, 5))
+        expr2 = (a @ b) - (a @ b) * (a @ b) + (a @ b)
         value = expr2.evaluate()
-        from IPython import embed
+        np.testing.assert_array_equal(expr2.evaluate(known_evals={})[0], value)
+        self.assertIn((a @ b).id, expr2.evaluate(known_evals={})[1])
+        np.testing.assert_array_equal(
+            expr2.evaluate(known_evals={})[1][(a @ b).id], (a @ b).evaluate()
+        )
 
-        embed()
-        import ipdb
-
-        ipdb.set_trace()
-        # np.testing.assert_array_equal(expr2.evaluate(known_evals={})[0], value)
-        # self.assertIn((a @ b).id, expr2.evaluate(known_evals={})[1])
-        # np.testing.assert_array_equal(
-        #     expr.evaluate(known_evals={})[1][(a @ b).id], (a @ b).evaluate()
-        # )
+        # Expect using known evals to be faster than not
+        timer = pybamm.Timer()
+        start = timer.time()
+        for _ in range(20):
+            expr2.evaluate()
+        end = timer.time()
+        start_known_evals = timer.time()
+        for _ in range(20):
+            expr2.evaluate(known_evals={})
+        end_known_evals = timer.time()
+        self.assertLess(end_known_evals - start_known_evals, 1.2 * (end - start))
+        self.assertGreater(end - start, 1.2 * (end_known_evals - start_known_evals))
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
