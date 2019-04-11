@@ -12,9 +12,9 @@ import os
 
 
 class TestHomogeneousReaction(unittest.TestCase):
-    def test_set_parameters(self):
+    def setUp(self):
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        param = pybamm.ParameterValues(
+        self.param = pybamm.ParameterValues(
             os.path.join(
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
@@ -30,9 +30,13 @@ class TestHomogeneousReaction(unittest.TestCase):
             },
         )
 
+    def tearDown(self):
+        del self.param
+
+    def test_set_parameters(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         rxn = pybamm.interface.homogeneous_reaction(whole_cell)
-        processed_rxn = param.process_symbol(rxn)
+        processed_rxn = self.param.process_symbol(rxn)
 
         # rxn (a concatenation of functions of scalars and parameters) should get
         # discretised to a concantenation of functions of scalars
@@ -58,22 +62,6 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertEqual(processed_rxn.children[2].domain, ["positive electrode"])
 
     def test_discretisation(self):
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        param = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current density": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
-            },
-        )
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
 
@@ -81,7 +69,7 @@ class TestHomogeneousReaction(unittest.TestCase):
 
         rxn = pybamm.interface.homogeneous_reaction(whole_cell)
 
-        param_rxn = param.process_symbol(rxn)
+        param_rxn = self.param.process_symbol(rxn)
         processed_rxn = disc.process_symbol(param_rxn)
 
         submesh = disc.mesh.combine_submeshes(*whole_cell)
@@ -90,8 +78,8 @@ class TestHomogeneousReaction(unittest.TestCase):
         self.assertEqual(processed_rxn.evaluate(0, None).shape, submesh[0].nodes.shape)
 
         # test values
-        l_n = param.process_symbol(pybamm.standard_parameters_lithium_ion.l_n)
-        l_p = param.process_symbol(pybamm.standard_parameters_lithium_ion.l_p)
+        l_n = self.param.process_symbol(pybamm.geometric_parameters.l_n)
+        l_p = self.param.process_symbol(pybamm.geometric_parameters.l_p)
         npts_n = mesh["negative electrode"][0].npts
         npts_s = mesh["separator"][0].npts
         np.testing.assert_array_equal(
@@ -105,36 +93,20 @@ class TestHomogeneousReaction(unittest.TestCase):
         )
 
     def test_disc_for_scalars(self):
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        param = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current density": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
-            },
-        )
         disc = get_discretisation_for_testing()
 
         j_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
         j_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
 
-        param_j_n = param.process_symbol(j_n)
-        param_j_p = param.process_symbol(j_p)
+        param_j_n = self.param.process_symbol(j_n)
+        param_j_p = self.param.process_symbol(j_p)
 
         processed_j_n = disc.process_symbol(param_j_n)
         processed_j_p = disc.process_symbol(param_j_p)
 
         # test values
-        l_n = param.process_symbol(pybamm.standard_parameters_lithium_ion.l_n)
-        l_p = param.process_symbol(pybamm.standard_parameters_lithium_ion.l_p)
+        l_n = self.param.process_symbol(pybamm.geometric_parameters.l_n)
+        l_p = self.param.process_symbol(pybamm.geometric_parameters.l_p)
 
         np.testing.assert_array_equal((processed_j_n * l_n).evaluate(0, None), 1)
         np.testing.assert_array_equal((processed_j_p * l_p).evaluate(0, None), -1)
@@ -142,6 +114,31 @@ class TestHomogeneousReaction(unittest.TestCase):
     def test_failure(self):
         with self.assertRaises(pybamm.DomainError):
             pybamm.interface.homogeneous_reaction(["not a domain"])
+
+    def test_simplify_constant_current(self):
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
+
+        param_rxn = self.param.process_symbol(rxn)
+        processed_rxn = disc.process_symbol(param_rxn)
+
+        # Simplifiy, since current is constant this should give a vector
+        rxn_simp = processed_rxn.simplify()
+        self.assertIsInstance(rxn_simp, pybamm.Vector)
+        # test values
+        l_n = self.param.process_symbol(pybamm.geometric_parameters.l_n)
+        l_p = self.param.process_symbol(pybamm.geometric_parameters.l_p)
+        npts_n = mesh["negative electrode"][0].npts
+        npts_s = mesh["separator"][0].npts
+        np.testing.assert_array_equal((l_n * rxn_simp).evaluate(0, None)[:npts_n], 1)
+        np.testing.assert_array_equal(
+            rxn_simp.evaluate(0, None)[npts_n : npts_n + npts_s], 0
+        )
+        np.testing.assert_array_equal(
+            (l_p * rxn_simp).evaluate(0, None)[npts_n + npts_s :], -1
+        )
 
 
 class TestButlerVolmer(unittest.TestCase):
