@@ -17,6 +17,11 @@ class TestBinaryOperators(unittest.TestCase):
         bin = pybamm.BinaryOperator("binary test", a, b)
         self.assertEqual(bin.children[0].name, a.name)
         self.assertEqual(bin.children[1].name, b.name)
+        c = pybamm.Scalar(1)
+        d = pybamm.Scalar(2)
+        bin2 = pybamm.BinaryOperator("binary test", c, d)
+        with self.assertRaises(NotImplementedError):
+            bin2.evaluate()
 
     def test_binary_operator_domains(self):
         # same domain
@@ -54,6 +59,40 @@ class TestBinaryOperators(unittest.TestCase):
         b = pybamm.Scalar(2)
         pow2 = pybamm.Power(a, b)
         self.assertEqual(pow2.evaluate(), 16)
+
+    def test_known_eval(self):
+        # Scalars
+        a = pybamm.Scalar(4)
+        b = pybamm.Scalar(2)
+        expr = (a + b) - (a + b) * (a + b)
+        value = expr.evaluate()
+        self.assertEqual(expr.evaluate(known_evals={})[0], value)
+        self.assertIn((a + b).id, expr.evaluate(known_evals={})[1])
+        self.assertEqual(expr.evaluate(known_evals={})[1][(a + b).id], 6)
+
+        # Matrices
+        a = pybamm.Matrix(np.random.rand(5, 5))
+        b = pybamm.Matrix(np.random.rand(5, 5))
+        expr2 = (a @ b) - (a @ b) * (a @ b) + (a @ b)
+        value = expr2.evaluate()
+        np.testing.assert_array_equal(expr2.evaluate(known_evals={})[0], value)
+        self.assertIn((a @ b).id, expr2.evaluate(known_evals={})[1])
+        np.testing.assert_array_equal(
+            expr2.evaluate(known_evals={})[1][(a @ b).id], (a @ b).evaluate()
+        )
+
+        # Expect using known evals to be faster than not
+        timer = pybamm.Timer()
+        start = timer.time()
+        for _ in range(20):
+            expr2.evaluate()
+        end = timer.time()
+        start_known_evals = timer.time()
+        for _ in range(20):
+            expr2.evaluate(known_evals={})
+        end_known_evals = timer.time()
+        self.assertLess(end_known_evals - start_known_evals, 1.2 * (end - start))
+        self.assertGreater(end - start, 1.2 * (end_known_evals - start_known_evals))
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))

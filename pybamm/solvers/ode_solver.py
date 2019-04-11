@@ -37,7 +37,7 @@ class OdeSolver(pybamm.BaseSolver):
         events = [event.simplify() for event in model.events]
 
         def dydt(t, y):
-            return concatenated_rhs.evaluate(t, y)
+            return concatenated_rhs.evaluate(t, y, known_evals={})[0]
 
         # Create event-dependent function to evaluate events
         def event_fun(event):

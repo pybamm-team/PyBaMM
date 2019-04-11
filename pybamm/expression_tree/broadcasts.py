@@ -98,20 +98,17 @@ class NumpyBroadcast(Broadcast):
     def mesh(self):
         return self._mesh
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        child = self.children[0]
-        child_eval = child.evaluate(t, y)
-
-        # Different broadcasting based on the shape of child_eval
+    def _unary_evaluate(self, child):
+        """ See :meth:`pybamm.UnaryOperator._unary_evaluate()`. """
+        # Different broadcasting based on the shape of child
         try:
-            child_eval_size = child_eval.size
+            child_size = child.size
         except AttributeError:
-            child_eval_size = 0
+            child_size = 0
 
-        if child_eval_size <= 1:
-            return child_eval * self.broadcasting_vector
-        if child_eval_size > 1:
+        if child_size <= 1:
+            return child * self.broadcasting_vector
+        if child_size > 1:
             # Possible shapes for a child with a shape:
             # (n,) -> (e.g. time-like object) broadcast to (n, broadcasting_size)
             # (1,n) -> (e.g. state-vector-like object) broadcast to
@@ -119,23 +116,21 @@ class NumpyBroadcast(Broadcast):
             # (n,1) -> error
             # (n,m) -> error
             # (n,m,k,...) -> error
-            if child_eval.ndim == 1:
+            if child.ndim == 1:
                 # shape (n,)
                 return np.repeat(
-                    child_eval[np.newaxis, :], self.broadcasting_vector_size, axis=0
+                    child[np.newaxis, :], self.broadcasting_vector_size, axis=0
                 )
-            elif child_eval.ndim == 2:
-                if child_eval.shape[0] == 1:
+            elif child.ndim == 2:
+                if child.shape[0] == 1:
                     # shape (1, m) since size > 1
-                    return np.repeat(child_eval, self.broadcasting_vector_size, axis=0)
+                    return np.repeat(child, self.broadcasting_vector_size, axis=0)
             # All other cases
             raise ValueError(
-                "cannot broadcast child with shape '{}'".format(child_eval.shape)
+                "cannot broadcast child with shape '{}'".format(child.shape)
             )
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
         return self.__class__(child, self.domain, self.mesh)
-
-

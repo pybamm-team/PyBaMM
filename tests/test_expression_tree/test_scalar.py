@@ -14,6 +14,11 @@ class TestScalar(unittest.TestCase):
         self.assertEqual(a.value, 5)
         self.assertEqual(a.evaluate(), 5)
 
+        # with known_evals
+        self.assertEqual(a.evaluate(known_evals={a.id: 5})[0], 5)
+        # it's possible to provide a conflicting value of known_evals
+        self.assertEqual(a.evaluate(known_evals={a.id: 15})[0], 15)
+
     def test_scalar_operations(self):
         a = pybamm.Scalar(5)
         b = pybamm.Scalar(6)

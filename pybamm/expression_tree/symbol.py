@@ -56,6 +56,8 @@ class Symbol(anytree.NodeMixin):
             # copy child before adding
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
+
+        # Set domain (and hence id)
         self.domain = domain
 
         # useful flags
@@ -108,17 +110,25 @@ class Symbol(anytree.NodeMixin):
                 )
 
             self._domain = domain
+            # Update id since domain has changed
+            self.set_id()
 
     @property
     def id(self):
+        return self._id
+
+    def set_id(self):
         """
-        The immutable "identity" of a variable (for identifying y_slices).
+        Set the immutable "identity" of a variable (e.g. for identifying y_slices).
 
         This is identical to what we'd put in a __hash__ function
         However, implementing __hash__ requires also implementing __eq__,
-        which would then mess with loop-checking in the anytree module
+        which would then mess with loop-checking in the anytree module.
+
+        Hashing can be slow, so we set the id when we create the node, and hence only
+        need to hash once.
         """
-        return hash(
+        self._id = hash(
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
@@ -342,7 +352,7 @@ class Symbol(anytree.NodeMixin):
         else:
             return pybamm.Scalar(0)
 
-    def evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -365,6 +375,35 @@ class Symbol(anytree.NodeMixin):
                 self, type(self)
             )
         )
+
+    def evaluate(self, t=None, y=None, known_evals=None):
+        """Evaluate expression tree (wrapper for dict of known values).
+        If the dict 'known_evals' is provided, the dict is searched for self.id; if
+        self.id is in the keys, return that value; otherwise, evaluate using
+        :meth:`_base_evaluate()` and add that value to known_evals
+
+        Parameters
+        ----------
+        t : float or numeric type, optional
+            time at which to evaluate (default None)
+        y : numpy.array, optional
+            array to evaluate when solving (default None)
+        known_evals : dict, optional
+            dictionary containing known values (default None)
+
+        Returns
+        -------
+        number or array
+            the node evaluated at (t,y)
+        known_evals (if known_evals input is not None) : dict
+            the dictionary of known values
+        """
+        if known_evals is not None:
+            if self.id not in known_evals:
+                known_evals[self.id] = self._base_evaluate(t, y)
+            return known_evals[self.id], known_evals
+        else:
+            return self._base_evaluate(t, y)
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`

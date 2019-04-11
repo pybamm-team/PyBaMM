@@ -47,6 +47,21 @@ class UnaryOperator(pybamm.Symbol):
 
         return self.__class__(child)
 
+    def _unary_evaluate(self, child):
+        """Perform unary operation on a child. """
+        raise NotImplementedError
+
+    def evaluate(self, t=None, y=None, known_evals=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        if known_evals is not None:
+            if self.id not in known_evals:
+                child, known_evals = self.children[0].evaluate(t, y, known_evals)
+                known_evals[self.id] = self._unary_evaluate(child)
+            return known_evals[self.id], known_evals
+        else:
+            child = self.children[0].evaluate(t, y)
+            return self._unary_evaluate(child)
+
 
 class Negate(UnaryOperator):
     """A node in the expression tree representing a `-` negation operator
@@ -58,9 +73,9 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
         super().__init__("-", child)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return -self.children[0].evaluate(t, y)
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{}{!s}".format(self.name, self.children[0])
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -69,9 +84,9 @@ class Negate(UnaryOperator):
         else:
             return -self.children[0].diff(variable)
 
-    def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{}{!s}".format(self.name, self.children[0])
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return -child
 
 
 class AbsoluteValue(UnaryOperator):
@@ -89,9 +104,9 @@ class AbsoluteValue(UnaryOperator):
         # Derivative is not well-defined
         raise NotImplementedError("Derivative of absolute function is not defined")
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return np.abs(self.children[0].evaluate(t, y))
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return np.abs(child)
 
 
 class Function(UnaryOperator):
@@ -119,9 +134,9 @@ class Function(UnaryOperator):
                 # otherwise the derivative of the function is zero
                 return pybamm.Scalar(0)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.func(self.children[0].evaluate(t, y))
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return self.func(child)
 
     # Function needs its own simplify as it has a different __init__ signature
     def simplify(self):
@@ -144,9 +159,9 @@ class Index(UnaryOperator):
         super().__init__(name, child)
         self.index = index
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y)[self.index]
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return child[self.index]
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
