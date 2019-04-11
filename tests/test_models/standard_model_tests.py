@@ -113,15 +113,20 @@ class OptimisationsTest(object):
         self.model = model
 
     def evaluate_model(self, simplify=False, use_known_evals=False):
-        if simplify:
-            concatenated_rhs = self.model.concatenated_rhs.simplify()
-        else:
-            concatenated_rhs = self.model.concatenated_rhs
+        result = np.array([])
+        for eqn in [self.model.concatenated_rhs, self.model.concatenated_algebraic]:
+            if eqn is not None:
+                if simplify:
+                    eqn = eqn.simplify()
 
-        y = self.model.concatenated_initial_conditions
-        if use_known_evals:
-            rhs_eval, known_evals = concatenated_rhs.evaluate(0, y, known_evals={})
-        else:
-            rhs_eval = concatenated_rhs.evaluate(0, y)
+                y = self.model.concatenated_initial_conditions
+                if use_known_evals:
+                    eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
+                else:
+                    eqn_eval = eqn.evaluate(0, y)
+            else:
+                eqn_eval = np.array([])
 
-        return rhs_eval
+            result = np.concatenate([result, eqn_eval])
+
+        return result

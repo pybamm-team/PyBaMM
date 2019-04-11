@@ -30,7 +30,6 @@ class TestReactionDiffusionModel(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
 
-    @unittest.skip("")
     def test_convergence(self):
         # Convergence of c at x=0.5
         model = pybamm.ReactionDiffusionModel()
