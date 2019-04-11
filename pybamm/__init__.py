@@ -78,6 +78,7 @@ from .expression_tree.unary_operators import (
     Divergence,
     BoundaryValue,
     Integral,
+    IndefiniteIntegral,
     grad,
     div,
     surf,

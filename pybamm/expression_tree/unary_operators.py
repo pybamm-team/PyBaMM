@@ -284,6 +284,57 @@ class Integral(SpatialOperator):
         return self.__class__(child, self.integration_variable)
 
 
+class IndefiniteIntegral(SpatialOperator):
+    """A node in the expression tree representing an indefinite integral operator
+
+    .. math::
+        I = \\int_{x_\text{min}}^{x}\\!f(u)\\,du
+
+    where :math:`u\\in\\text{domain}` which can represent either a
+    spatial or temporal variable.
+
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    integration_variable : :class:`pybamm.IndependentVariable`
+        The variable over which to integrate
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, integration_variable):
+        if isinstance(integration_variable, pybamm.SpatialVariable):
+            # Check that child and integration_variable domains agree
+            if child.domain != integration_variable.domain:
+                raise pybamm.DomainError(
+                    """child and integration_variable must have the same domain"""
+                )
+        elif not isinstance(integration_variable, pybamm.IndependentVariable):
+            raise ValueError(
+                """integration_variable must be of type pybamm.IndependentVariable,
+                   not {}""".format(
+                    type(integration_variable)
+                )
+            )
+        name = "{} integrated w.r.t {}".format(child.name, integration_variable.name)
+        if isinstance(integration_variable, pybamm.SpatialVariable):
+            name += "on {}".format(integration_variable.domain)
+        super().__init__(name, child)
+        self._integration_variable = integration_variable
+        # the integrated variable has the same domain as the child
+        self.domain = child.domain
+
+    @property
+    def integration_variable(self):
+        return self._integration_variable
+
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+
+        return self.__class__(child, self.integration_variable)
+
+
 class BoundaryValue(SpatialOperator):
     """A node in the expression tree which gets the boundary value of a variable.
 
