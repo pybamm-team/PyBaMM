@@ -17,6 +17,11 @@ class TestBinaryOperators(unittest.TestCase):
         bin = pybamm.BinaryOperator("binary test", a, b)
         self.assertEqual(bin.children[0].name, a.name)
         self.assertEqual(bin.children[1].name, b.name)
+        c = pybamm.Scalar(1)
+        d = pybamm.Scalar(2)
+        bin2 = pybamm.BinaryOperator("binary test", c, d)
+        with self.assertRaises(NotImplementedError):
+            bin2.evaluate()
 
     def test_binary_operator_domains(self):
         # same domain

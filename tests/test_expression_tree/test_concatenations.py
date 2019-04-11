@@ -18,8 +18,12 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[0].name, "a")
         self.assertEqual(conc.children[1].name, "b")
         self.assertEqual(conc.children[2].name, "c")
+        d = pybamm.Scalar(2)
+        e = pybamm.Scalar(1)
+        f = pybamm.Scalar(3)
+        conc2 = pybamm.Concatenation(d, e, f)
         with self.assertRaises(NotImplementedError):
-            conc.evaluate(None, 3)
+            conc2.evaluate()
 
     def test_concatenation_domains(self):
         a = pybamm.Symbol("a", domain=["negative electrode"])
