@@ -11,6 +11,7 @@ import copy
 import autograd.numpy as np
 
 from anytree.exporter import DotExporter
+from scipy.sparse import issparse
 
 
 def simplify_if_constant(new_node):
@@ -23,7 +24,7 @@ def simplify_if_constant(new_node):
         if result is not None:
             if isinstance(result, numbers.Number):
                 return pybamm.Scalar(result, domain=new_node.domain)
-            elif isinstance(result, np.ndarray):
+            elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1:
                     return pybamm.Vector(result, domain=new_node.domain)
                 else:

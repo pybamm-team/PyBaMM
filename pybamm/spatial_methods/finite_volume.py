@@ -341,6 +341,62 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return pybamm.Vector(vector)
 
+    def indefinite_integral(self, domain, symbol, discretised_symbol):
+        """Implementation of the indefinite integral operator. The
+        input discretised symbol must be defined on the internal mesh edges.
+        See :meth:`pybamm.BaseDiscretisation.indefinite_integral`
+        """
+
+        if not symbol.has_gradient_and_not_divergence():
+            raise pybamm.ModelError(
+                "Symbol to be integrated must be valid on the mesh edges"
+            )
+
+        # Calculate integration matrix
+        integration_matrix = self.indefinite_integral_matrix(domain)
+
+        # Don't need to check for spherical domains as spherical polars
+        # only change the diveregence (symbols here have grad and no div)
+        out = integration_matrix @ discretised_symbol
+
+        out.domain = domain
+
+        return out
+
+    def indefinite_integral_matrix(self, domain):
+        """
+        Matrix for finite-volume implementation of the indefinite integral
+
+        .. math::
+            F = \\int\\!f(u)\\,du
+
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) of integration
+
+        Returns
+        -------
+        :class:`pybamm.Vector`
+            The finite volume integral vector for the domain
+        """
+
+        # Create appropriate submesh by combining submeshes in domain
+        submesh_list = self.mesh.combine_submeshes(*domain)
+        submesh = submesh_list[0]
+        n = submesh.npts
+        sec_pts = len(submesh_list)
+
+        # note we have added a row of zeros at top for F(0) = 0
+        du_n = submesh.d_nodes
+        du_entries = [du_n] * (n - 1)
+        offset = -np.arange(1, n, 1)
+        sub_matrix = diags(du_entries, offset, shape=(n, n - 1))
+        matrix = kron(eye(sec_pts), sub_matrix)
+
+        return pybamm.Matrix(matrix)
+
     def add_ghost_nodes(self, symbol, discretised_symbol, lbc=None, rbc=None):
         """
         Add Dirichlet boundary conditions via ghost nodes.

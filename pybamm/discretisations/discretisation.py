@@ -303,6 +303,13 @@ class Discretisation(object):
                 child.domain, child, discretised_child
             )
 
+        elif isinstance(symbol, pybamm.IndefiniteIntegral):
+            child = symbol.children[0]
+            discretised_child = self.process_symbol(child)
+            return self._spatial_methods[child.domain[0]].indefinite_integral(
+                child.domain, child, discretised_child
+            )
+
         elif isinstance(symbol, pybamm.Broadcast):
             # Process child first
             new_child = self.process_symbol(symbol.children[0])
