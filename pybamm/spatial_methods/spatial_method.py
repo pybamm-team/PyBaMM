@@ -25,8 +25,8 @@ class SpatialMethod:
 
     def spatial_variable(self, symbol):
         """
-        Creates a discretised spatial variable compatible with
-        the FiniteVolume method.
+        Convert a :class:`pybamm.SpatialVariable` node to a linear algebra object that
+        can be evaluated (e.g. a :class:`pybamm.Vector`).
 
         Parameters
         -----------
@@ -146,7 +146,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def surface_value(self, discretised_symbol):
+    def boundary_value(self, discretised_symbol):
         """
         Returns the surface value using the approriate expression for the
         spatial method.
