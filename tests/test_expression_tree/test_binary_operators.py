@@ -66,10 +66,16 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(expr.evaluate(known_evals={})[1][(a + b).id], 6)
 
         # Matrices
-        a = pybamm.Matrix(np.random.rand(5, 5))
-        b = pybamm.Matrix(np.random.rand(5, 5))
+        a = pybamm.Matrix(np.random.rand(300, 300))
+        b = pybamm.Matrix(np.random.rand(300, 300))
         expr2 = (a @ b) - (a @ b) * (a @ b) + (a @ b) - (a @ b)
         value = expr2.evaluate()
+        from IPython import embed
+
+        embed()
+        import ipdb
+
+        ipdb.set_trace()
         # np.testing.assert_array_equal(expr2.evaluate(known_evals={})[0], value)
         # self.assertIn((a @ b).id, expr2.evaluate(known_evals={})[1])
         # np.testing.assert_array_equal(
