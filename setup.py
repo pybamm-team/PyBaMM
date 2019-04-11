@@ -13,7 +13,7 @@ setup(
     long_description=readme,
     author="Valentin Sulzer",
     author_email="valentinsulzer@hotmail.com",
-    url="https://github.com/tinosulzer/PyBaMM",
+    url="https://github.com/pybamm-team/PyBaMM",
     # List of dependencies
     install_requires=[
         "numpy>=1.14",
