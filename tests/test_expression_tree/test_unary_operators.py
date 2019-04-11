@@ -65,7 +65,7 @@ class TestUnaryOperators(unittest.TestCase):
         logvar = pybamm.Function(np.log1p, var)
         np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
 
-        d = pybamm.Symbol("a")
+        d = pybamm.Scalar(6)
         funcd = pybamm.Function(test_const_function, d)
         self.assertEqual(funcd.evaluate(), 1)
 
