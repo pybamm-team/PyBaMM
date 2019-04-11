@@ -1,4 +1,4 @@
-import numpy as np
+import autograd.numpy as np
 
 
 def graphite_mcmb2528_ocp_Dualfoil(sto):

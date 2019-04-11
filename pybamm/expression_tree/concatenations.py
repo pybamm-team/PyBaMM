@@ -263,3 +263,11 @@ class SparseStack(pybamm.Symbol):
             else:
                 evaluated_child = csr_matrix(evaluated_child)
         return evaluated_child
+
+    def simplify(self):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        children = [child.simplify() for child in self.children]
+
+        new_node = self.__class__(*children)
+
+        return pybamm.simplify_if_constant(new_node)
