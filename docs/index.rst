@@ -1,6 +1,6 @@
 .. Root of all pybamm docs
 
-.. _GitHub: https://github.com/tinosulzer/PyBaMM
+.. _GitHub: https://github.com/pybamm-team/PyBaMM
 
 Welcome to PyBaMM's documentation!
 ==================================
