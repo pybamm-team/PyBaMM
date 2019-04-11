@@ -123,7 +123,10 @@ class Symbol(anytree.NodeMixin):
 
         This is identical to what we'd put in a __hash__ function
         However, implementing __hash__ requires also implementing __eq__,
-        which would then mess with loop-checking in the anytree module
+        which would then mess with loop-checking in the anytree module.
+
+        Hashing can be slow, so we set the id when we create the node, and hence only
+        need to hash once.
         """
         self._id = hash(
             (self.__class__, self.name)

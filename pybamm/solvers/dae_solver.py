@@ -40,19 +40,18 @@ class DaeSolver(pybamm.BaseSolver):
         events = [event.simplify() for event in model.events]
 
         def residuals(t, y, ydot):
-            rhs_eval = concatenated_rhs.evaluate(t, y)
-            return np.concatenate(
-                (
-                    rhs_eval - ydot[: rhs_eval.shape[0]],
-                    concatenated_algebraic.evaluate(t, y),
-                )
-            )
+            rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
+            # reuse known_evals
+            concat_evals = concatenated_algebraic.evaluate(
+                t, y, known_evals=known_evals
+            )[0]
+            return np.concatenate((rhs_eval - ydot[: rhs_eval.shape[0]], concat_evals))
 
         def rhs(t, y):
-            return concatenated_rhs.evaluate(t, y)
+            return concatenated_rhs.evaluate(t, y, known_evals={})[0]
 
         def algebraic(t, y):
-            return concatenated_algebraic.evaluate(t, y)
+            return concatenated_algebraic.evaluate(t, y, known_evals={})[0]
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
