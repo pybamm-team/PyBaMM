@@ -210,6 +210,17 @@ class DomainConcatenation(Concatenation):
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
+        children = self.children
+        if all([isinstance(x, pybamm.StateVector) for x in children]):
+            if all(
+                [
+                    children[idx].y_slice.stop == children[idx + 1].y_slice.start
+                    for idx in range(len(children) - 1)
+                ]
+            ):
+                return pybamm.StateVector(
+                    slice(children[0].y_slice.start, children[-1].y_slice.stop)
+                )
         children = [child.simplify() for child in self.children]
 
         new_node = self.__class__(children, self.mesh, self)
