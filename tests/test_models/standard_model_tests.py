@@ -9,6 +9,8 @@ import numpy as np
 
 
 class StandardModelTest(object):
+    """ Basic processing test for the models. """
+
     def __init__(self, model):
         self.model = model
         # Set default parameters
@@ -86,3 +88,40 @@ class StandardModelTest(object):
         param.process_discretised_model(self.model, self.disc)
         # Model should still be well-posed after processing
         self.model.check_well_posedness()
+
+
+class OptimisationsTest(object):
+    """ Test that the optimised models give the same result as the original model. """
+
+    def __init__(self, model, parameter_values=None, disc=None):
+        # Set parameter values
+        if parameter_values is None:
+            parameter_values = model.default_parameter_values
+        # Process model and geometry
+        parameter_values.process_model(model)
+        parameter_values.process_geometry(model.default_geometry)
+        geometry = model.default_geometry
+        # Set discretisation
+        if disc is None:
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        # Discretise model
+        disc.process_model(model)
+
+        self.model = model
+
+    def evaluate_model(self, simplify=False, use_known_evals=False):
+        if simplify:
+            concatenated_rhs = self.model.concatenated_rhs.simplify()
+        else:
+            concatenated_rhs = self.model.concatenated_rhs
+
+        y = self.model.concatenated_initial_conditions
+        if use_known_evals:
+            rhs_eval, known_evals = concatenated_rhs.evaluate(0, y, known_evals={})
+        else:
+            rhs_eval = concatenated_rhs.evaluate(0, y)
+
+        return rhs_eval
