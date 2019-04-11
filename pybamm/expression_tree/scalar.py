@@ -57,5 +57,5 @@ class Scalar(pybamm.Symbol):
         self._value = float(value)
 
     def _base_evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._value

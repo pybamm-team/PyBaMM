@@ -66,7 +66,7 @@ class StateVector(pybamm.Symbol):
         return self._y_slice
 
     def _base_evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if y is None:
             raise TypeError("StateVector cannot evaluate input 'y=None'")
         if y.shape[0] < self.y_slice.stop:

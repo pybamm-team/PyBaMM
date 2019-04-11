@@ -37,7 +37,7 @@ class Time(IndependentVariable):
         super().__init__("time")
 
     def _base_evaluate(self, t, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if t is None:
             raise ValueError("t must be provided")
         return t

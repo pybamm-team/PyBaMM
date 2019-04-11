@@ -46,23 +46,12 @@ class Concatenation(pybamm.Symbol):
 
         return domain
 
+    def _concatenation_evaluate(self, children_eval):
+        """ Concatenate the evaluated children. """
+        raise NotImplementedError
+
     def evaluate(self, t=None, y=None, known_evals=None):
-        """evaluate expression tree
-
-        will raise a ``NotImplementedError`` if this member function has not
-        been defined for the node. For example, :class:`Scalar` returns its
-        scalar value, but :class:`Variable` will raise ``NotImplementedError``
-
-        Parameters
-        ----------
-
-        t : float or numeric type, optional
-            time at which to evaluate (default None)
-
-        y : numpy.array, optional
-            array to evaluate when solving (default None)
-
-        """
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
                 children_eval = [0] * len(self.children)
@@ -104,7 +93,7 @@ class NumpyConcatenation(Concatenation):
         super().__init__(*children, name="numpy concatenation", check_domain=False)
 
     def _concatenation_evaluate(self, children_eval):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        """ See :meth:`Concatenation._concatenation_evaluate()`. """
         if len(children_eval) == 0:
             return np.array([])
         else:
@@ -208,7 +197,7 @@ class DomainConcatenation(Concatenation):
         return slices
 
     def _concatenation_evaluate(self, children_eval):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        """ See :meth:`Concatenation._concatenation_evaluate()`. """
         # preallocate vector
         vector = np.empty(self._size)
 

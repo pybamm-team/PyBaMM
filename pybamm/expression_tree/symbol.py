@@ -366,21 +366,26 @@ class Symbol(anytree.NodeMixin):
         )
 
     def evaluate(self, t=None, y=None, known_evals=None):
-        """evaluate expression tree
-
-        will raise a ``NotImplementedError`` if this member function has not
-        been defined for the node. For example, :class:`Scalar` returns its
-        scalar value, but :class:`Variable` will raise ``NotImplementedError``
+        """Evaluate expression tree (wrapper for dict of known values).
+        If the dict 'known_evals' is provided, the dict is searched for self.id; if
+        self.id is in the keys, return that value; otherwise, evaluate using
+        :meth:`_base_evaluate()` and add that value to known_evals
 
         Parameters
         ----------
-
         t : float or numeric type, optional
             time at which to evaluate (default None)
-
         y : numpy.array, optional
             array to evaluate when solving (default None)
+        known_evals : dict, optional
+            dictionary containing known values (default None)
 
+        Returns
+        -------
+        number or array
+            the node evaluated at (t,y)
+        known_evals (if known_evals input is not None) : dict
+            the dictionary of known values
         """
         if known_evals is not None:
             if self.id not in known_evals:

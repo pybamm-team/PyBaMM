@@ -49,5 +49,5 @@ class Array(pybamm.Symbol):
         return self._entries.size
 
     def _base_evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._entries
