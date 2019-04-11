@@ -98,7 +98,7 @@ class NumpyBroadcast(Broadcast):
     def mesh(self):
         return self._mesh
 
-    def _base_evaluate(self, child):
+    def _unary_evaluate(self, child):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         # Different broadcasting based on the shape of child
         try:

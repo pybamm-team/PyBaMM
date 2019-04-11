@@ -21,10 +21,13 @@ class Concatenation(pybamm.Symbol):
 
     """
 
-    def __init__(self, *children, name=None):
+    def __init__(self, *children, name=None, check_domain=True):
         if name is None:
             name = "concatenation"
-        domain = self.get_children_domains(children)
+        if check_domain:
+            domain = self.get_children_domains(children)
+        else:
+            domain = []
         super().__init__(name, children, domain=domain)
 
     def get_children_domains(self, children):
@@ -62,19 +65,19 @@ class Concatenation(pybamm.Symbol):
         """
         if known_evals is not None:
             if self.id not in known_evals:
-                children_eval = [] * len(self.children)
+                children_eval = [0] * len(self.children)
                 for idx, child in enumerate(self.children):
                     children_eval[idx], known_evals = child.evaluate(t, y, known_evals)
                 known_evals[self.id] = self._concatenation_evaluate(children_eval)
             return known_evals[self.id], known_evals
         else:
-            children_eval = [] * len(self.children)
+            children_eval = [0] * len(self.children)
             for idx, child in enumerate(self.children):
                 children_eval[idx] = child.evaluate(t, y)
             return self._concatenation_evaluate(children_eval)
 
 
-class NumpyConcatenation(pybamm.Symbol):
+class NumpyConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of equations, when we
     *don't* care about domains. The class :class:`pybamm.DomainConcatenation`, which
     *is* careful about domains and uses broadcasting where appropriate, should be used
@@ -82,7 +85,7 @@ class NumpyConcatenation(pybamm.Symbol):
 
     Upon evaluation, equations are concatenated using numpy concatenation.
 
-    **Extends**: :class:`pybamm.Symbol`
+    **Extends**: :class:`Concatenation`
 
     Parameters
     ----------
@@ -98,7 +101,7 @@ class NumpyConcatenation(pybamm.Symbol):
         for i, child in enumerate(children):
             if child.evaluates_to_number():
                 children[i] = pybamm.NumpyBroadcast(child, [], None)
-        super().__init__("model concatenation", children, domain=[])
+        super().__init__(*children, name="numpy concatenation", check_domain=False)
 
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
