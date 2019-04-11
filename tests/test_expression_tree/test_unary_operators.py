@@ -14,6 +14,10 @@ def test_function(arg):
     return arg + arg
 
 
+def test_const_function():
+    return 1
+
+
 class TestUnaryOperators(unittest.TestCase):
     def test_unary_operator(self):
         a = pybamm.Symbol("a", domain=["test"])
@@ -60,6 +64,16 @@ class TestUnaryOperators(unittest.TestCase):
         y = np.linspace(0, 1, 100)
         logvar = pybamm.Function(np.log1p, var)
         np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
+
+        d = pybamm.Symbol("a")
+        funcd = pybamm.Function(test_const_function, d)
+        self.assertEqual(funcd.evaluate(), 1)
+
+    def test_function_simplify(self):
+        a = pybamm.Symbol("a")
+        funca = pybamm.Function(test_const_function, a).simplify()
+        self.assertIsInstance(funca, pybamm.Scalar)
+        self.assertEqual(funca.evaluate(), 1)
 
     def test_gradient(self):
         a = pybamm.Symbol("a")

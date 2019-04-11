@@ -7,6 +7,7 @@ import pybamm
 
 import autograd
 import numpy as np
+from inspect import signature
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -97,6 +98,15 @@ class AbsoluteValue(UnaryOperator):
 class Function(UnaryOperator):
     """A node in the expression tree representing an arbitrary function
 
+    Parameters
+    ----------
+    func : method
+        A function that takes either 0 or 1 parameters. If func takes no parameters,
+        self.evaluate() return func(). Otherwise, self.evaluate(t,y) returns
+        func(child.evaluate(t,y))
+    child : :class:`pybamm.Symbol`
+        The child node to apply the function to
+
     **Extends:** :class:`UnaryOperator`
     """
 
@@ -104,6 +114,12 @@ class Function(UnaryOperator):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
         super().__init__("function ({})".format(func.__name__), child)
         self.func = func
+        # hack to work out whether function takes any params
+        # (signature doesn't work for numpy)
+        if isinstance(func, np.ufunc):
+            self.takes_no_params = False
+        else:
+            self.takes_no_params = len(signature(func).parameters) == 0
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -121,16 +137,23 @@ class Function(UnaryOperator):
 
     def evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.func(self.children[0].evaluate(t, y))
+        if self.takes_no_params:
+            return self.func()
+        else:
+            return self.func(self.children[0].evaluate(t, y))
 
     # Function needs its own simplify as it has a different __init__ signature
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
-        child = self.children[0].simplify()
+        if self.takes_no_params:
+            # If self.func() takes no parameters then we can always simplify it
+            return pybamm.Scalar(self.func())
+        else:
+            child = self.children[0].simplify()
 
-        new_node = pybamm.Function(self.func, child)
+            new_node = pybamm.Function(self.func, child)
 
-        return pybamm.simplify_if_constant(new_node)
+            return pybamm.simplify_if_constant(new_node)
 
 
 class Index(UnaryOperator):

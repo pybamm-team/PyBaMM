@@ -5,9 +5,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import copy
 import pandas as pd
-from inspect import signature
+import copy
 
 
 class ParameterValues(dict):
@@ -182,21 +181,13 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_child = self.process_symbol(symbol.children[0])
             function_name = self.get_parameter_value(symbol)
-            function = pybamm.load_function(function_name)
-            # It's possible to define a FunctionParameter with a function that doesn't
-            # take any parameters
-            if len(signature(function).parameters) == 0:
-                # If the function doesn't take any parameters, we return a Scalar
-                return pybamm.Scalar(function(), name=function_name)
+            function = pybamm.Function(pybamm.load_function(function_name), new_child)
+            if symbol.diff_variable is None:
+                return function
             else:
-                # Otherwise return a pybamm.Function
-                function_symbol = pybamm.Function(function, new_child)
-                if symbol.diff_variable is None:
-                    return function_symbol
-                else:
-                    # return differentiated function
-                    new_diff_variable = self.process_symbol(symbol.children[0])
-                    return function_symbol.diff(new_diff_variable)
+                # return differentiated function
+                new_diff_variable = self.process_symbol(symbol.children[0])
+                return function.diff(new_diff_variable)
 
         elif isinstance(symbol, pybamm.Scalar):
             # update any Scalar nodes if their name is in the parameter dict (no error)
