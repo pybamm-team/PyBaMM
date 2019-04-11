@@ -11,18 +11,34 @@ import numpy as np
 class StandardModelTest(object):
     """ Basic processing test for the models. """
 
-    def __init__(self, model):
+    def __init__(
+        self,
+        model,
+        parameter_values=None,
+        geometry=None,
+        submesh_types=None,
+        var_pts=None,
+        spatial_methods=None,
+        solver=None,
+    ):
         self.model = model
-        # Set default parameters
-        self.parameter_values = model.default_parameter_values
+        # Set parameters, geometry, spatial methods etc
+        # The code below is equivalent to:
+        #    if parameter_values is None:
+        #       self.parameter_values = model.default_parameter_values
+        #    else:
+        #       self.parameter_values = parameter_values
+        self.parameter_values = parameter_values or model.default_parameter_values
+        geometry = geometry or model.default_geometry
+        self.submesh_types = submesh_types or model.default_submesh_types
+        self.var_pts = var_pts or model.default_var_pts
+        self.spatial_methods = spatial_methods or model.default_spatial_methods
+        self.solver = solver or model.default_solver
         # Process geometry
-        self.parameter_values.process_geometry(model.default_geometry)
-        geometry = model.default_geometry
-        # Set default discretisation
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-        self.disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        # Set default solver
-        self.solver = model.default_solver
+        self.parameter_values.process_geometry(geometry)
+        # Set discretisation
+        mesh = pybamm.Mesh(geometry, self.submesh_types, self.var_pts)
+        self.disc = pybamm.Discretisation(mesh, self.spatial_methods)
 
     def test_processing_parameters(self, parameter_values=None):
         # Overwrite parameters if given
