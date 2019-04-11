@@ -55,6 +55,27 @@ class TestBinaryOperators(unittest.TestCase):
         pow2 = pybamm.Power(a, b)
         self.assertEqual(pow2.evaluate(), 16)
 
+    def test_known_eval(self):
+        # Scalars
+        a = pybamm.Scalar(4)
+        b = pybamm.Scalar(2)
+        expr = (a + b) - (a + b) * (a + b)
+        value = expr.evaluate()
+        self.assertEqual(expr.evaluate(known_evals={})[0], value)
+        self.assertIn((a + b).id, expr.evaluate(known_evals={})[1])
+        self.assertEqual(expr.evaluate(known_evals={})[1][(a + b).id], 6)
+
+        # Matrices
+        a = pybamm.Matrix(np.random.rand(5, 5))
+        b = pybamm.Matrix(np.random.rand(5, 5))
+        expr2 = (a @ b) - (a @ b) * (a @ b) + (a @ b) - (a @ b)
+        value = expr2.evaluate()
+        # np.testing.assert_array_equal(expr2.evaluate(known_evals={})[0], value)
+        # self.assertIn((a @ b).id, expr2.evaluate(known_evals={})[1])
+        # np.testing.assert_array_equal(
+        #     expr.evaluate(known_evals={})[1][(a @ b).id], (a @ b).evaluate()
+        # )
+
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))

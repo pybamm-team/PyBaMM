@@ -55,6 +55,8 @@ class Symbol(anytree.NodeMixin):
             # copy child before adding
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
+
+        # Set domain (and hence id)
         self.domain = domain
 
         # useful flags
@@ -107,21 +109,31 @@ class Symbol(anytree.NodeMixin):
                 )
 
             self._domain = domain
+            # Update id since domain has changed
+            self.set_id()
 
     @property
     def id(self):
+        return self._id
+
+    def set_id(self):
         """
-        The immutable "identity" of a variable (for identifying y_slices).
+        Set the immutable "identity" of a variable (e.g. for identifying y_slices).
 
         This is identical to what we'd put in a __hash__ function
         However, implementing __hash__ requires also implementing __eq__,
         which would then mess with loop-checking in the anytree module
         """
-        return hash(
-            (self.__class__, self.name)
-            + tuple([child.id for child in self.children])
-            + tuple(self.domain)
-        )
+        try:
+            self._id = hash(
+                (self.__class__, self.name)
+                + tuple([child.id for child in self.children])
+                + tuple(self.domain)
+            )
+        except TypeError:
+            import ipdb
+
+            ipdb.set_trace()
 
     @property
     def orphans(self):

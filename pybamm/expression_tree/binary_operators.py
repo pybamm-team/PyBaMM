@@ -481,11 +481,15 @@ class BinaryOperator(pybamm.Symbol):
     def evaluate(self, t=None, y=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
-            if self.id not in known_evals:
+            id = self.id
+            try:
+                return known_evals[id], known_evals
+            except KeyError:
                 left, known_evals = self.children[0].evaluate(t, y, known_evals)
                 right, known_evals = self.children[1].evaluate(t, y, known_evals)
-                known_evals[self.id] = self._binary_evaluate(left, right)
-            return known_evals[self.id], known_evals
+                value = self._binary_evaluate(left, right)
+                known_evals[id] = value
+                return value, known_evals
         else:
             left = self.children[0].evaluate(t, y)
             right = self.children[1].evaluate(t, y)
