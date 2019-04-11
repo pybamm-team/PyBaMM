@@ -18,8 +18,12 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[0].name, "a")
         self.assertEqual(conc.children[1].name, "b")
         self.assertEqual(conc.children[2].name, "c")
+        d = pybamm.Scalar(2)
+        e = pybamm.Scalar(1)
+        f = pybamm.Scalar(3)
+        conc2 = pybamm.Concatenation(d, e, f)
         with self.assertRaises(NotImplementedError):
-            conc.evaluate(None, 3)
+            conc2.evaluate()
 
     def test_concatenation_domains(self):
         a = pybamm.Symbol("a", domain=["negative electrode"])
@@ -91,7 +95,7 @@ class TestConcatenations(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
+        a = pybamm.NumpyBroadcast(pybamm.Scalar(2), a_dom, mesh)
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
 
         # concatenate them the "wrong" way round to check they get reordered correctly
@@ -109,7 +113,7 @@ class TestConcatenations(unittest.TestCase):
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
         b_dom = ["negative electrode", "positive electrode"]
-        a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
+        a = pybamm.NumpyBroadcast(pybamm.Scalar(2, domain=a_dom), a_dom, mesh)
         b = pybamm.Vector(
             np.concatenate(
                 [np.full(mesh[b_dom[0]][0].npts, 1), np.full(mesh[b_dom[1]][0].npts, 3)]
@@ -145,7 +149,7 @@ class TestConcatenations(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a = pybamm.NumpyBroadcast(pybamm.Scalar(2, a_dom), a_dom, mesh)
+        a = pybamm.NumpyBroadcast(pybamm.Scalar(2), a_dom, mesh)
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
 
         conc = pybamm.DomainConcatenation([a, b], mesh)

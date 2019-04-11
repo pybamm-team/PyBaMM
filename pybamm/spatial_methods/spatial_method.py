@@ -104,7 +104,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def integral(self, domain, discretised_symbol):
+    def integral(self, domain, symbol, discretised_symbol):
         """
         Implements the integral for a spatial method.
 
@@ -112,6 +112,8 @@ class SpatialMethod:
         ----------
         domain: iterable of strings
             The domain in which to integrate
+        symbol: class: pybamm.Symbol
+            The symbol to which is being integrated
         discretised_symbol: class: pybamm.Array
             The discretised symbol of the correct size
 
@@ -119,6 +121,27 @@ class SpatialMethod:
         -------
         :class: `pybamm.Array`
             Contains the result of acting the discretised integral on
+            the child discretised_symbol
+        """
+        raise NotImplementedError
+
+    def indefinite_integral(self, domain, symbol, discretised_symbol):
+        """
+        Implements the indefinite integral for a spatial method.
+
+        Parameters
+        ----------
+        domain: iterable of strings
+            The domain in which to integrate
+        symbol: class: pybamm.Symbol
+            The symbol to which is being integrated
+        discretised_symbol: class: pybamm.Array
+            The discretised symbol of the correct size
+
+        Returns
+        -------
+        :class: `pybamm.Array`
+            Contains the result of acting the discretised indefinite integral on
             the child discretised_symbol
         """
         raise NotImplementedError

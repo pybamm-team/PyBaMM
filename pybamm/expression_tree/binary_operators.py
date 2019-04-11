@@ -115,20 +115,20 @@ def simplify_addition_subtraction(myclass, left, right):
         ret = None
         if len(array) > 0:
             ret = array[0]
-            for child, t in zip(array[1:], types[1:]):
-                if t == pybamm.Addition:
+            for child, typ in zip(array[1:], types[1:]):
+                if typ == pybamm.Addition:
                     ret += child
                 else:
                     ret -= child
         return ret
 
     # can reorder the numerator
-    (constant, nonconstant, constant_t, nonconstant_t) = partition_by_constant(
+    (constant, nonconstant, constant_types, nonconstant_types) = partition_by_constant(
         numerator, numerator_types
     )
 
-    constant_expr = fold_add_subtract(constant, constant_t)
-    nonconstant_expr = fold_add_subtract(nonconstant, nonconstant_t)
+    constant_expr = fold_add_subtract(constant, constant_types)
+    nonconstant_expr = fold_add_subtract(nonconstant, nonconstant_types)
 
     if constant_expr is not None and nonconstant_expr is None:
         # might be no nonconstants
@@ -139,14 +139,14 @@ def simplify_addition_subtraction(myclass, left, right):
     else:
         # or mix of both
         constant_expr = pybamm.simplify_if_constant(constant_expr)
-        if constant_t[0] is None and nonconstant_t[0] == pybamm.Addition:
+        if constant_types[0] is None and nonconstant_types[0] == pybamm.Addition:
             new_expression = constant_expr + nonconstant_expr
-        elif constant_t[0] is None and nonconstant_t[0] == pybamm.Subtraction:
+        elif constant_types[0] is None and nonconstant_types[0] == pybamm.Subtraction:
             new_expression = constant_expr - nonconstant_expr
-        elif nonconstant_t[0] is None and constant_t[0] == pybamm.Addition:
+        elif nonconstant_types[0] is None and constant_types[0] == pybamm.Addition:
             new_expression = nonconstant_expr + constant_expr
         else:
-            assert constant_t[0] == pybamm.Subtraction
+            assert constant_types[0] == pybamm.Subtraction
             new_expression = nonconstant_expr - constant_expr
 
     return new_expression
@@ -157,12 +157,12 @@ def simplify_multiplication_division(myclass, left, right):
     if children are associative (multiply, division, etc) then try to find
     groups of constant children (that produce a value) and simplify them
 
-    The purpose of this function is to simplify expressions of the type (2 * c / 2),
+    The purpose of this function is to simplify expressions of the type (1 * c / 2),
     which should simplify to (0.5 * c). The former expression consists of a Divsion,
     with a left child of a Multiplication containing a Scalar and a Parameter, and a
     right child consisting of a Scalar. For this case, this function will first flatten
     the expression to a list of the bottom level children on the numerator (i.e.
-    [Scalar(2), Parameter(c)]) and their operators (i.e. [None, Multiplication]), as
+    [Scalar(1), Parameter(c)]) and their operators (i.e. [None, Multiplication]), as
     well as those children on the denominator (i.e. [Scalar(2)]. After this, all the
     constant children on the numerator and denominator (i.e. Scalar(1) and Scalar(2))
     will be combined appropriatly, in this case to Scalar(0.5), and combined with the
@@ -196,8 +196,14 @@ def simplify_multiplication_division(myclass, left, right):
     numerator_types = []
 
     # recursive function to flatten a term involving only multiplications or divisions
-    def flatten(previous_class, this_class, left_child, right_child,
-                in_numerator, in_matrix_multiplication):
+    def flatten(
+        previous_class,
+        this_class,
+        left_child,
+        right_child,
+        in_numerator,
+        in_matrix_multiplication,
+    ):
         """
         recursive function to flatten a term involving only Multiplication, Division or
         MatrixMultiplication. keeps track of wether a term is on the numerator or
@@ -220,20 +226,31 @@ def simplify_multiplication_division(myclass, left, right):
             if isinstance(child, pybamm.MatrixMultiplication):
                 left, right = child.orphans
                 if child == left_child:
-                    flatten(previous_class, child.__class__, left, right, in_numerator,
-                            True)
+                    flatten(
+                        previous_class, child.__class__, left, right, in_numerator, True
+                    )
                 else:
-                    flatten(this_class, child.__class__, left, right, in_numerator,
-                            True)
-            elif isinstance(child, (pybamm.Multiplication, pybamm.Division)) \
-                    and not in_matrix_multiplication:
+                    flatten(
+                        this_class, child.__class__, left, right, in_numerator, True
+                    )
+            elif (
+                isinstance(child, (pybamm.Multiplication, pybamm.Division))
+                and not in_matrix_multiplication
+            ):
                 left, right = child.orphans
                 if child == left_child:
-                    flatten(previous_class, child.__class__, left, right, in_numerator,
-                            False)
+                    flatten(
+                        previous_class,
+                        child.__class__,
+                        left,
+                        right,
+                        in_numerator,
+                        False,
+                    )
                 else:
-                    flatten(this_class, child.__class__, left, right, in_numerator,
-                            False)
+                    flatten(
+                        this_class, child.__class__, left, right, in_numerator, False
+                    )
             else:
                 if in_numerator:
                     numerator.append(child)
@@ -255,7 +272,7 @@ def simplify_multiplication_division(myclass, left, right):
 
     # check if there is a matrix multiply in the numerator (if so we can't reorder it)
     has_matrix_multiply = any(
-        [t == pybamm.MatrixMultiplication for t in numerator_types + [myclass]]
+        [typ == pybamm.MatrixMultiplication for typ in numerator_types + [myclass]]
     )
 
     def partition_by_constant(source, types=None):
@@ -289,16 +306,19 @@ def simplify_multiplication_division(myclass, left, right):
         """
         ret = None
         if len(array) > 0:
-            ret = array[0]
             if types is None:
+                ret = array[0]
                 for child in array[1:]:
                     ret *= child
             else:
-                for child, t in zip(array[1:], types[1:]):
-                    if t == pybamm.MatrixMultiplication:
-                        ret = ret @ child
+                # work backwards through 'array' and 'types' so that multiplications
+                # and matrix multiplications are performed in the most efficient order
+                ret = array[-1]
+                for child, typ in zip(reversed(array[:-1]), reversed(types[1:])):
+                    if typ == pybamm.MatrixMultiplication:
+                        ret = child @ ret
                     else:
-                        ret *= child
+                        ret = child * ret
         return ret
 
     # compact denominator_constant to a constant scalar
@@ -332,23 +352,23 @@ def simplify_multiplication_division(myclass, left, right):
     elif has_matrix_multiply:
         # only consider neighbouring children for numerator as we can't reorder mat muls
         new_numerator = [numerator[0]]
-        new_numerator_t = [numerator_types[0]]
-        for child, t in zip(numerator[1:], numerator_types[1:]):
+        new_numerator_types = [numerator_types[0]]
+        for child, typ in zip(numerator[1:], numerator_types[1:]):
             if (
                 new_numerator[-1].is_constant()
                 and child.is_constant()
                 and new_numerator[-1].evaluate_ignoring_errors() is not None
                 and child.evaluate_ignoring_errors() is not None
             ):
-                if t == pybamm.MatrixMultiplication:
+                if typ == pybamm.MatrixMultiplication:
                     new_numerator[-1] = new_numerator[-1] @ child
                 else:
                     new_numerator[-1] *= child
                 new_numerator[-1] = pybamm.simplify_if_constant(new_numerator[-1])
             else:
                 new_numerator.append(child)
-                new_numerator_t.append(t)
-        new_numerator = fold_multiply(new_numerator, new_numerator_t)
+                new_numerator_types.append(typ)
+        new_numerator = fold_multiply(new_numerator, new_numerator_types)
 
     else:
         # can reorder the numerator since no matrix multiplies
@@ -457,6 +477,27 @@ class BinaryOperator(pybamm.Symbol):
 
         return pybamm.simplify_if_constant(new_node)
 
+    def _binary_evaluate(self, left, right):
+        """ Perform binary operation on nodes 'left' and 'right'. """
+        raise NotImplementedError
+
+    def evaluate(self, t=None, y=None, known_evals=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        if known_evals is not None:
+            id = self.id
+            try:
+                return known_evals[id], known_evals
+            except KeyError:
+                left, known_evals = self.children[0].evaluate(t, y, known_evals)
+                right, known_evals = self.children[1].evaluate(t, y, known_evals)
+                value = self._binary_evaluate(left, right)
+                known_evals[id] = value
+                return value, known_evals
+        else:
+            left = self.children[0].evaluate(t, y)
+            right = self.children[1].evaluate(t, y)
+            return self._binary_evaluate(left, right)
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
@@ -480,9 +521,9 @@ class Power(BinaryOperator):
                 + base * pybamm.Function(np.log, base) * exponent.diff(variable)
             )
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) ** self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left ** right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -515,9 +556,9 @@ class Addition(BinaryOperator):
         else:
             return self.children[0].diff(variable) + self.children[1].diff(variable)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) + self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left + right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -549,9 +590,9 @@ class Subtraction(BinaryOperator):
         else:
             return self.children[0].diff(variable) - self.children[1].diff(variable)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) - self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left - right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -588,11 +629,8 @@ class Multiplication(BinaryOperator):
             left, right = self.orphans
             return left.diff(variable) * right + left * right.diff(variable)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        left = self.children[0].evaluate(t, y)
-        right = self.children[1].evaluate(t, y)
-
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
         # broadcasting is done correctly, see #253. This might be inefficient, so will
         # need to revisit
@@ -655,10 +693,9 @@ class MatrixMultiplication(BinaryOperator):
         # We shouldn't need this
         raise NotImplementedError
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-
-        return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left @ right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -691,9 +728,9 @@ class Division(BinaryOperator):
                 top.diff(variable) * bottom - top * bottom.diff(variable)
             ) / bottom ** 2
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) / self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left / right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """

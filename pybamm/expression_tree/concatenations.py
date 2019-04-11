@@ -21,15 +21,14 @@ class Concatenation(pybamm.Symbol):
 
     """
 
-    def __init__(self, *children, name=None):
+    def __init__(self, *children, name=None, check_domain=True):
         if name is None:
             name = "concatenation"
-        domain = self.get_children_domains(children)
+        if check_domain:
+            domain = self.get_children_domains(children)
+        else:
+            domain = []
         super().__init__(name, children, domain=domain)
-
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        raise NotImplementedError
 
     def get_children_domains(self, children):
         # combine domains from children
@@ -47,8 +46,27 @@ class Concatenation(pybamm.Symbol):
 
         return domain
 
+    def _concatenation_evaluate(self, children_eval):
+        """ Concatenate the evaluated children. """
+        raise NotImplementedError
 
-class NumpyConcatenation(pybamm.Symbol):
+    def evaluate(self, t=None, y=None, known_evals=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        if known_evals is not None:
+            if self.id not in known_evals:
+                children_eval = [0] * len(self.children)
+                for idx, child in enumerate(self.children):
+                    children_eval[idx], known_evals = child.evaluate(t, y, known_evals)
+                known_evals[self.id] = self._concatenation_evaluate(children_eval)
+            return known_evals[self.id], known_evals
+        else:
+            children_eval = [0] * len(self.children)
+            for idx, child in enumerate(self.children):
+                children_eval[idx] = child.evaluate(t, y)
+            return self._concatenation_evaluate(children_eval)
+
+
+class NumpyConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of equations, when we
     *don't* care about domains. The class :class:`pybamm.DomainConcatenation`, which
     *is* careful about domains and uses broadcasting where appropriate, should be used
@@ -56,7 +74,7 @@ class NumpyConcatenation(pybamm.Symbol):
 
     Upon evaluation, equations are concatenated using numpy concatenation.
 
-    **Extends**: :class:`pybamm.Symbol`
+    **Extends**: :class:`Concatenation`
 
     Parameters
     ----------
@@ -72,14 +90,14 @@ class NumpyConcatenation(pybamm.Symbol):
         for i, child in enumerate(children):
             if child.evaluates_to_number():
                 children[i] = pybamm.NumpyBroadcast(child, [], None)
-        super().__init__("model concatenation", children, domain=[])
+        super().__init__(*children, name="numpy concatenation", check_domain=False)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        if len(self.children) == 0:
+    def _concatenation_evaluate(self, children_eval):
+        """ See :meth:`Concatenation._concatenation_evaluate()`. """
+        if len(children_eval) == 0:
             return np.array([])
         else:
-            return np.concatenate([child.evaluate(t, y) for child in self.children])
+            return np.concatenate([child for child in children_eval])
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
@@ -145,8 +163,9 @@ class DomainConcatenation(Concatenation):
             self._size = self._slices[self.domain[-1]].stop
 
             # create disc of domain => slice for each child
-            self._children_slices = [self.create_slices(
-                child) for child in self.children]
+            self._children_slices = [
+                self.create_slices(child) for child in self.children
+            ]
         else:
             self._mesh = copy.copy(copy_this._mesh)
             self._slices = copy.copy(copy_this._slices)
@@ -177,14 +196,13 @@ class DomainConcatenation(Concatenation):
             start = end
         return slices
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+    def _concatenation_evaluate(self, children_eval):
+        """ See :meth:`Concatenation._concatenation_evaluate()`. """
         # preallocate vector
         vector = np.empty(self._size)
 
         # loop through domains of children writing subvectors to final vector
-        for child, slices in zip(self.children, self._children_slices):
-            child_vector = child.evaluate(t, y)
+        for child_vector, slices in zip(children_eval, self._children_slices):
             for child_dom, child_slice in slices.items():
                 vector[self._slices[child_dom]] = child_vector[child_slice]
 
