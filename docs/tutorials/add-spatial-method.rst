@@ -1,7 +1,10 @@
+.. _CONTRIBUTING.md: https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md
+
+
 Adding a Spatial Method
 =======================
 
-As with any contribution to PyBaMM, please follow the workflow in `CONTRIBUTING.md <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.
+As with any contribution to PyBaMM, please follow the workflow in CONTRIBUTING.md_.
 In particular, start by creating an issue to discuss what you want to do - this is a good way to avoid wasted coding hours!
 
 The role of spatial methods
@@ -91,5 +94,5 @@ To test this, add something like the following test to one of the model test fil
 This will check that the model can run with the new spatial method (but not that it gives a sensible answer!).
 
 Once you have performed the above checks, you are almost ready to merge your code into the core PyBaMM - see
-`CONTRIBUTING.md <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md#c-merging-your-changes-with-pybamm>`_
+`CONTRIBUTING.md workflow <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md#c-merging-your-changes-with-pybamm>`_
 for how to do this.

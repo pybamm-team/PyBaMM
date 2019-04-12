@@ -35,8 +35,8 @@ Contents
 Examples
 ========
 
-Detailed examples can be viewed on
-`GitHub <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_, 
+Detailed examples can be viewed on the
+`GitHub examples page <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_,
 and run locally using ``jupyter notebook``, or online through
 `Binder <https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master?filepath=examples%2Fnotebooks>`_.
 
@@ -48,4 +48,4 @@ There are many ways to contribute to PyBaMM:
 .. toctree::
     tutorials/add-spatial-method
 
-Before contributing, please read the [contribution guidelines](https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md)
+Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.

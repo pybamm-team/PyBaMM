@@ -1,6 +1,6 @@
 # PyBaMM
 
-[![Build Status](https://travis-ci.org/tinosulzer/PyBaMM.svg?branch=master)](https://travis-ci.org/tinosulzer/PyBaMM)
+[![Build Status](https://travis-ci.org/pybamm-team/PyBaMM.svg?branch=master)](https://travis-ci.org/pybamm-team/PyBaMM)
 [![Documentation Status](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/tinosulzer/PyBaMM/branch/master/graph/badge.svg)](https://codecov.io/gh/tinosulzer/PyBaMM)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master?filepath=examples%2Fnotebooks)
