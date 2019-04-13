@@ -25,13 +25,11 @@ def run_code_tests(executable=None, folder: str = "unit"):
         If given, tests are run in subprocesses using the given executable (e.g.
         'python2' or 'python3').
     folder : str
-        Which folder to run the tests from (unit or convergence)
+        Which folder to run the tests from (unit, convergence or both ('all'))
 
     """
     if folder == "all":
         tests = "tests/"
-        # run_code_tests(executable, "unit")
-        # run_code_tests(executable, "convergence")
     else:
         tests = "tests/" + folder
     if executable is None:
@@ -274,7 +272,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--folder",
         nargs=1,
-        default="unit",
+        default=["unit"],
         choices=["unit", "convergence", "all"],
         help="Which folder to run the tests from.",
     )
@@ -317,7 +315,7 @@ if __name__ == "__main__":
 
     # Run tests
     has_run = False
-    # Daily vs unit
+    # Unit vs convergence
     folder = args.folder[0]
     # Unit tests
     if args.unit:
@@ -332,7 +330,7 @@ if __name__ == "__main__":
         run_code_tests("python3", folder)
     if args.nosub:
         has_run = True
-        run_code_tests(folder)
+        run_code_tests(folder=folder)
     # Flake8
     if args.flake8:
         has_run = True
@@ -355,7 +353,7 @@ if __name__ == "__main__":
     if args.quick:
         has_run = True
         run_flake8()
-        run_code_tests()
+        run_code_tests(folder=folder)
         run_doc_tests()
     # Help
     if not has_run:
