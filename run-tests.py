@@ -15,14 +15,25 @@ import unittest
 import subprocess
 
 
-def run_unit_tests(executable=None):
+def run_unit_tests(executable=None, folder: str = "continuous"):
     """
     Runs unit tests, exits if they don't finish.
 
-    If an ``executable`` is given, tests are run in subprocesses using the
-    given executable (e.g. ``python2`` or ``python3``).
+    Parameters
+    ----------
+    executable : str (default None)
+        If given, tests are run in subprocesses using the given executable (e.g.
+        'python2' or 'python3').
+    folder : str
+        Which folder to run the tests from
+        daily : unit tests
+        continuous : integration tests (slow)
+
     """
-    tests = "tests/"
+    if folder == "all":
+        tests = "tests/"
+    elif folder in ["continuous", "daily"]:
+        tests = "tests/" + folder
     if executable is None:
         suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
@@ -234,7 +245,7 @@ def export_notebook(ipath, opath):
 if __name__ == "__main__":
     # Set up argument parsing
     parser = argparse.ArgumentParser(
-        description="Run unit tests for Pints.",
+        description="Run unit tests for PyBaMM.",
         epilog="To run individual unit tests, use e.g."
         " $ pybamm/tests/test_simulation.py",
     )
@@ -242,22 +253,29 @@ if __name__ == "__main__":
     parser.add_argument(
         "--unit",
         action="store_true",
-        help="Run all unit tests using the `python` interpreter.",
+        help="Run unit tests using the `python` interpreter.",
     )
     parser.add_argument(
         "--unit2",
         action="store_true",
-        help="Run all unit tests using the `python2` interpreter.",
+        help="Run unit tests using the `python2` interpreter.",
     )
     parser.add_argument(
         "--unit3",
         action="store_true",
-        help="Run all unit tests using the `python3` interpreter.",
+        help="Run unit tests using the `python3` interpreter.",
     )
     parser.add_argument(
         "--nosub",
         action="store_true",
-        help="Run all unit tests without starting a subprocess.",
+        help="Run unit tests without starting a subprocess.",
+    )
+    # Daily tests vs continuous tests
+    parser.add_argument(
+        "-folder",
+        nargs=1,
+        default="continuous",
+        help="Which folder to run the tests from.",
     )
     # Notebook tests
     parser.add_argument(
@@ -298,20 +316,22 @@ if __name__ == "__main__":
 
     # Run tests
     has_run = False
+    # Daily vs continuous
+    folder = args.folder
     # Unit tests
     if args.unit:
         has_run = True
-        run_unit_tests("python")
+        run_unit_tests("python", folder)
     if args.unit2:
         raise NotImplementedError
         has_run = True
-        run_unit_tests("python2")
+        run_unit_tests("python2", folder)
     if args.unit3:
         has_run = True
-        run_unit_tests("python3")
+        run_unit_tests("python3", folder)
     if args.nosub:
         has_run = True
-        run_unit_tests()
+        run_unit_tests(folder)
     # Flake8
     if args.flake8:
         has_run = True
