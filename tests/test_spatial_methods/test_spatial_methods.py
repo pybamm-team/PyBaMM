@@ -15,17 +15,11 @@ class TestSpatialMethod(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.spatial_variable(None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.broadcast(None, None)
-        with self.assertRaises(NotImplementedError):
             spatial_method.gradient(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.surface_value(None)
-        with self.assertRaises(NotImplementedError):
-            spatial_method.compute_diffusivity()
-        with self.assertRaises(NotImplementedError):
-            spatial_method.mass_matrix(None, None)
 
 
 if __name__ == "__main__":

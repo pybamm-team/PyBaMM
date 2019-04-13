@@ -6,15 +6,15 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-from scipy.sparse import diags
-from scipy.sparse import eye
-from scipy.sparse import kron
+from scipy.sparse import diags, eye, kron
 
 
 class FiniteVolume(pybamm.SpatialMethod):
     """
     A class which implements the steps specific to the finite volume method during
     discretisation.
+
+    For broadcast and mass_matrix, we follow the default behaviour from SpatialMethod.
 
     Parameters
     ----------
@@ -52,15 +52,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
         else:
             raise NotImplementedError("3D meshes not yet implemented")
-
-    def broadcast(self, symbol, domain):
-        """
-        Broadcast symbol to a specified domain. To do this, calls
-        :class:`pybamm.NumpyBroadcast`
-
-        See :meth: `pybamm.SpatialMethod.broadcast`
-        """
-        return pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -568,43 +559,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         boundary_value = pybamm.Function(linear_extrapolation, discretised_symbol)
         boundary_value.domain = []
         return boundary_value
-
-    def mass_matrix(self, symbol, boundary_conditions):
-        """
-        Calculates the mass matrix for a spatial method.
-
-        Parameters
-        ----------
-        symbol: :class:`pybamm.Variable`
-            The variable corresponding to the equation for which we are
-            calculating the mass matrix.
-        boundary_conditions : dict
-            The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
-
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The (sparse) mass matrix for the spatial method.
-        """
-        # NOTE: for different spatial methods the matrix may need to be adjusted
-        # to account for Dirichlet boundary conditions. Here, we just have that
-        # the mass matrix is the identity.
-
-        # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*symbol.domain)
-
-        # Get number of points in primary dimension
-        n = submesh[0].npts
-
-        # Create mass matrix for primary dimension
-        prim_mass = eye(n)
-
-        # Get number of points in secondary dimension
-        sec_pts = len(submesh)
-
-        mass = kron(eye(sec_pts), prim_mass)
-        return pybamm.Matrix(mass)
 
     def compute_diffusivity(
         self, discretised_symbol, extrapolate_left=False, extrapolate_right=False

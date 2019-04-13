@@ -1,11 +1,14 @@
 #
 # A general spatial method class
 #
+import pybamm
+from scipy.sparse import eye, kron
 
 
 class SpatialMethod:
     """
-    A general spatial methods class.
+    A general spatial methods class, with default (trivial) behaviour for broadcast,
+    mass_matrix and compute_diffusivity.
     All spatial methods will follow the general form of SpatialMethod in
     that they contain a method for broadcasting variables onto a mesh,
     a gradient operator, and a diverence operator.
@@ -42,22 +45,13 @@ class SpatialMethod:
 
     def broadcast(self, symbol, domain):
         """
-        Broadcast symbol to a specified domain.
+        Broadcast symbol to a specified domain. To do this, calls
+        :class:`pybamm.NumpyBroadcast`
 
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            The symbol to be broadcasted
-        domain : iterable of string
-            The domain to broadcast to
-
-        Returns
-        -------
-        broadcasted_symbol: class: `pybamm.Array`
-            The discretised symbol of the correct size for
-            the spatial method
+        See :meth: `pybamm.SpatialMethod.broadcast`
         """
-        raise NotImplementedError
+        # Default behaviour: use NumpyBroadcast
+        return pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """
@@ -182,14 +176,31 @@ class SpatialMethod:
         :class:`pybamm.Matrix`
             The (sparse) mass matrix for the spatial method.
         """
-        raise NotImplementedError
+        # NOTE: for different spatial methods the matrix may need to be adjusted
+        # to account for Dirichlet boundary conditions. Here, we just have the default
+        # behaviour that the mass matrix is the identity.
 
-    # We could possibly move the following outside of SpatialMethod
-    # depending on the requirements of the FiniteVolume
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*symbol.domain)
 
-    def compute_diffusivity(self, extrapolate_left=False, extrapolate_right=False):
+        # Get number of points in primary dimension
+        n = submesh[0].npts
+
+        # Create mass matrix for primary dimension
+        prim_mass = eye(n)
+
+        # Get number of points in secondary dimension
+        sec_pts = len(submesh)
+
+        mass = kron(eye(sec_pts), prim_mass)
+        return pybamm.Matrix(mass)
+
+    def compute_diffusivity(
+        self, symbol, extrapolate_left=None, extrapolate_right=None
+    ):
         """Compute the diffusivity at edges of cells.
         Could interpret this as: find diffusivity as
         off grid locations
         """
-        raise NotImplementedError
+        # Default behaviour (identity operator): return symbol
+        return symbol
