@@ -48,7 +48,7 @@ class TestUtil(unittest.TestCase):
         abs_test_path = os.path.join(
             os.getcwd(),
             "tests",
-            "continuous",
+            "unit",
             "test_parameters",
             "data",
             "process_symbol_test_function.py",

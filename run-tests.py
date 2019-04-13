@@ -15,9 +15,9 @@ import unittest
 import subprocess
 
 
-def run_unit_tests(executable=None, folder: str = "continuous"):
+def run_code_tests(executable=None, folder: str = "unit"):
     """
-    Runs unit tests, exits if they don't finish.
+    Runs tests, exits if they don't finish.
 
     Parameters
     ----------
@@ -25,20 +25,20 @@ def run_unit_tests(executable=None, folder: str = "continuous"):
         If given, tests are run in subprocesses using the given executable (e.g.
         'python2' or 'python3').
     folder : str
-        Which folder to run the tests from
-        daily : unit tests
-        continuous : integration tests (slow)
+        Which folder to run the tests from (unit or convergence)
 
     """
     if folder == "all":
         tests = "tests/"
-    elif folder in ["continuous", "daily"]:
+        # run_code_tests(executable, "unit")
+        # run_code_tests(executable, "convergence")
+    else:
         tests = "tests/" + folder
     if executable is None:
         suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
-        print("Running unit tests with executable `" + executable + "`")
+        print("Running {} tests with executable '{}'".format(folder, executable))
         cmd = [executable] + ["-m", "unittest", "discover", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
@@ -79,7 +79,7 @@ def run_flake8():
         sys.exit(ret)
 
 
-def run_doctests():
+def run_doc_tests():
     """
     Checks if the documentation can be built, runs any doctests (currently not
     used).
@@ -270,11 +270,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Run unit tests without starting a subprocess.",
     )
-    # Daily tests vs continuous tests
+    # Daily tests vs unit tests
     parser.add_argument(
-        "-folder",
+        "--folder",
         nargs=1,
-        default="continuous",
+        default="unit",
+        choices=["unit", "convergence", "all"],
         help="Which folder to run the tests from.",
     )
     # Notebook tests
@@ -316,22 +317,22 @@ if __name__ == "__main__":
 
     # Run tests
     has_run = False
-    # Daily vs continuous
-    folder = args.folder
+    # Daily vs unit
+    folder = args.folder[0]
     # Unit tests
     if args.unit:
         has_run = True
-        run_unit_tests("python", folder)
+        run_code_tests("python", folder)
     if args.unit2:
         raise NotImplementedError
         has_run = True
-        run_unit_tests("python2", folder)
+        run_code_tests("python2", folder)
     if args.unit3:
         has_run = True
-        run_unit_tests("python3", folder)
+        run_code_tests("python3", folder)
     if args.nosub:
         has_run = True
-        run_unit_tests(folder)
+        run_code_tests(folder)
     # Flake8
     if args.flake8:
         has_run = True
@@ -339,7 +340,7 @@ if __name__ == "__main__":
     # Doctests
     if args.doctest:
         has_run = True
-        run_doctests()
+        run_doc_tests()
     # Notebook tests
     if args.allbooks:
         has_run = True
@@ -354,8 +355,8 @@ if __name__ == "__main__":
     if args.quick:
         has_run = True
         run_flake8()
-        run_unit_tests()
-        run_doctests()
+        run_code_tests()
+        run_doc_tests()
     # Help
     if not has_run:
         parser.print_help()
