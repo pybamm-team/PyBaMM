@@ -1060,7 +1060,6 @@ class TestFiniteVolume(unittest.TestCase):
 
         # Function for convergence testing
         def get_error(n):
-
             # create discretisation
             mesh = get_mesh_for_testing(n)
             spatial_methods = {"macroscale": pybamm.FiniteVolume}
@@ -1085,11 +1084,13 @@ class TestFiniteVolume(unittest.TestCase):
             return div_approx_internal - div_exact_internal
 
         # Get errors
-        ns = 10 * (2 ** np.arange(2, 6))
-        ns = 3 * np.round(ns / 3)
-        for idx in []:
-            errs = np.array([get_error(int(n)) for n in ns])
+        ns = 3 ** np.arange(1, 6)
+        errs = np.array([get_error(int(n)) for n in ns])
+        import ipdb
 
+        ipdb.set_trace()
+        for idx_factor in []:
+            err_at_idx =
             # Get rates: expect h**2 convergence
             rates = np.log2(errs[:-1] / errs[1:])
             np.testing.assert_array_less(1.9 * np.ones_like(rates), rates)
