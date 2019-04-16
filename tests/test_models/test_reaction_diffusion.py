@@ -72,7 +72,7 @@ class TestReactionDiffusionModel(unittest.TestCase):
                 [concs[i](1, x) - concs[-1](1, x) for i in range(len(ns) - 1)]
             )
             # Get rates: expect h**2 convergence
-            rates = np.log2(errs[:-1] / errs[1:]) / np.log2(2)
+            rates = np.log2(errs[:-1] / errs[1:])
             np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
 
