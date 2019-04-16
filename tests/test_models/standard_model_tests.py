@@ -30,15 +30,15 @@ class StandardModelTest(object):
         #       self.parameter_values = parameter_values
         self.parameter_values = parameter_values or model.default_parameter_values
         geometry = geometry or model.default_geometry
-        self.submesh_types = submesh_types or model.default_submesh_types
-        self.var_pts = var_pts or model.default_var_pts
-        self.spatial_methods = spatial_methods or model.default_spatial_methods
+        submesh_types = submesh_types or model.default_submesh_types
+        var_pts = var_pts or model.default_var_pts
+        spatial_methods = spatial_methods or model.default_spatial_methods
         self.solver = solver or model.default_solver
         # Process geometry
         self.parameter_values.process_geometry(geometry)
         # Set discretisation
-        mesh = pybamm.Mesh(geometry, self.submesh_types, self.var_pts)
-        self.disc = pybamm.Discretisation(mesh, self.spatial_methods)
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        self.disc = pybamm.Discretisation(mesh, spatial_methods)
 
     def test_processing_parameters(self, parameter_values=None):
         # Overwrite parameters if given
