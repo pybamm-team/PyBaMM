@@ -1006,8 +1006,8 @@ class TestFiniteVolume(unittest.TestCase):
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
             var.id: {
-                "left": pybamm.Scalar(np.sin(0)),
-                "right": pybamm.Scalar(np.sin(1)),
+                "left": pybamm.Scalar(np.exp(0)),
+                "right": pybamm.Scalar(np.exp(1)),
             }
         }
 
@@ -1024,8 +1024,8 @@ class TestFiniteVolume(unittest.TestCase):
             combined_submesh = mesh.combine_submeshes(*whole_cell)
 
             # Define exact solutions
-            y = np.sin(combined_submesh[0].nodes)
-            grad_exact = np.cos(combined_submesh[0].edges)
+            y = np.exp(combined_submesh[0].nodes)
+            grad_exact = np.exp(combined_submesh[0].edges)
 
             # Discretise and evaluate
             disc.set_variable_slices([var])
@@ -1033,15 +1033,18 @@ class TestFiniteVolume(unittest.TestCase):
             grad_approx = grad_eqn_disc.evaluate(None, y)
 
             # Calculate errors
-            return np.linalg.norm(grad_approx - grad_exact) / np.linalg.norm(grad_exact)
+            return grad_approx[0] - grad_exact[0]
 
         # Get errors
-        ns = 100 * (2 ** np.arange(2, 7))
+        ns = 147 * (2 ** np.arange(2, 7))
         ns = 3 * np.round(ns / 3)
         errs = np.array([get_l2_error(int(n)) for n in ns])
 
         # Get rates: expect h**1.5 convergence
         rates = np.log2(errs[:-1] / errs[1:])
+        import ipdb
+
+        ipdb.set_trace()
         np.testing.assert_array_less(1.49 * np.ones_like(rates), rates)
 
     def test_div_convergence_internal(self):
@@ -1051,7 +1054,10 @@ class TestFiniteVolume(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
+            N.id: {
+                "left": 0 * pybamm.Scalar(np.cos(0)),
+                "right": pybamm.Scalar(np.cos(1)),
+            }
         }
 
         # Function for convergence testing
@@ -1068,7 +1074,10 @@ class TestFiniteVolume(unittest.TestCase):
 
             # Define exact solutions
             y = np.sin(combined_submesh[0].nodes)
-            div_exact_internal = -np.sin(combined_submesh[0].nodes[1:-1])
+            div_exact_internal = (
+                np.cos(combined_submesh[0].nodes[1:-1]) ** 2
+                - np.sin(combined_submesh[0].nodes[1:-1]) ** 2
+            )
 
             # Discretise and evaluate
             disc.set_variable_slices([var])
@@ -1131,7 +1140,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # Get rates: expect h**1.5 convergence because of boundary conditions
         rates = np.log2(errs[:-1] / errs[1:])
-        np.testing.assert_array_less(1.49 * np.ones_like(rates), rates)
+        np.testing.assert_array_less(1.9 * np.ones_like(rates), rates)
 
     def test_spherical_operators(self):
         # test div( grad( sin(r) )) == (2/r)*cos(r) - *sin(r)
