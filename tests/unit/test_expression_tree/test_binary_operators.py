@@ -92,7 +92,7 @@ class TestBinaryOperators(unittest.TestCase):
             expr2.evaluate(known_evals={})
         end_known_evals = timer.time()
         self.assertLess(end_known_evals - start_known_evals, 1.2 * (end - start))
-        self.assertGreater(end - start, 1.2 * (end_known_evals - start_known_evals))
+        self.assertGreater(end - start, (end_known_evals - start_known_evals))
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
