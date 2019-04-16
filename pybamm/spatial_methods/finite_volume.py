@@ -139,6 +139,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """Matrix-vector multiplication to implement the divergence operator.
         See :meth:`pybamm.SpatialMethod.divergence`
         """
+
         # Check that boundary condition keys are hashes (ids)
         for key in boundary_conditions.keys():
             assert isinstance(key, int), TypeError(
