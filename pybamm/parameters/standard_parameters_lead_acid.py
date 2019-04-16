@@ -2,23 +2,8 @@
 # Standard parameters for lead-acid battery models
 #
 """
-Standard Parameters for lead-acid battery models
-
-Electrolyte Properties
-----------------------
-ce_typ
-    Typical lithium ion concentration in electrolyte
-De_typ
-    Typical lithium ion diffusivity in the electrolyte
-nu_plus
-    Stoichiometry of hydrogen anions
-nu_minus
-    Stoichiometry of hydrogen sulfate anions
-nu
-    Stoichiometry of sulfuric acid
+Standard parameters for lead-acid battery models
 """
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 from scipy import constants
 
