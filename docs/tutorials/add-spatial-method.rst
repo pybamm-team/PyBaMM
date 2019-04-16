@@ -43,16 +43,16 @@ and add the class to `pybamm/__init__.py`::
 You can then start implementing the spatial method by adding functions to the class.
 In particular, any spatial method *must* have the following functions (from the base class :class:`pybamm.SpatialMethod`):
 
-- :meth:`pybamm.SpatialMethod.spatial_variable()`
-- :meth:`pybamm.SpatialMethod.broadcast`
+- :meth:`pybamm.SpatialMethod.spatial_variable`
 - :meth:`pybamm.SpatialMethod.gradient`
 - :meth:`pybamm.SpatialMethod.divergence`
 - :meth:`pybamm.SpatialMethod.integral`
 - :meth:`pybamm.SpatialMethod.indefinite integral`
+- :meth:`pybamm.SpatialMethod.boundary_value`
 
 Optionally, a new spatial method can also overwrite the default behaviour for the following functions:
 
-- :meth:`pybamm.SpatialMethod.boundary_value`
+- :meth:`pybamm.SpatialMethod.broadcast`
 - :meth:`pybamm.SpatialMethod.mass_matrix`
 - :meth:`pybamm.SpatialMethod.compute_diffusivity`
 
