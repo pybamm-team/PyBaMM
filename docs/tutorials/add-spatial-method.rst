@@ -59,7 +59,7 @@ Optionally, a new spatial method can also overwrite the default behaviour for th
 For an example of an existing spatial method implementation, see the Finite Volume
 `API docs <https://pybamm.readthedocs.io/en/latest/source/spatial_methods/finite_volume.html>`_.
 and
-`notebook <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_.
+`notebook <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/spatial_methods/finite-volumes.ipynb>`_.
 
 Unit tests for the new class
 ----------------------------
