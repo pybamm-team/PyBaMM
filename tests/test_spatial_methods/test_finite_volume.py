@@ -970,7 +970,7 @@ class TestFiniteVolume(unittest.TestCase):
         grad_eqn = pybamm.grad(var)
 
         # Function for convergence testing
-        def get_l2_error(n):
+        def get_error(n):
             # Set up discretisation
             n = 3 * round(n / 3)
             # create discretisation
@@ -988,12 +988,12 @@ class TestFiniteVolume(unittest.TestCase):
             grad_eqn_disc = disc.process_symbol(grad_eqn)
             grad_approx = grad_eqn_disc.evaluate(None, y)
 
-            # Calculate errors
-            return np.linalg.norm(grad_approx - grad_exact) / np.linalg.norm(grad_exact)
+            # Return difference between approx and exact
+            return (grad_approx - grad_exact) / (grad_exact)
 
         # Get errors
         ns = 100 * (2 ** np.arange(2, 7))
-        errs = np.array([get_l2_error(int(n)) for n in ns])
+        errs = np.array([get_error(int(n)) for n in ns])
 
         # Get rates: expect h**2 convergence
         rates = np.log2(errs[:-1] / errs[1:])
@@ -1012,7 +1012,7 @@ class TestFiniteVolume(unittest.TestCase):
         }
 
         # Function for convergence testing
-        def get_l2_error(n):
+        def get_error(n):
             # create discretisation
             mesh = get_mesh_for_testing(n)
             spatial_methods = {"macroscale": pybamm.FiniteVolume}
@@ -1032,26 +1032,24 @@ class TestFiniteVolume(unittest.TestCase):
             grad_eqn_disc = disc.process_symbol(grad_eqn)
             grad_approx = grad_eqn_disc.evaluate(None, y)
 
-            # Calculate errors
-            return grad_approx[0] - grad_exact[0]
+            # Return difference
+            return grad_approx - grad_exact
 
-        # Get errors
-        ns = 147 * (2 ** np.arange(2, 7))
+        # Get errors at the first and last point (to test boundary conditions)
+        ns = 100 * (2 ** np.arange(2, 7))
         ns = 3 * np.round(ns / 3)
-        errs = np.array([get_l2_error(int(n)) for n in ns])
+        for idx in [0, -1]:
+            errs = np.array([get_error(int(n))[idx] for n in ns])
 
-        # Get rates: expect h**1.5 convergence
-        rates = np.log2(errs[:-1] / errs[1:])
-        import ipdb
-
-        ipdb.set_trace()
-        np.testing.assert_array_less(1.49 * np.ones_like(rates), rates)
+            # Get rates: expect linear convergence
+            rates = np.log2(errs[:-1] / errs[1:])
+            np.testing.assert_array_less(0.99 * np.ones_like(rates), rates)
 
     def test_div_convergence_internal(self):
         # Convergence
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
-        N = pybamm.grad(var)
+        N = pybamm.Function(np.arcsin, var) ** 2 * pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
             N.id: {
@@ -1061,7 +1059,7 @@ class TestFiniteVolume(unittest.TestCase):
         }
 
         # Function for convergence testing
-        def get_l2_error(n):
+        def get_error(n):
 
             # create discretisation
             mesh = get_mesh_for_testing(n)
@@ -1074,29 +1072,27 @@ class TestFiniteVolume(unittest.TestCase):
 
             # Define exact solutions
             y = np.sin(combined_submesh[0].nodes)
-            div_exact_internal = (
-                np.cos(combined_submesh[0].nodes[1:-1]) ** 2
-                - np.sin(combined_submesh[0].nodes[1:-1]) ** 2
-            )
+            x = combined_submesh[0].nodes[1:-1]
+            # N = x**2 * cos(x) --> dNdx = x*(2cos(x) - xsin(x))
+            div_exact_internal = x * (2 * np.cos(x) - x * np.sin(x))
 
             # Discretise and evaluate
             disc.set_variable_slices([var])
             div_eqn_disc = disc.process_symbol(div_eqn)
             div_approx_internal = div_eqn_disc.evaluate(None, y)[1:-1]
 
-            # Calculate errors
-            return np.linalg.norm(
-                div_approx_internal - div_exact_internal
-            ) / np.linalg.norm(div_exact_internal)
+            # Return difference between approx and exact
+            return div_approx_internal - div_exact_internal
 
         # Get errors
         ns = 10 * (2 ** np.arange(2, 6))
         ns = 3 * np.round(ns / 3)
-        errs = np.array([get_l2_error(int(n)) for n in ns])
+        for idx in []:
+            errs = np.array([get_error(int(n)) for n in ns])
 
-        # Get rates: expect h**2 convergence
-        rates = np.log2(errs[:-1] / errs[1:])
-        np.testing.assert_array_less(1.9 * np.ones_like(rates), rates)
+            # Get rates: expect h**2 convergence
+            rates = np.log2(errs[:-1] / errs[1:])
+            np.testing.assert_array_less(1.9 * np.ones_like(rates), rates)
 
     def test_div_convergence(self):
         # Convergence
@@ -1109,7 +1105,7 @@ class TestFiniteVolume(unittest.TestCase):
         }
 
         # Function for convergence testing
-        def get_l2_error(n):
+        def get_error(n):
             whole_cell = ["negative electrode", "separator", "positive electrode"]
             # create discretisation
             mesh = get_mesh_for_testing(n)
@@ -1128,15 +1124,13 @@ class TestFiniteVolume(unittest.TestCase):
             div_eqn_disc = disc.process_symbol(div_eqn)
             div_approx_internal = div_eqn_disc.evaluate(None, y)[1:-1]
 
-            # Calculate errors
-            return np.linalg.norm(
-                div_approx_internal - div_exact_internal
-            ) / np.linalg.norm(div_exact_internal)
+            # Return difference between approx and exact
+            return (div_approx_internal - div_exact_internal) / (div_exact_internal)
 
         # Get errors
         ns = 10 * (2 ** np.arange(2, 6))
         ns = 3 * np.round(ns / 3)
-        errs = np.array([get_l2_error(int(n)) for n in ns])
+        errs = np.array([get_error(int(n)) for n in ns])
 
         # Get rates: expect h**1.5 convergence because of boundary conditions
         rates = np.log2(errs[:-1] / errs[1:])
@@ -1153,7 +1147,7 @@ class TestFiniteVolume(unittest.TestCase):
             N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
         }
 
-        def get_l2_error(n):
+        def get_error(n):
             mesh = get_mesh_for_testing(n)
             spatial_methods = {"negative particle": pybamm.FiniteVolume}
             disc = pybamm.Discretisation(mesh, spatial_methods)
@@ -1172,15 +1166,12 @@ class TestFiniteVolume(unittest.TestCase):
             eqn_disc = disc.process_symbol(eqn)
             approx_internal = eqn_disc.evaluate(None, y)[1:-1]
 
-            # error
-            error = np.linalg.norm(approx_internal - exact_internal) / np.linalg.norm(
-                exact_internal
-            )
-            return error
+            # Return difference between approx and exact
+            return approx_internal - exact_internal
 
         # Get errors
         ns = 10 * (2 ** np.arange(2, 7))
-        errs = np.array([get_l2_error(int(n)) for n in ns])
+        errs = np.array([get_error(int(n)) for n in ns])
 
         # Get rates: expect h**2
         rates = np.log2(errs[:-1] / errs[1:])
@@ -1197,7 +1188,7 @@ class TestFiniteVolume(unittest.TestCase):
             N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
         }
 
-        def get_l2_error(m):
+        def get_error(m):
             mesh = get_p2d_mesh_for_testing(3, m)
             spatial_methods = {"negative particle": pybamm.FiniteVolume}
             disc = pybamm.Discretisation(mesh, spatial_methods)
@@ -1222,15 +1213,12 @@ class TestFiniteVolume(unittest.TestCase):
             approx_internal = approx_eval[:, 1:-1]
             approx_internal = np.reshape(approx_internal, [sec_pts * (prim_pts - 2)])
 
-            # error
-            error = np.linalg.norm(approx_internal - exact_internal) / np.linalg.norm(
-                exact_internal
-            )
-            return error
+            # Return difference between approx and exact
+            return approx_internal - exact_internal
 
         # Get errors
         ns = 10 * (2 ** np.arange(2, 7))
-        errs = np.array([get_l2_error(int(n)) for n in ns])
+        errs = np.array([get_error(int(n)) for n in ns])
 
         # Get rates: expect h**2
         rates = np.log2(errs[:-1] / errs[1:])
@@ -1287,7 +1275,7 @@ class TestFiniteVolume(unittest.TestCase):
             }
         }
 
-        def get_l2_error(m):
+        def get_error(m):
             mesh = get_p2d_mesh_for_testing(6, m)
             spatial_methods = {
                 "negative particle": pybamm.FiniteVolume,
@@ -1319,15 +1307,12 @@ class TestFiniteVolume(unittest.TestCase):
             approx_internal = approx_eval[:, 1:-1]
             approx_internal = np.reshape(approx_internal, [sec_pts * (prim_pts - 2)])
 
-            # error
-            error = np.linalg.norm(approx_internal - exact_internal) / np.linalg.norm(
-                exact_internal
-            )
-            return error
+            # Return difference between approx and exact
+            return approx_internal - exact_internal
 
         # Get errors
         ns = 10 * (2 ** np.arange(2, 7))
-        errs = np.array([get_l2_error(int(n)) for n in ns])
+        errs = np.array([get_error(int(n)) for n in ns])
 
         # Get rates: expect h**2
         rates = np.log2(errs[:-1] / errs[1:])

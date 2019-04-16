@@ -12,14 +12,12 @@ import unittest
 
 
 class TestReactionDiffusionModel(unittest.TestCase):
-    @unittest.skip("")
     def test_basic_processing(self):
         model = pybamm.ReactionDiffusionModel()
 
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skip("")
     def test_optimisations(self):
         model = pybamm.ReactionDiffusionModel()
         optimtest = tests.OptimisationsTest(model)
@@ -47,7 +45,7 @@ class TestReactionDiffusionModel(unittest.TestCase):
         # solver = pybamm.ScikitsOdeSolver(tol=1e-12)
 
         # Function for convergence testing
-        def get_c_at_x(n):
+        def get_concs(n):
             model_copy = copy.deepcopy(model)
             # Set up discretisation
             var = pybamm.standard_spatial_vars
@@ -59,29 +57,23 @@ class TestReactionDiffusionModel(unittest.TestCase):
             disc.process_model(model_copy)
             solver.solve(model_copy, t_eval)
             t, y = solver.t, solver.y
-            conc = pybamm.ProcessedVariable(
+            return pybamm.ProcessedVariable(
                 model_copy.variables["Electrolyte concentration"], t, y, mesh=disc.mesh
             )
 
-            # Calculate concentration at ln
-            return conc(t, 0.5)
-
         # Get concentrations
-        ns = 20 * (2 ** np.arange(6))
-        concs = [get_c_at_x(int(n) + 1) for n in ns]
+        ns = 2 ** np.arange(8)
+        concs = [get_concs(int(n)) for n in ns]
 
-        # Get errors
-        norm = np.linalg.norm
-        errs = np.array(
-            [norm(concs[i + 1] - concs[i]) / norm(concs[i]) for i in range(len(ns) - 1)]
-        )
-        errs = errs[:-1] - errs[-1]
-        # Get rates: expect h**2 convergence, check for h convergence only
-        rates = np.log2(errs[:-1] / errs[1:])
-        import ipdb
-
-        ipdb.set_trace()
-        np.testing.assert_array_less(0.99 * np.ones_like(rates), rates)
+        # Test the value at a range of x points
+        for x in np.linspace(0, 1, 5):
+            # Get errors
+            errs = np.array(
+                [concs[i](1, x) - concs[-1](1, x) for i in range(len(ns) - 1)]
+            )
+            # Get rates: expect h**2 convergence
+            rates = np.log2(errs[:-1] / errs[1:]) / np.log2(2)
+            np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
 
 if __name__ == "__main__":

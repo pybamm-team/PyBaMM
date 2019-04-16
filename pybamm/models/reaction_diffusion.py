@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import autograd.numpy as np
 
 
 class ReactionDiffusionModel(pybamm.BaseModel):
@@ -27,10 +28,15 @@ class ReactionDiffusionModel(pybamm.BaseModel):
         #
         # Submodels
         #
-        # Load reaction flux from submodels
-        j = pybamm.interface.homogeneous_reaction(whole_cell)
+        # Use cos(x) as the source term
+        x = pybamm.SpatialVariable("x", domain=whole_cell)
+        j = pybamm.Function(np.cos, x)
+        # Use uniform porosity
+        epsilon = pybamm.Scalar(1)
         # Load diffusion model from submodels
-        diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
+        diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(
+            c_e, j, param, epsilon=epsilon
+        )
 
         # Create own model from diffusion model
         self.update(diffusion_model)
