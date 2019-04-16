@@ -2,61 +2,8 @@
 # Standard parameters for lithium-ion battery models
 #
 """
-Standard pybamm.Parameters for battery models
-
-Physical Constants
-------------------
-sp.R
-    Ideal gas constant
-sp.F
-    Faraday's constant
-sp.T_ref
-    Reference temperature
-
-Microscale Geometry
--------------------
-R_n, R_p
-    Negative and positive particle radii
-sp.a_n_dim, sp.a_p_dim
-    Negative and positive electrode surface area densities
-
-Electrolyte Properties
-----------------------
-ce_typ
-    Typical lithium ion concentration in electrolyte
-De_typ
-    Typical lithium ion diffusivity in the electrolyte
-
-Electrode Properties
---------------------
-sigma_n, sigma_p
-    Electrical conductivities of the negative and positive electrode
-cn_max, cp_max
-    Maximum lithium concentration in the negative and positive electrode
-D_n_typ, Dp_typ
-    Typical diffusivitites in the solid electrode material
-
-Electrochemical Reactions
---------------------------
-m_n, m_p
-    Reaction rates in negative and positive electrode regions
-
-Electrical
-----------
-voltage_low_cut, voltage_high_cut
-    Low and high voltage cut-offs
-I_typ
-    Typical current density
-
-Initial Conditions
--------------------
-ce0_dimensional
-    Initial lithium ion concentration in the electrolyte
-cn0_dimensional, cp0_dimensional
-    Initial lithium concentration in the negative and positive electrodes
+Standard parameters for lithium-ion battery models
 """
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 from scipy import constants
 

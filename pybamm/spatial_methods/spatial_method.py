@@ -25,8 +25,8 @@ class SpatialMethod:
 
     def spatial_variable(self, symbol):
         """
-        Creates a discretised spatial variable compatible with
-        the FiniteVolume method.
+        Convert a :class:`pybamm.SpatialVariable` node to a linear algebra object that
+        can be evaluated (e.g. a :class:`pybamm.Vector`).
 
         Parameters
         -----------
@@ -48,7 +48,7 @@ class SpatialMethod:
         ----------
         symbol : :class:`pybamm.Symbol`
             The symbol to be broadcasted
-        domain : iterable of string
+        domain : iterable of strings
             The domain to broadcast to
 
         Returns
@@ -67,7 +67,7 @@ class SpatialMethod:
         ----------
         symbol: :class:`pybamm.Symbol`
             The symbol that we will take the gradient of.
-        discretised_symbol: class: pybamm.Array
+        discretised_symbol: :class:`pybamm.Array`
             The discretised symbol of the correct size
 
         boundary_conditions : dict
@@ -90,7 +90,7 @@ class SpatialMethod:
         ----------
         symbol: :class:`pybamm.Symbol`
             The symbol that we will take the gradient of.
-        discretised_symbol: class: pybamm.Array
+        discretised_symbol: :class:`pybamm.Array`
             The discretised symbol of the correct size
         boundary_conditions : dict
             The boundary conditions of the model
@@ -112,9 +112,9 @@ class SpatialMethod:
         ----------
         domain: iterable of strings
             The domain in which to integrate
-        symbol: class: pybamm.Symbol
+        symbol: :class:`pybamm.Symbol`
             The symbol to which is being integrated
-        discretised_symbol: class: pybamm.Array
+        discretised_symbol: :class:`pybamm.Array`
             The discretised symbol of the correct size
 
         Returns
@@ -133,9 +133,9 @@ class SpatialMethod:
         ----------
         domain: iterable of strings
             The domain in which to integrate
-        symbol: class: pybamm.Symbol
+        symbol: :class:`pybamm.Symbol`
             The symbol to which is being integrated
-        discretised_symbol: class: pybamm.Array
+        discretised_symbol: :class:`pybamm.Array`
             The discretised symbol of the correct size
 
         Returns
@@ -146,7 +146,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def surface_value(self, discretised_symbol):
+    def boundary_value(self, discretised_symbol):
         """
         Returns the surface value using the approriate expression for the
         spatial method.

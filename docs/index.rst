@@ -8,7 +8,7 @@ Welcome to PyBaMM's documentation!
 Python Battery Mathematical Modelling (**PyBAMM**) solves continuum models for
 batteries, using both numerical methods and asymptotic analysis.
 
-PyBAMM is hosted on GitHub_. This page provides the *API*, or *developer
+PyBaMM is hosted on GitHub_. This page provides the *API*, or *developer
 documentation* for ``pybamm``.
 
 * :ref:`genindex`
@@ -31,3 +31,21 @@ Contents
     source/spatial_methods/index
     source/solvers/index
     source/processed_variable
+
+Examples
+========
+
+Detailed examples can be viewed on the
+`GitHub examples page <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_,
+and run locally using ``jupyter notebook``, or online through
+`Binder <https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master?filepath=examples%2Fnotebooks>`_.
+
+Contributing
+============
+
+There are many ways to contribute to PyBaMM:
+
+.. toctree::
+    tutorials/add-spatial-method
+
+Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.

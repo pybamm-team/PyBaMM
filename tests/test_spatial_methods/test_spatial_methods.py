@@ -21,7 +21,7 @@ class TestSpatialMethod(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.surface_value(None)
+            spatial_method.boundary_value(None)
         with self.assertRaises(NotImplementedError):
             spatial_method.compute_diffusivity()
         with self.assertRaises(NotImplementedError):
