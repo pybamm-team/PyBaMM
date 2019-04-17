@@ -14,15 +14,9 @@ class TestDFN(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lithium_ion.DFN()
         var = pybamm.standard_spatial_vars
-        model.default_var_pts = {
-            var.x_n: 3,
-            var.x_s: 3,
-            var.x_p: 3,
-            var.r_n: 3,
-            var.r_p: 3,
-        }
+        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 3, var.r_p: 3}
 
-        modeltest = tests.StandardModelTest(model)
+        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all()
 
     def test_optimisations(self):
