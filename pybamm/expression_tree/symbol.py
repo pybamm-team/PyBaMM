@@ -273,14 +273,18 @@ class Symbol(anytree.NodeMixin):
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
+        if other is None:
+            return self
+        elif isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Multiplication(self, other)
         else:
             raise NotImplementedError
 
     def __rmul__(self, other):
         """return a :class:`Multiplication` object"""
-        if isinstance(other, (Symbol, numbers.Number)):
+        if other is None:
+            return self
+        elif isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Multiplication(other, self)
         else:
             raise NotImplementedError
@@ -301,6 +305,8 @@ class Symbol(anytree.NodeMixin):
 
     def __truediv__(self, other):
         """return a :class:`Division` object"""
+        if other is None:
+            return self
         if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Division(self, other)
         else:
@@ -308,6 +314,8 @@ class Symbol(anytree.NodeMixin):
 
     def __rtruediv__(self, other):
         """return a :class:`Division` object"""
+        if other is None:
+            return pybamm.Division(1.0, self)
         if isinstance(other, (Symbol, numbers.Number)):
             return pybamm.Division(other, self)
         else:

@@ -79,9 +79,6 @@ class TestMatrix(unittest.TestCase):
             self.assertIsInstance(expr, pybamm.Vector)
             np.testing.assert_array_equal(expr.entries, np.array([2, 2]))
 
-        with self.assertRaises(pybamm.ModelError):
-            (e / (m1 @ v)).simplify()
-
         # dont expant mult within mat-mult (issue #253)
         m1 = pybamm.Matrix(np.ones((300, 299)))
         m2 = pybamm.Matrix(np.ones((299, 300)))
@@ -108,11 +105,11 @@ class TestMatrix(unittest.TestCase):
         # we don't expect any speed up or slow down here
         timer = pybamm.Timer()
         start = timer.time()
-        for _ in range(20):
+        for _ in range(40):
             expr2.evaluate(y=np.ones(300))
         end = timer.time()
         start_simp = timer.time()
-        for _ in range(20):
+        for _ in range(40):
             expr2simp.evaluate(y=np.ones(300))
         end_simp = timer.time()
         self.assertLess(end_simp - start_simp, 1.2 * (end - start))
