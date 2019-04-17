@@ -189,11 +189,8 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             r = submesh[0].nodes
             r_edge = submesh[0].edges[1:-1]
 
-            prim_pts = submesh[0].npts
-            sec_pts = len(submesh)
-
             N = pybamm.Matrix(
-                np.kron(np.ones(sec_pts), r_edge ** 2 * np.sin(r_edge)),
+                np.kron(np.ones(len(submesh)), r_edge ** 2 * np.sin(r_edge)),
                 domain=["negative particle"],
             )
             div_eqn = pybamm.div(N)
@@ -204,7 +201,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
             div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
-            div_exact = np.kron(np.ones(sec_pts), div_exact)
+            div_exact = np.kron(np.ones(len(submesh)), div_exact)
 
             # Discretise and evaluate
             div_eqn_disc = disc.process_symbol(div_eqn)
@@ -233,9 +230,6 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             r = submesh_r[0].nodes
             r_edge = submesh_r[0].edges[1:-1]
             x = pybamm.Vector(mesh["negative electrode"][0].nodes)
-
-            prim_pts = submesh_r[0].npts
-            sec_pts = len(submesh_r)
 
             N = pybamm.Matrix(
                 np.kron(x.entries, r_edge ** 2 * np.sin(r_edge)),
