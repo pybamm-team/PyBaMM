@@ -18,7 +18,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     Parameters
     ----------
-    mesh : :class:`pybamm.Mesh` (or subclass)
+    mesh : :class:`pybamm.Mesh`
         Contains all the submeshes for discretisation
 
     **Extends:"": :class:`pybamm.SpatialMethod`
@@ -244,7 +244,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         ----------
         domain : list
             The domain(s) in which to compute the divergence matrix
-        bc_type : string
+        bc_type : str
             What type of boundary condition to apply. Affects the size of the resulting
             matrix
 
@@ -528,7 +528,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         -----------
         discretised_symbol : :class:`pybamm.StateVector`
             The discretised variable from which to calculate the boundary value
-        side : string
+        side : str
             Which side to take the boundary value on ("left" or "right")
 
         Returns

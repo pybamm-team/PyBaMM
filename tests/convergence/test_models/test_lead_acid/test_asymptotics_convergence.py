@@ -49,9 +49,9 @@ class TestAsymptoticConvergence(unittest.TestCase):
                 base_parameters=full_model.default_parameter_values,
                 optional_parameters={"Typical current density": current},
             )
-            param.process_discretised_model(leading_order_model, loqs_disc)
-            param.process_discretised_model(composite_model, comp_disc)
-            param.process_discretised_model(full_model, full_disc)
+            param.update_model(leading_order_model, loqs_disc)
+            param.update_model(composite_model, comp_disc)
+            param.update_model(full_model, full_disc)
             # Solve, make sure times are the same
             t_eval = np.linspace(0, 0.1, 10)
             solver_loqs = leading_order_model.default_solver

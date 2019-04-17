@@ -17,7 +17,7 @@ class TestUpdateParameters(unittest.TestCase):
         self.assertEqual(eqn.evaluate(), 7)
 
         parameter_values = pybamm.ParameterValues({"test parameter": 3})
-        eqn_changed = parameter_values.process_symbol(eqn)
+        eqn_changed = parameter_values.update_scalars(eqn)
         self.assertEqual(eqn_changed.evaluate(), 10)
 
     def test_set_and_update_parameters(self):
@@ -27,12 +27,12 @@ class TestUpdateParameters(unittest.TestCase):
         eqn = a + b * c
 
         parameter_values = pybamm.ParameterValues({"test parameter": 2})
-        eqn_changed = parameter_values.process_symbol(eqn)
-        self.assertEqual(eqn_changed.evaluate(), 7)
+        eqn_processed = parameter_values.process_symbol(eqn)
+        self.assertEqual(eqn_processed.evaluate(), 7)
 
         parameter_values = pybamm.ParameterValues({"test parameter": 3})
-        eqn_changed_again = parameter_values.process_symbol(eqn_changed)
-        self.assertEqual(eqn_changed_again.evaluate(), 10)
+        eqn_updated = parameter_values.update_scalars(eqn_processed)
+        self.assertEqual(eqn_updated.evaluate(), 10)
 
     def test_update_model(self):
         # standard model
