@@ -12,7 +12,7 @@ class SpatialMethod:
 
     Parameters
     ----------
-    mesh : :class: `pybamm.Mesh` (or subclass)
+    mesh : :class: `pybamm.Mesh`
         Contains all the submeshes for discretisation
     """
 

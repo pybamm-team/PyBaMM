@@ -232,7 +232,7 @@ class BaseModel(object):
 
         Parameters
         ----------
-        submodel : iterable of submodels (subclasses of :class:`pybamm.BaseModel`)
+        submodel : iterable of :class:`pybamm.BaseModel`
             The submodels from which to create new model
         """
         for submodel in submodels:

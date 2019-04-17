@@ -20,7 +20,7 @@ class Broadcast(pybamm.SpatialOperator):
         child node
     domain : iterable of string
         the domain to broadcast the child to
-    name : string
+    name : str
         name of the node
 
     **Extends:** :class:`SpatialOperator`
