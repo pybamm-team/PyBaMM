@@ -47,5 +47,6 @@ There are many ways to contribute to PyBaMM:
 
 .. toctree::
     tutorials/add-spatial-method
+    tutorials/add-solver
 
 Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.

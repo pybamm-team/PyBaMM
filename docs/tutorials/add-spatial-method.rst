@@ -13,11 +13,11 @@ The role of spatial methods
 All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_.
 After it has been created and parameters have been set, the model is passed to the :class:`pybamm.Discretisation` class,
 which converts it into a linear algebra form.
-For example, the object::
+For example, the object:
 
     grad(u)
 
-might get converted to a Matrix-Vector multiplication::
+might get converted to a Matrix-Vector multiplication:
 
     Matrix(100,100) @ y[0:100]
 
@@ -32,11 +32,11 @@ Implementing a new spatial method
 ---------------------------------
 
 To add a new spatial method (e.g. My Fast Method), first create a new file (``my_fast_method.py``) in ``pybamm/spatial_methods``,
-with a single class that inherits from :class:`pybamm.SpatialMethod`, such as::
+with a single class that inherits from :class:`pybamm.SpatialMethod`, such as:
 
     def MyFastMethod(pybamm.SpatialMethod):
 
-and add the class to `pybamm/__init__.py`::
+and add the class to `pybamm/__init__.py`:
 
     from .spatial_methods.my_fast_method import MyFastMethod
 
@@ -65,8 +65,8 @@ Unit tests for the new class
 ----------------------------
 
 For the new spatial method to be added to PyBaMM, you must add unit tests to demonstrate that it behaves as expected
-(see, for example, the `Finite Volume unit tests <https://github.com/pybamm-team/PyBaMM/blob/master/tests/test_spatial_methods/test_finite_volume.py>`_).
-The best way to get started would be to create a file `test_my_fast_method.py` in `tests/test_spatial_methods/` that performs at least the
+(see, for example, the `Finite Volume unit tests <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_spatial_methods/test_finite_volume.py>`_).
+The best way to get started would be to create a file `test_my_fast_method.py` in `tests/unit/test_spatial_methods/` that performs at least the
 following checks:
 
 - Operations return objects that have the expected shape
@@ -78,7 +78,7 @@ Test on the models
 
 In theory, any existing model can now be discretised using `MyFastMethod` instead of their default spatial methods, with no extra work from here.
 To test this, add something like the following test to one of the model test files
-(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/test_models/test_lithium_ion/test_lithium_ion_dfn.py>`_)::
+(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_models/test_lithium_ion/test_lithium_ion_dfn.py>`_):
 
     def test_my_fast_method(self):
         model = pybamm.lithium_ion.DFN()
