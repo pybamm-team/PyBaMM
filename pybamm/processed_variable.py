@@ -3,7 +3,6 @@
 #
 import numpy as np
 import scipy.interpolate as interp
-import matplotlib.pyplot as plt
 
 
 class ProcessedVariable(object):
