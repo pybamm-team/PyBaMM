@@ -89,11 +89,10 @@ class ParameterValues(dict):
         processing : str, optional
             Flag to indicate how to process model (default 'process')
 
-            - 'process': Calls :meth:`process_symbol()` - walk through the symbol
-            and replace any Parameter with a Value.
-
-            - 'update': Calls :meth:`update_scalars()` (for already-processed
-            model) - update the value of any Scalars in the expression tree.
+            * 'process': Calls :meth:`process_symbol()` (walk through the symbol \
+            and replace any Parameter with a Value)
+            * 'update': Calls :meth:`update_scalars()` for use on already-processed \
+            model (update the value of any Scalars in the expression tree.)
 
         """
         if processing == "process":
