@@ -3,6 +3,7 @@
 #
 import numpy as np
 import scipy.interpolate as interp
+import matplotlib.pyplot as plt
 
 
 class ProcessedVariable(object):
@@ -27,6 +28,25 @@ class ProcessedVariable(object):
         interpolation
     interp_kind : str
         The method to use for interpolation
+
+    Notes
+    -----
+    The default behaviour of :meth:`scipy.interpolate.interp1d` and
+    :meth:`scipy.interpolate.interp2d` is followed for extrapolation to points outside
+    the domain:
+
+    - in 1D, a `ValueError` is raised if a point outside the interpolation range is \
+        requested. The standard use case for 1D interpolation is a function of time, \
+        which we never expect to extrapolate outside the domain
+    - in 2D, the nearest neighbour is returned if a point outside the interpolation \
+        range is requested. This is useful since the x values used for interpolation \
+        don't always go from x=0 to x=1 (e.g. if x is nodes in a Finite Volumes mesh). \
+        However, this can lead to values far from the interpolation range being very \
+        inaccurate, without any errors being raised.
+
+    A possible improvement in 2D would be to calculate the values at x=0 and x=1, add
+    these to the `entries` matrix, and then disallow extrapolation outside of the
+    interpolation range
 
     """
 

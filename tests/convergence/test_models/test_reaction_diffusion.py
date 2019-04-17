@@ -23,7 +23,6 @@ class TestReactionDiffusionModel(unittest.TestCase):
         # Set up solver
         t_eval = np.linspace(0, 1)
         solver = model.default_solver
-        # solver = pybamm.ScikitsOdeSolver(tol=1e-12)
 
         # Function for convergence testing
         def get_concs(n):
@@ -46,11 +45,16 @@ class TestReactionDiffusionModel(unittest.TestCase):
         ns = 2 ** np.arange(8)
         concs = [get_concs(int(n)) for n in ns]
 
-        # Test the value at a range of x points
-        for x in np.linspace(0, 1, 5):
-            # Get errors
+        # Test the value at a range of times
+        for t in np.linspace(0.01, 1, 5):
+            # Get errors at the points from the coarsest solution
+            x = concs[0].x_sol
+            # Use inf norm (max abs error), comparing each solution to the finest sol
             errs = np.array(
-                [concs[i](1, x) - concs[-1](1, x) for i in range(len(ns) - 1)]
+                [
+                    np.linalg.norm(concs[i](t, x) - concs[-1](t, x), np.inf)
+                    for i in range(len(ns) - 1)
+                ]
             )
             # Get rates: expect h**2 convergence
             rates = np.log2(errs[:-1] / errs[1:])
