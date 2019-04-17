@@ -47,7 +47,7 @@ class ParameterValues(dict):
 
         Parameters
         ----------
-        filename : string
+        filename : str
             The name of the csv file containing the parameters.
 
         Returns
@@ -68,7 +68,7 @@ class ParameterValues(dict):
 
         Parameters
         ----------
-        parameter : :class:`pybamm.expression_tree.parameter.Parameter` instance
+        parameter : :class:`pybamm.Parameter` instance
             The parameter whose value to obtain
 
         Returns
@@ -84,8 +84,16 @@ class ParameterValues(dict):
 
         Parameters
         ----------
-        model : :class:`pybamm.models.core.BaseModel` (or subclass) instance
+        model : :class:`pybamm.BaseModel`
             Model to assign parameter values for
+        processing : str, optional
+            Flag to indicate how to process model (default 'process')
+
+            - 'process': Calls :meth:`process_symbol()` - walk through the symbol
+            and replace any Parameter with a Value.
+
+            - 'update': Calls :meth:`update_scalars()` (for already-processed
+            model) - update the value of any Scalars in the expression tree.
 
         """
         if processing == "process":
@@ -129,7 +137,7 @@ class ParameterValues(dict):
 
         Parameters
         ----------
-        model : :class:`pybamm.models.core.BaseModel` (or subclass) instance
+        model : :class:`pybamm.BaseModel`
             Model to assign parameter values for
         disc : :class:`pybamm.Discretisation`
             The class that was used to discretise
@@ -146,14 +154,15 @@ class ParameterValues(dict):
         ).evaluate(0, None)
 
     def process_geometry(self, geometry):
-        """Assign parameter values to a geometry.
-            Currently inplace, could be changed to return a new model.
+        """
+        Assign parameter values to a geometry.
+        Currently inplace, could be changed to return a new model.
 
-            Parameters
-            ----------
-            geometry : :class:`pybamm.Geometry` (or subclass) instance
-                    Geometry specs to assign parameter values to
-            """
+        Parameters
+        ----------
+        geometry : :class:`pybamm.Geometry`
+                Geometry specs to assign parameter values to
+        """
 
         for domain in geometry:
             for prim_sec, variables in geometry[domain].items():
@@ -165,7 +174,6 @@ class ParameterValues(dict):
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
-        Can process a model either before or after discretisation
 
         Parameters
         ----------
