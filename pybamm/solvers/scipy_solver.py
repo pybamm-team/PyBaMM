@@ -14,7 +14,7 @@ class ScipySolver(pybamm.OdeSolver):
 
     Parameters
     ----------
-    method : string, optional
+    method : str, optional
         The method to use in solve_ivp (default is "BDF")
     tolerance : float, optional
         The tolerance for the solver (default is 1e-8). Set as the both reltol and

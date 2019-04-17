@@ -123,7 +123,7 @@ class DomainConcatenation(Concatenation):
     children : iterable of :class:`pybamm.Symbol`
         The symbols to concatenate
 
-    mesh : :class:`pybamm.BaseMesh` (or subclass)
+    mesh : :class:`pybamm.BaseMesh`
         The underlying mesh for discretisation, used to obtain the number of mesh points
         in each domain.
 

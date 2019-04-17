@@ -53,7 +53,7 @@ def exchange_current_density(c_e, c_s_k_surf=None, domain=None):
         The electrolyte concentration
     c_s_k_surf : :class:`pybamm.Variable`
         The concentration of lithium on the surface of a particle
-    domain : string
+    domain : str
         Which domain to calculate the exchange current density in ("negative electrode"
         or "positive electrode"). Default is None, in which case the domain is\
         c_e.domain
