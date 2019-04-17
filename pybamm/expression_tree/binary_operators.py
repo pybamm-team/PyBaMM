@@ -477,6 +477,27 @@ class BinaryOperator(pybamm.Symbol):
 
         return pybamm.simplify_if_constant(new_node)
 
+    def _binary_evaluate(self, left, right):
+        """ Perform binary operation on nodes 'left' and 'right'. """
+        raise NotImplementedError
+
+    def evaluate(self, t=None, y=None, known_evals=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        if known_evals is not None:
+            id = self.id
+            try:
+                return known_evals[id], known_evals
+            except KeyError:
+                left, known_evals = self.children[0].evaluate(t, y, known_evals)
+                right, known_evals = self.children[1].evaluate(t, y, known_evals)
+                value = self._binary_evaluate(left, right)
+                known_evals[id] = value
+                return value, known_evals
+        else:
+            left = self.children[0].evaluate(t, y)
+            right = self.children[1].evaluate(t, y)
+            return self._binary_evaluate(left, right)
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
@@ -525,9 +546,9 @@ class Power(BinaryOperator):
                     @ exponent.jac(variable)
                 )
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) ** self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left ** right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -567,9 +588,9 @@ class Addition(BinaryOperator):
         else:
             return self.children[0].jac(variable) + self.children[1].jac(variable)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) + self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left + right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -605,9 +626,9 @@ class Subtraction(BinaryOperator):
         """ See :meth:`pybamm.Symbol.jac()`. """
         return self.children[0].jac(variable) - self.children[1].jac(variable)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) - self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left - right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -659,11 +680,8 @@ class Multiplication(BinaryOperator):
                 left
             ) @ right.jac(variable)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        left = self.children[0].evaluate(t, y)
-        right = self.children[1].evaluate(t, y)
-
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
         # broadcasting is done correctly, see #253. This might be inefficient, so will
         # need to revisit
@@ -737,9 +755,9 @@ class MatrixMultiplication(BinaryOperator):
         else:
             raise NotImplementedError
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) @ self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left @ right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -787,9 +805,9 @@ class Division(BinaryOperator):
                 - pybamm.Diagonal(top) @ bottom.jac(variable)
             )
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y) / self.children[1].evaluate(t, y)
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return left / right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """

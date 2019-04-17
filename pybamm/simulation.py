@@ -24,7 +24,7 @@ class Simulation(object):
         The mesh to be used for the simulation.
     solver : :class:`pybamm.solver.Solver` instance
         The algorithm for solving the model.
-    name : string, optional
+    name : str, optional
         The simulation name.
 
     """

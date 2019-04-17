@@ -50,7 +50,7 @@ class BaseSolver(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
         t_eval : numeric type

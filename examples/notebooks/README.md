@@ -1,6 +1,6 @@
 # Examples
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tinosulzer/PyBaMM/master)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master)
 
 This page contains a number of examples showing how to use PyBaMM.
 
@@ -9,7 +9,7 @@ These notebooks can be downloaded and used locally by running
 ```
 $ jupyter notebook
 ```
-from your local PyBaMM repository, or used online through [Binder](https://mybinder.org/v2/gh/tinosulzer/PyBaMM/master), or you can simply copy/paste the relevant code.
+from your local PyBaMM repository, or used online through [Binder](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master), or you can simply copy/paste the relevant code.
 
 ## Getting started
 

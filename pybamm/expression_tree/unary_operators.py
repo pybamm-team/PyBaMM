@@ -9,6 +9,7 @@ import autograd
 import numpy as np
 import numbers
 from scipy.sparse import csr_matrix, diags
+from inspect import signature
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -49,6 +50,21 @@ class UnaryOperator(pybamm.Symbol):
 
         return self.__class__(child)
 
+    def _unary_evaluate(self, child):
+        """Perform unary operation on a child. """
+        raise NotImplementedError
+
+    def evaluate(self, t=None, y=None, known_evals=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        if known_evals is not None:
+            if self.id not in known_evals:
+                child, known_evals = self.children[0].evaluate(t, y, known_evals)
+                known_evals[self.id] = self._unary_evaluate(child)
+            return known_evals[self.id], known_evals
+        else:
+            child = self.children[0].evaluate(t, y)
+            return self._unary_evaluate(child)
+
 
 class Negate(UnaryOperator):
     """A node in the expression tree representing a `-` negation operator
@@ -60,9 +76,9 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
         super().__init__("-", child)
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return -self.children[0].evaluate(t, y)
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "{}{!s}".format(self.name, self.children[0])
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -75,9 +91,9 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.Symbol.jac()`. """
         return -self.children[0].jac(variable)
 
-    def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{}{!s}".format(self.name, self.children[0])
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return -child
 
 
 class AbsoluteValue(UnaryOperator):
@@ -100,13 +116,22 @@ class AbsoluteValue(UnaryOperator):
         # Derivative is not well-defined
         raise NotImplementedError("Derivative of absolute function is not defined")
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return np.abs(self.children[0].evaluate(t, y))
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return np.abs(child)
 
 
 class Function(UnaryOperator):
     """A node in the expression tree representing an arbitrary function
+
+    Parameters
+    ----------
+    func : method
+        A function that takes either 0 or 1 parameters. If func takes no parameters,
+        self.evaluate() return func(). Otherwise, self.evaluate(t,y) returns
+        func(child.evaluate(t,y))
+    child : :class:`pybamm.Symbol`
+        The child node to apply the function to
 
     **Extends:** :class:`UnaryOperator`
     """
@@ -115,6 +140,12 @@ class Function(UnaryOperator):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
         super().__init__("function ({})".format(func.__name__), child)
         self.func = func
+        # hack to work out whether function takes any params
+        # (signature doesn't work for numpy)
+        if isinstance(func, np.ufunc):
+            self.takes_no_params = False
+        else:
+            self.takes_no_params = len(signature(func).parameters) == 0
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -147,18 +178,25 @@ class Function(UnaryOperator):
             jac_fun.domain = self.domain
             return jac_fun
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.func(self.children[0].evaluate(t, y))
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        if self.takes_no_params:
+            return self.func()
+        else:
+            return self.func(child)
 
     # Function needs its own simplify as it has a different __init__ signature
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
-        child = self.children[0].simplify()
+        if self.takes_no_params:
+            # If self.func() takes no parameters then we can always simplify it
+            return pybamm.Scalar(self.func())
+        else:
+            child = self.children[0].simplify()
 
-        new_node = pybamm.Function(self.func, child)
+            new_node = pybamm.Function(self.func, child)
 
-        return pybamm.simplify_if_constant(new_node)
+            return pybamm.simplify_if_constant(new_node)
 
 
 class Index(UnaryOperator):
@@ -172,9 +210,9 @@ class Index(UnaryOperator):
         super().__init__(name, child)
         self.index = index
 
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        return self.children[0].evaluate(t, y)[self.index]
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return child[self.index]
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
@@ -402,7 +440,7 @@ class BoundaryValue(SpatialOperator):
     ----------
     child : `pybamm.Symbol`
         The variable whose boundary value to take
-    side : string
+    side : str
         Which side to take the boundary value on ("left" or "right")
 
     **Extends:** :class:`SpatialOperator`

@@ -47,7 +47,7 @@ class Discretisation(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
 
@@ -127,7 +127,7 @@ class Discretisation(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
 
@@ -147,7 +147,7 @@ class Discretisation(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
@@ -273,12 +273,12 @@ class Discretisation(object):
 
         Parameters
         ----------
-        symbol : :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
+        symbol : :class:`pybamm.expression_tree.symbol.Symbol`
             Symbol to discretise
 
         Returns
         -------
-        :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
+        :class:`pybamm.expression_tree.symbol.Symbol`
             Discretised symbol
 
         """
@@ -366,12 +366,12 @@ class Discretisation(object):
 
         Parameters
         ----------
-        bin_op : :class:`pybamm.BinaryOperator` (or subclass)
+        bin_op : :class:`pybamm.BinaryOperator`
             Binary operator to discretise
 
         Returns
         -------
-        :class:`pybamm.BinaryOperator` (or subclass)
+        :class:`pybamm.BinaryOperator`
             Discretised binary operator
 
         """

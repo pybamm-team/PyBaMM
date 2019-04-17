@@ -41,7 +41,7 @@ You now have everything you need to start making changes!
 9. [Test your code!](#testing)
 10. PyBaMM has online documentation at http://pybamm.readthedocs.io/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
 11. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
-12. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/tinosulzer/pybamm).
+12. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
 13. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM master repository.
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
@@ -229,7 +229,7 @@ Next, open a browser, and navigate to your local PyBaMM directory (by typing the
 
 Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [examples directory](examples/notebooks). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
 
-All example notebooks should be listed in [examples/README.md](https://github.com/tinosulzer/pybamm/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
+All example notebooks should be listed in [examples/README.md](https://github.com/pybamm-team/PyBaMM/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
 
 Where possible, notebooks are tested daily. A list of slow notebooks (which time-out and fail tests) is maintained in `.slow-books`, these notebooks will be excluded from daily testing.
 
@@ -250,7 +250,7 @@ Note that this file must be kept in sync with the version number in [pybamm/__in
 
 ### Travis CI
 
-All committed code is tested using [Travis CI](https://travis-ci.org/), tests are published on https://travis-ci.org/tinosulzer/pybamm.
+All committed code is tested using [Travis CI](https://travis-ci.org/), tests are published on https://travis-ci.org/pybamm-team/PyBaMM.
 
 Configuration files:
 
@@ -267,7 +267,7 @@ Unit tests and flake8 testing is done for every commit. A nightly cronjob also t
 
 ### Codecov
 
-Code coverage (how much of our code is actually seen by the (linux) unit tests) is tested using [Codecov](https://docs.codecov.io/), a report is visible on https://codecov.io/gh/tinosulzer/pybamm.
+Code coverage (how much of our code is actually seen by the (linux) unit tests) is tested using [Codecov](https://docs.codecov.io/), a report is visible on https://codecov.io/gh/pybamm-team/PyBaMM.
 
 Configuration files:
 
@@ -281,7 +281,7 @@ Documentation is built using https://readthedocs.org/ and published on http://py
 
 ### Binder
 
-Editable notebooks are made available using [Binder](mybinder.readthedocs.io) at https://mybinder.org/v2/gh/tinosulzer/PyBaMM/master.
+Editable notebooks are made available using [Binder](mybinder.readthedocs.io) at https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master.
 
 Configuration files:
 
@@ -293,7 +293,7 @@ postBuild
 
 GitHub does some magic with particular filenames. In particular:
 
-- The first page people see when they go to [our GitHub page](https://github.com/tinosulzer/PyBaMM) displays the contents of [README.md](README.md), which is written in the [Markdown](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet) format. Some guidelines can be found [here](https://help.github.com/articles/about-readmes/).
+- The first page people see when they go to [our GitHub page](https://github.com/pybamm-team/PyBaMM) displays the contents of [README.md](README.md), which is written in the [Markdown](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet) format. Some guidelines can be found [here](https://help.github.com/articles/about-readmes/).
 - The license for using PyBaMM is stored in [LICENSE](LICENSE), and [automatically](https://help.github.com/articles/adding-a-license-to-a-repository/) linked to by GitHub.
 - This file, [CONTRIBUTING.md](CONTRIBUTING.md) is recognised as the contribution guidelines and a link is [automatically](https://github.com/blog/1184-contributing-guidelines) displayed when new issues or pull requests are created.
 

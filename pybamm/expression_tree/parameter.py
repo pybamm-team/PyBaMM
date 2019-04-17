@@ -28,7 +28,9 @@ class Parameter(pybamm.Symbol):
 class FunctionParameter(pybamm.UnaryOperator):
     """A node in the expression tree representing a function parameter
 
-    This node will be replaced by a :class:`pybamm.Function` node
+    This node will be replaced by a :class:`pybamm.Function` node if a callable function
+    is passed to the parameter values, and otherwise (in some rarer cases, such as
+    constant current) a :class:`pybamm.Scalar` node.
 
     Parameters
     ----------

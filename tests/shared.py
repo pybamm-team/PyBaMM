@@ -16,12 +16,9 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         super().__init__(mesh)
 
     def spatial_variable(self, symbol):
-        # for finite volume we use the cell centres
+        # use the cell centres
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         return pybamm.Vector(symbol_mesh[0].nodes)
-
-    def broadcast(self, symbol, domain):
-        return pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
