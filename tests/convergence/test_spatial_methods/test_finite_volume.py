@@ -9,7 +9,8 @@ import unittest
 
 
 class TestFiniteVolumeConvergence(unittest.TestCase):
-    def test_cartesian_grad_convergence(self):
+    def test_cartesian_spherical_grad_convergence(self):
+        # note that grad function is the same for cartesian and spherical
         spatial_methods = {"macroscale": pybamm.FiniteVolume}
         whole_cell = ["negative electrode", "separator", "positive electrode"]
 
@@ -91,177 +92,181 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
         ns = 10 * 2 ** np.arange(6)
         errs = {n: get_error(int(n)) for n in ns}
         # expect quadratic convergence everywhere
-        errs_internal = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
-        rates = np.log2(errs_internal[:-1] / errs_internal[1:])
+        err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
+        rates = np.log2(err_norm[:-1] / err_norm[1:])
         np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
-    def test_spherical_convergence(self):
-        # test div( grad( r**3 )) == 12*r
+    def test_spherical_div_convergence_quadratic(self):
+        # test div( r**2 * sin(r) ) == 4*r*sin(r) - r**2*cos(r)
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
 
-        domain = ["negative particle"]
-        c = pybamm.Variable("c", domain=domain)
-        N = pybamm.grad(c)
-        eqn = pybamm.div(N)
-        boundary_conditions = {
-            N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(3)}
-        }
-
+        # Function for convergence testing
         def get_error(n):
+            # create mesh and discretisation (single particle)
             mesh = get_mesh_for_testing(n)
-            spatial_methods = {"negative particle": pybamm.FiniteVolume}
             disc = pybamm.Discretisation(mesh, spatial_methods)
+            submesh = mesh["negative particle"]
+            r = submesh[0].nodes
+            r_edge = submesh[0].edges[1:-1]
+
+            # Define flux and bcs
+            N = pybamm.Vector(
+                r_edge ** 2 * np.sin(r_edge), domain=["negative particle"]
+            )
+            div_eqn = pybamm.div(N)
+            boundary_conditions = {
+                N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(np.sin(1))}
+            }
             disc._bcs = boundary_conditions
-            mesh = disc.mesh["negative particle"]
-            r = mesh[0].nodes
+            # Define exact solutions
+            # N = r**3 --> div(N) = 5 * r**2
+            div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
 
-            # exact solution
-            y = r ** 3
-            div_grad_exact = 12 * r
-
-            # discretise and evaluate
-            variables = [c]
-            disc.set_variable_slices(variables)
-            eqn_disc = disc.process_symbol(eqn)
-            div_grad_approx = eqn_disc.evaluate(None, y)
+            # Discretise and evaluate
+            div_eqn_disc = disc.process_symbol(div_eqn)
+            div_approx = div_eqn_disc.evaluate()
 
             # Return difference between approx and exact
-            return div_grad_approx - div_grad_exact
+            return div_approx - div_exact
 
         # Get errors
-        ns = 100 * 3 ** np.arange(2, 5)
+        ns = 10 * 2 ** np.arange(6)
         errs = {n: get_error(int(n)) for n in ns}
-        # expect quadratic convergence at internal points
-        for idx_factor in [0, 1, 2]:
-            err_at_idx = np.array(
-                [errs[n][((2 * idx_factor + 1) * n - 3) // 6] for n in ns]
-            )
-            rates = np.log(err_at_idx[:-1] / err_at_idx[1:]) / np.log(3)
-            np.testing.assert_array_less(1.9 * np.ones_like(rates), rates)
-        # expect linear convergence at the boundaries
-        for idx in [0, -1]:
-            err_at_idx = np.array([errs[n][idx] for n in ns])
-            rates = np.log(err_at_idx[:-1] / err_at_idx[1:]) / np.log(3)
-            np.testing.assert_array_less(0.98 * np.ones_like(rates), rates)
+        # expect quadratic convergence everywhere
+        err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
+        rates = np.log2(err_norm[:-1] / err_norm[1:])
+        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
-    def test_p2d_spherical_convergence(self):
-        # test div( grad( sin(r) )) == (2/r)*cos(r) - sin(r)
+    def test_spherical_div_convergence_linear(self):
+        # test div( r*sin(r) ) == 3*sin(r) + r*cos(r)
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
 
-        domain = ["negative particle"]
-        c = pybamm.Variable("c", domain=domain)
-        N = pybamm.grad(c)
-        eqn = pybamm.div(N)
-        boundary_conditions = {
-            N.id: {"left": pybamm.Scalar(np.cos(0)), "right": pybamm.Scalar(np.cos(1))}
-        }
+        # Function for convergence testing
+        def get_error(n):
+            # create mesh and discretisation (single particle)
+            mesh = get_mesh_for_testing(n)
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            submesh = mesh["negative particle"]
+            r = submesh[0].nodes
+            r_edge = submesh[0].edges[1:-1]
 
+            # Define flux and bcs
+            N = pybamm.Vector(r_edge * np.sin(r_edge), domain=["negative particle"])
+            div_eqn = pybamm.div(N)
+            boundary_conditions = {
+                N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(np.sin(1))}
+            }
+            disc._bcs = boundary_conditions
+            # Define exact solutions
+            # N = r*sin(r) --> div(N) = 3*sin(r) + r*cos(r)
+            div_exact = 3 * np.sin(r) + r * np.cos(r)
+
+            # Discretise and evaluate
+            div_eqn_disc = disc.process_symbol(div_eqn)
+            div_approx = div_eqn_disc.evaluate()
+
+            # Return difference between approx and exact
+            return div_approx - div_exact
+
+        # Get errors
+        ns = 10 * 2 ** np.arange(6)
+        errs = {n: get_error(int(n)) for n in ns}
+        # expect linear convergence everywhere
+        err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
+        rates = np.log2(err_norm[:-1] / err_norm[1:])
+        np.testing.assert_array_less(0.99 * np.ones_like(rates), rates)
+
+    def test_p2d_spherical_convergence_quadratic(self):
+        # test div( r**2 * sin(r) ) == 4*r*sin(r) - r**2*cos(r)
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
+
+        # Function for convergence testing
         def get_error(m):
+            # create mesh and discretisation p2d, uniform in x
             mesh = get_p2d_mesh_for_testing(3, m)
-            spatial_methods = {"negative particle": pybamm.FiniteVolume}
             disc = pybamm.Discretisation(mesh, spatial_methods)
+            submesh = mesh["negative particle"]
+            r = submesh[0].nodes
+            r_edge = submesh[0].edges[1:-1]
+
+            prim_pts = submesh[0].npts
+            sec_pts = len(submesh)
+
+            N = pybamm.Matrix(
+                np.kron(np.ones(sec_pts), r_edge ** 2 * np.sin(r_edge)),
+                domain=["negative particle"],
+            )
+            div_eqn = pybamm.div(N)
+            boundary_conditions = {
+                N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(np.sin(1))}
+            }
             disc._bcs = boundary_conditions
-            mesh = disc.mesh["negative particle"]
-            r = mesh[0].nodes
+            # Define exact solutions
+            # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
+            div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
+            div_exact = np.kron(np.ones(sec_pts), div_exact)
 
-            prim_pts = mesh[0].npts
-            sec_pts = len(mesh)
+            # Discretise and evaluate
+            div_eqn_disc = disc.process_symbol(div_eqn)
+            div_approx = div_eqn_disc.evaluate()
 
-            # exact solution
-            y = np.kron(np.ones(sec_pts), np.sin(r))
-            exact = (2 / r) * np.cos(r) - np.sin(r)
-            exact = np.kron(np.ones(sec_pts), exact)
-
-            # discretise and evaluate
-            variables = [c]
-            disc.set_variable_slices(variables)
-            eqn_disc = disc.process_symbol(eqn)
-            approx_eval = eqn_disc.evaluate(None, y)
-            approx_eval = np.reshape(approx_eval, [sec_pts, prim_pts])
-            approx = approx_eval
-            approx = np.reshape(approx, [sec_pts * prim_pts])
-
-            # Return difference between approx and exact
-            return approx - exact
+            return div_approx - div_exact
 
         # Get errors
-        ns = 100 * 3 ** np.arange(2, 5)
+        ns = 10 * 2 ** np.arange(6)
         errs = {n: get_error(int(n)) for n in ns}
-        # expect quadratic convergence at internal points
-        for idx_factor in [0, 1, 2]:
-            err_at_idx = np.array(
-                [errs[n][((2 * idx_factor + 1) * n - 3) // 6] for n in ns]
-            )
-            rates = np.log(err_at_idx[:-1] / err_at_idx[1:]) / np.log(3)
-            np.testing.assert_array_less(1.9 * np.ones_like(rates), rates)
-        # expect linear convergence at the boundaries
-        for idx in [0, -1]:
-            err_at_idx = np.array([errs[n][idx] for n in ns])
-            rates = np.log(err_at_idx[:-1] / err_at_idx[1:]) / np.log(3)
-            np.testing.assert_array_less(0.98 * np.ones_like(rates), rates)
+        # expect quadratic convergence everywhere
+        err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
+        rates = np.log2(err_norm[:-1] / err_norm[1:])
+        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
     def test_p2d_with_x_dep_bcs_spherical_convergence(self):
-        # test div( grad( sin(r) )) == (2/r)*cos(r) - *sin(r)
+        # test div_r( (r**2 * sin(r)) * x ) == (4*r*sin(r) - r**2*cos(r)) * x
+        spatial_methods = {"negative particle": pybamm.FiniteVolume}
 
-        xn = pybamm.SpatialVariable("x", ["negative electrode"])
-        c = pybamm.Variable("c", domain=["negative particle"])
-        N = pybamm.grad(c)
-        eqn = pybamm.div(N)
-        boundary_conditions = {
-            N: {
-                "left": pybamm.Scalar(np.cos(0)) * xn,
-                "right": pybamm.Scalar(np.cos(1)) * xn,
-            }
-        }
-
+        # Function for convergence testing
         def get_error(m):
+            # create mesh and discretisation p2d, x-dependent
             mesh = get_p2d_mesh_for_testing(6, m)
-            spatial_methods = {
-                "negative particle": pybamm.FiniteVolume,
-                "negative electrode": pybamm.FiniteVolume,
-            }
             disc = pybamm.Discretisation(mesh, spatial_methods)
-            mesh = disc.mesh["negative particle"]
-            disc._bcs = {
-                key.id: disc.process_dict(value)
-                for key, value in boundary_conditions.items()
+            submesh_r = mesh["negative particle"]
+            r = submesh_r[0].nodes
+            r_edge = submesh_r[0].edges[1:-1]
+            x = pybamm.Vector(mesh["negative electrode"][0].nodes)
+
+            prim_pts = submesh_r[0].npts
+            sec_pts = len(submesh_r)
+
+            N = pybamm.Matrix(
+                np.kron(x.entries, r_edge ** 2 * np.sin(r_edge)),
+                domain=["negative particle"],
+            )
+            div_eqn = pybamm.div(N)
+            boundary_conditions = {
+                N.id: {
+                    "left": pybamm.Scalar(0) * x,
+                    "right": pybamm.Scalar(np.sin(1)) * x,
+                }
             }
-            r = mesh[0].nodes
-            xn_disc = disc.process_symbol(xn)
+            disc._bcs = boundary_conditions
+            # Define exact solutions
+            # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
+            div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
+            div_exact = np.kron(x.entries, div_exact)
 
-            prim_pts = mesh[0].npts
-            sec_pts = len(mesh)
+            # Discretise and evaluate
+            div_eqn_disc = disc.process_symbol(div_eqn)
+            div_approx = div_eqn_disc.evaluate()
 
-            # exact solution
-            y = np.kron(xn_disc.entries, np.sin(r))
-            div_grad_exact = (2 / r) * np.cos(r) - np.sin(r)
-            div_grad_exact = np.kron(xn_disc.entries, div_grad_exact)
-
-            # discretise and evaluate
-            variables = [c]
-            disc.set_variable_slices(variables)
-            eqn_disc = disc.process_symbol(eqn)
-            approx_eval = eqn_disc.evaluate(None, y)
-            approx_eval = np.reshape(approx_eval, [sec_pts, prim_pts])
-            approx = approx_eval
-            approx = np.reshape(approx, [sec_pts * prim_pts])
-
-            # Return difference between approx and exact
-            return approx - div_grad_exact
+            return div_approx - div_exact
 
         # Get errors
-        ns = 100 * 3 ** np.arange(2, 5)
+        ns = 10 * 2 ** np.arange(6)
         errs = {n: get_error(int(n)) for n in ns}
-        # expect quadratic convergence at internal points
-        for idx_factor in [0, 1, 2]:
-            err_at_idx = np.array(
-                [errs[n][((2 * idx_factor + 1) * n - 3) // 6] for n in ns]
-            )
-            rates = np.log(err_at_idx[:-1] / err_at_idx[1:]) / np.log(3)
-            np.testing.assert_array_less(1.9 * np.ones_like(rates), rates)
-        # expect linear convergence at the boundaries
-        for idx in [0, -1]:
-            err_at_idx = np.array([errs[n][idx] for n in ns])
-            rates = np.log(err_at_idx[:-1] / err_at_idx[1:]) / np.log(3)
-            np.testing.assert_array_less(0.98 * np.ones_like(rates), rates)
+        # expect quadratic convergence everywhere
+        err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
+        rates = np.log2(err_norm[:-1] / err_norm[1:])
+        np.testing.assert_array_less(1.99 * np.ones_like(rates), rates)
 
 
 if __name__ == "__main__":
