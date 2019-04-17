@@ -6,9 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-from scipy.sparse import diags
-from scipy.sparse import eye
-from scipy.sparse import kron
+from scipy.sparse import diags, eye, kron, csr_matrix, vstack
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -638,23 +636,39 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
 
         def arithmetic_mean(array):
-            """Calculate the arithemetic mean of an array"""
-            mean_array = (array[1:] + array[:-1]) / 2
+            """Calculate the arithemetic mean of an array using matrix multiplication"""
+            # Create appropriate submesh by combining submeshes in domain
+            submesh_list = self.mesh.combine_submeshes(*array.domain)
+
+            # can just use 1st entry of list to obtain the point etc
+            submesh = submesh_list[0]
+
+            # Create 1D matrix using submesh
+            n = submesh.npts
+            sub_matrix = diags([0.5, 0.5], [0, 1], shape=(n - 1, n))
+
             if extrapolate_left:
-                left_node = array[0] - (array[1] - array[0]) / 2
-                mean_array = np.concatenate([np.array([left_node]), mean_array])
+                sub_matrix_left = csr_matrix(
+                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
+                )
+                sub_matrix = vstack([sub_matrix_left, sub_matrix])
             if extrapolate_right:
-                right_node = array[-1] - (array[-2] - array[-1]) / 2
-                mean_array = np.concatenate([mean_array, np.array([right_node])])
-            return mean_array
+                sub_matrix_right = csr_matrix(
+                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
+                )
+                sub_matrix = vstack([sub_matrix, sub_matrix_right])
 
-        def node_to_edge(symbol):
-            # If the symbol is a numpy array of shape (n,), do the averaging
-            # NOTE: Doing this check every time might be slow?
-            if isinstance(symbol, np.ndarray) and len(symbol.shape) == 1:
-                return arithmetic_mean(symbol)
-            # If not, no need to average
-            else:
-                return symbol
+            # second dim length
+            second_dim_len = len(submesh_list)
 
-        return pybamm.Function(node_to_edge, discretised_symbol)
+            # generate full matrix from the submatrix
+            matrix = kron(eye(second_dim_len), sub_matrix)
+
+            return pybamm.Matrix(matrix) @ array
+
+        # If discretised_symbol evaluates to number there is no need to average
+        # NOTE: Doing this check every time might be slow?
+        if discretised_symbol.evaluates_to_number():
+            return discretised_symbol
+        else:
+            return arithmetic_mean(discretised_symbol)
