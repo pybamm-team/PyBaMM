@@ -35,7 +35,6 @@ class TestMatrix(unittest.TestCase):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
         c = pybamm.Parameter("c")
-        e = pybamm.Scalar(2)
 
         # matrix multiplication
         A = pybamm.Matrix(np.array([[1, 0], [0, 1]]))
@@ -101,19 +100,7 @@ class TestMatrix(unittest.TestCase):
         np.testing.assert_array_equal(
             expr2.evaluate(y=np.ones(300)), expr2simp.evaluate(y=np.ones(300))
         )
-
-        # we don't expect any speed up or slow down here
-        timer = pybamm.Timer()
-        start = timer.time()
-        for _ in range(40):
-            expr2.evaluate(y=np.ones(300))
-        end = timer.time()
-        start_simp = timer.time()
-        for _ in range(40):
-            expr2simp.evaluate(y=np.ones(300))
-        end_simp = timer.time()
-        self.assertLess(end_simp - start_simp, 1.2 * (end - start))
-        self.assertLess(end - start, 1.2 * (end_simp - start_simp))
+        self.assertEqual(expr2.id, expr2simp.id)
 
         # more complex expression, with simplification
         expr3 = m1 @ (v3 * (m2 @ v2))
