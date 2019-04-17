@@ -836,13 +836,15 @@ class TestFiniteVolume(unittest.TestCase):
         integral_eqn_disc = disc.process_symbol(integral_eqn)
 
         constant_y = np.ones_like(mesh["negative particle"][0].nodes)
-        self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), np.pi)
+        self.assertAlmostEqual(
+            integral_eqn_disc.evaluate(None, constant_y), 2 * np.pi ** 2
+        )
         linear_y = mesh["negative particle"][0].nodes
         self.assertAlmostEqual(
-            integral_eqn_disc.evaluate(None, linear_y), 2 * np.pi / 3, places=4
+            integral_eqn_disc.evaluate(None, linear_y), 4 * np.pi ** 2 / 3, places=4
         )
         one_over_y = 1 / mesh["negative particle"][0].nodes
-        self.assertEqual(integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi)
+        self.assertEqual(integral_eqn_disc.evaluate(None, one_over_y), 4 * np.pi ** 2)
 
     def test_indefinite_integral(self):
 

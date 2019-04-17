@@ -297,7 +297,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim = len(submesh_list)
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
             r = pybamm.Vector(r_numpy)
-            out = 2 * np.pi * integration_vector @ (discretised_symbol * r)
+            out = 4 * np.pi ** 2 * integration_vector @ (discretised_symbol * r)
         else:
             out = integration_vector @ discretised_symbol
         out.domain = []
