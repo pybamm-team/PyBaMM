@@ -124,9 +124,8 @@ class Discretisation(object):
             """y_slices should be dict, not {}""".format(type(self._y_slices))
         )
 
-    def process_initial_conditions(self, model):
+    def process_initial_conditions(self, model, new_model):
         """Discretise model initial_conditions.
-        Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
@@ -136,32 +135,42 @@ class Discretisation(object):
 
         """
         # Discretise initial conditions
-        model.initial_conditions = self.process_dict(model.initial_conditions)
+        new_model.initial_conditions = self.process_dict(model.initial_conditions)
 
         # Concatenate initial conditions into a single vector
         # check that all initial conditions are set
-        model.concatenated_initial_conditions = self._concatenate_init(
-            model.initial_conditions
+        new_model.concatenated_initial_conditions = self._concatenate_init(
+            new_model.initial_conditions
         ).evaluate(0, None)
 
-    def process_rhs_and_algebraic(self, model):
+        return new_model
+
+    def process_rhs_and_algebraic(self, model, new_model):
         """Discretise model equations - differential ('rhs') and algebraic.
-        Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
+
+        Returns
+        -------
+        new_model : :class:`pybamm.BaseModel`
+
         """
         # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_dict(model.rhs)
+        new_model.rhs = self.process_dict(model.rhs)
         # Concatenate rhs into a single state vector
-        model.concatenated_rhs = self.concatenate(*model.rhs.values())
+        new_model.concatenated_rhs = self.concatenate(*new_model.rhs.values())
 
         # Discretise and concatenate algebraic equations
-        model.algebraic = self.process_dict(model.algebraic)
-        model.concatenated_algebraic = self.concatenate(*model.algebraic.values())
+        new_model.algebraic = self.process_dict(model.algebraic)
+        new_model.concatenated_algebraic = self.concatenate(
+            *new_model.algebraic.values()
+        )
+
+        return new_model
 
     def create_mass_matrix(self, model):
         """Creates mass matrix of the discretised model.
@@ -227,11 +236,11 @@ class Discretisation(object):
 
         Returns
         -------
-        var_eqn_dict : dict
+        new_var_eqn_dict : dict
             Discretised equations
 
         """
-
+        new_var_eqn_dict = {}
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
 
@@ -245,10 +254,10 @@ class Discretisation(object):
                         )
 
             # Process symbol (original or broadcasted)
-            var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
-        return var_eqn_dict
+        return new_var_eqn_dict
 
     def process_symbol(self, symbol):
         """Discretise operators in model equations.
