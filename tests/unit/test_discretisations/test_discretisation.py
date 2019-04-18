@@ -490,7 +490,6 @@ class TestDiscretise(unittest.TestCase):
 
         # jacobian
         y = pybamm.StateVector(slice(0, np.size(y0)))
-        disc.create_jacobian(model)
         jac_rhs = model.concatenated_rhs.jac(y)
         jac_algebraic = model.concatenated_algebraic.jac(y)
         jacobian = pybamm.SparseStack(jac_rhs, jac_algebraic).evaluate(0, y0)

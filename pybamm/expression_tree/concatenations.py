@@ -103,7 +103,6 @@ class NumpyConcatenation(Concatenation):
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         if len(self.children) == 0:
-            # NOTE: need to think about if this is the right thing to do here
             return pybamm.Scalar(0)
         else:
             return SparseStack(*[child.jac(variable) for child in self.children])
@@ -219,7 +218,6 @@ class DomainConcatenation(Concatenation):
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         if len(self.children) == 0:
-            # NOTE: need to think about if this is the right thing to do here
             return pybamm.Scalar(0)
         else:
             return SparseStack(*[child.jac(variable) for child in self.children])

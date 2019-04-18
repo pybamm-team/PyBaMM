@@ -167,7 +167,7 @@ class Discretisation(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             Discretised model. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
@@ -198,40 +198,6 @@ class Discretisation(object):
         # Create block diagonal (sparse) mass matrix
         mass_matrix = block_diag(mass_list)
         model.mass_matrix = pybamm.Matrix(mass_matrix)
-
-    def create_jacobian(self, model):
-        """Creates jacobian of the discretised model.
-        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
-        M is the (possibly singular) mass matrix. The Jacobian is df/dy.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
-            Discretised model. Must have attributes rhs, initial_conditions and
-            boundary_conditions (all dicts of {variable: equation})
-        """
-        # Get number points in model
-        N = model.concatenated_initial_conditions.shape[0]
-
-        # Create StateVector to differentiate model with respect to
-        y = pybamm.StateVector(slice(0, N))
-
-        # Differentiate concatenated rhs and algebraic equations w.r.t. the
-        # entire StateVector
-        jac_rhs = dict.fromkeys(model.rhs.keys())
-        for eqn_key, eqn in model.rhs.items():
-            jac_rhs[eqn_key] = eqn.jac(y)
-
-        jac_algebraic = dict.fromkeys(model.algebraic.keys())
-        for eqn_key, eqn in model.algebraic.items():
-            jac_algebraic[eqn_key] = eqn.jac(y)
-
-        jacobian = self.sparse_stack(*jac_rhs.values(), *jac_algebraic.values())
-
-        def jacfn(t, y):
-            return jacobian.simplify().evaluate(t, y)
-
-        model.jacobian = jacfn
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
@@ -467,9 +433,6 @@ class Discretisation(object):
         sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
 
         return self.concatenate(*sorted_equations)
-
-    def sparse_stack(self, *symbols):
-        return pybamm.SparseStack(*symbols)
 
     def check_model(self, model):
         """ Perform some basic checks to make sure the discretised model makes sense."""
