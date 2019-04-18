@@ -70,40 +70,42 @@ class Discretisation(object):
 
         # set up inplace vs not inplace
         if inplace:
-            # any changes to discretised_model attributes will change model attributes
+            # any changes to model_disc attributes will change model attributes
             # since they point to the same object
-            discretised_model = model
+            model_disc = model
         else:
             # create a blank model so that original model is unchanged
-            discretised_model = pybamm.BaseModel()
+            model_disc = pybamm.BaseModel()
 
         # Process initial condtions
-        discretised_model.initial_conditions, discretised_model.concatenated_initial_conditions = self.process_initial_conditions(
-            model
-        )
+        ics, concat_ics = self.process_initial_conditions(model)
+        model_disc.initial_conditions = ics
+        model_disc.concatenated_initial_conditions = concat_ics
 
         # Process parabolic and elliptic equations
-        discretised_model.rhs, discretised_model.concatenated_rhs, discretised_model.algebraic, discretised_model.concatenated_algebraic = self.process_rhs_and_algebraic(
-            model
-        )
+        rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
+        model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
+        model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
 
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
         # model.initial_conditions and model.boundary_conditions
-        discretised_model.variables = self.process_dict(model.variables)
+        model_disc.variables = self.process_dict(model.variables)
 
         # Process events
+        processed_events = [None] * len(model.events)
         for idx, event in enumerate(model.events):
-            discretised_model.events[idx] = self.process_symbol(event)
+            processed_events[idx] = self.process_symbol(event)
+        model_disc.events = processed_events
 
         # Create mass matrix
-        discretised_model.mass_matrix = self.create_mass_matrix(model)
+        model_disc.mass_matrix = self.create_mass_matrix(model)
 
         # Check that resulting model makes sense
-        self.check_model(discretised_model)
+        self.check_model(model_disc)
 
         if not inplace:
-            return discretised_model
+            return model_disc
 
     def set_variable_slices(self, variables):
         """Sets the slicing for variables.
