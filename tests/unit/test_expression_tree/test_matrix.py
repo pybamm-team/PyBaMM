@@ -66,6 +66,13 @@ class TestMatrix(unittest.TestCase):
                 expr.children[0].entries, np.array([[3, 0], [0, 3]])
             )
 
+        expr = (v @ v / 2).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(),0.5)
+        self.assertIsInstance(expr.children[1], pybamm.MatrixMultiplication)
+
+
         # mat-mul on numerator and denominator
         expr = (m2 @ (m1 @ v) / (m2 @ (m1 @ v))).simplify()
         for child in expr.children:
