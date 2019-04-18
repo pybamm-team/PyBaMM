@@ -35,7 +35,6 @@ class TestMatrix(unittest.TestCase):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
         c = pybamm.Parameter("c")
-        e = pybamm.Scalar(2)
 
         # matrix multiplication
         A = pybamm.Matrix(np.array([[1, 0], [0, 1]]))
@@ -50,6 +49,7 @@ class TestMatrix(unittest.TestCase):
         m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
         m2 = pybamm.Matrix(np.array([[3, 0], [0, 3]]))
         v = pybamm.StateVector(slice(0, 2))
+        v2 = pybamm.StateVector(slice(2, 4))
 
         for expr in [((m2 @ m1) @ v).simplify(), (m2 @ (m1 @ v)).simplify()]:
             self.assertIsInstance(expr.children[0], pybamm.Matrix)
@@ -57,6 +57,44 @@ class TestMatrix(unittest.TestCase):
             np.testing.assert_array_equal(
                 expr.children[0].entries, np.array([[6, 0], [0, 6]])
             )
+
+        # div by a constant
+        for expr in [((m2 @ m1) @ v / 2).simplify(), (m2 @ (m1 @ v) / 2).simplify()]:
+            self.assertIsInstance(expr.children[0], pybamm.Matrix)
+            self.assertIsInstance(expr.children[1], pybamm.StateVector)
+            np.testing.assert_array_equal(
+                expr.children[0].entries, np.array([[3, 0], [0, 3]])
+            )
+
+        expr = (v @ v / 2).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 0.5)
+        self.assertIsInstance(expr.children[1], pybamm.MatrixMultiplication)
+
+        # mat-mul on numerator and denominator
+        expr = (m2 @ (m1 @ v) / (m2 @ (m1 @ v))).simplify()
+        for child in expr.children:
+            self.assertIsInstance(child.children[0], pybamm.Matrix)
+            self.assertIsInstance(child.children[1], pybamm.StateVector)
+            np.testing.assert_array_equal(
+                child.children[0].entries, np.array([[6, 0], [0, 6]])
+            )
+
+        # mat-mul just on denominator
+        expr = (1 / (m2 @ (m1 @ v))).simplify()
+        self.assertIsInstance(expr.children[1].children[0], pybamm.Matrix)
+        self.assertIsInstance(expr.children[1].children[1], pybamm.StateVector)
+        np.testing.assert_array_equal(
+            expr.children[1].children[0].entries, np.array([[6, 0], [0, 6]])
+        )
+        expr = (v2 / (m2 @ (m1 @ v))).simplify()
+        self.assertIsInstance(expr.children[0], pybamm.StateVector)
+        self.assertIsInstance(expr.children[1].children[0], pybamm.Matrix)
+        self.assertIsInstance(expr.children[1].children[1], pybamm.StateVector)
+        np.testing.assert_array_equal(
+            expr.children[1].children[0].entries, np.array([[6, 0], [0, 6]])
+        )
 
         # scalar * matrix
         for expr in [
@@ -78,9 +116,6 @@ class TestMatrix(unittest.TestCase):
         for expr in [(m1 @ v1).simplify()]:
             self.assertIsInstance(expr, pybamm.Vector)
             np.testing.assert_array_equal(expr.entries, np.array([2, 2]))
-
-        with self.assertRaises(pybamm.ModelError):
-            (e / (m1 @ v)).simplify()
 
         # dont expant mult within mat-mult (issue #253)
         m1 = pybamm.Matrix(np.ones((300, 299)))
@@ -104,19 +139,7 @@ class TestMatrix(unittest.TestCase):
         np.testing.assert_array_equal(
             expr2.evaluate(y=np.ones(300)), expr2simp.evaluate(y=np.ones(300))
         )
-
-        # we don't expect any speed up or slow down here
-        timer = pybamm.Timer()
-        start = timer.time()
-        for _ in range(20):
-            expr2.evaluate(y=np.ones(300))
-        end = timer.time()
-        start_simp = timer.time()
-        for _ in range(20):
-            expr2simp.evaluate(y=np.ones(300))
-        end_simp = timer.time()
-        self.assertLess(end_simp - start_simp, 1.2 * (end - start))
-        self.assertLess(end - start, 1.2 * (end_simp - start_simp))
+        self.assertEqual(expr2.id, expr2simp.id)
 
         # more complex expression, with simplification
         expr3 = m1 @ (v3 * (m2 @ v2))
