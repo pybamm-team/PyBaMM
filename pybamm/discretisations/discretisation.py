@@ -51,8 +51,15 @@ class Discretisation(object):
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         inplace: bool, optional
-            If True, discretise the model in place. Otherwise, return a new discretised
-            model. Default is True.
+            If True, discretise the model in place. Otherwise, return a new
+            discretised model. Default is True.
+
+        Returns
+        -------
+        model_disc : :class:`pybamm.BaseModel`
+            The discretised model. Note that if ``inplace`` is True, model will
+            have also been discretised in place so model == model_disc. If
+            ``inplace`` is False, model != model_disc
 
         """
         # Prepare discretisation
@@ -104,8 +111,7 @@ class Discretisation(object):
         # Check that resulting model makes sense
         self.check_model(model_disc)
 
-        if not inplace:
-            return model_disc
+        return model_disc
 
     def set_variable_slices(self, variables):
         """Sets the slicing for variables.
