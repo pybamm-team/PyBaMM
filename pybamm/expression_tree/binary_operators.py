@@ -352,13 +352,21 @@ def simplify_multiplication_division(myclass, left, right):
             result = new_numerator / new_denominator
 
     elif numerator_has_mat_mul and not denominator_has_mat_mul:
-        new_numerator = simplify_with_mat_mul(numerator, numerator_types)
-
         # can reorder the denominator since no matrix multiplies
         denominator_constant, denominator_nonconst = partition_by_constant(denominator)
 
         constant_denominator_expr = fold_multiply(denominator_constant)
         nonconst_denominator_expr = fold_multiply(denominator_nonconst)
+
+        # fold constant denominator expr into numerator if possible
+        if constant_denominator_expr is not None:
+            for i, child in enumerate(numerator):
+                if child.is_constant() and child.evaluate_ignoring_errors() is not None:
+                    numerator[i] = child / constant_denominator_expr
+                    numerator[i] = pybamm.simplify_if_constant(numerator[i])
+                    constant_denominator_expr = None
+
+        new_numerator = simplify_with_mat_mul(numerator, numerator_types)
 
         # result = constant_numerator_expr * new_numerator / nonconst_denominator_expr
         # need to take into accound that terms can be None
@@ -385,9 +393,7 @@ def simplify_multiplication_division(myclass, left, right):
         # can reorder the numerator since no matrix multiplies
         numerator_constant, numerator_nonconst = partition_by_constant(numerator)
 
-        constant_numerator_expr = pybamm.simplify_if_constant(
-            fold_multiply(numerator_constant)
-        )
+        constant_numerator_expr = fold_multiply(numerator_constant)
         nonconst_numerator_expr = fold_multiply(numerator_nonconst)
 
         # result = constant_numerator_expr * nonconst_numerator_expr / new_denominator
