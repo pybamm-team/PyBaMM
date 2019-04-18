@@ -219,7 +219,7 @@ class Discretisation(object):
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
+            Discretised model. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
 
         Returns
@@ -255,19 +255,6 @@ class Discretisation(object):
         mass_matrix = block_diag(mass_list)
 
         return pybamm.Matrix(mass_matrix)
-
-    def create_jacobian(self, model):
-        """Creates jacobian of the discretised model.
-        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
-        M is the (possibly singular) mass matrix. The Jacobian is df/dy.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
-            boundary_conditions (all dicts of {variable: equation})
-        """
-        # TO DO: create jacobian by differentiating tree wrt StateVector
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary

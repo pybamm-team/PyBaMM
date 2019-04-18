@@ -5,8 +5,9 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
+import autograd.numpy as np
 from scipy.sparse import diags, eye, kron
+from autograd.builtins import isinstance
 
 
 class FiniteVolume(pybamm.SpatialMethod):
