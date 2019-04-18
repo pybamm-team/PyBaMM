@@ -405,16 +405,10 @@ def simplify_multiplication_division(myclass, left, right):
                 constant_numerator_expr
             )
             if nonconst_numerator_expr is None:
-                if new_denominator is None:
-                    result = constant_numerator_expr
-                else:
-                    result = constant_numerator_expr / new_denominator
+                result = constant_numerator_expr / new_denominator
             else:
-                if new_denominator is None:
-                    result = constant_numerator_expr * nonconst_numerator_expr
-                else:
-                    result = constant_numerator_expr * nonconst_numerator_expr \
-                        / new_denominator
+                result = constant_numerator_expr * nonconst_numerator_expr \
+                    / new_denominator
 
     else:
         # can reorder the numerator since no matrix multiplies
