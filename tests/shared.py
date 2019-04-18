@@ -3,7 +3,7 @@
 #
 import pybamm
 
-import numpy as np
+from scipy.sparse import eye
 
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):
@@ -24,15 +24,22 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain][0].npts
-        gradient_matrix = pybamm.Matrix(np.eye(n))
+        gradient_matrix = pybamm.Matrix(eye(n))
         return gradient_matrix @ discretised_symbol
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain][0].npts
-        divergence_matrix = pybamm.Matrix(np.eye(n))
+        divergence_matrix = pybamm.Matrix(eye(n))
         return divergence_matrix @ discretised_symbol
+
+    def mass_matrix(self, symbol, boundary_conditions):
+        n = 0
+        for domain in symbol.domain:
+            n += self.mesh[domain][0].npts
+        mass_matrix = pybamm.Matrix(eye(n))
+        return mass_matrix
 
 
 def get_mesh_for_testing(npts=None):

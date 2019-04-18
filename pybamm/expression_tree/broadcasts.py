@@ -4,8 +4,10 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+
 import numbers
 import numpy as np
+from scipy.sparse import csr_matrix
 
 
 class Broadcast(pybamm.SpatialOperator):
@@ -129,6 +131,20 @@ class NumpyBroadcast(Broadcast):
             raise ValueError(
                 "cannot broadcast child with shape '{}'".format(child.shape)
             )
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        child = self.orphans[0]
+        if child.evaluates_to_number():
+            variable_y_indices = np.arange(
+                variable.y_slice.start, variable.y_slice.stop
+            )
+            jac = csr_matrix(
+                (self.broadcasting_vector_size, np.size(variable_y_indices))
+            )
+            return pybamm.Matrix(jac)
+        else:
+            return child.jac(variable)
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """

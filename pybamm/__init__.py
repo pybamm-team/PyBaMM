@@ -64,6 +64,7 @@ from .expression_tree.concatenations import (
     Concatenation,
     NumpyConcatenation,
     DomainConcatenation,
+    SparseStack,
 )
 from .expression_tree.array import Array
 from .expression_tree.matrix import Matrix
@@ -82,7 +83,8 @@ from .expression_tree.unary_operators import (
     grad,
     div,
     surf,
-    integrate,
+    Diagonal,
+    integrate
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
