@@ -82,15 +82,22 @@ class BaseModel(object):
                 "Positive electrode OCV": os.path.join(
                     input_path, "lico2_ocp_Dualfoil.py"
                 ),
+                "Negative electrode diffusivity": os.path.join(
+                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
+                ),
+                "Positive electrode diffusivity": os.path.join(
+                    input_path, "lico2_diffusivity_Dualfoil.py"
+                ),
             },
         )
         self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
-        self.default_submesh_pts = {
-            "negative electrode": {"x": 40},
-            "separator": {"x": 25},
-            "positive electrode": {"x": 35},
-            "negative particle": {"r": 10},
-            "positive particle": {"r": 10},
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 40,
+            var.x_s: 25,
+            var.x_p: 35,
+            var.r_n: 10,
+            var.r_p: 10,
         }
         self.default_submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
@@ -225,7 +232,7 @@ class BaseModel(object):
 
         Parameters
         ----------
-        submodel : iterable of submodels (subclasses of :class:`pybamm.BaseModel`)
+        submodel : iterable of :class:`pybamm.BaseModel`
             The submodels from which to create new model
         """
         for submodel in submodels:
@@ -358,6 +365,16 @@ class BaseModel(object):
                         )
                     )
 
+        # Standard Output Variables
+        for output, expression in self._variables.items():
+            if expression is None:
+                raise pybamm.ModelError(
+                    """The standard output variable '{}' which is
+                    required for testing has not been supplied.""".format(
+                        output
+                    )
+                )
+
 
 class LeadAcidBaseModel(BaseModel):
     """
@@ -406,7 +423,7 @@ class LeadAcidBaseModel(BaseModel):
 class LithiumIonBaseModel(BaseModel):
     """
     Overwrites default parameters from Base Model with default parameters for
-    lead-acid models
+    lithium-ion models
 
     **Extends:** :class:`BaseModel`
 
@@ -440,5 +457,113 @@ class LithiumIonBaseModel(BaseModel):
                 "Positive electrode OCV": os.path.join(
                     input_path, "lico2_ocp_Dualfoil.py"
                 ),
+                "Negative electrode diffusivity": os.path.join(
+                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
+                ),
+                "Positive electrode diffusivity": os.path.join(
+                    input_path, "lico2_diffusivity_Dualfoil.py"
+                ),
             },
+        )
+
+        # Standard output variables
+        # Current
+        self._variables.update(
+            {
+                "Total current density": None,
+                "Negative electrode current density": None,
+                "Positive electrode current density": None,
+                "Electrolyte current density": None,
+                "Interfacial current density": None,
+                "Exchange current density": None,
+            }
+        )
+
+        self._variables.update(
+            {
+                "Total current density [A m-2]": None,
+                "Negative electrode current density [A m-2]": None,
+                "Positive electrode current density [A m-2]": None,
+                "Electrolyte current density [A m-2]": None,
+                "Interfacial current density [A m-2]": None,
+                "Exchange current density [A m-2]": None,
+            }
+        )
+        # Voltage
+        self._variables.update(
+            {
+                "Negative electrode open circuit potential": None,
+                "Positive electrode open circuit potential": None,
+                "Average negative electrode open circuit potential": None,
+                "Average positive electrode open circuit potential": None,
+                "Average open circuit voltage": None,
+                "Measured open circuit voltage": None,
+                "Terminal voltage": None,
+            }
+        )
+
+        self._variables.update(
+            {
+                "Negative electrode open circuit potential [V]": None,
+                "Positive electrode open circuit potential [V]": None,
+                "Average negative electrode open circuit potential [V]": None,
+                "Average positive electrode open circuit potential [V]": None,
+                "Average open circuit voltage [V]": None,
+                "Measured open circuit voltage [V]": None,
+                "Terminal voltage [V]": None,
+            }
+        )
+
+        # Overpotentials
+        self._variables.update(
+            {
+                "Negative reaction overpotential": None,
+                "Positive reaction overpotential": None,
+                "Average negative reaction overpotential": None,
+                "Average positive reaction overpotential": None,
+                "Average reaction overpotential": None,
+                "Average electrolyte overpotential": None,
+                "Average solid phase ohmic losses": None,
+            }
+        )
+
+        self._variables.update(
+            {
+                "Negative reaction overpotential [V]": None,
+                "Positive reaction overpotential [V]": None,
+                "Average negative reaction overpotential [V]": None,
+                "Average positive reaction overpotential [V]": None,
+                "Average reaction overpotential [V]": None,
+                "Average electrolyte overpotential [V]": None,
+                "Average solid phase ohmic losses [V]": None,
+            }
+        )
+        # Concentration
+        self._variables.update(
+            {
+                "Negative particle concentration": None,
+                "Positive particle concentration": None,
+                "Negative particle surface concentration": None,
+                "Positive particle surface concentration": None,
+                "Electrolyte concentration": None,
+            }
+        )
+
+        self._variables.update(
+            {
+                "Negative particle concentration [mols m-3]": None,
+                "Positive particle concentration [mols m-3]": None,
+                "Negative particle surface concentration [mols m-3]": None,
+                "Positive particle surface concentration [mols m-3]": None,
+                "Electrolyte concentration [mols m-3]": None,
+            }
+        )
+
+        # Potential
+        self._variables.update(
+            {
+                "Negative electrode potential [V]": None,
+                "Positive electrode potential [V]": None,
+                "Electrolyte potential [V]": None,
+            }
         )

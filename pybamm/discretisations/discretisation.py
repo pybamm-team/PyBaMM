@@ -47,21 +47,22 @@ class Discretisation(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
 
         """
-        # set boundary conditions (only need key ids for boundary_conditions)
-        self._bcs = {
-            key.id: self.process_dict(value)
-            for key, value in model.boundary_conditions.items()
-        }
         # set variables (we require the full variable not just id)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
 
         # Set the y split for variables
         self.set_variable_slices(variables)
+
+        # set boundary conditions (only need key ids for boundary_conditions)
+        self._bcs = {
+            key.id: self.process_dict(value)
+            for key, value in model.boundary_conditions.items()
+        }
 
         # Process initial condtions
         self.process_initial_conditions(model)
@@ -129,7 +130,7 @@ class Discretisation(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
 
@@ -149,7 +150,7 @@ class Discretisation(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
@@ -169,7 +170,7 @@ class Discretisation(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
@@ -208,7 +209,7 @@ class Discretisation(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
         """
@@ -233,6 +234,7 @@ class Discretisation(object):
 
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
+
             if eqn.evaluates_to_number():
                 if not isinstance(eqn_key, str):
                     if eqn_key.domain == []:
@@ -253,12 +255,12 @@ class Discretisation(object):
 
         Parameters
         ----------
-        symbol : :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
+        symbol : :class:`pybamm.expression_tree.symbol.Symbol`
             Symbol to discretise
 
         Returns
         -------
-        :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
+        :class:`pybamm.expression_tree.symbol.Symbol`
             Discretised symbol
 
         """
@@ -283,6 +285,13 @@ class Discretisation(object):
                 child.domain, child, discretised_child
             )
 
+        elif isinstance(symbol, pybamm.IndefiniteIntegral):
+            child = symbol.children[0]
+            discretised_child = self.process_symbol(child)
+            return self._spatial_methods[child.domain[0]].indefinite_integral(
+                child.domain, child, discretised_child
+            )
+
         elif isinstance(symbol, pybamm.Broadcast):
             # Process child first
             new_child = self.process_symbol(symbol.children[0])
@@ -300,7 +309,7 @@ class Discretisation(object):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
             return self._spatial_methods[child.domain[0]].boundary_value(
-                discretised_child, symbol.side
+                child, discretised_child, symbol.side
             )
 
         elif isinstance(symbol, pybamm.BinaryOperator):
@@ -339,12 +348,12 @@ class Discretisation(object):
 
         Parameters
         ----------
-        bin_op : :class:`pybamm.BinaryOperator` (or subclass)
+        bin_op : :class:`pybamm.BinaryOperator`
             Binary operator to discretise
 
         Returns
         -------
-        :class:`pybamm.BinaryOperator` (or subclass)
+        :class:`pybamm.BinaryOperator`
             Discretised binary operator
 
         """

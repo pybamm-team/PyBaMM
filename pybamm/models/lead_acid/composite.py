@@ -48,8 +48,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         super().__init__()
 
         # Parameters
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
+        param = pybamm.standard_parameters_lead_acid
 
         #
         # Variables
@@ -82,7 +81,9 @@ class Composite(pybamm.LeadAcidBaseModel):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         j = pybamm.interface.homogeneous_reaction(whole_cell)
         # Concentration model (reaction diffusion with homogeneous reaction)
-        conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, eps, j, param)
+        conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(
+            c_e, j, param, epsilon=eps
+        )
         # Porosity model
         porosity_model = pybamm.porosity.Standard(eps, j, param)
         # Electrolyte potential model (solve ODE analytically)

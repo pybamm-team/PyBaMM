@@ -6,9 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-from scipy.sparse import diags
-from scipy.sparse import eye
-from scipy.sparse import kron
+from scipy.sparse import diags, eye, kron
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -16,9 +14,11 @@ class FiniteVolume(pybamm.SpatialMethod):
     A class which implements the steps specific to the finite volume method during
     discretisation.
 
+    For broadcast and mass_matrix, we follow the default behaviour from SpatialMethod.
+
     Parameters
     ----------
-    mesh : :class:`pybamm.Mesh` (or subclass)
+    mesh : :class:`pybamm.Mesh`
         Contains all the submeshes for discretisation
 
     **Extends:"": :class:`pybamm.SpatialMethod`
@@ -47,20 +47,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         # for finite volume we use the cell centres
-        if symbol.name in ["x", "r"]:
+        if symbol.name in ["x_n", "x_s", "x_p", "r_n", "r_p", "x", "r"]:
             symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-            return pybamm.Vector(symbol_mesh[0].nodes)
+            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
         else:
             raise NotImplementedError("3D meshes not yet implemented")
-
-    def broadcast(self, symbol, domain):
-        """
-        Broadcast symbol to a specified domain. To do this, calls
-        :class:`pybamm.NumpyBroadcast`
-
-        See :meth: `pybamm.SpatialMethod.broadcast`
-        """
-        return pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -224,7 +215,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             edges = submesh_list[0].edges
 
         # check for particle domain
-        if ("negative particle" or "positive particle") in domain:
+        if submesh_list[0].coord_sys == "spherical polar":
 
             # create np.array of repeated submesh[0].nodes
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
@@ -253,7 +244,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         ----------
         domain : list
             The domain(s) in which to compute the divergence matrix
-        bc_type : string
+        bc_type : str
             What type of boundary condition to apply. Affects the size of the resulting
             matrix
 
@@ -299,13 +290,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Calculate integration vector
         integration_vector = self.definite_integral_vector(domain)
-        # Check for particle domain
-        if ("negative particle" or "positive particle") in symbol.domain:
-            submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+
+        # Check for spherical domains
+        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        if submesh_list[0].coord_sys == "spherical polar":
             second_dim = len(submesh_list)
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
             r = pybamm.Vector(r_numpy)
-            out = 2 * np.pi * integration_vector @ (discretised_symbol * r)
+            out = 4 * np.pi ** 2 * integration_vector @ (discretised_symbol * r)
         else:
             out = integration_vector @ discretised_symbol
         out.domain = []
@@ -340,6 +332,62 @@ class FiniteVolume(pybamm.SpatialMethod):
             vector = np.append(vector, submesh.d_edges * np.ones_like(submesh.nodes))
 
         return pybamm.Vector(vector)
+
+    def indefinite_integral(self, domain, symbol, discretised_symbol):
+        """Implementation of the indefinite integral operator. The
+        input discretised symbol must be defined on the internal mesh edges.
+        See :meth:`pybamm.BaseDiscretisation.indefinite_integral`
+        """
+
+        if not symbol.has_gradient_and_not_divergence():
+            raise pybamm.ModelError(
+                "Symbol to be integrated must be valid on the mesh edges"
+            )
+
+        # Calculate integration matrix
+        integration_matrix = self.indefinite_integral_matrix(domain)
+
+        # Don't need to check for spherical domains as spherical polars
+        # only change the diveregence (symbols here have grad and no div)
+        out = integration_matrix @ discretised_symbol
+
+        out.domain = domain
+
+        return out
+
+    def indefinite_integral_matrix(self, domain):
+        """
+        Matrix for finite-volume implementation of the indefinite integral
+
+        .. math::
+            F = \\int\\!f(u)\\,du
+
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) of integration
+
+        Returns
+        -------
+        :class:`pybamm.Vector`
+            The finite volume integral vector for the domain
+        """
+
+        # Create appropriate submesh by combining submeshes in domain
+        submesh_list = self.mesh.combine_submeshes(*domain)
+        submesh = submesh_list[0]
+        n = submesh.npts
+        sec_pts = len(submesh_list)
+
+        # note we have added a row of zeros at top for F(0) = 0
+        du_n = submesh.d_nodes
+        du_entries = [du_n] * (n - 1)
+        offset = -np.arange(1, n, 1)
+        sub_matrix = diags(du_entries, offset, shape=(n, n - 1))
+        matrix = kron(eye(sec_pts), sub_matrix)
+
+        return pybamm.Matrix(matrix)
 
     def add_ghost_nodes(self, symbol, discretised_symbol, lbc=None, rbc=None):
         """
@@ -471,7 +519,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_discretised_symbol
 
-    def boundary_value(self, discretised_symbol, side):
+    def boundary_value(self, symbol, discretised_symbol, side):
         """
         Uses linear extrapolation to get the boundary value of a variable in the
         Finite Volume Method.
@@ -480,7 +528,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         -----------
         discretised_symbol : :class:`pybamm.StateVector`
             The discretised variable from which to calculate the boundary value
-        side : string
+        side : str
             Which side to take the boundary value on ("left" or "right")
 
         Returns
@@ -489,55 +537,28 @@ class FiniteVolume(pybamm.SpatialMethod):
             The variable representing the boundary value.
         """
 
+        # find the number of submeshs
+        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        if isinstance(submesh_list[0].npts, list):
+            NotImplementedError("Can only take in 1D primary directions")
+
+        prim_pts = submesh_list[0].npts
+        sec_pts = len(submesh_list)
+
         def linear_extrapolation(array):
             """Linearly extrapolates an array"""
+
+            # first reshape array for convenice with many particles
+            array = np.reshape(array, [sec_pts, prim_pts])
+
             if side == "left":
-                return array[0] + (array[0] - array[1]) / 2
+                return array[:, 0] + (array[:, 0] - array[:, 1]) / 2
             elif side == "right":
-                return array[-1] + (array[-1] - array[-2]) / 2
+                return array[:, -1] + (array[:, -1] - array[:, -2]) / 2
 
-        return BoundaryValueEvaluated(discretised_symbol, linear_extrapolation)
-
-    def mass_matrix(self, symbol, boundary_conditions):
-        """
-        Calculates the mass matrix for a spatial method.
-
-        Parameters
-        ----------
-        symbol: :class:`pybamm.Variable`
-            The variable corresponding to the equation for which we are
-            calculating the mass matrix.
-        boundary_conditions : dict
-            The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
-
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The (sparse) mass matrix for the spatial method.
-        """
-        # NOTE: for different spatial methods the matrix may need to be adjusted
-        # to account for Dirichlet boundary conditions. Here, we just have that
-        # the mass matrix is the identity.
-
-        # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*symbol.domain)
-
-        # Get number of points in primary dimension
-        n = submesh[0].npts
-
-        # Create mass matrix for primary dimension
-        prim_mass = eye(n)
-
-        # Get number of points in secondary dimension
-        sec_pts = len(submesh)
-
-        mass = kron(eye(sec_pts), prim_mass)
-        return pybamm.Matrix(mass)
-
-    #######################################################
-    # Can probably be moved outside of the spatial method
-    ######################################################
+        boundary_value = pybamm.Function(linear_extrapolation, discretised_symbol)
+        boundary_value.domain = []
+        return boundary_value
 
     def compute_diffusivity(
         self, discretised_symbol, extrapolate_left=False, extrapolate_right=False
@@ -565,7 +586,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.NodeToEdge`
+        :class:`pybamm.Function`
             Averaged symbol. When evaluated, this returns either a scalar or an array of
             shape (n-1,) as appropriate.
         """
@@ -581,73 +602,13 @@ class FiniteVolume(pybamm.SpatialMethod):
                 mean_array = np.concatenate([mean_array, np.array([right_node])])
             return mean_array
 
-        return pybamm.NodeToEdge(discretised_symbol, arithmetic_mean)
+        def node_to_edge(symbol):
+            # If the symbol is a numpy array of shape (n,), do the averaging
+            # NOTE: Doing this check every time might be slow?
+            if isinstance(symbol, np.ndarray) and len(symbol.shape) == 1:
+                return arithmetic_mean(symbol)
+            # If not, no need to average
+            else:
+                return symbol
 
-
-class BoundaryValueEvaluated(pybamm.SpatialOperator):
-    """A node in the expression tree representing a unary operator that evaluates the
-    value of its child at a boundary.
-
-    Parameters
-    ----------
-    child : :class:`Symbol`
-        child node
-    boundary_function : method
-        the function used to calculate the boundary value
-
-    **Extends:** :class:`pybamm.SpatialOperator`
-    """
-
-    def __init__(self, child, boundary_function):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__(
-            "boundary value ({})".format(boundary_function.__name__), child
-        )
-        self._boundary_function = boundary_function
-        # Domain of BoundaryValue must be ([]) so that expressions can be formed
-        # of boundary values of variables in different domains
-        self.domain = []
-
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        evaluated_child = self.children[0].evaluate(t, y)
-        return self._boundary_function(evaluated_child)
-
-
-class NodeToEdge(pybamm.SpatialOperator):
-    """A node in the expression tree representing a unary operator that evaluates the
-    value of its child at cell edges by averaging the value at cell nodes.
-
-    Parameters
-    ----------
-
-    child : :class:`Symbol`
-        child node
-    node_to_edge_function : method
-        the function used to average; only acts if the child evaluates to a
-        one-dimensional numpy array
-
-    **Extends:** :class:`pybamm.SpatialOperator`
-    """
-
-    def __init__(self, child, node_to_edge_function):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__(
-            "node to edge ({})".format(node_to_edge_function.__name__), child
-        )
-        self._node_to_edge_function = node_to_edge_function
-
-    @property
-    def node_to_edge_function(self):
-        return self._node_to_edge_function
-
-    def evaluate(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        evaluated_child = self.children[0].evaluate(t, y)
-        # If the evaluated child is a numpy array of shape (n,), do the averaging
-        # NOTE: Doing this check every time might be slow?
-        if isinstance(evaluated_child, np.ndarray) and len(evaluated_child.shape) == 1:
-            return self._node_to_edge_function(evaluated_child)
-        # If not, no need to average
-        else:
-            return evaluated_child
+        return pybamm.Function(node_to_edge, discretised_symbol)

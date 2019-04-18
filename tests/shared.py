@@ -16,12 +16,9 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         super().__init__(mesh)
 
     def spatial_variable(self, symbol):
-        # for finite volume we use the cell centres
+        # use the cell centres
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
         return pybamm.Vector(symbol_mesh[0].nodes)
-
-    def broadcast(self, symbol, domain):
-        return pybamm.NumpyBroadcast(symbol, domain, self.mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
@@ -36,18 +33,6 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
             n += self.mesh[domain][0].npts
         divergence_matrix = pybamm.Matrix(np.eye(n))
         return divergence_matrix @ discretised_symbol
-
-    def compute_diffusivity(
-        self, symbol, extrapolate_left=None, extrapolate_right=None
-    ):
-        return symbol
-
-    def mass_matrix(self, symbol, boundary_conditions):
-        n = 0
-        for domain in symbol.domain:
-            n += self.mesh[domain][0].npts
-        mass_matrix = pybamm.Matrix(np.eye(n))
-        return mass_matrix
 
 
 def get_mesh_for_testing(npts=None):
@@ -70,24 +55,14 @@ def get_mesh_for_testing(npts=None):
         "positive particle": pybamm.Uniform1DSubMesh,
     }
 
+    var = pybamm.standard_spatial_vars
+
     if npts is None:
-        submesh_pts = {
-            "negative electrode": {"x": 40},
-            "separator": {"x": 25},
-            "positive electrode": {"x": 35},
-            "negative particle": {"r": 10},
-            "positive particle": {"r": 10},
-        }
+        var_pts = {var.x_n: 40, var.x_s: 25, var.x_p: 35, var.r_n: 10, var.r_p: 10}
     else:
         n = 3 * round(npts / 3)
-        submesh_pts = {
-            "negative electrode": {"x": n},
-            "separator": {"x": n},
-            "positive electrode": {"x": n},
-            "negative particle": {"r": npts},
-            "positive particle": {"r": npts},
-        }
-    return pybamm.Mesh(geometry, submesh_types, submesh_pts)
+        var_pts = {var.x_n: n, var.x_s: n, var.x_p: n, var.r_n: npts, var.r_p: npts}
+    return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
 def get_p2d_mesh_for_testing(npts=None, mpts=None):
@@ -111,25 +86,14 @@ def get_p2d_mesh_for_testing(npts=None, mpts=None):
         "positive particle": pybamm.Uniform1DSubMesh,
     }
 
+    var = pybamm.standard_spatial_vars
     if mpts is None:
-        submesh_pts = {
-            "negative electrode": {"x": 40},
-            "separator": {"x": 25},
-            "positive electrode": {"x": 35},
-            "negative particle": {"r": 10, "x": 40},
-            "positive particle": {"r": 10, "x": 35},
-        }
+        var_pts = {var.x_n: 40, var.x_s: 25, var.x_p: 35, var.r_n: 10, var.r_p: 10}
     else:
         n = 3 * round(npts / 3)
-        submesh_pts = {
-            "negative electrode": {"x": n},
-            "separator": {"x": n},
-            "positive electrode": {"x": n},
-            "negative particle": {"r": mpts, "x": n},
-            "positive particle": {"r": mpts, "x": n},
-        }
+        var_pts = {var.x_n: n, var.x_s: n, var.x_p: n, var.r_n: mpts, var.r_p: mpts}
 
-    return pybamm.Mesh(geometry, submesh_types, submesh_pts)
+    return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
 def get_discretisation_for_testing(npts=None):

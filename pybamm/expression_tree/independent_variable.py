@@ -5,6 +5,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
+KNOWN_SPATIAL_VARS = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
+
 
 class IndependentVariable(pybamm.Symbol):
     """A node in the expression tree representing an independent variable
@@ -34,8 +36,8 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
-    def evaluate(self, t, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+    def _base_evaluate(self, t, y=None):
+        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if t is None:
             raise ValueError("t must be provided")
         return t
@@ -47,28 +49,34 @@ class SpatialVariable(IndependentVariable):
     Parameters
     ----------
     name : str
-        name of the node ("x", "y", "z" or "r")
+        name of the node (e.g. "x_n")
     domain : iterable of str
         list of domains that this variable is valid over
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain):
-        if name not in ["x", "y", "z", "r"]:
+    def __init__(self, name, domain=[], coord_sys=None):
+        self.coord_sys = coord_sys
+        super().__init__(name, domain=domain)
+
+        if name not in KNOWN_SPATIAL_VARS:
             raise ValueError(
-                "name must be 'x', 'y', 'z' or 'r' but is '{}'".format(name)
+                "name must be KNOWN_SPATIAL_VARS  but is '{}'".format(name)
             )
         if domain == []:
             raise ValueError("domain must be provided")
-        if name == "r" and domain not in [["negative particle"], ["positive particle"]]:
+        if name in ["r", "r_n", "r_p"] and domain not in [
+            ["negative particle"],
+            ["positive particle"],
+        ]:
             raise pybamm.DomainError("domain must be particle if name is 'r'")
-        elif name in ["x", "y", "z"] and any(["particle" in dom for dom in domain]):
+        elif name in ["x", "y", "z", "x_n", "x_s", "x_p"] and any(
+            ["particle" in dom for dom in domain]
+        ):
             raise pybamm.DomainError(
                 "domain cannot be particle if name is '{}'".format(name)
             )
-
-        super().__init__(name, domain=domain)
 
 
 # the independent variable time

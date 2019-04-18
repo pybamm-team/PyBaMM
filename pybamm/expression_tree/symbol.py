@@ -11,6 +11,7 @@ import copy
 import autograd.numpy as np
 
 from anytree.exporter import DotExporter
+from scipy.sparse import issparse
 
 
 def simplify_if_constant(new_node):
@@ -23,7 +24,7 @@ def simplify_if_constant(new_node):
         if result is not None:
             if isinstance(result, numbers.Number):
                 return pybamm.Scalar(result, domain=new_node.domain)
-            elif isinstance(result, np.ndarray):
+            elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1:
                     return pybamm.Vector(result, domain=new_node.domain)
                 else:
@@ -55,6 +56,8 @@ class Symbol(anytree.NodeMixin):
             # copy child before adding
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
+
+        # Set domain (and hence id)
         self.domain = domain
 
         # useful flags
@@ -107,17 +110,25 @@ class Symbol(anytree.NodeMixin):
                 )
 
             self._domain = domain
+            # Update id since domain has changed
+            self.set_id()
 
     @property
     def id(self):
+        return self._id
+
+    def set_id(self):
         """
-        The immutable "identity" of a variable (for identifying y_slices).
+        Set the immutable "identity" of a variable (e.g. for identifying y_slices).
 
         This is identical to what we'd put in a __hash__ function
         However, implementing __hash__ requires also implementing __eq__,
-        which would then mess with loop-checking in the anytree module
+        which would then mess with loop-checking in the anytree module.
+
+        Hashing can be slow, so we set the id when we create the node, and hence only
+        need to hash once.
         """
-        return hash(
+        self._id = hash(
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
@@ -141,7 +152,7 @@ class Symbol(anytree.NodeMixin):
         children)
         """
         for pre, _, node in anytree.RenderTree(self):
-            print("%s%s" % (pre, str(node)))
+            print("%s%s" % (pre, str(node.name)))
 
     def visualise(self, filename):
         """
@@ -191,15 +202,11 @@ class Symbol(anytree.NodeMixin):
         new_node = anytree.Node(str(counter), label=name)
         counter += 1
 
-        if isinstance(symbol, pybamm.BinaryOperator):
-            left, right = symbol.children
-            new_left, counter = self.relabel_tree(left, counter)
-            new_right, counter = self.relabel_tree(right, counter)
-            new_node.children = [new_left, new_right]
-
-        elif isinstance(symbol, pybamm.UnaryOperator):
-            new_child, counter = self.relabel_tree(symbol.children[0], counter)
-            new_node.children = [new_child]
+        new_children = []
+        for child in symbol.children:
+            new_child, counter = self.relabel_tree(child, counter)
+            new_children.append(new_child)
+        new_node.children = new_children
 
         return new_node, counter
 
@@ -345,7 +352,7 @@ class Symbol(anytree.NodeMixin):
         else:
             return pybamm.Scalar(0)
 
-    def evaluate(self, t=None, y=None):
+    def _base_evaluate(self, t=None, y=None):
         """evaluate expression tree
 
         will raise a ``NotImplementedError`` if this member function has not
@@ -368,6 +375,35 @@ class Symbol(anytree.NodeMixin):
                 self, type(self)
             )
         )
+
+    def evaluate(self, t=None, y=None, known_evals=None):
+        """Evaluate expression tree (wrapper for dict of known values).
+        If the dict 'known_evals' is provided, the dict is searched for self.id; if
+        self.id is in the keys, return that value; otherwise, evaluate using
+        :meth:`_base_evaluate()` and add that value to known_evals
+
+        Parameters
+        ----------
+        t : float or numeric type, optional
+            time at which to evaluate (default None)
+        y : numpy.array, optional
+            array to evaluate when solving (default None)
+        known_evals : dict, optional
+            dictionary containing known values (default None)
+
+        Returns
+        -------
+        number or array
+            the node evaluated at (t,y)
+        known_evals (if known_evals input is not None) : dict
+            the dictionary of known values
+        """
+        if known_evals is not None:
+            if self.id not in known_evals:
+                known_evals[self.id] = self._base_evaluate(t, y)
+            return known_evals[self.id], known_evals
+        else:
+            return self._base_evaluate(t, y)
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
@@ -458,6 +494,10 @@ class Symbol(anytree.NodeMixin):
         """
 
         new_symbol = copy.deepcopy(self)
+        # strip out domain info by default, so that conflicting domains are not an issue
+        # during simplification. This should only be run after the model is discretised,
+        # after which domains are no longer an issue
+        new_symbol.domain = []
         new_symbol.parent = None
         return simplify_if_constant(new_symbol)
 

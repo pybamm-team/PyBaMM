@@ -26,7 +26,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
         t_eval : numeric type
@@ -34,20 +34,24 @@ class DaeSolver(pybamm.BaseSolver):
 
         """
 
+        # create simplified rhs algebraic and event expressions
+        concatenated_rhs = model.concatenated_rhs.simplify()
+        concatenated_algebraic = model.concatenated_algebraic.simplify()
+        events = [event.simplify() for event in model.events]
+
         def residuals(t, y, ydot):
-            rhs_eval = model.concatenated_rhs.evaluate(t, y)
-            return np.concatenate(
-                (
-                    rhs_eval - ydot[: rhs_eval.shape[0]],
-                    model.concatenated_algebraic.evaluate(t, y),
-                )
-            )
+            rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
+            # reuse known_evals
+            concat_evals = concatenated_algebraic.evaluate(
+                t, y, known_evals=known_evals
+            )[0]
+            return np.concatenate((rhs_eval - ydot[: rhs_eval.shape[0]], concat_evals))
 
         def rhs(t, y):
-            return model.concatenated_rhs.evaluate(t, y)
+            return concatenated_rhs.evaluate(t, y, known_evals={})[0]
 
         def algebraic(t, y):
-            return model.concatenated_algebraic.evaluate(t, y)
+            return concatenated_algebraic.evaluate(t, y, known_evals={})[0]
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
@@ -56,7 +60,7 @@ class DaeSolver(pybamm.BaseSolver):
 
             return eval_event
 
-        events = [event_fun(event) for event in model.events]
+        events = [event_fun(event) for event in events]
 
         y0 = self.calculate_consistent_initial_conditions(
             rhs, algebraic, model.concatenated_initial_conditions

@@ -1,6 +1,6 @@
 # Examples
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tinosulzer/PyBaMM/master)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master)
 
 This page contains a number of examples showing how to use PyBaMM.
 
@@ -9,12 +9,12 @@ These notebooks can be downloaded and used locally by running
 ```
 $ jupyter notebook
 ```
-from your local PyBaMM repository, or used online through [Binder](https://mybinder.org/v2/gh/tinosulzer/PyBaMM/master), or you can simply copy/paste the relevant code.
+from your local PyBaMM repository, or used online through [Binder](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master), or you can simply copy/paste the relevant code.
 
 ## Getting started
 
 The easiest way to start with PyBaMM is by running and comparing some of the inbuilt models:
-- [Run a pre-defined model](./run-model.ipynb)
+- [Run the Single Particle Model (SPM)](./models/SPM.ipynb)
 - [Compare models](./compare-models.ipynb)
 
 It is also easy to new models or change the setting that are used:
