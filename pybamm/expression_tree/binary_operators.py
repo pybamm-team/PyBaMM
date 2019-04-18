@@ -346,7 +346,10 @@ def simplify_multiplication_division(myclass, left, right):
     if numerator_has_mat_mul and denominator_has_mat_mul:
         new_numerator = simplify_with_mat_mul(numerator, numerator_types)
         new_denominator = simplify_with_mat_mul(denominator, denominator_types)
-        result = new_numerator / new_denominator
+        if new_denominator is None:
+            result = new_numerator
+        else:
+            result = new_numerator / new_denominator
 
     elif numerator_has_mat_mul and not denominator_has_mat_mul:
         new_numerator = simplify_with_mat_mul(numerator, numerator_types)
@@ -357,14 +360,24 @@ def simplify_multiplication_division(myclass, left, right):
         constant_denominator_expr = fold_multiply(denominator_constant)
         nonconst_denominator_expr = fold_multiply(denominator_nonconst)
 
+        # result = constant_numerator_expr * new_numerator / nonconst_denominator_expr
+        # need to take into accound that terms can be None
         if constant_denominator_expr is None:
-            result = new_numerator / nonconst_denominator_expr
+            if nonconst_denominator_expr is None:
+                result = new_numerator
+            else:
+                result = new_numerator / nonconst_denominator_expr
         else:
             # invert constant denominator terms for speed
             constant_numerator_expr = pybamm.simplify_if_constant(
                 1 / constant_denominator_expr
             )
-            result = constant_numerator_expr * new_numerator / nonconst_denominator_expr
+
+            if nonconst_denominator_expr is None:
+                result = constant_numerator_expr * new_numerator
+            else:
+                result = constant_numerator_expr * new_numerator \
+                    / nonconst_denominator_expr
 
     elif not numerator_has_mat_mul and denominator_has_mat_mul:
         new_denominator = simplify_with_mat_mul(denominator, denominator_types)
@@ -377,13 +390,25 @@ def simplify_multiplication_division(myclass, left, right):
         )
         nonconst_numerator_expr = fold_multiply(numerator_nonconst)
 
+        # result = constant_numerator_expr * nonconst_numerator_expr / new_denominator
+        # need to take into account that terms can be None
         if constant_numerator_expr is None:
             result = nonconst_numerator_expr / new_denominator
         else:
             constant_numerator_expr = pybamm.simplify_if_constant(
                 constant_numerator_expr
             )
-            result = constant_numerator_expr * nonconst_numerator_expr / new_denominator
+            if nonconst_numerator_expr is None:
+                if new_denominator is None:
+                    result = constant_numerator_expr
+                else:
+                    result = constant_numerator_expr / new_denominator
+            else:
+                if new_denominator is None:
+                    result = constant_numerator_expr * nonconst_numerator_expr
+                else:
+                    result = constant_numerator_expr * nonconst_numerator_expr \
+                        / new_denominator
 
     else:
         # can reorder the numerator since no matrix multiplies
@@ -412,8 +437,20 @@ def simplify_multiplication_division(myclass, left, right):
                 constant_numerator_expr = pybamm.simplify_if_constant(
                     1 / constant_denominator_expr
                 )
-        result = constant_numerator_expr * nonconst_numerator_expr \
-            / nonconst_denominator_expr
+
+        # result = constant_numerator_expr * nonconst_numerator_expr
+        #    / nonconst_denominator_expr
+        # need to take into account that terms can be None
+        if constant_numerator_expr is None:
+            result = nonconst_numerator_expr
+        else:
+            if nonconst_numerator_expr is None:
+                result = constant_numerator_expr
+            else:
+                result = constant_numerator_expr * nonconst_numerator_expr
+
+        if nonconst_denominator_expr is not None:
+            result = result / nonconst_denominator_expr
 
     return result
 
