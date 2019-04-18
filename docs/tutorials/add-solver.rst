@@ -13,66 +13,71 @@ The role of solvers
 All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_.
 After the model has been created, parameters have been set, and the model has been discretised, the model is now a linear algebra object with the following attributes:
 
-model.rhs
-  A :class:`pybamm.Symbol` that can be evaluated at a state (``t``, ``y``) and returns the value of all the differential equations at that state, concatenated into a single vector
-model.algebraic
-  A :class:`pybamm.Symbol` that can be evaluated at a state (``t``, ``y``) and returns the value of all the algebraic equations at that state, concatenated into a single vector
+model.concatenated_rhs
+  A :class:`pybamm.Symbol` nodes that can be evaluated at a state (``t``, ``y``) and returns the value of all the differential equations at that state, concatenated into a single vector
+model.concatenated_algebraic
+  A :class:`pybamm.Symbol` nodes that can be evaluated at a state (``t``, ``y``) and returns the value of all the algebraic equations at that state, concatenated into a single vector
 model.concatenated_initial_conditions
+  A numpy array of initial conditions for all the differential and algebraic equations, concatenated into a single vector
+model.events
+  A list of :class:`pybamm.Symbol` nodes representing events at which the solver should terminate. Specifically, the solver should terminate when any of the events in ``model.events`` evaluate to zero
 
+The role of solvers is to solve a model at a given set of time points, returning a vector of times ``t`` and a matrix of states ``y``.
 
-The role
+Base solver classes vs specific solver classes
+----------------------------------------------
 
+There is one general base solver class, :class:`pybamm.BaseSolver`, and two specialised base classes, :class:`pybamm.OdeSolver` and :class:`pybamm.DaeSolver`. The general base class simply sets up some useful solver properties such as tolerances. The specialised base classes implement a method :meth:`self.solve()` that solves a model at a given set of time points.
 
+The ``solve`` method unpacks the model, simplifies it by removing extraneous operations, (optionally) creates or calls the mass matrix and/or jacobian, and passes the appropriate attributes to another method, called ``integrate``, which does the time-stepping. The role of specific solver classes is simply to implement this ``integrate`` method for an arbitrary set of derivative function, initial conditions etc.
 
-The base solver class
----------------------
-
-
+The base DAE solver class also computes a consistent set of initial conditions for the algebraic equations, using ``model.concatenated_initial_conditions`` as an initial guess.
 
 Implementing a new solver
----------------------------------
+-------------------------
 
-To add a new solver (e.g. My Fast DAE Solver), first create a new file (``my_fast_dae_solver.py``) in ``pybamm/solvers``,
+To add a new solver (e.g. My Fast DAE Solver), first create a new file (``my_fast_dae_solver.py``) in ``pybamm/solvers/``,
 with a single class that inherits from either :class:`pybamm.OdeSolver` or :class:`pybamm.DaeSolver`, depending on whether the new solver can solve DAE systems. For example:
+
+.. code-block:: python
 
     def MyFastDaeSolver(pybamm.DaeSolver):
 
-Also add the class to `pybamm/__init__.py`:
+Also add the class to ``pybamm/__init__.py``:
+
+.. code-block:: python
 
     from .solvers.my_fast_solver import MyFastSolver
 
-You can then start implementing the solver by adding functions to the class.
-In particular, any solver *must* have the following functions (from the base class :class:`pybamm.SpatialMethod`):
+You can then start implementing the solver by adding the ``integrate`` function to the class, which for an ODE solver has interface
 
-- :meth:`pybamm.SpatialMethod.spatial_variable`
-- :meth:`pybamm.SpatialMethod.gradient`
-- :meth:`pybamm.SpatialMethod.divergence`
-- :meth:`pybamm.SpatialMethod.integral`
-- :meth:`pybamm.SpatialMethod.indefinite integral`
-- :meth:`pybamm.SpatialMethod.boundary_value`
+.. code-block:: python
 
-Optionally, a new solver can also overwrite the default behaviour for the following functions:
+    def integrate(self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
 
-- :meth:`pybamm.SpatialMethod.broadcast`
-- :meth:`pybamm.SpatialMethod.mass_matrix`
-- :meth:`pybamm.SpatialMethod.compute_diffusivity`
+and for a DAE solver has interface
 
-For an example of an existing solver implementation, see the Scikits ODEs solver
+.. code-block:: python
+
+    def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
+
+For an example of an existing solver implementation, see the Scikits DAE solver
 `API docs <https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html>`_.
 and
-`notebook <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/solvers/scikits-solvers.ipynb>`_.
+`notebook <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/solvers/scikits-dae-solver.ipynb>`_.
 
 Unit tests for the new class
 ----------------------------
 
 For the new solver to be added to PyBaMM, you must add unit tests to demonstrate that it behaves as expected
-(see, for example, the `Finite Volume unit tests <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_solvers/test_finite_volume.py>`_).
-The best way to get started would be to create a file `test_my_fast_method.py` in `tests/unit/test_solvers/` that performs at least the
+(see, for example, the `Scikits solver tests <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_solvers/test_scikits_solvers.py>`_).
+The best way to get started would be to create a file ``test_my_fast_solver.py`` in ``tests/unit/test_solvers/`` that performs at least the
 following checks:
 
-- Operations return objects that have the expected shape
-- Standard operations behave as expected, e.g. (in 1D) grad(x^2) = 2*x, integral(sin(x), 0, pi) = 2
-- (more advanced) make sure that the operations converge at the correct rate to known analytical solutions as you decrease the grid size
+- The ``integrate`` method works on a simple ODE/DAE model with/without jacobian, mass matrix and/or events as appropriate
+- The ``solve`` method works on a simple model (in theory, if the ``integrate`` method works then the ``solve`` method should always work)
+
+If the solver is expected to converge in a certain way as the time step is changed, you could also add a convergence test in ``tests/convergence/solvers/``.
 
 Test on the models
 ------------------
@@ -81,10 +86,11 @@ In theory, any existing model can now be solved using `MyFastDaeSolver` instead 
 To test this, add something like the following test to one of the model test files
 (e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_models/test_lithium_ion/test_lithium_ion_dfn.py>`_):
 
+.. code-block:: python
+
     def test_my_fast_solver(self):
         model = pybamm.lithium_ion.DFN()
         solver = pybamm.MyFastDaeSolver()
-
         modeltest = tests.StandardModelTest(model, solver=solver)
         modeltest.test_all()
 
