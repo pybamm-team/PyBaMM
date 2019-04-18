@@ -365,7 +365,7 @@ class BoundaryValue(SpatialOperator):
     ----------
     child : `pybamm.Symbol`
         The variable whose boundary value to take
-    side : string
+    side : str
         Which side to take the boundary value on ("left" or "right")
 
     **Extends:** :class:`SpatialOperator`

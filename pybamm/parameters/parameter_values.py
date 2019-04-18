@@ -47,7 +47,7 @@ class ParameterValues(dict):
 
         Parameters
         ----------
-        filename : string
+        filename : str
             The name of the csv file containing the parameters.
 
         Returns
@@ -68,7 +68,7 @@ class ParameterValues(dict):
 
         Parameters
         ----------
-        parameter : :class:`pybamm.expression_tree.parameter.Parameter` instance
+        parameter : :class:`pybamm.Parameter` instance
             The parameter whose value to obtain
 
         Returns
@@ -78,60 +78,72 @@ class ParameterValues(dict):
         """
         return self[parameter.name]
 
-    def process_model(self, model):
+    def process_model(self, model, processing="process"):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
-        model : :class:`pybamm.models.core.BaseModel` (or subclass) instance
+        model : :class:`pybamm.BaseModel`
             Model to assign parameter values for
+        processing : str, optional
+            Flag to indicate how to process model (default 'process')
+
+            * 'process': Calls :meth:`process_symbol()` (walk through the symbol \
+            and replace any Parameter with a Value)
+            * 'update': Calls :meth:`update_scalars()` for use on already-processed \
+            model (update the value of any Scalars in the expression tree.)
 
         """
+        if processing == "process":
+            processing_function = self.process_symbol
+        elif processing == "update":
+            processing_function = self.update_scalars
+
         for variable, equation in model.rhs.items():
-            model.rhs[variable] = self.process_symbol(equation)
+            model.rhs[variable] = processing_function(equation)
 
         for variable, equation in model.algebraic.items():
-            model.algebraic[variable] = self.process_symbol(equation)
+            model.algebraic[variable] = processing_function(equation)
 
         for variable, equation in model.initial_conditions.items():
-            model.initial_conditions[variable] = self.process_symbol(equation)
+            model.initial_conditions[variable] = processing_function(equation)
 
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
         new_boundary_conditions = {}
         for variable, bcs in model.boundary_conditions.items():
-            processed_variable = self.process_symbol(variable)
+            processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
             if "left" in bcs.keys():
                 new_boundary_conditions[processed_variable][
                     "left"
-                ] = self.process_symbol(bcs["left"])
+                ] = processing_function(bcs["left"])
             if "right" in bcs.keys():
                 new_boundary_conditions[processed_variable][
                     "right"
-                ] = self.process_symbol(bcs["right"])
+                ] = processing_function(bcs["right"])
         model.boundary_conditions = new_boundary_conditions
 
         for variable, equation in model.variables.items():
-            model.variables[variable] = self.process_symbol(equation)
+            model.variables[variable] = processing_function(equation)
 
         for idx, equation in enumerate(model.events):
-            model.events[idx] = self.process_symbol(equation)
+            model.events[idx] = processing_function(equation)
 
-    def process_discretised_model(self, model, disc):
+    def update_model(self, model, disc):
         """Process a discretised model.
         Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
-        model : :class:`pybamm.models.core.BaseModel` (or subclass) instance
+        model : :class:`pybamm.BaseModel`
             Model to assign parameter values for
         disc : :class:`pybamm.Discretisation`
             The class that was used to discretise
 
         """
         # process parameter values for the model
-        self.process_model(model)
+        self.process_model(model, processing="update")
 
         # update discretised quantities using disc
         model.concatenated_rhs = disc.concatenate(*model.rhs.values())
@@ -141,14 +153,15 @@ class ParameterValues(dict):
         ).evaluate(0, None)
 
     def process_geometry(self, geometry):
-        """Assign parameter values to a geometry.
-            Currently inplace, could be changed to return a new model.
+        """
+        Assign parameter values to a geometry.
+        Currently inplace, could be changed to return a new model.
 
-            Parameters
-            ----------
-            geometry : :class:`pybamm.Geometry` (or subclass) instance
-                    Geometry specs to assign parameter values to
-            """
+        Parameters
+        ----------
+        geometry : :class:`pybamm.Geometry`
+                Geometry specs to assign parameter values to
+        """
 
         for domain in geometry:
             for prim_sec, variables in geometry[domain].items():
@@ -160,16 +173,15 @@ class ParameterValues(dict):
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
-        Can process a model either before or after discretisation
 
         Parameters
         ----------
-        symbol : :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
+        symbol : :class:`pybamm.Symbol`
             Symbol or Expression tree to set parameters for
 
         Returns
         -------
-        symbol : :class:`pybamm.expression_tree.symbol.Symbol` (or subclass) instance
+        symbol : :class:`pybamm.Symbol`
             Symbol with Parameter instances replaced by Value
 
         """
@@ -188,15 +200,6 @@ class ParameterValues(dict):
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.children[0])
                 return function.diff(new_diff_variable)
-
-        elif isinstance(symbol, pybamm.Scalar):
-            # update any Scalar nodes if their name is in the parameter dict (no error)
-            try:
-                value = self.get_parameter_value(symbol)
-            except KeyError:
-                # KeyError -> name not in parameter dict, don't update, return old value
-                value = symbol.value
-            return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
@@ -244,3 +247,27 @@ class ParameterValues(dict):
             new_symbol = copy.deepcopy(symbol)
             new_symbol.parent = None
             return new_symbol
+
+    def update_scalars(self, symbol):
+        """Update the value of any Scalars in the expression tree.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            Symbol or Expression tree to update
+
+        Returns
+        -------
+        symbol : :class:`pybamm.Symbol`
+            Symbol with Scalars updated
+
+        """
+        for x in symbol.pre_order():
+            if isinstance(x, pybamm.Scalar):
+                # update any Scalar nodes if their name is in the parameter dict
+                try:
+                    x.value = self.get_parameter_value(x)
+                except KeyError:
+                    # KeyError -> name not in parameter dict, don't update
+                    continue
+        return symbol

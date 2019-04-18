@@ -25,7 +25,7 @@ class ProcessedVariable(object):
     mesh : :class:`pybamm.Mesh`
         The mesh used to solve, used here to calculate the reference x values for
         interpolation
-    interp_kind : string
+    interp_kind : str
         The method to use for interpolation
 
     """

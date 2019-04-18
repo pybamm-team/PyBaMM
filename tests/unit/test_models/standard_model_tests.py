@@ -101,7 +101,7 @@ class StandardModelTest(object):
             )
         # otherwise update self.param and change the parameters in the discretised model
         self.param = param
-        param.process_discretised_model(self.model, self.disc)
+        param.update_model(self.model, self.disc)
         # Model should still be well-posed after processing
         self.model.check_well_posedness()
 
