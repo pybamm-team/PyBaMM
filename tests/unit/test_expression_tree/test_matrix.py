@@ -104,60 +104,60 @@ class TestMatrix(unittest.TestCase):
             )
 
         # matrix * vector
-        m1=pybamm.Matrix(np.array([[2, 0], [0, 2]]))
-        v1=pybamm.Vector(np.array([1, 1]))
+        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
+        v1 = pybamm.Vector(np.array([1, 1]))
 
         for expr in [(m1 @ v1).simplify()]:
             self.assertIsInstance(expr, pybamm.Vector)
             np.testing.assert_array_equal(expr.entries, np.array([2, 2]))
 
         # dont expant mult within mat-mult (issue #253)
-        m1=pybamm.Matrix(np.ones((300, 299)))
-        m2=pybamm.Matrix(np.ones((299, 300)))
-        v1=pybamm.StateVector(slice(0, 299))
-        v2=pybamm.StateVector(slice(0, 300))
-        v3=pybamm.Vector(np.ones(299))
+        m1 = pybamm.Matrix(np.ones((300, 299)))
+        m2 = pybamm.Matrix(np.ones((299, 300)))
+        v1 = pybamm.StateVector(slice(0, 299))
+        v2 = pybamm.StateVector(slice(0, 300))
+        v3 = pybamm.Vector(np.ones(299))
 
-        expr=m1 @ (v1 * m2)
+        expr = m1 @ (v1 * m2)
         self.assertEqual(
-            expr.simplify().evaluate(y = np.ones((299, 1))).shape, (300, 300)
+            expr.simplify().evaluate(y=np.ones((299, 1))).shape, (300, 300)
         )
         np.testing.assert_array_equal(
-            expr.evaluate(y = np.ones((299, 1))),
-            expr.simplify().evaluate(y = np.ones((299, 1))),
+            expr.evaluate(y=np.ones((299, 1))),
+            expr.simplify().evaluate(y=np.ones((299, 1))),
         )
 
         # more complex expression
-        expr2=m1 @ (v1 * (m2 @ v2))
-        expr2simp=expr2.simplify()
+        expr2 = m1 @ (v1 * (m2 @ v2))
+        expr2simp = expr2.simplify()
         np.testing.assert_array_equal(
-            expr2.evaluate(y = np.ones(300)), expr2simp.evaluate(y = np.ones(300))
+            expr2.evaluate(y=np.ones(300)), expr2simp.evaluate(y=np.ones(300))
         )
         self.assertEqual(expr2.id, expr2simp.id)
 
         # more complex expression, with simplification
-        expr3=m1 @ (v3 * (m2 @ v2))
-        expr3simp=expr3.simplify()
+        expr3 = m1 @ (v3 * (m2 @ v2))
+        expr3simp = expr3.simplify()
         np.testing.assert_array_equal(
-            expr3.evaluate(y = np.ones(300)), expr3simp.evaluate(y = np.ones(300))
+            expr3.evaluate(y=np.ones(300)), expr3simp.evaluate(y=np.ones(300))
         )
 
         # we expect simplified solution to be much faster
-        timer=pybamm.Timer()
-        start=timer.time()
+        timer = pybamm.Timer()
+        start = timer.time()
         for _ in range(20):
             expr3.evaluate(y=np.ones(300))
-        end=timer.time()
-        start_simp=timer.time()
+        end = timer.time()
+        start_simp = timer.time()
         for _ in range(20):
             expr3simp.evaluate(y=np.ones(300))
-        end_simp=timer.time()
+        end_simp = timer.time()
         self.assertLess(end_simp - start_simp, 1.5 * (end - start))
         self.assertGreater(end - start, (end_simp - start_simp))
 
     def test_matrix_modification(self):
-        exp=self.mat @ self.mat + self.mat
-        self.A[0, 0]=-1
+        exp = self.mat @ self.mat + self.mat
+        self.A[0, 0] = -1
         self.assertTrue(exp.children[1]._entries[0, 0], -1)
         self.assertTrue(exp.children[0].children[0]._entries[0, 0], -1)
         self.assertTrue(exp.children[0].children[1]._entries[0, 0], -1)
@@ -168,5 +168,5 @@ if __name__ == "__main__":
     import sys
 
     if "-v" in sys.argv:
-        debug=True
+        debug = True
     unittest.main()
