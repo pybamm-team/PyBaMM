@@ -7,8 +7,8 @@ Adding Parameter Values
 As with any contribution to PyBaMM, please follow the workflow in CONTRIBUTING.md_.
 In particular, start by creating an issue to discuss what you want to do - this is a good way to avoid wasted coding hours!
 
-The role of parameters values
-----------------------
+The role of parameter values
+----------------------------
 
 All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_.
 At the stage of creating a model, we use :class:`pybamm.Parameter` and :class:`pybamm.FunctionParameter` objects to represent parameters and functions respectively.
@@ -24,11 +24,11 @@ Adding a set of parameters values
 Parameter sets should be added as csv files in the appropriate chemistry folder in ``input/parameters/`` (add a new folder if no parameters exist for that chemistry yet).
 The expected structure of the csv file is
 
-+------------+------------+-----------+-----------+-----------+
-| Name       | Value      | Units     | Reference | Notes     |
-+============+============+===========+===========+===========+
-| Example    | 13         | m.s-2     | bloggs2019| an example|
-+------------+------------+-----------+-----------+-----------+
++------------+------------+-----------+-------------+-------------+
+| Name       | Value      | Units     | Reference   | Notes       |
++============+============+===========+=============+=============+
+| Example    | 13         | m.s-2     | bloggs2019  | an example  |
++------------+------------+-----------+-------------+-------------+
 
 Empty lines, and lines starting with ``#``, will be ignored.
 

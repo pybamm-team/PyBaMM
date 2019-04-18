@@ -49,7 +49,7 @@ There are many ways to contribute to PyBaMM:
 .. toctree::
     :maxdepth: 1
 
-    tutorials/add-parameters
+    tutorials/add-parameter-values
     tutorials/add-spatial-method
 
 Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.
