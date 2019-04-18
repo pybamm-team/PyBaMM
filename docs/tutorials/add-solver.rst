@@ -62,7 +62,7 @@ and for a DAE solver has interface
     def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
 
 For an example of an existing solver implementation, see the Scikits DAE solver
-`API docs <https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html>`_.
+`API docs <https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html>`_
 and
 `notebook <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/solvers/scikits-dae-solver.ipynb>`_.
 
