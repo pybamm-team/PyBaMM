@@ -47,19 +47,9 @@ Also add the class to ``pybamm/__init__.py``:
 
 .. code-block:: python
 
-    from .solvers.my_fast_solver import MyFastSolver
+    from .solvers.my_fast_dae_solver import MyFastDaeSolver
 
-You can then start implementing the solver by adding the ``integrate`` function to the class, which for an ODE solver has interface
-
-.. code-block:: python
-
-    def integrate(self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
-
-and for a DAE solver has interface
-
-.. code-block:: python
-
-    def integrate(self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None):
+You can then start implementing the solver by adding the ``integrate`` function to the class (the interfaces are slightly different for an ODE Solver and a DAE Solver, see :meth:`pybamm.OdeSolver.interface` vs :meth:`pybamm.DaeSolver.interface`)
 
 For an example of an existing solver implementation, see the Scikits DAE solver
 `API docs <https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html>`_
