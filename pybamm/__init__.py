@@ -101,7 +101,12 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 # Model classes
 #
-from .models.base_models import BaseModel, LeadAcidBaseModel, LithiumIonBaseModel
+from .models.base_models import (
+    BaseModel,
+    SubModel,
+    LeadAcidBaseModel,
+    LithiumIonBaseModel,
+)
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
@@ -117,6 +122,7 @@ from .models.submodels import (
     interface,
     particle,
     porosity,
+    potential,
 )
 
 #

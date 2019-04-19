@@ -61,8 +61,20 @@ class LOQS(pybamm.LeadAcidBaseModel):
         j0_p = pybamm.interface.exchange_current_density(
             c_e, domain=["positive electrode"]
         )
-        Phi = -param.U_n(c_e) - pybamm.Function(np.arcsinh, j_n / (2 * j0_n))
-        v = Phi + param.U_p(c_e) - pybamm.Function(np.arcsinh, j_p / (2 * j0_p))
+        Phi = -param.U_n(c_e) - pybamm.Function(
+            np.arcsinh, j_n / (2 * j0_n * param.l_n)
+        )
+        V = (
+            Phi
+            + param.U_p(c_e)
+            - pybamm.Function(np.arcsinh, j_p / (2 * j0_p * param.l_p))
+        )
+        # Phis_n = pybamm.Scalar(0)
+        # Phis_p = V
+        # Concatenate variables
+        # eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        # Phis = pybamm.Concatenation(Phis_n, pybamm.Scalar(0), Phis_p)
+        # self.variables = {"c": c, "eps": eps, "Phi": Phi, "Phis": Phis, "V": V}
         self.variables = {
             "Electrolyte concentration": pybamm.Broadcast(c_e, whole_cell),
             "Porosity": pybamm.Concatenation(
@@ -74,50 +86,44 @@ class LOQS(pybamm.LeadAcidBaseModel):
                 Phi, ["negative electrode"]
             ),
             "Positive electrode overpotential": pybamm.Broadcast(
-                v, ["positive electrode"]
+                V, ["positive electrode"]
             ),
             "Electrolyte potential": pybamm.Broadcast(Phi, whole_cell),
-            "Voltage": v,
-            "Exchange-current density": pybamm.Concatenation(
-                pybamm.Broadcast(j_n, ["negative electrode"]),
-                pybamm.Broadcast(0, ["separator"]),
-                pybamm.Broadcast(j_p, ["positive electrode"]),
-            ),
-            "Interfacial current density": pybamm.Concatenation(
-                pybamm.Broadcast(j0_n, ["negative electrode"]),
-                pybamm.Broadcast(0, ["separator"]),
-                pybamm.Broadcast(j0_p, ["positive electrode"]),
-            ),
+            "Voltage": V,
         }
 
         # Terminate if concentration goes below zero
         self.events = [c_e]
 
-        # Standard post-processing to find other variables
-        self.post_process(param)
-
-    def post_process(self, param):
+        "-----------------------------------------------------------------------------"
+        "Post-Processing"
 
         # spatial variables
         spatial_vars = pybamm.standard_spatial_vars
 
-        # Read variables
-        c_e = self.variables["Electrolyte concentration"]
-        j = self.variables["Interfacial current density"]
+        # electrolyte concentration
+        c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
+        c_e_s = pybamm.Broadcast(1, domain=["separator"])
+        c_e_p = pybamm.Broadcast(1, domain=["positive electrode"])
+        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-        # Concentration
         c_e_dim = param.c_e_typ * c_e
 
         # current
-        current_dim = param.dimensional_current_with_time
+        current_dim = param.i_typ * param.current_with_time
 
         # interfacial current density
+        j_n = pybamm.Broadcast(j_n, ["negative electrode"])
+        j_s = pybamm.Broadcast(pybamm.Scalar(0), domain=["separator"])
+        j_p = pybamm.Broadcast(j_p, ["positive electrode"])
+        j = pybamm.Concatenation(j_n, j_s, j_p)
+
         j_dim = param.i_typ * j
 
         # exhange current density
-        j0_n = pybamm.interface.exchange_current_density(c_e_n, pybamm.surf(c_s_n))
+        j0_n = pybamm.interface.exchange_current_density(c_e_n)
         j0_s = pybamm.Broadcast(pybamm.Scalar(0), domain=["separator"])
-        j0_p = pybamm.interface.exchange_current_density(c_e_p, pybamm.surf(c_s_p))
+        j0_p = pybamm.interface.exchange_current_density(c_e_p)
         j0 = pybamm.Concatenation(j0_n, j0_s, j0_p)
 
         j0_dim = param.i_typ * j0
@@ -136,8 +142,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         eta_r_av_dim = param.potential_scale * eta_r_av
 
         # open circuit voltage
-        ocp_n = pybamm.Broadcast(param.U_n(pybamm.surf(c_s_n)), ["negative electrode"])
-        ocp_p = pybamm.Broadcast(param.U_p(pybamm.surf(c_s_p)), ["positive electrode"])
+        ocp_n = pybamm.Broadcast(param.U_n(pybamm.surf(c_e_n)), ["negative electrode"])
+        ocp_p = pybamm.Broadcast(param.U_p(pybamm.surf(c_e_p)), ["positive electrode"])
         ocp_n_av = pybamm.Integral(ocp_n, spatial_vars.x_n) / param.l_n
         ocp_p_av = pybamm.Integral(ocp_p, spatial_vars.x_p) / param.l_p
         ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
@@ -191,7 +197,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self._variables.update(
             {
                 "Total current density": param.current_with_time,
+                "Negative electrode current density": i_s_n,
+                "Positive electrode current density": i_s_p,
                 "Electrolyte current density": i_e,
+                "Interfacial current density": j,
                 "Exchange current density": j0,
             }
         )
@@ -199,6 +208,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self._variables.update(
             {
                 "Total current density [A m-2]": current_dim,
+                "Negative electrode current density [A m-2]": i_s_n_dim,
+                "Positive electrode current density [A m-2]": i_s_p_dim,
                 "Electrolyte current density [A m-2]": i_e_dim,
                 "Interfacial current density [A m-2]": j_dim,
                 "Exchange current density [A m-2]": j0_dim,
@@ -208,6 +219,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # Voltage
         self._variables.update(
             {
+                "Negative electrode open circuit potential": ocp_n,
+                "Positive electrode open circuit potential": ocp_p,
                 "Average negative electrode open circuit potential": ocp_n_av,
                 "Average positive electrode open circuit potential": ocp_p_av,
                 "Average open circuit voltage": ocv_av,
@@ -218,6 +231,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         self._variables.update(
             {
+                "Negative electrode open circuit potential [V]": ocp_n_dim,
+                "Positive electrode open circuit potential [V]": ocp_p_dim,
                 "Average negative electrode open circuit potential [V]": ocp_n_av_dim,
                 "Average positive electrode open circuit potential [V]": ocp_p_av_dim,
                 "Average open circuit voltage [V]": ocv_av_dim,
@@ -229,6 +244,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # Overpotential
         self._variables.update(
             {
+                "Negative reaction overpotential": eta_r_n,
+                "Positive reaction overpotential": eta_r_p,
                 "Average negative reaction overpotential": eta_r_n_av,
                 "Average positive reaction overpotential": eta_r_p_av,
                 "Average reaction overpotential": eta_r_av,
@@ -239,6 +256,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         self._variables.update(
             {
+                "Negative reaction overpotential [V]": eta_r_n_dim,
+                "Positive reaction overpotential [V]": eta_r_p_dim,
                 "Average negative reaction overpotential [V]": eta_r_n_av_dim,
                 "Average positive reaction overpotential [V]": eta_r_p_av_dim,
                 "Average reaction overpotential [V]": eta_r_av_dim,
@@ -248,11 +267,25 @@ class LOQS(pybamm.LeadAcidBaseModel):
         )
 
         # Concentration
+        self._variables.update({"Electrolyte concentration": c_e})
+
         self._variables.update({"Electrolyte concentration [mols m-3]": c_e_dim})
 
         # Potential
         self._variables.update(
-            {"Electrolyte potential": phi_e, "Electrolyte potential [V]": phi_e_dim}
+            {
+                "Negative electrode potential": phi_s_n,
+                "Positive electrode potential": phi_s_p,
+                "Electrolyte potential": phi_e,
+            }
+        )
+
+        self._variables.update(
+            {
+                "Negative electrode potential [V]": phi_s_n_dim,
+                "Positive electrode potential [V]": phi_s_p_dim,
+                "Electrolyte potential [V]": phi_e_dim,
+            }
         )
 
         "-----------------------------------------------------------------------------"
