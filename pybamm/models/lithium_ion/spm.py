@@ -21,29 +21,22 @@ class SPM(pybamm.LithiumIonBaseModel):
         param = pybamm.standard_parameters_lithium_ion
 
         "-----------------------------------------------------------------------------"
-        "Model Variables"
-
-        # Particle concentration
-        c_s_n = pybamm.Variable(
-            "Negative particle concentration", domain="negative particle"
-        )
-        c_s_p = pybamm.Variable(
-            "Positive particle concentration", domain="positive particle"
-        )
-
-        "-----------------------------------------------------------------------------"
         "Submodels"
 
         # Interfacial current density
-        int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        int_curr_model.set_homogeneous_interfacial_current()
-        self.update(int_curr_model)
+        interfacial_current_model = pybamm.interface.InterfacialCurrent(param)
+        interfacial_current_model.set_homogeneous_interfacial_current()
+        self.update(interfacial_current_model)
 
         # Particle models
-        j_n = int_curr_model.variables["Negative electrode interfacial current density"]
-        j_p = int_curr_model.variables["Positive electrode interfacial current density"]
-        negative_particle_model = pybamm.particle.Standard(c_s_n, j_n, param)
-        positive_particle_model = pybamm.particle.Standard(c_s_p, j_p, param)
+        negative_particle_model = pybamm.particle.Standard(param)
+        negative_particle_model.set_differential_system(
+            self.variables, ["negative particle"]
+        )
+        positive_particle_model = pybamm.particle.Standard(param)
+        positive_particle_model.set_differential_system(
+            self.variables, ["positive particle"]
+        )
         self.update(negative_particle_model, positive_particle_model)
 
         "-----------------------------------------------------------------------------"
@@ -54,15 +47,14 @@ class SPM(pybamm.LithiumIonBaseModel):
         self.update(eleclyte_conc_model)
 
         # Exchange-current density
-        int_curr_model.set_exchange_current_densities(self.variables)
-        self.update(int_curr_model)
+        interfacial_current_model.set_exchange_current_densities(self.variables)
+        self.update(interfacial_current_model)
 
         # Potentials
         potential_model = pybamm.potential.Potential(param)
-        potential_model.set_open_circuit_potentials(
-            pybamm.Broadcast(pybamm.surf(c_s_n), ["negative electrode"]),
-            pybamm.Broadcast(pybamm.surf(c_s_p), ["positive electrode"]),
-        )
+        c_s_n_surf = self.variables["Negative particle surface concentration"]
+        c_s_p_surf = self.variables["Positive particle surface concentration"]
+        potential_model.set_open_circuit_potentials(c_s_n_surf, c_s_p_surf)
         potential_model.set_reaction_overpotentials(self.variables, "current")
         self.update(potential_model)
 
@@ -73,7 +65,7 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         # Electrode
         electrode_model = pybamm.electrode.Ohm(param)
-        electrode_model.explicit_leading_order(self.variables)
+        electrode_model.set_explicit_leading_order(self.variables)
         self.update(electrode_model)
 
         "-----------------------------------------------------------------------------"
@@ -82,4 +74,6 @@ class SPM(pybamm.LithiumIonBaseModel):
         self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
 
         # Cut-off if either concentration goes negative
+        c_s_n = self.variables["Negative particle concentration"]
+        c_s_p = self.variables["Positive particle concentration"]
         self.events = [pybamm.Function(np.min, c_s_n), pybamm.Function(np.min, c_s_p)]
