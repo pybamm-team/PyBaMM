@@ -23,8 +23,15 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_equations(self, c_e, phi_e, j, eps=None):
+    def set_algebraic_system(self, phi_e, variables):
+        # Load parameters and spatial variables
         param = self.set_of_parameters
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
+
+        # Unpack variables
+        c_e = variables["Electrolyte concentration"]
+        j = variables["Interfacial current density"]
 
         # if porosity is not provided, use the input parameter
         try:
@@ -33,9 +40,9 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
             epsilon = param.epsilon
 
         # functions
-        i_e = (param.kappa_e(c_e) * (eps ** param.b) * param.gamma_e / param.C_e) * (
-            param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
-        )
+        i_e = (
+            param.kappa_e(c_e) * (epsilon ** param.b) * param.gamma_e / param.C_e
+        ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e))
 
         # Equations (algebraic only)
         self.algebraic = {phi_e: pybamm.div(i_e) - j}
@@ -45,12 +52,24 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
         self.rhs = {}
 
         # Variables
-        self.set_variables(phi_e, i_e, eta_c_av, delta_phi_e_av)
+        # eta_c_av and delta_phi_e_av not defined?
+        eta_c_av = pybamm.Scalar(0)
+        delta_phi_e_av = pybamm.Scalar(0)
+
+        # average elecrolyte overpotential (ohmic + concentration overpotential)
+        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+        phi_e_n_av = pybamm.Integral(phi_e_n, x_n) / param.l_n
+        phi_e_p_av = pybamm.Integral(phi_e_p, x_p) / param.l_p
+        eta_e_av = phi_e_p_av - phi_e_n_av
+
+        self.variables = self.get_variables(
+            phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av
+        )
 
         # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
 
-    def set_explicit_leading_order(self, variables):
+    def get_explicit_leading_order(self, variables):
         """
         Provides explicit leading order solution to the electrolyte current conservation
         equation where the constitutive equation is taken to be of Stefan-Maxwell form.
@@ -96,11 +115,12 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
         delta_phi_e_av = pybamm.Scalar(0)
         # concentration overpotential
         eta_c_av = pybamm.Scalar(0)
+        # electrolyte overpotential
+        eta_e_av = eta_c_av + delta_phi_e_av
 
-        # Variables
-        self.set_variables(phi_e, i_e, eta_c_av, delta_phi_e_av)
+        return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
 
-    def set_explicit_combined(self, variables):
+    def get_explicit_combined(self, variables):
         """
         Provides and explicit combined leading and first order solution to the
         electrolyte current conservation equation where the constitutive equation is
@@ -198,20 +218,19 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
 
         # concentration overpotential (combined leading and first order)
         eta_c_av = 2 * param.C_e * (1 - param.t_plus) * (c_e_p_av - c_e_n_av)
+        # electrolyte overpotential
+        eta_e_av = eta_c_av + delta_phi_e_av
 
         # Variables
-        self.set_variables(phi_e, i_e, eta_c_av, delta_phi_e_av)
+        return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
 
-    def set_variables(self, phi_e, i_e, eta_c_av, delta_phi_e_av):
+    def get_variables(self, phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av):
         "Compute dimensional variables from dimensionless ones"
         param = self.set_of_parameters
         pot_scale = param.potential_scale
 
-        # electrolyte overpotential
-        eta_e_av = eta_c_av + delta_phi_e_av
-
         # Set dimensionless and dimensional variables
-        self.variables = {
+        return {
             "Electrolyte potential": phi_e,
             "Electrolyte current density": i_e,
             "Average concentration overpotential": eta_c_av,

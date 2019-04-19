@@ -18,7 +18,7 @@ class Potential(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_open_circuit_potentials(self, c_n, c_p):
+    def get_open_circuit_potentials(self, variables, intercalation=True):
         """
         Compute open-circuit potentials (dimensionless and dimensionless). Note that for
         this submodel, we must specify explicitly which concentration we are using to
@@ -26,18 +26,24 @@ class Potential(pybamm.SubModel):
 
         Parameters
         ----------
-        c_n : :class:`pybamm.Symbol`
-            The negative-electrode concentration to use to calculate the
-            negative-electrode OCP (e.g. negative particle surface concentration)
-        c_p : :class:`pybamm.Symbol`
-            The positive-electrode concentration to use to calculate the
-            positive-electrode OCP (e.g. positive particle surface concentration)
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
+        intercalation : bool
+            Whether intercalation occurs in the model.
 
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
+
+        if intercalation:
+            c_n = pybamm.surf(variables["Negative particle concentration"])
+            c_p = pybamm.surf(variables["Positive particle concentration"])
+        else:
+            c_e = variables["Electrolyte concentration"]
+            c_n, c_s, c_p = c_e.orphans
 
         # Dimensionless
         ocp_n = pybamm.Broadcast(param.U_n(c_n), ["negative electrode"])
@@ -60,24 +66,22 @@ class Potential(pybamm.SubModel):
         ocv_dim = ocp_p_right_dim - ocp_n_left_dim
 
         # Variables
-        self.variables.update(
-            {
-                "Negative electrode open circuit potential": ocp_n,
-                "Positive electrode open circuit potential": ocp_p,
-                "Average negative electrode open circuit potential": ocp_n_av,
-                "Average positive electrode open circuit potential": ocp_p_av,
-                "Average open circuit voltage": ocv_av,
-                "Measured open circuit voltage": ocv,
-                "Negative electrode open circuit potential [V]": ocp_n_dim,
-                "Positive electrode open circuit potential [V]": ocp_p_dim,
-                "Average negative electrode open circuit potential [V]": ocp_n_av_dim,
-                "Average positive electrode open circuit potential [V]": ocp_p_av_dim,
-                "Average open circuit voltage [V]": ocv_av_dim,
-                "Measured open circuit voltage [V]": ocv_dim,
-            }
-        )
+        return {
+            "Negative electrode open circuit potential": ocp_n,
+            "Positive electrode open circuit potential": ocp_p,
+            "Average negative electrode open circuit potential": ocp_n_av,
+            "Average positive electrode open circuit potential": ocp_p_av,
+            "Average open circuit voltage": ocv_av,
+            "Measured open circuit voltage": ocv,
+            "Negative electrode open circuit potential [V]": ocp_n_dim,
+            "Positive electrode open circuit potential [V]": ocp_p_dim,
+            "Average negative electrode open circuit potential [V]": ocp_n_av_dim,
+            "Average positive electrode open circuit potential [V]": ocp_p_av_dim,
+            "Average open circuit voltage [V]": ocv_av_dim,
+            "Measured open circuit voltage [V]": ocv_dim,
+        }
 
-    def set_reaction_overpotentials(self, variables, compute_from):
+    def get_reaction_overpotentials(self, variables, compute_from):
         """
         Compute reaction overpotentials (dimensionless and dimensionless).
 
@@ -99,8 +103,8 @@ class Potential(pybamm.SubModel):
             int_curr_model = pybamm.interface.InterfacialCurrent(param)
             eta_r_n, eta_r_p = int_curr_model.get_inverse_butler_volmer(variables)
         elif compute_from == "potentials":
-            phi_s = variables["Electrode potential"]
-            phi_s_n, phi_s_s, phi_s_p = phi_s.orphans
+            phi_s_n = variables["Negative electrode potential"]
+            phi_s_p = variables["Positive electrode potential"]
             phi_e = variables["Electrolyte potential"]
             phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
             ocp_n = variables["Negative electrode open circuit potential"]
@@ -108,6 +112,12 @@ class Potential(pybamm.SubModel):
 
             eta_r_n = phi_s_n - phi_e_n - ocp_n
             eta_r_p = phi_s_p - phi_e_p - ocp_p
+        else:
+            raise ValueError(
+                "compute_from must be 'current' or 'potentials', not {}".format(
+                    compute_from
+                )
+            )
 
         # Derived and dimensional reaction overpotentials
         eta_r_n_av = pybamm.Integral(eta_r_n, x_n) / param.l_n
@@ -121,17 +131,15 @@ class Potential(pybamm.SubModel):
         eta_r_av_dim = param.potential_scale * eta_r_av
 
         # Update variables
-        self.variables.update(
-            {
-                "Negative reaction overpotential": eta_r_n,
-                "Positive reaction overpotential": eta_r_p,
-                "Average negative reaction overpotential": eta_r_n_av,
-                "Average positive reaction overpotential": eta_r_p_av,
-                "Average reaction overpotential": eta_r_av,
-                "Negative reaction overpotential [V]": eta_r_n_dim,
-                "Positive reaction overpotential [V]": eta_r_p_dim,
-                "Average negative reaction overpotential [V]": eta_r_n_av_dim,
-                "Average positive reaction overpotential [V]": eta_r_p_av_dim,
-                "Average reaction overpotential [V]": eta_r_av_dim,
-            }
-        )
+        return {
+            "Negative reaction overpotential": eta_r_n,
+            "Positive reaction overpotential": eta_r_p,
+            "Average negative reaction overpotential": eta_r_n_av,
+            "Average positive reaction overpotential": eta_r_p_av,
+            "Average reaction overpotential": eta_r_av,
+            "Negative reaction overpotential [V]": eta_r_n_dim,
+            "Positive reaction overpotential [V]": eta_r_p_dim,
+            "Average negative reaction overpotential [V]": eta_r_n_av_dim,
+            "Average positive reaction overpotential [V]": eta_r_p_av_dim,
+            "Average reaction overpotential [V]": eta_r_av_dim,
+        }

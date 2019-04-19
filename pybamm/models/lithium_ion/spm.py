@@ -21,22 +21,24 @@ class SPM(pybamm.LithiumIonBaseModel):
         param = pybamm.standard_parameters_lithium_ion
 
         "-----------------------------------------------------------------------------"
+        "Model Variables"
+
+        c_s_n = pybamm.standard_variables.c_s_n
+        c_s_p = pybamm.standard_variables.c_s_p
+
+        "-----------------------------------------------------------------------------"
         "Submodels"
 
         # Interfacial current density
-        interfacial_current_model = pybamm.interface.InterfacialCurrent(param)
-        interfacial_current_model.set_homogeneous_interfacial_current()
-        self.update(interfacial_current_model)
+        int_curr_model = pybamm.interface.InterfacialCurrent(param)
+        j_vars = int_curr_model.get_homogeneous_interfacial_current()
+        self.variables.update(j_vars)
 
         # Particle models
         negative_particle_model = pybamm.particle.Standard(param)
-        negative_particle_model.set_differential_system(
-            self.variables, ["negative particle"]
-        )
+        negative_particle_model.set_differential_system(c_s_n, self.variables)
         positive_particle_model = pybamm.particle.Standard(param)
-        positive_particle_model.set_differential_system(
-            self.variables, ["positive particle"]
-        )
+        positive_particle_model.set_differential_system(c_s_p, self.variables)
         self.update(negative_particle_model, positive_particle_model)
 
         "-----------------------------------------------------------------------------"
@@ -47,26 +49,26 @@ class SPM(pybamm.LithiumIonBaseModel):
         self.update(eleclyte_conc_model)
 
         # Exchange-current density
-        interfacial_current_model.set_exchange_current_densities(self.variables)
-        self.update(interfacial_current_model)
+        ecd_vars = int_curr_model.get_exchange_current_densities(self.variables)
+        self.variables.update(ecd_vars)
 
         # Potentials
-        potential_model = pybamm.potential.Potential(param)
-        c_s_n_surf = self.variables["Negative particle surface concentration"]
-        c_s_p_surf = self.variables["Positive particle surface concentration"]
-        potential_model.set_open_circuit_potentials(c_s_n_surf, c_s_p_surf)
-        potential_model.set_reaction_overpotentials(self.variables, "current")
-        self.update(potential_model)
+        pot_model = pybamm.potential.Potential(param)
+        ocp_vars = pot_model.get_open_circuit_potentials(
+            self.variables, intercalation=True
+        )
+        eta_r_vars = pot_model.get_reaction_overpotentials(self.variables, "current")
+        self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        eleclyte_current_model.set_explicit_leading_order(self.variables)
-        self.update(eleclyte_current_model)
+        elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
+        self.variables.update(elyte_vars)
 
         # Electrode
         electrode_model = pybamm.electrode.Ohm(param)
-        electrode_model.set_explicit_leading_order(self.variables)
-        self.update(electrode_model)
+        electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
+        self.variables.update(electrode_vars)
 
         "-----------------------------------------------------------------------------"
         "Defaults and Solver Conditions"

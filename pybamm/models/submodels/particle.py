@@ -21,16 +21,15 @@ class Standard(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_differential_system(self, variables, domain):
+    def set_differential_system(self, c, variables):
         param = self.set_of_parameters
 
-        if len(domain) != 1:
+        if len(c.domain) != 1:
             raise NotImplementedError(
                 "Only implemented when c_k is on exactly 1 subdomain"
             )
 
-        if domain[0] == "negative particle":
-            c = pybamm.Variable("c_s_n", ["negative particle"])
+        if c.domain[0] == "negative particle":
             j = variables["Negative electrode interfacial current density"]
 
             N = -(1 / param.C_n) * pybamm.grad(c)
@@ -40,9 +39,8 @@ class Standard(pybamm.SubModel):
             self.boundary_conditions = {
                 N: {"left": pybamm.Scalar(0), "right": param.C_n * j / param.a_n}
             }
-            self.set_variables(c, N)
-        elif domain[0] == "positive particle":
-            c = pybamm.Variable("c_s_p", ["positive particle"])
+            self.variables = self.get_variables(c, N)
+        elif c.domain[0] == "positive particle":
             j = variables["Positive electrode interfacial current density"]
 
             N = -(1 / param.C_p) * pybamm.grad(c)
@@ -55,11 +53,11 @@ class Standard(pybamm.SubModel):
                     "right": param.C_p * j / param.a_p / param.gamma_p,
                 }
             }
-            self.set_variables(c, N)
+            self.variables = self.get_variables(c, N)
         else:
             raise pybamm.ModelError("Domain not valid for the particle equations")
 
-    def set_variables(self, c, N):
+    def get_variables(self, c, N):
         if c.domain == ["negative particle"]:
             conc_scale = self.set_of_parameters.c_n_max
             domain = "Negative particle"
@@ -67,7 +65,7 @@ class Standard(pybamm.SubModel):
             conc_scale = self.set_of_parameters.c_p_max
             domain = "Positive particle"
 
-        self.variables = {
+        return {
             domain + " concentration": c,
             domain + " surface concentration": pybamm.surf(c),
             domain + " flux": N,

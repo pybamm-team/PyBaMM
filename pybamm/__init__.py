@@ -101,6 +101,8 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 # Model classes
 #
+from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard variables
+from .models import standard_variables
 from .models.base_models import (
     BaseModel,
     SubModel,
@@ -128,7 +130,6 @@ from .models.submodels import (
 #
 # Parameters class and methods
 #
-from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard parameters
 from .parameters.parameter_values import ParameterValues
 from .parameters import standard_current_functions
 from .parameters import geometric_parameters

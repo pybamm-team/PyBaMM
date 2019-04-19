@@ -27,21 +27,25 @@ class Ohm(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_system(self, phi_s, j, eps=None):
+    def set_algebraic_system(self, phi_s, variables):
         param = self.set_of_parameters
-
         icell = param.current_with_time
+
+        # if porosity is not provided, use the input parameter
+        try:
+            epsilon = variables["Porosity"]
+        except KeyError:
+            epsilon = param.epsilon
+        eps_n, eps_s, eps_p = epsilon.orphans
 
         # algebraic model only
         self.rhs = {}
 
         # different bounday conditions in each electrode
         if phi_s.domain == ["negative electrode"]:
-            # if the porosity is not a variable, use the input parameter
-            if eps is None:
-                eps = param.epsilon_n
+            j = variables["Negative electrode interfacial current density"]
             # liion sigma_n may already account for porosity
-            i_s_n = -param.sigma_n * (1 - eps) ** param.b * pybamm.grad(phi_s)
+            i_s_n = -param.sigma_n * (1 - eps_n) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_n) + j}
             self.boundary_conditions = {phi_s: {"left": 0}, i_s_n: {"right": 0}}
             self.initial_conditions = {phi_s: 0}
@@ -50,43 +54,27 @@ class Ohm(pybamm.SubModel):
                 "Negative electrode current density": i_s_n,
             }
         elif phi_s.domain == ["positive electrode"]:
-            # if porosity is not a variable, use the input parameter
-            if eps is None:
-                eps = param.epsilon_p
+            j = variables["Positive electrode interfacial current density"]
             # liion sigma_p may already account for porosity
-            i_s_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
+            i_s_p = -param.sigma_p * (1 - eps_p) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_p) + j}
             self.boundary_conditions = {i_s_p: {"left": 0, "right": icell}}
             self.initial_conditions = {
                 phi_s: param.U_p(param.c_p_init) - param.U_n(param.c_n_init)
             }
-            self.variables = {
-                "Positive electrode potential": phi_s,
-                "Positive electrode current density": i_s_p,
-            }
-        # for whole cell domain call both electrode models and ignore separator
-        elif phi_s.domain == ["negative electrode", "separator", "positive electrode"]:
-            # if porosity is not a variable, use the input parameter
-            if eps is None:
-                eps = param.epsilon
-            phi_s_n, phi_s_s, phi_s_p = phi_s.orphans
-            eps_n, eps_s, eps_p = eps.orphans
-            j_n, j_s, j_p = j.orphans
-            neg_model = Ohm(phi_s_n, j_n, param, eps=eps_n)
-            pos_model = Ohm(phi_s_p, j_p, param, eps=eps_p)
-            self.update(neg_model, pos_model)
-            # Voltage variable
-            voltage = pybamm.BoundaryValue(phi_s, "right") - pybamm.BoundaryValue(
-                phi_s, "left"
+            self.variables.update(
+                {
+                    "Positive electrode potential": phi_s,
+                    "Positive electrode current density": i_s_p,
+                }
             )
-            self.variables.update({"Terminal voltage": voltage})
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(phi_s.domain))
 
         # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
 
-    def set_explicit_leading_order(self, variables):
+    def get_explicit_leading_order(self, variables):
         """
         Provides the leading order explicit solution to solid phase current
         conservation with ohm's law.
@@ -119,22 +107,22 @@ class Ohm(pybamm.SubModel):
 
         # electode potential
         phi_s_n = pybamm.Broadcast(0, ["negative electrode"])
-        phi_s_s = pybamm.Broadcast(0, ["separator"])
         v = ocp_p_right + eta_r_p_right + phi_e_right
         phi_s_p = v + pybamm.Broadcast(0, ["positive electrode"])
-        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
 
         # electrode current
         i_s_n = i_cell - i_cell * x_n / l_n
-        i_s_s = pybamm.Broadcast(0, ["separator"])
         i_s_p = i_cell - i_cell * (1 - x_p) / l_p
-        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
-        delta_phi_s_av = pybamm.Scalar(0)
+        variables = {
+            "Negative electrode potential": phi_s_n,
+            "Negative electrode current density": i_s_n,
+            "Positive electrode potential": phi_s_p,
+            "Positive electrode current density": i_s_p,
+        }
+        return self.get_post_processed(variables)
 
-        self.set_variables(phi_s, i_s, delta_phi_s_av, v)
-
-    def set_explicit_combined(self, variables):
+    def get_explicit_combined(self, variables):
         """
         Provides an explicit combined leading and first order solution to solid phase
         current conservation with ohm's law. Note that the returned current density is
@@ -175,37 +163,54 @@ class Ohm(pybamm.SubModel):
         sigma_n_eff = param.sigma_n * (1 - eps_n)
         sigma_p_eff = param.sigma_p * (1 - eps_p)
         phi_s_n = i_cell * x_n * (2 * l_n - x_n) / (2 * sigma_n_eff * l_n)
-        phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
         phi_s_p = (ocp_p_right + eta_r_p_right + phi_e_right) + i_cell * (
             (1 - x_p) * (1 - 2 * l_p - x_p) / (2 * sigma_p_eff * l_p)
         )
-        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
 
         # electrode current
         i_s_n = i_cell - i_cell * x_n / l_n
-        i_s_s = pybamm.Broadcast(0, ["separator"])
         i_s_p = i_cell - i_cell * (1 - x_p) / l_p
+
+        variables = {
+            "Negative electrode potential": phi_s_n,
+            "Negative electrode current density": i_s_n,
+            "Positive electrode potential": phi_s_p,
+            "Positive electrode current density": i_s_p,
+        }
+        return self.get_post_processed(variables)
+
+    def get_post_processed(self, variables):
+        phi_s_n = variables["Negative electrode potential"]
+        phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
+        phi_s_p = variables["Positive electrode potential"]
+        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+
+        i_s_n = variables["Negative electrode current density"]
+        i_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
+        i_s_p = variables["Positive electrode current density"]
         i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
-        # average solid phase ohmic losses
-        delta_phi_s_av = -i_cell / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
+        return self.get_variables(phi_s, i_s)
 
-        # terminal voltage
-        ocv_av = variables["Average open circuit voltage"]
-        eta_r_av = variables["Average reaction overpotential"]
-        eta_c_av = variables["Average concentration overpotential"]
-        delta_phi_e_av = variables["Average electrolyte ohmic losses"]
-
-        v = ocv_av + eta_r_av + eta_c_av + delta_phi_e_av + delta_phi_s_av
-
-        self.set_variables(phi_s, i_s, delta_phi_s_av, v)
-
-    def set_variables(self, phi_s, i_s, delta_phi_s_av, v):
+    def get_variables(self, phi_s, i_s):
         param = self.set_of_parameters
+
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
         phi_s_n, phi_s_s, phi_s_p = phi_s.orphans
         i_s_n, i_s_s, i_s_p = i_s.orphans
+
+        # Derived variables
+        # solid phase ohmic losses
+        delta_phi_s_n = phi_s_n - pybamm.BoundaryValue(phi_s_n, "left")
+        delta_phi_s_n_av = pybamm.Integral(delta_phi_s_n, x_n) / param.l_n
+        delta_phi_s_p = phi_s_p - pybamm.BoundaryValue(phi_s_p, "right")
+        delta_phi_s_p_av = pybamm.Integral(delta_phi_s_p, x_p) / param.l_p
+        delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
+        # Voltage variable
+        v = pybamm.BoundaryValue(phi_s, "right") - pybamm.BoundaryValue(phi_s, "left")
 
         # Dimensional
         phi_s_n_dim = param.potential_scale * phi_s_n
@@ -219,24 +224,21 @@ class Ohm(pybamm.SubModel):
         v_dim = param.potential_scale * v
 
         # Update variables
-
-        self.variables.update(
-            {
-                "Negative electrode potential": phi_s_n,
-                "Positive electrode potential": phi_s_p,
-                "Electrode potential": phi_s,
-                "Negative electrode current density": i_s_n,
-                "Positive electrode current density": i_s_p,
-                "Electrode current density": i_s,
-                "Average solid phase ohmic losses": delta_phi_s_av,
-                "Terminal voltage": v,
-                "Negative electrode potential [V]": phi_s_n_dim,
-                "Positive electrode potential [V]": phi_s_p_dim,
-                "Electrode potential [V]": phi_s_dim,
-                "Negative electrode current density [A m-2]": i_s_n_dim,
-                "Positive electrode current density [A m-2]": i_s_p_dim,
-                "Electrode current density [A m-2]": i_s_dim,
-                "Average solid phase ohmic losses [V]": delta_phi_s_av_dim,
-                "Terminal voltage [V]": v_dim,
-            }
-        )
+        return {
+            "Negative electrode potential": phi_s_n,
+            "Positive electrode potential": phi_s_p,
+            "Electrode potential": phi_s,
+            "Negative electrode current density": i_s_n,
+            "Positive electrode current density": i_s_p,
+            "Electrode current density": i_s,
+            "Average solid phase ohmic losses": delta_phi_s_av,
+            "Terminal voltage": v,
+            "Negative electrode potential [V]": phi_s_n_dim,
+            "Positive electrode potential [V]": phi_s_p_dim,
+            "Electrode potential [V]": phi_s_dim,
+            "Negative electrode current density [A m-2]": i_s_n_dim,
+            "Positive electrode current density [A m-2]": i_s_p_dim,
+            "Electrode current density [A m-2]": i_s_dim,
+            "Average solid phase ohmic losses [V]": delta_phi_s_av_dim,
+            "Terminal voltage [V]": v_dim,
+        }

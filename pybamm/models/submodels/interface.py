@@ -9,7 +9,7 @@ class InterfacialCurrent(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_homogeneous_interfacial_current(self):
+    def get_homogeneous_interfacial_current(self):
         """ Homogeneous reaction at the electrode-electrolyte interface """
         icell = pybamm.electrical_parameters.current_with_time
 
@@ -20,9 +20,9 @@ class InterfacialCurrent(pybamm.SubModel):
             -icell / pybamm.geometric_parameters.l_p, ["positive electrode"]
         )
 
-        self.set_derived_interfacial_currents(j_n, j_p)
+        return self.get_derived_interfacial_currents(j_n, j_p)
 
-    def set_exchange_current_densities(self, variables, intercalation=True):
+    def get_exchange_current_densities(self, variables, intercalation=True):
         """The exchange current-density as a function of concentration
 
         Parameters
@@ -38,8 +38,8 @@ class InterfacialCurrent(pybamm.SubModel):
         c_e_n, c_e_s, c_e_p = c_e.orphans
 
         if intercalation:
-            c_s_n_surf = variables["Negative particle surface concentration"]
-            c_s_p_surf = variables["Positive particle surface concentration"]
+            c_s_n_surf = pybamm.surf(variables["Negative particle concentration"])
+            c_s_p_surf = pybamm.surf(variables["Positive particle concentration"])
             j0_n = (1 / param.C_r_n) * (
                 c_e_n ** (1 / 2) * c_s_n_surf ** (1 / 2) * (1 - c_s_n_surf) ** (1 / 2)
             )
@@ -53,20 +53,18 @@ class InterfacialCurrent(pybamm.SubModel):
 
         j0 = pybamm.Concatenation(*[j0_n, pybamm.Broadcast(0, ["separator"]), j0_p])
 
-        # Update Variables and compute dimensional variables
+        # Compute dimensional variables
         i_typ = param.i_typ
-        self.variables.update(
-            {
-                "Negative electrode exchange-current density": j0_n,
-                "Positive electrode exchange-current density": j0_p,
-                "Exchange-current density": j0,
-                "Negative electrode exchange-current density [A m-2]": i_typ * j0_n,
-                "Positive electrode exchange-current density [A m-2]": i_typ * j0_p,
-                "Exchange-current density [A m-2]": i_typ * j0,
-            }
-        )
+        return {
+            "Negative electrode exchange-current density": j0_n,
+            "Positive electrode exchange-current density": j0_p,
+            "Exchange-current density": j0,
+            "Negative electrode exchange-current density [A m-2]": i_typ * j0_n,
+            "Positive electrode exchange-current density [A m-2]": i_typ * j0_p,
+            "Exchange-current density [A m-2]": i_typ * j0,
+        }
 
-    def set_interfacial_current_butler_volmer(self, variables):
+    def get_interfacial_current_butler_volmer(self, variables):
         """
         Butler-Volmer reactions
 
@@ -93,7 +91,7 @@ class InterfacialCurrent(pybamm.SubModel):
         j_n = j0_n * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_r_n)
         j_p = j0_p * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r_p)
 
-        self.set_derived_interfacial_currents(j_n, j_p)
+        return self.get_derived_interfacial_currents(j_n, j_p)
 
     def get_inverse_butler_volmer(self, variables):
         """
@@ -120,18 +118,16 @@ class InterfacialCurrent(pybamm.SubModel):
 
         return eta_r_n, eta_r_p
 
-    def set_derived_interfacial_currents(self, j_n, j_p):
+    def get_derived_interfacial_currents(self, j_n, j_p):
         i_typ = self.set_of_parameters.i_typ
 
         j = pybamm.Concatenation(*[j_n, pybamm.Broadcast(0, ["separator"]), j_p])
 
-        self.variables.update(
-            {
-                "Negative electrode interfacial current density": j_n,
-                "Positive electrode interfacial current density": j_p,
-                "Interfacial current density": j,
-                "Negative electrode interfacial current density [A m-2]": i_typ * j_n,
-                "Positive electrode interfacial current density [A m-2]": i_typ * j_p,
-                "Interfacial current density [A m-2]": i_typ * j,
-            }
-        )
+        return {
+            "Negative electrode interfacial current density": j_n,
+            "Positive electrode interfacial current density": j_p,
+            "Interfacial current density": j,
+            "Negative electrode interfacial current density [A m-2]": i_typ * j_n,
+            "Positive electrode interfacial current density [A m-2]": i_typ * j_p,
+            "Interfacial current density [A m-2]": i_typ * j,
+        }

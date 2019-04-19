@@ -47,17 +47,11 @@ class StefanMaxwell(ElectrolyteDiffusionModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_differential_system(self, variables):
+    def set_differential_system(self, c_e, variables):
         param = self.set_of_parameters
 
         # Unpack variables
         j = variables["Interfacial current density"]
-
-        # Electrolyte concentration (combined leading and first order, nonlinear)
-        c_e_n = pybamm.Variable("c_e_n", ["negative electrode"])
-        c_e_s = pybamm.Variable("c_e_s", ["separator"])
-        c_e_p = pybamm.Variable("c_e_p", ["positive electrode"])
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
         # if porosity is not provided, use the input parameter
         try:
