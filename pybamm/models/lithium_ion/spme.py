@@ -35,10 +35,12 @@ class SPMe(pybamm.LithiumIonBaseModel):
         self.variables.update(j_vars)
 
         # Particle models
+        j_n = j_vars["Negative electrode interfacial current density"].orphans[0]
         negative_particle_model = pybamm.particle.Standard(param)
-        negative_particle_model.set_differential_system(c_s_n, self.variables)
+        negative_particle_model.set_differential_system(c_s_n, j_n, broadcast=True)
+        j_p = j_vars["Positive electrode interfacial current density"].orphans[0]
         positive_particle_model = pybamm.particle.Standard(param)
-        positive_particle_model.set_differential_system(c_s_p, self.variables)
+        positive_particle_model.set_differential_system(c_s_p, j_p, broadcast=True)
         self.update(negative_particle_model, positive_particle_model)
 
         # Electrolyte diffusion model
@@ -54,9 +56,9 @@ class SPMe(pybamm.LithiumIonBaseModel):
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_open_circuit_potentials(
-            self.variables, intercalation=True
-        )
+        c_s_n_surf = self.variables["Negative particle surface concentration"]
+        c_s_p_surf = self.variables["Positive particle surface concentration"]
+        ocp_vars = pot_model.get_open_circuit_potentials(c_s_n_surf, c_s_p_surf)
         eta_r_vars = pot_model.get_reaction_overpotentials(self.variables, "current")
         self.variables.update({**ocp_vars, **eta_r_vars})
 

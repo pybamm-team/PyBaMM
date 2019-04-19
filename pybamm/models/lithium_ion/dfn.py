@@ -50,9 +50,11 @@ class DFN(pybamm.LithiumIonBaseModel):
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_open_circuit_potentials(
-            self.variables, intercalation=True
-        )
+        c_s_n_surf = pybamm.surf(c_s_n)
+        c_s_n_surf.domain = ["negative electrode"]
+        c_s_p_surf = pybamm.surf(c_s_p)
+        c_s_p_surf.domain = ["positive electrode"]
+        ocp_vars = pot_model.get_open_circuit_potentials(c_s_n_surf, c_s_p_surf)
         self.variables.update(ocp_vars)
         eta_r_vars = pot_model.get_reaction_overpotentials(self.variables, "potentials")
         self.variables.update(eta_r_vars)
@@ -62,10 +64,12 @@ class DFN(pybamm.LithiumIonBaseModel):
         self.variables.update(j_vars)
 
         # Particle models
+        j_n = j_vars["Negative electrode interfacial current density"]
         negative_particle_model = pybamm.particle.Standard(param)
-        negative_particle_model.set_differential_system(c_s_n, self.variables)
+        negative_particle_model.set_differential_system(c_s_n, j_n)
+        j_p = j_vars["Positive electrode interfacial current density"]
         positive_particle_model = pybamm.particle.Standard(param)
-        positive_particle_model.set_differential_system(c_s_p, self.variables)
+        positive_particle_model.set_differential_system(c_s_p, j_p)
 
         # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)

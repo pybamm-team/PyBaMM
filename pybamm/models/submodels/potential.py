@@ -18,7 +18,7 @@ class Potential(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_open_circuit_potentials(self, variables, intercalation=True):
+    def get_open_circuit_potentials(self, c_n, c_p):
         """
         Compute open-circuit potentials (dimensionless and dimensionless). Note that for
         this submodel, we must specify explicitly which concentration we are using to
@@ -38,16 +38,9 @@ class Potential(pybamm.SubModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        if intercalation:
-            c_n = pybamm.surf(variables["Negative particle concentration"])
-            c_p = pybamm.surf(variables["Positive particle concentration"])
-        else:
-            c_e = variables["Electrolyte concentration"]
-            c_n, c_s, c_p = c_e.orphans
-
         # Dimensionless
-        ocp_n = pybamm.Broadcast(param.U_n(c_n), ["negative electrode"])
-        ocp_p = pybamm.Broadcast(param.U_p(c_p), ["positive electrode"])
+        ocp_n = param.U_n(c_n)
+        ocp_p = param.U_p(c_p)
         ocp_n_av = pybamm.Integral(ocp_n, x_n) / param.l_n
         ocp_p_av = pybamm.Integral(ocp_p, x_p) / param.l_p
         ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
