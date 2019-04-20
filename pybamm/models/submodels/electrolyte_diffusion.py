@@ -23,12 +23,19 @@ class ElectrolyteDiffusionModel(pybamm.SubModel):
         super().__init__(set_of_parameters)
 
     def set_variables(self, c_e, N_e):
-        param = self.set_of_parameters
+        c_e_typ = self.set_of_parameters.c_e_typ
 
+        c_e_n, c_e_s, c_e_p = c_e.orphans
         self.variables = {
             "Electrolyte concentration": c_e,
+            "Negative electrode electrolyte concentration": c_e_n,
+            "Separator electrolyte concentration": c_e_s,
+            "Positive electrode electrolyte concentration": c_e_p,
             "Reduced cation flux": N_e,
-            "Electrolyte concentration [mols m-3]": param.c_e_typ * c_e,
+            "Electrolyte concentration [mols m-3]": c_e_typ * c_e,
+            "Negative electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_n,
+            "Separator electrolyte concentration [mols m-3]": c_e_typ * c_e_s,
+            "Positive electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_p,
         }
 
 
@@ -116,7 +123,12 @@ class StefanMaxwell(ElectrolyteDiffusionModel):
         # Variables
         whole_cell = epsilon.domain
         N_e = pybamm.Broadcast(0, whole_cell)
-        self.set_variables(pybamm.Broadcast(c_e, whole_cell), N_e)
+        c_e_var = pybamm.Concatenation(
+            pybamm.Broadcast(c_e, ["negative electrode"]),
+            pybamm.Broadcast(c_e, ["separator"]),
+            pybamm.Broadcast(c_e, ["positive electrode"]),
+        )
+        self.set_variables(c_e_var, N_e)
 
         # Cut off if concentration goes negative
         self.events = [pybamm.Function(np.min, c_e)]

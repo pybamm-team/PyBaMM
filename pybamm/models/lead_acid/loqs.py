@@ -26,7 +26,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         "Model Variables"
 
         c_e = pybamm.Variable("Electrolyte concentration")
-        eps = pybamm.standard_variables.eps
+        eps = pybamm.standard_variables.eps_piecewise_constant
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -51,7 +51,9 @@ class LOQS(pybamm.LeadAcidBaseModel):
         "Post-Processing"
 
         # Exchange-current density
-        ecd_vars = int_curr_model.get_exchange_current_densities(self.variables)
+        ecd_vars = int_curr_model.get_exchange_current_densities(
+            self.variables, intercalation=False
+        )
         self.variables.update(ecd_vars)
 
         # Potentials

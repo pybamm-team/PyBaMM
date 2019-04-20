@@ -33,10 +33,10 @@ class Standard(pybamm.SubModel):
     def set_leading_order_system(self, epsilon, j):
         param = self.set_of_parameters
 
+        self.variables = {"Porosity": epsilon}
         for k in range(3):
             # Unpack
-            eps_k = epsilon.orphans[k]
-            eps_k.domain = []
+            eps_k = epsilon.orphans[k].orphans[0]
             j_k = j.orphans[k].orphans[0]
             beta_surf_k = param.beta_surf.orphans[k].orphans[0]
             eps_init_k = param.eps_init.orphans[k].orphans[0]
@@ -53,12 +53,3 @@ class Standard(pybamm.SubModel):
                     Domain + " porosity change": pybamm.Broadcast(deps_dt, domain),
                 }
             )
-        self.variables.update(
-            {
-                "Porosity": pybamm.Concatenation(
-                    self.variables["Negative electrode porosity"],
-                    self.variables["Separator porosity"],
-                    self.variables["Positive electrode porosity"],
-                )
-            }
-        )
