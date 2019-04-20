@@ -3,7 +3,6 @@
 #
 import pybamm
 import autograd.numpy as np
-from autograd import isinstance
 
 
 class InterfacialCurrent(pybamm.SubModel):

@@ -348,9 +348,6 @@ class BaseModel(object):
         ids1 = set(x.id for x in dict1.keys())
         ids2 = set(x.id for x in dict2.keys())
         if len(ids1.intersection(ids2)) != 0:
-            import ipdb
-
-            ipdb.set_trace()
             raise pybamm.ModelError("Submodel incompatible: duplicate variables")
         dict1.update(dict2)
 
