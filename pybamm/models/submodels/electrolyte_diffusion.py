@@ -8,39 +8,8 @@ import pybamm
 import numpy as np
 
 
-class ElectrolyteDiffusionModel(pybamm.SubModel):
-    """Base model class for diffusion in the electrolyte.
-
-    Parameters
-    ----------
-    set_of_parameters : parameter class
-        The parameters to use for this submodel
-
-    *Extends:* :class:`pybamm.SubModel`
-    """
-
-    def __init__(self, set_of_parameters):
-        super().__init__(set_of_parameters)
-
-    def set_variables(self, c_e, N_e):
-        c_e_typ = self.set_of_parameters.c_e_typ
-
-        c_e_n, c_e_s, c_e_p = c_e.orphans
-        self.variables = {
-            "Electrolyte concentration": c_e,
-            "Negative electrode electrolyte concentration": c_e_n,
-            "Separator electrolyte concentration": c_e_s,
-            "Positive electrode electrolyte concentration": c_e_p,
-            "Reduced cation flux": N_e,
-            "Electrolyte concentration [mols m-3]": c_e_typ * c_e,
-            "Negative electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_n,
-            "Separator electrolyte concentration [mols m-3]": c_e_typ * c_e_s,
-            "Positive electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_p,
-        }
-
-
-class StefanMaxwell(ElectrolyteDiffusionModel):
-    """A class that generates the expression tree for Stefan-Maxwell Diffusion in the
+class StefanMaxwell(pybamm.SubModel):
+    """"A class that generates the expression tree for Stefan-Maxwell Diffusion in the
     electrolyte.
 
     Parameters
@@ -48,7 +17,7 @@ class StefanMaxwell(ElectrolyteDiffusionModel):
     set_of_parameters : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`ElectrolyteDiffusionModel`
+    *Extends:* :class:`pybamm.SubModel`
     """
 
     def __init__(self, set_of_parameters):
@@ -84,7 +53,7 @@ class StefanMaxwell(ElectrolyteDiffusionModel):
         self.initial_conditions = {c_e: param.c_e_init}
         self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
         self.variables = {"Electrolyte concentration": c_e, "Reduced cation flux": N_e}
-        self.set_variables(c_e, N_e)
+        variables = self.get_variables(c_e, N_e)
 
         # Cut off if concentration goes negative
         self.events = [pybamm.Function(np.min, c_e)]
@@ -128,15 +97,12 @@ class StefanMaxwell(ElectrolyteDiffusionModel):
             pybamm.Broadcast(c_e, ["separator"]),
             pybamm.Broadcast(c_e, ["positive electrode"]),
         )
-        self.set_variables(c_e_var, N_e)
+        variables = self.get_variables(c_e_var, N_e)
 
         # Cut off if concentration goes negative
         self.events = [pybamm.Function(np.min, c_e)]
 
-
-class ConstantConcentration(ElectrolyteDiffusionModel):
-    def __init__(self, set_of_parameters):
-        super().__init__(set_of_parameters)
+    def get_constant_concentration_variables(self):
 
         c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
         c_e_s = pybamm.Broadcast(1, domain=["separator"])
@@ -145,4 +111,20 @@ class ConstantConcentration(ElectrolyteDiffusionModel):
 
         N_e = pybamm.Broadcast(0, c_e.domain)
 
-        self.set_variables(c_e, N_e)
+        return self.get_variables(c_e, N_e)
+
+    def get_variables(self, c_e, N_e):
+        c_e_typ = self.set_of_parameters.c_e_typ
+
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        return {
+            "Electrolyte concentration": c_e,
+            "Negative electrode electrolyte concentration": c_e_n,
+            "Separator electrolyte concentration": c_e_s,
+            "Positive electrode electrolyte concentration": c_e_p,
+            "Reduced cation flux": N_e,
+            "Electrolyte concentration [mols m-3]": c_e_typ * c_e,
+            "Negative electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_n,
+            "Separator electrolyte concentration [mols m-3]": c_e_typ * c_e_s,
+            "Positive electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_p,
+        }

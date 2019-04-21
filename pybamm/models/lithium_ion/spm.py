@@ -47,8 +47,9 @@ class SPM(pybamm.LithiumIonBaseModel):
         "Post-Processing"
 
         # Electrolyte concentration
-        eleclyte_conc_model = pybamm.electrolyte_diffusion.ConstantConcentration(param)
-        self.update(eleclyte_conc_model)
+        electrolyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        conc_vars = electrolyte_conc_model.get_constant_concentration_variables()
+        self.variables.update(conc_vars)
 
         # Exchange-current density
         ecd_vars = int_curr_model.get_exchange_current_densities(self.variables)
