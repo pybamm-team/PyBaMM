@@ -106,5 +106,3 @@ class DFN(pybamm.LithiumIonBaseModel):
         self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
         # Default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
-        # Cut-off if either concentration goes negative
-        self.events = [pybamm.Function(np.min, c_s_n), pybamm.Function(np.min, c_s_p)]

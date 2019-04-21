@@ -69,7 +69,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Porosity
         j = j_vars["Interfacial current density"]
         porosity_model = pybamm.porosity.Standard(param)
-        porosity_model.set_leading_order_system(eps, j)
+        porosity_model.set_differential_system(eps, j)
         self.update(porosity_model)
 
         # Electrolyte concentration
