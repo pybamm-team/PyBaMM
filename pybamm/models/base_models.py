@@ -53,160 +53,6 @@ class BaseModel(object):
         self._mass_matrix = None
         self._jacobian = None
 
-        # Default parameter values, geometry, submesh, spatial methods and solver
-
-        # Lion parameters left as default parameter set for tests
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        self.default_parameter_values = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current density": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Capiglia1999.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Capiglia1999.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lico2_ocp_Dualfoil.py"
-                ),
-                "Negative electrode diffusivity": os.path.join(
-                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
-                ),
-                "Positive electrode diffusivity": os.path.join(
-                    input_path, "lico2_diffusivity_Dualfoil.py"
-                ),
-            },
-        )
-        self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
-        var = pybamm.standard_spatial_vars
-        self.default_var_pts = {
-            var.x_n: 40,
-            var.x_s: 25,
-            var.x_p: 35,
-            var.r_n: 10,
-            var.r_p: 10,
-        }
-        self.default_submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "negative particle": pybamm.Uniform1DSubMesh,
-            "positive particle": pybamm.Uniform1DSubMesh,
-        }
-        self.default_spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "negative particle": pybamm.FiniteVolume,
-            "positive particle": pybamm.FiniteVolume,
-        }
-        self.default_solver = pybamm.ScikitsOdeSolver()
-
-        # Standard output variables
-        # Current
-        icell = pybamm.electrical_parameters.current_with_time
-        icell_dim = pybamm.electrical_parameters.dimensional_current_with_time
-        self.variables.update(
-            {"Total current density": icell, "Total current density [A m-2]": icell_dim}
-        )
-
-        # Interfacial current
-        self.variables.update(
-            {
-                "Negative electrode current density": None,
-                "Positive electrode current density": None,
-                "Electrolyte current density": None,
-                "Interfacial current density": None,
-                "Exchange-current density": None,
-            }
-        )
-
-        self.variables.update(
-            {
-                "Negative electrode current density [A m-2]": None,
-                "Positive electrode current density [A m-2]": None,
-                "Electrolyte current density [A m-2]": None,
-                "Interfacial current density [A m-2]": None,
-                "Exchange-current density [A m-2]": None,
-            }
-        )
-        # Voltage
-        self.variables.update(
-            {
-                "Negative electrode open circuit potential": None,
-                "Positive electrode open circuit potential": None,
-                "Average negative electrode open circuit potential": None,
-                "Average positive electrode open circuit potential": None,
-                "Average open circuit voltage": None,
-                "Measured open circuit voltage": None,
-                "Terminal voltage": None,
-            }
-        )
-
-        self.variables.update(
-            {
-                "Negative electrode open circuit potential [V]": None,
-                "Positive electrode open circuit potential [V]": None,
-                "Average negative electrode open circuit potential [V]": None,
-                "Average positive electrode open circuit potential [V]": None,
-                "Average open circuit voltage [V]": None,
-                "Measured open circuit voltage [V]": None,
-                "Terminal voltage [V]": None,
-            }
-        )
-
-        # Overpotentials
-        self.variables.update(
-            {
-                "Negative reaction overpotential": None,
-                "Positive reaction overpotential": None,
-                "Average negative reaction overpotential": None,
-                "Average positive reaction overpotential": None,
-                "Average reaction overpotential": None,
-                "Average electrolyte overpotential": None,
-                "Average solid phase ohmic losses": None,
-            }
-        )
-
-        self.variables.update(
-            {
-                "Negative reaction overpotential [V]": None,
-                "Positive reaction overpotential [V]": None,
-                "Average negative reaction overpotential [V]": None,
-                "Average positive reaction overpotential [V]": None,
-                "Average reaction overpotential [V]": None,
-                "Average electrolyte overpotential [V]": None,
-                "Average solid phase ohmic losses [V]": None,
-            }
-        )
-        # Concentration
-        self.variables.update(
-            {
-                "Electrolyte concentration": None,
-                "Electrolyte concentration [mols m-3]": None,
-            }
-        )
-
-        # Potential
-        self.variables.update(
-            {
-                "Negative electrode potential [V]": None,
-                "Positive electrode potential [V]": None,
-                "Electrolyte potential [V]": None,
-            }
-        )
-
     def _set_dict(self, dict, name):
         """
         Convert any scalar equations in dict to 'pybamm.Scalar'
@@ -469,7 +315,169 @@ class BaseModel(object):
                 )
 
 
-class SubModel(BaseModel):
+class StandardBatteryBaseModel(BaseModel):
+    """
+    Base model class with some default settings and required variables
+
+    **Extends:** :class:`StandardBatteryBaseModel`
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        # Default parameter values, geometry, submesh, spatial methods and solver
+        # Lion parameters left as default parameter set for tests
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
+        self.default_parameter_values = pybamm.ParameterValues(
+            os.path.join(
+                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
+            ),
+            {
+                "Typical current density": 1,
+                "Current function": os.path.join(
+                    os.getcwd(),
+                    "pybamm",
+                    "parameters",
+                    "standard_current_functions",
+                    "constant_current.py",
+                ),
+                "Electrolyte diffusivity": os.path.join(
+                    input_path, "electrolyte_diffusivity_Capiglia1999.py"
+                ),
+                "Electrolyte conductivity": os.path.join(
+                    input_path, "electrolyte_conductivity_Capiglia1999.py"
+                ),
+                "Negative electrode OCV": os.path.join(
+                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lico2_ocp_Dualfoil.py"
+                ),
+                "Negative electrode diffusivity": os.path.join(
+                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
+                ),
+                "Positive electrode diffusivity": os.path.join(
+                    input_path, "lico2_diffusivity_Dualfoil.py"
+                ),
+            },
+        )
+        self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 40,
+            var.x_s: 25,
+            var.x_p: 35,
+            var.r_n: 10,
+            var.r_p: 10,
+        }
+        self.default_submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+        }
+        self.default_spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        self.default_solver = pybamm.ScikitsOdeSolver()
+
+        # Standard output variables
+        # Current
+        self.variables.update(
+            {"Total current density": None, "Total current density [A m-2]": None}
+        )
+
+        # Interfacial current
+        self.variables.update(
+            {
+                "Negative electrode current density": None,
+                "Positive electrode current density": None,
+                "Electrolyte current density": None,
+                "Interfacial current density": None,
+                "Exchange-current density": None,
+            }
+        )
+
+        self.variables.update(
+            {
+                "Negative electrode current density [A m-2]": None,
+                "Positive electrode current density [A m-2]": None,
+                "Electrolyte current density [A m-2]": None,
+                "Interfacial current density [A m-2]": None,
+                "Exchange-current density [A m-2]": None,
+            }
+        )
+        # Voltage
+        self.variables.update(
+            {
+                "Negative electrode open circuit potential": None,
+                "Positive electrode open circuit potential": None,
+                "Average negative electrode open circuit potential": None,
+                "Average positive electrode open circuit potential": None,
+                "Average open circuit voltage": None,
+                "Measured open circuit voltage": None,
+                "Terminal voltage": None,
+            }
+        )
+
+        self.variables.update(
+            {
+                "Negative electrode open circuit potential [V]": None,
+                "Positive electrode open circuit potential [V]": None,
+                "Average negative electrode open circuit potential [V]": None,
+                "Average positive electrode open circuit potential [V]": None,
+                "Average open circuit voltage [V]": None,
+                "Measured open circuit voltage [V]": None,
+                "Terminal voltage [V]": None,
+            }
+        )
+
+        # Overpotentials
+        self.variables.update(
+            {
+                "Negative reaction overpotential": None,
+                "Positive reaction overpotential": None,
+                "Average negative reaction overpotential": None,
+                "Average positive reaction overpotential": None,
+                "Average reaction overpotential": None,
+                "Average electrolyte overpotential": None,
+                "Average solid phase ohmic losses": None,
+            }
+        )
+
+        self.variables.update(
+            {
+                "Negative reaction overpotential [V]": None,
+                "Positive reaction overpotential [V]": None,
+                "Average negative reaction overpotential [V]": None,
+                "Average positive reaction overpotential [V]": None,
+                "Average reaction overpotential [V]": None,
+                "Average electrolyte overpotential [V]": None,
+                "Average solid phase ohmic losses [V]": None,
+            }
+        )
+        # Concentration
+        self.variables.update(
+            {
+                "Electrolyte concentration": None,
+                "Electrolyte concentration [mols m-3]": None,
+            }
+        )
+
+        # Potential
+        self.variables.update(
+            {
+                "Negative electrode potential [V]": None,
+                "Positive electrode potential [V]": None,
+                "Electrolyte potential [V]": None,
+            }
+        )
+
+
+class SubModel(StandardBatteryBaseModel):
     def __init__(self, set_of_parameters):
         super().__init__()
         self.set_of_parameters = set_of_parameters
@@ -477,12 +485,12 @@ class SubModel(BaseModel):
         self.variables = {}
 
 
-class LeadAcidBaseModel(BaseModel):
+class LeadAcidBaseModel(StandardBatteryBaseModel):
     """
     Overwrites default parameters from Base Model with default parameters for
     lead-acid models
 
-    **Extends:** :class:`BaseModel`
+    **Extends:** :class:`StandardBatteryBaseModel`
 
     """
 
@@ -520,13 +528,20 @@ class LeadAcidBaseModel(BaseModel):
             },
         )
 
+        # Current
+        icell = pybamm.electrical_parameters.current_with_time
+        icell_dim = pybamm.electrical_parameters.dimensional_current_with_time
+        self.variables.update(
+            {"Total current density": icell, "Total current density [A m-2]": icell_dim}
+        )
 
-class LithiumIonBaseModel(BaseModel):
+
+class LithiumIonBaseModel(StandardBatteryBaseModel):
     """
     Overwrites default parameters from Base Model with default parameters for
     lithium-ion models
 
-    **Extends:** :class:`BaseModel`
+    **Extends:** :class:`StandardBatteryBaseModel`
 
     """
 
@@ -534,6 +549,13 @@ class LithiumIonBaseModel(BaseModel):
         super().__init__()
 
         # Additional standard output variables
+        # Current
+        icell = pybamm.electrical_parameters.current_with_time
+        icell_dim = pybamm.electrical_parameters.dimensional_current_with_time
+        self.variables.update(
+            {"Total current density": icell, "Total current density [A m-2]": icell_dim}
+        )
+
         # Particle concentration
         self.variables.update(
             {

@@ -5,7 +5,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
-from tests import StandardModelTest
+from tests import get_mesh_for_testing, get_discretisation_for_testing
 
 import unittest
 import numpy as np
@@ -274,7 +274,7 @@ class TestScikitsSolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
-        disc = StandardModelTest(model).disc
+        disc = get_discretisation_for_testing()
         disc.process_model(model)
 
         # Solve
@@ -295,7 +295,7 @@ class TestScikitsSolver(unittest.TestCase):
             pybamm.Function(np.min, 2 * var - 2.5),
             pybamm.Function(np.min, var - 1.5),
         ]
-        disc = StandardModelTest(model).disc
+        disc = get_discretisation_for_testing()
         disc.process_model(model)
 
         # Solve
@@ -314,13 +314,11 @@ class TestScikitsSolver(unittest.TestCase):
         var2 = pybamm.Variable("var2", domain=whole_cell)
         model.rhs = {var1: var1, var2: 1 - var1}
         model.initial_conditions = {var1: 1.0, var2: -1.0}
-        disc = StandardModelTest(model).disc
+        disc = get_discretisation_for_testing()
         disc.process_model(model)
 
         # Add user-supplied Jacobian to model
-        mesh = pybamm.Mesh(
-            model.default_geometry, model.default_submesh_types, model.default_var_pts
-        )
+        mesh = get_mesh_for_testing()
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )
@@ -350,7 +348,7 @@ class TestScikitsSolver(unittest.TestCase):
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
-        disc = StandardModelTest(model).disc
+        disc = get_discretisation_for_testing()
         disc.process_model(model)
 
         # Solve
@@ -370,7 +368,7 @@ class TestScikitsSolver(unittest.TestCase):
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 3}
-        disc = StandardModelTest(model).disc
+        disc = get_discretisation_for_testing()
         disc.process_model(model)
 
         # Solve
@@ -394,7 +392,7 @@ class TestScikitsSolver(unittest.TestCase):
             pybamm.Function(np.min, var1 - 1.5),
             pybamm.Function(np.min, var2 - 2.5),
         ]
-        disc = StandardModelTest(model).disc
+        disc = get_discretisation_for_testing()
         disc.process_model(model)
 
         # Solve
@@ -416,13 +414,11 @@ class TestScikitsSolver(unittest.TestCase):
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1.0, var2: 2.0}
         model.initial_conditions_ydot = {var1: 0.1, var2: 0.2}
-        disc = StandardModelTest(model).disc
+        disc = get_discretisation_for_testing()
         disc.process_model(model)
 
         # Add user-supplied Jacobian to model
-        mesh = pybamm.Mesh(
-            model.default_geometry, model.default_submesh_types, model.default_var_pts
-        )
+        mesh = get_mesh_for_testing()
         combined_submesh = mesh.combine_submeshes(
             "negative electrode", "separator", "positive electrode"
         )

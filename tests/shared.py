@@ -51,7 +51,7 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
             bv_matrix = pybamm.Matrix(left_matrix)
         elif side == "right":
             bv_matrix = pybamm.Matrix(right_matrix)
-        return bv_matrix
+        return bv_matrix @ discretised_symbol
 
 
 def get_mesh_for_testing(npts=None):

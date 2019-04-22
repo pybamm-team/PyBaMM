@@ -84,7 +84,7 @@ from .expression_tree.unary_operators import (
     div,
     surf,
     Diagonal,
-    integrate
+    integrate,
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
@@ -107,6 +107,7 @@ from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard var
 from .models import standard_variables
 from .models.base_models import (
     BaseModel,
+    StandardBatteryBaseModel,
     SubModel,
     LeadAcidBaseModel,
     LithiumIonBaseModel,

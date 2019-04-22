@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class ReactionDiffusionModel(pybamm.BaseModel):
+class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
     """Reaction-diffusion model.
 
     **Extends**: :class:`pybamm.BaseModel`
@@ -15,25 +15,24 @@ class ReactionDiffusionModel(pybamm.BaseModel):
 
     def __init__(self):
         super().__init__()
-        # Parameters
+        "-----------------------------------------------------------------------------"
+        "Parameters"
         param = pybamm.standard_parameters_lithium_ion
 
-        # Variables and parameters
-        #
-        # Define concentration variable
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c_e = pybamm.Variable("Concentration", whole_cell)
+        "-----------------------------------------------------------------------------"
+        "Model Variables"
 
-        #
-        # Submodels
-        #
-        # Load reaction flux from submodels
-        j = pybamm.interface.homogeneous_reaction(whole_cell)
-        # Load diffusion model from submodels
-        diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
+        c_e = pybamm.standard_variables.c_e
 
-        # Create own model from diffusion model
-        self.update(diffusion_model)
+        "-----------------------------------------------------------------------------"
+        "Submodels"
 
-        # Add j to variables dict
-        self.variables.update({"Interfacial current density": j})
+        # Interfacial current density
+        int_curr_model = pybamm.interface.InterfacialCurrent(param)
+        j_vars = int_curr_model.get_homogeneous_interfacial_current()
+        self.variables = j_vars
+
+        # Electrolyte concentration
+        eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        eleclyte_conc_model.set_differential_system(c_e, self.variables)
+        self.update(eleclyte_conc_model)

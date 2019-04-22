@@ -149,8 +149,6 @@ class TestButlerVolmer(unittest.TestCase):
         processed_vars = {
             name: parameter_values.process_symbol(var) for name, var in bv_vars.items()
         }
-        bv_n = processed_vars["Negative electrode interfacial current density"]
-        bv_p = processed_vars["Positive electrode interfacial current density"]
         bv = processed_vars["Interfacial current density"]
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in bv.pre_order()]
 
@@ -204,6 +202,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
             "Negative particle concentration": c_s_n,
             "Positive particle concentration": c_s_p,
         }
+        self.variables_c_e = {"Electrolyte concentration": c_e}
 
     def tearDown(self):
         del self.variables
@@ -218,10 +217,10 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         self.assertEqual(j0_n.domain, ["negative electrode"])
         self.assertEqual(j0_p.domain, ["positive electrode"])
 
-        # Without intercalation
+    def test_creation_no_intercalation(self):
         param_la = pybamm.standard_parameters_lead_acid
         model = pybamm.interface.InterfacialCurrent(param_la)
-        j0_vars = model.get_exchange_current_densities(self.variables, False)
+        j0_vars = model.get_exchange_current_densities(self.variables_c_e, False)
         j0_n = j0_vars["Negative electrode exchange-current density"]
         j0_p = j0_vars["Positive electrode exchange-current density"]
         self.assertEqual(j0_n.domain, ["negative electrode"])
@@ -243,14 +242,15 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_n.pre_order()]
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_p.pre_order()]
 
-        # Without intercalation
+    def test_set_parameters_no_intercalation(self):
         param_la = pybamm.standard_parameters_lead_acid
         model = pybamm.interface.InterfacialCurrent(param_la)
+        j0_vars = model.get_exchange_current_densities(self.variables_c_e, False)
         # Process parameters
+        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
         processed_vars = {
             name: parameter_values.process_symbol(var) for name, var in j0_vars.items()
         }
-        j0_vars = model.get_exchange_current_densities(self.variables, False)
         j0_n = processed_vars["Negative electrode exchange-current density"]
         j0_p = processed_vars["Positive electrode exchange-current density"]
         # Test
@@ -273,20 +273,21 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         }
         j0_n = processed_vars["Negative electrode exchange-current density"]
         j0_p = processed_vars["Positive electrode exchange-current density"]
-        # Test
-        submesh = np.concatenate(
-            [
-                mesh["negative electrode"][0].nodes,
-                mesh["positive electrode"][0].nodes,
-                mesh["negative electrode"][0].nodes,
-                mesh["positive electrode"][0].nodes,
-            ]
-        )
-        y = submesh ** 2
-        # should evaluate to vectors with the right shape
-        import ipdb
 
-        ipdb.set_trace()
+        # Test
+        y = (
+            np.concatenate(
+                [
+                    mesh["negative particle"][0].nodes,
+                    mesh["positive particle"][0].nodes,
+                    mesh["negative electrode"][0].nodes,
+                    mesh["separator"][0].nodes,
+                    mesh["positive electrode"][0].nodes,
+                ]
+            )
+            ** 2
+        )
+        # should evaluate to vectors with the right shape
         self.assertEqual(
             j0_n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
         )
@@ -294,22 +295,26 @@ class TestExchangeCurrentDensity(unittest.TestCase):
             j0_p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
         )
 
-        # Without intercalation
+    def test_discretisation_no_intercalation(self):
         param_la = pybamm.standard_parameters_lead_acid
         model = pybamm.interface.InterfacialCurrent(param_la)
-        # Process parameters
+        j0_vars = model.get_exchange_current_densities(self.variables_c_e, False)
+        # Process parameters and discretise
+        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+        disc.set_variable_slices([self.variables["Electrolyte concentration"]])
         processed_vars = {
             name: disc.process_symbol(parameter_values.process_symbol(var))
             for name, var in j0_vars.items()
         }
-        j0_vars = model.get_exchange_current_densities(self.variables, False)
         j0_n = processed_vars["Negative electrode exchange-current density"]
         j0_p = processed_vars["Positive electrode exchange-current density"]
+
         # Test
-        submesh = np.concatenate(
-            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
-        )
-        y = submesh ** 2
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        submesh = mesh.combine_submeshes(*whole_cell)
+        y = submesh[0].nodes ** 2
         # should evaluate to vectors with the right shape
         self.assertEqual(
             j0_n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
