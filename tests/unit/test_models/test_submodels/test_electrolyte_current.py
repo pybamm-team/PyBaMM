@@ -70,7 +70,10 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         # Get disc
         modeltest = tests.StandardModelTest(model)
 
-        for out_vars in [leading_order_vars, combined_vars]:
+        for order, out_vars in [
+            ("leading", leading_order_vars),
+            ("combined", combined_vars),
+        ]:
             # Process parameters
             for name, var in out_vars.items():
                 out_vars[name] = modeltest.parameter_values.process_symbol(var)
@@ -103,7 +106,10 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
             np.testing.assert_array_less(0, i_e_eval)
             np.testing.assert_array_less(i_e_eval, 1.01)
 
-            self.assertLess(delta_phi_e_eval, 0)
+            if order == "leading":
+                self.assertEqual(delta_phi_e_eval, 0)
+            if order == "combined":
+                self.assertLess(delta_phi_e_eval, 0)
 
             # check that left boundary of phi_e is approx 0
             phi_e_left = pybamm.BoundaryValue(phi_e, "left")
@@ -111,24 +117,6 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
             phi_e_left_eval = phi_e_left_disc.evaluate(0, None)
 
             np.testing.assert_almost_equal(phi_e_left_eval, 0, 3)  # extrapolation error
-
-
-class TestFirstOrderPotential(unittest.TestCase):
-    def test_basic_processing(self):
-        loqs_model = pybamm.lead_acid.LOQS()
-        c_e_n = pybamm.Broadcast(pybamm.Scalar(1), ["negative electrode"])
-        c_e_s = pybamm.Broadcast(pybamm.Scalar(1), ["separator"])
-        c_e_p = pybamm.Broadcast(pybamm.Scalar(1), ["positive electrode"])
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
-
-        param = pybamm.standard_parameters_lead_acid
-
-        model = pybamm.electrolyte_current.StefanMaxwellFirstOrderPotential(
-            loqs_model, c_e, param
-        )
-
-        parameter_values = loqs_model.default_parameter_values
-        parameter_values.process_model(model)
 
 
 if __name__ == "__main__":

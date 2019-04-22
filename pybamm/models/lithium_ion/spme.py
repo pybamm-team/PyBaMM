@@ -61,9 +61,6 @@ class SPMe(pybamm.LithiumIonBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte current
-        # Define leading-order concentration
-        c_e_0 = pybamm.Scalar(1)
-        self.variables.update({"Electrolyte concentration (leading-order)": c_e_0})
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
         elyte_vars = eleclyte_current_model.get_explicit_combined(self.variables)
         self.variables.update(elyte_vars)

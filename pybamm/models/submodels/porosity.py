@@ -69,6 +69,8 @@ class Standard(pybamm.SubModel):
             self.variables.update(
                 {
                     Domain + " porosity": pybamm.Broadcast(eps_k, domain),
+                    Domain
+                    + " porosity (leading-order)": pybamm.Broadcast(eps_k, domain),
                     Domain + " porosity change": pybamm.Broadcast(deps_dt, domain),
                 }
             )

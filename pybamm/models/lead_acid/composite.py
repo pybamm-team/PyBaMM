@@ -61,6 +61,14 @@ class Composite(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Submodels"
 
+        # Leading-order model
+        loqs_model = pybamm.lead_acid.LOQS()
+        self.update(loqs_model)
+        # Label variables as leading-order
+        self.variables = {
+            name + " (leading-order)": var for name, var in self.variables.items()
+        }
+
         # Interfacial current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
         j_vars = int_curr_model.get_homogeneous_interfacial_current()
@@ -77,21 +85,13 @@ class Composite(pybamm.LeadAcidBaseModel):
         eleclyte_conc_model.set_differential_system(c_e, self.variables)
         self.update(eleclyte_conc_model)
 
-        # Leading-order model
-        loqs_model = pybamm.lead_acid.LOQS()
-        self.update(loqs_model)
-
-        # Electrolyte potential (solve ODE analytically)
-        elec_pot_model = pybamm.electrolyte_current.StefanMaxwellFirstOrderPotential(
-            loqs_model, c_e, param
-        )
-        self.update(elec_pot_model)
-
         "-----------------------------------------------------------------------------"
         "Post-Processing"
 
         # Exchange-current density
-        ecd_vars = int_curr_model.get_exchange_current_densities(self.variables)
+        ecd_vars = int_curr_model.get_exchange_current_densities(
+            self.variables, intercalation=False
+        )
         self.variables.update(ecd_vars)
 
         # Potentials
@@ -104,7 +104,7 @@ class Composite(pybamm.LeadAcidBaseModel):
 
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
+        elyte_vars = eleclyte_current_model.get_explicit_combined(self.variables)
         self.variables.update(elyte_vars)
 
         # Electrode
