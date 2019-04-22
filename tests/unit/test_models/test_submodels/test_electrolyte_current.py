@@ -43,7 +43,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_explicit_combined_stefan_maxwell(self):
+    def test_explicit(self):
         param = pybamm.standard_parameters_lithium_ion
 
         # Set up
@@ -93,7 +93,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
             i_e_disc = modeltest.disc.process_symbol(i_e)
             i_e_eval = i_e_disc.evaluate(0, None)
 
-            delta_phi_e_disc = modeltest.disc.process_symbol(delta_phi_e)
+            delta_phi_e_disc = modeltest.disc.process_symbol(delta_phi_e_av)
             delta_phi_e_eval = delta_phi_e_disc.evaluate(0, None)
 
             self.assertTrue(type(phi_e_eval) is np.ndarray)
