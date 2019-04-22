@@ -7,21 +7,30 @@ import pybamm
 
 
 class Standard(pybamm.SubModel):
-    """A class that generates the expression tree for Stefan-Maxwell Diffusion in the
-    electrolyte.
+    """Change in porosity due to reactions
 
     Parameters
     ----------
     set_of_parameters : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`ElectrolyteDiffusionModel`
+    *Extends:* :class:`pybamm.SubModel`
     """
 
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
     def set_differential_system(self, epsilon, j):
+        """
+        ODE system for the change in porosity due to reactions
+
+        Parameters
+        ----------
+        epsilon : :class:`pybamm.Concatenation`
+            The porosity variable
+        j : :class:`pybamm.Concatenation`
+            Interfacial current density
+        """
         param = self.set_of_parameters
 
         deps_dt = -param.beta_surf * j
@@ -31,6 +40,16 @@ class Standard(pybamm.SubModel):
         self.variables = {"Porosity": epsilon, "Porosity change": deps_dt}
 
     def set_leading_order_system(self, epsilon, j):
+        """
+        ODE system for the leading-order change in porosity due to reactions
+
+        Parameters
+        ----------
+        epsilon : :class:`pybamm.Concatenation`
+            The porosity variable
+        j : :class:`pybamm.Concatenation`
+            Interfacial current density
+        """
         param = self.set_of_parameters
 
         self.variables = {"Porosity": epsilon}

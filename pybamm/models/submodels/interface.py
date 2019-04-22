@@ -10,7 +10,14 @@ class InterfacialCurrent(pybamm.SubModel):
         super().__init__(set_of_parameters)
 
     def get_homogeneous_interfacial_current(self):
-        """ Homogeneous reaction at the electrode-electrolyte interface """
+        """
+        Homogeneous reaction at the electrode-electrolyte interface
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
         icell = pybamm.electrical_parameters.current_with_time
 
         j_n = pybamm.Broadcast(
@@ -32,6 +39,11 @@ class InterfacialCurrent(pybamm.SubModel):
             already-calculated variables
         intercalation : bool
             Whether intercalation occurs in the model.
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         param = self.set_of_parameters
         c_e = variables["Electrolyte concentration"]
@@ -78,6 +90,11 @@ class InterfacialCurrent(pybamm.SubModel):
         variables : dict
             Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
             already-calculated variables
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         param = self.set_of_parameters
 
@@ -103,6 +120,11 @@ class InterfacialCurrent(pybamm.SubModel):
             Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
             already-calculated variables
 
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+
         """
         param = self.set_of_parameters
 
@@ -119,6 +141,15 @@ class InterfacialCurrent(pybamm.SubModel):
         return eta_r_n, eta_r_p
 
     def get_derived_interfacial_currents(self, j_n, j_p):
+        """
+        Calculate dimensionless and dimensional variables for the interfacial current
+        submodel
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
         i_typ = self.set_of_parameters.i_typ
 
         j = pybamm.Concatenation(*[j_n, pybamm.Broadcast(0, ["separator"]), j_p])

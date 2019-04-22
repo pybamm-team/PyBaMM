@@ -28,6 +28,17 @@ class Ohm(pybamm.SubModel):
         super().__init__(set_of_parameters)
 
     def set_algebraic_system(self, phi_s, variables):
+        """
+        PDE system for current in the electrodes, using Ohm's law
+
+        Parameters
+        ----------
+        phi_s : :class:`pybamm.Variable`
+            The eletrode potential variable
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
+        """
         param = self.set_of_parameters
         icell = param.current_with_time
 
@@ -84,6 +95,11 @@ class Ohm(pybamm.SubModel):
         variables : dict
             Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
             already-calculated variables
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         # import parameters and spatial variables
         param = self.set_of_parameters
@@ -133,6 +149,11 @@ class Ohm(pybamm.SubModel):
         variables : dict
             Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
             already-calculated variables
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         # import parameters and spatial vairables
         param = self.set_of_parameters
@@ -180,6 +201,20 @@ class Ohm(pybamm.SubModel):
         return self.get_post_processed(variables)
 
     def get_post_processed(self, variables):
+        """
+        Calculate dimensionless and dimensional variables for the electrode submodel
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
         phi_s_n = variables["Negative electrode potential"]
         phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
         phi_s_p = variables["Positive electrode potential"]
@@ -193,6 +228,21 @@ class Ohm(pybamm.SubModel):
         return self.get_variables(phi_s, i_s)
 
     def get_variables(self, phi_s, i_s):
+        """
+        Calculate dimensionless and dimensional variables for the electrode submodel
+
+        Parameters
+        ----------
+        phi_s :class:`pybamm.Concatenation`
+            The electrode potential
+        i_s :class:`pybamm.Concatenation`
+            The electrode current density
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
         param = self.set_of_parameters
 
         x_n = pybamm.standard_spatial_vars.x_n

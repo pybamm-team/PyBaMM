@@ -7,8 +7,7 @@ import pybamm
 
 
 class Standard(pybamm.SubModel):
-    """A class that generates the expression tree for Stefan-Maxwell Current in the
-    electrolyte.
+    """Diffusion in the particles
 
     Parameters
     ----------
@@ -22,6 +21,18 @@ class Standard(pybamm.SubModel):
         super().__init__(set_of_parameters)
 
     def set_differential_system(self, c, j, broadcast=False):
+        """
+        PDE system for diffusion in the particles
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Variable`
+            The particle concentration variable
+        j : :class:`pybamm.Concatenation`
+            Interfacial current density
+        broadcast : bool
+            Whether to broadcast variables when computing standard variables
+        """
         param = self.set_of_parameters
 
         if len(c.domain) != 1:
@@ -54,6 +65,23 @@ class Standard(pybamm.SubModel):
             raise pybamm.ModelError("Domain not valid for the particle equations")
 
     def get_variables(self, c, N, broadcast):
+        """
+        Calculate dimensionless and dimensional variables for the electrolyte submodel
+
+        Parameters
+        ----------
+        c : :class:`pybamm.Concatenation`
+            The particle concentration variable
+        N : :class:`pybamm.Symbol`
+            The flux of lithium in the particles
+        broadcast : bool
+            Whether to broadcast variables when computing standard variables
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
         if c.domain == ["negative particle"]:
             conc_scale = self.set_of_parameters.c_n_max
             domain = "Negative particle"

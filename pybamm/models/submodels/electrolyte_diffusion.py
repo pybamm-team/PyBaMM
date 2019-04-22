@@ -24,6 +24,17 @@ class StefanMaxwell(pybamm.SubModel):
         super().__init__(set_of_parameters)
 
     def set_differential_system(self, c_e, variables):
+        """
+        PDE system for Stefan-Maxwell diffusion in the electrolyte
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Concatenation`
+            The eletrolyte concentration variable
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
+        """
         param = self.set_of_parameters
 
         # Unpack variables
@@ -59,6 +70,17 @@ class StefanMaxwell(pybamm.SubModel):
         self.events = [pybamm.Function(np.min, c_e)]
 
     def set_leading_order_system(self, c_e, variables):
+        """
+        ODE system for leading-order Stefan-Maxwell diffusion in the electrolyte
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Variable`
+            The eletrolyte concentration variable
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
+        """
         param = self.set_of_parameters
 
         # Unpack variables
@@ -102,6 +124,14 @@ class StefanMaxwell(pybamm.SubModel):
         self.events = [pybamm.Function(np.min, c_e)]
 
     def get_constant_concentration_variables(self):
+        """
+        Constant concentraiton (c_e = 1) in the electrolyte
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
 
         c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
         c_e_s = pybamm.Broadcast(1, domain=["separator"])
@@ -113,6 +143,23 @@ class StefanMaxwell(pybamm.SubModel):
         return self.get_variables(c_e, N_e)
 
     def get_variables(self, c_e, N_e):
+        """
+        Calculate dimensionless and dimensional variables for the electrolyte diffusion
+        submodel
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Concatenation`
+            The electrolyte concentration variable
+        N_e : :class:`pybamm.Symbol`
+            The flux of electrolyte cations
+
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
         c_e_typ = self.set_of_parameters.c_e_typ
 
         c_e_n, c_e_s, c_e_p = c_e.orphans

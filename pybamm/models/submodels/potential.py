@@ -26,12 +26,10 @@ class Potential(pybamm.SubModel):
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
-        intercalation : bool
-            Whether intercalation occurs in the model.
-
+        c_n : :class:`pybamm.Symbol`
+            The concentration that controls the negative electrode OCP
+        c_p : :class:`pybamm.Symbol`
+            The concentration that controls the positive electrode OCP
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters

@@ -24,6 +24,18 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
         super().__init__(set_of_parameters)
 
     def set_algebraic_system(self, phi_e, variables):
+        """
+        PDE system for current in the electrolyte, derived from the Stefan-Maxwell
+        equations.
+
+        Parameters
+        ----------
+        phi_e : :class:`pybamm.Concatenation`
+            The eletrolyte potential variable
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
+        """
         # Load parameters and spatial variables
         param = self.set_of_parameters
         x_n = pybamm.standard_spatial_vars.x_n
@@ -79,6 +91,11 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
         variables : dict
             Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
             already-calculated variables
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         # import parameters and spatial variables
         param = self.set_of_parameters
@@ -132,6 +149,11 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
         variables : dict
             Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
             already-calculated variables
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         # import parameters and spatial vairables
         param = self.set_of_parameters
@@ -225,7 +247,26 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
         return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
 
     def get_variables(self, phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av):
-        "Compute dimensional variables from dimensionless ones"
+        """
+        Calculate dimensionless and dimensional variables for the electrolyte current
+        submodel
+
+        Parameters
+        ----------
+        phi_e :class:`pybamm.Concatenation`
+            The electrolyte potential
+        i_e :class:`pybamm.Concatenation`
+            The electrolyte current density
+        delta_phi_e_av: :class:`pybamm.Symbol`
+            Average Ohmic losses in the electrolyte
+        eta_e_av: :class:`Pybamm.Symbol`
+            Average electrolyte overpotential
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
         param = self.set_of_parameters
         pot_scale = param.potential_scale
 
