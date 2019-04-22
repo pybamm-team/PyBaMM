@@ -184,7 +184,7 @@ class MacInnesStefanMaxwell(pybamm.SubModel):
                 .orphans[0]
             )
         except KeyError:
-            c_e_0 = 1
+            c_e_0 = pybamm.Scalar(1)
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 
         # bulk conductivities (leading order)

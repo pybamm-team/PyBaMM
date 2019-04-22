@@ -45,13 +45,16 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain][0].npts
-        left_matrix = coo_matrix(([1], ([0], [0])), shape=(n, n))
-        right_matrix = coo_matrix(([1], ([n - 1], [n - 1])), shape=(n, n))
         if side == "left":
-            bv_matrix = pybamm.Matrix(left_matrix)
+            left_vector = coo_matrix(([1], ([0], [0])), shape=(1, n))
+            bv_vector = pybamm.Matrix(left_vector)
         elif side == "right":
-            bv_matrix = pybamm.Matrix(right_matrix)
-        return bv_matrix @ discretised_symbol
+            right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
+            bv_vector = pybamm.Matrix(right_vector)
+        out = bv_vector @ discretised_symbol
+        # boundary value removes domain
+        out.domain = []
+        return out
 
 
 def get_mesh_for_testing(npts=None):

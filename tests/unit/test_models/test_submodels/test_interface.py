@@ -195,8 +195,8 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         c_e_s = pybamm.Variable("concentration", domain=["separator"])
         c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
-        c_s_n = pybamm.Variable("surface conc", domain=["negative electrode"])
-        c_s_p = pybamm.Variable("surface conc", domain=["positive electrode"])
+        c_s_n = pybamm.Variable("surface conc", domain=["negative particle"])
+        c_s_p = pybamm.Variable("surface conc", domain=["positive particle"])
         self.variables = {
             "Electrolyte concentration": c_e,
             "Negative particle concentration": c_s_n,
@@ -278,11 +278,11 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         y = (
             np.concatenate(
                 [
-                    mesh["negative particle"][0].nodes,
-                    mesh["positive particle"][0].nodes,
                     mesh["negative electrode"][0].nodes,
                     mesh["separator"][0].nodes,
                     mesh["positive electrode"][0].nodes,
+                    mesh["negative particle"][0].nodes,
+                    mesh["positive particle"][0].nodes,
                 ]
             )
             ** 2

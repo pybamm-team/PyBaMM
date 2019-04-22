@@ -57,7 +57,6 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
 
         in_vars = {
             "Electrolyte concentration": c_e,
-            "Electrolyte concentration (leading-order)": 1,
             "Negative electrode open circuit potential": ocp_n,
             "Negative reaction overpotential": eta_r_n,
         }

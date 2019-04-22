@@ -80,13 +80,6 @@ class TestBroadcasts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "cannot broadcast child with shape"):
             broad.evaluate(y=y)
 
-        # vector - not accepted
-        vec = pybamm.Vector(np.ones(5))
-        with self.assertRaisesRegex(
-            TypeError, "cannot Broadcast a constant Vector or Matrix"
-        ):
-            broad = pybamm.NumpyBroadcast(vec, whole_cell, mesh)
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
