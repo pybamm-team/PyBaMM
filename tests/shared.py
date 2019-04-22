@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from scipy.sparse import eye
+from scipy.sparse import eye, coo_matrix
 
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):
@@ -40,6 +40,18 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
             n += self.mesh[domain][0].npts
         mass_matrix = pybamm.Matrix(eye(n))
         return mass_matrix
+
+    def boundary_value(self, symbol, discretised_symbol, side):
+        n = 0
+        for domain in symbol.domain:
+            n += self.mesh[domain][0].npts
+        left_matrix = coo_matrix(([1], ([0], [0])), shape=(n, n))
+        right_matrix = coo_matrix(([1], ([n - 1], [n - 1])), shape=(n, n))
+        if side == "left":
+            bv_matrix = pybamm.Matrix(left_matrix)
+        elif side == "right":
+            bv_matrix = pybamm.Matrix(right_matrix)
+        return bv_matrix
 
 
 def get_mesh_for_testing(npts=None):

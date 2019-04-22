@@ -5,8 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
-
 
 class SPMe(pybamm.LithiumIonBaseModel):
     """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery.

@@ -60,7 +60,6 @@ class StefanMaxwell(pybamm.SubModel):
 
     def set_leading_order_system(self, c_e, variables):
         param = self.set_of_parameters
-        i_cell = param.current_with_time
 
         # Unpack variables
         j_n = variables["Negative electrode interfacial current density"].orphans[0]
@@ -83,7 +82,7 @@ class StefanMaxwell(pybamm.SubModel):
             c_e: 1
             / (param.l_n * eps_n + param.l_s * eps_s + param.l_p * eps_p)
             * (
-                (param.s_n - param.s_p) * i_cell
+                (param.l_n * param.s_n * j_n + param.l_p * param.s_p * j_p)
                 - c_e * (param.l_n * deps_n_dt + param.l_p * deps_p_dt)
             )
         }

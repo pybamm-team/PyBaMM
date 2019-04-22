@@ -5,8 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
-
 
 class SPM(pybamm.LithiumIonBaseModel):
     """Single Particle Model (SPM) of a lithium-ion battery.

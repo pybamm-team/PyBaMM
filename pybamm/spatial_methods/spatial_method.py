@@ -150,16 +150,19 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def boundary_value(self, discretised_symbol):
+    def boundary_value(self, symbol, discretised_symbol, side):
         """
-        Returns the surface value using the approriate expression for the
+        Returns the boundary value using the approriate expression for the
         spatial method.
 
         Parameters
         -----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol to which is being integrated
         discretised_symbol : :class:`pybamm.StateVector`
-            The discretised variable (a state vector) from which to calculate
-            the surface value.
+            The discretised variable from which to calculate the boundary value
+        side : str
+            Which side to take the boundary value on ("left" or "right")
 
         Returns
         -------

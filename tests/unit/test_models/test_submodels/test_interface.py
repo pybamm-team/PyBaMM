@@ -8,624 +8,272 @@ from tests import get_discretisation_for_testing
 
 import unittest
 import numpy as np
-import os
 
 
 class TestHomogeneousReaction(unittest.TestCase):
-    def setUp(self):
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        self.param = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current density": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
-            },
-        )
-
-    def tearDown(self):
-        del self.param
-
     def test_set_parameters(self):
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
-        processed_rxn = self.param.process_symbol(rxn)
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.interface.InterfacialCurrent(param)
+        j_vars = model.get_homogeneous_interfacial_current()
+        parameter_values = model.default_parameter_values
 
-        # rxn (a concatenation of functions of scalars and parameters) should get
-        # discretised to a concantenation of functions of scalars
-        self.assertIsInstance(processed_rxn, pybamm.Concatenation)
+        processed_j_vars = {
+            name: parameter_values.process_symbol(var) for name, var in j_vars.items()
+        }
+        j = processed_j_vars["Interfacial current density"]
+
+        self.assertIsInstance(j, pybamm.Concatenation)
         self.assertFalse(
-            any(
-                [
-                    isinstance(x, pybamm.Parameter)
-                    for x in processed_rxn.children[0].pre_order()
-                ]
-            )
+            any([isinstance(x, pybamm.Parameter) for x in j.children[0].pre_order()])
         )
         self.assertFalse(
-            any(
-                [
-                    isinstance(x, pybamm.Parameter)
-                    for x in processed_rxn.children[2].pre_order()
-                ]
-            )
+            any([isinstance(x, pybamm.Parameter) for x in j.children[2].pre_order()])
         )
-        self.assertEqual(processed_rxn.children[0].domain, ["negative electrode"])
-        self.assertEqual(processed_rxn.children[1].domain, ["separator"])
-        self.assertEqual(processed_rxn.children[2].domain, ["positive electrode"])
+        self.assertEqual(j.children[0].domain, ["negative electrode"])
+        self.assertEqual(j.children[1].domain, ["separator"])
+        self.assertEqual(j.children[2].domain, ["positive electrode"])
 
     def test_discretisation(self):
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
 
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.interface.InterfacialCurrent(param)
+        j_vars = model.get_homogeneous_interfacial_current()
+        parameter_values = model.default_parameter_values
 
-        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
+        processed_vars = {
+            name: disc.process_symbol(parameter_values.process_symbol(var))
+            for name, var in j_vars.items()
+        }
+        j = processed_vars["Interfacial current density"]
+        j_n = processed_vars["Negative electrode interfacial current density"]
+        j_p = processed_vars["Positive electrode interfacial current density"]
 
-        param_rxn = self.param.process_symbol(rxn)
-        processed_rxn = disc.process_symbol(param_rxn)
+        submesh = disc.mesh.combine_submeshes(*j.domain)
 
-        submesh = disc.mesh.combine_submeshes(*whole_cell)
-
-        self.assertIsInstance(processed_rxn, pybamm.Concatenation)
-        self.assertEqual(processed_rxn.evaluate(0, None).shape, submesh[0].nodes.shape)
+        self.assertIsInstance(j, pybamm.Concatenation)
+        self.assertEqual(j.evaluate(0, None).shape, submesh[0].nodes.shape)
 
         # test values
-        l_n = self.param.process_symbol(pybamm.geometric_parameters.l_n)
-        l_p = self.param.process_symbol(pybamm.geometric_parameters.l_p)
+        l_n = parameter_values.process_symbol(param.l_n)
+        l_p = parameter_values.process_symbol(param.l_p)
         npts_n = mesh["negative electrode"][0].npts
         npts_s = mesh["separator"][0].npts
+        np.testing.assert_array_equal((l_n * j).evaluate(0, None)[:npts_n], 1)
+        np.testing.assert_array_equal(j.evaluate(0, None)[npts_n : npts_n + npts_s], 0)
         np.testing.assert_array_equal(
-            (l_n * processed_rxn).evaluate(0, None)[:npts_n], 1
+            (l_p * j).evaluate(0, None)[npts_n + npts_s :], -1
         )
-        np.testing.assert_array_equal(
-            processed_rxn.evaluate(0, None)[npts_n : npts_n + npts_s], 0
-        )
-        np.testing.assert_array_equal(
-            (l_p * processed_rxn).evaluate(0, None)[npts_n + npts_s :], -1
-        )
-
-    def test_disc_for_scalars(self):
-        disc = get_discretisation_for_testing()
-
-        j_n = pybamm.interface.homogeneous_reaction(["negative electrode"])
-        j_p = pybamm.interface.homogeneous_reaction(["positive electrode"])
-
-        param_j_n = self.param.process_symbol(j_n)
-        param_j_p = self.param.process_symbol(j_p)
-
-        processed_j_n = disc.process_symbol(param_j_n)
-        processed_j_p = disc.process_symbol(param_j_p)
-
-        # test values
-        l_n = self.param.process_symbol(pybamm.geometric_parameters.l_n)
-        l_p = self.param.process_symbol(pybamm.geometric_parameters.l_p)
-
-        np.testing.assert_array_equal((processed_j_n * l_n).evaluate(0, None), 1)
-        np.testing.assert_array_equal((processed_j_p * l_p).evaluate(0, None), -1)
-
-    def test_failure(self):
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.interface.homogeneous_reaction(["not a domain"])
+        np.testing.assert_array_equal((l_n * j_n).evaluate(0, None), 1)
+        np.testing.assert_array_equal((l_p * j_p).evaluate(0, None), -1)
 
     def test_simplify_constant_current(self):
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        rxn = pybamm.interface.homogeneous_reaction(whole_cell)
 
-        param_rxn = self.param.process_symbol(rxn)
-        processed_rxn = disc.process_symbol(param_rxn)
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.interface.InterfacialCurrent(param)
+        j_vars = model.get_homogeneous_interfacial_current()
+        parameter_values = model.default_parameter_values
+
+        processed_vars = {
+            name: disc.process_symbol(parameter_values.process_symbol(var))
+            for name, var in j_vars.items()
+        }
+        j = processed_vars["Interfacial current density"]
 
         # Simplifiy, since current is constant this should give a vector
-        rxn_simp = processed_rxn.simplify()
-        self.assertIsInstance(rxn_simp, pybamm.Vector)
+        j_simp = j.simplify()
+        self.assertIsInstance(j_simp, pybamm.Vector)
         # test values
-        l_n = self.param.process_symbol(pybamm.geometric_parameters.l_n)
-        l_p = self.param.process_symbol(pybamm.geometric_parameters.l_p)
+        l_n = parameter_values.process_symbol(param.l_n)
+        l_p = parameter_values.process_symbol(param.l_p)
         npts_n = mesh["negative electrode"][0].npts
         npts_s = mesh["separator"][0].npts
-        np.testing.assert_array_equal((l_n * rxn_simp).evaluate(0, None)[:npts_n], 1)
+        np.testing.assert_array_equal((l_n * j_simp).evaluate(0, None)[:npts_n], 1)
         np.testing.assert_array_equal(
-            rxn_simp.evaluate(0, None)[npts_n : npts_n + npts_s], 0
+            j_simp.evaluate(0, None)[npts_n : npts_n + npts_s], 0
         )
         np.testing.assert_array_equal(
-            (l_p * rxn_simp).evaluate(0, None)[npts_n + npts_s :], -1
+            (l_p * j_simp).evaluate(0, None)[npts_n + npts_s :], -1
         )
 
 
 class TestButlerVolmer(unittest.TestCase):
     def setUp(self):
-        self.cn = pybamm.Variable("concentration", domain=["negative electrode"])
-        self.cs = pybamm.Variable("concentration", domain=["separator"])
-        self.cp = pybamm.Variable("concentration", domain=["positive electrode"])
-        self.c = pybamm.Concatenation(self.cn, self.cs, self.cp)
-        self.Delta_phin = pybamm.Variable(
-            "potential difference", domain=["negative electrode"]
-        )
-        self.Delta_phis = pybamm.Variable("potential difference", domain=["separator"])
-        self.Delta_phip = pybamm.Variable(
-            "potential difference", domain=["positive electrode"]
-        )
-        self.Delta_phi = pybamm.Concatenation(
-            self.Delta_phin, self.Delta_phis, self.Delta_phip
-        )
-        self.cn_surf = pybamm.Variable(
-            "surface concentration", domain=["negative electrode"]
-        )
-        self.cp_surf = pybamm.Variable(
-            "surface concentration", domain=["positive electrode"]
-        )
-        self.c_surf = pybamm.Concatenation(self.cn_surf, self.cp_surf)
+        eta_r_n = pybamm.Variable("overpotential", domain=["negative electrode"])
+        eta_r_p = pybamm.Variable("overpotential", domain=["positive electrode"])
+        j0_n = pybamm.Variable("exchange-curr density", domain=["negative electrode"])
+        j0_p = pybamm.Variable("exchange-curr density", domain=["positive electrode"])
 
-        self.param = pybamm.standard_parameters_lead_acid
-
-        self.lion_param = pybamm.standard_parameters_lithium_ion
+        self.variables = {
+            "Negative reaction overpotential": eta_r_n,
+            "Positive reaction overpotential": eta_r_p,
+            "Negative electrode exchange-current density": j0_n,
+            "Positive electrode exchange-current density": j0_p,
+        }
 
     def tearDown(self):
-        del self.cn
-        del self.cs
-        del self.cp
-        del self.c
-        del self.Delta_phin
-        del self.Delta_phis
-        del self.Delta_phip
-        del self.Delta_phi
-        del self.cn_surf
-        del self.cp_surf
-        del self.c_surf
-        del self.param
+        del self.variables
 
     def test_creation(self):
-        # negative electrode passes, returns Multiplication
-        bv = pybamm.interface.butler_volmer(self.param, self.cn, self.Delta_phin)
-        self.assertIsInstance(bv, pybamm.Multiplication)
-        self.assertEqual(bv.domain, ["negative electrode"])
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.interface.InterfacialCurrent(param)
+        bv_vars = model.get_interfacial_current_butler_volmer(self.variables)
+        bv_n = bv_vars["Negative electrode interfacial current density"]
+        bv_p = bv_vars["Positive electrode interfacial current density"]
+        bv = bv_vars["Interfacial current density"]
 
-        # positive electrode passes, returns Multiplication
-        bv = pybamm.interface.butler_volmer(self.param, self.cp, self.Delta_phip)
-        self.assertIsInstance(bv, pybamm.Multiplication)
-        self.assertEqual(bv.domain, ["positive electrode"])
+        # negative electrode Butler-Volmer is Multiplication
+        self.assertIsInstance(bv_n, pybamm.Multiplication)
+        self.assertEqual(bv_n.domain, ["negative electrode"])
 
-        # whole cell domain passes, returns concatenation
-        bv = pybamm.interface.butler_volmer(self.param, self.c, self.Delta_phi)
-        self.assertIsInstance(bv, pybamm.Concatenation)
-        self.assertEqual(
-            bv.domain, ["negative electrode", "separator", "positive electrode"]
-        )
+        # positive electrode Butler-Volmer is Multiplication
+        self.assertIsInstance(bv_p, pybamm.Multiplication)
+        self.assertEqual(bv_p.domain, ["positive electrode"])
 
-        # c and Delta_phi without domain, domain gets input
-        c = pybamm.Variable("concentration", domain=[])
-        Delta_phi = pybamm.Variable("potential", domain=[])
-        bv = pybamm.interface.butler_volmer(
-            self.param, c, Delta_phi, domain=["negative electrode"]
-        )
-        self.assertIsInstance(bv, pybamm.Multiplication)
-        self.assertEqual(bv.domain, [])
-
-    def test_failures(self):
-        # no way of determining domain
-        c = pybamm.Variable("concentration", domain=[])
-        Delta_phi = pybamm.Variable("potential", domain=[])
-        with self.assertRaisesRegex(ValueError, "domain cannot be None"):
-            pybamm.interface.butler_volmer(self.param, c, Delta_phi)
-
-        # can't unpack concatenations
-        with self.assertRaisesRegex(
-            TypeError, "c_e and Delta_phi must both be Concatenations"
-        ):
-            pybamm.interface.butler_volmer(
-                self.param,
-                self.cn,
-                self.Delta_phin,
-                domain=["negative electrode", "separator", "positive electrode"],
-            )
-        with self.assertRaisesRegex(TypeError, "c_s_k_surf must be a Concatenation"):
-            pybamm.interface.butler_volmer(
-                self.param,
-                self.c,
-                self.Delta_phi,
-                self.cn_surf,
-                domain=["negative electrode", "separator", "positive electrode"],
-            )
-
-        # bad domain
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.interface.butler_volmer(
-                self.param, c, Delta_phi, domain=["not a domain"]
-            )
-
-    def test_creation_with_particles(self):
-        # negative electrode passes, returns Multiplication
-        bv = pybamm.interface.butler_volmer(
-            self.lion_param, self.cn, self.Delta_phin, self.cn_surf
-        )
-        self.assertIsInstance(bv, pybamm.Multiplication)
-        self.assertEqual(bv.domain, ["negative electrode"])
-
-        # positive electrode passes, returns Multiplication
-        bv = pybamm.interface.butler_volmer(
-            self.lion_param, self.cp, self.Delta_phip, self.cp_surf
-        )
-        self.assertIsInstance(bv, pybamm.Multiplication)
-        self.assertEqual(bv.domain, ["positive electrode"])
-
-        # whole cell domain passes, returns concatenation
-        bv = pybamm.interface.butler_volmer(
-            self.lion_param, self.c, self.Delta_phi, self.c_surf
-        )
+        # whole cell domain Butler-Volmer is concatenation
         self.assertIsInstance(bv, pybamm.Concatenation)
         self.assertEqual(
             bv.domain, ["negative electrode", "separator", "positive electrode"]
         )
 
     def test_set_parameters(self):
-        param = pybamm.standard_parameters_lead_acid
-        bv = pybamm.interface.butler_volmer(param, self.c, self.Delta_phi)
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
-        parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
-            {
-                "Typical current density": 1,
-                "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
-                ),
-            },
-        )
-        proc_bv = parameter_values.process_symbol(bv)
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_bv.pre_order()]
-
-        # with particles
         param = pybamm.standard_parameters_lithium_ion
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        parameter_values = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current density": 1,
-                "Negative electrode OCV": os.path.join(
-                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lico2_ocp_Dualfoil.py"
-                ),
-            },
-        )
-        bv = pybamm.interface.butler_volmer(
-            param, self.c, self.Delta_phi, c_s_k_surf=self.c_surf
-        )
-        proc_bv = parameter_values.process_symbol(bv)
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_bv.pre_order()]
+        model = pybamm.interface.InterfacialCurrent(param)
+        bv_vars = model.get_interfacial_current_butler_volmer(self.variables)
+
+        # Process parameters
+        parameter_values = model.default_parameter_values
+        processed_vars = {
+            name: parameter_values.process_symbol(var) for name, var in bv_vars.items()
+        }
+        bv_n = processed_vars["Negative electrode interfacial current density"]
+        bv_p = processed_vars["Positive electrode interfacial current density"]
+        bv = processed_vars["Interfacial current density"]
+        [self.assertNotIsInstance(x, pybamm.Parameter) for x in bv.pre_order()]
 
     def test_discretisation(self):
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.interface.InterfacialCurrent(param)
+        bv_vars = model.get_interfacial_current_butler_volmer(self.variables)
 
-        param = pybamm.standard_parameters_lead_acid
-        bv_n = pybamm.interface.butler_volmer(param, self.cn, self.Delta_phin)
-        bv_p = pybamm.interface.butler_volmer(param, self.cp, self.Delta_phip)
-
-        # process parameters
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
-        parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
-            {
-                "Typical current density": 1,
-                "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
-                ),
-            },
-        )
-        param_bv_n = parameter_values.process_symbol(bv_n)
-        param_bv_p = parameter_values.process_symbol(bv_p)
-
-        # discretise
+        # Process parameters and discretise
+        parameter_values = model.default_parameter_values
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
-        variables = [self.cn, self.cp, self.Delta_phin, self.Delta_phip]
-        disc.set_variable_slices(variables)
-        processed_bv_n = disc.process_symbol(param_bv_n)
-        processed_bv_p = disc.process_symbol(param_bv_p)
+        disc.set_variable_slices(self.variables.values())
 
+        processed_vars = {
+            name: disc.process_symbol(parameter_values.process_symbol(var))
+            for name, var in bv_vars.items()
+        }
+        bv_n = processed_vars["Negative electrode interfacial current density"]
+        bv_p = processed_vars["Positive electrode interfacial current density"]
+        bv = processed_vars["Interfacial current density"]
+
+        # test butler-volmer in each electrode
         submesh = np.concatenate(
             [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
         )
         y = np.concatenate([submesh ** 2, submesh ** 3])
-
-        # should evaluate to vectors with the right shape
         self.assertEqual(
-            processed_bv_n.evaluate(None, y).shape,
-            mesh["negative electrode"][0].nodes.shape,
+            bv_n.evaluate(None, y).shape, mesh["negative electrode"][0].nodes.shape
         )
         self.assertEqual(
-            processed_bv_p.evaluate(None, y).shape,
-            mesh["positive electrode"][0].nodes.shape,
+            bv_p.evaluate(None, y).shape, mesh["positive electrode"][0].nodes.shape
         )
 
-    def test_discretisation_with_particles(self):
-        bv_n = pybamm.interface.butler_volmer(
-            self.lion_param, self.cn, self.Delta_phin, self.cn_surf
-        )
-        bv_p = pybamm.interface.butler_volmer(
-            self.lion_param, self.cp, self.Delta_phip, self.cp_surf
-        )
-
-        # process parameters
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        parameter_values = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current density": 1,
-                "Negative electrode OCV": os.path.join(
-                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lico2_ocp_Dualfoil.py"
-                ),
-            },
-        )
-        param_bv_n = parameter_values.process_symbol(bv_n)
-        param_bv_p = parameter_values.process_symbol(bv_p)
-
-        # discretise
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
-        variables = [
-            self.cn,
-            self.cp,
-            self.Delta_phin,
-            self.Delta_phip,
-            self.cn_surf,
-            self.cp_surf,
-        ]
-        disc.set_variable_slices(variables)
-        processed_bv_n = disc.process_symbol(param_bv_n)
-        processed_bv_p = disc.process_symbol(param_bv_p)
-
-        submesh = np.concatenate(
-            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
-        )
-        y = np.concatenate([submesh ** 2, submesh ** 3, submesh])
-
-        # should evaluate to vectors with the right shape
-        self.assertEqual(
-            processed_bv_n.evaluate(None, y).shape,
-            mesh["negative electrode"][0].nodes.shape,
-        )
-        self.assertEqual(
-            processed_bv_p.evaluate(None, y).shape,
-            mesh["positive electrode"][0].nodes.shape,
-        )
-
-    def test_discretisation_whole(self):
-        param = pybamm.standard_parameters_lead_acid
-
-        bv_whole = pybamm.interface.butler_volmer(param, self.c, self.Delta_phi)
-
-        # process parameters
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
-        parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
-            {
-                "Typical current density": 1,
-                "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
-                ),
-            },
-        )
-        param_bv_whole = parameter_values.process_symbol(bv_whole)
-
-        # discretise
-        disc = get_discretisation_for_testing()
-
-        variables = [self.c, self.Delta_phi]
-        disc.set_variable_slices(variables)
-        processed_bv_whole = disc.process_symbol(param_bv_whole)
-
-        # test
+        # test concatenated butlver-volmer
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
-        y = np.concatenate(
-            [whole_cell_mesh[0].nodes ** 2, whole_cell_mesh[0].nodes ** 3]
-        )
-        self.assertEqual(
-            processed_bv_whole.evaluate(None, y).shape, whole_cell_mesh[0].nodes.shape
-        )
-
-    def test_discretisation_whole_with_particles(self):
-        bv_whole = pybamm.interface.butler_volmer(
-            self.lion_param, self.c, self.Delta_phi, c_s_k_surf=self.c_surf
-        )
-
-        # process parameters
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        parameter_values = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current density": 1,
-                "Negative electrode OCV": os.path.join(
-                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lico2_ocp_Dualfoil.py"
-                ),
-            },
-        )
-
-        param_bv_whole = parameter_values.process_symbol(bv_whole)
-
-        # discretise
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
-
-        variables = [self.c, self.Delta_phi, self.c_surf]
-        disc.set_variable_slices(variables)
-        processed_bv_whole = disc.process_symbol(param_bv_whole)
-
-        # test
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
-        submesh = np.concatenate(
-            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
-        )
-        y = np.concatenate(
-            [whole_cell_mesh[0].nodes ** 2, whole_cell_mesh[0].nodes ** 3, submesh]
-        )
-        self.assertEqual(
-            processed_bv_whole.evaluate(None, y).shape, whole_cell_mesh[0].nodes.shape
-        )
+        self.assertEqual(bv.evaluate(None, y).shape, whole_cell_mesh[0].nodes.shape)
 
 
 class TestExchangeCurrentDensity(unittest.TestCase):
     def setUp(self):
-        self.cn = pybamm.Variable("concentration", domain=["negative electrode"])
-        self.cs = pybamm.Variable("concentration", domain=["separator"])
-        self.cp = pybamm.Variable("concentration", domain=["positive electrode"])
-        self.c = pybamm.Concatenation(self.cn, self.cs, self.cp)
-        self.cn_surf = pybamm.Variable(
-            "surface concentration", domain=["negative electrode"]
-        )
-        self.cp_surf = pybamm.Variable(
-            "surface concentration", domain=["positive electrode"]
-        )
+        c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
+        c_e_s = pybamm.Variable("concentration", domain=["separator"])
+        c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
+        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        c_s_n = pybamm.Variable("surface conc", domain=["negative electrode"])
+        c_s_p = pybamm.Variable("surface conc", domain=["positive electrode"])
+        self.variables = {
+            "Electrolyte concentration": c_e,
+            "Negative particle concentration": c_s_n,
+            "Positive particle concentration": c_s_p,
+        }
 
     def tearDown(self):
-        del self.cn
-        del self.cs
-        del self.cp
-        del self.c
-        del self.cn_surf
-        del self.cp_surf
+        del self.variables
 
     def test_creation(self):
-        # Concentration without domain passes
-        c = pybamm.Variable("c")
-        pybamm.interface.exchange_current_density(c, domain=["negative electrode"])
-        pybamm.interface.exchange_current_density(c, domain=["positive electrode"])
+        # With intercalation
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.interface.InterfacialCurrent(param)
+        j0_vars = model.get_exchange_current_densities(self.variables)
+        j0_n = j0_vars["Negative electrode exchange-current density"]
+        j0_p = j0_vars["Positive electrode exchange-current density"]
+        self.assertEqual(j0_n.domain, ["negative electrode"])
+        self.assertEqual(j0_p.domain, ["positive electrode"])
 
-        # Concentration with correct domain passes
-        j0n = pybamm.interface.exchange_current_density(self.cn)
-        j0p = pybamm.interface.exchange_current_density(self.cp)
-        self.assertEqual(j0n.domain, ["negative electrode"])
-        self.assertEqual(j0p.domain, ["positive electrode"])
-
-        # Surface concentration passes
-        j0n = pybamm.interface.exchange_current_density(self.cn, self.cn_surf)
-        j0p = pybamm.interface.exchange_current_density(self.cp, self.cp_surf)
-        self.assertEqual(j0n.domain, ["negative electrode"])
-        self.assertEqual(j0p.domain, ["positive electrode"])
-
-        # Concentration without domain or with "not a domain" fails
-        c = pybamm.Variable("concentration", domain=[])
-        with self.assertRaises(ValueError):
-            pybamm.interface.exchange_current_density(c)
-        with self.assertRaises(KeyError):
-            pybamm.interface.exchange_current_density(c, domain=["not a domain"])
+        # Without intercalation
+        param_la = pybamm.standard_parameters_lead_acid
+        model = pybamm.interface.InterfacialCurrent(param_la)
+        j0_vars = model.get_exchange_current_densities(self.variables, False)
+        j0_n = j0_vars["Negative electrode exchange-current density"]
+        j0_p = j0_vars["Positive electrode exchange-current density"]
+        self.assertEqual(j0_n.domain, ["negative electrode"])
+        self.assertEqual(j0_p.domain, ["positive electrode"])
 
     def test_set_parameters(self):
-        param = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"Typical current density": 1}
-        )
-        # without surface concentration
-        j0n = pybamm.interface.exchange_current_density(self.cn)
-        j0p = pybamm.interface.exchange_current_density(self.cp)
-        proc_j0n = param.process_symbol(j0n)
-        proc_j0p = param.process_symbol(j0p)
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_j0n.pre_order()]
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_j0p.pre_order()]
+        # With intercalation
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.interface.InterfacialCurrent(param)
+        j0_vars = model.get_exchange_current_densities(self.variables)
+        # Process parameters
+        parameter_values = model.default_parameter_values
+        processed_vars = {
+            name: parameter_values.process_symbol(var) for name, var in j0_vars.items()
+        }
+        j0_n = processed_vars["Negative electrode exchange-current density"]
+        j0_p = processed_vars["Positive electrode exchange-current density"]
+        # Test
+        [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_n.pre_order()]
+        [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_p.pre_order()]
 
-        # with surface concentration
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        param = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {"Typical current density": 1},
-        )
-        j0n = pybamm.interface.exchange_current_density(self.cn, self.cn_surf)
-        j0p = pybamm.interface.exchange_current_density(self.cp, self.cp_surf)
-        proc_j0n = param.process_symbol(j0n)
-        proc_j0p = param.process_symbol(j0p)
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_j0n.pre_order()]
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in proc_j0p.pre_order()]
+        # Without intercalation
+        param_la = pybamm.standard_parameters_lead_acid
+        model = pybamm.interface.InterfacialCurrent(param_la)
+        # Process parameters
+        processed_vars = {
+            name: parameter_values.process_symbol(var) for name, var in j0_vars.items()
+        }
+        j0_vars = model.get_exchange_current_densities(self.variables, False)
+        j0_n = processed_vars["Negative electrode exchange-current density"]
+        j0_p = processed_vars["Positive electrode exchange-current density"]
+        # Test
+        [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_n.pre_order()]
+        [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_p.pre_order()]
 
     def test_discretisation(self):
-        # create exchange-current densities
-        j0n = pybamm.interface.exchange_current_density(self.cn)
-        j0p = pybamm.interface.exchange_current_density(self.cp)
-
-        # process parameters
-        param = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"Typical current density": 1}
-        )
-        param_j0n = param.process_symbol(j0n)
-        param_j0p = param.process_symbol(j0p)
-
-        # discretise
+        # With intercalation
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.interface.InterfacialCurrent(param)
+        j0_vars = model.get_exchange_current_densities(self.variables)
+        # Process parameters and discretise
+        parameter_values = model.default_parameter_values
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
-
-        variables = [self.cn, self.cp]
-        disc.set_variable_slices(variables)
-        processed_j0n = disc.process_symbol(param_j0n)
-        processed_j0p = disc.process_symbol(param_j0p)
-
-        submesh = np.concatenate(
-            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
-        )
-        y = submesh ** 2
-        # should evaluate to vectors with the right shape
-        self.assertEqual(
-            processed_j0n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
-        )
-        self.assertEqual(
-            processed_j0p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
-        )
-
-    def test_discretisation_surface_conc(self):
-        # create exchange-current densities
-        j0n = pybamm.interface.exchange_current_density(self.cn, self.cn_surf)
-        j0p = pybamm.interface.exchange_current_density(self.cp, self.cp_surf)
-
-        # process parameters
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        param = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {"Typical current density": 1},
-        )
-        param_j0n = param.process_symbol(j0n)
-        param_j0p = param.process_symbol(j0p)
-
-        # discretise
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
-
-        variables = [self.cn, self.cp, self.cn_surf, self.cp_surf]
-        disc.set_variable_slices(variables)
-        processed_j0n = disc.process_symbol(param_j0n)
-        processed_j0p = disc.process_symbol(param_j0p)
-
+        disc.set_variable_slices(self.variables.values())
+        processed_vars = {
+            name: disc.process_symbol(parameter_values.process_symbol(var))
+            for name, var in j0_vars.items()
+        }
+        j0_n = processed_vars["Negative electrode exchange-current density"]
+        j0_p = processed_vars["Positive electrode exchange-current density"]
+        # Test
         submesh = np.concatenate(
             [
                 mesh["negative electrode"][0].nodes,
@@ -636,11 +284,38 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         )
         y = submesh ** 2
         # should evaluate to vectors with the right shape
+        import ipdb
+
+        ipdb.set_trace()
         self.assertEqual(
-            processed_j0n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
+            j0_n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
         )
         self.assertEqual(
-            processed_j0p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
+            j0_p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
+        )
+
+        # Without intercalation
+        param_la = pybamm.standard_parameters_lead_acid
+        model = pybamm.interface.InterfacialCurrent(param_la)
+        # Process parameters
+        processed_vars = {
+            name: disc.process_symbol(parameter_values.process_symbol(var))
+            for name, var in j0_vars.items()
+        }
+        j0_vars = model.get_exchange_current_densities(self.variables, False)
+        j0_n = processed_vars["Negative electrode exchange-current density"]
+        j0_p = processed_vars["Positive electrode exchange-current density"]
+        # Test
+        submesh = np.concatenate(
+            [mesh["negative electrode"][0].nodes, mesh["positive electrode"][0].nodes]
+        )
+        y = submesh ** 2
+        # should evaluate to vectors with the right shape
+        self.assertEqual(
+            j0_n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
+        )
+        self.assertEqual(
+            j0_p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
         )
 
 
