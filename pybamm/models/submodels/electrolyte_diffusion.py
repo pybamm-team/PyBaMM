@@ -84,22 +84,22 @@ class StefanMaxwell(pybamm.SubModel):
         param = self.set_of_parameters
 
         # Unpack variables
-        j_n = variables["Negative electrode interfacial current density"].orphans[0]
-        j_p = variables["Positive electrode interfacial current density"].orphans[0]
-        import ipdb
+        j_n = variables["Negative electrode interfacial current density"]
+        j_p = variables["Positive electrode interfacial current density"]
 
-        ipdb.set_trace()
         # if porosity is not provided, use the input parameter
         try:
-            epsilon = variables["Porosity"]
-            deps_n_dt = variables["Negative electrode porosity change"].orphans[0]
-            deps_p_dt = variables["Positive electrode porosity change"].orphans[0]
+            eps_n = variables["Negative electrode porosity"]
+            eps_s = variables["Separator porosity"]
+            eps_p = variables["Positive electrode porosity"]
+            deps_n_dt = variables["Negative electrode porosity change"]
+            deps_p_dt = variables["Positive electrode porosity change"]
         except KeyError:
-            epsilon = param.epsilon
+            eps_n = param.epsilon_n
+            eps_s = param.epsilon_s
+            eps_p = param.epsilon_p
             deps_n_dt = pybamm.Scalar(0)
             deps_p_dt = pybamm.Scalar(0)
-
-        eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 
         # Model
         self.rhs = {
@@ -113,7 +113,7 @@ class StefanMaxwell(pybamm.SubModel):
         self.initial_conditions = {c_e: param.c_e_init}
 
         # Variables
-        whole_cell = epsilon.domain
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         N_e = pybamm.Broadcast(0, whole_cell)
         c_e_var = pybamm.Concatenation(
             pybamm.Broadcast(c_e, ["negative electrode"]),

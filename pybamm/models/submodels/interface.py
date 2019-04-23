@@ -9,9 +9,14 @@ class InterfacialCurrent(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_homogeneous_interfacial_current(self):
+    def get_homogeneous_interfacial_current(self, broadcast=True):
         """
         Homogeneous reaction at the electrode-electrolyte interface
+
+        Parameters
+        ----------
+        broadcast : bool
+            Whether to broadcast the result
 
         Returns
         -------
@@ -20,14 +25,19 @@ class InterfacialCurrent(pybamm.SubModel):
         """
         icell = pybamm.electrical_parameters.current_with_time
 
-        j_n = pybamm.Broadcast(
-            icell / pybamm.geometric_parameters.l_n, ["negative electrode"]
-        )
-        j_p = pybamm.Broadcast(
-            -icell / pybamm.geometric_parameters.l_p, ["positive electrode"]
-        )
+        j_n = icell / pybamm.geometric_parameters.l_n
+        j_p = -icell / pybamm.geometric_parameters.l_p
 
-        return self.get_derived_interfacial_currents(j_n, j_p)
+        if broadcast:
+            return self.get_derived_interfacial_currents(
+                pybamm.Broadcast(jn, ["negative electrode"]),
+                pybamm.Broadcast(j_p, ["positive electrode"]),
+            )
+        else:
+            return {
+                "Negative electrode interfacial current density": j_n,
+                "Positive electrode interfacial current density": j_p,
+            }
 
     def get_exchange_current_densities(self, variables, intercalation=True):
         """The exchange current-density as a function of concentration

@@ -74,10 +74,10 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         "Submodels"
         # Exchange-current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        ecd_vars = int_curr_model.get_exchange_current_densities(
+        j0_vars = int_curr_model.get_exchange_current_densities(
             self.variables, intercalation=False
         )
-        self.variables.update(ecd_vars)
+        self.variables.update(j0_vars)
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)

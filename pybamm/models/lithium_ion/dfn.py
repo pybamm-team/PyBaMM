@@ -44,8 +44,8 @@ class DFN(pybamm.LithiumIonBaseModel):
         "Submodels"
         # Exchange-current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        ecd_vars = int_curr_model.get_exchange_current_densities(self.variables)
-        self.variables.update(ecd_vars)
+        j0_vars = int_curr_model.get_exchange_current_densities(self.variables)
+        self.variables.update(j0_vars)
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)

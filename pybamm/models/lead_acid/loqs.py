@@ -31,8 +31,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         # Interfacial current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        j_vars = int_curr_model.get_homogeneous_interfacial_current()
-        self.variables.update(j_vars)
+        j_vars = int_curr_model.get_homogeneous_interfacial_current(broadcast=False)
+        leading_order_variables = j_vars
 
         # Porosity
         j = j_vars["Interfacial current density"]
@@ -49,10 +49,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
         "Post-Processing"
 
         # Exchange-current density
-        ecd_vars = int_curr_model.get_exchange_current_densities(
+        j0_vars = int_curr_model.get_exchange_current_densities(
             self.variables, intercalation=False
         )
-        self.variables.update(ecd_vars)
+        self.variables.update(j0_vars)
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)

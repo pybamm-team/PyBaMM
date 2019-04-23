@@ -49,8 +49,8 @@ class SPMe(pybamm.LithiumIonBaseModel):
         "-----------------------------------------------------------------------------"
         "Post-Processing"
         # Exchange-current density
-        ecd_vars = int_curr_model.get_exchange_current_densities(self.variables)
-        self.variables.update(ecd_vars)
+        j0_vars = int_curr_model.get_exchange_current_densities(self.variables)
+        self.variables.update(j0_vars)
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)

@@ -46,7 +46,7 @@ class Standard(pybamm.SubModel):
             "Porosity change": deps_dt,
         }
 
-    def set_leading_order_system(self, epsilon, j):
+    def set_leading_order_system(self, epsilon, variables):
         """
         ODE system for the leading-order change in porosity due to reactions
 
@@ -59,28 +59,30 @@ class Standard(pybamm.SubModel):
         """
         param = self.set_of_parameters
 
+        eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
+        j_n = variables["Negative electrode interfacial current density"]
+        j_s = pybamm.Scalar(0)
+        j_p = variables["Positive electrode interfacial current density"]
+
         self.variables = {"Porosity": epsilon}
-        for k in range(3):
-            # Unpack
-            eps_k = epsilon.orphans[k].orphans[0]
-            j_k = j.orphans[k].orphans[0]
-            beta_surf_k = param.beta_surf.orphans[k].orphans[0]
-            eps_init_k = param.eps_init.orphans[k].orphans[0]
-            domain = epsilon.domain[k]
+        self.leading_order_variables = {}
+        for (eps, j, beta_surf, eps_init, domain) in [
+            (eps_n, j_n, param.beta_surf_n, param.eps_n_init, "negative electrode"),
+            (eps_s, j_s, 0, param.eps_s_init, "separator"),
+            (eps_p, j_p, param.beta_surf_p, param.eps_p_init, "positive electrode"),
+        ]:
             Domain = domain.capitalize()
 
             # Model
-            deps_dt = -beta_surf_k * j_k
-            self.rhs.update({eps_k: deps_dt})
-            self.initial_conditions.update({eps_k: eps_init_k})
-            import ipdb
-
-            ipdb.set_trace()
+            deps_dt = -beta_surf * j
+            self.rhs.update({eps: deps_dt})
+            self.initial_conditions.update({eps: eps_init})
             self.variables.update(
                 {
-                    Domain + " porosity": pybamm.Broadcast(eps_k, domain),
-                    Domain
-                    + " porosity (leading-order)": pybamm.Broadcast(eps_k, domain),
+                    Domain + " porosity": pybamm.Broadcast(eps, domain),
                     Domain + " porosity change": pybamm.Broadcast(deps_dt, domain),
                 }
+            )
+            self.leading_order_variables.update(
+                {Domain + " porosity": eps, Domain + " porosity change": deps_dt}
             )

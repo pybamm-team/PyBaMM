@@ -15,6 +15,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.variables = {}
 
         "-----------------------------------------------------------------------------"
         "Parameters"
@@ -38,10 +39,10 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
 
         # Exchange-current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        leading_order_ecd_vars = int_curr_model.get_exchange_current_densities(
+        leading_order_j0_vars = int_curr_model.get_exchange_current_densities(
             leading_order_variables, intercalation=False
         )
-        leading_order_variables.update(leading_order_ecd_vars)
+        leading_order_variables.update(leading_order_j0_vars)
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)
@@ -61,8 +62,9 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         # Porosity
         j = leading_order_j_vars["Interfacial current density"]
         porosity_model = pybamm.porosity.Standard(param)
-        porosity_model.set_leading_order_system(eps, j)
+        porosity_model.set_leading_order_system(eps, leading_order_variables)
         self.update(porosity_model)
+        leading_order_variables.update(porosity_model.leading_order_variables)
 
         # Electrolyte concentration
         eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
@@ -83,6 +85,22 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Post-Processing"
 
+        for name, var in leading_order_variables.items():
+            if "negative" in name.lower():
+                self.variables[name] = pybamm.Broadcast(var, ["negative electrode"])
+            elif "positive" in name.lower():
+                self.variables[name] = pybamm.Broadcast(var, ["positive electrode"])
+            # else:
+            #     self.variables[name] = var
+
+        # self.variables.update(
+        #     {
+        #         "Interfacial current density": pybamm.Scalar(1),
+        #         "Interfacial current density [A m-2]": pybamm.Scalar(1),
+        #         "Exchange-current density": pybamm.Scalar(1),
+        #         "Exchange-current density [A m-2]": pybamm.Scalar(1),
+        #     }
+        # )
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
         elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
@@ -92,3 +110,9 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         electrode_model = pybamm.electrode.Ohm(param)
         electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
         self.variables.update(electrode_vars)
+
+        "-----------------------------------------------------------------------------"
+        "Default Solver"
+
+        # Use stiff solver
+        self.default_solver = pybamm.ScipySolver("BDF")

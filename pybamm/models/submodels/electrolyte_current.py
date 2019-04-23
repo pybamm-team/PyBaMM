@@ -390,7 +390,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         self.algebraic = {}
 
         if domain == ["negative electrode"]:
-            j = variables["Negative electrode interfacial current density"].orphans[0]
+            j = variables["Negative electrode interfacial current density"]
 
             i_e = i_cell * x_n / param.l_n
             self.rhs = {delta_phi: 1 / param.C_dl_n * (i_cell / param.l_n - j)}
@@ -400,7 +400,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
                 "Negative electrolyte current density": i_e,
             }
         elif domain == ["positive electrode"]:
-            j = variables["Positive electrode interfacial current density"].orphans[0]
+            j = variables["Positive electrode interfacial current density"]
 
             i_e = i_cell * (1 - x_p) / param.l_p
             self.rhs = {delta_phi: 1 / param.C_dl_p * (-i_cell / param.l_p - j)}
