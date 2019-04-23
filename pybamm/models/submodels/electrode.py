@@ -269,7 +269,7 @@ class Ohm(pybamm.SubModel):
         i_s_p_dim = param.i_typ * i_s_p
         i_s_dim = param.i_typ * i_s
         delta_phi_s_av_dim = param.potential_scale * delta_phi_s_av
-        v_dim = param.potential_scale * v
+        v_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * v
 
         # Update variables
         return {
