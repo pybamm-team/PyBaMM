@@ -11,7 +11,6 @@ import numpy as np
 import unittest
 
 
-@unittest.skip("")
 class TestMacInnesStefanMaxwell(unittest.TestCase):
     def test_basic_processing(self):
         # Parameters

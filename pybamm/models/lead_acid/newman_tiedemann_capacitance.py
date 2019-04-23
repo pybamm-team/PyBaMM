@@ -59,6 +59,7 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         delta_phi_p = pybamm.standard_variables.delta_phi_p
 
         # Add variables to list of variables, as they are needed by submodels
+        self.variables = {}
         self.variables.update(
             {
                 "Electrolyte concentration": c_e,
@@ -70,6 +71,7 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Submodels"
+
         # Exchange-current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
         ecd_vars = int_curr_model.get_exchange_current_densities(
@@ -83,7 +85,9 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         c_e_p = self.variables["Electrolyte concentration"].orphans[2]
         ocp_vars = pot_model.get_open_circuit_potentials(c_e_n, c_e_p)
         self.variables.update(ocp_vars)
-        eta_r_vars = pot_model.get_reaction_overpotentials(self.variables, "potentials")
+        eta_r_vars = pot_model.get_reaction_overpotentials(
+            self.variables, "potential differences"
+        )
         self.variables.update(eta_r_vars)
 
         # Interfacial current density
@@ -99,19 +103,19 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         # Electrolyte diffusion
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         electrolyte_diffusion_model.set_differential_system(c_e, self.variables)
+        self.update(electrolyte_diffusion_model)
 
         # Electrolyte current
-        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        eleclyte_current_model.set_differential_system(delta_phi, self.variables)
-
-        "-----------------------------------------------------------------------------"
-        "Combine Submodels"
-        self.update(electrolyte_diffusion_model, eleclyte_current_model)
+        eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        eleclyte_current_model_n.set_differential_system(delta_phi_n, self.variables)
+        eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        eleclyte_current_model_p.set_differential_system(delta_phi_p, self.variables)
+        self.update(eleclyte_current_model_n, eleclyte_current_model_p)
 
         "-----------------------------------------------------------------------------"
         "Post-process"
-        volt_vars = eleclyte_current_model.get_post_processed(self.variables)
-        self.variables.update(volt_vars)
+        # volt_vars = eleclyte_current_model.get_post_processed(self.variables)
+        # self.variables.update(volt_vars)
 
         # Electrode (voltage)
         # electrode_model = pybamm.electrode.Ohm(param)

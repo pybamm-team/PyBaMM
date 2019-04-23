@@ -103,9 +103,20 @@ class Potential(pybamm.SubModel):
 
             eta_r_n = phi_s_n - phi_e_n - ocp_n
             eta_r_p = phi_s_p - phi_e_p - ocp_p
+        elif compute_from == "potential differences":
+            delta_phi_n = variables["Negative electrode potential difference"]
+            delta_phi_p = variables["Positive electrode potential difference"]
+            ocp_n = variables["Negative electrode open circuit potential"]
+            ocp_p = variables["Positive electrode open circuit potential"]
+
+            eta_r_n = delta_phi_n - ocp_n
+            eta_r_p = delta_phi_p - ocp_p
         else:
             raise ValueError(
-                "compute_from must be 'current' or 'potentials', not {}".format(
+                """
+                compute_from must be 'current', 'potentials' or 'potential differences',
+                not {}
+                """.format(
                     compute_from
                 )
             )

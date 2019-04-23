@@ -37,7 +37,14 @@ class Standard(pybamm.SubModel):
         self.rhs = {epsilon: deps_dt}
         self.initial_conditions = {epsilon: param.eps_init}
 
-        self.variables = {"Porosity": epsilon, "Porosity change": deps_dt}
+        eps_n, eps_s, eps_p = epsilon.orphans
+        self.variables = {
+            "Porosity": epsilon,
+            "Negative electrode porosity": eps_n,
+            "Separator porosity": eps_s,
+            "Positive electrode porosity": eps_p,
+            "Porosity change": deps_dt,
+        }
 
     def set_leading_order_system(self, epsilon, j):
         """
