@@ -96,8 +96,8 @@ class Composite(pybamm.LeadAcidBaseModel):
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)
-        c_e_n = self.variables["Negative electrode electrolyte concentration"]
-        c_e_p = self.variables["Positive electrode electrolyte concentration"]
+        c_e_n = self.variables["Negative electrolyte concentration"]
+        c_e_p = self.variables["Positive electrolyte concentration"]
         ocp_vars = pot_model.get_open_circuit_potentials(c_e_n, c_e_p)
         eta_r_vars = pot_model.get_reaction_overpotentials(self.variables, "current")
         self.variables.update({**ocp_vars, **eta_r_vars})

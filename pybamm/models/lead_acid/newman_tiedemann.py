@@ -128,7 +128,5 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Defaults and Solver Conditions"
-        # default geometry
-        self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
         # Default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()

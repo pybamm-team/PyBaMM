@@ -46,84 +46,73 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
     def __init__(self):
         super().__init__()
 
-        # Parameters
-        param = pybamm.standard_parameters
-        param.__dict__.update(pybamm.standard_parameters_lead_acid.__dict__)
+        "-----------------------------------------------------------------------------"
+        "Parameters"
+        param = pybamm.standard_parameters_lead_acid
 
-        #
-        # Variables
-        #
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        #
-        # Variables
-        #
-        # Concentration variables
-        c_e_n = pybamm.Variable(
-            "Negative electrode electrolyte concentration",
-            domain=["negative electrode"],
+        "-----------------------------------------------------------------------------"
+        "Model Variables"
+
+        c_e = pybamm.standard_variables.c_e
+        eps = pybamm.standard_variables.eps
+        delta_phi_n = pybamm.standard_variables.delta_phi_n
+        delta_phi_p = pybamm.standard_variables.delta_phi_p
+
+        # Add variables to list of variables, as they are needed by submodels
+        self.variables.update(
+            {
+                "Electrolyte concentration": c_e,
+                "Porosity": eps,
+                "Negative electrode potential difference": delta_phi_n,
+                "Positive electrode potential difference": delta_phi_p,
+            }
         )
-        c_e_s = pybamm.Variable(
-            "Separator electrolyte concentration", domain=["separator"]
+
+        "-----------------------------------------------------------------------------"
+        "Submodels"
+        # Exchange-current density
+        int_curr_model = pybamm.interface.InterfacialCurrent(param)
+        ecd_vars = int_curr_model.get_exchange_current_densities(
+            self.variables, intercalation=False
         )
-        c_e_p = pybamm.Variable(
-            "Positive electrode electrolyte concentration",
-            domain=["positive electrode"],
-        )
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
-        # Porosity variables
-        eps_n = pybamm.Variable(
-            "Negative electrode porosity", domain=["negative electrode"]
-        )
-        eps_s = pybamm.Variable("Separator porosity", domain=["separator"])
-        eps_p = pybamm.Variable(
-            "Positive electrode porosity", domain=["positive electrode"]
-        )
-        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
-        # Potential variables
-        phi_e_n = pybamm.Variable(
-            "Negative electrode electrolyte potential", domain=["negative electrode"]
-        )
-        phi_e_s = pybamm.Variable(
-            "Separator electrolyte potential", domain=["separator"]
-        )
-        phi_e_p = pybamm.Variable(
-            "Positive electrode electrolyte potential", domain=["positive electrode"]
-        )
-        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
-        phi_s_n = pybamm.Variable(
-            "Negative electrode potential", domain=["negative electrode"]
-        )
-        phi_s_s = pybamm.Broadcast(pybamm.Scalar(0), ["separator"])
-        phi_s_p = pybamm.Variable(
-            "Positive electrode potential", domain=["positive electrode"]
-        )
-        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
-        Delta_phi = pybamm.Concatenation(
-            phi_s_n - phi_e_n, phi_s_s - phi_e_s, phi_s_p - phi_e_p
-        )
-        #
-        # Submodels
-        #
+        self.variables.update(ecd_vars)
+
+        # Potentials
+        pot_model = pybamm.potential.Potential(param)
+        c_e_n = self.variables["Electrolyte concentration"].orphans[0]
+        c_e_p = self.variables["Electrolyte concentration"].orphans[2]
+        ocp_vars = pot_model.get_open_circuit_potentials(c_e_n, c_e_p)
+        self.variables.update(ocp_vars)
+        eta_r_vars = pot_model.get_reaction_overpotentials(self.variables, "potentials")
+        self.variables.update(eta_r_vars)
+
         # Interfacial current density
-        j = pybamm.interface.butler_volmer(param, c_e, Delta_phi, domain=whole_cell)
-        # Concentration model (reaction diffusion with butler volmer)
-        conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, eps, j, param)
-        # Porosity model
-        porosity_model = pybamm.porosity.Standard(eps, j, param)
-        # Electrolyte potential model (conservation of current and MacInnes)
-        electrolyte_potential_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
-            c_e, eps, phi_e, j, param
-        )
-        # Solid potential model (conservation of current and MacInnes)
-        solid_potential_model = pybamm.electrode.Ohm(phi_s, eps, j, param)
+        j_vars = int_curr_model.get_interfacial_current_butler_volmer(self.variables)
+        self.variables.update(j_vars)
 
-        # Update own model with submodels
-        self.update(
-            conc_model,
-            porosity_model,
-            electrolyte_potential_model,
-            solid_potential_model,
-        )
+        # Porosity
+        j = j_vars["Interfacial current density"]
+        porosity_model = pybamm.porosity.Standard(param)
+        porosity_model.set_differential_system(eps, j)
+        self.update(porosity_model)
 
-        # Set default solver to DAE
-        self.default_solver = pybamm.ScikitsDaeSolver()
+        # Electrolyte diffusion
+        electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        electrolyte_diffusion_model.set_differential_system(c_e, self.variables)
+
+        # Electrolyte current
+        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        eleclyte_current_model.set_differential_system(delta_phi, self.variables)
+
+        "-----------------------------------------------------------------------------"
+        "Combine Submodels"
+        self.update(electrolyte_diffusion_model, eleclyte_current_model)
+
+        "-----------------------------------------------------------------------------"
+        "Post-process"
+        volt_vars = eleclyte_current_model.get_post_processed(self.variables)
+        self.variables.update(volt_vars)
+
+        # Electrode (voltage)
+        # electrode_model = pybamm.electrode.Ohm(param)
+        # volt_vars = electrode_model.get_variables()

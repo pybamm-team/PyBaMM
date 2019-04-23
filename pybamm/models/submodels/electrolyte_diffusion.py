@@ -165,12 +165,12 @@ class StefanMaxwell(pybamm.SubModel):
         c_e_n, c_e_s, c_e_p = c_e.orphans
         return {
             "Electrolyte concentration": c_e,
-            "Negative electrode electrolyte concentration": c_e_n,
+            "Negative electrolyte concentration": c_e_n,
             "Separator electrolyte concentration": c_e_s,
-            "Positive electrode electrolyte concentration": c_e_p,
+            "Positive electrolyte concentration": c_e_p,
             "Reduced cation flux": N_e,
             "Electrolyte concentration [mols m-3]": c_e_typ * c_e,
-            "Negative electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_n,
+            "Negative electrolyte concentration [mols m-3]": c_e_typ * c_e_n,
             "Separator electrolyte concentration [mols m-3]": c_e_typ * c_e_s,
-            "Positive electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_p,
+            "Positive electrolyte concentration [mols m-3]": c_e_typ * c_e_p,
         }

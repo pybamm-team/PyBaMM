@@ -73,12 +73,10 @@ class Ohm(pybamm.SubModel):
             self.initial_conditions = {
                 phi_s: param.U_p(param.c_p_init) - param.U_n(param.c_n_init)
             }
-            self.variables.update(
-                {
-                    "Positive electrode potential": phi_s,
-                    "Positive electrode current density": i_s_p,
-                }
-            )
+            self.variables = {
+                "Positive electrode potential": phi_s,
+                "Positive electrode current density": i_s_p,
+            }
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(phi_s.domain))
 
