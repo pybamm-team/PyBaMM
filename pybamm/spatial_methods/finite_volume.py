@@ -6,11 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-<<<<<<< HEAD
 from scipy.sparse import diags, eye, kron, csr_matrix, vstack
-=======
-from scipy.sparse import diags, eye, kron
->>>>>>> master
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -541,7 +537,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The variable representing the boundary value.
         """
 
-        # find the number of submeshs
+        # Find the number of submeshes
         submesh_list = self.mesh.combine_submeshes(*symbol.domain)
         if isinstance(submesh_list[0].npts, list):
             NotImplementedError("Can only take in 1D primary directions")
@@ -549,19 +545,24 @@ class FiniteVolume(pybamm.SpatialMethod):
         prim_pts = submesh_list[0].npts
         sec_pts = len(submesh_list)
 
-        def linear_extrapolation(array):
-            """Linearly extrapolates an array"""
+        # Create submatrix to compute boundary values
+        if side == "left":
+            sub_matrix = csr_matrix(
+                ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, prim_pts)
+            )
+        elif side == "right":
+            sub_matrix = csr_matrix(
+                ([-0.5, 1.5], ([0, 0], [prim_pts - 2, prim_pts - 1])),
+                shape=(1, prim_pts),
+            )
 
-            # first reshape array for convenice with many particles
-            array = np.reshape(array, [sec_pts, prim_pts])
+        # Generate full matrix from the submatrix
+        matrix = kron(eye(sec_pts), sub_matrix)
 
-            if side == "left":
-                return array[:, 0] + (array[:, 0] - array[:, 1]) / 2
-            elif side == "right":
-                return array[:, -1] + (array[:, -1] - array[:, -2]) / 2
-
-        boundary_value = pybamm.Function(linear_extrapolation, discretised_symbol)
+        # Return boundary value with domain removed
+        boundary_value = pybamm.Matrix(matrix) @ discretised_symbol
         boundary_value.domain = []
+
         return boundary_value
 
     def compute_diffusivity(
@@ -600,7 +601,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             # Create appropriate submesh by combining submeshes in domain
             submesh_list = self.mesh.combine_submeshes(*array.domain)
 
-            # can just use 1st entry of list to obtain the point etc
+            # Can just use 1st entry of list to obtain the point etc
             submesh = submesh_list[0]
 
             # Create 1D matrix using submesh
@@ -618,10 +619,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
                 sub_matrix = vstack([sub_matrix, sub_matrix_right])
 
-            # second dim length
+            # Second dimension length
             second_dim_len = len(submesh_list)
 
-            # generate full matrix from the submatrix
+            # Generate full matrix from the submatrix
             matrix = kron(eye(second_dim_len), sub_matrix)
 
             return pybamm.Matrix(matrix) @ array
