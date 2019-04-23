@@ -41,7 +41,7 @@ class Discretisation(object):
     def mesh(self):
         return self._mesh
 
-    def process_model(self, model):
+    def process_model(self, model, inplace=True):
         """Discretise a model.
         Currently inplace, could be changed to return a new model.
 
@@ -50,8 +50,19 @@ class Discretisation(object):
         model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
+        inplace: bool, optional
+            If True, discretise the model in place. Otherwise, return a new
+            discretised model. Default is True.
+
+        Returns
+        -------
+        model_disc : :class:`pybamm.BaseModel`
+            The discretised model. Note that if ``inplace`` is True, model will
+            have also been discretised in place so model == model_disc. If
+            ``inplace`` is False, model != model_disc
 
         """
+        # Prepare discretisation
         # set variables (we require the full variable not just id)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
 
@@ -64,30 +75,43 @@ class Discretisation(object):
             for key, value in model.boundary_conditions.items()
         }
 
+        # set up inplace vs not inplace
+        if inplace:
+            # any changes to model_disc attributes will change model attributes
+            # since they point to the same object
+            model_disc = model
+        else:
+            # create a blank model so that original model is unchanged
+            model_disc = pybamm.BaseModel()
+
         # Process initial condtions
-        self.process_initial_conditions(model)
+        ics, concat_ics = self.process_initial_conditions(model)
+        model_disc.initial_conditions = ics
+        model_disc.concatenated_initial_conditions = concat_ics
 
         # Process parabolic and elliptic equations
-        self.process_rhs_and_algebraic(model)
+        rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
+        model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
+        model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
 
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
         # model.initial_conditions and model.boundary_conditions
-        model.variables = self.process_dict(model.variables)
+        model_disc.variables = self.process_dict(model.variables)
 
         # Process events
+        processed_events = [None] * len(model.events)
         for idx, event in enumerate(model.events):
-            model.events[idx] = self.process_symbol(event)
-        model.concatenated_events = self.concatenate(*model.events)
+            processed_events[idx] = self.process_symbol(event)
+        model_disc.events = processed_events
 
         # Create mass matrix
-        self.create_mass_matrix(model)
-
-        # Create Jacobian
-        self.create_jacobian(model)
+        model_disc.mass_matrix = self.create_mass_matrix(model)
 
         # Check that resulting model makes sense
-        self.check_model(model)
+        self.check_model(model_disc)
+
+        return model_disc
 
     def set_variable_slices(self, variables):
         """Sets the slicing for variables.
@@ -126,42 +150,66 @@ class Discretisation(object):
 
     def process_initial_conditions(self, model):
         """Discretise model initial_conditions.
-        Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
+
+        Returns
+        -------
+        tuple
+            Tuple of processed_initial_conditions (dict of initial conditions) and
+            concatenated_initial_conditions (numpy array of concatenated initial
+            conditions)
 
         """
         # Discretise initial conditions
-        model.initial_conditions = self.process_dict(model.initial_conditions)
+        processed_initial_conditions = self.process_dict(model.initial_conditions)
 
         # Concatenate initial conditions into a single vector
         # check that all initial conditions are set
-        model.concatenated_initial_conditions = self._concatenate_init(
-            model.initial_conditions
+        processed_concatenated_initial_conditions = self._concatenate_init(
+            processed_initial_conditions
         ).evaluate(0, None)
+
+        return processed_initial_conditions, processed_concatenated_initial_conditions
 
     def process_rhs_and_algebraic(self, model):
         """Discretise model equations - differential ('rhs') and algebraic.
-        Currently inplace, could be changed to return a new model.
 
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
             Model to dicretise. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
+
+        Returns
+        -------
+        tuple
+            Tuple of processed_rhs (dict of processed differential equations),
+            processed_concatenated_rhs, processed_algebraic (dict of processed algebraic
+            equations) and processed_concatenated_algebraic
+
         """
         # Discretise right-hand sides, passing domain from variable
-        model.rhs = self.process_dict(model.rhs)
+        processed_rhs = self.process_dict(model.rhs)
         # Concatenate rhs into a single state vector
-        model.concatenated_rhs = self.concatenate(*model.rhs.values())
+        processed_concatenated_rhs = self.concatenate(*processed_rhs.values())
 
         # Discretise and concatenate algebraic equations
-        model.algebraic = self.process_dict(model.algebraic)
-        model.concatenated_algebraic = self.concatenate(*model.algebraic.values())
+        processed_algebraic = self.process_dict(model.algebraic)
+        processed_concatenated_algebraic = self.concatenate(
+            *processed_algebraic.values()
+        )
+
+        return (
+            processed_rhs,
+            processed_concatenated_rhs,
+            processed_algebraic,
+            processed_concatenated_algebraic,
+        )
 
     def create_mass_matrix(self, model):
         """Creates mass matrix of the discretised model.
@@ -171,8 +219,13 @@ class Discretisation(object):
         Parameters
         ----------
         model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
+            Discretised model. Must have attributes rhs, initial_conditions and
             boundary_conditions (all dicts of {variable: equation})
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The mass matrix
         """
         # Create list of mass matrices for each equation to be put into block
         # diagonal mass matrix for the model
@@ -200,20 +253,8 @@ class Discretisation(object):
 
         # Create block diagonal (sparse) mass matrix
         mass_matrix = block_diag(mass_list)
-        model.mass_matrix = pybamm.Matrix(mass_matrix)
 
-    def create_jacobian(self, model):
-        """Creates jacobian of the discretised model.
-        Note that the model is assumed to be of the form M*y_dot = f(t,y), where
-        M is the (possibly singular) mass matrix. The Jacobian is df/dy.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            Model to dicretise. Must have attributes rhs, initial_conditions and
-            boundary_conditions (all dicts of {variable: equation})
-        """
-        # TO DO: create jacobian by differentiating tree wrt StateVector
+        return pybamm.Matrix(mass_matrix)
 
     def process_dict(self, var_eqn_dict):
         """Discretise a dictionary of {variable: equation}, broadcasting if necessary
@@ -227,11 +268,11 @@ class Discretisation(object):
 
         Returns
         -------
-        var_eqn_dict : dict
+        new_var_eqn_dict : dict
             Discretised equations
 
         """
-
+        new_var_eqn_dict = {}
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
 
@@ -245,10 +286,10 @@ class Discretisation(object):
                         )
 
             # Process symbol (original or broadcasted)
-            var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
-        return var_eqn_dict
+        return new_var_eqn_dict
 
     def process_symbol(self, symbol):
         """Discretise operators in model equations.
@@ -516,7 +557,8 @@ class Discretisation(object):
                 assert model.rhs[var].evaluate(0, y0).shape == model.variables[
                     var.name
                 ].evaluate(0, y0).shape or isinstance(
-                    model.variables[var.name], pybamm.NumpyBroadcast
+                    model.variables[var.name],
+                    (pybamm.NumpyBroadcast, pybamm.Concatenation),
                 ), pybamm.ModelError(
                     """
                     variable and its eqn must have the same shape after discretisation

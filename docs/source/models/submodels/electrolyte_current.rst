@@ -6,6 +6,3 @@ Electrolyte Current Submodel
 
 .. autoclass:: pybamm.electrolyte_current.MacInnesStefanMaxwellCapacitance
     :members:
-
-.. autoclass:: pybamm.electrolyte_current.StefanMaxwellFirstOrderPotential
-    :members:

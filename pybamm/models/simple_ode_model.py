@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class SimpleODEModel(pybamm.BaseModel):
+class SimpleODEModel(pybamm.StandardBatteryBaseModel):
     """A model consisting of only ODEs.
     Useful for testing solution when variables have domain '[]', and for testing
     broadcasting.

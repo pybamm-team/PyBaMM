@@ -1,231 +1,164 @@
 #
 # Equations for the electrode-electrolyte interface
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 import autograd.numpy as np
 
 
-def homogeneous_reaction(domain):
-    """
-    Homogeneous reaction at the electrode-electrolyte interface
+class InterfacialCurrent(pybamm.SubModel):
+    def __init__(self, set_of_parameters):
+        super().__init__(set_of_parameters)
 
-    Parameters
-    ----------
-    domain : iterable of strings
-        If feed in just a single domain then will return a Scalar which will
-        remain as a scalar after discretisation
+    def get_homogeneous_interfacial_current(self):
+        """
+        Homogeneous reaction at the electrode-electrolyte interface
 
-        If feed in ["negative electrode", "separator", "positive electrode"]
-        will return a concatenation of scalars. Concatenations
-        will be processed into a vector upon discretisation.
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        icell = pybamm.electrical_parameters.current_with_time
 
-    """
-    current = pybamm.electrical_parameters.current_with_time
-
-    if domain == ["negative electrode"]:
-        exchange_current = current / pybamm.geometric_parameters.l_n
-    elif domain == ["separator"]:
-        exchange_current = pybamm.Scalar(0)
-    elif domain == ["positive electrode"]:
-        exchange_current = -current / pybamm.geometric_parameters.l_p
-
-    elif domain == ["negative electrode", "separator", "positive electrode"]:
-        return pybamm.Concatenation(
-            *[pybamm.Broadcast(homogeneous_reaction([dom]), [dom]) for dom in domain]
+        j_n = pybamm.Broadcast(
+            icell / pybamm.geometric_parameters.l_n, ["negative electrode"]
         )
-    else:
-        raise pybamm.DomainError("{} is not a valid domain".format(domain))
+        j_p = pybamm.Broadcast(
+            -icell / pybamm.geometric_parameters.l_p, ["positive electrode"]
+        )
 
-    # set the domain (required for processing boundary conditions)
-    exchange_current.domain = domain
+        return self.get_derived_interfacial_currents(j_n, j_p)
 
-    return exchange_current
+    def get_exchange_current_densities(self, variables, intercalation=True):
+        """The exchange current-density as a function of concentration
 
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
+        intercalation : bool
+            Whether intercalation occurs in the model.
 
-def exchange_current_density(c_e, c_s_k_surf=None, domain=None):
-    """The exchange current-density as a function of concentration
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        param = self.set_of_parameters
+        c_e = variables["Electrolyte concentration"]
+        c_e_n, c_e_s, c_e_p = c_e.orphans
 
-    Parameters
-    ----------
-    c_e : :class:`pybamm.Variable`
-        The electrolyte concentration
-    c_s_k_surf : :class:`pybamm.Variable`
-        The concentration of lithium on the surface of a particle
-    domain : str
-        Which domain to calculate the exchange current density in ("negative electrode"
-        or "positive electrode"). Default is None, in which case the domain is\
-        c_e.domain
-
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-        The exchange-current density
-    """
-    if domain is None:
-        # read domain from c if it exists
-        if c_e.domain != []:
-            domain = c_e.domain
-        # otherwise raise error
+        if intercalation:
+            c_s_n_surf = pybamm.surf(variables["Negative particle concentration"])
+            c_s_p_surf = pybamm.surf(variables["Positive particle concentration"])
+            j0_n = (1 / param.C_r_n) * (
+                c_e_n ** (1 / 2) * c_s_n_surf ** (1 / 2) * (1 - c_s_n_surf) ** (1 / 2)
+            )
+            j0_p = (param.gamma_p / param.C_r_p) * (
+                c_e_p ** (1 / 2) * c_s_p_surf ** (1 / 2) * (1 - c_s_p_surf) ** (1 / 2)
+            )
         else:
-            raise ValueError("domain cannot be None if c_e.domain is empty")
+            j0_n = param.m_n * c_e_n
+            c_w_p = (1 - c_e_p * param.V_e) / param.V_w
+            j0_p = param.m_p * (c_e_p ** 2 * c_w_p)
 
-    for dom in domain:
-        if dom not in pybamm.KNOWN_DOMAINS:
-            raise KeyError("domain not in known domains")
+        j0 = pybamm.Concatenation(*[j0_n, pybamm.Broadcast(0, ["separator"]), j0_p])
 
-    if c_s_k_surf:
-        # we need to make this less specific
-        sp = pybamm.standard_parameters_lithium_ion
-        if domain == ["negative electrode"]:
-            return (
-                (1 / sp.C_r_n)
-                * c_e ** (1 / 2)
-                * c_s_k_surf ** (1 / 2)
-                * (1 - c_s_k_surf) ** (1 / 2)
-            )
-        elif domain == ["positive electrode"]:
-            return (
-                (sp.gamma_p / sp.C_r_p)
-                * c_e ** (1 / 2)
-                * c_s_k_surf ** (1 / 2)
-                * (1 - c_s_k_surf) ** (1 / 2)
-            )
-    else:
-        # we need to make this less specific
-        sp = pybamm.standard_parameters_lead_acid
-        if domain == ["negative electrode"]:
-            return sp.m_n * c_e
-        elif domain == ["positive electrode"]:
-            c_w = (1 - c_e * sp.V_e) / sp.V_w
-            return sp.m_p * c_e ** 2 * c_w
+        # Compute dimensional variables
+        i_typ = param.i_typ
+        return {
+            "Negative electrode exchange-current density": j0_n,
+            "Positive electrode exchange-current density": j0_p,
+            "Exchange-current density": j0,
+            "Negative electrode exchange-current density [A m-2]": i_typ * j0_n,
+            "Positive electrode exchange-current density [A m-2]": i_typ * j0_p,
+            "Exchange-current density [A m-2]": i_typ * j0,
+        }
 
+    def get_interfacial_current_butler_volmer(self, variables):
+        """
+        Butler-Volmer reactions
 
-def inverse_butler_volmer(j, j0, ne):
-    """
-    Inverts the Butler-Volmer relation to solve for the reaction overpotential.
+        .. math::
+            j = j_0(c) * \\sinh(\\phi - U(c)),
 
-    Parameters
-    ----------
-    param : parameter class
-        The parameters to use for this submodel
-    j : :class:`pybamm.Symbol`
-        The interfacial current density
-    j0 : :class:`pybamm.Symbol`
-        The exchange current density
-    ne : int
-        The number of electrons in the charge transfer reaction
+            \\text{where} \\phi = \\Phi_\\text{s} - \\Phi
 
-    Returns
-    -------
-    eta :class: `pybamm.Symbol`
-        The reaction overpotential
-    """
-    eta = (2 / ne) * pybamm.Function(np.arcsinh, j / j0)
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
 
-    return eta
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        param = self.set_of_parameters
 
+        # Unpack variables
+        eta_r_n = variables["Negative reaction overpotential"]
+        eta_r_p = variables["Positive reaction overpotential"]
+        j0_n = variables["Negative electrode exchange-current density"]
+        j0_p = variables["Positive electrode exchange-current density"]
 
-def butler_volmer(param, c_e, Delta_phi, c_s_k_surf=None, domain=None):
-    """
-    Butler-Volmer reactions
+        # Compute Butler-Volmer
+        j_n = j0_n * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_r_n)
+        j_p = j0_p * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r_p)
 
-    .. math::
-        j = j_0(c) * \\sinh(\\phi - U(c)),
+        return self.get_derived_interfacial_currents(j_n, j_p)
 
-        \\text{where} \\phi = \\Phi_\\text{s} - \\Phi
+    def get_inverse_butler_volmer(self, variables):
+        """
+        Inverts the Butler-Volmer relation to solve for the reaction overpotential.
 
-    Parameters
-    ----------
-    c : :class:`pybamm.Symbol`
-        The electrolyte concentration
-    phi : :class:`pybamm.Symbol`
-        The difference betweent the solid potential and electrolyte potential
-    domain : iterable of strings
-        The domain in which to calculate the interfacial current density. Default is
-        None, in which case the domain is calculated based on c and phi or defaults to
-        the domain spanning the whole cell
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
 
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-        The interfacial current density in the appropriate domain
-    """
-    if domain is None:
-        # check and get domain using the functionality from Binary Operator
-        domain = pybamm.BinaryOperator("", c_e, Delta_phi).domain
-        # raise error if no domain can be found
-        if domain == []:
-            raise ValueError(
-                "domain cannot be None if c_e.domain and Delta_phi.domain are empty"
-            )
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
 
-    # Get the concentration for ocp (either surface concentration, if given, or
-    # electrolyte concentration otherwise)
-    if c_s_k_surf:
-        c_ocp = c_s_k_surf
-    else:
-        c_ocp = c_e
+        """
+        param = self.set_of_parameters
 
-    # Get the current densities based on domain
-    if domain == ["negative electrode"]:
-        j0_n = exchange_current_density(
-            c_e, domain=["negative electrode"], c_s_k_surf=c_s_k_surf
-        )
-        eta_n = Delta_phi - param.U_n(c_ocp)
-        return j0_n * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_n)
-    elif domain == ["positive electrode"]:
-        j0_p = exchange_current_density(
-            c_e, domain=["positive electrode"], c_s_k_surf=c_s_k_surf
-        )
-        eta_p = Delta_phi - param.U_p(c_ocp)
-        return j0_p * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_p)
-    # To get current density across the whole domain, unpack and call this function
-    # again in the subdomains, then concatenate
-    elif domain == ["negative electrode", "separator", "positive electrode"]:
-        # Unpack c
-        if all([isinstance(var, pybamm.Concatenation) for var in [c_e, Delta_phi]]):
-            c_e_n, c_e_s, c_e_p = c_e.orphans
-            Delta_phi_n, Delta_phi_s, Delta_phi_p = Delta_phi.orphans
-        else:
-            raise TypeError(
-                """
-                c_e and Delta_phi must both be Concatenations, not '{}' and '{}'
-                """.format(
-                    type(c_e), type(Delta_phi)
-                )
-            )
-        if c_s_k_surf:
-            if isinstance(c_s_k_surf, pybamm.Concatenation):
-                c_s_n_surf, c_s_p_surf = c_s_k_surf.orphans
-            else:
-                raise TypeError(
-                    "c_s_k_surf must be a Concatenation, not '{}'".format(
-                        type(c_s_k_surf)
-                    )
-                )
-        else:
-            c_s_n_surf, c_s_p_surf = None, None
-        # Negative electrode
-        current_neg = butler_volmer(
-            param,
-            c_e_n,
-            Delta_phi_n,
-            c_s_k_surf=c_s_n_surf,
-            domain=["negative electrode"],
-        )
-        # Separator
-        current_sep = pybamm.Broadcast(0, ["separator"])
-        # Positive electrode
-        current_pos = butler_volmer(
-            param,
-            c_e_p,
-            Delta_phi_p,
-            c_s_k_surf=c_s_p_surf,
-            domain=["positive electrode"],
-        )
-        # Concatenate
-        return pybamm.Concatenation(current_neg, current_sep, current_pos)
-    else:
-        raise pybamm.DomainError("domain '{}' not recognised".format(domain))
+        # Unpack variables
+        j_n = variables["Negative electrode interfacial current density"]
+        j_p = variables["Positive electrode interfacial current density"]
+        j0_n = variables["Negative electrode exchange-current density"]
+        j0_p = variables["Positive electrode exchange-current density"]
+
+        # Invert Butler-Volmer
+        eta_r_n = (2 / param.ne_n) * pybamm.Function(np.arcsinh, j_n / j0_n)
+        eta_r_p = (2 / param.ne_p) * pybamm.Function(np.arcsinh, j_p / j0_p)
+
+        return eta_r_n, eta_r_p
+
+    def get_derived_interfacial_currents(self, j_n, j_p):
+        """
+        Calculate dimensionless and dimensional variables for the interfacial current
+        submodel
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        i_typ = self.set_of_parameters.i_typ
+
+        j = pybamm.Concatenation(*[j_n, pybamm.Broadcast(0, ["separator"]), j_p])
+
+        return {
+            "Negative electrode interfacial current density": j_n,
+            "Positive electrode interfacial current density": j_p,
+            "Interfacial current density": j,
+            "Negative electrode interfacial current density [A m-2]": i_typ * j_n,
+            "Positive electrode interfacial current density [A m-2]": i_typ * j_p,
+            "Interfacial current density [A m-2]": i_typ * j,
+        }

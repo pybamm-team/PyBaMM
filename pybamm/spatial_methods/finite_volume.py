@@ -5,8 +5,9 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
+import autograd.numpy as np
 from scipy.sparse import diags, eye, kron
+from autograd.builtins import isinstance
 
 
 class FiniteVolume(pybamm.SpatialMethod):
@@ -524,17 +525,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         Uses linear extrapolation to get the boundary value of a variable in the
         Finite Volume Method.
 
-        Parameters
-        -----------
-        discretised_symbol : :class:`pybamm.StateVector`
-            The discretised variable from which to calculate the boundary value
-        side : str
-            Which side to take the boundary value on ("left" or "right")
-
-        Returns
-        -------
-        :class:`pybamm.Symbol`
-            The variable representing the boundary value.
+        See :meth:`pybamm.SpatialMethod.boundary_value`
         """
 
         # find the number of submeshs

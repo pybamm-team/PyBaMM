@@ -5,7 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import copy
 import numpy as np
 import unittest
 
@@ -26,19 +25,18 @@ class TestReactionDiffusionModel(unittest.TestCase):
 
         # Function for convergence testing
         def get_c_at_x(n):
-            model_copy = copy.deepcopy(model)
             # Set up discretisation
             var = pybamm.standard_spatial_vars
             submesh_pts = {var.x_n: n, var.x_s: n, var.x_p: n, var.r_n: 1, var.r_p: 1}
-            mesh = pybamm.Mesh(geometry, model_copy.default_submesh_types, submesh_pts)
-            disc = pybamm.Discretisation(mesh, model_copy.default_spatial_methods)
+            mesh = pybamm.Mesh(geometry, model.default_submesh_types, submesh_pts)
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 
             # Discretise and solve
-            disc.process_model(model_copy)
-            solver.solve(model_copy, t_eval)
+            model_disc = disc.process_model(model, inplace=False)
+            solver.solve(model_disc, t_eval)
             t, y = solver.t, solver.y
             conc = pybamm.ProcessedVariable(
-                model_copy.variables["Electrolyte concentration"], t, y, mesh=disc.mesh
+                model_disc.variables["Electrolyte concentration"], t, y, mesh=disc.mesh
             )
 
             # Calculate concentration at ln

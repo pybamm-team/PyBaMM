@@ -1382,6 +1382,51 @@ class TestFiniteVolume(unittest.TestCase):
             mass.toarray(), model.mass_matrix.entries.toarray()
         )
 
+    def test_jacobian(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
+
+        var = pybamm.Variable("var", domain=whole_cell)
+        disc.set_variable_slices([var])
+        y = pybamm.StateVector(slice(0, combined_submesh[0].npts))
+        y_test = np.ones_like(combined_submesh[0].nodes)
+
+        # grad
+        eqn = pybamm.grad(var)
+        eqn_disc = disc.process_symbol(eqn)
+        eqn_jac = eqn_disc.jac(y)
+        jacobian = eqn_jac.evaluate(y=y_test)
+        grad_matrix = pybamm.FiniteVolume.gradient_matrix(disc, whole_cell).entries
+        np.testing.assert_array_equal(jacobian.toarray(), grad_matrix.toarray())
+
+        # grad with averaging
+        eqn = var * pybamm.grad(var)
+        eqn_disc = disc.process_symbol(eqn)
+        eqn_jac = eqn_disc.jac(y)
+        eqn_jac.evaluate(y=y_test)
+
+        # div(grad)
+        flux = pybamm.grad(var)
+        eqn = pybamm.div(flux)
+        disc._bcs = {flux.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(2)}}
+        eqn_disc = disc.process_symbol(eqn)
+        eqn_jac = eqn_disc.jac(y)
+        eqn_jac.evaluate(y=y_test)
+
+        # div(grad) with averaging
+        flux = var * pybamm.grad(var)
+        eqn = pybamm.div(flux)
+        disc._bcs = {flux.id: {"left": pybamm.Scalar(1), "right": pybamm.Scalar(2)}}
+        eqn_disc = disc.process_symbol(eqn)
+        eqn_jac = eqn_disc.jac(y)
+        eqn_jac.evaluate(y=y_test)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
