@@ -223,7 +223,13 @@ def simplify_multiplication_division(myclass, left, right):
         """
         for child in [left_child, right_child]:
 
-            if isinstance(child, pybamm.MatrixMultiplication):
+            if child == left_child:
+                other_child = right_child
+            else:
+                other_child = left_child
+
+            if isinstance(child, pybamm.MatrixMultiplication) and \
+                    not isinstance(other_child, pybamm.MatrixMultiplication):
                 left, right = child.orphans
                 if child == left_child:
                     flatten(

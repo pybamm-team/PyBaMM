@@ -120,6 +120,7 @@ class TestMatrix(unittest.TestCase):
         # dont expant mult within mat-mult (issue #253)
         m1 = pybamm.Matrix(np.ones((300, 299)))
         m2 = pybamm.Matrix(np.ones((299, 300)))
+        m3 = pybamm.Matrix(np.ones((300, 300)))
         v1 = pybamm.StateVector(slice(0, 299))
         v2 = pybamm.StateVector(slice(0, 300))
         v3 = pybamm.Vector(np.ones(299))
@@ -140,6 +141,10 @@ class TestMatrix(unittest.TestCase):
             expr2.evaluate(y=np.ones(300)), expr2simp.evaluate(y=np.ones(300))
         )
         self.assertEqual(expr2.id, expr2simp.id)
+
+        expr3 = m1 @ ((m2 @ v1) * (m3 @ v2))
+        expr3simp = expr3.simplify()
+        self.assertEqual(expr3.id, expr3simp.id)
 
         # more complex expression, with simplification
         expr3 = m1 @ (v3 * (m2 @ v2))
