@@ -286,7 +286,12 @@ class Discretisation(object):
                         )
 
             # Process symbol (original or broadcasted)
-            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            try:
+                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            except pybamm.DomainError:
+                import ipdb
+
+                ipdb.set_trace()
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
         return new_var_eqn_dict
@@ -373,6 +378,7 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
+
             return new_symbol
 
         else:
@@ -422,9 +428,14 @@ class Discretisation(object):
             extrapolate_right = any(
                 [x.has_right_ghost_cell for x in new_left.pre_order()]
             )
-            new_right = self._spatial_methods[bin_op.domain[0]].compute_diffusivity(
-                new_right, extrapolate_left, extrapolate_right
-            )
+            try:
+                new_right = self._spatial_methods[bin_op.domain[0]].compute_diffusivity(
+                    new_right, extrapolate_left, extrapolate_right
+                )
+            except IndexError:
+                import ipdb
+
+                ipdb.set_trace()
         # If only right child has gradient, compute diffusivity for left child
         elif (
             right.has_gradient_and_not_divergence()

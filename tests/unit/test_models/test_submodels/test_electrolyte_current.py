@@ -173,6 +173,42 @@ class TestMacInnesCapacitance(unittest.TestCase):
         model_whole_test = tests.StandardModelTest(model_whole)
         model_whole_test.test_all()
 
+    def test_basic_processing_leading_order(self):
+        # Parameters
+        param = pybamm.standard_parameters_lithium_ion
+
+        # Variables
+        delta_phi_n = pybamm.standard_variables.delta_phi_n
+        delta_phi_p = pybamm.standard_variables.delta_phi_p
+
+        # Interfacial current density
+        int_curr_model = pybamm.interface.InterfacialCurrent(param)
+        variables = int_curr_model.get_homogeneous_interfacial_current()
+
+        # Negative electrode
+        model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        model_n.set_leading_order_system(delta_phi_n, variables)
+        # Test
+        modeltest_n = tests.StandardModelTest(model_n)
+        modeltest_n.test_all()
+
+        # Positive electrode
+        model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        model_p.set_leading_order_system(delta_phi_p, variables)
+        # Test
+        modeltest_p = tests.StandardModelTest(model_p)
+        modeltest_p.test_all()
+
+        # Both
+        model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        model_n.set_leading_order_system(delta_phi_n, variables)
+        model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        model_p.set_leading_order_system(delta_phi_p, variables)
+        model_n.update(model_p)
+        model_whole = model_n
+        model_whole_test = tests.StandardModelTest(model_whole)
+        model_whole_test.test_all()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

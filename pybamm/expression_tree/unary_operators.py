@@ -408,7 +408,7 @@ class IndefiniteIntegral(Integral):
             child.name, integration_variable.name
         )
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += "on {}".format(integration_variable.domain)
+            self.name += " on {}".format(integration_variable.domain)
         # the integrated variable has the same domain as the child
         self.domain = child.domain
 
