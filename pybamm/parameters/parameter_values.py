@@ -222,7 +222,7 @@ class ParameterValues(dict):
             elif isinstance(symbol, pybamm.Function):
                 new_symbol = pybamm.Function(symbol.func, new_child)
             elif isinstance(symbol, pybamm.Integral):
-                new_symbol = pybamm.Integral(new_child, symbol.integration_variable)
+                new_symbol = symbol.__class__(new_child, symbol.integration_variable)
             elif isinstance(symbol, pybamm.BoundaryValue):
                 new_symbol = pybamm.BoundaryValue(new_child, symbol.side)
             else:
