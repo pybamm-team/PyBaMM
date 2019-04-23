@@ -84,7 +84,7 @@ from .expression_tree.unary_operators import (
     div,
     surf,
     Diagonal,
-    integrate
+    integrate,
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
