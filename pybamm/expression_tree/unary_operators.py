@@ -398,7 +398,7 @@ class IndefiniteIntegral(Integral):
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
 
-    **Extends:** :class:`SpatialOperator`
+    **Extends:** :class:`Integral`
     """
 
     def __init__(self, child, integration_variable):
@@ -408,7 +408,7 @@ class IndefiniteIntegral(Integral):
             child.name, integration_variable.name
         )
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            self.name += "on {}".format(integration_variable.domain)
+            self.name += " on {}".format(integration_variable.domain)
         # the integrated variable has the same domain as the child
         self.domain = child.domain
 
