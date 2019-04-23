@@ -261,6 +261,3 @@ class SPMe(pybamm.LithiumIonBaseModel):
         "Defaults and Solver Conditions"
         # default geometry
         self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
-
-        # Cut-off if either concentration goes negative
-        self.events = [pybamm.Function(np.min, c_s_n), pybamm.Function(np.min, c_s_p)]

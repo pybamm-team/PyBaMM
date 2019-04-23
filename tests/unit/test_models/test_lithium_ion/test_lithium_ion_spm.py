@@ -60,6 +60,46 @@ class TestSPM(unittest.TestCase):
         np.testing.assert_array_less(0, c_s_n_surf.entries)
         np.testing.assert_array_less(0, c_s_p_surf.entries)
 
+    def test_charge(self):
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        parameter_values.update({"Typical current density": -1})
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+        t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
+        # check surface concentration increases in negative particle and
+        # decreases in positive particle for charge
+        c_s_n_surf = pybamm.ProcessedVariable(
+            model.variables["Negative particle surface concentration"],
+            t_sol,
+            y_sol,
+            mesh=modeltest.disc.mesh,
+        )
+        c_s_p_surf = pybamm.ProcessedVariable(
+            model.variables["Positive particle surface concentration"],
+            t_sol,
+            y_sol,
+            mesh=modeltest.disc.mesh,
+        )
+        voltage = pybamm.ProcessedVariable(
+            model.variables["Terminal voltage"], t_sol, y_sol
+        )
+        # neg surf concentration should be monotonically increasing for a charge
+        np.testing.assert_array_less(
+            c_s_n_surf.entries[:, :-1], c_s_n_surf.entries[:, 1:]
+        )
+        # pos surf concentration should be monotonically decreasing for a charge
+        np.testing.assert_array_less(
+            c_s_p_surf.entries[:, 1:], c_s_p_surf.entries[:, :-1]
+        )
+
+        # test that surface concentrations are all positive
+        np.testing.assert_array_less(c_s_n_surf.entries, 1)
+        np.testing.assert_array_less(c_s_p_surf.entries, 1)
+
+        np.testing.assert_array_less(voltage.entries[:-1], voltage.entries[1:])
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import autograd.numpy as np
 
 
 class Standard(pybamm.BaseModel):
@@ -45,6 +46,7 @@ class Standard(pybamm.BaseModel):
                 "Negative particle surface concentration [mols m-3]": param.c_n_max
                 * pybamm.surf(c),
             }
+            self.events = [pybamm.Function(np.min, c), pybamm.Function(np.max, c) - 1]
         elif c.domain[0] == "positive particle":
             N = -(1 / param.C_p) * pybamm.grad(c)
             self.rhs = {c: -pybamm.div(N)}
@@ -64,5 +66,6 @@ class Standard(pybamm.BaseModel):
                 "Positive particle surface concentration [mols m-3]": param.c_p_max
                 * pybamm.surf(c),
             }
+            self.events = [pybamm.Function(np.min, c), pybamm.Function(np.max, c) - 1]
         else:
             raise pybamm.ModelError("Domain not valid for the particle equations")
