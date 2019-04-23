@@ -114,8 +114,8 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Post-process"
-        # volt_vars = eleclyte_current_model.get_post_processed(self.variables)
-        # self.variables.update(volt_vars)
+        eleclyte_vars = eleclyte_current_model_n.get_post_processed(self.variables)
+        self.variables.update(eleclyte_vars)
 
         # Electrode (voltage)
         # electrode_model = pybamm.electrode.Ohm(param)

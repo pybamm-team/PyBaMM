@@ -29,7 +29,6 @@ class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known, decimal=5)
 
-    @unittest.skip("")
     def test_solution(self):
         model = pybamm.lead_acid.NewmanTiedemannCapacitance()
         # Make grid very coarse for quick test (note that r domain doesn't matter)
