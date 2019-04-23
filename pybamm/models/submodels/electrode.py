@@ -253,9 +253,9 @@ class Ohm(pybamm.SubModel):
         # Derived variables
         # solid phase ohmic losses
         delta_phi_s_n = phi_s_n - pybamm.BoundaryValue(phi_s_n, "left")
-        delta_phi_s_n_av = pybamm.Integral(delta_phi_s_n, x_n) / param.l_n
+        delta_phi_s_n_av = pybamm.average(delta_phi_s_n)
         delta_phi_s_p = phi_s_p - pybamm.BoundaryValue(phi_s_p, "right")
-        delta_phi_s_p_av = pybamm.Integral(delta_phi_s_p, x_p) / param.l_p
+        delta_phi_s_p_av = pybamm.average(delta_phi_s_p)
         delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
         # Voltage variable
         v = pybamm.BoundaryValue(phi_s, "right") - pybamm.BoundaryValue(phi_s, "left")

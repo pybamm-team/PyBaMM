@@ -124,8 +124,8 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         # average elecrolyte overpotential (ohmic + concentration overpotential)
         phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
-        phi_e_n_av = pybamm.Integral(phi_e_n, x_n) / param.l_n
-        phi_e_p_av = pybamm.Integral(phi_e_p, x_p) / param.l_p
+        phi_e_n_av = pybamm.average(phi_e_n)
+        phi_e_p_av = pybamm.average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
 
         self.variables = self.get_variables(
@@ -305,8 +305,8 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         # electrode-averaged electrolye concentrations (combined leading
         # and first order)
-        c_e_n_av = pybamm.Integral(c_e_n, x_n) / l_n
-        c_e_p_av = pybamm.Integral(c_e_p, x_p) / l_p
+        c_e_n_av = pybamm.average(c_e_n)
+        c_e_p_av = pybamm.average(c_e_p)
 
         # concentration overpotential (combined leading and first order)
         eta_c_av = 2 * param.C_e * (1 - param.t_plus) * (c_e_p_av - c_e_n_av)
@@ -490,8 +490,8 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         delta_phi_e_av = pybamm.Scalar(0)
 
         # average elecrolyte overpotential (ohmic + concentration overpotential)
-        phi_e_n_av = pybamm.Integral(phi_e_n, x_n) / param.l_n
-        phi_e_p_av = pybamm.Integral(phi_e_p, x_p) / param.l_p
+        phi_e_n_av = pybamm.average(phi_e_n)
+        phi_e_p_av = pybamm.average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
 
         return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
@@ -574,8 +574,8 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         delta_phi_e_av = pybamm.Scalar(0)
 
         # average elecrolyte overpotential (ohmic + concentration overpotential)
-        phi_e_n_av = pybamm.Integral(phi_e_n, x_n) / param.l_n
-        phi_e_p_av = pybamm.Integral(phi_e_p, x_p) / param.l_p
+        phi_e_n_av = pybamm.average(phi_e_n)
+        phi_e_p_av = pybamm.average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
 
         return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
