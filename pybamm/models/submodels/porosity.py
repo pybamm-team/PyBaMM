@@ -73,6 +73,9 @@ class Standard(pybamm.SubModel):
             deps_dt = -beta_surf_k * j_k
             self.rhs.update({eps_k: deps_dt})
             self.initial_conditions.update({eps_k: eps_init_k})
+            import ipdb
+
+            ipdb.set_trace()
             self.variables.update(
                 {
                     Domain + " porosity": pybamm.Broadcast(eps_k, domain),

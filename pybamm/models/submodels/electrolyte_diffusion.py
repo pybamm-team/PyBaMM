@@ -86,7 +86,9 @@ class StefanMaxwell(pybamm.SubModel):
         # Unpack variables
         j_n = variables["Negative electrode interfacial current density"].orphans[0]
         j_p = variables["Positive electrode interfacial current density"].orphans[0]
+        import ipdb
 
+        ipdb.set_trace()
         # if porosity is not provided, use the input parameter
         try:
             epsilon = variables["Porosity"]

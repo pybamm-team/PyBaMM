@@ -39,10 +39,18 @@ class Potential(pybamm.SubModel):
         # Dimensionless
         ocp_n = param.U_n(c_n)
         ocp_p = param.U_p(c_p)
-        ocp_n_av = pybamm.Integral(ocp_n, x_n) / param.l_n
-        ocp_p_av = pybamm.Integral(ocp_p, x_p) / param.l_p
-        ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
-        ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
+        if ocp_n.domain == []:
+            ocp_n_av = ocp_n
+            ocp_n_left = ocp_n
+        else:
+            ocp_n_av = pybamm.Integral(ocp_n, x_n) / param.l_n
+            ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
+        if ocp_p.domain == []:
+            ocp_p_av = ocp_p
+            ocp_p_right = ocp_p
+        else:
+            ocp_p_av = pybamm.Integral(ocp_p, x_p) / param.l_p
+            ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
         ocv_av = ocp_p_av - ocp_n_av
         ocv = ocp_p_right - ocp_n_left
 
@@ -122,8 +130,14 @@ class Potential(pybamm.SubModel):
             )
 
         # Derived and dimensional reaction overpotentials
-        eta_r_n_av = pybamm.Integral(eta_r_n, x_n) / param.l_n
-        eta_r_p_av = pybamm.Integral(eta_r_p, x_p) / param.l_p
+        if eta_r_n.domain == []:
+            eta_r_n_av = eta_r_n
+        else:
+            eta_r_n_av = pybamm.Integral(eta_r_n, x_n) / param.l_n
+        if eta_r_p.domain == []:
+            eta_r_p_av = eta_r_p
+        else:
+            eta_r_p_av = pybamm.Integral(eta_r_p, x_p) / param.l_p
         eta_r_av = eta_r_p_av - eta_r_n_av
 
         eta_r_n_dim = param.potential_scale * eta_r_n

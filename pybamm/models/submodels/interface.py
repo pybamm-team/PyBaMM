@@ -47,7 +47,12 @@ class InterfacialCurrent(pybamm.SubModel):
         """
         param = self.set_of_parameters
         c_e = variables["Electrolyte concentration"]
-        c_e_n, c_e_s, c_e_p = c_e.orphans
+        # Allow for leading-order case
+        if isinstance(c_e, pybamm.Variable):
+            c_e_n = c_e
+            c_e_p = c_e
+        else:
+            c_e_n, c_e_s, c_e_p = c_e.orphans
 
         if intercalation:
             c_s_n_surf = pybamm.surf(variables["Negative particle concentration"])
@@ -63,18 +68,25 @@ class InterfacialCurrent(pybamm.SubModel):
             c_w_p = (1 - c_e_p * param.V_e) / param.V_w
             j0_p = param.m_p * (c_e_p ** 2 * c_w_p)
 
-        j0 = pybamm.Concatenation(*[j0_n, pybamm.Broadcast(0, ["separator"]), j0_p])
-
         # Compute dimensional variables
         i_typ = param.i_typ
-        return {
+        variables = {
             "Negative electrode exchange-current density": j0_n,
             "Positive electrode exchange-current density": j0_p,
-            "Exchange-current density": j0,
             "Negative electrode exchange-current density [A m-2]": i_typ * j0_n,
             "Positive electrode exchange-current density [A m-2]": i_typ * j0_p,
-            "Exchange-current density [A m-2]": i_typ * j0,
         }
+        if j0_n.domain == []:
+            return variables
+        else:
+            j0 = pybamm.Concatenation(*[j0_n, pybamm.Broadcast(0, ["separator"]), j0_p])
+            variables.update(
+                {
+                    "Exchange-current density": j0,
+                    "Exchange-current density [A m-2]": i_typ * j0,
+                }
+            )
+            return variables
 
     def get_interfacial_current_butler_volmer(self, variables):
         """
