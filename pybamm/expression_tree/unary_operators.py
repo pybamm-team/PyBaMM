@@ -524,7 +524,7 @@ def surf(variable):
         the surface value of ``variable``
     """
 
-    return boundar_value(variable, "right")
+    return boundary_value(variable, "right")
 
 
 def average(symbol):
