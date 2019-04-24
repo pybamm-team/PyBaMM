@@ -17,6 +17,10 @@ if scikits_odes_spec is not None:
         scikits_odes_spec.loader.exec_module(scikits_odes)
         from scikits.odes.sundials import ida
 
+        jac_class = ida.IDA_JacRhsFunction
+else:
+    jac_class = object
+
 
 class ScikitsDaeSolver(pybamm.DaeSolver):
     """Solve a discretised model, using scikits.odes.
@@ -99,7 +103,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         return sol.values.t, np.transpose(sol.values.y)
 
 
-class JacobianFunctionIDA(ida.IDA_JacRhsFunction):
+class JacobianFunctionIDA(jac_class):
     def set_jacobian(self, mass_matrix, jacobian):
         """
         Sets the user supplied mass matrix and Jacobian function for the DAE model.
