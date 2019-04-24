@@ -9,7 +9,7 @@ class InterfacialCurrent(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_homogeneous_interfacial_current(self, broadcast=True):
+    def get_homogeneous_interfacial_current(self, domain=None, broadcast=True):
         """
         Homogeneous reaction at the electrode-electrolyte interface
 
@@ -25,18 +25,26 @@ class InterfacialCurrent(pybamm.SubModel):
         """
         icell = pybamm.electrical_parameters.current_with_time
 
+        j_n = icell / pybamm.geometric_parameters.l_n
+        j_p = -icell / pybamm.geometric_parameters.l_p
         if domain == ["negative electrode"]:
-            j_n = icell / pybamm.geometric_parameters.l_n
             if broadcast:
                 return pybamm.Broadcast(j_n, ["negative electrode"])
             else:
                 return j_n
         elif domain == ["positive electrode"]:
-            j_p = -icell / pybamm.geometric_parameters.l_p
             if broadcast:
                 return pybamm.Broadcast(j_p, ["positive electrode"])
             else:
                 return j_p
+        elif domain == None:
+            j_n = self.get_homogeneous_interfacial_current(
+                ["negative electrode"], broadcast
+            )
+            j_p = self.get_homogeneous_interfacial_current(
+                ["positive electrode"], broadcast
+            )
+            return j_n, j_p
 
     def get_exchange_current(self, c_e, c_s_k_surf=None, domain=None):
         """The exchange current-density as a function of concentration
@@ -107,7 +115,7 @@ class InterfacialCurrent(pybamm.SubModel):
         elif domain == ["positive electrode"]:
             return j0 * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r)
 
-    def get_inverse_butler_volmer(self, j, j0):
+    def get_inverse_butler_volmer(self, j, j0, domain):
         """
         Inverts the Butler-Volmer relation to solve for the reaction overpotential.
 
@@ -127,9 +135,9 @@ class InterfacialCurrent(pybamm.SubModel):
 
         domain = domain or j_n.domain
         if domain == ["negative electrode"]:
-            return (2 / param.ne_n) * pybamm.Function(np.arcsinh, j_n / j0_n)
+            return (2 / param.ne_n) * pybamm.Function(np.arcsinh, j / j0)
         elif domain == ["positive electrode"]:
-            return (2 / param.ne_p) * pybamm.Function(np.arcsinh, j_p / j0_p)
+            return (2 / param.ne_p) * pybamm.Function(np.arcsinh, j / j0)
 
     def get_derived_interfacial_currents(self, j_n, j_p):
         """

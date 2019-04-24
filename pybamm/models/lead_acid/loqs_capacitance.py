@@ -28,11 +28,6 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         delta_phi_n = pybamm.Variable("Negative electrode potential difference")
         delta_phi_p = pybamm.Variable("Positive electrode potential difference")
         epsilon = pybamm.standard_variables.eps_piecewise_constant
-        leading_order_variables = {
-            "Electrolyte concentration": c_e,
-            "Negative electrode potential difference": delta_phi_n,
-            "Positive electrode potential difference": delta_phi_p,
-        }
 
         "-----------------------------------------------------------------------------"
         "Submodels"

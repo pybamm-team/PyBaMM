@@ -15,6 +15,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.variables = {}
 
         "-----------------------------------------------------------------------------"
         "Parameters"
@@ -24,50 +25,54 @@ class LOQS(pybamm.LeadAcidBaseModel):
         "Model Variables"
 
         c_e = pybamm.Variable("Electrolyte concentration")
-        eps = pybamm.standard_variables.eps_piecewise_constant
+        epsilon = pybamm.standard_variables.eps_piecewise_constant
 
         "-----------------------------------------------------------------------------"
         "Submodels"
 
         # Interfacial current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        j_vars = int_curr_model.get_homogeneous_interfacial_current(broadcast=False)
-        leading_order_variables = j_vars
+        j_n, j_p = int_curr_model.get_homogeneous_interfacial_current(broadcast=False)
 
         # Porosity
-        j = j_vars["Interfacial current density"]
         porosity_model = pybamm.porosity.Standard(param)
-        porosity_model.set_leading_order_system(eps, j)
-        self.update(porosity_model)
+        porosity_model.set_leading_order_system(epsilon, j_n, j_p)
 
         # Electrolyte concentration
         eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        eleclyte_conc_model.set_leading_order_system(c_e, self.variables)
-        self.update(eleclyte_conc_model)
+        eleclyte_conc_model.set_leading_order_system(c_e, j_n, j_p, epsilon)
+
+        self.update(porosity_model, eleclyte_conc_model)
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
 
         # Exchange-current density
-        j0_vars = int_curr_model.get_exchange_current_densities(
-            self.variables, intercalation=False
-        )
-        self.variables.update(j0_vars)
+        j0_n = int_curr_model.get_exchange_current(c_e, domain=["negative electrode"])
+        j0_p = int_curr_model.get_exchange_current(c_e, domain=["positive electrode"])
 
         # Potentials
-        pot_model = pybamm.potential.Potential(param)
-        c_e_n = self.variables["Negative electrolyte concentration"]
-        c_e_p = self.variables["Positive electrolyte concentration"]
-        ocp_vars = pot_model.get_open_circuit_potentials(c_e_n, c_e_p)
-        eta_r_vars = pot_model.get_reaction_overpotentials(self.variables, "current")
-        self.variables.update({**ocp_vars, **eta_r_vars})
+        ocp_n = param.U_n(c_e)
+        ocp_p = param.U_p(c_e)
+        eta_r_n = int_curr_model.get_inverse_butler_volmer(
+            j_n, j0_n, ["negative electrode"]
+        )
+        eta_r_p = int_curr_model.get_inverse_butler_volmer(
+            j_p, j0_p, ["positive electrode"]
+        )
+        delta_phi_n = eta_r_n + ocp_n
+        delta_phi_p = eta_r_p + ocp_p
 
-        # Electrolyte current
-        eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
-        self.variables.update(elyte_vars)
+        v = delta_phi_n - delta_phi_p
+        v_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * v
+        self.variables.update({"Terminal voltage": v, "Terminal voltage [V]": v_dim})
 
-        # Electrode
-        electrode_model = pybamm.electrode.Ohm(param)
-        electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
-        self.variables.update(electrode_vars)
+        # # Electrolyte current
+        # eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
+        # elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
+        # self.variables.update(elyte_vars)
+        #
+        # # Electrode
+        # electrode_model = pybamm.electrode.Ohm(param)
+        # electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
+        # self.variables.update(electrode_vars)
