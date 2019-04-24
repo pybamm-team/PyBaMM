@@ -85,7 +85,7 @@ class Ohm(pybamm.SubModel):
         # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
 
-    def get_explicit_leading_order(self, variables):
+    def get_explicit_leading_order(self, ocp_p, eta_r_p, phi_e):
         """
         Provides the leading order explicit solution to solid phase current
         conservation with ohm's law.
@@ -111,32 +111,21 @@ class Ohm(pybamm.SubModel):
         # define current
         i_cell = param.current_with_time
 
-        # unpack variables
-        ocp_p = variables["Positive electrode open circuit potential"]
-        eta_r_p = variables["Positive reaction overpotential"]
-        phi_e = variables["Electrolyte potential"]
-
-        # extract right-most ocp, overpotential, and electrolyte potential
-        ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
-        eta_r_p_right = pybamm.BoundaryValue(eta_r_p, "right")
+        # Take boundary values
         phi_e_right = pybamm.BoundaryValue(phi_e, "right")
 
         # electode potential
         phi_s_n = pybamm.Broadcast(0, ["negative electrode"])
-        v = ocp_p_right + eta_r_p_right + phi_e_right
-        phi_s_p = v + pybamm.Broadcast(0, ["positive electrode"])
+        v = ocp_p + eta_r_p + phi_e_right
+        phi_s_p = pybamm.Broadcast(v, ["positive electrode"])
 
         # electrode current
         i_s_n = i_cell - i_cell * x_n / l_n
         i_s_p = i_cell - i_cell * (1 - x_p) / l_p
 
-        variables = {
-            "Negative electrode potential": phi_s_n,
-            "Negative electrode current density": i_s_n,
-            "Positive electrode potential": phi_s_p,
-            "Positive electrode current density": i_s_p,
-        }
-        return self.get_post_processed(variables)
+        delta_phi_s_av = pybamm.Scalar(0)
+
+        return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
     def get_explicit_combined(self, variables):
         """
@@ -192,12 +181,6 @@ class Ohm(pybamm.SubModel):
         i_s_n = i_cell - i_cell * x_n / l_n
         i_s_p = i_cell - i_cell * (1 - x_p) / l_p
 
-        variables = {
-            "Negative electrode potential": phi_s_n,
-            "Negative electrode current density": i_s_n,
-            "Positive electrode potential": phi_s_p,
-            "Positive electrode current density": i_s_p,
-        }
         return self.get_post_processed(variables)
 
     def get_post_processed(self, variables):
@@ -216,18 +199,20 @@ class Ohm(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         phi_s_n = variables["Negative electrode potential"]
-        phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
         phi_s_p = variables["Positive electrode potential"]
-        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
 
         i_s_n = variables["Negative electrode current density"]
-        i_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
         i_s_p = variables["Positive electrode current density"]
-        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
+
+        delta_phi_s_n = phi_s_n - pybamm.BoundaryValue(phi_s_n, "left")
+        delta_phi_s_n_av = pybamm.Integral(delta_phi_s_n, x_n) / param.l_n
+        delta_phi_s_p = phi_s_p - pybamm.BoundaryValue(phi_s_p, "right")
+        delta_phi_s_p_av = pybamm.Integral(delta_phi_s_p, x_p) / param.l_p
+        delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
 
         return self.get_variables(phi_s, i_s)
 
-    def get_variables(self, phi_s, i_s):
+    def get_variables(self, phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av):
         """
         Calculate dimensionless and dimensional variables for the electrode submodel
 
@@ -249,18 +234,15 @@ class Ohm(pybamm.SubModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
-        phi_s_n, phi_s_s, phi_s_p = phi_s.orphans
-        i_s_n, i_s_s, i_s_p = i_s.orphans
+        phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
+        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+        i_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
+        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
-        # Derived variables
-        # solid phase ohmic losses
-        delta_phi_s_n = phi_s_n - pybamm.BoundaryValue(phi_s_n, "left")
-        delta_phi_s_n_av = pybamm.Integral(delta_phi_s_n, x_n) / param.l_n
-        delta_phi_s_p = phi_s_p - pybamm.BoundaryValue(phi_s_p, "right")
-        delta_phi_s_p_av = pybamm.Integral(delta_phi_s_p, x_p) / param.l_p
-        delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
         # Voltage variable
-        v = pybamm.BoundaryValue(phi_s, "right") - pybamm.BoundaryValue(phi_s, "left")
+        v = pybamm.BoundaryValue(phi_s_p, "right") - pybamm.BoundaryValue(
+            phi_s_n, "left"
+        )
 
         # Dimensional
         phi_s_n_dim = param.potential_scale * phi_s_n
