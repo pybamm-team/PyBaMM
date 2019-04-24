@@ -46,7 +46,7 @@ class Standard(pybamm.SubModel):
             "Porosity change": deps_dt,
         }
 
-    def set_leading_order_system(self, epsilon, variables):
+    def set_leading_order_system(self, epsilon, j_n, j_p):
         """
         ODE system for the leading-order change in porosity due to reactions
 
@@ -60,9 +60,7 @@ class Standard(pybamm.SubModel):
         param = self.set_of_parameters
 
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-        j_n = variables["Negative electrode interfacial current density"]
         j_s = pybamm.Scalar(0)
-        j_p = variables["Positive electrode interfacial current density"]
 
         self.variables = {"Porosity": epsilon}
         self.leading_order_variables = {}

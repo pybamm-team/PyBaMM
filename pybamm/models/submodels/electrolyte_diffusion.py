@@ -69,7 +69,7 @@ class StefanMaxwell(pybamm.SubModel):
         # Cut off if concentration goes negative
         self.events = [pybamm.Function(np.min, c_e)]
 
-    def set_leading_order_system(self, c_e, variables):
+    def set_leading_order_system(self, c_e, j_n, j_p, epsilon=None):
         """
         ODE system for leading-order Stefan-Maxwell diffusion in the electrolyte
 
@@ -83,18 +83,12 @@ class StefanMaxwell(pybamm.SubModel):
         """
         param = self.set_of_parameters
 
-        # Unpack variables
-        j_n = variables["Negative electrode interfacial current density"]
-        j_p = variables["Positive electrode interfacial current density"]
-
         # if porosity is not provided, use the input parameter
-        try:
-            eps_n = variables["Negative electrode porosity"]
-            eps_s = variables["Separator porosity"]
-            eps_p = variables["Positive electrode porosity"]
-            deps_n_dt = variables["Negative electrode porosity change"]
-            deps_p_dt = variables["Positive electrode porosity change"]
-        except KeyError:
+        if epsilon is not None:
+            eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
+            deps_n_dt = -param.beta_surf_n * eps_n
+            deps_p_dt = -param.beta_surf_p * eps_p
+        else:
             eps_n = param.epsilon_n
             eps_s = param.epsilon_s
             eps_p = param.epsilon_p

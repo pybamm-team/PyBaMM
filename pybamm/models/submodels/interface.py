@@ -25,21 +25,20 @@ class InterfacialCurrent(pybamm.SubModel):
         """
         icell = pybamm.electrical_parameters.current_with_time
 
-        j_n = icell / pybamm.geometric_parameters.l_n
-        j_p = -icell / pybamm.geometric_parameters.l_p
+        if domain == ["negative electrode"]:
+            j_n = icell / pybamm.geometric_parameters.l_n
+            if broadcast:
+                return pybamm.Broadcast(j_n, ["negative electrode"])
+            else:
+                return j_n
+        elif domain == ["positive electrode"]:
+            j_p = -icell / pybamm.geometric_parameters.l_p
+            if broadcast:
+                return pybamm.Broadcast(j_p, ["positive electrode"])
+            else:
+                return j_p
 
-        if broadcast:
-            return self.get_derived_interfacial_currents(
-                pybamm.Broadcast(jn, ["negative electrode"]),
-                pybamm.Broadcast(j_p, ["positive electrode"]),
-            )
-        else:
-            return {
-                "Negative electrode interfacial current density": j_n,
-                "Positive electrode interfacial current density": j_p,
-            }
-
-    def get_exchange_current_densities(self, variables, intercalation=True):
+    def get_exchange_current(self, c_e, c_s_k_surf=None, domain=None):
         """The exchange current-density as a function of concentration
 
         Parameters
@@ -56,62 +55,24 @@ class InterfacialCurrent(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         param = self.set_of_parameters
-        c_e = variables["Electrolyte concentration"]
-        # Allow for leading-order case
-        if isinstance(c_e, pybamm.Variable):
-            c_e_n = c_e
-            c_e_p = c_e
-        else:
-            c_e_n, c_e_s, c_e_p = c_e.orphans
+        domain = domain or c_e.domain
 
-        if intercalation:
-            c_s_n_surf = pybamm.surf(variables["Negative particle concentration"])
-            c_s_p_surf = pybamm.surf(variables["Positive particle concentration"])
-            j0_n = (1 / param.C_r_n) * (
-                c_e_n ** (1 / 2) * c_s_n_surf ** (1 / 2) * (1 - c_s_n_surf) ** (1 / 2)
-            )
-            j0_p = (param.gamma_p / param.C_r_p) * (
-                c_e_p ** (1 / 2) * c_s_p_surf ** (1 / 2) * (1 - c_s_p_surf) ** (1 / 2)
-            )
-        else:
-            j0_n = param.m_n * c_e_n
-            c_w_p = (1 - c_e_p * param.V_e) / param.V_w
-            j0_p = param.m_p * (c_e_p ** 2 * c_w_p)
+        if domain == ["negative electrode"]:
+            return param.m_n * c_e
+        elif domain == ["positive electrode"]:
+            c_w = (1 - c_e * param.V_e) / param.V_w
+            return param.m_p * (c_e ** 2 * c_w)
 
-        # Compute dimensional variables
-        i_typ = param.i_typ
-        variables = {
-            "Negative electrode exchange-current density": j0_n,
-            "Positive electrode exchange-current density": j0_p,
-            "Negative electrode exchange-current density [A m-2]": i_typ * j0_n,
-            "Positive electrode exchange-current density [A m-2]": i_typ * j0_p,
-        }
-        if j0_n.domain == []:
-            return variables
-        else:
-            j0 = pybamm.Concatenation(*[j0_n, pybamm.Broadcast(0, ["separator"]), j0_p])
-            variables.update(
-                {
-                    "Exchange-current density": j0,
-                    "Exchange-current density [A m-2]": i_typ * j0,
-                }
-            )
-            return variables
-
-    def get_interfacial_current_butler_volmer(self, variables):
-        """
-        Butler-Volmer reactions
-
-        .. math::
-            j = j_0(c) * \\sinh(\\phi - U(c)),
-
-            \\text{where} \\phi = \\Phi_\\text{s} - \\Phi
+    def get_exchange_current_intercalation(self, c_e, c_s_k_surf, domain=None):
+        """The exchange current-density as a function of concentration
 
         Parameters
         ----------
         variables : dict
             Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
             already-calculated variables
+        intercalation : bool
+            Whether intercalation occurs in the model.
 
         Returns
         -------
@@ -119,20 +80,34 @@ class InterfacialCurrent(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         param = self.set_of_parameters
+        domain = domain or c_e.domain
 
-        # Unpack variables
-        eta_r_n = variables["Negative reaction overpotential"]
-        eta_r_p = variables["Positive reaction overpotential"]
-        j0_n = variables["Negative electrode exchange-current density"]
-        j0_p = variables["Positive electrode exchange-current density"]
+        if domain == ["negative electrode"]:
+            return (1 / param.C_r_n) * (
+                c_e_n ** (1 / 2) * c_s_n_surf ** (1 / 2) * (1 - c_s_n_surf) ** (1 / 2)
+            )
+        elif domain == ["positive electrode"]:
+            return (param.gamma_p / param.C_r_p) * (
+                c_e_p ** (1 / 2) * c_s_p_surf ** (1 / 2) * (1 - c_s_p_surf) ** (1 / 2)
+            )
 
-        # Compute Butler-Volmer
-        j_n = j0_n * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_r_n)
-        j_p = j0_p * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r_p)
+    def get_butler_volmer(self, j0, eta_r, domain=None):
+        """
+        Butler-Volmer reactions
 
-        return self.get_derived_interfacial_currents(j_n, j_p)
+        .. math::
+            j = j_0(c) * \\sinh(\\eta_r(c))
 
-    def get_inverse_butler_volmer(self, variables):
+        """
+        param = self.set_of_parameters
+
+        domain = domain or j_n.domain
+        if domain == ["negative electrode"]:
+            return j0 * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_r)
+        elif domain == ["positive electrode"]:
+            return j0 * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r)
+
+    def get_inverse_butler_volmer(self, j, j0):
         """
         Inverts the Butler-Volmer relation to solve for the reaction overpotential.
 
@@ -150,17 +125,11 @@ class InterfacialCurrent(pybamm.SubModel):
         """
         param = self.set_of_parameters
 
-        # Unpack variables
-        j_n = variables["Negative electrode interfacial current density"]
-        j_p = variables["Positive electrode interfacial current density"]
-        j0_n = variables["Negative electrode exchange-current density"]
-        j0_p = variables["Positive electrode exchange-current density"]
-
-        # Invert Butler-Volmer
-        eta_r_n = (2 / param.ne_n) * pybamm.Function(np.arcsinh, j_n / j0_n)
-        eta_r_p = (2 / param.ne_p) * pybamm.Function(np.arcsinh, j_p / j0_p)
-
-        return eta_r_n, eta_r_p
+        domain = domain or j_n.domain
+        if domain == ["negative electrode"]:
+            return (2 / param.ne_n) * pybamm.Function(np.arcsinh, j_n / j0_n)
+        elif domain == ["positive electrode"]:
+            return (2 / param.ne_p) * pybamm.Function(np.arcsinh, j_p / j0_p)
 
     def get_derived_interfacial_currents(self, j_n, j_p):
         """

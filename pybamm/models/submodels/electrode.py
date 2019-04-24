@@ -198,34 +198,7 @@ class Ohm(pybamm.SubModel):
         }
         return self.get_post_processed(variables)
 
-    def get_post_processed(self, variables):
-        """
-        Calculate dimensionless and dimensional variables for the electrode submodel
-
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
-
-        Returns
-        -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
-        """
-        phi_s_n = variables["Negative electrode potential"]
-        phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
-        phi_s_p = variables["Positive electrode potential"]
-        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
-
-        i_s_n = variables["Negative electrode current density"]
-        i_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
-        i_s_p = variables["Positive electrode current density"]
-        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
-
-        return self.get_variables(phi_s, i_s)
-
-    def get_variables(self, phi_s, i_s):
+    def get_variables(self, phi_s_n, phi_s_p, i_s_n, i_s_p):
         """
         Calculate dimensionless and dimensional variables for the electrode submodel
 
@@ -246,9 +219,11 @@ class Ohm(pybamm.SubModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        # Unpack
-        phi_s_n, phi_s_s, phi_s_p = phi_s.orphans
-        i_s_n, i_s_s, i_s_p = i_s.orphans
+        # Concatenate
+        phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
+        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+        i_s_s = pybamm.Broadcast(0, ["separator"])
+        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
         # Derived variables
         # solid phase ohmic losses

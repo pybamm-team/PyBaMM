@@ -32,7 +32,8 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
     def test_solution(self):
         model = pybamm.lead_acid.LOQSCapacitance()
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 2))
+
+        modeltest.test_all()
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
 
         # Post-process variables
@@ -43,7 +44,7 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
             mesh=modeltest.disc.mesh,
         )
         voltage = pybamm.ProcessedVariable(
-            model.variables["Terminal voltage"], t_sol, y_sol
+            model.variables["Terminal voltage [V]"], t_sol, y_sol
         )
 
         # check output

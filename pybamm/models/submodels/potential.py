@@ -18,7 +18,7 @@ class Potential(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_open_circuit_potentials(self, c_n, c_p):
+    def get_derived_open_circuit_potentials(self, ocp_n, ocp_p):
         """
         Compute open-circuit potentials (dimensionless and dimensionless). Note that for
         this submodel, we must specify explicitly which concentration we are using to
@@ -33,12 +33,8 @@ class Potential(pybamm.SubModel):
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
 
         # Dimensionless
-        ocp_n = param.U_n(c_n)
-        ocp_p = param.U_p(c_p)
         ocp_n_av = pybamm.average(ocp_n)
         ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
         ocp_p_av = pybamm.average(ocp_p)
@@ -72,7 +68,7 @@ class Potential(pybamm.SubModel):
             "Measured open circuit voltage [V]": ocv_dim,
         }
 
-    def get_reaction_overpotentials(self, variables, compute_from):
+    def get_derived_reaction_overpotentials(self, eta_r_n, eta_r_p):
         """
         Compute reaction overpotentials (dimensionless and dimensionless).
 
@@ -85,41 +81,8 @@ class Potential(pybamm.SubModel):
             Whether to use the current densities (invert Butler-Volmer) or potentials
             (direct calculation) to compute reaction overpotentials
         """
-        # Load parameters and spatial variables
+        # Load parameters
         param = self.set_of_parameters
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
-
-        if compute_from == "current":
-            int_curr_model = pybamm.interface.InterfacialCurrent(param)
-            eta_r_n, eta_r_p = int_curr_model.get_inverse_butler_volmer(variables)
-        elif compute_from == "potentials":
-            phi_s_n = variables["Negative electrode potential"]
-            phi_s_p = variables["Positive electrode potential"]
-            phi_e = variables["Electrolyte potential"]
-            phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
-            ocp_n = variables["Negative electrode open circuit potential"]
-            ocp_p = variables["Positive electrode open circuit potential"]
-
-            eta_r_n = phi_s_n - phi_e_n - ocp_n
-            eta_r_p = phi_s_p - phi_e_p - ocp_p
-        elif compute_from == "potential differences":
-            delta_phi_n = variables["Negative electrode potential difference"]
-            delta_phi_p = variables["Positive electrode potential difference"]
-            ocp_n = variables["Negative electrode open circuit potential"]
-            ocp_p = variables["Positive electrode open circuit potential"]
-
-            eta_r_n = delta_phi_n - ocp_n
-            eta_r_p = delta_phi_p - ocp_p
-        else:
-            raise ValueError(
-                """
-                compute_from must be 'current', 'potentials' or 'potential differences',
-                not {}
-                """.format(
-                    compute_from
-                )
-            )
 
         # Derived and dimensional reaction overpotentials
         eta_r_n_av = pybamm.average(eta_r_n)
