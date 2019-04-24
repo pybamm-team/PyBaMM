@@ -384,8 +384,9 @@ def simplify_multiplication_division(myclass, left, right):
             if nonconst_denominator_expr is None:
                 result = constant_numerator_expr * new_numerator
             else:
-                result = constant_numerator_expr * new_numerator \
-                    / nonconst_denominator_expr
+                result = (
+                    constant_numerator_expr * new_numerator / nonconst_denominator_expr
+                )
 
     elif not numerator_has_mat_mul and denominator_has_mat_mul:
         new_denominator = simplify_with_mat_mul(denominator, denominator_types)
@@ -407,8 +408,9 @@ def simplify_multiplication_division(myclass, left, right):
             if nonconst_numerator_expr is None:
                 result = constant_numerator_expr / new_denominator
             else:
-                result = constant_numerator_expr * nonconst_numerator_expr \
-                    / new_denominator
+                result = (
+                    constant_numerator_expr * nonconst_numerator_expr / new_denominator
+                )
 
     else:
         # can reorder the numerator since no matrix multiplies
@@ -461,7 +463,11 @@ def is_zero(expr):
     """
     if expr.is_constant():
         result = expr.evaluate_ignoring_errors()
-        return isinstance(result, numbers.Number) and result == 0
+        return (
+            (isinstance(result, numbers.Number) and result == 0)
+            or (issparse(result) and result.count_nonzero() == 0)
+            or (isinstance(result, np.ndarray) and np.all(result == 0))
+        )
     else:
         return False
 

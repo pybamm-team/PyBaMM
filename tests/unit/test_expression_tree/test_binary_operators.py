@@ -223,6 +223,28 @@ class TestBinaryOperators(unittest.TestCase):
             (pybammS2 @ pybammS2).evaluate()
 
 
+class TestIsZero(unittest.TestCase):
+    def test_is_zero(self):
+        a = pybamm.Scalar(0)
+        b = pybamm.Scalar(2)
+        self.assertTrue(pybamm.is_zero(a))
+        self.assertFalse(pybamm.is_zero(b))
+
+        a = pybamm.Matrix(coo_matrix(np.zeros((10, 10))))
+        b = pybamm.Matrix(coo_matrix(np.ones((10, 10))))
+        c = pybamm.Matrix(coo_matrix(([1], ([0], [0])), shape=(5, 5)))
+        self.assertTrue(pybamm.is_zero(a))
+        self.assertFalse(pybamm.is_zero(b))
+        self.assertFalse(pybamm.is_zero(c))
+
+        a = pybamm.Matrix(np.zeros((10, 10)))
+        b = pybamm.Matrix(np.ones((10, 10)))
+        c = pybamm.Matrix(np.array([1, 0, 0]))
+        self.assertTrue(pybamm.is_zero(a))
+        self.assertFalse(pybamm.is_zero(b))
+        self.assertFalse(pybamm.is_zero(c))
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
