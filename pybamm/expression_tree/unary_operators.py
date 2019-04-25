@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import autograd
+import copy
 import numpy as np
 import numbers
 from scipy.sparse import csr_matrix, diags
