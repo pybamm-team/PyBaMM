@@ -542,10 +542,12 @@ def average(symbol):
     """
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
-        return symbol
+        new_symbol = copy.deepcopy(symbol)
+        new_symbol.parent = None
+        return new_symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.children[0]
+        return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
         if symbol.domain == ["negative electrode"]:
