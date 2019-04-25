@@ -127,7 +127,7 @@ class Ohm(pybamm.SubModel):
 
         return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
-    def get_explicit_combined(self, variables):
+    def get_explicit_combined(self, ocp_p, eta_r_p, phi_e, epsilon=None):
         """
         Provides an explicit combined leading and first order solution to solid phase
         current conservation with ohm's law. Note that the returned current density is
@@ -152,19 +152,19 @@ class Ohm(pybamm.SubModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        # Unpack variables
-        phi_e = variables["Electrolyte potential"]
-        ocp_p = variables["Positive electrode open circuit potential"]
-        eta_r_p = variables["Positive reaction overpotential"]
-
         # if porosity is not provided, use the input parameter
-        try:
-            epsilon = variables["Porosity"]
-        except KeyError:
+        if epsilon is None:
             epsilon = param.epsilon
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 
         # extract right-most ocp, overpotential, and electrolyte potential
+        if ocp_p.domain == []:
+            ocp_p = pybamm.Broadcast(ocp_p, ["positive electrode"])
+        if eta_r_p.domain == []:
+            eta_r_p = pybamm.Broadcast(eta_r_p, ["positive electrode"])
+        if phi_e.domain == []:
+            phi_e = pybamm.Broadcast(phi_e, ["positive electrode"])
+
         ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
         eta_r_p_right = pybamm.BoundaryValue(eta_r_p, "right")
         phi_e_right = pybamm.BoundaryValue(phi_e, "right")
@@ -181,7 +181,13 @@ class Ohm(pybamm.SubModel):
         i_s_n = i_cell - i_cell * x_n / l_n
         i_s_p = i_cell - i_cell * (1 - x_p) / l_p
 
-        return self.get_post_processed(variables)
+        delta_phi_s_av = (
+            -i_cell
+            / 3
+            * (l_p / param.sigma_p / (1 - eps_p) + l_n / param.sigma_n / (1 - eps_n))
+        )
+
+        return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
     def get_post_processed(self, variables):
         """

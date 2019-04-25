@@ -23,7 +23,7 @@ class StefanMaxwell(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_differential_system(self, c_e, variables):
+    def set_differential_system(self, c_e, reactions, epsilon=None):
         """
         PDE system for Stefan-Maxwell diffusion in the electrolyte
 
@@ -37,14 +37,10 @@ class StefanMaxwell(pybamm.SubModel):
         """
         param = self.set_of_parameters
 
-        # Unpack variables
-        j = variables["Interfacial current density"]
-
         # if porosity is not provided, use the input parameter
-        try:
-            epsilon = variables["Porosity"]
-            deps_dt = variables["Porosity change"]
-        except KeyError:
+        if epsilon is not None:
+            dep_dt = reactions["porosity change"]
+        else:
             epsilon = param.epsilon
             deps_dt = pybamm.Scalar(0)
 
@@ -52,27 +48,25 @@ class StefanMaxwell(pybamm.SubModel):
         N_e = -(epsilon ** param.b) * pybamm.grad(c_e)
 
         # Model
+        j_n = reactions["main"]["neg"]["aj"]
+        j_p = reactions["main"]["pos"]["aj"]
+        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
+        source_terms = -param.s / param.gamma_e * j
         self.rhs = {
             c_e: (1 / epsilon)
-            * (
-                -pybamm.div(N_e) / param.C_e
-                + param.s / param.gamma_e * j
-                - c_e * deps_dt
-            )
+            * (-pybamm.div(N_e) / param.C_e - source_terms - c_e * deps_dt)
         }
 
         self.initial_conditions = {c_e: param.c_e_init}
         self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
-        self.variables = {"Electrolyte concentration": c_e, "Reduced cation flux": N_e}
         self.variables = self.get_variables(c_e, N_e)
 
         # Cut off if concentration goes negative
         self.events = [pybamm.Function(np.min, c_e)]
 
-    def set_leading_order_system(self, c_e, variables):
+    def set_leading_order_system(self, c_e, reactions, epsilon=None):
         """
         ODE system for leading-order Stefan-Maxwell diffusion in the electrolyte
-
         Parameters
         ----------
         c_e : :class:`pybamm.Variable`
@@ -83,35 +77,33 @@ class StefanMaxwell(pybamm.SubModel):
         """
         param = self.set_of_parameters
 
-        # Unpack variables
-        j_n = variables["Negative electrode interfacial current density"].orphans[0]
-        j_p = variables["Positive electrode interfacial current density"].orphans[0]
-
         # if porosity is not provided, use the input parameter
-        try:
-            epsilon = variables["Porosity"]
-            deps_n_dt = variables["Negative electrode porosity change"].orphans[0]
-            deps_p_dt = variables["Positive electrode porosity change"].orphans[0]
-        except KeyError:
-            epsilon = param.epsilon
+        if epsilon is not None:
+            eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
+            deps_n_dt = reactions["neg porosity change"]
+            deps_p_dt = reactions["pos porosity change"]
+        else:
+            eps_n = param.epsilon_n
+            eps_s = param.epsilon_s
+            eps_p = param.epsilon_p
             deps_n_dt = pybamm.Scalar(0)
             deps_p_dt = pybamm.Scalar(0)
 
-        eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-
         # Model
+        source_terms = sum(
+            param.l_n * rxn["neg"]["s_plus"] * rxn["neg"]["aj"]
+            + param.l_p * rxn["pos"]["s_plus"] * rxn["pos"]["aj"]
+            for rxn in reactions.values()
+        )
         self.rhs = {
             c_e: 1
             / (param.l_n * eps_n + param.l_s * eps_s + param.l_p * eps_p)
-            * (
-                (param.l_n * param.s_n * j_n + param.l_p * param.s_p * j_p)
-                - c_e * (param.l_n * deps_n_dt + param.l_p * deps_p_dt)
-            )
+            * (-source_terms - c_e * (param.l_n * deps_n_dt + param.l_p * deps_p_dt))
         }
         self.initial_conditions = {c_e: param.c_e_init}
 
         # Variables
-        whole_cell = epsilon.domain
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
         N_e = pybamm.Broadcast(0, whole_cell)
         c_e_var = pybamm.Concatenation(
             pybamm.Broadcast(c_e, ["negative electrode"]),
@@ -122,6 +114,25 @@ class StefanMaxwell(pybamm.SubModel):
 
         # Cut off if concentration goes negative
         self.events = [pybamm.Function(np.min, c_e)]
+
+    def get_constant_concentration_variables(self):
+        """
+        Constant concentraiton (c_e = 1) in the electrolyte
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+
+        c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
+        c_e_s = pybamm.Broadcast(1, domain=["separator"])
+        c_e_p = pybamm.Broadcast(1, domain=["positive electrode"])
+        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+
+        N_e = pybamm.Broadcast(0, c_e.domain)
+
+        return self.get_variables(c_e, N_e)
 
     def get_variables(self, c_e, N_e):
         """
@@ -143,23 +154,15 @@ class StefanMaxwell(pybamm.SubModel):
         """
         c_e_typ = self.set_of_parameters.c_e_typ
 
-        if c_e.domain == []:
-            c_e_n = pybamm.Broadcast(c_e, domain=["negative electrode"])
-            c_e_s = pybamm.Broadcast(c_e, domain=["separator"])
-            c_e_p = pybamm.Broadcast(c_e, domain=["positive electrode"])
-            c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
-            N_e = pybamm.Broadcast(N_e, c_e.domain)
-        else:
-            c_e_n, c_e_s, c_e_p = c_e.orphans
-
+        c_e_n, c_e_s, c_e_p = c_e.orphans
         return {
             "Electrolyte concentration": c_e,
-            "Negative electrode electrolyte concentration": c_e_n,
+            "Negative electrolyte concentration": c_e_n,
             "Separator electrolyte concentration": c_e_s,
-            "Positive electrode electrolyte concentration": c_e_p,
+            "Positive electrolyte concentration": c_e_p,
             "Reduced cation flux": N_e,
             "Electrolyte concentration [mols m-3]": c_e_typ * c_e,
-            "Negative electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_n,
+            "Negative electrolyte concentration [mols m-3]": c_e_typ * c_e_n,
             "Separator electrolyte concentration [mols m-3]": c_e_typ * c_e_s,
-            "Positive electrode electrolyte concentration [mols m-3]": c_e_typ * c_e_p,
+            "Positive electrolyte concentration [mols m-3]": c_e_typ * c_e_p,
         }

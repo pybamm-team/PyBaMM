@@ -38,9 +38,22 @@ class SPMe(pybamm.LithiumIonBaseModel):
         positive_particle_model.set_differential_system(c_s_p, j_p, broadcast=True)
         self.update(negative_particle_model, positive_particle_model)
 
+        # Electrolyte concentration
+        reactions = {
+            "main": {
+                "neg": {
+                    "s_plus": -1,
+                    "aj": pybamm.Broadcast(j_n, ["negative electrode"]),
+                },
+                "pos": {
+                    "s_plus": -1,
+                    "aj": pybamm.Broadcast(j_p, ["positive electrode"]),
+                },
+            }
+        }
         # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        electrolyte_diffusion_model.set_differential_system(c_e, self.variables)
+        electrolyte_diffusion_model.set_differential_system(c_e, reactions)
         self.update(electrolyte_diffusion_model)
 
         "-----------------------------------------------------------------------------"
@@ -49,10 +62,10 @@ class SPMe(pybamm.LithiumIonBaseModel):
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
         j0_n = int_curr_model.get_exchange_current(
-            c_e, c_s_n_surf, ["negative electrode"]
+            c_e.orphans[0], pybamm.surf(c_s_n), ["negative electrode"]
         )
         j0_p = int_curr_model.get_exchange_current(
-            c_e, c_s_p_surf, ["positive electrode"]
+            c_e.orphans[2], c_s_p_surf, ["positive electrode"]
         )
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
@@ -73,15 +86,13 @@ class SPMe(pybamm.LithiumIonBaseModel):
 
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        elyte_vars = eleclyte_current_model.get_explicit_leading_order(ocp_n, eta_r_n)
+        elyte_vars = eleclyte_current_model.get_explicit_combined(ocp_n, eta_r_n, c_e)
         self.variables.update(elyte_vars)
 
         # Electrode
         electrode_model = pybamm.electrode.Ohm(param)
         phi_e = self.variables["Electrolyte concentration"]
-        electrode_vars = electrode_model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e
-        )
+        electrode_vars = electrode_model.get_explicit_combined(ocp_p, eta_r_p, phi_e)
         self.variables.update(electrode_vars)
 
         "-----------------------------------------------------------------------------"

@@ -207,7 +207,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
             eta_e_av,
         )
 
-    def get_explicit_combined(self, variables):
+    def get_explicit_combined(self, ocp_n, eta_r_n, c_e, epsilon=None, c_e_0=None):
         """
         Provides and explicit combined leading and first order solution to the
         electrolyte current conservation equation where the constitutive equation is
@@ -234,26 +234,13 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
-        # Unpack variables
-        c_e = variables["Electrolyte concentration"]
-        ocp_n = variables["Negative electrode open circuit potential"]
-        eta_r_n = variables["Negative reaction overpotential"]
-
         # extract c_e components
         c_e_n, c_e_s, c_e_p = c_e.orphans
 
         # if porosity is not provided, use the input parameter
-        try:
-            epsilon = variables["Porosity (leading-order)"]
-        except KeyError:
+        if epsilon is None:
             epsilon = param.epsilon
-        try:
-            c_e_0 = (
-                variables["Electrolyte concentration (leading-order)"]
-                .orphans[0]
-                .orphans[0]
-            )
-        except KeyError:
+        if c_e_0 is None:
             c_e_0 = pybamm.Scalar(1)
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 
@@ -263,6 +250,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
 
         # get left-most ocp and overpotential
+        if ocp_n.domain == []:
+            ocp_n = pybamm.Broadcast(ocp_n, ["negative electrode"])
+        if eta_r_n.domain == []:
+            eta_r_n = pybamm.Broadcast(eta_r_n, ["negative electrode"])
+        if c_e_n.domain == []:
+            c_e_n = pybamm.Broadcast(c_e_n, ["negative electrode"])
         ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
         eta_r_n_left = pybamm.BoundaryValue(eta_r_n, "left")
         c_e_n_left = pybamm.BoundaryValue(c_e_n, "left")
@@ -318,8 +311,8 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         # electrode-averaged electrolye concentrations (combined leading
         # and first order)
-        c_e_n_av = pybamm.average(c_e_n)
-        c_e_p_av = pybamm.average(c_e_p)
+        c_e_n_av = pybamm.Integral(c_e_n, x_n) / l_n
+        c_e_p_av = pybamm.Integral(c_e_p, x_p) / l_p
 
         # concentration overpotential (combined leading and first order)
         eta_c_av = 2 * param.C_e * (1 - param.t_plus) * (c_e_p_av - c_e_n_av)
