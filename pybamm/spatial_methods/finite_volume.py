@@ -7,6 +7,8 @@ import pybamm
 
 import numpy as np
 from scipy.sparse import diags, eye, kron, csr_matrix, vstack
+import autograd.numpy as np
+from autograd.builtins import isinstance
 
 
 class FiniteVolume(pybamm.SpatialMethod):

@@ -90,7 +90,7 @@ class BaseModel(object):
                 ),
             },
         )
-        self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
+        self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
         var = pybamm.standard_spatial_vars
         self.default_var_pts = {
             var.x_n: 40,
@@ -111,7 +111,10 @@ class BaseModel(object):
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
         }
-        self.default_solver = pybamm.ScikitsOdeSolver()
+        try:
+            self.default_solver = pybamm.ScikitsOdeSolver()
+        except ImportError:
+            self.default_solver = pybamm.ScipySolver()
 
     def _set_dict(self, dict, name):
         """

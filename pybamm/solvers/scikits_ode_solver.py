@@ -7,6 +7,7 @@ import pybamm
 
 import numpy as np
 import importlib
+from scipy.sparse import issparse
 
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:
@@ -15,6 +16,10 @@ if scikits_odes_spec is not None:
         scikits_odes = importlib.util.module_from_spec(scikits_odes_spec)
         scikits_odes_spec.loader.exec_module(scikits_odes)
         from scikits.odes.sundials import cvode
+
+        jac_class = cvode.CV_JacRhsFunction
+else:
+    jac_class = object
 
 
 class ScikitsOdeSolver(pybamm.OdeSolver):
@@ -94,7 +99,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         return sol.values.t, np.transpose(sol.values.y)
 
 
-class JacobianFunctionCV(cvode.CV_JacRhsFunction):
+class JacobianFunctionCV(jac_class):
     def set_jacobian(self, jacobian):
         """
         Sets the user supplied Jacobian function for the ODE model.
@@ -107,5 +112,11 @@ class JacobianFunctionCV(cvode.CV_JacRhsFunction):
         self.jacobian = jacobian
 
     def evaluate(self, t, y, fy, return_jacobian):
-        return_jacobian[:][:] = self.jacobian(t, y)
+        # scikits_odes requires the full (dense) jacobian
+        jac_eval = self.jacobian(t, y)
+        if issparse(jac_eval):
+            return_jacobian[:][:] = jac_eval.toarray()
+        else:
+            return_jacobian[:][:] = jac_eval
+
         return 0

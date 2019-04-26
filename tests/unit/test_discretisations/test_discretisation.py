@@ -357,6 +357,15 @@ class TestDiscretise(unittest.TestCase):
             model.mass_matrix.entries.toarray(),
         )
 
+        # Create StateVector to differentiate model with respect to
+        y = pybamm.StateVector(slice(0, combined_submesh[0].npts))
+
+        # jacobian is identity
+        jacobian = model.concatenated_rhs.jac(y).evaluate(0, y0)
+        np.testing.assert_array_equal(
+            np.eye(combined_submesh[0].npts), jacobian.toarray()
+        )
+
         # several equations
         T = pybamm.Variable("T", domain=["negative electrode"])
         q = pybamm.grad(T)
@@ -399,6 +408,15 @@ class TestDiscretise(unittest.TestCase):
         # mass matrix is identity
         np.testing.assert_array_equal(
             np.eye(np.size(y0)), model.mass_matrix.entries.toarray()
+        )
+
+        # Create StateVector to differentiate model with respect to
+        y = pybamm.StateVector(slice(0, np.size(y0)))
+
+        # jacobian is identity
+        jacobian = model.concatenated_rhs.jac(y).evaluate(0, y0)
+        np.testing.assert_array_equal(
+            np.eye(np.size(y0)), jacobian.toarray()
         )
 
         # test that not enough initial conditions raises an error
@@ -470,6 +488,31 @@ class TestDiscretise(unittest.TestCase):
             mass.toarray(), model.mass_matrix.entries.toarray()
         )
 
+        # jacobian
+        y = pybamm.StateVector(slice(0, np.size(y0)))
+        jac_rhs = model.concatenated_rhs.jac(y)
+        jac_algebraic = model.concatenated_algebraic.jac(y)
+        jacobian = pybamm.SparseStack(jac_rhs, jac_algebraic).evaluate(0, y0)
+
+        jacobian_actual = np.block(
+            [
+                [
+                    np.eye(np.size(combined_submesh[0].nodes)),
+                    np.zeros(
+                        (
+                            np.size(combined_submesh[0].nodes),
+                            np.size(combined_submesh[0].nodes),
+                        )
+                    ),
+                ],
+                [
+                    -2 * np.eye(np.size(combined_submesh[0].nodes)),
+                    np.eye(np.size(combined_submesh[0].nodes)),
+                ],
+            ]
+        )
+        np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
+
     def test_process_model_concatenation(self):
         # concatenation of variables as the key
         cn = pybamm.Variable("c", domain=["negative electrode"])
@@ -499,6 +542,31 @@ class TestDiscretise(unittest.TestCase):
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
         model.check_well_posedness()
+
+    def test_process_model_not_inplace(self):
+        # concatenation of variables as the key
+        c = pybamm.Variable("c", domain=["negative electrode"])
+        N = pybamm.grad(c)
+        model = pybamm.BaseModel()
+        model.rhs = {c: pybamm.div(N)}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+        model.boundary_conditions = {N: {"left": 0, "right": 0}}
+        model.check_well_posedness()
+
+        # create discretisation
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+        submesh = mesh["negative electrode"]
+
+        discretised_model = disc.process_model(model, inplace=False)
+        y0 = discretised_model.concatenated_initial_conditions
+        np.testing.assert_array_equal(y0, 3 * np.ones_like(submesh[0].nodes))
+
+        # grad and div are identity operators here
+        np.testing.assert_array_equal(
+            y0, discretised_model.concatenated_rhs.evaluate(None, y0)
+        )
+        discretised_model.check_well_posedness()
 
     def test_broadcast(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]

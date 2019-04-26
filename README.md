@@ -14,6 +14,8 @@ PyBaMM comes with a number of [detailed examples](examples/README.md), hosted he
 
 ## How can I install PyBaMM?
 
+The safest way to install PyBaMM is to do so within a virtual environment ([introduction to virtual environments](https://realpython.com/python-virtual-environments-a-primer/))
+
 You'll need the following requirements:
 
 - Python 3.5+
