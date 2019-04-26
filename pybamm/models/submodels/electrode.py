@@ -27,7 +27,7 @@ class Ohm(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_system(self, phi_s, reactions, epsilon=None):
+    def set_algebraic_system(self, phi_s, reactions, eps=None):
         """
         PDE system for current in the electrodes, using Ohm's law
 
@@ -42,19 +42,17 @@ class Ohm(pybamm.SubModel):
         param = self.set_of_parameters
         icell = param.current_with_time
 
-        # if porosity is not provided, use the input parameter
-        if epsilon is None:
-            epsilon = param.epsilon
-        eps_n, eps_s, eps_p = epsilon.orphans
-
         # algebraic model only
         self.rhs = {}
 
         # different bounday conditions in each electrode
         if phi_s.domain == ["negative electrode"]:
             j = reactions["main"]["neg"]["aj"]
+            # if porosity is not provided, use the input parameter
+            if eps is None:
+                eps = param.epsilon_n
             # liion sigma_n may already account for porosity
-            i_s_n = -param.sigma_n * (1 - eps_n) ** param.b * pybamm.grad(phi_s)
+            i_s_n = -param.sigma_n * (1 - eps) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_n) + j}
             self.boundary_conditions = {phi_s: {"left": 0}, i_s_n: {"right": 0}}
             self.initial_conditions = {phi_s: 0}
@@ -64,8 +62,11 @@ class Ohm(pybamm.SubModel):
             }
         elif phi_s.domain == ["positive electrode"]:
             j = reactions["main"]["pos"]["aj"]
+            # if porosity is not provided, use the input parameter
+            if eps is None:
+                eps = param.epsilon_p
             # liion sigma_p may already account for porosity
-            i_s_p = -param.sigma_p * (1 - eps_p) ** param.b * pybamm.grad(phi_s)
+            i_s_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_p) + j}
             self.boundary_conditions = {i_s_p: {"left": 0, "right": icell}}
             self.initial_conditions = {

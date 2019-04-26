@@ -49,26 +49,20 @@ class SPM(pybamm.LithiumIonBaseModel):
         self.variables.update(conc_vars)
 
         # Exchange-current density
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
-        j0_n = int_curr_model.get_exchange_current_densities(
-            c_e, c_s_n_surf, ["negative electrode"]
-        )
-        j0_p = int_curr_model.get_exchange_current_densities(
-            c_e, c_s_p_surf, ["positive electrode"]
-        )
+        j0_n = int_curr_model.get_exchange_current_densities(c_e, c_s_n_surf, neg)
+        j0_p = int_curr_model.get_exchange_current_densities(c_e, c_s_p_surf, pos)
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
 
         # Potentials
         ocp_n = param.U_n(c_s_n_surf)
         ocp_p = param.U_p(c_s_p_surf)
-        eta_r_n = int_curr_model.get_inverse_butler_volmer(
-            j_n, j0_n, ["negative electrode"]
-        )
-        eta_r_p = int_curr_model.get_inverse_butler_volmer(
-            j_p, j0_p, ["positive electrode"]
-        )
+        eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
+        eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
         pot_model = pybamm.potential.Potential(param)
         ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
         eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
