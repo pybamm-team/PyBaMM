@@ -149,6 +149,7 @@ class TestMatrix(unittest.TestCase):
         # more complex expression, with simplification
         expr3 = m1 @ (v3 * (m2 @ v2))
         expr3simp = expr3.simplify()
+        self.assertNotEqual(expr3.id, expr3simp.id)
         np.testing.assert_array_equal(
             expr3.evaluate(y=np.ones(300)), expr3simp.evaluate(y=np.ones(300))
         )
@@ -165,6 +166,18 @@ class TestMatrix(unittest.TestCase):
         end_simp = timer.time()
         self.assertLess(end_simp - start_simp, 1.5 * (end - start))
         self.assertGreater(end - start, (end_simp - start_simp))
+
+        m1 = pybamm.Matrix(np.ones((300, 300)))
+        m2 = pybamm.Matrix(np.ones((300, 300)))
+        m3 = pybamm.Matrix(np.ones((300, 300)))
+        m4 = pybamm.Matrix(np.ones((300, 300)))
+        v1 = pybamm.StateVector(slice(0, 300))
+        v2 = pybamm.StateVector(slice(300, 600))
+        v3 = pybamm.StateVector(slice(600, 900))
+        v4 = pybamm.StateVector(slice(900, 1200))
+        expr4 = (m1 @ v1) * ((m2 @ v2) / (m3 @ v3) - m4 @ v4)
+        expr4simp = expr4.simplify()
+        self.assertEqual(expr4.id, expr4simp.id)
 
     def test_matrix_modification(self):
         exp = self.mat @ self.mat + self.mat
