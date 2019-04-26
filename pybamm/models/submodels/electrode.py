@@ -232,8 +232,6 @@ class Ohm(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         param = self.set_of_parameters
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
         phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?

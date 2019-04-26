@@ -118,6 +118,9 @@ class InterfacialCurrent(pybamm.SubModel):
 class LeadAcidReaction(InterfacialCurrent):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
+        self.default_parameter_values = (
+            pybamm.LeadAcidBaseModel().default_parameter_values
+        )
 
     def get_exchange_current_densities(self, c_e, domain=None):
         """The exchange current-density as a function of concentration
