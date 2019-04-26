@@ -18,6 +18,7 @@ class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lithium_ion
+        self.variables = {}
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -29,10 +30,14 @@ class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
 
         # Interfacial current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        j_vars = int_curr_model.get_homogeneous_interfacial_current()
-        self.variables = j_vars
+        j_n, j_p = int_curr_model.get_homogeneous_interfacial_current()
 
         # Electrolyte concentration
+        j_n = pybamm.Broadcast(j_n, ["negative electrode"])
+        j_p = pybamm.Broadcast(j_p, ["positive electrode"])
+        reactions = {
+            "main": {"neg": {"s_plus": 1, "aj": j_n}, "pos": {"s_plus": 1, "aj": j_p}}
+        }
         eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        eleclyte_conc_model.set_differential_system(c_e, self.variables)
+        eleclyte_conc_model.set_differential_system(c_e, reactions)
         self.update(eleclyte_conc_model)

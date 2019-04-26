@@ -109,7 +109,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte current
-        x = pybamm.standard_spatial_vars.x
+        # x = pybamm.standard_spatial_vars.x
         # c_e_0 = pybamm.Integral(
         #     leading_order_model.variables["Electrolyte concentration"], x
         # )

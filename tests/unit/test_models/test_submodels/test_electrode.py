@@ -16,24 +16,25 @@ class TestOhm(unittest.TestCase):
         # Parameters
         param = pybamm.standard_parameters_lithium_ion
 
-        # Variables
+        # Variables and reactions
         phi_s_n = pybamm.standard_variables.phi_s_n
         phi_s_p = pybamm.standard_variables.phi_s_p
-
-        # Interfacial current density
-        int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        variables = int_curr_model.get_homogeneous_interfacial_current()
+        onen = pybamm.Broadcast(1, ["negative electrode"])
+        onep = pybamm.Broadcast(1, ["positive electrode"])
+        reactions = {
+            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+        }
 
         # Set up model and test
         # Negative only
         model_n = pybamm.electrode.Ohm(param)
-        model_n.set_algebraic_system(phi_s_n, variables)
+        model_n.set_algebraic_system(phi_s_n, reactions)
         model_n_test = tests.StandardModelTest(model_n)
         model_n_test.test_all()
 
         # Positive only
         model_p = pybamm.electrode.Ohm(param)
-        model_p.set_algebraic_system(phi_s_p, variables)
+        model_p.set_algebraic_system(phi_s_p, reactions)
         # overwrite boundary conditions for purposes of the test
         i_s_p = model_p.variables["Positive electrode current density"]
         model_p.boundary_conditions = {phi_s_p: {"right": 0}, i_s_p: {"left": 0}}
@@ -42,9 +43,9 @@ class TestOhm(unittest.TestCase):
 
         # Both
         model_n = pybamm.electrode.Ohm(param)
-        model_n.set_algebraic_system(phi_s_n, variables)
+        model_n.set_algebraic_system(phi_s_n, reactions)
         model_p = pybamm.electrode.Ohm(param)
-        model_p.set_algebraic_system(phi_s_p, variables)
+        model_p.set_algebraic_system(phi_s_p, reactions)
         model_n.update(model_p)
         model_whole = model_n
         # overwrite boundary conditions for purposes of the test
@@ -68,19 +69,13 @@ class TestOhm(unittest.TestCase):
         phi_e_p = pybamm.Broadcast(1, domain=["positive electrode"])
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
-        ocp_p = pybamm.Broadcast(0, domain=["positive electrode"])
-        eta_r_p = pybamm.Broadcast(0, domain=["positive electrode"])
-
-        in_vars = {
-            "Electrolyte potential": phi_e,
-            "Positive electrode open circuit potential": ocp_p,
-            "Positive reaction overpotential": eta_r_p,
-        }
+        ocp_p = pybamm.Scalar(0)
+        eta_r_p = pybamm.Scalar(0)
 
         # Model
         model = pybamm.electrode.Ohm(param)
-        leading_order_vars = model.get_explicit_leading_order(in_vars)
-        combined_vars = model.get_explicit_combined(in_vars)
+        leading_order_vars = model.get_explicit_leading_order(ocp_p, eta_r_p, phi_e)
+        combined_vars = model.get_explicit_combined(ocp_p, eta_r_p, phi_e)
 
         # Get disc
         modeltest = tests.StandardModelTest(model)

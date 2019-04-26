@@ -31,7 +31,7 @@ class InterfacialCurrent(pybamm.SubModel):
             return j_n
         elif domain == ["positive electrode"]:
             return j_p
-        elif domain == None:
+        elif domain is None:
             return j_n, j_p
 
     def get_butler_volmer(self, j0, eta_r, domain=None):
@@ -68,7 +68,7 @@ class InterfacialCurrent(pybamm.SubModel):
         """
         param = self.set_of_parameters
 
-        domain = domain or j_n.domain
+        domain = domain or j.domain
         if domain == ["negative electrode"]:
             return (2 / param.ne_n) * pybamm.Function(np.arcsinh, j / j0)
         elif domain == ["positive electrode"]:

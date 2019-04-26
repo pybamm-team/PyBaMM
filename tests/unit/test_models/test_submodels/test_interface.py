@@ -31,7 +31,6 @@ class TestHomogeneousReaction(unittest.TestCase):
 
     def test_discretisation(self):
         disc = get_discretisation_for_testing()
-        mesh = disc.mesh
 
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.interface.InterfacialCurrent(param)
