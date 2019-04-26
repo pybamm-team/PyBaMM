@@ -231,11 +231,9 @@ def simplify_multiplication_division(myclass, left, right):
             # flatten if all matrix multiplications
             # flatten if one child is a matrix mult if the other term is a scalar or
             # vector
-            if (
-                isinstance(child, pybamm.MatrixMultiplication) and (
-                    in_matrix_multiplication
-                    or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
-                )
+            if isinstance(child, pybamm.MatrixMultiplication) and (
+                in_matrix_multiplication
+                or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
                 left, right = child.orphans
                 if child == left_child:
@@ -541,7 +539,14 @@ class BinaryOperator(pybamm.Symbol):
         elif rdomain == []:
             return ldomain
         else:
-            raise pybamm.DomainError("""children must have same (or empty) domains""")
+            raise pybamm.DomainError(
+                """
+                children must have same (or empty) domains, but left.domain is '{}'
+                and right.domain is '{}'
+                """.format(
+                    ldomain, rdomain
+                )
+            )
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """

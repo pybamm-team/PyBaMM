@@ -56,12 +56,12 @@ class Composite(pybamm.LeadAcidBaseModel):
         "Model Variables"
 
         c_e = pybamm.standard_variables.c_e
-        eps = pybamm.standard_variables.eps_piecewise_constant
+        eps = pybamm.standard_variables.eps
 
         "-----------------------------------------------------------------------------"
         "Submodels"
         # Leading order model
-        # leading_order_model = pybamm.lead_acid.LOQS()
+        leading_order_model = pybamm.lead_acid.LOQS()
 
         # Interfacial current density
         int_curr_model = pybamm.interface.LeadAcidReaction(param)
@@ -84,7 +84,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         eleclyte_conc_model.set_differential_system(c_e, reactions, epsilon=eps)
 
-        self.update(porosity_model, eleclyte_conc_model)
+        self.update(leading_order_model, porosity_model, eleclyte_conc_model)
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
@@ -109,14 +109,15 @@ class Composite(pybamm.LeadAcidBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte current
-        # x = pybamm.standard_spatial_vars.x
-        # c_e_0 = pybamm.Integral(
-        #     leading_order_model.variables["Electrolyte concentration"], x
-        # )
-        c_e_0 = pybamm.Scalar(1)
+        eps0 = leading_order_model.variables["Porosity"]
+        c_e_0 = (
+            leading_order_model.variables["Electrolyte concentration"]
+            .orphans[0]
+            .orphans[0]
+        )
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
         elyte_vars = eleclyte_current_model.get_explicit_combined(
-            ocp_n, eta_r_n, c_e, eps, c_e_0
+            ocp_n, eta_r_n, c_e, eps0, c_e_0
         )
         self.variables.update(elyte_vars)
 
@@ -124,6 +125,6 @@ class Composite(pybamm.LeadAcidBaseModel):
         electrode_model = pybamm.electrode.Ohm(param)
         phi_e = self.variables["Electrolyte concentration"]
         electrode_vars = electrode_model.get_explicit_combined(
-            ocp_p, eta_r_p, phi_e, eps
+            ocp_p, eta_r_p, phi_e, eps0
         )
         self.variables.update(electrode_vars)

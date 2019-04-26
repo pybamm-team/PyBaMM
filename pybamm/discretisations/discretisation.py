@@ -286,7 +286,12 @@ class Discretisation(object):
                         )
 
             # Process symbol (original or broadcasted)
-            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            try:
+                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            except KeyError:
+                import ipdb
+
+                ipdb.set_trace()
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
         return new_var_eqn_dict

@@ -416,11 +416,14 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_visualise(self):
         param = pybamm.standard_parameters_lithium_ion
 
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
         c_e = pybamm.standard_variables.c_e
-        variables = {"Interfacial current density": pybamm.Variable("j", whole_cell)}
+        onen = pybamm.Broadcast(1, ["negative electrode"])
+        onep = pybamm.Broadcast(1, ["positive electrode"])
+        reactions = {
+            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+        }
         model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model.set_differential_system(c_e, variables)
+        model.set_differential_system(c_e, reactions)
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test.png")
         self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
