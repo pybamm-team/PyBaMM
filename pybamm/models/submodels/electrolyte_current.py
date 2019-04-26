@@ -94,9 +94,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         ----------
         phi_e : :class:`pybamm.Concatenation`
             The eletrolyte potential variable
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        c_e : :class:`pybamm.Concatenation`
+            The eletrolyte concentration variable
+        reactions : dict
+            Dictionary of reaction variables
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters
@@ -149,9 +152,10 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        ocp_n : :class:`pybamm.Symbol`
+            Open-circuit potential in the negative electrode
+        eta_r_n : :class:`pybamm.Symbol`
+            Reaction overpotential in the negative electrode
 
         Returns
         -------
@@ -199,9 +203,16 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        ocp_n : :class:`pybamm.Symbol`
+            Open-circuit potential in the negative electrode
+        eta_r_n : :class:`pybamm.Symbol`
+            Reaction overpotential in the negative electrode
+        c_e : :class:`pybamm.Concatenation`
+            The eletrolyte concentration variable
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
+        c_e : :class:`pybamm.Concatenation`
+            Leading-order concentration
 
         Returns
         -------

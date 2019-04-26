@@ -91,9 +91,12 @@ class Ohm(pybamm.SubModel):
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        ocp_p : :class:`pybamm.Symbol`
+            Open-circuit potential in the positive electrode
+        eta_r_p : :class:`pybamm.Symbol`
+            Reaction overpotential in the positive electrode
+        phi_e : :class:`pybamm.Concatenation`
+            Eletrolyte potential
 
         Returns
         -------
@@ -134,9 +137,14 @@ class Ohm(pybamm.SubModel):
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        ocp_p : :class:`pybamm.Symbol`
+            Open-circuit potential in the positive electrode
+        eta_r_p : :class:`pybamm.Symbol`
+            Reaction overpotential in the positive electrode
+        phi_e : :class:`pybamm.Concatenation`
+            Eletrolyte potential
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
 
         Returns
         -------
@@ -222,7 +230,7 @@ class Ohm(pybamm.SubModel):
         Parameters
         ----------
         phi_s :class:`pybamm.Concatenation`
-            The electrode potential
+            The electrode potentialin the negative electrode
         i_s :class:`pybamm.Concatenation`
             The electrode current density
 
