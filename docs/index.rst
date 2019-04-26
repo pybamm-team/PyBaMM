@@ -51,5 +51,6 @@ There are many ways to contribute to PyBaMM:
 
     tutorials/add-parameter-values
     tutorials/add-spatial-method
+    tutorials/add-solver
 
 Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.
