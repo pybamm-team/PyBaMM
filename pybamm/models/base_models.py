@@ -382,7 +382,10 @@ class StandardBatteryBaseModel(BaseModel):
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
         }
-        self.default_solver = pybamm.ScikitsOdeSolver()
+        try:
+            self.default_solver = pybamm.ScikitsOdeSolver()
+        except ImportError:
+            self.default_solver = pybamm.ScipySolver()
 
         # Standard output variables
         # Current
