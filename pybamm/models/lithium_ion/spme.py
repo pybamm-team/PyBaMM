@@ -36,35 +36,35 @@ class SPMe(pybamm.LithiumIonBaseModel):
         negative_particle_model.set_differential_system(c_s_n, j_n, broadcast=True)
         positive_particle_model = pybamm.particle.Standard(param)
         positive_particle_model.set_differential_system(c_s_p, j_p, broadcast=True)
-        self.update(negative_particle_model, positive_particle_model)
 
         # Electrolyte concentration
+        broad_j_n = pybamm.Broadcast(j_n, ["negative electrode"])
+        broad_j_p = pybamm.Broadcast(j_p, ["positive electrode"])
         reactions = {
             "main": {
-                "neg": {
-                    "s_plus": -1,
-                    "aj": pybamm.Broadcast(j_n, ["negative electrode"]),
-                },
-                "pos": {
-                    "s_plus": -1,
-                    "aj": pybamm.Broadcast(j_p, ["positive electrode"]),
-                },
+                "neg": {"s_plus": -1, "aj": broad_j_n},
+                "pos": {"s_plus": -1, "aj": broad_j_p},
             }
         }
         # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         electrolyte_diffusion_model.set_differential_system(c_e, reactions)
-        self.update(electrolyte_diffusion_model)
+
+        self.update(
+            negative_particle_model,
+            positive_particle_model,
+            electrolyte_diffusion_model,
+        )
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
         # Exchange-current density
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
-        j0_n = int_curr_model.get_exchange_current(
-            c_e.orphans[0], pybamm.surf(c_s_n), ["negative electrode"]
+        j0_n = int_curr_model.get_exchange_current_densities(
+            c_e.orphans[0], c_s_n_surf, ["negative electrode"]
         )
-        j0_p = int_curr_model.get_exchange_current(
+        j0_p = int_curr_model.get_exchange_current_densities(
             c_e.orphans[2], c_s_p_surf, ["positive electrode"]
         )
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)

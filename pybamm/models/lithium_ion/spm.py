@@ -51,10 +51,10 @@ class SPM(pybamm.LithiumIonBaseModel):
         # Exchange-current density
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
-        j0_n = int_curr_model.get_exchange_current(
-            c_e, pybamm.surf(c_s_n), ["negative electrode"]
+        j0_n = int_curr_model.get_exchange_current_densities(
+            c_e, c_s_n_surf, ["negative electrode"]
         )
-        j0_p = int_curr_model.get_exchange_current(
+        j0_p = int_curr_model.get_exchange_current_densities(
             c_e, c_s_p_surf, ["positive electrode"]
         )
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)

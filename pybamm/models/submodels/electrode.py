@@ -27,7 +27,7 @@ class Ohm(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_system(self, phi_s, variables):
+    def set_algebraic_system(self, phi_s, reactions, epsilon=None):
         """
         PDE system for current in the electrodes, using Ohm's law
 
@@ -43,9 +43,7 @@ class Ohm(pybamm.SubModel):
         icell = param.current_with_time
 
         # if porosity is not provided, use the input parameter
-        try:
-            epsilon = variables["Porosity"]
-        except KeyError:
+        if epsilon is None:
             epsilon = param.epsilon
         eps_n, eps_s, eps_p = epsilon.orphans
 
@@ -54,7 +52,7 @@ class Ohm(pybamm.SubModel):
 
         # different bounday conditions in each electrode
         if phi_s.domain == ["negative electrode"]:
-            j = variables["Negative electrode interfacial current density"]
+            j = reactions["main"]["neg"]["aj"]
             # liion sigma_n may already account for porosity
             i_s_n = -param.sigma_n * (1 - eps_n) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_n) + j}
@@ -65,7 +63,7 @@ class Ohm(pybamm.SubModel):
                 "Negative electrode current density": i_s_n,
             }
         elif phi_s.domain == ["positive electrode"]:
-            j = variables["Positive electrode interfacial current density"]
+            j = reactions["main"]["pos"]["aj"]
             # liion sigma_p may already account for porosity
             i_s_p = -param.sigma_p * (1 - eps_p) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_p) + j}
@@ -189,7 +187,7 @@ class Ohm(pybamm.SubModel):
 
         return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
-    def get_post_processed(self, variables):
+    def get_post_processed(self, phi_s_n, phi_s_p, i_s_n, i_s_p):
         """
         Calculate dimensionless and dimensional variables for the electrode submodel
 
@@ -204,11 +202,9 @@ class Ohm(pybamm.SubModel):
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
-        phi_s_n = variables["Negative electrode potential"]
-        phi_s_p = variables["Positive electrode potential"]
-
-        i_s_n = variables["Negative electrode current density"]
-        i_s_p = variables["Positive electrode current density"]
+        param = self.set_of_parameters
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
 
         delta_phi_s_n = phi_s_n - pybamm.BoundaryValue(phi_s_n, "left")
         delta_phi_s_n_av = pybamm.Integral(delta_phi_s_n, x_n) / param.l_n
@@ -216,7 +212,7 @@ class Ohm(pybamm.SubModel):
         delta_phi_s_p_av = pybamm.Integral(delta_phi_s_p, x_p) / param.l_p
         delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
 
-        return self.get_variables(phi_s, i_s)
+        return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
     def get_variables(self, phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av):
         """
@@ -235,7 +231,6 @@ class Ohm(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         param = self.set_of_parameters
-
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 

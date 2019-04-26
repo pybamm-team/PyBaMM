@@ -44,7 +44,7 @@ class InterfacialCurrent(pybamm.SubModel):
         """
         param = self.set_of_parameters
 
-        domain = domain or j_n.domain
+        domain = domain or j0.domain
         if domain == ["negative electrode"]:
             return j0 * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_r)
         elif domain == ["positive electrode"]:
@@ -119,7 +119,7 @@ class LeadAcidReaction(InterfacialCurrent):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_exchange_current(self, c_e, domain=None):
+    def get_exchange_current_densities(self, c_e, domain=None):
         """The exchange current-density as a function of concentration
 
         Parameters
@@ -149,7 +149,7 @@ class LithiumIonReaction(InterfacialCurrent):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_exchange_current(self, c_e, c_s_k_surf, domain=None):
+    def get_exchange_current_densities(self, c_e, c_s_k_surf, domain=None):
         """The exchange current-density as a function of concentration
 
         Parameters

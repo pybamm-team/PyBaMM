@@ -48,11 +48,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         i_cell = param.current_with_time
         pot_scale = param.potential_scale
 
-        phi_e_n, phi_e_s, phi_e_p = phi_e
-        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
-        i_e_n, i_e_p = i_e
-        i_e_s = pybamm.Broadcast(i_cell, ["separator"])
-        i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
+        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
 
         # Set dimensionless and dimensional variables
         return {
@@ -60,8 +56,6 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             "Separator electrolyte potential": phi_e_p,
             "Positive electrolyte potential": phi_e_p,
             "Electrolyte potential": phi_e,
-            "Negative electrolyte current density": i_e_n,
-            "Positive electrolyte current density": i_e_p,
             "Electrolyte current density": i_e,
             "Average concentration overpotential": eta_c_av,
             "Average electrolyte ohmic losses": delta_phi_e_av,
@@ -70,8 +64,6 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
-            "Negative electrolyte current density [A m-2]": param.i_typ * i_e_n,
-            "Positive electrolyte current density [A m-2]": param.i_typ * i_e_p,
             "Electrolyte current density [A m-2]": param.i_typ * i_e,
             "Average concentration overpotential [V]": pot_scale * eta_c_av,
             "Average electrolyte ohmic losses [V]": pot_scale * delta_phi_e_av,
@@ -94,7 +86,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_system(self, phi_e, variables):
+    def set_algebraic_system(self, phi_e, c_e, reactions, epsilon=None):
         """
         PDE system for current in the electrolyte, derived from the Stefan-Maxwell
         equations.
@@ -113,13 +105,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack variables
-        c_e = variables["Electrolyte concentration"]
-        j = variables["Interfacial current density"]
+        j_n = reactions["main"]["neg"]["aj"]
+        j_p = reactions["main"]["pos"]["aj"]
+        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
 
         # if porosity is not provided, use the input parameter
-        try:
-            epsilon = variables["Porosity"]
-        except KeyError:
+        if epsilon is None:
             epsilon = param.epsilon
 
         # functions
@@ -141,16 +132,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         # average elecrolyte overpotential (ohmic + concentration overpotential)
         phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
-        phi_e_n_av = pybamm.average(phi_e_n)
-        phi_e_p_av = pybamm.average(phi_e_p)
+        phi_e_n_av = pybamm.Integral(phi_e_n, x_n) / param.l_n
+        phi_e_p_av = pybamm.Integral(phi_e_p, x_p) / param.l_p
         eta_e_av = phi_e_p_av - phi_e_n_av
 
         self.variables = self.get_variables(
-            (phi_e_n, phi_e_s, phi_e_p),
-            (i_e_n, i_e_p),
-            eta_c_av,
-            delta_phi_e_av,
-            eta_e_av,
+            phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av
         )
 
         # Set default solver to DAE
@@ -187,10 +174,13 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         phi_e_n = pybamm.Broadcast(phi_e_const, ["negative electrode"])
         phi_e_s = pybamm.Broadcast(phi_e_const, ["separator"])
         phi_e_p = pybamm.Broadcast(phi_e_const, ["positive electrode"])
+        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # electrolyte current
         i_e_n = i_cell * x_n / l_n
+        i_e_s = pybamm.Broadcast(i_cell, ["separator"])
         i_e_p = i_cell * (1 - x_p) / l_p
+        i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte ohmic losses
         delta_phi_e_av = pybamm.Scalar(0)
@@ -199,13 +189,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         # electrolyte overpotential
         eta_e_av = eta_c_av + delta_phi_e_av
 
-        return self.get_variables(
-            (phi_e_n, phi_e_s, phi_e_p),
-            (i_e_n, i_e_p),
-            eta_c_av,
-            delta_phi_e_av,
-            eta_e_av,
-        )
+        return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
 
     def get_explicit_combined(self, ocp_n, eta_r_n, c_e, epsilon=None, c_e_0=None):
         """
@@ -262,7 +246,9 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         # electrolyte current (leading-order approximation)
         i_e_n = i_cell * x_n / l_n
+        i_e_s = pybamm.Broadcast(i_cell, ["separator"])
         i_e_p = i_cell * (1 - x_p) / l_p
+        i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte potential (combined leading and first order)
         phi_e_const = (
@@ -298,6 +284,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
                 + (1 - l_p) / kappa_s
             )
         )
+        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         "Ohmic losses and overpotentials"
         # average electrolyte ohmic losses
@@ -320,13 +307,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         eta_e_av = eta_c_av + delta_phi_e_av
 
         # Variables
-        return self.get_variables(
-            (phi_e_n, phi_e_s, phi_e_p),
-            (i_e_n, i_e_p),
-            eta_c_av,
-            delta_phi_e_av,
-            eta_e_av,
-        )
+        return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
 
 
 class MacInnesCapacitance(ElectrolyteCurrentBaseModel):

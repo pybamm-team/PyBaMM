@@ -115,25 +115,6 @@ class StefanMaxwell(pybamm.SubModel):
         # Cut off if concentration goes negative
         self.events = [pybamm.Function(np.min, c_e)]
 
-    def get_constant_concentration_variables(self):
-        """
-        Constant concentraiton (c_e = 1) in the electrolyte
-
-        Returns
-        -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
-        """
-
-        c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
-        c_e_s = pybamm.Broadcast(1, domain=["separator"])
-        c_e_p = pybamm.Broadcast(1, domain=["positive electrode"])
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
-
-        N_e = pybamm.Broadcast(0, c_e.domain)
-
-        return self.get_variables(c_e, N_e)
-
     def get_variables(self, c_e, N_e):
         """
         Calculate dimensionless and dimensional variables for the electrolyte diffusion
@@ -153,6 +134,12 @@ class StefanMaxwell(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         c_e_typ = self.set_of_parameters.c_e_typ
+
+        if c_e.domain == []:
+            c_e_n = pybamm.Broadcast(c_e, domain=["negative electrode"])
+            c_e_s = pybamm.Broadcast(c_e, domain=["separator"])
+            c_e_p = pybamm.Broadcast(c_e, domain=["positive electrode"])
+            c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
         return {
