@@ -76,7 +76,7 @@ class TestFiniteVolume(unittest.TestCase):
         # check linear variable extrapolates correctly
         linear_y = micro_submesh[0].nodes
         y_surf = micro_submesh[0].nodes[-1] + micro_submesh[0].d_nodes[-1] / 2
-        self.assertEqual(surf_eqn_disc.evaluate(None, linear_y), y_surf)
+        self.assertAlmostEqual(surf_eqn_disc.evaluate(None, linear_y)[0], y_surf)
 
     def test_discretise_diffusivity_times_spatial_operator(self):
         # Set up
