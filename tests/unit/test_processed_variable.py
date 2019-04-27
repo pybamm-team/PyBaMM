@@ -58,13 +58,13 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = np.array([np.linspace(0, 5, 1000)])
         processed_var = pybamm.ProcessedVariable(var, t_sol, y_sol)
         # vector
-        np.testing.assert_array_equal(processed_var(t_sol), y_sol)
+        np.testing.assert_array_equal(processed_var(t_sol), y_sol[0])
         # scalar
         np.testing.assert_array_equal(processed_var(0.5), 2.5)
         np.testing.assert_array_equal(processed_var(0.7), 3.5)
 
         processed_eqn = pybamm.ProcessedVariable(eqn, t_sol, y_sol)
-        np.testing.assert_array_equal(processed_eqn(t_sol), t_sol * y_sol)
+        np.testing.assert_array_equal(processed_eqn(t_sol), t_sol * y_sol[0])
         np.testing.assert_array_almost_equal(processed_eqn(0.5), 0.5 * 2.5)
 
         # with spatial dependence

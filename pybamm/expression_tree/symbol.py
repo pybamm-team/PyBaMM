@@ -50,7 +50,7 @@ class Symbol(anytree.NodeMixin):
 
     def __init__(self, name, children=[], domain=[]):
         super(Symbol, self).__init__()
-        self._name = name
+        self.name = name
 
         for child in children:
             # copy child before adding
@@ -68,6 +68,11 @@ class Symbol(anytree.NodeMixin):
     def name(self):
         """name of the node"""
         return self._name
+
+    @name.setter
+    def name(self, value):
+        assert isinstance(value, str)
+        self._name = value
 
     @property
     def domain(self):
