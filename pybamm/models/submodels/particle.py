@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import autograd.numpy as np
 
 
 class Standard(pybamm.SubModel):
@@ -63,6 +64,8 @@ class Standard(pybamm.SubModel):
             self.variables = self.get_variables(c, N, broadcast)
         else:
             raise pybamm.ModelError("Domain not valid for the particle equations")
+
+        self.events = [pybamm.Function(np.min, c), pybamm.Function(np.max, c) - 1]
 
     def get_variables(self, c, N, broadcast):
         """

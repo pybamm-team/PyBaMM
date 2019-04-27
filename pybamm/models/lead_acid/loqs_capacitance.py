@@ -76,31 +76,31 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Post-Processing"
 
-        # for name, var in leading_order_variables.items():
-        #     if "negative" in name.lower():
-        #         self.variables[name] = pybamm.Broadcast(var, ["negative electrode"])
-        #     elif "positive" in name.lower():
-        #         self.variables[name] = pybamm.Broadcast(var, ["positive electrode"])
-        #     # else:
-        #     #     self.variables[name] = var
-        #
-        # # self.variables.update(
-        # #     {
-        # #         "Interfacial current density": pybamm.Scalar(1),
-        # #         "Interfacial current density [A m-2]": pybamm.Scalar(1),
-        # #         "Exchange-current density": pybamm.Scalar(1),
-        # #         "Exchange-current density [A m-2]": pybamm.Scalar(1),
-        # #     }
-        # # )
-        # # Electrolyte current
-        # eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        # elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
-        # self.variables.update(elyte_vars)
-        #
-        # # Electrode
-        # electrode_model = pybamm.electrode.Ohm(param)
-        # electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
-        # self.variables.update(electrode_vars)
+        for name, var in leading_order_variables.items():
+            if "negative" in name.lower():
+                self.variables[name] = pybamm.Broadcast(var, ["negative electrode"])
+            elif "positive" in name.lower():
+                self.variables[name] = pybamm.Broadcast(var, ["positive electrode"])
+            # else:
+            #     self.variables[name] = var
+
+        # self.variables.update(
+        #     {
+        #         "Interfacial current density": pybamm.Scalar(1),
+        #         "Interfacial current density [A m-2]": pybamm.Scalar(1),
+        #         "Exchange-current density": pybamm.Scalar(1),
+        #         "Exchange-current density [A m-2]": pybamm.Scalar(1),
+        #     }
+        # )
+        # Electrolyte current
+        eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
+        elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
+        self.variables.update(elyte_vars)
+
+        # Electrode
+        electrode_model = pybamm.electrode.Ohm(param)
+        electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
+        self.variables.update(electrode_vars)
 
         "-----------------------------------------------------------------------------"
         "Default Solver"

@@ -47,17 +47,21 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         param = self.set_of_parameters
         pot_scale = param.potential_scale
 
+        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+
         # Set dimensionless and dimensional variables
         return {
-            "Negative electrode potential difference": delta_phi_n,
-            "Positive electrode potential difference": delta_phi_p,
-            "Negative electrolyte current density": i_e_n,
-            "Positive electrolyte current density": i_e_p,
+            "Negative electrolyte potential": phi_e_n,
+            "Separator electrolyte potential": phi_e_p,
+            "Positive electrolyte potential": phi_e_p,
             "Electrolyte potential": phi_e,
             "Electrolyte current density": i_e,
             "Average concentration overpotential": eta_c_av,
             "Average electrolyte ohmic losses": delta_phi_e_av,
             "Average electrolyte overpotential": eta_e_av,
+            "Negative electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_n,
+            "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
+            "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
             "Electrolyte current density [A m-2]": param.i_typ * i_e,
             "Average concentration overpotential [V]": pot_scale * eta_c_av,
@@ -81,7 +85,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_system(self, phi_e, variables):
+    def set_algebraic_system(self, phi_e, c_e, reactions, epsilon=None):
         """
         PDE system for current in the electrolyte, derived from the Stefan-Maxwell
         equations.
@@ -90,9 +94,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         ----------
         phi_e : :class:`pybamm.Concatenation`
             The eletrolyte potential variable
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        c_e : :class:`pybamm.Concatenation`
+            The eletrolyte concentration variable
+        reactions : dict
+            Dictionary of reaction variables
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters
@@ -100,13 +107,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack variables
-        c_e = variables["Electrolyte concentration"]
-        j = variables["Interfacial current density"]
+        j_n = reactions["main"]["neg"]["aj"]
+        j_p = reactions["main"]["pos"]["aj"]
+        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
 
         # if porosity is not provided, use the input parameter
-        try:
-            epsilon = variables["Porosity"]
-        except KeyError:
+        if epsilon is None:
             epsilon = param.epsilon
 
         # functions
@@ -139,16 +145,17 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
 
-    def get_explicit_leading_order(self, variables):
+    def get_explicit_leading_order(self, ocp_n, eta_r_n):
         """
         Provides explicit leading order solution to the electrolyte current conservation
         equation where the constitutive equation is taken to be of Stefan-Maxwell form.
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        ocp_n : :class:`pybamm.Symbol`
+            Open-circuit potential in the negative electrode
+        eta_r_n : :class:`pybamm.Symbol`
+            Reaction overpotential in the negative electrode
 
         Returns
         -------
@@ -165,16 +172,8 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         # define current
         i_cell = param.current_with_time
 
-        # unpack variables
-        ocp_n = variables["Negative electrode open circuit potential"]
-        eta_r_n = variables["Negative reaction overpotential"]
-
-        # get left-most ocp and overpotential
-        ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
-        eta_r_n_left = pybamm.BoundaryValue(eta_r_n, "left")
-
         # electrolye potential
-        phi_e_const = -ocp_n_left - eta_r_n_left
+        phi_e_const = -ocp_n - eta_r_n
         phi_e_n = pybamm.Broadcast(phi_e_const, ["negative electrode"])
         phi_e_s = pybamm.Broadcast(phi_e_const, ["separator"])
         phi_e_p = pybamm.Broadcast(phi_e_const, ["positive electrode"])
@@ -195,7 +194,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
 
-    def get_explicit_combined(self, variables):
+    def get_explicit_combined(self, ocp_n, eta_r_n, c_e, epsilon=None, c_e_0=None):
         """
         Provides and explicit combined leading and first order solution to the
         electrolyte current conservation equation where the constitutive equation is
@@ -204,9 +203,16 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        ocp_n : :class:`pybamm.Symbol`
+            Open-circuit potential in the negative electrode
+        eta_r_n : :class:`pybamm.Symbol`
+            Reaction overpotential in the negative electrode
+        c_e : :class:`pybamm.Concatenation`
+            The eletrolyte concentration variable
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
+        c_e : :class:`pybamm.Concatenation`
+            Leading-order concentration
 
         Returns
         -------
@@ -222,26 +228,13 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
-        # Unpack variables
-        c_e = variables["Electrolyte concentration"]
-        ocp_n = variables["Negative electrode open circuit potential"]
-        eta_r_n = variables["Negative reaction overpotential"]
-
         # extract c_e components
         c_e_n, c_e_s, c_e_p = c_e.orphans
 
         # if porosity is not provided, use the input parameter
-        try:
-            epsilon = variables["Porosity (leading-order)"]
-        except KeyError:
+        if epsilon is None:
             epsilon = param.epsilon
-        try:
-            c_e_0 = (
-                variables["Electrolyte concentration (leading-order)"]
-                .orphans[0]
-                .orphans[0]
-            )
-        except KeyError:
+        if c_e_0 is None:
             c_e_0 = pybamm.Scalar(1)
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 
@@ -251,6 +244,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
 
         # get left-most ocp and overpotential
+        if ocp_n.domain == []:
+            ocp_n = pybamm.Broadcast(ocp_n, ["negative electrode"])
+        if eta_r_n.domain == []:
+            eta_r_n = pybamm.Broadcast(eta_r_n, ["negative electrode"])
+        if c_e_n.domain == []:
+            c_e_n = pybamm.Broadcast(c_e_n, ["negative electrode"])
         ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
         eta_r_n_left = pybamm.BoundaryValue(eta_r_n, "left")
         c_e_n_left = pybamm.BoundaryValue(c_e_n, "left")

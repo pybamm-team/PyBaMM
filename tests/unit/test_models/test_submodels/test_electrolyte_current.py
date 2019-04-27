@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
 import numbers
 import numpy as np
@@ -11,23 +12,24 @@ import numpy as np
 import unittest
 
 
+@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
 class TestMacInnesStefanMaxwell(unittest.TestCase):
     def test_basic_processing(self):
         # Parameters
         param = pybamm.standard_parameters_lithium_ion
 
-        # Variables
+        # Variables and reactions
         phi_e = pybamm.standard_variables.phi_e
         c_e = pybamm.standard_variables.c_e
-
-        # Interfacial current density
-        int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        variables = int_curr_model.get_homogeneous_interfacial_current()
-        variables.update({"Electrolyte concentration": c_e})
+        onen = pybamm.Broadcast(1, ["negative electrode"])
+        onep = pybamm.Broadcast(1, ["positive electrode"])
+        reactions = {
+            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+        }
 
         # Set up model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        model.set_algebraic_system(phi_e, variables)
+        model.set_algebraic_system(phi_e, c_e, reactions)
 
         # some small changes so that tests pass
         i_e = model.variables["Electrolyte current density"]
@@ -52,19 +54,13 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         c_e_p = pybamm.Broadcast(1, domain=["positive electrode"])
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-        ocp_n = pybamm.Broadcast(0, domain=["negative electrode"])
-        eta_r_n = pybamm.Broadcast(0, domain=["negative electrode"])
-
-        in_vars = {
-            "Electrolyte concentration": c_e,
-            "Negative electrode open circuit potential": ocp_n,
-            "Negative reaction overpotential": eta_r_n,
-        }
+        ocp_n = pybamm.Scalar(0)
+        eta_r_n = pybamm.Scalar(0)
 
         # Model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        leading_order_vars = model.get_explicit_leading_order(in_vars)
-        combined_vars = model.get_explicit_combined(in_vars)
+        leading_order_vars = model.get_explicit_leading_order(ocp_n, eta_r_n)
+        combined_vars = model.get_explicit_combined(ocp_n, eta_r_n, c_e)
 
         # Get disc
         modeltest = tests.StandardModelTest(model)

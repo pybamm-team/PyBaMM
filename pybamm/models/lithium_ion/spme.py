@@ -28,46 +28,67 @@ class SPMe(pybamm.LithiumIonBaseModel):
         "-----------------------------------------------------------------------------"
         "Submodels"
         # Interfacial current density
-        int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        j_vars = int_curr_model.get_homogeneous_interfacial_current()
-        self.variables.update(j_vars)
+        int_curr_model = pybamm.interface.LithiumIonReaction(param)
+        j_n = int_curr_model.get_homogeneous_interfacial_current(["negative electrode"])
+        j_p = int_curr_model.get_homogeneous_interfacial_current(["positive electrode"])
 
         # Particle models
-        j_n = j_vars["Negative electrode interfacial current density"].orphans[0]
         negative_particle_model = pybamm.particle.Standard(param)
         negative_particle_model.set_differential_system(c_s_n, j_n, broadcast=True)
-        j_p = j_vars["Positive electrode interfacial current density"].orphans[0]
         positive_particle_model = pybamm.particle.Standard(param)
         positive_particle_model.set_differential_system(c_s_p, j_p, broadcast=True)
-        self.update(negative_particle_model, positive_particle_model)
 
+        # Electrolyte concentration
+        broad_j_n = pybamm.Broadcast(j_n, ["negative electrode"])
+        broad_j_p = pybamm.Broadcast(j_p, ["positive electrode"])
+        reactions = {
+            "main": {
+                "neg": {"s_plus": 1, "aj": broad_j_n},
+                "pos": {"s_plus": 1, "aj": broad_j_p},
+            }
+        }
         # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        electrolyte_diffusion_model.set_differential_system(c_e, self.variables)
-        self.update(electrolyte_diffusion_model)
+        electrolyte_diffusion_model.set_differential_system(c_e, reactions)
+
+        self.update(
+            negative_particle_model,
+            positive_particle_model,
+            electrolyte_diffusion_model,
+        )
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
         # Exchange-current density
-        j0_vars = int_curr_model.get_exchange_current_densities(self.variables)
-        self.variables.update(j0_vars)
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        c_e_n, _, c_e_p = c_e.orphans
+        c_s_n_surf = pybamm.surf(c_s_n)
+        c_s_p_surf = pybamm.surf(c_s_p)
+        j0_n = int_curr_model.get_exchange_current_densities(c_e_n, c_s_n_surf, neg)
+        j0_p = int_curr_model.get_exchange_current_densities(c_e_p, c_s_p_surf, pos)
+        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
 
         # Potentials
+        ocp_n = param.U_n(c_s_n_surf)
+        ocp_p = param.U_p(c_s_p_surf)
+        eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
+        eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
         pot_model = pybamm.potential.Potential(param)
-        c_s_n_surf = self.variables["Negative particle surface concentration"]
-        c_s_p_surf = self.variables["Positive particle surface concentration"]
-        ocp_vars = pot_model.get_open_circuit_potentials(c_s_n_surf, c_s_p_surf)
-        eta_r_vars = pot_model.get_reaction_overpotentials(self.variables, "current")
+        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
+        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
         self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        elyte_vars = eleclyte_current_model.get_explicit_combined(self.variables)
+        elyte_vars = eleclyte_current_model.get_explicit_combined(ocp_n, eta_r_n, c_e)
         self.variables.update(elyte_vars)
 
         # Electrode
         electrode_model = pybamm.electrode.Ohm(param)
-        electrode_vars = electrode_model.get_explicit_combined(self.variables)
+        phi_e = self.variables["Electrolyte potential"]
+        electrode_vars = electrode_model.get_explicit_combined(ocp_p, eta_r_p, phi_e)
         self.variables.update(electrode_vars)
 
         "-----------------------------------------------------------------------------"

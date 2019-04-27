@@ -16,19 +16,27 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
 
         # Variables and parameters
         c_e = pybamm.standard_variables.c_e
-        variables = {"Interfacial current density": pybamm.Scalar(1)}
+        onen = pybamm.Broadcast(1, ["negative electrode"])
+        onep = pybamm.Broadcast(1, ["positive electrode"])
+        reactions = {
+            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+        }
         model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model.set_differential_system(c_e, variables)
+        model.set_differential_system(c_e, reactions)
 
     def test_basic_processing(self):
         # Parameter values
         param = pybamm.standard_parameters_lithium_ion
 
         # Variables and parameters
-        variables = {"Interfacial current density": pybamm.Scalar(1)}
         c_e = pybamm.standard_variables.c_e
+        onen = pybamm.Broadcast(1, ["negative electrode"])
+        onep = pybamm.Broadcast(1, ["positive electrode"])
+        reactions = {
+            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+        }
         model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model.set_differential_system(c_e, variables)
+        model.set_differential_system(c_e, reactions)
 
         modeltest = tests.StandardModelTest(model)
         # Either
@@ -47,10 +55,14 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
 
         # Variables and parameters
-        variables = {"Interfacial current density": pybamm.Scalar(1)}
         c_e = pybamm.standard_variables.c_e
+        onen = pybamm.Broadcast(1, ["negative electrode"])
+        onep = pybamm.Broadcast(1, ["positive electrode"])
+        reactions = {
+            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+        }
         model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model.set_differential_system(c_e, variables)
+        model.set_differential_system(c_e, reactions)
 
         # Dirichlet conditions
         model.boundary_conditions = {c_e: {"left": 0, "right": 0}}
@@ -59,14 +71,14 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
 
         # Dirichlet and Neumann conditions
         model2 = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model2.set_differential_system(c_e, variables)
+        model2.set_differential_system(c_e, reactions)
         N_e = model2.variables["Reduced cation flux"]
         model2.boundary_conditions = {c_e: {"left": 0}, N_e: {"right": 0}}
         modeltest2 = tests.StandardModelTest(model2)
         modeltest2.test_all()
 
         model3 = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model3.set_differential_system(c_e, variables)
+        model3.set_differential_system(c_e, reactions)
         N_e = model3.variables["Reduced cation flux"]
         model3.boundary_conditions = {N_e: {"left": 0}, c_e: {"right": 0}}
         modeltest3 = tests.StandardModelTest(model3)

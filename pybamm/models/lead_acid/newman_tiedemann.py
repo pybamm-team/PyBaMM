@@ -59,62 +59,55 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         phi_s_p = pybamm.standard_variables.phi_s_p
         phi_s_n = pybamm.standard_variables.phi_s_n
 
-        # Add variables to list of variables, as they are needed by submodels
-        self.variables.update(
-            {
-                "Electrolyte concentration": c_e,
-                "Porosity": eps,
-                "Electrolyte potential": phi_e,
-                "Negative electrode potential": phi_s_n,
-                "Positive electrode potential": phi_s_p,
-            }
-        )
-
         "-----------------------------------------------------------------------------"
         "Submodels"
         # Exchange-current density
-        int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        j0_vars = int_curr_model.get_exchange_current_densities(
-            self.variables, intercalation=False
-        )
-        self.variables.update(j0_vars)
+        c_e_n, _, c_e_p = c_e.orphans
+        int_curr_model = pybamm.interface.LeadAcidReaction(param)
+        j0_n = int_curr_model.get_exchange_current_densities(c_e_n)
+        j0_p = int_curr_model.get_exchange_current_densities(c_e_p)
 
         # Potentials
-        pot_model = pybamm.potential.Potential(param)
-        c_e_n = self.variables["Electrolyte concentration"].orphans[0]
-        c_e_p = self.variables["Electrolyte concentration"].orphans[2]
-        ocp_vars = pot_model.get_open_circuit_potentials(c_e_n, c_e_p)
-        self.variables.update(ocp_vars)
-        eta_r_vars = pot_model.get_reaction_overpotentials(self.variables, "potentials")
-        self.variables.update(eta_r_vars)
+        phi_e_n, _, phi_e_p = phi_e.orphans
+        ocp_n = param.U_n(c_e_n)
+        ocp_p = param.U_p(c_e_p)
+        eta_r_n = phi_s_n - phi_e_n - ocp_n
+        eta_r_p = phi_s_p - phi_e_p - ocp_p
 
         # Interfacial current density
-        j_vars = int_curr_model.get_interfacial_current_butler_volmer(self.variables)
-        self.variables.update(j_vars)
+        j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n)
+        j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p)
 
         # Porosity
-        j = j_vars["Interfacial current density"]
         porosity_model = pybamm.porosity.Standard(param)
-        porosity_model.set_differential_system(eps, j)
-        self.update(porosity_model)
+        porosity_model.set_differential_system(eps, j_n, j_p)
 
-        # Electrolyte diffusion
+        # Electrolyte concentration
+        reactions = {
+            "main": {
+                "neg": {"s_plus": param.s_n, "aj": j_n},
+                "pos": {"s_plus": param.s_p, "aj": j_p},
+                "porosity change": porosity_model.variables["Porosity change"],
+            }
+        }
+        # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        electrolyte_diffusion_model.set_differential_system(c_e, self.variables)
+        electrolyte_diffusion_model.set_differential_system(c_e, reactions, eps)
 
-        # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        eleclyte_current_model.set_algebraic_system(phi_e, self.variables)
+        eleclyte_current_model.set_algebraic_system(phi_e, c_e, reactions, eps)
 
-        # Electrode
+        # Electrode models
+        eps_n, _, eps_p = eps.orphans
         negative_electrode_current_model = pybamm.electrode.Ohm(param)
-        negative_electrode_current_model.set_algebraic_system(phi_s_n, self.variables)
+        negative_electrode_current_model.set_algebraic_system(phi_s_n, reactions, eps_n)
         positive_electrode_current_model = pybamm.electrode.Ohm(param)
-        positive_electrode_current_model.set_algebraic_system(phi_s_p, self.variables)
+        positive_electrode_current_model.set_algebraic_system(phi_s_p, reactions, eps_p)
 
         "-----------------------------------------------------------------------------"
         "Combine Submodels"
         self.update(
+            porosity_model,
             electrolyte_diffusion_model,
             eleclyte_current_model,
             negative_electrode_current_model,
@@ -123,7 +116,25 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Post-process"
-        volt_vars = positive_electrode_current_model.get_post_processed(self.variables)
+
+        # Excahnge-current density
+        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
+
+        # Potentials
+        pot_model = pybamm.potential.Potential(param)
+        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
+        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
+        self.variables.update({**ocp_vars, **eta_r_vars})
+
+        # Voltage
+        phi_s_n = self.variables["Negative electrode potential"]
+        phi_s_p = self.variables["Positive electrode potential"]
+        i_s_n = self.variables["Negative electrode current density"]
+        i_s_p = self.variables["Positive electrode current density"]
+        volt_vars = positive_electrode_current_model.get_variables(
+            phi_s_n, phi_s_p, i_s_n, i_s_p
+        )
         self.variables.update(volt_vars)
 
         "-----------------------------------------------------------------------------"

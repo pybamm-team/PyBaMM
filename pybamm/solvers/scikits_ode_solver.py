@@ -17,6 +17,10 @@ if scikits_odes_spec is not None:
         scikits_odes_spec.loader.exec_module(scikits_odes)
         from scikits.odes.sundials import cvode
 
+        jac_class = cvode.CV_JacRhsFunction
+else:
+    jac_class = object
+
 
 class ScikitsOdeSolver(pybamm.OdeSolver):
     """Solve a discretised model, using scikits.odes.
@@ -95,7 +99,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         return sol.values.t, np.transpose(sol.values.y)
 
 
-class JacobianFunctionCV(cvode.CV_JacRhsFunction):
+class JacobianFunctionCV(jac_class):
     def set_jacobian(self, jacobian):
         """
         Sets the user supplied Jacobian function for the ODE model.

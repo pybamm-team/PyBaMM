@@ -223,7 +223,18 @@ def simplify_multiplication_division(myclass, left, right):
         """
         for child in [left_child, right_child]:
 
-            if isinstance(child, pybamm.MatrixMultiplication):
+            if child == left_child:
+                other_child = right_child
+            else:
+                other_child = left_child
+
+            # flatten if all matrix multiplications
+            # flatten if one child is a matrix mult if the other term is a scalar or
+            # vector
+            if isinstance(child, pybamm.MatrixMultiplication) and (
+                in_matrix_multiplication
+                or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
+            ):
                 left, right = child.orphans
                 if child == left_child:
                     flatten(
@@ -233,6 +244,7 @@ def simplify_multiplication_division(myclass, left, right):
                     flatten(
                         this_class, child.__class__, left, right, in_numerator, True
                     )
+            # flatten if all multiplies and divides
             elif (
                 isinstance(child, (pybamm.Multiplication, pybamm.Division))
                 and not in_matrix_multiplication
@@ -251,6 +263,7 @@ def simplify_multiplication_division(myclass, left, right):
                     flatten(
                         this_class, child.__class__, left, right, in_numerator, False
                     )
+            # everything else don't flatten
             else:
                 if in_numerator:
                     numerator.append(child)
@@ -526,7 +539,14 @@ class BinaryOperator(pybamm.Symbol):
         elif rdomain == []:
             return ldomain
         else:
-            raise pybamm.DomainError("""children must have same (or empty) domains""")
+            raise pybamm.DomainError(
+                """
+                children must have same (or empty) domains, but left.domain is '{}'
+                and right.domain is '{}'
+                """.format(
+                    ldomain, rdomain
+                )
+            )
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
