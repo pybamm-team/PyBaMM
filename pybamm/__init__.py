@@ -80,11 +80,12 @@ from .expression_tree.unary_operators import (
     BoundaryValue,
     Integral,
     IndefiniteIntegral,
+    Diagonal,
     grad,
     div,
     surf,
-    Diagonal,
-    integrate,
+    average,
+    boundary_value,
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
