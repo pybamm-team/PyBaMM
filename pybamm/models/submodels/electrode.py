@@ -160,16 +160,9 @@ class Ohm(pybamm.SubModel):
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 
         # extract right-most ocp, overpotential, and electrolyte potential
-        if ocp_p.domain == []:
-            ocp_p = pybamm.Broadcast(ocp_p, ["positive electrode"])
-        if eta_r_p.domain == []:
-            eta_r_p = pybamm.Broadcast(eta_r_p, ["positive electrode"])
-        if phi_e.domain == []:
-            phi_e = pybamm.Broadcast(phi_e, ["positive electrode"])
-
-        ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
-        eta_r_p_right = pybamm.BoundaryValue(eta_r_p, "right")
-        phi_e_right = pybamm.BoundaryValue(phi_e, "right")
+        ocp_p_right = pybamm.boundary_value(ocp_p, "right")
+        eta_r_p_right = pybamm.boundary_value(eta_r_p, "right")
+        phi_e_right = pybamm.boundary_value(phi_e, "right")
 
         # electrode potential
         sigma_n_eff = param.sigma_n * (1 - eps_n)
@@ -217,9 +210,9 @@ class Ohm(pybamm.SubModel):
         param = self.set_of_parameters
 
         if delta_phi_s_av is None:
-            delta_phi_s_n = phi_s_n - pybamm.BoundaryValue(phi_s_n, "left")
+            delta_phi_s_n = phi_s_n - pybamm.boundary_value(phi_s_n, "left")
             delta_phi_s_n_av = pybamm.average(delta_phi_s_n)
-            delta_phi_s_p = phi_s_p - pybamm.BoundaryValue(phi_s_p, "right")
+            delta_phi_s_p = phi_s_p - pybamm.boundary_value(phi_s_p, "right")
             delta_phi_s_p_av = pybamm.average(delta_phi_s_p)
             delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
 
@@ -230,7 +223,7 @@ class Ohm(pybamm.SubModel):
         i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
         # Voltage variable
-        v = pybamm.BoundaryValue(phi_s_p, "right") - pybamm.BoundaryValue(
+        v = pybamm.boundary_value(phi_s_p, "right") - pybamm.boundary_value(
             phi_s_n, "left"
         )
 

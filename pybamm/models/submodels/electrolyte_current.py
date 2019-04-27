@@ -242,15 +242,9 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
 
         # get left-most ocp and overpotential
-        if ocp_n.domain == []:
-            ocp_n = pybamm.Broadcast(ocp_n, ["negative electrode"])
-        if eta_r_n.domain == []:
-            eta_r_n = pybamm.Broadcast(eta_r_n, ["negative electrode"])
-        if c_e_n.domain == []:
-            c_e_n = pybamm.Broadcast(c_e_n, ["negative electrode"])
-        ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
-        eta_r_n_left = pybamm.BoundaryValue(eta_r_n, "left")
-        c_e_n_left = pybamm.BoundaryValue(c_e_n, "left")
+        ocp_n_left = pybamm.boundary_value(ocp_n, "left")
+        eta_r_n_left = pybamm.boundary_value(eta_r_n, "left")
+        c_e_n_left = pybamm.boundary_value(c_e_n, "left")
 
         # electrolyte current (leading-order approximation)
         i_e_n = i_cell * x_n / l_n

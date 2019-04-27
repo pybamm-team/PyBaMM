@@ -43,8 +43,8 @@ class Potential(pybamm.SubModel):
         # Dimensionless
         ocp_n_av = pybamm.average(ocp_n)
         ocp_p_av = pybamm.average(ocp_p)
-        ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
-        ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
+        ocp_n_left = pybamm.boundary_value(ocp_n, "left")
+        ocp_p_right = pybamm.boundary_value(ocp_p, "right")
         ocv_av = ocp_p_av - ocp_n_av
         ocv = ocp_p_right - ocp_n_left
 
