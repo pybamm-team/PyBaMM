@@ -91,14 +91,8 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte: post-process
-        i_s_n = eleclyte_current_model_n.variables[
-            "Negative electrolyte current density"
-        ]
-        i_s_p = eleclyte_current_model_p.variables[
-            "Positive electrolyte current density"
-        ]
-        electrolyte_vars = eleclyte_current_model_p.get_post_processed_leading_order(
-            delta_phi_n, i_s_n, i_s_p
+        electrolyte_vars = eleclyte_current_model_p.get_explicit_leading_order(
+            ocp_n, eta_r_n
         )
         self.variables.update(electrolyte_vars)
 
