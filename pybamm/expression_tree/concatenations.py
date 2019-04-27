@@ -287,6 +287,7 @@ class SparseStack(Concatenation):
                             child_eval = csr_matrix((1, np.size(y)))
                         else:
                             child_eval = csr_matrix(child_eval)
+                    children_eval[idx] = child_eval
                 known_evals[self.id] = self._concatenation_evaluate(children_eval)
             return known_evals[self.id], known_evals
         else:
