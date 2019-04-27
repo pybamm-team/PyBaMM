@@ -6,6 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import autograd
+import copy
 import numpy as np
 import numbers
 from scipy.sparse import csr_matrix, diags
@@ -488,7 +489,8 @@ def div(expression):
 
 
 def surf(variable):
-    """convenience function for creating a :class:`SurfaceValue`
+    """convenience function for creating a right :class:`BoundaryValue`, usually in the
+    spherical geometry
 
     Parameters
     ----------
@@ -503,25 +505,66 @@ def surf(variable):
         the surface value of ``variable``
     """
 
-    return BoundaryValue(variable, "right")
+    return boundary_value(variable, "right")
 
 
-def integrate(expression, variable):
+def average(symbol):
+    """convenience function for creating an average
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # If symbol doesn't have a domain, its average value is itself
+    if symbol.domain == []:
+        new_symbol = copy.deepcopy(symbol)
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    # Otherwise, use Integral to calculate average value
+    else:
+        if symbol.domain == ["negative electrode"]:
+            x = pybamm.standard_spatial_vars.x_n
+            l = pybamm.geometric_parameters.l_n
+        elif symbol.domain == ["separator"]:
+            x = pybamm.standard_spatial_vars.x_s
+            l = pybamm.geometric_parameters.l_s
+        elif symbol.domain == ["positive electrode"]:
+            x = pybamm.standard_spatial_vars.x_p
+            l = pybamm.geometric_parameters.l_p
+
+        return Integral(symbol, x) / l
+
+
+def boundary_value(symbol, side):
     """convenience function for creating a :class:`Integral`
 
     Parameters
     ----------
-
-    expression : :class:`pybamm.Symbol`
-        The function to be integrated
-    integration_variable : :class:`pybamm.IndependentVariable`
-        The variable over which to integrate
+    symbol : `pybamm.Symbol`
+        The symbol whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
 
     Returns
     -------
-
-    :class:`Integral`
+    :class:`BoundaryValue`
         the new integrated expression tree
     """
-
-    return Integral(expression, variable)
+    # If symbol doesn't have a domain, its boundary value is itself
+    if symbol.domain == []:
+        return symbol
+    # If symbol is a Broadcast, its boundary value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.children[0]
+    # Otherwise, calculate boundary value
+    else:
+        return BoundaryValue(symbol, side)

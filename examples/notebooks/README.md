@@ -19,12 +19,12 @@ The easiest way to start with PyBaMM is by running and comparing some of the inb
 
 It is also easy to new models or change the setting that are used:
 - [Add a model](./add-model.ipynb)
-- [Change the settings](./change-settings.ipynb) (parameters, discretisation or solver)
+- [Change the settings](./change-settings.ipynb) (parameters, spatial method or solver)
 
-For more advanced usage, new sets of parameters, discretisations and solvers can be added:
-- [Add parameters](./add-parameters.ipynb)
-- [Add a discretisation](./add-discretisation.ipynb)
-- [Add a solver](./add-solver.ipynb)
+For more advanced usage, new sets of parameters, spatial methods and solvers can be added:
+- [Add parameters](https://pybamm.readthedocs.io/en/latest/tutorials/add-parameter-values.html)
+- [Add a spatial method](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html)
+- [Add a solver](https://pybamm.readthedocs.io/en/latest/tutorials/add-solver.html)
 
 ## Expression tree structure
 
@@ -33,7 +33,7 @@ notebook explains how this works, from model creation to solution.
 
 ### Models
 
-The following models are implemented and can easily be [used](./run-model.ipynb) or [compared](./compare-models.ipynb). We always welcome [new models](./add-model.ipynb)!
+The following models are implemented and can easily be used or [compared](./compare-models.ipynb). We always welcome [new models](./add-model.ipynb)!
 
 #### Lithium-ion models
 
@@ -48,16 +48,18 @@ The following models are implemented and can easily be [used](./run-model.ipynb)
 - [First-Order Quasi-Static](./models/lead-acid-FOQS.ipynb)
 - [Composite](./models/lead-acid-composite.ipynb)
 
-### Discretisations
+### Spatial Methods
 
-The following discretisation is implemented
-- [Finite Volumes](./discretisations/finite-volumes.ipynb)
+The following spatial method is implemented
+- [Finite Volumes](./spatial_methods/finite-volumes.ipynb)
 
-See [here](./add-discretisation.ipynb) for instructions on adding new discretisations.
+See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html) for instructions on adding new spatial methods.
 
 ### Solvers
 
-The following solver is implemented
-- [Inbuilt SciPy solver](./solvers/scipy-integrate.ipynb)
+The following solvers are implemented
+- Scipy ODE solver
+- [Scikits ODE solver](./solvers/scikits-ode-solver.ipynb)
+- [Scikits DAE solver](./solvers/scikits-dae-solver.ipynb)
 
-See [here](./add-solver.ipynb) for instructions on adding new solvers.
+See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-solver.html) for instructions on adding new solvers.

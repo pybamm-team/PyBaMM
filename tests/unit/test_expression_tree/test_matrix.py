@@ -157,11 +157,11 @@ class TestMatrix(unittest.TestCase):
         # we expect simplified solution to be much faster
         timer = pybamm.Timer()
         start = timer.time()
-        for _ in range(20):
+        for _ in range(100):
             expr3.evaluate(y=np.ones(300))
         end = timer.time()
         start_simp = timer.time()
-        for _ in range(20):
+        for _ in range(100):
             expr3simp.evaluate(y=np.ones(300))
         end_simp = timer.time()
         self.assertLess(end_simp - start_simp, 1.5 * (end - start))

@@ -56,11 +56,12 @@ class TestSymbol(unittest.TestCase):
 
         # Integral
         self.assertIsInstance(
-            (pybamm.integrate(a, pybamm.t)).simplify(), pybamm.Integral
+            (pybamm.Integral(a, pybamm.t)).simplify(), pybamm.Integral
         )
 
         # BoundaryValue
-        self.assertIsInstance((pybamm.surf(v)).simplify(), pybamm.BoundaryValue)
+        v_neg = pybamm.Variable("v", domain=["negative electrode"])
+        self.assertIsInstance((pybamm.surf(v_neg)).simplify(), pybamm.BoundaryValue)
 
         # addition
         self.assertIsInstance((a + b).simplify(), pybamm.Scalar)
