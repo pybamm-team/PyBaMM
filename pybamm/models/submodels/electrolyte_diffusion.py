@@ -30,10 +30,11 @@ class StefanMaxwell(pybamm.SubModel):
         Parameters
         ----------
         c_e : :class:`pybamm.Concatenation`
-            The eletrolyte concentration variable
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+            Eletrolyte concentration
+        reactions : dict
+            Dictionary of reaction variables
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
         """
         param = self.set_of_parameters
 
@@ -70,10 +71,11 @@ class StefanMaxwell(pybamm.SubModel):
         Parameters
         ----------
         c_e : :class:`pybamm.Variable`
-            The eletrolyte concentration variable
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+            Eletrolyte concentration
+        reactions : dict
+            Dictionary of reaction variables
+        epsilon : :class:`pybamm.Concatenation`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
         """
         param = self.set_of_parameters
 
@@ -123,10 +125,9 @@ class StefanMaxwell(pybamm.SubModel):
         Parameters
         ----------
         c_e : :class:`pybamm.Concatenation`
-            The electrolyte concentration variable
+            Electrolyte concentration
         N_e : :class:`pybamm.Symbol`
-            The flux of electrolyte cations
-
+            Flux of electrolyte cations
 
         Returns
         -------

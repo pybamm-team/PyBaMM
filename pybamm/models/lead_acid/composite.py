@@ -65,7 +65,8 @@ class Composite(pybamm.LeadAcidBaseModel):
 
         # Interfacial current density
         int_curr_model = pybamm.interface.LeadAcidReaction(param)
-        j_n, j_p = int_curr_model.get_homogeneous_interfacial_current()
+        j_n = int_curr_model.get_homogeneous_interfacial_current(["negative electrode"])
+        j_p = int_curr_model.get_homogeneous_interfacial_current(["positive electrode"])
         broad_j_n = pybamm.Broadcast(j_n, ["negative electrode"])
         broad_j_p = pybamm.Broadcast(j_p, ["positive electrode"])
 

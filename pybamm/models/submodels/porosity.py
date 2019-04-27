@@ -26,10 +26,12 @@ class Standard(pybamm.SubModel):
 
         Parameters
         ----------
-        epsilon : :class:`pybamm.Concatenation`
+        epsilon : :class:`pybamm.Symbol`
             The porosity variable
-        j : :class:`pybamm.Concatenation`
-            Interfacial current density
+        j_n : :class:`pybamm.Symbol`
+            Interfacial current density in the negative electrode
+        j_p : :class:`pybamm.Symbol`
+            Interfacial current density in the positive electrode
         """
         param = self.set_of_parameters
 
@@ -47,8 +49,10 @@ class Standard(pybamm.SubModel):
         ----------
         epsilon : :class:`pybamm.Concatenation`
             The porosity variable
-        j : :class:`pybamm.Concatenation`
-            Interfacial current density
+        j_n : :class:`pybamm.Symbol`
+            Interfacial current density in the negative electrode
+        j_p : :class:`pybamm.Symbol`
+            Interfacial current density in the positive electrode
         """
         param = self.set_of_parameters
 

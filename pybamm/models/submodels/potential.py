@@ -26,10 +26,10 @@ class Potential(pybamm.SubModel):
 
         Parameters
         ----------
-        c_n : :class:`pybamm.Symbol`
-            The concentration that controls the negative electrode OCP
-        c_p : :class:`pybamm.Symbol`
-            The concentration that controls the positive electrode OCP
+        ocp_n : :class:`pybamm.Symbol`
+            Dimensionless negative electrode open-circuit potential
+        ocp_p : :class:`pybamm.Symbol`
+            Dimensionless positive electrode open-circuit potential
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters
@@ -82,12 +82,10 @@ class Potential(pybamm.SubModel):
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
-        compute_from : str
-            Whether to use the current densities (invert Butler-Volmer) or potentials
-            (direct calculation) to compute reaction overpotentials
+        eta_r_n : :class:`pybamm.Symbol`
+            Dimensionless negative electrode reaction overpotential
+        eta_r_p : :class:`pybamm.Symbol`
+            Dimensionless positive electrode reaction overpotential
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters

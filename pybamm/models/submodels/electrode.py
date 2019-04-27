@@ -11,17 +11,10 @@ class Ohm(pybamm.SubModel):
 
     Parameters
     ----------
-    phi : :class:`pybamm.Symbol`
-        The electric potential in the electrodes ("electrode potential")
-    j : :class:`pybamm.Symbol`
-        An expression tree that represents the interfacial current density at the
-        electrode-electrolyte interface
-    param : parameter class
+    set_of_parameters : parameter class
         The parameters to use for this submodel
-    epsilon : :class:`pybamm.Symbol`
-        The (electrolyte/liquid phase) porosity (optional)
 
-    *Extends:* :class:`BaseModel`
+    *Extends:* :class:`pybamm.SubModel`
     """
 
     def __init__(self, set_of_parameters):
@@ -34,10 +27,12 @@ class Ohm(pybamm.SubModel):
         Parameters
         ----------
         phi_s : :class:`pybamm.Variable`
-            The eletrode potential variable
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+            Eletrode potential
+        reactions : dict
+            Dictionary of reaction variables
+        eps : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
+
         """
         param = self.set_of_parameters
         icell = param.current_with_time
@@ -196,15 +191,23 @@ class Ohm(pybamm.SubModel):
 
         return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
-    def get_post_processed(self, phi_s_n, phi_s_p, i_s_n, i_s_p):
+    def get_variables(self, phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av=None):
         """
         Calculate dimensionless and dimensional variables for the electrode submodel
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        phi_s_n : :class:`pybamm.Symbol`
+            The electrode potential in the negative electrode
+        phi_s_p : :class:`pybamm.Symbol`
+            The electrode potential in the positive electrode
+        i_s_n : :class:`pybamm.Symbol`
+            The electrode current density in the negative electrode
+        i_s_p : :class:`pybamm.Symbol`
+            The electrode current density in the positive electrode
+        delta_phi_s_av : :class:`pybamm,Symbol`, optional
+            Average solid phase Ohmic losses. Default is None, in which case
+            delta_phi_s_av is calculated from phi_s_n and phi_s_p
 
         Returns
         -------
@@ -212,34 +215,15 @@ class Ohm(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         param = self.set_of_parameters
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
 
-        delta_phi_s_n = phi_s_n - pybamm.BoundaryValue(phi_s_n, "left")
-        delta_phi_s_n_av = pybamm.Integral(delta_phi_s_n, x_n) / param.l_n
-        delta_phi_s_p = phi_s_p - pybamm.BoundaryValue(phi_s_p, "right")
-        delta_phi_s_p_av = pybamm.Integral(delta_phi_s_p, x_p) / param.l_p
-        delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
-
-        return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
-
-    def get_variables(self, phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av):
-        """
-        Calculate dimensionless and dimensional variables for the electrode submodel
-
-        Parameters
-        ----------
-        phi_s :class:`pybamm.Concatenation`
-            The electrode potentialin the negative electrode
-        i_s :class:`pybamm.Concatenation`
-            The electrode current density
-
-        Returns
-        -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
-        """
-        param = self.set_of_parameters
+        if delta_phi_s_av is None:
+            x_n = pybamm.standard_spatial_vars.x_n
+            x_p = pybamm.standard_spatial_vars.x_p
+            delta_phi_s_n = phi_s_n - pybamm.BoundaryValue(phi_s_n, "left")
+            delta_phi_s_n_av = pybamm.Integral(delta_phi_s_n, x_n) / param.l_n
+            delta_phi_s_p = phi_s_p - pybamm.BoundaryValue(phi_s_p, "right")
+            delta_phi_s_p_av = pybamm.Integral(delta_phi_s_p, x_p) / param.l_p
+            delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
 
         # Unpack
         phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?

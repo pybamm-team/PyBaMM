@@ -6,22 +6,33 @@ import autograd.numpy as np
 
 
 class InterfacialCurrent(pybamm.SubModel):
+    """
+    Base class for interfacial currents
+
+    Parameters
+    ----------
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
+
+    *Extends:* :class:`pybamm.SubModel`
+    """
+
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_homogeneous_interfacial_current(self, domain=None):
+    def get_homogeneous_interfacial_current(self, domain):
         """
         Homogeneous reaction at the electrode-electrolyte interface
 
         Parameters
         ----------
-        broadcast : bool
-            Whether to broadcast the result
+        domain : iter of str
+            The domain(s) in which to compute the interfacial current.
 
         Returns
         -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        :class:`pybamm.Symbol`
+            Homogeneous interfacial current density
         """
         icell = pybamm.electrical_parameters.current_with_time
 
@@ -31,8 +42,6 @@ class InterfacialCurrent(pybamm.SubModel):
             return j_n
         elif domain == ["positive electrode"]:
             return j_p
-        elif domain is None:
-            return j_n, j_p
 
     def get_butler_volmer(self, j0, eta_r, domain=None):
         """
@@ -40,6 +49,21 @@ class InterfacialCurrent(pybamm.SubModel):
 
         .. math::
             j = j_0(c) * \\sinh(\\eta_r(c))
+
+        Parameters
+        ----------
+        j0 : :class:`pybamm.Symbol`
+            Exchange-current density
+        eta_r : :class:`pybamm.Symbol`
+            Reaction overpotential
+        domain : iter of str, optional
+            The domain(s) in which to compute the interfacial current. Default is None,
+            in which case j0.domain is used.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            Interfacial current density
 
         """
         param = self.set_of_parameters
@@ -50,20 +74,24 @@ class InterfacialCurrent(pybamm.SubModel):
         elif domain == ["positive electrode"]:
             return j0 * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r)
 
-    def get_inverse_butler_volmer(self, j, j0, domain):
+    def get_inverse_butler_volmer(self, j, j0, domain=None):
         """
         Inverts the Butler-Volmer relation to solve for the reaction overpotential.
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
+        j : :class:`pybamm.Symbol`
+            Interfacial current density
+        j0 : :class:`pybamm.Symbol`
+            Exchange-current density
+        domain : iter of str, optional
+            The domain(s) in which to compute the interfacial current. Default is None,
+            in which case j.domain is used.
 
         Returns
         -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        :class:`pybamm.Symbol`
+            Reaction overpotential
 
         """
         param = self.set_of_parameters
@@ -78,6 +106,17 @@ class InterfacialCurrent(pybamm.SubModel):
         """
         Calculate dimensionless and dimensional variables for the interfacial current
         submodel
+
+        Parameters
+        ----------
+        j_n : :class:`pybamm.Symbol`
+            Interfacial current density in the negative electrode
+        j_p : :class:`pybamm.Symbol`
+            Interfacial current density in the positive electrode
+        j0_n : :class:`pybamm.Symbol`
+            Exchange-current density in the negative electrode
+        j0_p : :class:`pybamm.Symbol`
+            Exchange-current density in the positive electrode
 
         Returns
         -------
@@ -115,28 +154,37 @@ class InterfacialCurrent(pybamm.SubModel):
         }
 
 
-class LeadAcidReaction(InterfacialCurrent):
+class LeadAcidReaction(InterfacialCurrent, pybamm.LeadAcidBaseModel):
+    """
+    Interfacial current from lead-acid reactions
+
+    Parameters
+    ----------
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
+
+    *Extends:* :class:`InterfacialCurrent`, :class:`pybamm.LeadAcidBaseModel`
+    """
+
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
-        self.default_parameter_values = (
-            pybamm.LeadAcidBaseModel().default_parameter_values
-        )
 
     def get_exchange_current_densities(self, c_e, domain=None):
         """The exchange current-density as a function of concentration
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
-        intercalation : bool
-            Whether intercalation occurs in the model.
+        c_e : :class:`pybamm.Symbol`
+            Electrolyte concentration
+        domain : iter of str, optional
+            The domain(s) in which to compute the interfacial current. Default is None,
+            in which case c_e.domain is used.
 
         Returns
         -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        :class:`pybamm.Symbol`
+            Exchange-current density
+
         """
         param = self.set_of_parameters
         domain = domain or c_e.domain
@@ -149,6 +197,17 @@ class LeadAcidReaction(InterfacialCurrent):
 
 
 class LithiumIonReaction(InterfacialCurrent):
+    """
+    Interfacial current from lithium-ion reactions
+
+    Parameters
+    ----------
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
+
+    *Extends:* :class:`InterfacialCurrent`
+    """
+
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
@@ -157,16 +216,18 @@ class LithiumIonReaction(InterfacialCurrent):
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
-        intercalation : bool
-            Whether intercalation occurs in the model.
+        c_e : :class:`pybamm.Symbol`
+            Electrolyte concentration
+        c_s_k_surf : :class:`pybamm.Symbol`
+            Electrode surface concentration
+        domain : iter of str, optional
+            The domain(s) in which to compute the interfacial current. Default is None,
+            in which case c_e.domain is used.
 
         Returns
         -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        :class:`pybamm.Symbol`
+            Exchange-current density
         """
         param = self.set_of_parameters
         domain = domain or c_e.domain

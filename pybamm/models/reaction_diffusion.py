@@ -30,7 +30,8 @@ class ReactionDiffusionModel(pybamm.LeadAcidBaseModel):
 
         # Interfacial current density
         int_curr_model = pybamm.interface.LeadAcidReaction(param)
-        j_n, j_p = int_curr_model.get_homogeneous_interfacial_current()
+        j_n = int_curr_model.get_homogeneous_interfacial_current(["negative electrode"])
+        j_p = int_curr_model.get_homogeneous_interfacial_current(["positive electrode"])
 
         # Porosity
         epsilon = pybamm.Scalar(1)

@@ -14,7 +14,8 @@ class TestHomogeneousReaction(unittest.TestCase):
     def test_set_parameters(self):
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.interface.InterfacialCurrent(param)
-        j_n, j_p = model.get_homogeneous_interfacial_current()
+        j_n = model.get_homogeneous_interfacial_current(["negative electrode"])
+        j_p = model.get_homogeneous_interfacial_current(["positive electrode"])
         parameter_values = model.default_parameter_values
 
         j_n = parameter_values.process_symbol(j_n)
@@ -34,7 +35,8 @@ class TestHomogeneousReaction(unittest.TestCase):
 
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.interface.InterfacialCurrent(param)
-        j_n, j_p = model.get_homogeneous_interfacial_current()
+        j_n = model.get_homogeneous_interfacial_current(["negative electrode"])
+        j_p = model.get_homogeneous_interfacial_current(["positive electrode"])
         parameter_values = model.default_parameter_values
 
         j_n = disc.process_symbol(parameter_values.process_symbol(j_n))
@@ -52,7 +54,8 @@ class TestHomogeneousReaction(unittest.TestCase):
 
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.interface.InterfacialCurrent(param)
-        j_n, j_p = model.get_homogeneous_interfacial_current()
+        j_n = model.get_homogeneous_interfacial_current(["negative electrode"])
+        j_p = model.get_homogeneous_interfacial_current(["positive electrode"])
         parameter_values = model.default_parameter_values
         j = pybamm.Concatenation(
             pybamm.Broadcast(j_n, ["negative electrode"]),
