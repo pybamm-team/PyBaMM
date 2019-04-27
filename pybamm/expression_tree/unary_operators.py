@@ -383,7 +383,7 @@ class Integral(SpatialOperator):
         return self.__class__(child, self.integration_variable)
 
 
-class IndefiniteIntegral(SpatialOperator):
+class IndefiniteIntegral(Integral):
     """A node in the expression tree representing an indefinite integral operator
 
     .. math::
@@ -399,39 +399,19 @@ class IndefiniteIntegral(SpatialOperator):
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
 
-    **Extends:** :class:`SpatialOperator`
+    **Extends:** :class:`Integral`
     """
 
     def __init__(self, child, integration_variable):
+        super().__init__(child, integration_variable)
+        # Overwrite the name
+        self.name = "{} integrated w.r.t {}".format(
+            child.name, integration_variable.name
+        )
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            # Check that child and integration_variable domains agree
-            if child.domain != integration_variable.domain:
-                raise pybamm.DomainError(
-                    """child and integration_variable must have the same domain"""
-                )
-        elif not isinstance(integration_variable, pybamm.IndependentVariable):
-            raise ValueError(
-                """integration_variable must be of type pybamm.IndependentVariable,
-                   not {}""".format(
-                    type(integration_variable)
-                )
-            )
-        name = "{} integrated w.r.t {}".format(child.name, integration_variable.name)
-        if isinstance(integration_variable, pybamm.SpatialVariable):
-            name += " on {}".format(integration_variable.domain)
-        super().__init__(name, child)
-        self._integration_variable = integration_variable
+            self.name += " on {}".format(integration_variable.domain)
         # the integrated variable has the same domain as the child
         self.domain = child.domain
-
-    @property
-    def integration_variable(self):
-        return self._integration_variable
-
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-
-        return self.__class__(child, self.integration_variable)
 
 
 class BoundaryValue(SpatialOperator):
