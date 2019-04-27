@@ -18,7 +18,6 @@ class ReactionDiffusionModel(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
-        self.variables = {}
 
         "-----------------------------------------------------------------------------"
         "Model Variables"

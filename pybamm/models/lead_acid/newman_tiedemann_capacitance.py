@@ -59,7 +59,6 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         delta_phi_p = pybamm.standard_variables.delta_phi_p
 
         # Add variables to list of variables, as they are needed by submodels
-        self.variables = {}
         self.variables.update(
             {
                 "Electrolyte concentration": c_e,
