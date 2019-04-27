@@ -126,8 +126,8 @@ class TestSPM(unittest.TestCase):
             model.variables["Terminal voltage"], t_sol, y_sol
         )
         # variables should remain unchanged
-        np.testing.assert_almost_equal(c_s_n_surf.entries - c_s_n_surf.entries[:, 0], 0)
-        np.testing.assert_almost_equal(c_s_p_surf.entries - c_s_p_surf.entries[:, 0], 0)
+        np.testing.assert_almost_equal(c_s_n_surf.entries - c_s_n_surf.entries[0], 0)
+        np.testing.assert_almost_equal(c_s_p_surf.entries - c_s_p_surf.entries[0], 0)
         np.testing.assert_almost_equal(voltage.entries - voltage.entries[0], 0)
 
 

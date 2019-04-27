@@ -65,6 +65,8 @@ class Standard(pybamm.SubModel):
         else:
             raise pybamm.ModelError("Domain not valid for the particle equations")
 
+        self.events = [pybamm.Function(np.min, c), pybamm.Function(np.max, c) - 1]
+
     def get_variables(self, c, N, broadcast):
         """
         Calculate dimensionless and dimensional variables for the electrolyte submodel

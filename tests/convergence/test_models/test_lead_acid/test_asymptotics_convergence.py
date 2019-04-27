@@ -81,10 +81,13 @@ class TestAsymptoticConvergence(unittest.TestCase):
             norm = np.linalg.norm
             loqs_error = norm(voltage_loqs(t) - voltage_full(t)) / norm(voltage_full(t))
             comp_error = norm(voltage_comp(t) - voltage_full(t)) / norm(voltage_full(t))
+            import ipdb
+
+            ipdb.set_trace()
             return (loqs_error, comp_error)
 
         # Get errors
-        currents = 0.5 / (2 ** np.arange(3))
+        currents = 0.0005 / (2 ** np.arange(3))
         errs = np.array([get_l2_error(current) for current in currents])
         loqs_errs, comp_errs = [np.array(err) for err in zip(*errs)]
 
