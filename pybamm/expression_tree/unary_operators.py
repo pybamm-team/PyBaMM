@@ -243,13 +243,12 @@ class Diagonal(UnaryOperator):
         # We shouldn't need this
         raise NotImplementedError
 
-    def evaluate(self, t=None, y=None):
+    def _unary_evaluate(self, child):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        evaluated_child = self.children[0].evaluate(t, y)
-        if np.size(evaluated_child) == 1:
-            return csr_matrix(evaluated_child)
+        if np.size(child) == 1:
+            return csr_matrix(child)
         else:
-            return diags(evaluated_child, 0)
+            return diags(child, 0)
 
     def evaluates_to_number(self):
         """ See :meth:`pybamm.Symbol.evaluates_to_number()`. """

@@ -73,7 +73,7 @@ class DaeSolver(pybamm.BaseSolver):
         jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
 
         def jacobian(t, y):
-            return jac.evaluate(t, y)
+            return jac.evaluate(t, y, known_evals={})[0]
 
         self.t, self.y = self.integrate(
             residuals,

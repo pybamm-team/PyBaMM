@@ -248,50 +248,59 @@ class DomainConcatenation(Concatenation):
         return pybamm.simplify_if_constant(new_node)
 
 
-class SparseStack(pybamm.Symbol):
+class SparseStack(Concatenation):
     """A node in the expression tree representing a concatenation of sparse
     matrices. As with NumpyConcatenation, we *don't* care about domains.
     The class :class:`pybamm.DomainConcatenation`, which *is* careful about
     domains and uses broadcasting where appropriate, should be used whenever
     possible instead.
 
-    **Extends**: :class:`pybamm.Symbol`
+    **Extends**: :class:`Concatenation`
 
     Parameters
     ----------
-    children : iterable of :class:`pybamm.Symbol`
+    children : iterable of :class:`Concatenation`
         The equations to concatenate
 
     """
 
     def __init__(self, *children):
-        super().__init__("model concatenation", children, domain=[])
+        children = list(children)
+        super().__init__(*children, name="sparse stack", check_domain=False)
 
-    def evaluate(self, t=None, y=None):
+    def evaluate(self, t=None, y=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        if len(self.children) == 0:
-            return np.array([])
-        else:
-            return vstack([self.evaluate_child(child, t, y) for child in self.children])
-
-    def evaluate_child(self, child, t, y):
-        """ Evaluates the child and, if the results is dense, converts the
-        result as a sparse matrix.
-        """
         # NOTE: I think this probably a very hacky way of doing this, but need
         # some way of concatenating sparse matrices with dense matrices that
         # come from evaluate. The other way would be to make all the matrices
         # dense and then do a NumpyConcatenation, but I fear this will be bad
         # when the Jacobian is very large
-        evaluated_child = child.evaluate(t, y)
-        if issparse(evaluated_child) is False:
-            if np.size(evaluated_child) == 1 and evaluated_child == 0:
-                # If rhs or algebraic was a constant, then the result is scalar
-                # zero and should be replaced with a row of zeros
-                evaluated_child = csr_matrix((1, np.size(y)))
-            else:
-                evaluated_child = csr_matrix(evaluated_child)
-        return evaluated_child
+        if known_evals is not None:
+            if self.id not in known_evals:
+                children_eval = [None] * len(self.children)
+                for idx, child in enumerate(self.children):
+                    child_eval, known_evals = child.evaluate(t, y, known_evals)
+                    if issparse(child_eval) is False:
+                        if np.size(child_eval) == 1 and child_eval == 0:
+                            # If rhs or algebraic was a constant, then the result is
+                            # scalar zero and should be replaced with a row of zeros
+                            child_eval = csr_matrix((1, np.size(y)))
+                        else:
+                            child_eval = csr_matrix(child_eval)
+                known_evals[self.id] = self._concatenation_evaluate(children_eval)
+            return known_evals[self.id], known_evals
+        else:
+            children_eval = [None] * len(self.children)
+            for idx, child in enumerate(self.children):
+                children_eval[idx] = child.evaluate(t, y)
+            return self._concatenation_evaluate(children_eval)
+
+    def _concatenation_evaluate(self, children_eval):
+        """ See :meth:`Concatenation.evaluate()`. """
+        if len(children_eval) == 0:
+            return np.array([])
+        else:
+            return vstack(children_eval)
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
