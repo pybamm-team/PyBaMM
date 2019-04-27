@@ -33,8 +33,6 @@ class Potential(pybamm.SubModel):
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
 
         # Broadcast if necessary
         if ocp_n.domain == []:
@@ -43,8 +41,8 @@ class Potential(pybamm.SubModel):
             ocp_p = pybamm.Broadcast(ocp_p, ["positive electrode"])
 
         # Dimensionless
-        ocp_n_av = pybamm.Integral(ocp_n, x_n) / param.l_n
-        ocp_p_av = pybamm.Integral(ocp_p, x_p) / param.l_p
+        ocp_n_av = pybamm.average(ocp_n)
+        ocp_p_av = pybamm.average(ocp_p)
         ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
         ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
         ocv_av = ocp_p_av - ocp_n_av
@@ -89,8 +87,6 @@ class Potential(pybamm.SubModel):
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
 
         # Broadcast if necessary
         if eta_r_n.domain == []:
@@ -99,8 +95,8 @@ class Potential(pybamm.SubModel):
             eta_r_p = pybamm.Broadcast(eta_r_p, ["positive electrode"])
 
         # Derived and dimensional reaction overpotentials
-        eta_r_n_av = pybamm.Integral(eta_r_n, x_n) / param.l_n
-        eta_r_p_av = pybamm.Integral(eta_r_p, x_p) / param.l_p
+        eta_r_n_av = pybamm.average(eta_r_n)
+        eta_r_p_av = pybamm.average(eta_r_p)
         eta_r_av = eta_r_p_av - eta_r_n_av
 
         eta_r_n_dim = param.potential_scale * eta_r_n

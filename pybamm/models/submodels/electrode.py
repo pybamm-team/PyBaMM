@@ -217,12 +217,10 @@ class Ohm(pybamm.SubModel):
         param = self.set_of_parameters
 
         if delta_phi_s_av is None:
-            x_n = pybamm.standard_spatial_vars.x_n
-            x_p = pybamm.standard_spatial_vars.x_p
             delta_phi_s_n = phi_s_n - pybamm.BoundaryValue(phi_s_n, "left")
-            delta_phi_s_n_av = pybamm.Integral(delta_phi_s_n, x_n) / param.l_n
+            delta_phi_s_n_av = pybamm.average(delta_phi_s_n)
             delta_phi_s_p = phi_s_p - pybamm.BoundaryValue(phi_s_p, "right")
-            delta_phi_s_p_av = pybamm.Integral(delta_phi_s_p, x_p) / param.l_p
+            delta_phi_s_p_av = pybamm.average(delta_phi_s_p)
             delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
 
         # Unpack

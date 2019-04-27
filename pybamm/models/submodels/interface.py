@@ -36,12 +36,10 @@ class InterfacialCurrent(pybamm.SubModel):
         """
         icell = pybamm.electrical_parameters.current_with_time
 
-        j_n = icell / pybamm.geometric_parameters.l_n
-        j_p = -icell / pybamm.geometric_parameters.l_p
         if domain == ["negative electrode"]:
-            return j_n
+            return icell / pybamm.geometric_parameters.l_n
         elif domain == ["positive electrode"]:
-            return j_p
+            return -icell / pybamm.geometric_parameters.l_p
 
     def get_butler_volmer(self, j0, eta_r, domain=None):
         """
