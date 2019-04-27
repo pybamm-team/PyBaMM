@@ -76,7 +76,7 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         # Electrode
         electrode_model = pybamm.electrode.Ohm(param)
-        phi_e = self.variables["Electrolyte concentration"]
+        phi_e = self.variables["Electrolyte potential"]
         electrode_vars = electrode_model.get_explicit_leading_order(
             ocp_p, eta_r_p, phi_e
         )

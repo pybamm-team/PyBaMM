@@ -70,9 +70,9 @@ class InterfacialCurrent(pybamm.SubModel):
 
         domain = domain or j0.domain
         if domain == ["negative electrode"]:
-            return j0 * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_r)
+            return 2 * j0 * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_r)
         elif domain == ["positive electrode"]:
-            return j0 * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r)
+            return 2 * j0 * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r)
 
     def get_inverse_butler_volmer(self, j, j0, domain=None):
         """
@@ -98,9 +98,9 @@ class InterfacialCurrent(pybamm.SubModel):
 
         domain = domain or j.domain
         if domain == ["negative electrode"]:
-            return (2 / param.ne_n) * pybamm.Function(np.arcsinh, j / j0)
+            return (2 / param.ne_n) * pybamm.Function(np.arcsinh, j / (2 * j0))
         elif domain == ["positive electrode"]:
-            return (2 / param.ne_p) * pybamm.Function(np.arcsinh, j / j0)
+            return (2 / param.ne_p) * pybamm.Function(np.arcsinh, j / (2 * j0))
 
     def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p):
         """
