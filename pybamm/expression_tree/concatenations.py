@@ -270,31 +270,36 @@ class SparseStack(Concatenation):
 
     def evaluate(self, t=None, y=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
-        # NOTE: I think this probably a very hacky way of doing this, but need
-        # some way of concatenating sparse matrices with dense matrices that
-        # come from evaluate. The other way would be to make all the matrices
-        # dense and then do a NumpyConcatenation, but I fear this will be bad
-        # when the Jacobian is very large
         if known_evals is not None:
             if self.id not in known_evals:
                 children_eval = [None] * len(self.children)
                 for idx, child in enumerate(self.children):
                     child_eval, known_evals = child.evaluate(t, y, known_evals)
-                    if issparse(child_eval) is False:
-                        if np.size(child_eval) == 1 and child_eval == 0:
-                            # If rhs or algebraic was a constant, then the result is
-                            # scalar zero and should be replaced with a row of zeros
-                            child_eval = csr_matrix((1, np.size(y)))
-                        else:
-                            child_eval = csr_matrix(child_eval)
-                    children_eval[idx] = child_eval
+                    children_eval[idx] = self.sparsify(child_eval)
                 known_evals[self.id] = self._concatenation_evaluate(children_eval)
             return known_evals[self.id], known_evals
         else:
             children_eval = [None] * len(self.children)
             for idx, child in enumerate(self.children):
-                children_eval[idx] = child.evaluate(t, y)
+                child_eval = child.evaluate(t, y)
+                children_eval[idx] = self.sparsify(child_eval)
             return self._concatenation_evaluate(children_eval)
+
+    def sparsify(self, child_eval):
+        """Turn child into sparse matrix; this function should eventually be removed"""
+        # NOTE: I think this probably a very hacky way of doing this, but need
+        # some way of concatenating sparse matrices with dense matrices that
+        # come from evaluate. The other way would be to make all the matrices
+        # dense and then do a NumpyConcatenation, but I fear this will be bad
+        # when the Jacobian is very large
+        if issparse(child_eval) is False:
+            if np.size(child_eval) == 1 and child_eval == 0:
+                # If rhs or algebraic was a constant, then the result is
+                # scalar zero and should be replaced with a row of zeros
+                child_eval = csr_matrix((1, np.size(y)))
+            else:
+                child_eval = csr_matrix(child_eval)
+        return child_eval
 
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation.evaluate()`. """

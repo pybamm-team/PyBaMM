@@ -57,7 +57,7 @@ class Array(pybamm.Symbol):
         # Slightly different syntax for sparse and non-sparse matrices
         entries = self._entries
         if issparse(entries):
-            entries_str = entries.data.tostring()
+            entries_str = entries.toarray().tostring()
         else:
             entries_str = entries.tostring()
 
