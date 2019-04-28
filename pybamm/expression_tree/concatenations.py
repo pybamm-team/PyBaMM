@@ -275,17 +275,17 @@ class SparseStack(Concatenation):
                 children_eval = [None] * len(self.children)
                 for idx, child in enumerate(self.children):
                     child_eval, known_evals = child.evaluate(t, y, known_evals)
-                    children_eval[idx] = self.sparsify(child_eval)
+                    children_eval[idx] = self.sparsify(child_eval, y)
                 known_evals[self.id] = self._concatenation_evaluate(children_eval)
             return known_evals[self.id], known_evals
         else:
             children_eval = [None] * len(self.children)
             for idx, child in enumerate(self.children):
                 child_eval = child.evaluate(t, y)
-                children_eval[idx] = self.sparsify(child_eval)
+                children_eval[idx] = self.sparsify(child_eval, y)
             return self._concatenation_evaluate(children_eval)
 
-    def sparsify(self, child_eval):
+    def sparsify(self, child_eval, y):
         """Turn child into sparse matrix; this function should eventually be removed"""
         # NOTE: I think this probably a very hacky way of doing this, but need
         # some way of concatenating sparse matrices with dense matrices that
