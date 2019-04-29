@@ -231,11 +231,9 @@ def simplify_multiplication_division(myclass, left, right):
             # flatten if all matrix multiplications
             # flatten if one child is a matrix mult if the other term is a scalar or
             # vector
-            if (
-                isinstance(child, pybamm.MatrixMultiplication) and (
-                    in_matrix_multiplication
-                    or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
-                )
+            if isinstance(child, pybamm.MatrixMultiplication) and (
+                in_matrix_multiplication
+                or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
                 left, right = child.orphans
                 if child == left_child:
@@ -607,19 +605,15 @@ class Power(BinaryOperator):
             if base.evaluates_to_number() and exponent.evaluates_to_number():
                 return pybamm.Scalar(0)
             elif exponent.evaluates_to_number():
-                return pybamm.Diagonal(exponent * base ** (exponent - 1)) @ base.jac(
-                    variable
-                )
+                return (exponent * base ** (exponent - 1)) * base.jac(variable)
             elif base.evaluates_to_number():
-                return pybamm.Diagonal(
+                return (
                     base ** exponent * pybamm.Function(np.log, base)
-                ) @ exponent.jac(variable)
+                ) * exponent.jac(variable)
             else:
-                return pybamm.Diagonal(base ** (exponent - 1)) @ (
-                    exponent @ base.jac(variable)
-                    + pybamm.Diagonal(base)
-                    @ pybamm.Diagonal(pybamm.Function(np.log, base))
-                    @ exponent.jac(variable)
+                return (base ** (exponent - 1)) * (
+                    exponent * base.jac(variable)
+                    + base * pybamm.Function(np.log, base) * exponent.jac(variable)
                 )
 
     def _binary_evaluate(self, left, right):
@@ -752,9 +746,7 @@ class Multiplication(BinaryOperator):
         elif right.evaluates_to_number():
             return right * left.jac(variable)
         else:
-            return pybamm.Diagonal(right) @ left.jac(variable) + pybamm.Diagonal(
-                left
-            ) @ right.jac(variable)
+            return right * left.jac(variable) + left * right.jac(variable)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
