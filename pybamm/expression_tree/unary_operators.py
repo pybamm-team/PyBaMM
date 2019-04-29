@@ -8,8 +8,7 @@ import pybamm
 import autograd
 import copy
 import numpy as np
-import numbers
-from scipy.sparse import csr_matrix, diags
+from scipy.sparse import csr_matrix
 from inspect import signature
 
 
@@ -219,48 +218,6 @@ class Index(UnaryOperator):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
         return self.__class__(child, self.index)
-
-
-class Diagonal(UnaryOperator):
-    """A node in the expression tree representing an operator which creates a
-    diagonal matrix from a vector. If the child is already a matrix, it
-    simply returns the child.
-
-    **Extends:** :class:`UnaryOperator`
-    """
-
-    def __init__(self, child):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__("diag", child)
-
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        # We shouldn't need this
-        raise NotImplementedError
-
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
-        # We shouldn't need this
-        raise NotImplementedError
-
-    def _unary_evaluate(self, child):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        if np.size(child) == 1:
-            return csr_matrix(child)
-        else:
-            return diags(child, 0)
-
-    def evaluates_to_number(self):
-        """ See :meth:`pybamm.Symbol.evaluates_to_number()`. """
-        result = self.evaluate_ignoring_errors()
-        if isinstance(result, numbers.Number):
-            return True
-        elif isinstance(result, csr_matrix) and isinstance(
-            result.toarray()[0][0], numbers.Number
-        ):
-            return True
-        else:
-            return False
 
 
 class SpatialOperator(UnaryOperator):
