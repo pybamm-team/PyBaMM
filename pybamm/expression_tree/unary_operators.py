@@ -173,7 +173,7 @@ class Function(UnaryOperator):
             jac = csr_matrix((1, np.size(variable_y_indices)))
             return pybamm.Matrix(jac)
         else:
-            jac_fun = Function(autograd.jacobian(self.func), child) @ child.jac(
+            jac_fun = Function(autograd.elementwise_grad(self.func), child) * child.jac(
                 variable
             )
             jac_fun.domain = self.domain
