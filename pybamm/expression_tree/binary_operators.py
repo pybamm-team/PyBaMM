@@ -231,11 +231,9 @@ def simplify_multiplication_division(myclass, left, right):
             # flatten if all matrix multiplications
             # flatten if one child is a matrix mult if the other term is a scalar or
             # vector
-            if (
-                isinstance(child, pybamm.MatrixMultiplication) and (
-                    in_matrix_multiplication
-                    or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
-                )
+            if isinstance(child, pybamm.MatrixMultiplication) and (
+                in_matrix_multiplication
+                or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
                 left, right = child.orphans
                 if child == left_child:
@@ -528,10 +526,12 @@ class BinaryOperator(pybamm.Symbol):
             right = pybamm.Scalar(right)
         domain = self.get_children_domains(left.domain, right.domain)
         super().__init__(name, children=[left, right], domain=domain)
+        self.left = self.children[0]
+        self.right = self.children[1]
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
+        return "{!s} {} {!s}".format(self.left, self.name, self.right)
 
     def get_children_domains(self, ldomain, rdomain):
         if ldomain == rdomain:
@@ -545,8 +545,8 @@ class BinaryOperator(pybamm.Symbol):
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
-        left = self.children[0].simplify()
-        right = self.children[1].simplify()
+        left = self.left.simplify()
+        right = self.right.simplify()
 
         # _binary_simplify defined in derived classes for specific rules
         new_node = self._binary_simplify(left, right)
@@ -564,14 +564,14 @@ class BinaryOperator(pybamm.Symbol):
             try:
                 return known_evals[id], known_evals
             except KeyError:
-                left, known_evals = self.children[0].evaluate(t, y, known_evals)
-                right, known_evals = self.children[1].evaluate(t, y, known_evals)
+                left, known_evals = self.left.evaluate(t, y, known_evals)
+                right, known_evals = self.right.evaluate(t, y, known_evals)
                 value = self._binary_evaluate(left, right)
                 known_evals[id] = value
                 return value, known_evals
         else:
-            left = self.children[0].evaluate(t, y)
-            right = self.children[1].evaluate(t, y)
+            left = self.left.evaluate(t, y)
+            right = self.right.evaluate(t, y)
             return self._binary_evaluate(left, right)
 
 
@@ -655,14 +655,14 @@ class Addition(BinaryOperator):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            return self.children[0].diff(variable) + self.children[1].diff(variable)
+            return self.left.diff(variable) + self.right.diff(variable)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            return self.children[0].jac(variable) + self.children[1].jac(variable)
+            return self.left.jac(variable) + self.right.jac(variable)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
@@ -696,11 +696,11 @@ class Subtraction(BinaryOperator):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            return self.children[0].diff(variable) - self.children[1].diff(variable)
+            return self.left.diff(variable) - self.right.diff(variable)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        return self.children[0].jac(variable) - self.children[1].jac(variable)
+        return self.left.jac(variable) - self.right.jac(variable)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
