@@ -4,7 +4,6 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
-import numpy as np
 
 
 class DFN(pybamm.LithiumIonBaseModel):
@@ -258,5 +257,3 @@ class DFN(pybamm.LithiumIonBaseModel):
         self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
         # Default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
-        # Cut-off if either concentration goes negative
-        self.events = [pybamm.Function(np.min, c_s_n), pybamm.Function(np.min, c_s_p)]

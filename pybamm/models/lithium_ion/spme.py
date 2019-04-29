@@ -5,8 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import numpy as np
-
 
 class SPMe(pybamm.LithiumIonBaseModel):
     """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery.
@@ -261,6 +259,3 @@ class SPMe(pybamm.LithiumIonBaseModel):
         "Defaults and Solver Conditions"
         # default geometry
         self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
-
-        # Cut-off if either concentration goes negative
-        self.events = [pybamm.Function(np.min, c_s_n), pybamm.Function(np.min, c_s_p)]

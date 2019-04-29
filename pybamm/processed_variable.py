@@ -71,6 +71,6 @@ class ProcessedVariable(object):
     def __call__(self, t, x=None):
         "Evaluate the variable at arbitrary t (and x), using interpolation"
         if self.x_sol is None:
-            return self._interpolation_function(t)
+            return self._interpolation_function(t)[0]
         else:
             return self._interpolation_function(t, x)

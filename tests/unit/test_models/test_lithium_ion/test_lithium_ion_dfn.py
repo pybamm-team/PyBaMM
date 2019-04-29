@@ -4,12 +4,14 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
 
 import numpy as np
 import unittest
 
 
+@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
 class TestDFN(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lithium_ion.DFN()

@@ -33,3 +33,7 @@ Unary Operators
 .. autofunction:: pybamm.div
 
 .. autofunction:: pybamm.surf
+
+.. autofunction:: pybamm.boundary_value
+
+.. autofunction:: pybamm.average
