@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-from scipy.sparse import csr_matrix, issparse, vstack
+from scipy.sparse import vstack
 import copy
 
 
