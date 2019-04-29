@@ -56,7 +56,7 @@ class OdeSolver(pybamm.BaseSolver):
         jac_rhs = concatenated_rhs.jac(y).simplify()
 
         def jacobian(t, y):
-            return jac_rhs.evaluate(t, y)
+            return jac_rhs.evaluate(t, y, known_evals={})[0]
 
         self.t, self.y = self.integrate(
             dydt,
