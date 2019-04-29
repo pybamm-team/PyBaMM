@@ -864,18 +864,44 @@ class Division(BinaryOperator):
         if top.evaluates_to_number() and bottom.evaluates_to_number():
             return pybamm.Scalar(0)
         elif top.evaluates_to_number():
-            return -top * pybamm.Diagonal(1 / bottom ** 2) @ bottom.jac(variable)
+            return -top / bottom ** 2 * bottom.jac(variable)
         elif bottom.evaluates_to_number():
             return top.jac(variable) / bottom
         else:
-            return pybamm.Diagonal(1 / bottom ** 2) @ (
-                pybamm.Diagonal(bottom) @ top.jac(variable)
-                - pybamm.Diagonal(top) @ bottom.jac(variable)
-            )
+            return (
+                bottom * top.jac(variable) - top * bottom.jac(variable)
+            ) / bottom ** 2
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        return left / right
+        # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
+        # broadcasting is done correctly, see #253. This might be inefficient, so will
+        # need to revisit
+
+        def is_numpy_1d_vector(v):
+            return isinstance(v, np.ndarray) and len(v.shape) == 1
+
+        def is_numpy_2d_col_vector(v):
+            return isinstance(v, np.ndarray) and len(v.shape) == 2 and v.shape[1] == 1
+
+        if is_numpy_1d_vector(left):
+            left = left.reshape(-1, 1)
+
+        if is_numpy_1d_vector(right):
+            right = right.reshape(-1, 1)
+
+        if issparse(left):
+            result = left.multiply(1 / right)
+        elif issparse(right):
+            # Hadamard product is commutative, so we can switch right and left
+            result = (1 / right).multiply(left)
+        else:
+            result = left / right
+
+        if is_numpy_2d_col_vector(result):
+            result = result.reshape(-1)
+
+        return result
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
