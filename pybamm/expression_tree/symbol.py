@@ -64,6 +64,9 @@ class Symbol(anytree.NodeMixin):
         self._has_left_ghost_cell = False
         self._has_right_ghost_cell = False
 
+        # cache children
+        self.cached_children = self.children
+
     @property
     def name(self):
         """name of the node"""

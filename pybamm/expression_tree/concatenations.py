@@ -30,7 +30,6 @@ class Concatenation(pybamm.Symbol):
         else:
             domain = []
         super().__init__(name, children, domain=domain)
-        self.cached_children = self.children
 
     def get_children_domains(self, children):
         # combine domains from children
