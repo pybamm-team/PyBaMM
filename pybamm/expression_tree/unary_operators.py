@@ -8,8 +8,7 @@ import pybamm
 import autograd
 import copy
 import numpy as np
-import numbers
-from scipy.sparse import csr_matrix, diags
+from scipy.sparse import csr_matrix
 from inspect import signature
 
 
@@ -173,7 +172,7 @@ class Function(UnaryOperator):
             jac = csr_matrix((1, np.size(variable_y_indices)))
             return pybamm.Matrix(jac)
         else:
-            jac_fun = Function(autograd.jacobian(self.func), child) @ child.jac(
+            jac_fun = Function(autograd.elementwise_grad(self.func), child) * child.jac(
                 variable
             )
             jac_fun.domain = self.domain
@@ -219,48 +218,6 @@ class Index(UnaryOperator):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
         return self.__class__(child, self.index)
-
-
-class Diagonal(UnaryOperator):
-    """A node in the expression tree representing an operator which creates a
-    diagonal matrix from a vector. If the child is already a matrix, it
-    simply returns the child.
-
-    **Extends:** :class:`UnaryOperator`
-    """
-
-    def __init__(self, child):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__("diag", child)
-
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        # We shouldn't need this
-        raise NotImplementedError
-
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
-        # We shouldn't need this
-        raise NotImplementedError
-
-    def _unary_evaluate(self, child):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        if np.size(child) == 1:
-            return csr_matrix(child)
-        else:
-            return diags(child, 0)
-
-    def evaluates_to_number(self):
-        """ See :meth:`pybamm.Symbol.evaluates_to_number()`. """
-        result = self.evaluate_ignoring_errors()
-        if isinstance(result, numbers.Number):
-            return True
-        elif isinstance(result, csr_matrix) and isinstance(
-            result.toarray()[0][0], numbers.Number
-        ):
-            return True
-        else:
-            return False
 
 
 class SpatialOperator(UnaryOperator):
@@ -560,10 +517,12 @@ def boundary_value(symbol, side):
     """
     # If symbol doesn't have a domain, its boundary value is itself
     if symbol.domain == []:
-        return symbol
+        new_symbol = copy.deepcopy(symbol)
+        new_symbol.parent = None
+        return new_symbol
     # If symbol is a Broadcast, its boundary value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.children[0]
+        return symbol.orphans[0]
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)

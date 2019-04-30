@@ -231,11 +231,9 @@ def simplify_multiplication_division(myclass, left, right):
             # flatten if all matrix multiplications
             # flatten if one child is a matrix mult if the other term is a scalar or
             # vector
-            if (
-                isinstance(child, pybamm.MatrixMultiplication) and (
-                    in_matrix_multiplication
-                    or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
-                )
+            if isinstance(child, pybamm.MatrixMultiplication) and (
+                in_matrix_multiplication
+                or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
                 left, right = child.orphans
                 if child == left_child:
@@ -545,7 +543,14 @@ class BinaryOperator(pybamm.Symbol):
         elif rdomain == []:
             return ldomain
         else:
-            raise pybamm.DomainError("""children must have same (or empty) domains""")
+            raise pybamm.DomainError(
+                """
+                children must have same (or empty) domains, but left.domain is '{}'
+                and right.domain is '{}'
+                """.format(
+                    ldomain, rdomain
+                )
+            )
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
@@ -611,19 +616,15 @@ class Power(BinaryOperator):
             if base.evaluates_to_number() and exponent.evaluates_to_number():
                 return pybamm.Scalar(0)
             elif exponent.evaluates_to_number():
-                return pybamm.Diagonal(exponent * base ** (exponent - 1)) @ base.jac(
-                    variable
-                )
+                return (exponent * base ** (exponent - 1)) * base.jac(variable)
             elif base.evaluates_to_number():
-                return pybamm.Diagonal(
+                return (
                     base ** exponent * pybamm.Function(np.log, base)
-                ) @ exponent.jac(variable)
+                ) * exponent.jac(variable)
             else:
-                return pybamm.Diagonal(base ** (exponent - 1)) @ (
-                    exponent @ base.jac(variable)
-                    + pybamm.Diagonal(base)
-                    @ pybamm.Diagonal(pybamm.Function(np.log, base))
-                    @ exponent.jac(variable)
+                return (base ** (exponent - 1)) * (
+                    exponent * base.jac(variable)
+                    + base * pybamm.Function(np.log, base) * exponent.jac(variable)
                 )
 
     def _binary_evaluate(self, left, right):
@@ -756,9 +757,7 @@ class Multiplication(BinaryOperator):
         elif right.evaluates_to_number():
             return right * left.jac(variable)
         else:
-            return pybamm.Diagonal(right) @ left.jac(variable) + pybamm.Diagonal(
-                left
-            ) @ right.jac(variable)
+            return right * left.jac(variable) + left * right.jac(variable)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
@@ -876,18 +875,44 @@ class Division(BinaryOperator):
         if top.evaluates_to_number() and bottom.evaluates_to_number():
             return pybamm.Scalar(0)
         elif top.evaluates_to_number():
-            return -top * pybamm.Diagonal(1 / bottom ** 2) @ bottom.jac(variable)
+            return -top / bottom ** 2 * bottom.jac(variable)
         elif bottom.evaluates_to_number():
             return top.jac(variable) / bottom
         else:
-            return pybamm.Diagonal(1 / bottom ** 2) @ (
-                pybamm.Diagonal(bottom) @ top.jac(variable)
-                - pybamm.Diagonal(top) @ bottom.jac(variable)
-            )
+            return (
+                bottom * top.jac(variable) - top * bottom.jac(variable)
+            ) / bottom ** 2
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        return left / right
+        # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
+        # broadcasting is done correctly, see #253. This might be inefficient, so will
+        # need to revisit
+
+        def is_numpy_1d_vector(v):
+            return isinstance(v, np.ndarray) and len(v.shape) == 1
+
+        def is_numpy_2d_col_vector(v):
+            return isinstance(v, np.ndarray) and len(v.shape) == 2 and v.shape[1] == 1
+
+        if is_numpy_1d_vector(left):
+            left = left.reshape(-1, 1)
+
+        if is_numpy_1d_vector(right):
+            right = right.reshape(-1, 1)
+
+        if issparse(left):
+            result = left.multiply(1 / right)
+        elif issparse(right):
+            # Hadamard product is commutative, so we can switch right and left
+            result = (1 / right).multiply(left)
+        else:
+            result = left / right
+
+        if is_numpy_2d_col_vector(result):
+            result = result.reshape(-1)
+
+        return result
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """

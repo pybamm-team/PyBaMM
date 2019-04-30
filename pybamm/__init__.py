@@ -81,7 +81,6 @@ from .expression_tree.unary_operators import (
     BoundaryValue,
     Integral,
     IndefiniteIntegral,
-    Diagonal,
     grad,
     div,
     surf,
@@ -105,7 +104,15 @@ from .expression_tree.exceptions import DomainError, ModelError
 #
 # Model classes
 #
-from .models.base_models import BaseModel, LeadAcidBaseModel, LithiumIonBaseModel
+from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard variables
+from .models import standard_variables
+from .models.base_models import (
+    BaseModel,
+    StandardBatteryBaseModel,
+    SubModel,
+    LeadAcidBaseModel,
+    LithiumIonBaseModel,
+)
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
 from .models import lead_acid
@@ -121,12 +128,12 @@ from .models.submodels import (
     interface,
     particle,
     porosity,
+    potential,
 )
 
 #
 # Parameters class and methods
 #
-from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard parameters
 from .parameters.parameter_values import ParameterValues
 from .parameters import standard_current_functions
 from .parameters import geometric_parameters

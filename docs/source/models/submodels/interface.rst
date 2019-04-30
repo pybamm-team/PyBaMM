@@ -1,4 +1,5 @@
 Interface Submodels
 ===================
 
-.. automethod:: pybamm.interface.homogeneous_reaction
+.. autoclass:: pybamm.interface.InterfacialCurrent
+    :members:

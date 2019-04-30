@@ -42,7 +42,9 @@ class TestLeadAcidLOQS(unittest.TestCase):
             y_sol,
             mesh=modeltest.disc.mesh,
         )
-        voltage = pybamm.ProcessedVariable(model.variables["Voltage"], t_sol, y_sol)
+        voltage = pybamm.ProcessedVariable(
+            model.variables["Terminal voltage"], t_sol, y_sol
+        )
 
         # check output
         # concentration and voltage should be monotonically decreasing for a discharge
@@ -67,7 +69,9 @@ class TestLeadAcidLOQS(unittest.TestCase):
             y_sol,
             mesh=modeltest.disc.mesh,
         )
-        voltage = pybamm.ProcessedVariable(model.variables["Voltage"], t_sol, y_sol)
+        voltage = pybamm.ProcessedVariable(
+            model.variables["Terminal voltage"], t_sol, y_sol
+        )
         # neg surf concentration should be monotonically increasing for a charge
         np.testing.assert_array_less(c_e.entries[:, :-1], c_e.entries[:, 1:])
         np.testing.assert_array_less(voltage.entries[:-1], voltage.entries[1:])
@@ -88,9 +92,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
             y_sol,
             mesh=modeltest.disc.mesh,
         )
-        voltage = pybamm.ProcessedVariable(model.variables["Voltage"], t_sol, y_sol)
+        voltage = pybamm.ProcessedVariable(
+            model.variables["Terminal voltage"], t_sol, y_sol
+        )
         # variables should remain unchanged
-        np.testing.assert_almost_equal(c_e.entries - c_e.entries[:, 0], 0)
+        np.testing.assert_almost_equal(c_e.entries - c_e.entries[0], 0)
         np.testing.assert_almost_equal(voltage.entries - voltage.entries[0], 0)
 
 
