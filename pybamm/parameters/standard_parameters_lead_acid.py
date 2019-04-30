@@ -135,6 +135,13 @@ def chi_dimensional(c_e):
     return pybamm.FunctionParameter("Darken thermodynamic factor", c_e)
 
 
+def c_w_dimensional(c_e):
+    """
+    Water concentration [mol.m-3], from thermodynamics. c_k in [mol.m-3].
+    """
+    return (1 - c_e * V_e) / V_w
+
+
 def rho_dimensional(c_e):
     """
     Dimensional density of electrolyte [kg.m-3], from thermodynamics. c_e in [mol.m-3].
@@ -297,6 +304,11 @@ def chi(c_e):
     c_e_dimensional = c_e * c_e_typ
     alpha = (nu * V_w - V_e) * c_e_typ
     return chi_dimensional(c_e_dimensional) * 2 * (1 - t_plus) / (1 - alpha * c_e)
+
+
+def c_w(c_e):
+    "Dimensionless water concentration"
+    return c_w_dimensional(c_e_typ * c_e) / c_w_dimensional(c_e_typ)
 
 
 def U_n(c_en):

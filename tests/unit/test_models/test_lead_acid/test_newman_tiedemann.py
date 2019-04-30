@@ -55,7 +55,9 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
             y_sol,
             mesh=modeltest.disc.mesh,
         )
-        voltage = pybamm.ProcessedVariable(model.variables["Voltage"], t_sol, y_sol)
+        voltage = pybamm.ProcessedVariable(
+            model.variables["Terminal voltage"], t_sol, y_sol
+        )
 
         # check output
         # concentration and voltage should be monotonically decreasing for a discharge

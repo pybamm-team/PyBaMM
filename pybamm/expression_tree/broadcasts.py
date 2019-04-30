@@ -73,11 +73,6 @@ class NumpyBroadcast(Broadcast):
     """
 
     def __init__(self, child, domain, mesh):
-        # Only accept a 'constant' input if it evaluates to a number (i.e. no vectors
-        # and matrices)
-        if child.is_constant() and not child.evaluates_to_number():
-            raise TypeError("cannot Broadcast a constant Vector or Matrix")
-
         super().__init__(child, domain, name="numpy broadcast")
         # determine broadcasting vector size (size 1 if the domain is empty)
         if domain == []:

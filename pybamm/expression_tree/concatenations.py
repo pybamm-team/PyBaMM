@@ -6,7 +6,7 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
-from scipy.sparse import csr_matrix, issparse, vstack
+from scipy.sparse import vstack
 import copy
 
 
@@ -278,32 +278,14 @@ class SparseStack(Concatenation):
             if self.id not in known_evals:
                 children_eval = [None] * len(children)
                 for idx, child in enumerate(children):
-                    child_eval, known_evals = child.evaluate(t, y, known_evals)
-                    children_eval[idx] = self.sparsify(child_eval, y)
+                    children_eval[idx], known_evals = child.evaluate(t, y, known_evals)
                 known_evals[self.id] = self._concatenation_evaluate(children_eval)
             return known_evals[self.id], known_evals
         else:
             children_eval = [None] * len(children)
             for idx, child in enumerate(children):
-                child_eval = child.evaluate(t, y)
-                children_eval[idx] = self.sparsify(child_eval, y)
+                children_eval[idx] = child.evaluate(t, y)
             return self._concatenation_evaluate(children_eval)
-
-    def sparsify(self, child_eval, y):
-        """Turn child into sparse matrix; this function should eventually be removed"""
-        # NOTE: I think this probably a very hacky way of doing this, but need
-        # some way of concatenating sparse matrices with dense matrices that
-        # come from evaluate. The other way would be to make all the matrices
-        # dense and then do a NumpyConcatenation, but I fear this will be bad
-        # when the Jacobian is very large
-        if issparse(child_eval) is False:
-            if np.size(child_eval) == 1 and child_eval == 0:
-                # If rhs or algebraic was a constant, then the result is
-                # scalar zero and should be replaced with a row of zeros
-                child_eval = csr_matrix((1, np.size(y)))
-            else:
-                child_eval = csr_matrix(child_eval)
-        return child_eval
 
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation.evaluate()`. """
