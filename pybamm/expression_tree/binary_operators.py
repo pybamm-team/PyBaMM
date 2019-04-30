@@ -539,7 +539,14 @@ class BinaryOperator(pybamm.Symbol):
         elif rdomain == []:
             return ldomain
         else:
-            raise pybamm.DomainError("""children must have same (or empty) domains""")
+            raise pybamm.DomainError(
+                """
+                children must have same (or empty) domains, but left.domain is '{}'
+                and right.domain is '{}'
+                """.format(
+                    ldomain, rdomain
+                )
+            )
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """

@@ -557,7 +557,8 @@ class Discretisation(object):
                 assert model.rhs[var].evaluate(0, y0).shape == model.variables[
                     var.name
                 ].evaluate(0, y0).shape or isinstance(
-                    model.variables[var.name], pybamm.NumpyBroadcast
+                    model.variables[var.name],
+                    (pybamm.NumpyBroadcast, pybamm.Concatenation),
                 ), pybamm.ModelError(
                     """
                     variable and its eqn must have the same shape after discretisation

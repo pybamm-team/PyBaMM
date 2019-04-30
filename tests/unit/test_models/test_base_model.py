@@ -131,9 +131,8 @@ class TestBaseModel(unittest.TestCase):
         # update with conflicting submodel
         submodel2 = pybamm.BaseModel()
         submodel2.rhs = {d: pybamm.div(pybamm.grad(d)) - 1}
-        with self.assertRaises(AssertionError) as error:
+        with self.assertRaises(pybamm.ModelError):
             model.update(submodel2)
-        self.assertIsInstance(error.exception.args[0], pybamm.ModelError)
 
         # update with multiple submodels
         submodel1 = submodel  # copy submodel from previous test
