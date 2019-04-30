@@ -7,7 +7,7 @@ import pybamm
 
 import autograd.numpy as np
 import numbers
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
 def simplify_addition_subtraction(myclass, left, right):
@@ -470,16 +470,25 @@ def simplify_multiplication_division(myclass, left, right):
     return result
 
 
-def is_zero(expr):
+def is_scalar_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar zero
     """
     if expr.is_constant():
         result = expr.evaluate_ignoring_errors()
-        return (
-            (isinstance(result, numbers.Number) and result == 0)
-            or (issparse(result) and result.count_nonzero() == 0)
-            or (isinstance(result, np.ndarray) and np.all(result == 0))
+        return isinstance(result, numbers.Number) and result == 0
+    else:
+        return False
+
+
+def is_matrix_zero(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar zero
+    """
+    if expr.is_constant():
+        result = expr.evaluate_ignoring_errors()
+        return (issparse(result) and result.count_nonzero() == 0) or (
+            isinstance(result, np.ndarray) and np.all(result == 0)
         )
     else:
         return False
@@ -635,11 +644,11 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         # anything to the power of zero is one
-        if is_zero(right):
+        if is_scalar_zero(right):
             return pybamm.Scalar(1)
 
         # anything to the power of one is itself
-        if is_zero(left):
+        if is_scalar_zero(left):
             return left
 
         return self.__class__(left, right)
@@ -677,9 +686,9 @@ class Addition(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         # anything added by a scalar zero returns the other child
-        if is_zero(left):
+        if is_scalar_zero(left):
             return right
-        if is_zero(right):
+        if is_scalar_zero(right):
             return left
 
         return simplify_addition_subtraction(self.__class__, left, right)
@@ -715,9 +724,9 @@ class Subtraction(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         # anything added by a scalar zero returns the other child
-        if is_zero(left):
+        if is_scalar_zero(left):
             return -right
-        if is_zero(right):
+        if is_scalar_zero(right):
             return left
 
         return simplify_addition_subtraction(self.__class__, left, right)
@@ -794,9 +803,19 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         # anything multiplied by a scalar zero returns a scalar zero
-
-        if is_zero(left) or is_zero(right):
+        if is_scalar_zero(left) or is_scalar_zero(right):
             return pybamm.Scalar(0)
+
+        # if one of the children is a zero matrix, we have to be careful about shapes
+        if is_matrix_zero(left) or is_matrix_zero(right):
+            left_shape = left.shape
+            right_shape = right.shape
+            if len(left_shape) == 0:
+                first_dim = 1
+            else:
+                first_dim = left_shape[0]
+            second_dim = right_shape[1]
+            return pybamm.Matrix(csr_matrix((first_dim, second_dim)))
 
         # anything multiplied by a scalar one returns itself
         if is_one(left):
@@ -841,7 +860,7 @@ class MatrixMultiplication(BinaryOperator):
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
         # anything multiplied by a scalar zero returns a scalar zero
-        if is_zero(left) or is_zero(right):
+        if is_scalar_zero(left) or is_scalar_zero(right):
             return pybamm.Scalar(0)
 
         return simplify_multiplication_division(self.__class__, left, right)
@@ -918,15 +937,15 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         # zero divided by zero returns nan scalar
-        if is_zero(left) and is_zero(right):
+        if is_scalar_zero(left) and is_scalar_zero(right):
             return pybamm.Scalar(np.nan)
 
         # zero divided by anything returns zero
-        if is_zero(left):
+        if is_scalar_zero(left):
             return pybamm.Scalar(0)
 
         # anything divided by zero returns inf
-        if is_zero(right):
+        if is_scalar_zero(right):
             return pybamm.Scalar(np.inf)
 
         # anything divided by one is itself

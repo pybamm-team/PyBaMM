@@ -540,3 +540,15 @@ class Symbol(anytree.NodeMixin):
     def has_right_ghost_cell(self, value):
         assert isinstance(value, bool)
         self._has_right_ghost_cell = value
+
+    @property
+    def shape(self):
+        """Shape of an object, found by evaluating it with appropriate t and y"""
+        min_y_size = max(
+            x.y_slice.stop
+            for x in self.pre_order()
+            if isinstance(x, pybamm.StateVector)
+        )
+        y = np.ones(min_y_size)
+        eval = self.evaluate(t=0, y=y)
+        return eval.shape

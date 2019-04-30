@@ -52,7 +52,8 @@ from .util import load_function
 #
 from .expression_tree.symbol import Symbol, simplify_if_constant
 from .expression_tree.binary_operators import (
-    is_zero,
+    is_scalar_zero,
+    is_matrix_zero,
     BinaryOperator,
     Addition,
     Power,
