@@ -21,7 +21,6 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all()
 
-    @unittest.skip("")
     def test_optimisations(self):
         model = pybamm.lithium_ion.DFN()
         optimtest = tests.OptimisationsTest(model)
