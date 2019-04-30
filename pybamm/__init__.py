@@ -80,7 +80,6 @@ from .expression_tree.unary_operators import (
     BoundaryValue,
     Integral,
     IndefiniteIntegral,
-    Diagonal,
     grad,
     div,
     surf,
