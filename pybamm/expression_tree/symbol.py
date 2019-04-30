@@ -543,12 +543,24 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def shape(self):
-        """Shape of an object, found by evaluating it with appropriate t and y"""
-        min_y_size = max(
-            x.y_slice.stop
-            for x in self.pre_order()
-            if isinstance(x, pybamm.StateVector)
-        )
-        y = np.ones(min_y_size)
+        """
+        Shape of an object, found by evaluating it with appropriate t and y
+
+        Raises
+        ------
+        NotImplementedError
+            If trying to find the shape of an object that cannot be evaluated
+        """
+        state_vectors_in_node = [
+            x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
+        ]
+        if state_vectors_in_node == []:
+            y = None
+        else:
+            min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
+            y = np.ones(min_y_size)
         eval = self.evaluate(t=0, y=y)
-        return eval.shape
+        if isinstance(eval, numbers.Number):
+            return ()
+        else:
+            return eval.shape

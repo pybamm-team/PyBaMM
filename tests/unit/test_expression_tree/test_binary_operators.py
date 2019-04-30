@@ -84,11 +84,11 @@ class TestBinaryOperators(unittest.TestCase):
         # Expect using known evals to be faster than not
         timer = pybamm.Timer()
         start = timer.time()
-        for _ in range(20):
+        for _ in range(100):
             expr2.evaluate()
         end = timer.time()
         start_known_evals = timer.time()
-        for _ in range(20):
+        for _ in range(100):
             expr2.evaluate(known_evals={})
         end_known_evals = timer.time()
         self.assertLess(end_known_evals - start_known_evals, 1.2 * (end - start))

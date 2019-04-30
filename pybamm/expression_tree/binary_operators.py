@@ -683,12 +683,25 @@ class Addition(BinaryOperator):
         return left + right
 
     def _binary_simplify(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+        """
+        See :meth:`pybamm.BinaryOperator.simplify()`.
+
+        Note
+        ----
+        We check for scalars first, then matrices. This is because
+        (Zero Matrix) + (Zero Scalar)
+        should return (Zero Matrix), not (Zero Scalar).
+        """
 
         # anything added by a scalar zero returns the other child
         if is_scalar_zero(left):
             return right
         if is_scalar_zero(right):
+            return left
+        # Check matrices after checking scalars
+        if is_matrix_zero(left):
+            return right
+        if is_matrix_zero(right):
             return left
 
         return simplify_addition_subtraction(self.__class__, left, right)
@@ -721,12 +734,25 @@ class Subtraction(BinaryOperator):
         return left - right
 
     def _binary_simplify(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+        """
+        See :meth:`pybamm.BinaryOperator.simplify()`.
+
+        Note
+        ----
+        We check for scalars first, then matrices. This is because
+        (Zero Matrix) - (Zero Scalar)
+        should return (Zero Matrix), not -(Zero Scalar).
+        """
 
         # anything added by a scalar zero returns the other child
         if is_scalar_zero(left):
             return -right
         if is_scalar_zero(right):
+            return left
+        # Check matrices after checking scalars
+        if is_matrix_zero(left):
+            return -right
+        if is_matrix_zero(right):
             return left
 
         return simplify_addition_subtraction(self.__class__, left, right)
