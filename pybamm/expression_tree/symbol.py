@@ -57,12 +57,19 @@ class Symbol(anytree.NodeMixin):
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
 
+        # cache children
+        self.cached_children = super(Symbol, self).children
+
         # Set domain (and hence id)
         self.domain = domain
 
         # useful flags
         self._has_left_ghost_cell = False
         self._has_right_ghost_cell = False
+
+    @property
+    def children(self):
+        return self.cached_children
 
     @property
     def name(self):
@@ -540,3 +547,27 @@ class Symbol(anytree.NodeMixin):
     def has_right_ghost_cell(self, value):
         assert isinstance(value, bool)
         self._has_right_ghost_cell = value
+
+    @property
+    def shape(self):
+        """
+        Shape of an object, found by evaluating it with appropriate t and y
+
+        Raises
+        ------
+        NotImplementedError
+            If trying to find the shape of an object that cannot be evaluated
+        """
+        state_vectors_in_node = [
+            x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
+        ]
+        if state_vectors_in_node == []:
+            y = None
+        else:
+            min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
+            y = np.ones(min_y_size)
+        eval = self.evaluate(t=0, y=y)
+        if isinstance(eval, numbers.Number):
+            return ()
+        else:
+            return eval.shape

@@ -7,7 +7,7 @@ import pybamm
 
 import autograd.numpy as np
 import numbers
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
 def simplify_addition_subtraction(myclass, left, right):
@@ -470,13 +470,26 @@ def simplify_multiplication_division(myclass, left, right):
     return result
 
 
-def is_zero(expr):
+def is_scalar_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar zero
     """
     if expr.is_constant():
         result = expr.evaluate_ignoring_errors()
         return isinstance(result, numbers.Number) and result == 0
+    else:
+        return False
+
+
+def is_matrix_zero(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar zero
+    """
+    if expr.is_constant():
+        result = expr.evaluate_ignoring_errors()
+        return (issparse(result) and result.count_nonzero() == 0) or (
+            isinstance(result, np.ndarray) and np.all(result == 0)
+        )
     else:
         return False
 
@@ -526,10 +539,12 @@ class BinaryOperator(pybamm.Symbol):
             right = pybamm.Scalar(right)
         domain = self.get_children_domains(left.domain, right.domain)
         super().__init__(name, children=[left, right], domain=domain)
+        self.left = self.children[0]
+        self.right = self.children[1]
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{!s} {} {!s}".format(self.children[0], self.name, self.children[1])
+        return "{!s} {} {!s}".format(self.left, self.name, self.right)
 
     def get_children_domains(self, ldomain, rdomain):
         if ldomain == rdomain:
@@ -550,8 +565,8 @@ class BinaryOperator(pybamm.Symbol):
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
-        left = self.children[0].simplify()
-        right = self.children[1].simplify()
+        left = self.left.simplify()
+        right = self.right.simplify()
 
         # _binary_simplify defined in derived classes for specific rules
         new_node = self._binary_simplify(left, right)
@@ -569,14 +584,14 @@ class BinaryOperator(pybamm.Symbol):
             try:
                 return known_evals[id], known_evals
             except KeyError:
-                left, known_evals = self.children[0].evaluate(t, y, known_evals)
-                right, known_evals = self.children[1].evaluate(t, y, known_evals)
+                left, known_evals = self.left.evaluate(t, y, known_evals)
+                right, known_evals = self.right.evaluate(t, y, known_evals)
                 value = self._binary_evaluate(left, right)
                 known_evals[id] = value
                 return value, known_evals
         else:
-            left = self.children[0].evaluate(t, y)
-            right = self.children[1].evaluate(t, y)
+            left = self.left.evaluate(t, y)
+            right = self.right.evaluate(t, y)
             return self._binary_evaluate(left, right)
 
 
@@ -612,19 +627,15 @@ class Power(BinaryOperator):
             if base.evaluates_to_number() and exponent.evaluates_to_number():
                 return pybamm.Scalar(0)
             elif exponent.evaluates_to_number():
-                return pybamm.Diagonal(exponent * base ** (exponent - 1)) @ base.jac(
-                    variable
-                )
+                return (exponent * base ** (exponent - 1)) * base.jac(variable)
             elif base.evaluates_to_number():
-                return pybamm.Diagonal(
+                return (
                     base ** exponent * pybamm.Function(np.log, base)
-                ) @ exponent.jac(variable)
+                ) * exponent.jac(variable)
             else:
-                return pybamm.Diagonal(base ** (exponent - 1)) @ (
-                    exponent @ base.jac(variable)
-                    + pybamm.Diagonal(base)
-                    @ pybamm.Diagonal(pybamm.Function(np.log, base))
-                    @ exponent.jac(variable)
+                return (base ** (exponent - 1)) * (
+                    exponent * base.jac(variable)
+                    + base * pybamm.Function(np.log, base) * exponent.jac(variable)
                 )
 
     def _binary_evaluate(self, left, right):
@@ -635,11 +646,11 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         # anything to the power of zero is one
-        if is_zero(right):
+        if is_scalar_zero(right):
             return pybamm.Scalar(1)
 
         # anything to the power of one is itself
-        if is_zero(left):
+        if is_scalar_zero(left):
             return left
 
         return self.__class__(left, right)
@@ -660,26 +671,39 @@ class Addition(BinaryOperator):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            return self.children[0].diff(variable) + self.children[1].diff(variable)
+            return self.left.diff(variable) + self.right.diff(variable)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            return self.children[0].jac(variable) + self.children[1].jac(variable)
+            return self.left.jac(variable) + self.right.jac(variable)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         return left + right
 
     def _binary_simplify(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+        """
+        See :meth:`pybamm.BinaryOperator.simplify()`.
+
+        Note
+        ----
+        We check for scalars first, then matrices. This is because
+        (Zero Matrix) + (Zero Scalar)
+        should return (Zero Matrix), not (Zero Scalar).
+        """
 
         # anything added by a scalar zero returns the other child
-        if is_zero(left):
+        if is_scalar_zero(left):
             return right
-        if is_zero(right):
+        if is_scalar_zero(right):
+            return left
+        # Check matrices after checking scalars
+        if is_matrix_zero(left):
+            return right
+        if is_matrix_zero(right):
             return left
 
         return simplify_addition_subtraction(self.__class__, left, right)
@@ -701,23 +725,36 @@ class Subtraction(BinaryOperator):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            return self.children[0].diff(variable) - self.children[1].diff(variable)
+            return self.left.diff(variable) - self.right.diff(variable)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        return self.children[0].jac(variable) - self.children[1].jac(variable)
+        return self.left.jac(variable) - self.right.jac(variable)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         return left - right
 
     def _binary_simplify(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+        """
+        See :meth:`pybamm.BinaryOperator.simplify()`.
+
+        Note
+        ----
+        We check for scalars first, then matrices. This is because
+        (Zero Matrix) - (Zero Scalar)
+        should return (Zero Matrix), not -(Zero Scalar).
+        """
 
         # anything added by a scalar zero returns the other child
-        if is_zero(left):
+        if is_scalar_zero(left):
             return -right
-        if is_zero(right):
+        if is_scalar_zero(right):
+            return left
+        # Check matrices after checking scalars
+        if is_matrix_zero(left):
+            return -right
+        if is_matrix_zero(right):
             return left
 
         return simplify_addition_subtraction(self.__class__, left, right)
@@ -757,9 +794,7 @@ class Multiplication(BinaryOperator):
         elif right.evaluates_to_number():
             return right * left.jac(variable)
         else:
-            return pybamm.Diagonal(right) @ left.jac(variable) + pybamm.Diagonal(
-                left
-            ) @ right.jac(variable)
+            return right * left.jac(variable) + left * right.jac(variable)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
@@ -796,9 +831,19 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         # anything multiplied by a scalar zero returns a scalar zero
-
-        if is_zero(left) or is_zero(right):
+        if is_scalar_zero(left) or is_scalar_zero(right):
             return pybamm.Scalar(0)
+
+        # if one of the children is a zero matrix, we have to be careful about shapes
+        if is_matrix_zero(left) or is_matrix_zero(right):
+            left_shape = left.shape
+            right_shape = right.shape
+            if len(left_shape) == 0:
+                first_dim = 1
+            else:
+                first_dim = left_shape[0]
+            second_dim = right_shape[1]
+            return pybamm.Matrix(csr_matrix((first_dim, second_dim)))
 
         # anything multiplied by a scalar one returns itself
         if is_one(left):
@@ -843,7 +888,7 @@ class MatrixMultiplication(BinaryOperator):
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
         # anything multiplied by a scalar zero returns a scalar zero
-        if is_zero(left) or is_zero(right):
+        if is_scalar_zero(left) or is_scalar_zero(right):
             return pybamm.Scalar(0)
 
         return simplify_multiplication_division(self.__class__, left, right)
@@ -877,32 +922,58 @@ class Division(BinaryOperator):
         if top.evaluates_to_number() and bottom.evaluates_to_number():
             return pybamm.Scalar(0)
         elif top.evaluates_to_number():
-            return -top * pybamm.Diagonal(1 / bottom ** 2) @ bottom.jac(variable)
+            return -top / bottom ** 2 * bottom.jac(variable)
         elif bottom.evaluates_to_number():
             return top.jac(variable) / bottom
         else:
-            return pybamm.Diagonal(1 / bottom ** 2) @ (
-                pybamm.Diagonal(bottom) @ top.jac(variable)
-                - pybamm.Diagonal(top) @ bottom.jac(variable)
-            )
+            return (
+                bottom * top.jac(variable) - top * bottom.jac(variable)
+            ) / bottom ** 2
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        return left / right
+        # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
+        # broadcasting is done correctly, see #253. This might be inefficient, so will
+        # need to revisit
+
+        def is_numpy_1d_vector(v):
+            return isinstance(v, np.ndarray) and len(v.shape) == 1
+
+        def is_numpy_2d_col_vector(v):
+            return isinstance(v, np.ndarray) and len(v.shape) == 2 and v.shape[1] == 1
+
+        if is_numpy_1d_vector(left):
+            left = left.reshape(-1, 1)
+
+        if is_numpy_1d_vector(right):
+            right = right.reshape(-1, 1)
+
+        if issparse(left):
+            result = left.multiply(1 / right)
+        elif issparse(right):
+            # Hadamard product is commutative, so we can switch right and left
+            result = (1 / right).multiply(left)
+        else:
+            result = left / right
+
+        if is_numpy_2d_col_vector(result):
+            result = result.reshape(-1)
+
+        return result
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         # zero divided by zero returns nan scalar
-        if is_zero(left) and is_zero(right):
+        if is_scalar_zero(left) and is_scalar_zero(right):
             return pybamm.Scalar(np.nan)
 
         # zero divided by anything returns zero
-        if is_zero(left):
+        if is_scalar_zero(left):
             return pybamm.Scalar(0)
 
         # anything divided by zero returns inf
-        if is_zero(right):
+        if is_scalar_zero(right):
             return pybamm.Scalar(np.inf)
 
         # anything divided by one is itself

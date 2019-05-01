@@ -66,14 +66,18 @@ class DaeSolver(pybamm.BaseSolver):
             rhs, algebraic, model.concatenated_initial_conditions
         )
 
-        # Create Jacobian from simplified rhs
-        y = pybamm.StateVector(slice(0, np.size(y0)))
-        jac_rhs = concatenated_rhs.jac(y).simplify()
-        jac_algebraic = concatenated_algebraic.jac(y).simplify()
-        jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
+        if model.use_jacobian:
+            # Create Jacobian from simplified rhs
+            y = pybamm.StateVector(slice(0, np.size(y0)))
+            jac_rhs = concatenated_rhs.jac(y).simplify()
+            jac_algebraic = concatenated_algebraic.jac(y).simplify()
+            jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
 
-        def jacobian(t, y):
-            return jac.evaluate(t, y)
+            def jacobian(t, y):
+                return jac.evaluate(t, y, known_evals={})[0]
+
+        else:
+            jacobian = None
 
         self.t, self.y = self.integrate(
             residuals,

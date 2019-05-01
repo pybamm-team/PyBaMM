@@ -85,3 +85,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
             ocp_p, eta_r_p, phi_e
         )
         self.variables.update(electrode_vars)
+
+        "-----------------------------------------------------------------------------"
+        "Settings"
+        # ODEs only (don't use jacobian)
+        self.use_jacobian = False
