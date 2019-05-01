@@ -474,6 +474,17 @@ class TestSymbol(unittest.TestCase):
         self.assertTrue(a.has_left_ghost_cell)
         self.assertTrue(a.has_right_ghost_cell)
 
+    def test_shape(self):
+        scal = pybamm.Scalar(1)
+        self.assertEqual(scal.shape, ())
+
+        state = pybamm.StateVector(slice(10, 25))
+        self.assertEqual(state.shape, (15,))
+
+        sym = pybamm.Symbol("sym")
+        with self.assertRaises(NotImplementedError):
+            sym.shape
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

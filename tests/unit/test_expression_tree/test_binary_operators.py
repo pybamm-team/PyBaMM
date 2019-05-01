@@ -84,11 +84,11 @@ class TestBinaryOperators(unittest.TestCase):
         # Expect using known evals to be faster than not
         timer = pybamm.Timer()
         start = timer.time()
-        for _ in range(20):
+        for _ in range(2000):
             expr2.evaluate()
         end = timer.time()
         start_known_evals = timer.time()
-        for _ in range(20):
+        for _ in range(2000):
             expr2.evaluate(known_evals={})
         end_known_evals = timer.time()
         self.assertLess(end_known_evals - start_known_evals, 1.2 * (end - start))
@@ -221,6 +221,29 @@ class TestBinaryOperators(unittest.TestCase):
             (pybammS1 @ pybammS1).evaluate()
         with self.assertRaisesRegex(ValueError, "dimension mismatch"):
             (pybammS2 @ pybammS2).evaluate()
+
+
+class TestIsZero(unittest.TestCase):
+    def test_is_scalar_zero(self):
+        a = pybamm.Scalar(0)
+        b = pybamm.Scalar(2)
+        self.assertTrue(pybamm.is_scalar_zero(a))
+        self.assertFalse(pybamm.is_scalar_zero(b))
+
+    def test_is_matrix_zero(self):
+        a = pybamm.Matrix(coo_matrix(np.zeros((10, 10))))
+        b = pybamm.Matrix(coo_matrix(np.ones((10, 10))))
+        c = pybamm.Matrix(coo_matrix(([1], ([0], [0])), shape=(5, 5)))
+        self.assertTrue(pybamm.is_matrix_zero(a))
+        self.assertFalse(pybamm.is_matrix_zero(b))
+        self.assertFalse(pybamm.is_matrix_zero(c))
+
+        a = pybamm.Matrix(np.zeros((10, 10)))
+        b = pybamm.Matrix(np.ones((10, 10)))
+        c = pybamm.Matrix(np.array([1, 0, 0]))
+        self.assertTrue(pybamm.is_matrix_zero(a))
+        self.assertFalse(pybamm.is_matrix_zero(b))
+        self.assertFalse(pybamm.is_matrix_zero(c))
 
 
 if __name__ == "__main__":
