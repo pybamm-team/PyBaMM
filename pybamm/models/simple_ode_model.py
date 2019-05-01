@@ -40,3 +40,8 @@ class SimpleODEModel(pybamm.StandardBatteryBaseModel):
             "b broadcasted": pybamm.Broadcast(b, whole_cell),
             "c broadcasted": pybamm.Broadcast(c, ["negative electrode", "separator"]),
         }
+
+        "-----------------------------------------------------------------------------"
+        "Settings"
+        # ODEs only (don't use jacobian)
+        self.use_jacobian = False

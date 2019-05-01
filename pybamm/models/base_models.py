@@ -53,6 +53,9 @@ class BaseModel(object):
         self._mass_matrix = None
         self._jacobian = None
 
+        # Default behaviour is to use the jacobian
+        self.use_jacobian = True
+
     def _set_dict(self, dict, name):
         """
         Convert any scalar equations in dict to 'pybamm.Scalar'
