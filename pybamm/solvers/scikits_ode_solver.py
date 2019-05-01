@@ -76,14 +76,6 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         def rootfn(t, y, return_root):
             return_root[:] = [event(t, y) for event in events]
 
-        # use 'dense' for linear solver if jacobian is a dense matrix
-        # otherwise, use 'spgmr'
-        jac_y0_t0 = jacobian(t_eval[0], y0)
-        if sparse.issparse(jac_y0_t0):
-            linsolver = 'spgmr'
-        else:
-            linsolver = 'dense'
-
         def jacfn(t, y, fy, J):
             J[:][:] = jacobian(t, y)
 
@@ -95,17 +87,23 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             Jv[:] = userdata._jac_eval * v
             return 0
 
-        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol,
-                         "linsolver": linsolver}
+        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
 
+        # use 'dense' for linear solver if jacobian is a dense matrix
+        # otherwise, use 'spgmr'
         if jacobian:
-            if linsolver == 'dense':
-                extra_options.update({"jacfn": jacfn})
-            else:
+            jac_y0_t0 = jacobian(t_eval[0], y0)
+            if sparse.issparse(jac_y0_t0):
                 extra_options.update({
+                    "linsolver": "spgmr",
                     "jac_times_setupfn": jac_times_setupfn,
                     "jac_times_vecfn": jac_times_vecfn,
                     "user_data": self
+                })
+            else:
+                extra_options.update({
+                    "linsolver": "dense",
+                    "jacfn": jacfn
                 })
 
         if events:
