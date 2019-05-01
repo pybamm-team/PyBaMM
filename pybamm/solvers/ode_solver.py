@@ -51,10 +51,9 @@ class OdeSolver(pybamm.BaseSolver):
 
         y0 = model.concatenated_initial_conditions
 
-        # Create Jacobian from simplified rhs
-        y = pybamm.StateVector(slice(0, np.size(y0)))
-
         if model.use_jacobian:
+            # Create Jacobian from simplified rhs
+            y = pybamm.StateVector(slice(0, np.size(y0)))
             jac_rhs = concatenated_rhs.jac(y).simplify()
 
             def jacobian(t, y):
