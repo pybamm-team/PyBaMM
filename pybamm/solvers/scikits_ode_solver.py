@@ -95,19 +95,18 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             Jv[:] = userdata._jac_eval * v
             return 0
 
-
         extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol,
-                "linsolver": linsolver}
+                         "linsolver": linsolver}
 
         if jacobian:
             if linsolver == 'dense':
                 extra_options.update({"jacfn": jacfn})
             else:
                 extra_options.update({
-                                      "jac_times_setupfn": jac_times_setupfn,
-                                      "jac_times_vecfn": jac_times_vecfn,
-                                      "user_data": self
-                                      })
+                    "jac_times_setupfn": jac_times_setupfn,
+                    "jac_times_vecfn": jac_times_vecfn,
+                    "user_data": self
+                })
 
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
@@ -117,5 +116,3 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
 
         # return solution, we need to tranpose y to match scipy's ivp interface
         return sol.values.t, np.transpose(sol.values.y)
-
-
