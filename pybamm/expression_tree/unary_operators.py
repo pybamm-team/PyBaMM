@@ -31,14 +31,15 @@ class UnaryOperator(pybamm.Symbol):
 
     def __init__(self, name, child):
         super().__init__(name, children=[child], domain=child.domain)
+        self.child = self.children[0]
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{}({!s})".format(self.name, self.children[0])
+        return "{}({!s})".format(self.name, self.child)
 
     def simplify(self):
         """ See :meth:`pybamm.Symbol.simplify()`. """
-        child = self.children[0].simplify()
+        child = self.child.simplify()
 
         # _binary_simplify defined in derived classes for specific rules
         new_node = self._unary_simplify(child)
@@ -58,11 +59,11 @@ class UnaryOperator(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
-                child, known_evals = self.children[0].evaluate(t, y, known_evals)
+                child, known_evals = self.child.evaluate(t, y, known_evals)
                 known_evals[self.id] = self._unary_evaluate(child)
             return known_evals[self.id], known_evals
         else:
-            child = self.children[0].evaluate(t, y)
+            child = self.child.evaluate(t, y)
             return self._unary_evaluate(child)
 
 
@@ -78,18 +79,18 @@ class Negate(UnaryOperator):
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{}{!s}".format(self.name, self.children[0])
+        return "{}{!s}".format(self.name, self.child)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            return -self.children[0].diff(variable)
+            return -self.child.diff(variable)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        return -self.children[0].jac(variable)
+        return -self.child.jac(variable)
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
@@ -192,7 +193,7 @@ class Function(UnaryOperator):
             # If self.func() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.func())
         else:
-            child = self.children[0].simplify()
+            child = self.child.simplify()
 
             new_node = pybamm.Function(self.func, child)
 
