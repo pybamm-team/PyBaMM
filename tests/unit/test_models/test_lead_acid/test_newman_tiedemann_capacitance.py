@@ -11,11 +11,8 @@ import numpy as np
 class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.NewmanTiedemannCapacitance()
-        # Make grid very coarse for quick test (note that r domain doesn't matter)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 1, var.r_p: 1}
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(t_eval=np.linspace(0, 0.1, 5))
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()  # t_eval=np.linspace(0, 0.1))
 
     def test_optimisations(self):
         model = pybamm.lead_acid.NewmanTiedemannCapacitance()
@@ -32,17 +29,8 @@ class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
     @unittest.skip("not yet working")
     def test_solution(self):
         model = pybamm.lead_acid.NewmanTiedemannCapacitance()
-        # Make grid very coarse for quick test (note that r domain doesn't matter)
-        var = pybamm.standard_spatial_vars
-        model.default_var_pts = {
-            var.x_n: 3,
-            var.x_s: 3,
-            var.x_p: 3,
-            var.r_n: 1,
-            var.r_p: 1,
-        }
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 0.1, 5))
+        modeltest.test_all(t_eval=np.linspace(0, 0.1))
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
 
         # Post-process variables

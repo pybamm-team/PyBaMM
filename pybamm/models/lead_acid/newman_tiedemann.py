@@ -117,7 +117,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Post-process"
 
-        # Excahnge-current density
+        # Exchange-current density
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
 
