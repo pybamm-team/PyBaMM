@@ -17,6 +17,28 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(sym.name, "a symbol")
         self.assertEqual(str(sym), "a symbol")
 
+    def test_cached_children(self):
+        symc1 = pybamm.Symbol("child1")
+        symc2 = pybamm.Symbol("child2")
+        symc3 = pybamm.Symbol("child3")
+        symp = pybamm.Symbol("parent", children=[symc1, symc2])
+
+        # test tuples of children for equality based on their name
+        def check_are_equal(children1, children2):
+            self.assertEqual(len(children1), len(children2))
+            for i in range(len(children1)):
+                self.assertEqual(children1[i].name, children2[i].name)
+
+        check_are_equal(symp.children, super(pybamm.Symbol, symp).children)
+        check_are_equal(symp.children, (symc1, symc2))
+
+        # update children, since we cache the children they will be unchanged
+        symc3.parent = symp
+        check_are_equal(symp.children, (symc1, symc2))
+
+        # check that the *actual* children are updated
+        check_are_equal(super(pybamm.Symbol, symp).children, (symc1, symc2, symc3))
+
     def test_symbol_simplify(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)

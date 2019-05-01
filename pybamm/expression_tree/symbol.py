@@ -57,6 +57,9 @@ class Symbol(anytree.NodeMixin):
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
 
+        # cache children
+        self.cached_children = super(Symbol, self).children
+
         # Set domain (and hence id)
         self.domain = domain
 
@@ -64,8 +67,9 @@ class Symbol(anytree.NodeMixin):
         self._has_left_ghost_cell = False
         self._has_right_ghost_cell = False
 
-        # cache children
-        self.cached_children = self.children
+    @property
+    def children(self):
+        return self.cached_children
 
     @property
     def name(self):
