@@ -137,6 +137,12 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         )
         self.variables.update(volt_vars)
 
+        # Voltage cut-off
+        voltage = pybamm.BoundaryValue(phi_s_p, "right") - pybamm.BoundaryValue(
+            phi_s_n, "left"
+        )
+        self.events.append(voltage - param.voltage_low_cut)
+
         "-----------------------------------------------------------------------------"
         "Defaults and Solver Conditions"
         # Default solver to DAE

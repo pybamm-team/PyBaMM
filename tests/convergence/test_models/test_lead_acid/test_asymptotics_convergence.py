@@ -53,7 +53,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
             param.update_model(composite_model, comp_disc)
             param.update_model(full_model, full_disc)
             # Solve, make sure times are the same
-            t_eval = np.linspace(0, 0.1, 10)
+            t_eval = np.linspace(0, 1)
             solver_loqs = leading_order_model.default_solver
             solver_loqs.solve(leading_order_model, t_eval)
             solver_comp = composite_model.default_solver

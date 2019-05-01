@@ -104,8 +104,12 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         )
         self.variables.update(electrode_vars)
 
-        "-----------------------------------------------------------------------------"
-        "Default Solver"
+        # Add cut-off voltage, using potential differences for quicker evaluation
+        voltage = delta_phi_p - delta_phi_n
+        self.events.append(voltage - param.voltage_low_cut)
 
-        # Use stiff solver
-        self.default_solver = pybamm.ScipySolver("BDF")
+        "-----------------------------------------------------------------------------"
+        "Extra settings"
+
+        # ODE model, don't use Jacobian
+        self.use_jacobian = False
