@@ -7,7 +7,7 @@ import pybamm
 
 import numpy as np
 import importlib
-from scipy.sparse import issparse
+import scipy.sparse as sparse
 
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:
@@ -15,11 +15,6 @@ if scikits_odes_spec is not None:
     if scikits_odes_spec is not None:
         scikits_odes = importlib.util.module_from_spec(scikits_odes_spec)
         scikits_odes_spec.loader.exec_module(scikits_odes)
-        from scikits.odes.sundials import cvode
-
-        jac_class = cvode.CV_JacRhsFunction
-else:
-    jac_class = object
 
 
 class ScikitsOdeSolver(pybamm.OdeSolver):
@@ -81,13 +76,38 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         def rootfn(t, y, return_root):
             return_root[:] = [event(t, y) for event in events]
 
-        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
+        # use 'dense' for linear solver if jacobian is a dense matrix
+        # otherwise, use 'spgmr'
+        jac_y0_t0 = jacobian(t_eval[0], y0)
+        if sparse.issparse(jac_y0_t0):
+            linsolver = 'spgmr'
+        else:
+            linsolver = 'dense'
+
+        def jacfn(t, y, fy, J):
+            J[:][:] = jacobian(t, y)
+
+        def jac_times_setupfn(t, y, fy, userdata):
+            userdata._jac_eval = jacobian(t, y)
+            return 0
+
+        def jac_times_vecfn(v, Jv, t, y, userdata):
+            Jv[:] = userdata._jac_eval * v
+            return 0
+
+
+        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol,
+                "linsolver": linsolver}
 
         if jacobian:
-            # Put the user-supplied Jacobian into the SUNDIALS Class
-            jacfn = JacobianFunctionCV()
-            jacfn.set_jacobian(jacobian=jacobian)
-            extra_options.update({"jacfn": jacfn})
+            if linsolver == 'dense':
+                extra_options.update({"jacfn": jacfn})
+            else:
+                extra_options.update({
+                                      "jac_times_setupfn": jac_times_setupfn,
+                                      "jac_times_vecfn": jac_times_vecfn,
+                                      "user_data": self
+                                      })
 
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
@@ -99,24 +119,3 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         return sol.values.t, np.transpose(sol.values.y)
 
 
-class JacobianFunctionCV(jac_class):
-    def set_jacobian(self, jacobian):
-        """
-        Sets the user supplied Jacobian function for the ODE model.
-
-        Parameters
-        ----------
-        jacobian : method
-            A function that takes in t and y and returns the Jacobian
-        """
-        self.jacobian = jacobian
-
-    def evaluate(self, t, y, fy, return_jacobian):
-        # scikits_odes requires the full (dense) jacobian
-        jac_eval = self.jacobian(t, y)
-        if issparse(jac_eval):
-            return_jacobian[:][:] = jac_eval.toarray()
-        else:
-            return_jacobian[:][:] = jac_eval
-
-        return 0
