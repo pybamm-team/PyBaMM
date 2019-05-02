@@ -223,6 +223,11 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
         self.assertEqual((b / b).simplify().evaluate(), 1)
 
+        # not implemented for Symbol
+        sym = pybamm.Symbol("sym")
+        with self.assertRaises(NotImplementedError):
+            sym.simplify()
+
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])
         self.assertEqual(a.domain, [pybamm.KNOWN_DOMAINS[0]])

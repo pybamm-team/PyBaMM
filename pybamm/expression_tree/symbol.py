@@ -11,25 +11,6 @@ import copy
 import autograd.numpy as np
 
 from anytree.exporter import DotExporter
-from scipy.sparse import issparse
-
-
-def simplify_if_constant(new_node):
-    """
-    Utility function to simplify an expression tree if it evalutes to a constant
-    scalar, vector or matrix
-    """
-    if new_node.is_constant():
-        result = new_node.evaluate_ignoring_errors()
-        if result is not None:
-            if isinstance(result, numbers.Number):
-                return pybamm.Scalar(result, domain=new_node.domain)
-            elif isinstance(result, np.ndarray) or issparse(result):
-                if result.ndim == 1:
-                    return pybamm.Vector(result, domain=new_node.domain)
-                else:
-                    return pybamm.Matrix(result, domain=new_node.domain)
-    return new_node
 
 
 class Symbol(anytree.NodeMixin):
@@ -512,21 +493,8 @@ class Symbol(anytree.NodeMixin):
         return any(isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order())
 
     def simplify(self):
-        """
-        Simplify the expression tree.
-
-        This function recurses down the tree, applying any simplifications defined in
-        classes derived from pybamm.Symbol. E.g. any expression multiplied by a
-        pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0)
-        """
-
-        new_symbol = copy.deepcopy(self)
-        # strip out domain info by default, so that conflicting domains are not an issue
-        # during simplification. This should only be run after the model is discretised,
-        # after which domains are no longer an issue
-        new_symbol.domain = []
-        new_symbol.parent = None
-        return simplify_if_constant(new_symbol)
+        """ Simplify the expression tree. See :meth:`pybamm.simplify()`. """
+        return pybamm.simplify(self)
 
     @property
     def has_left_ghost_cell(self):

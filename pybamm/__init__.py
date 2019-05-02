@@ -50,7 +50,7 @@ from .util import load_function
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import Symbol, simplify_if_constant
+from .expression_tree.symbol import Symbol
 from .expression_tree.binary_operators import (
     is_scalar_zero,
     is_matrix_zero,
@@ -101,6 +101,12 @@ from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
 from .expression_tree.exceptions import DomainError, ModelError
+from .expression_tree.simplify import (
+    simplify,
+    simplify_if_constant,
+    simplify_addition_subtraction,
+    simplify_multiplication_division,
+)
 
 #
 # Model classes

@@ -70,7 +70,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(funcd.evaluate(), 1)
 
     def test_function_simplify(self):
-        a = pybamm.Symbol("a")
+        a = pybamm.Parameter("a")
         funca = pybamm.Function(test_const_function, a).simplify()
         self.assertIsInstance(funca, pybamm.Scalar)
         self.assertEqual(funca.evaluate(), 1)
