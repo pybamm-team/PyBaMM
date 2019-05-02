@@ -27,14 +27,17 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
     tolerance : float, optional
         The tolerance for the solver (default is 1e-8). Set as the both reltol and
         abstol in solve_ivp.
+    linsolver : str, optional
+            Can be 'dense' (= default), 'lapackdense', 'spgmr', 'spbcgs', 'sptfqmr'
     """
 
-    def __init__(self, method="cvode", tol=1e-8):
+    def __init__(self, method="cvode", tol=1e-8, linsolver="dense"):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
         super().__init__(tol)
         self._method = method
+        self.linsolver = linsolver
 
     @property
     def method(self):
@@ -45,8 +48,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         self._method = value
 
     def integrate(
-        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None,
-        linsolver='dense'
+        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
     ):
         """
         Solve a model defined by dydt with initial conditions y0.
@@ -68,8 +70,6 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             A function that takes in t and y and returns the Jacobian. If
             None, the solver will approximate the Jacobian.
             (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
-        linsolver : method, optional
-            Can be 'dense' (= default), 'lapackdense', 'spgmr', 'spbcgs', 'sptfqmr'
 
         """
 
@@ -101,14 +101,14 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
                 return 0
 
         extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol,
-                         "linsolver": linsolver}
+                         "linsolver": self.linsolver}
 
         if jacobian:
-            if linsolver in ('dense', 'lapackdense'):
+            if self.linsolver in ('dense', 'lapackdense'):
                 extra_options.update({
                     "jacfn": jacfn
                 })
-            elif linsolver in ('spgmr', 'spbcgs', 'sptfqmr'):
+            elif self.linsolver in ('spgmr', 'spbcgs', 'sptfqmr'):
                 extra_options.update({
                     "jac_times_setupfn": jac_times_setupfn,
                     "jac_times_vecfn": jac_times_vecfn,

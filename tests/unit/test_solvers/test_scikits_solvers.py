@@ -110,6 +110,21 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_allclose(2.0 * t_sol - 0.25 * t_sol ** 2, y_sol[1], rtol=1e-4)
         np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
 
+        solver = pybamm.ScikitsOdeSolver(tol=1e-8, linsolver = "spgmr")
+
+        t_sol, y_sol = solver.integrate(linear_ode, y0, t_eval, jacobian=jacobian)
+        np.testing.assert_array_equal(t_sol, t_eval)
+        np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
+        np.testing.assert_allclose(2.0 * t_sol - 0.25 * t_sol ** 2, y_sol[1], rtol=1e-4)
+
+        t_sol, y_sol = solver.integrate(
+            linear_ode, y0, t_eval, jacobian=sparse_jacobian)
+
+        np.testing.assert_array_equal(t_sol, t_eval)
+        np.testing.assert_allclose(2.0 * t_sol - 0.25 * t_sol ** 2, y_sol[1], rtol=1e-4)
+        np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
+
+
         # Nonlinear exponential grwoth
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
 
@@ -124,6 +139,26 @@ class TestScikitsSolver(unittest.TestCase):
 
         y0 = np.array([1.0, 1.0])
         t_eval = np.linspace(0, 1, 100)
+
+        t_sol, y_sol = solver.integrate(
+            exponential_growth, y0, t_eval, jacobian=jacobian
+        )
+        np.testing.assert_array_equal(t_sol, t_eval)
+        np.testing.assert_allclose(np.exp(t_sol), y_sol[0], rtol=1e-4)
+        np.testing.assert_allclose(
+            np.exp(1 + t_sol - np.exp(t_sol)), y_sol[1], rtol=1e-4
+        )
+
+        t_sol, y_sol = solver.integrate(
+            exponential_growth, y0, t_eval, jacobian=sparse_jacobian,
+        )
+        np.testing.assert_array_equal(t_sol, t_eval)
+        np.testing.assert_allclose(np.exp(t_sol), y_sol[0], rtol=1e-4)
+        np.testing.assert_allclose(
+            np.exp(1 + t_sol - np.exp(t_sol)), y_sol[1], rtol=1e-4
+        )
+
+        solver = pybamm.ScikitsOdeSolver(tol=1e-8, linsolver="spgmr")
 
         t_sol, y_sol = solver.integrate(
             exponential_growth, y0, t_eval, jacobian=jacobian
