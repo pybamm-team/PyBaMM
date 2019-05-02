@@ -146,7 +146,7 @@ class Ohm(pybamm.SubModel):
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
-        # import parameters and spatial vairables
+        # import parameters and spatial variables
         param = self.set_of_parameters
         l_n = param.l_n
         l_p = param.l_p
@@ -168,8 +168,16 @@ class Ohm(pybamm.SubModel):
         sigma_n_eff = param.sigma_n * (1 - eps_n)
         sigma_p_eff = param.sigma_p * (1 - eps_p)
         phi_s_n = i_cell * x_n * (2 * l_n - x_n) / (2 * sigma_n_eff * l_n)
-        phi_s_p = (ocp_p_right + eta_r_p_right + phi_e_right) + i_cell * (
-            (1 - x_p) * (1 - 2 * l_p - x_p) / (2 * sigma_p_eff * l_p)
+
+        const = (
+            eta_r_p_av
+            + ocp_p_av
+            + phi_e_p_av
+            - (i_cell / 3 / l_p / sigma_p_eff) * (l_n ** 3 - 3 * l_n + 3)
+        )
+
+        phi_s_p = const + (i_cell / 2 / sigma_p_eff / l_p) * (
+            2 * (1 - l_p) * x_p - x_p ** 2
         )
 
         # electrode current

@@ -241,7 +241,8 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         kappa_s = param.kappa_e(c_e_0) * eps_s ** param.b
         kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
 
-        # get left-most ocp and overpotential
+        # get electrode averaged values
+        # TODO: fix this
         ocp_n_left = pybamm.boundary_value(ocp_n, "left")
         eta_r_n_left = pybamm.boundary_value(eta_r_n, "left")
         c_e_n_left = pybamm.boundary_value(c_e_n, "left")

@@ -81,9 +81,13 @@ class SPMe(pybamm.LithiumIonBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte current
-        eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        elyte_vars = eleclyte_current_model.get_explicit_combined(ocp_n, eta_r_n, c_e)
-        self.variables.update(elyte_vars)
+        electrolyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
+            param
+        )
+        electrolyte_vars = electrolyte_current_model.get_explicit_combined(
+            ocp_n, eta_r_n, c_e
+        )
+        self.variables.update(electrolyte_vars)
 
         # Electrode
         electrode_model = pybamm.electrode.Ohm(param)
