@@ -5,6 +5,30 @@ import numpy as np
 import scipy.interpolate as interp
 
 
+def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="linear"):
+    """
+    Post-process all variables in a model
+
+    Parameters
+    ----------
+    variables : dict
+        Dictionary of variables
+    t_sol : array_like, size (m,)
+        The time vector returned by the solver
+    y_sol : array_like, size (m, k)
+        The solution vector returned by the solver. Can include solution values that
+        other than those that get read by base_variable.evaluate() (i.e. k>=n)
+    mesh : :class:`pybamm.Mesh`
+        The mesh used to solve, used here to calculate the reference x values for
+        interpolation
+    interp_kind : str
+        The method to use for interpolation
+    """
+    for var, eqn in variables.items():
+        variables[var] = ProcessedVariable(eqn, t_sol, y_sol, mesh, interp_kind)
+    return variables
+
+
 class ProcessedVariable(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and

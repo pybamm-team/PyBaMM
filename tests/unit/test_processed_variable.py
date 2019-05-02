@@ -115,8 +115,10 @@ class TestProcessedVariable(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
-        processed_var = pybamm.ProcessedVariable(model.variables["c"], t_sol, y_sol)
-        np.testing.assert_array_almost_equal(processed_var.entries[0], np.exp(-t_sol))
+        processed_vars = pybamm.post_process_variables(model.variables, t_sol, y_sol)
+        np.testing.assert_array_almost_equal(
+            processed_vars["c"].entries[0], np.exp(-t_sol)
+        )
 
         # with space
         # set up and solve model
@@ -132,12 +134,14 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
         x = pybamm.SpatialVariable("x", domain=whole_cell)
         x_sol = modeltest.disc.process_symbol(x).entries
-        processed_var = pybamm.ProcessedVariable(
-            model.variables["c"], t_sol, y_sol, mesh=modeltest.disc.mesh
+        processed_vars = pybamm.post_process_variables(
+            model.variables, t_sol, y_sol, modeltest.disc.mesh
         )
+
         # test
         np.testing.assert_array_almost_equal(
-            processed_var.entries, np.ones_like(x_sol)[:, np.newaxis] * np.exp(-t_sol)
+            processed_vars["c"].entries,
+            np.ones_like(x_sol)[:, np.newaxis] * np.exp(-t_sol),
         )
 
 

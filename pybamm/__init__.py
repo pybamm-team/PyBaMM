@@ -187,7 +187,7 @@ from .solvers.scikits_ode_solver import ScikitsOdeSolver
 #
 # other
 #
-from .processed_variable import ProcessedVariable
+from .processed_variable import post_process_variables, ProcessedVariable
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
