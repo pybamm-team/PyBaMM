@@ -45,7 +45,8 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         self._method = value
 
     def integrate(
-        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
+        self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None,
+        linsolver = 'dense'
     ):
         """
         Solve a model defined by dydt with initial conditions y0.
@@ -67,6 +68,8 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             A function that takes in t and y and returns the Jacobian. If
             None, the solver will approximate the Jacobian.
             (see `SUNDIALS docs. <https://computation.llnl.gov/projects/sundials>`).
+        linsolver : method, optional
+            Can be 'dense' (= default), 'lapackdense', 'spgmr', 'spbcgs', 'sptfqmr'
 
         """
 
@@ -76,34 +79,40 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         def rootfn(t, y, return_root):
             return_root[:] = [event(t, y) for event in events]
 
-        def jacfn(t, y, fy, J):
-            J[:][:] = jacobian(t, y)
-
-        def jac_times_setupfn(t, y, fy, userdata):
-            userdata._jac_eval = jacobian(t, y)
-            return 0
-
-        def jac_times_vecfn(v, Jv, t, y, userdata):
-            Jv[:] = userdata._jac_eval * v
-            return 0
-
-        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
-
-        # use 'dense' for linear solver if jacobian is a dense matrix
-        # otherwise, use 'spgmr'
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0)
             if sparse.issparse(jac_y0_t0):
+                def jacfn(t, y, fy, J):
+                    J[:][:] = jacobian(t, y).toarray()
+
+                def jac_times_vecfn(v, Jv, t, y, userdata):
+                    Jv[:] = userdata._jac_eval * v
+                    return 0
+            else:
+                def jacfn(t, y, fy, J):
+                    J[:][:] = jacobian(t, y)
+
+                def jac_times_vecfn(v, Jv, t, y, userdata):
+                    Jv[:] = np.matmul(userdata._jac_eval, v)
+                    return 0
+
+            def jac_times_setupfn(t, y, fy, userdata):
+                userdata._jac_eval = jacobian(t, y)
+                return 0
+
+        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol,
+                "linsolver": linsolver}
+
+        if jacobian:
+            if linsolver in ('dense', 'lapackdense'):
                 extra_options.update({
-                    "linsolver": "spgmr",
+                    "jacfn": jacfn
+                })
+            elif linsolver in ('spgmr', 'spbcgs', 'sptfqmr'):
+                extra_options.update({
                     "jac_times_setupfn": jac_times_setupfn,
                     "jac_times_vecfn": jac_times_vecfn,
                     "user_data": self
-                })
-            else:
-                extra_options.update({
-                    "linsolver": "dense",
-                    "jacfn": jacfn
                 })
 
         if events:
