@@ -5,7 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import copy
 import numpy as np
 from scipy.sparse import block_diag, csr_matrix
 
@@ -380,6 +379,9 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Array):
             return symbol.__class__(symbol.entries, symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.StateVector):
+            return symbol.__class__(symbol.y_slice, symbol.name, symbol.domain)
 
         elif isinstance(symbol, pybamm.Time):
             return pybamm.Time()
