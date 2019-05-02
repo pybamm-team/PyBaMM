@@ -138,27 +138,57 @@ class VoltageTests(BaseOutputTest):
         neg_end_vs_start = self.ocp_n_av.entries[:, -1] - self.ocp_n_av.entries[:, 1]
         pos_end_vs_start = self.ocp_p_av.entries[:, -1] - self.ocp_p_av.entries[:, 1]
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(neg_end_vs_start, 0)
-            np.testing.assert_array_less(-pos_end_vs_start, 0)
-        elif self.operating_condition == "charge":
             np.testing.assert_array_less(-neg_end_vs_start, 0)
             np.testing.assert_array_less(pos_end_vs_start, 0)
+        elif self.operating_condition == "charge":
+            np.testing.assert_array_less(neg_end_vs_start, 0)
+            np.testing.assert_array_less(-pos_end_vs_start, 0)
         elif self.operating_condition == "off":
             np.testing.assert_array_almost_equal(neg_end_vs_start, 0)
             np.testing.assert_array_almost_equal(pos_end_vs_start, 0)
 
     def test_ocv(self):
-        "Test open-circuit-voltage decreases during discharge"
+        """Testing that:
+            - discharge: ocv decreases
+            - charge: ocv increases
+            - off: ocv constant
+        """
+
+        end_vs_start = self.ocv_av.entries[:, -1] - self.ocv_av.entries[:, 1]
+
+        if self.operating_condition == "discharge":
+            np.testing.assert_array_less(end_vs_start, 0)
+        elif self.operating_condition == "charge":
+            np.testing.assert_array_less(-end_vs_start, 0)
+        elif self.operating_condition == "off":
+            np.testing.assert_array_almost_equal(end_vs_start, 0)
 
     def test_voltage(self):
-        "Test terminal voltage is less than open-circuit-voltage during a discharge"
+        """Testing that:
+            - discharge: voltage decreases
+            - charge: voltage increases
+            - off: voltage constant
+        """
+        end_vs_start = self.voltage.entries[:, -1] - self.voltage.entries[:, 1]
+
+        if self.operating_condition == "discharge":
+            np.testing.assert_array_less(end_vs_start, 0)
+        elif self.operating_condition == "charge":
+            np.testing.assert_array_less(-end_vs_start, 0)
+        elif self.operating_condition == "off":
+            np.testing.assert_array_almost_equal(end_vs_start, 0)
 
     def test_consistent(self):
-        """Test voltage components are consistent with one another by ensuring they sum 
+        """Test voltage components are consistent with one another by ensuring they sum
         correctly"""
 
-        # ocv = ocp_p - ocp_n
-        # v = ocv + eta_r
+        np.testing.assert_array_almost_equal(
+            self.ocv_av.entries, self.ocp_p_av.entries - self.ocp_n_av.entries
+        )
+
+        np.testing.assert_array_almost_equal(
+            self.voltage.entries, self.ocv_av.entries + self.eta_r_av.entries
+        )
 
     def test_all(self):
         self.test_each_reaction_overpotential()
@@ -169,23 +199,49 @@ class VoltageTests(BaseOutputTest):
         self.test_consistent()
 
 
-class ParticleConcentrationTests(object):
-    def __init__(self, model, disc, solver, parameter_values):
-        self.model = model
-        self.disc = disc
-        self.solver = solver
+class ParticleConcentrationTests(BaseOutputTest):
+    def __init__(self, model, disc, solver, operating_condition):
+        super().__init__(model, disc, solver, operating_condition)
 
-        # create all the required terms here
+        self.c_s_n = self.get_var("Negative particle concentration")
+        self.c_s_p = self.get_var("Positive particle concentration")
+
+        self.c_s_n_surf = self.get_var("Negative particle surface concentration")
+        self.c_s_p_surf = self.get_var("Positive particle surface concentration")
+
+        # TODO: fix flux bug
+        # self.N_s_n = self.get_var("Negative particle flux")
+        # self.N_s_p = self.get_var("Positive particle flux")
 
     def test_concentration_increase_decrease(self):
-        """Test all concentrations in negative particles decrease and all 
-        concentrations in positive particles increase during discharge."""
+        """Test all concentrations in negative particles decrease and all
+        concentrations in positive particles increase over a discharge."""
+
+        neg_end_vs_start = self.c_s_n.entries[:, -1] - self.c_s_n.entries[:, 1]
+        pos_end_vs_start = self.c_s_p.entries[:, -1] - self.c_s_p.entries[:, 1]
+
+        if self.operating_condition == "discharge":
+            np.testing.assert_array_less(neg_end_vs_start, 0)
+            np.testing.assert_array_less(-pos_end_vs_start, 0)
+        elif self.operating_condition == "charge":
+            np.testing.assert_array_less(-neg_end_vs_start, 0)
+            np.testing.assert_array_less(pos_end_vs_start, 0)
+        elif self.operating_condition == "off":
+            np.testing.assert_array_almost_equal(neg_end_vs_start, 0)
+            np.testing.assert_array_almost_equal(pos_end_vs_start, 0)
 
     def test_concentration_limits(self):
         "Test that concentrations do not go below 0 or exceed the maximum."
 
+        np.testing.assert_array_less(-self.c_s_n.entries, 0)
+        np.testing.assert_array_less(-self.c_s_p.entries, 0)
+
+        np.testing.assert_array_less(self.c_s_n.entries, 1)
+        np.testing.assert_array_less(self.c_s_p.entries, 1)
+
     def test_conservation(self):
         "Test amount of lithium stored across all particles is constant."
+        # TODO: add an output for total lithium in particles
 
     def test_concentration_profile(self):
         """Test that the concentration in the centre of the negative particles is 
@@ -193,11 +249,13 @@ class ParticleConcentrationTests(object):
         concentration on the surface of the negative particle is less than the average 
         concentration in the particle. Test opposite is true for the positive 
         particle."""
+        # TODO: add an output for average particle concentration
 
     def test_fluxes(self):
         """Test that no flux holds in the centre of the particle. Test that surface 
         flux in the negative particles is less than zero and that the flux on the 
         surface of the positive particles is greater than zeros during a discharge."""
+        # TODO: implement after flux bug fix
 
     def test_all(self):
         self.test_concentration_increase_decrease()
