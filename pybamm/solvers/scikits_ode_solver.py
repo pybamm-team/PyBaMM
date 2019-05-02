@@ -46,7 +46,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None,
-        linsolver = 'dense'
+        linsolver='dense'
     ):
         """
         Solve a model defined by dydt with initial conditions y0.
@@ -101,7 +101,7 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
                 return 0
 
         extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol,
-                "linsolver": linsolver}
+                         "linsolver": linsolver}
 
         if jacobian:
             if linsolver in ('dense', 'lapackdense'):
