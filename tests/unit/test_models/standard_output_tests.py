@@ -265,19 +265,41 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.test_fluxes()
 
 
-class ElectrolyteConcentrationTests(object):
-    def __init__(self, model, disc, solver, parameter_values):
-        self.model = model
-        self.disc = disc
-        self.solver = solver
+class ElectrolyteConcentrationTests(BaseOutputTest):
+    def __init__(self, model, disc, solver, operating_condition):
+        super().__init__(model, disc, solver, operating_condition)
 
-        # create all the required terms here
+        self.c_e = self.get_var("Electrolyte concentration")
+
+        self.c_e_n = self.get_var("Negative electrolyte concentration")
+        self.c_e_s = self.get_var("Separator electrolyte concentration")
+        self.c_e_p = self.get_var("Positive electrolyte concentration")
+
+        # TODO: output average electrolyte concentration
+        # self.c_e_av = self.get_var("Average electrolyte concentration")
+        # self.c_e_n_av = self.get_var("Average negative electrolyte concentration")
+        # self.c_e_s_av = self.get_var("Average separator electrolyte concentration")
+        # self.c_e_p_av = self.get_var("Average positive electrolyte concentration")
+
+        # TODO: fix flux bug
+        # self.N_e = self.get_var("Electrolyte flux")
+
+        # self.N_e_n = self.get_var("Negative electrolyte flux")
+        # self.N_e_s = self.get_var("Separator electrolyte flux")
+        # self.N_e_p = self.get_var("Positive electrolyte flux")
+
+        # self.N_e_hat = self.get_var("Reduced cation flux")
 
     def test_concentration_limit(self):
         "Test that the electrolyte concentration is always greater than zero."
+        np.testing.assert_array_less(-self.c_e.entries, 0)
 
     def test_conservation(self):
         "Test conservation of species in the electrolyte."
+        # sufficient to check average concentration is constant
+
+        # diff = self.c_e_av.entries[:, 1:] - self.c_e_av.entries[:, :-1]
+        # np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
         """Test continuity of the concentration profile. Test average concentration is 
@@ -285,14 +307,45 @@ class ElectrolyteConcentrationTests(object):
         than the average and the concentration in the positive is less than the average 
         during a discharge."""
 
+        # TODO: uncomment when have average concentrations
+        # # small number so that can use array less
+        # epsilon = 0.001
+
+        # if self.operating_condition == "discharge":
+        #     np.testing.assert_array_less(
+        #         -self.c_e_n_av.entries, self.c_e_av.entries + epsilon
+        #     )
+        #     np.testing.assert_array_less(
+        #         self.c_e_p_av.entries, self.c_e_av.entries + epsilon
+        #     )
+        # elif self.operating_condition == "charge":
+        #     np.testing.assert_array_less(
+        #         -self.c_e_n_av.entries, self.c_e_av.entries + epsilon
+        #     )
+        #     np.testing.assert_array_less(
+        #         self.c_e_p_av.entries, self.c_e_av.entries + epsilon
+        #     )
+        # elif self.operating_condition == "off":
+        #     np.testing.assert_array_equal(self.c_e_n_av.entries, self.c_e_av.entries)
+        #     np.testing.assert_array_equal(self.c_e_s_av.entries, self.c_e_av.entries)
+        #     np.testing.assert_array_equal(self.c_e_p_av.entries, self.c_e_av.entries)
+
     def test_fluxes(self):
         """Test that the internal boundary fluxes are continuous. Test current 
         collector fluxes are zero."""
+
+        # TODO: fix flux bug
 
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,
         separator, and positive electrode, we get the correct behaviour: continuous 
         solution and recover combined through concatenation."""
+
+        c_e_combined = np.concatenate(
+            (self.c_e_n.entries, self.c_e_s.entries, self.c_e_p.entries), axis=0
+        )
+
+        np.testing.assert_array_equal(self.c_e.entries, c_e_combined)
 
     def test_all(self):
         self.test_concentration_limit()
@@ -302,7 +355,7 @@ class ElectrolyteConcentrationTests(object):
         self.test_splitting()
 
 
-class PotentialTests(object):
+class PotentialTests(BaseOutputTest):
     def __init__(self, model, disc, solver, parameter_values):
         self.model = model
         self.disc = disc
