@@ -90,6 +90,11 @@ class VoltageTests(BaseOutputTest):
         self.eta_n = self.get_var("Negative reaction overpotential [V]")
         self.eta_p = self.get_var("Positive reaction overpotential [V]")
         self.eta_r_av = self.get_var("Average reaction overpotential [V]")
+
+        self.eta_c_av = self.get_var("Average concentration overpotential [V]")
+        self.Delta_Phi_e_av = self.get_var("Average electrolyte ohmic losses [V]")
+        self.Delta_Phi_s_av = self.get_var("Average solid phase ohmic losses [V]")
+
         self.ocp_n_av = self.get_var(
             "Average negative electrode open circuit potential [V]"
         )
@@ -115,18 +120,29 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_equal(self.eta_n.entries, 0)
             np.testing.assert_array_equal(-self.eta_p.entries, 0)
 
-    def test_total_reaction_overpotential(self):
-        """Testing that:
-            - discharge: eta_r_av < 0
-            - charge: eta_r_av > 0
-            - off: eta_r_av == 0
+    def test_overpotentials(self):
+        """Testing that all are:
+            - discharge: . < 0
+            - charge: . > 0
+            - off: . == 0
         """
+        tol = 0.001
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(self.eta_r_av.entries, 0)
+            np.testing.assert_array_less(self.eta_r_av.entries, tol)
+            np.testing.assert_array_less(self.eta_c_av.entries, tol)
+            np.testing.assert_array_less(self.Delta_Phi_e_av.entries, tol)
+            np.testing.assert_array_less(self.Delta_Phi_s_av.entries, tol)
         elif self.operating_condition == "charge":
-            np.testing.assert_array_less(-self.eta_r_av.entries, 0)
+            np.testing.assert_array_less(-self.eta_r_av.entries, tol)
+            np.testing.assert_array_less(-self.eta_c_av.entries, tol)
+            np.testing.assert_array_less(-self.Delta_Phi_e_av.entries, tol)
+            np.testing.assert_array_less(-self.Delta_Phi_s_av.entries, tol)
+
         elif self.operating_condition == "off":
             np.testing.assert_array_equal(self.eta_r_av.entries, 0)
+            np.testing.assert_array_equal(self.eta_c_av.entries, 0)
+            np.testing.assert_array_equal(self.Delta_Phi_e_av.entries, 0)
+            np.testing.assert_array_equal(self.Delta_Phi_s_av.entries, 0)
 
     def test_ocps(self):
         """ Testing that:
@@ -187,12 +203,17 @@ class VoltageTests(BaseOutputTest):
         )
 
         np.testing.assert_array_almost_equal(
-            self.voltage.entries, self.ocv_av.entries + self.eta_r_av.entries
+            self.voltage.entries,
+            self.ocv_av.entries
+            + self.eta_r_av.entries
+            + self.eta_c_av.entries
+            + self.Delta_Phi_e_av.entries
+            + self.Delta_Phi_s_av.entries,
         )
 
     def test_all(self):
         self.test_each_reaction_overpotential()
-        self.test_total_reaction_overpotential()
+        self.test_overpotentials()
         self.test_ocps()
         self.test_ocv()
         self.test_voltage()
@@ -356,53 +377,69 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
 
 
 class PotentialTests(BaseOutputTest):
-    def __init__(self, model, disc, solver, parameter_values):
-        self.model = model
-        self.disc = disc
-        self.solver = solver
+    def __init__(self, model, disc, solver, operating_condition):
+        super().__init__(model, disc, solver, operating_condition)
 
-        # create all the required terms here
+        self.phi_s_n = self.get_var("Negative electrode potential [V]")
+        self.phi_s_p = self.get_var("Positive electrode potential [V]")
+
+        self.phi_e = self.get_var("Electrolyte potential [V]")
+
+        self.phi_e_n = self.get_var("Negative electrolyte potential [V]")
+        self.phi_e_s = self.get_var("Separator electrolyte potential [V]")
+        self.phi_e_p = self.get_var("Positive electrolyte potential [V]")
 
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
         average negative electrode potential is less than or equal to zero."""
 
+        np.testing.assert_array_equal(self.phi_s_n.entries[0], 0)
+
     def test_positive_electrode_potential_profile(self):
         """Test average positive electrode potential is less than the positive electrode
         potential on the right current collector."""
+
+        # TODO: add these when have averages
 
     def test_potential_differences(self):
         """Test electrolyte potential is less than the negative electrode potential.
         Test that the positive electrode potential is greater than the negative 
         electrode potential."""
 
-    def test_potential_profile(self):
-        """Test that negative electrode potential is zero on left boundary. Test
-        average negative electrode potential is less than or equal to zero. Test
-        average positive electrode potential is greater than average negative electrode 
-        potential. Test average positive electrode potential is less than the positive 
-        electrode potential on the right current collector."""
+        # TODO: these tests with averages
+
+        np.testing.assert_array_less(-self.phi_s_p.entries, 0)
 
     def test_all(self):
         self.test_negative_electrode_potential_profile()
         self.test_positive_electrode_potential_profile()
         self.test_potential_differences()
-        self.test_potential_profile()
 
 
-class CurrentTests(object):
-    def __init__(self, model, disc, solver, parameter_values):
-        self.model = model
-        self.disc = disc
-        self.solver = solver
+class CurrentTests(BaseOutputTest):
+    def __init__(self, model, disc, solver, operating_condition):
+        super().__init__(model, disc, solver, operating_condition)
+
+        self.j = self.get_var("Interfacial current density")
+        self.j0 = self.get_var("Exchange-current density")
+
+        self.j_n = self.get_var("Negative electrode interfacial current density")
+        self.j_p = self.get_var("Positive electrode interfacial current density")
+
+        self.j0_n = self.get_var("Negative electrode exchange-current density")
+        self.j0_p = self.get_var("Positive electrode exchange-current density")
 
     def test_interfacial_current_average(self):
         """Test that average of the interfacial current density is equal to the true 
         value."""
 
+        # TODO: need averages
+
     def test_conservation(self):
         """Test sum of electrode and electrolyte current densities give the applied 
         current density"""
+
+        # TODO: add a total function
 
     def test_all(self):
         self.test_interfacial_current_average()
