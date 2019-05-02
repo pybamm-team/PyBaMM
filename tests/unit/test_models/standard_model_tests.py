@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import tests
 
 import numpy as np
 
@@ -20,6 +21,7 @@ class StandardModelTest(object):
         var_pts=None,
         spatial_methods=None,
         solver=None,
+        chemistry=None,
     ):
         self.model = model
         # Set parameters, geometry, spatial methods etc
@@ -39,6 +41,7 @@ class StandardModelTest(object):
         # Set discretisation
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
         self.disc = pybamm.Discretisation(mesh, spatial_methods)
+        self.chemistry = None
 
     def test_processing_parameters(self, parameter_values=None):
         # Overwrite parameters if given
@@ -77,11 +80,19 @@ class StandardModelTest(object):
 
         self.solver.solve(self.model, t_eval)
 
+    def test_outputs(self):
+        # run the standard output tests
+        std_out_test = tests.StandardOutputTests(
+            self.model, self.disc, self.solver, self.chemistry, self.parameter_values
+        )
+        std_out_test.test_all()
+
     def test_all(self, param=None, disc=None, solver=None, t_eval=None):
         self.model.check_well_posedness()
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
+        self.test_outputs()
 
     def test_update_parameters(self, param):
         # check if geometry has changed, throw error if so (need to re-discretise)

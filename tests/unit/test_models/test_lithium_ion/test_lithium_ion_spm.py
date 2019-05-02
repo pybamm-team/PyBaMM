@@ -12,7 +12,7 @@ import unittest
 class TestSPM(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lithium_ion.SPM()
-        modeltest = tests.StandardModelTest(model)
+        modeltest = tests.StandardModelTest(model, chemistry="Lithium-ion")
         modeltest.test_all()
 
     def test_optimisations(self):
