@@ -147,6 +147,11 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(un2_disc, pybamm.AbsoluteValue)
         self.assertIsInstance(un2_disc.children[0], pybamm.Scalar)
 
+        # not implemented
+        sym = pybamm.Symbol("sym")
+        with self.assertRaises(NotImplementedError):
+            disc.process_symbol(sym)
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
@@ -415,9 +420,7 @@ class TestDiscretise(unittest.TestCase):
 
         # jacobian is identity
         jacobian = model.concatenated_rhs.jac(y).evaluate(0, y0)
-        np.testing.assert_array_equal(
-            np.eye(np.size(y0)), jacobian.toarray()
-        )
+        np.testing.assert_array_equal(np.eye(np.size(y0)), jacobian.toarray())
 
         # test that not enough initial conditions raises an error
         model = pybamm.BaseModel()
