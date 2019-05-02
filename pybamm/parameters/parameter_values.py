@@ -6,7 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import pandas as pd
-import copy
 
 
 class ParameterValues(dict):
@@ -243,10 +242,26 @@ class ParameterValues(dict):
                 # Concatenation or NumpyConcatenation
                 return symbol.__class__(*new_children)
 
+        # Other cases: return new variable to avoid tree internal corruption
+        elif isinstance(symbol, pybamm.Variable):
+            return pybamm.Variable(symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.Scalar):
+            return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.Array):
+            return symbol.__class__(symbol.entries, symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.SpatialVariable):
+            return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
+
+        elif isinstance(symbol, pybamm.Time):
+            return pybamm.Time()
+
         else:
-            new_symbol = copy.deepcopy(symbol)
-            new_symbol.parent = None
-            return new_symbol
+            raise NotImplementedError(
+                "Cannot process parameters for symbol of type '{}'".format(type(symbol))
+            )
 
     def update_scalars(self, symbol):
         """Update the value of any Scalars in the expression tree.
