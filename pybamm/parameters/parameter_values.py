@@ -260,7 +260,9 @@ class ParameterValues(dict):
             return pybamm.Time()
 
         else:
-            raise NotImplementedError
+            raise NotImplementedError(
+                "Cannot process parameters for symbol of type '{}'".format(type(symbol))
+            )
 
     def update_scalars(self, symbol):
         """Update the value of any Scalars in the expression tree.
