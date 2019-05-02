@@ -79,7 +79,7 @@ def simplify_addition_subtraction(myclass, left, right):
         """
         for child in [left_child, right_child]:
             if isinstance(child, (pybamm.Addition, pybamm.Subtraction)):
-                left, right = child.orphans
+                left, right = [simplify(child) for child in child.children]
                 flatten(child.__class__, left, right, in_subtraction)
 
             else:
@@ -252,7 +252,7 @@ def simplify_multiplication_division(myclass, left, right):
                 in_matrix_multiplication
                 or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
-                left, right = child.orphans
+                left, right = [simplify(child) for child in child.children]
                 if child == left_child:
                     flatten(
                         previous_class, child.__class__, left, right, in_numerator, True
@@ -266,7 +266,7 @@ def simplify_multiplication_division(myclass, left, right):
                 isinstance(child, (pybamm.Multiplication, pybamm.Division))
                 and not in_matrix_multiplication
             ):
-                left, right = child.orphans
+                left, right = [simplify(child) for child in child.children]
                 if child == left_child:
                     flatten(
                         previous_class,
@@ -525,7 +525,9 @@ def simplify(symbol):
         return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
 
     elif isinstance(symbol, pybamm.Array):
-        return symbol.__class__(symbol.entries, symbol.name, symbol.domain)
+        return symbol.__class__(
+            symbol.entries, symbol.name, symbol.domain, symbol.entries_string
+        )
 
     elif isinstance(symbol, pybamm.SpatialVariable):
         return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)

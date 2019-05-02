@@ -236,7 +236,7 @@ class Addition(BinaryOperator):
         if is_matrix_zero(right):
             return left
 
-        return pybamm.simplify_addition_subtraction(self.__class__, left, right)
+        return self.__class__(left, right)
 
 
 class Subtraction(BinaryOperator):
@@ -287,7 +287,7 @@ class Subtraction(BinaryOperator):
         if is_matrix_zero(right):
             return left
 
-        return pybamm.simplify_addition_subtraction(self.__class__, left, right)
+        return self.__class__(left, right)
 
 
 class Multiplication(BinaryOperator):
@@ -381,7 +381,7 @@ class Multiplication(BinaryOperator):
         if is_one(right):
             return left
 
-        return pybamm.simplify_multiplication_division(self.__class__, left, right)
+        return self.__class__(left, right)
 
 
 class MatrixMultiplication(BinaryOperator):
@@ -421,7 +421,7 @@ class MatrixMultiplication(BinaryOperator):
         if is_scalar_zero(left) or is_scalar_zero(right):
             return pybamm.Scalar(0)
 
-        return pybamm.simplify_multiplication_division(self.__class__, left, right)
+        return self.__class__(left, right)
 
 
 class Division(BinaryOperator):
@@ -510,4 +510,4 @@ class Division(BinaryOperator):
         if is_one(right):
             return left
 
-        return pybamm.simplify_multiplication_division(self.__class__, left, right)
+        return self.__class__(left, right)
