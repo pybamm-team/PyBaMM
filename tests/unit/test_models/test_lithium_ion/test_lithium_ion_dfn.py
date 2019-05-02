@@ -18,12 +18,6 @@ class TestDFN(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        from IPython import embed
-
-        embed()
-        import ipdb
-
-        ipdb.set_trace()
         modeltest.test_all()
 
     def test_optimisations(self):
