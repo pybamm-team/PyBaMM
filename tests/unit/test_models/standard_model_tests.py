@@ -21,7 +21,6 @@ class StandardModelTest(object):
         var_pts=None,
         spatial_methods=None,
         solver=None,
-        chemistry=None,
     ):
         self.model = model
         # Set parameters, geometry, spatial methods etc
@@ -41,7 +40,6 @@ class StandardModelTest(object):
         # Set discretisation
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
         self.disc = pybamm.Discretisation(mesh, spatial_methods)
-        self.chemistry = None
 
     def test_processing_parameters(self, parameter_values=None):
         # Overwrite parameters if given
@@ -83,7 +81,7 @@ class StandardModelTest(object):
     def test_outputs(self):
         # run the standard output tests
         std_out_test = tests.StandardOutputTests(
-            self.model, self.disc, self.solver, self.chemistry, self.parameter_values
+            self.model, self.disc, self.solver, self.parameter_values
         )
         std_out_test.test_all()
 

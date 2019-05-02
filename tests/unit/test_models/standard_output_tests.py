@@ -11,37 +11,52 @@ import numpy as np
 class StandardOutputTests(object):
     "Calls all the tests on the standard output variables."
 
-    def __init__(self, model, disc, solver, chemistry, parameter_values):
+    def __init__(self, model, disc, solver, parameter_values):
         self.model = model
         self.disc = disc
         self.solver = solver
-        self.chemistry = chemistry
-        self.parameter_values = parameter_values
+
+        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+            self.chemistry = "Lithium-ion"
+        elif isinstance(self.model, pybamm.LeadAcidBaseModel):
+            self.chemistry = "Lead acid"
+
+        current_sign = np.sign(parameter_values["Typical current density"])
+        if current_sign == 1:
+            self.operating_condition = "discharge"
+        elif current_sign == -1:
+            self.operating_condition = "charge"
+        else:
+            self.operating_condition = "off"
 
     def test_voltage(self):
-        tests = VoltageTests(self.model, self.disc, self.solver, self.parameter_values)
+        tests = VoltageTests(
+            self.model, self.disc, self.solver, self.operating_condition
+        )
         tests.test_all()
 
     def test_electrolyte(self):
         tests = ElectrolyteConcentrationTests(
-            self.model, self.disc, self.solver, self.parameter_values
+            self.model, self.disc, self.solver, self.operating_condition
         )
         tests.test_all()
 
     def test_potentials(self):
         tests = PotentialTests(
-            self.model, self.disc, self.solver, self.parameter_values
+            self.model, self.disc, self.solver, self.operating_condition
         )
         tests.test_all()
 
     def test_particles(self):
         tests = ParticleConcentrationTests(
-            self.model, self.disc, self.solver, self.parameter_values
+            self.model, self.disc, self.solver, self.operating_condition
         )
         tests.test_all()
 
     def test_currents(self):
-        tests = CurrentTests(self.model, self.disc, self.solver, self.parameter_values)
+        tests = CurrentTests(
+            self.model, self.disc, self.solver, self.operating_condition
+        )
         tests.test_all()
 
     def test_all(self):
@@ -55,19 +70,11 @@ class StandardOutputTests(object):
 
 
 class BaseOutputTest(object):
-    def __init__(self, model, disc, solver, parameter_values):
+    def __init__(self, model, disc, solver, operating_condition):
         self.model = model
         self.disc = disc
         self.solver = solver
-
-        current_sign = np.sign(parameter_values["Typical current density"])
-
-        if current_sign == 1:
-            self.operating_condition = "discharge"
-        elif current_sign == -1:
-            self.operating_condition = "charge"
-        else:
-            self.operating_condition = "off"
+        self.operating_condition = operating_condition
 
     def get_var(self, var):
         "Helper function to reduce repeated code."
@@ -77,8 +84,8 @@ class BaseOutputTest(object):
 
 
 class VoltageTests(BaseOutputTest):
-    def __init__(self, model, disc, solver, parameter_values):
-        super().__init__(model, disc, solver, parameter_values)
+    def __init__(self, model, disc, solver, operating_condition):
+        super().__init__(model, disc, solver, operating_condition)
 
         self.eta_n = self.get_var("Negative reaction overpotential [V]")
         self.eta_p = self.get_var("Positive reaction overpotential [V]")
@@ -93,7 +100,7 @@ class VoltageTests(BaseOutputTest):
         self.voltage = self.get_var("Terminal voltage [V]")
 
     def test_each_reaction_overpotential(self):
-        """Test that:
+        """Testing that:
             - discharge: eta_n > 0, eta_p < 0
             - charge: eta_n < 0, eta_p > 0
             - off: eta_n == 0, eta_p == 0
@@ -109,7 +116,7 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_equal(-self.eta_p.entries, 0)
 
     def test_total_reaction_overpotential(self):
-        """Test:
+        """Testing that:
             - discharge: eta_r_av < 0
             - charge: eta_r_av > 0
             - off: eta_r_av == 0
@@ -125,16 +132,20 @@ class VoltageTests(BaseOutputTest):
         """ Testing that:
             - discharge: ocp_n increases, ocp_p decreases
             - charge: ocp_n decreases, ocp_p increases
-            - 
-
+            - off: ocp_n, ocp_p constant
         """
-        end_vs_start = self.ocp_n_av.entries[:, -1] - self.ocp_n_av.entries[:, 1]
+
+        neg_end_vs_start = self.ocp_n_av.entries[:, -1] - self.ocp_n_av.entries[:, 1]
+        pos_end_vs_start = self.ocp_p_av.entries[:, -1] - self.ocp_p_av.entries[:, 1]
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(end_vs_start, 0)
+            np.testing.assert_array_less(neg_end_vs_start, 0)
+            np.testing.assert_array_less(-pos_end_vs_start, 0)
         elif self.operating_condition == "charge":
-            np.testing.assert_array_less(-end_vs_start, 0)
+            np.testing.assert_array_less(-neg_end_vs_start, 0)
+            np.testing.assert_array_less(pos_end_vs_start, 0)
         elif self.operating_condition == "off":
-            np.testing.assert_array_equal(end_vs_start, 0)
+            np.testing.assert_array_almost_equal(neg_end_vs_start, 0)
+            np.testing.assert_array_almost_equal(pos_end_vs_start, 0)
 
     def test_ocv(self):
         "Test open-circuit-voltage decreases during discharge"
