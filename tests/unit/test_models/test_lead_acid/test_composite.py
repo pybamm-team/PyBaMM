@@ -36,15 +36,11 @@ class TestLeadAcidComposite(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
 
         # Post-process variables
-        conc = pybamm.ProcessedVariable(
-            model.variables["Electrolyte concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
+        processed_variables = pybamm.post_process_variables(
+            model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        voltage = pybamm.ProcessedVariable(
-            model.variables["Terminal voltage"], t_sol, y_sol
-        )
+        conc = processed_variables["Electrolyte concentration"]
+        voltage = processed_variables["Terminal voltage"]
 
         # check output
         # concentration and voltage should be monotonically decreasing for a discharge

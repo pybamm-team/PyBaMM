@@ -35,18 +35,11 @@ class TestSPM(unittest.TestCase):
 
         # check surface concentration decreases in negative particle and
         # increases in positive particle for discharge
-        c_s_n_surf = pybamm.ProcessedVariable(
-            model.variables["Negative particle surface concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
+        processed_variables = pybamm.post_process_variables(
+            model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        c_s_p_surf = pybamm.ProcessedVariable(
-            model.variables["Positive particle surface concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
-        )
+        c_s_n_surf = processed_variables["Negative particle surface concentration"]
+        c_s_p_surf = processed_variables["Positive particle surface concentration"]
         # neg surf concentration should be monotonically decreasing for a discharge
         np.testing.assert_array_less(
             c_s_n_surf.entries[:, 1:], c_s_n_surf.entries[:, :-1]
@@ -70,21 +63,12 @@ class TestSPM(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
         # check surface concentration increases in negative particle and
         # decreases in positive particle for charge
-        c_s_n_surf = pybamm.ProcessedVariable(
-            model.variables["Negative particle surface concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
+        processed_variables = pybamm.post_process_variables(
+            model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        c_s_p_surf = pybamm.ProcessedVariable(
-            model.variables["Positive particle surface concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
-        )
-        voltage = pybamm.ProcessedVariable(
-            model.variables["Terminal voltage"], t_sol, y_sol
-        )
+        c_s_n_surf = processed_variables["Negative particle surface concentration"]
+        c_s_p_surf = processed_variables["Positive particle surface concentration"]
+        voltage = processed_variables["Terminal voltage"]
         # neg surf concentration should be monotonically increasing for a charge
         np.testing.assert_array_less(
             c_s_n_surf.entries[:, :-1], c_s_n_surf.entries[:, 1:]
@@ -110,21 +94,12 @@ class TestSPM(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
         # check surface concentration increases in negative particle and
         # decreases in positive particle for charge
-        c_s_n_surf = pybamm.ProcessedVariable(
-            model.variables["Negative particle surface concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
+        processed_variables = pybamm.post_process_variables(
+            model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        c_s_p_surf = pybamm.ProcessedVariable(
-            model.variables["Positive particle surface concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
-        )
-        voltage = pybamm.ProcessedVariable(
-            model.variables["Terminal voltage"], t_sol, y_sol
-        )
+        c_s_n_surf = processed_variables["Negative particle surface concentration"]
+        c_s_p_surf = processed_variables["Positive particle surface concentration"]
+        voltage = processed_variables["Terminal voltage"]
         # variables should remain unchanged
         np.testing.assert_almost_equal(c_s_n_surf.entries - c_s_n_surf.entries[0], 0)
         np.testing.assert_almost_equal(c_s_p_surf.entries - c_s_p_surf.entries[0], 0)

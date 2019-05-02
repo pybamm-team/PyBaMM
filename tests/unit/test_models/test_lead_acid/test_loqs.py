@@ -36,15 +36,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
 
         # Post-process variables
-        conc = pybamm.ProcessedVariable(
-            model.variables["Electrolyte concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
+        processed_variables = pybamm.post_process_variables(
+            model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        voltage = pybamm.ProcessedVariable(
-            model.variables["Terminal voltage"], t_sol, y_sol
-        )
+        conc = processed_variables["Electrolyte concentration"]
+        voltage = processed_variables["Terminal voltage"]
 
         # check output
         # concentration and voltage should be monotonically decreasing for a discharge
@@ -63,15 +59,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
         # check surface concentration increases in negative particle and
         # decreases in positive particle for charge
-        c_e = pybamm.ProcessedVariable(
-            model.variables["Electrolyte concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
+        processed_variables = pybamm.post_process_variables(
+            model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        voltage = pybamm.ProcessedVariable(
-            model.variables["Terminal voltage"], t_sol, y_sol
-        )
+        conc = processed_variables["Electrolyte concentration"]
+        voltage = processed_variables["Terminal voltage"]
         # neg surf concentration should be monotonically increasing for a charge
         np.testing.assert_array_less(c_e.entries[:, :-1], c_e.entries[:, 1:])
         np.testing.assert_array_less(voltage.entries[:-1], voltage.entries[1:])
@@ -86,15 +78,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
         # check surface concentration increases in negative particle and
         # decreases in positive particle for charge
-        c_e = pybamm.ProcessedVariable(
-            model.variables["Electrolyte concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
+        processed_variables = pybamm.post_process_variables(
+            model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        voltage = pybamm.ProcessedVariable(
-            model.variables["Terminal voltage"], t_sol, y_sol
-        )
+        conc = processed_variables["Electrolyte concentration"]
+        voltage = processed_variables["Terminal voltage"]
         # variables should remain unchanged
         np.testing.assert_almost_equal(c_e.entries - c_e.entries[0], 0)
         np.testing.assert_almost_equal(voltage.entries - voltage.entries[0], 0)

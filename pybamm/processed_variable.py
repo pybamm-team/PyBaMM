@@ -1,6 +1,7 @@
 #
 # Processed Variable class
 #
+import numbers
 import numpy as np
 import scipy.interpolate as interp
 
@@ -25,7 +26,10 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
         The method to use for interpolation
     """
     for var, eqn in variables.items():
-        variables[var] = ProcessedVariable(eqn, t_sol, y_sol, mesh, interp_kind)
+        try:
+            variables[var] = ProcessedVariable(eqn, t_sol, y_sol, mesh, interp_kind)
+        except ValueError:
+            pass
     return variables
 
 
@@ -55,46 +59,80 @@ class ProcessedVariable(object):
     """
 
     def __init__(self, base_variable, t_sol, y_sol, mesh=None, interp_kind="linear"):
-        if base_variable.domain != []:
-            if mesh is not None:
-                # Process the discretisation to get x values
-                x_sol = np.concatenate(
-                    [mesh[dom][0].nodes for dom in base_variable.domain]
-                )
-                len_x = len(x_sol)
-            else:
-                # We must provide a mesh for reference x values  for interpolation
-                raise ValueError("mesh must be provided for intepolation")
-        else:
-            # No discretisation provided, or variable has no domain (function of t only)
-            # We don't need x values for interpolation
-            x_sol = None
-            len_x = 1
+        self.base_variable = base_variable
+        self.t_sol = t_sol
+        self.y_sol = y_sol
+        self.mesh = mesh
+        self.interp_kind = interp_kind
 
+        self.base_eval = base_variable.evaluate(t_sol[0], y_sol[:, 0])
+
+        if isinstance(self.base_eval, numbers.Number):
+            self.type = "number"
+            self.value = self.base_eval
+        elif len(self.base_eval.shape) == 0 or self.base_eval.shape[0] == 1:
+            self.initialise_vector()
+        else:
+            self.initialise_matrix()
+
+    def initialise_vector(self):
+        self.type = "vector"
         # initialise empty array of the correct size
-        entries = np.empty((len_x, len(t_sol)))
+        entries = np.empty(len(self.t_sol))
         # Evaluate the base_variable index-by-index
-        for idx in range(len(t_sol)):
-            entries[:, idx] = base_variable.evaluate(t_sol[idx], y_sol[:, idx])
+        for idx in range(len(self.t_sol)):
+            entries[idx] = self.base_variable.evaluate(
+                self.t_sol[idx], self.y_sol[:, idx]
+            )
+
+        # No discretisation provided, or variable has no domain (function of t only)
+        self._interpolation_function = interp.interp1d(
+            self.t_sol, entries, kind=self.interp_kind
+        )
+
+        self.entries = entries
+
+    def initialise_matrix(self):
+        self.type = "matrix"
+        len_x = self.base_eval.shape[0]
+        entries = np.empty((len_x, len(self.t_sol)))
+
+        # Evaluate the base_variable index-by-index
+        for idx in range(len(self.t_sol)):
+            entries[:, idx] = self.base_variable.evaluate(
+                self.t_sol[idx], self.y_sol[:, idx]
+            )
+
+        if self.mesh is not None:
+            # Process the discretisation to get x values
+            nodes = self.mesh.combine_submeshes(*self.base_variable.domain)[0].nodes
+            edges = self.mesh.combine_submeshes(*self.base_variable.domain)[0].edges
+            if entries.shape[0] == len(nodes):
+                x_sol = nodes
+            elif entries.shape[0] == len(edges) - 2:
+                x_sol = edges[1:-1]
+            else:
+                import ipdb
+
+                ipdb.set_trace()
+        else:
+            # We must provide a mesh for reference x values  for interpolation
+            raise ValueError("mesh must be provided for intepolation")
 
         # assign attributes for reference
         self.entries = entries
         self.x_sol = x_sol
-        self.t_sol = t_sol
 
         # set up interpolation
-        if x_sol is None:
-            self._interpolation_function = interp.interp1d(
-                t_sol, entries, kind=interp_kind
-            )
-        else:
-            self._interpolation_function = interp.interp2d(
-                t_sol, x_sol, entries, kind=interp_kind
-            )
+        self._interpolation_function = interp.interp2d(
+            self.t_sol, x_sol, entries, kind=self.interp_kind
+        )
 
     def __call__(self, t, x=None):
         "Evaluate the variable at arbitrary t (and x), using interpolation"
-        if self.x_sol is None:
+        if self.type == "number":
+            return self.value * np.ones_like(t)
+        elif self.type == "vector":
             return self._interpolation_function(t)[0]
-        else:
+        elif self.type == "matrix":
             return self._interpolation_function(t, x)
