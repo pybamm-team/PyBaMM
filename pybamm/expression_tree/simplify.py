@@ -492,6 +492,16 @@ def simplify(symbol):
     This function recurses down the tree, applying any simplifications defined in
     classes derived from pybamm.Symbol. E.g. any expression multiplied by a
     pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0)
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The symbol to simplify
+
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Simplified symbol
     """
     if isinstance(symbol, pybamm.BinaryOperator):
         left, right = symbol.children
