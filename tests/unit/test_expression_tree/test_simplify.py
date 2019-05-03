@@ -11,7 +11,11 @@ import numpy as np
 import math
 
 
-class TestSymbol(unittest.TestCase):
+def test_const_function():
+    return 1
+
+
+class TestSimplify(unittest.TestCase):
     def test_symbol_simplify(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
@@ -196,10 +200,21 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
         self.assertEqual((b / b).simplify().evaluate(), 1)
 
+        # Spatial variable
+        x = pybamm.SpatialVariable("x", ["negative electrode"])
+        self.assertIsInstance(x.simplify(), pybamm.SpatialVariable)
+        self.assertEqual(x.simplify().id, x.id)
+
         # not implemented for Symbol
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):
             sym.simplify()
+
+    def test_function_simplify(self):
+        a = pybamm.Parameter("a")
+        funca = pybamm.Function(test_const_function, a).simplify()
+        self.assertIsInstance(funca, pybamm.Scalar)
+        self.assertEqual(funca.evaluate(), 1)
 
     def test_matrix_simplifications(self):
         a = pybamm.Scalar(0)

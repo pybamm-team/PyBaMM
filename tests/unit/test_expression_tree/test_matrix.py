@@ -39,6 +39,12 @@ class TestMatrix(unittest.TestCase):
         self.assertTrue(exp.children[0].children[1]._entries[0, 0], -1)
 
 
+class TestArray(unittest.TestCase):
+    def test_name(self):
+        arr = pybamm.Array(np.array([1, 2, 3]))
+        self.assertEqual(arr.name, "Array of shape (3,)")
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

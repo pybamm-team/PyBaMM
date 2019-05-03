@@ -69,12 +69,6 @@ class TestUnaryOperators(unittest.TestCase):
         funcd = pybamm.Function(test_const_function, d)
         self.assertEqual(funcd.evaluate(), 1)
 
-    def test_function_simplify(self):
-        a = pybamm.Parameter("a")
-        funca = pybamm.Function(test_const_function, a).simplify()
-        self.assertIsInstance(funca, pybamm.Scalar)
-        self.assertEqual(funca.evaluate(), 1)
-
     def test_gradient(self):
         a = pybamm.Symbol("a")
         grad = pybamm.Gradient(a)
