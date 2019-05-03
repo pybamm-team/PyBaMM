@@ -92,8 +92,8 @@ class StandardModelTest(object):
         self.test_solving(solver, t_eval)
 
         # only test outputs of SPM for now
-        if isinstance(self.model, pybamm.lithium_ion.spm.SPM):
-            self.test_outputs()
+        # if isinstance(self.model, pybamm.lithium_ion.spm.SPM):
+        self.test_outputs()
 
     def test_update_parameters(self, param):
         # check if geometry has changed, throw error if so (need to re-discretise)

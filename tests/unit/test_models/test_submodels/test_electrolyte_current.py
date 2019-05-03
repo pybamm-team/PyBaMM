@@ -134,6 +134,29 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
                     phi_e_left_eval, true_val_eval, 3
                 )  # extrapolation error
 
+                phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+
+                phi_e_n_av = pybamm.average(phi_e_n)
+                phi_e_n_av_param = modeltest.parameter_values.process_symbol(phi_e_n_av)
+                phi_e_n_av_disc = modeltest.disc.process_symbol(phi_e_n_av_param)
+                phi_e_n_av_eval = phi_e_n_av_disc.evaluate(0, None)
+
+                phi_e_p_av = pybamm.average(phi_e_p)
+                phi_e_p_av_param = modeltest.parameter_values.process_symbol(phi_e_p_av)
+                phi_e_p_av_disc = modeltest.disc.process_symbol(phi_e_p_av_param)
+                phi_e_p_av_eval = phi_e_p_av_disc.evaluate(0, None)
+
+                # this is zero but just include for completeness
+                eta_c_av_disc = modeltest.disc.process_symbol(eta_c_av)
+                eta_c_av_eval = eta_c_av_disc.evaluate(0, None)
+
+                np.testing.assert_almost_equal(
+                    delta_phi_e_eval + eta_c_av_eval,
+                    phi_e_p_av_eval - phi_e_n_av_eval,
+                    decimal=3,
+                )
+                # extrapolation error
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

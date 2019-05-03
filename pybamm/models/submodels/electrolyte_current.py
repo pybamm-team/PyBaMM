@@ -52,7 +52,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         # Set dimensionless and dimensional variables
         return {
             "Negative electrolyte potential": phi_e_n,
-            "Separator electrolyte potential": phi_e_p,
+            "Separator electrolyte potential": phi_e_s,
             "Positive electrolyte potential": phi_e_p,
             "Electrolyte potential": phi_e,
             "Electrolyte current density": i_e,
@@ -60,7 +60,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             "Average electrolyte ohmic losses": delta_phi_e_av,
             "Average electrolyte overpotential": eta_e_av,
             "Negative electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_n,
-            "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
+            "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_s,
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
             "Electrolyte current density [A m-2]": param.i_typ * i_e,
@@ -296,9 +296,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         "Ohmic losses and overpotentials"
         # average electrolyte ohmic losses
-        delta_phi_e_av = -(
-            param.C_e * i_cell / param.gamma_e
-        ) * (
+        delta_phi_e_av = -(param.C_e * i_cell / param.gamma_e) * (
             param.l_n / (3 * kappa_n)
             + param.l_s / (kappa_s)
             + param.l_p / (3 * kappa_p)

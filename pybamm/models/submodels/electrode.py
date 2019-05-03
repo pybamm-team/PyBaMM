@@ -192,7 +192,7 @@ class Ohm(pybamm.SubModel):
         if epsilon is None:
             epsilon = param.epsilon
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-        _, _, phi_e_p = [e.orphans[0] for e in phi_e.orphans]
+        _, _, phi_e_p = phi_e.orphans
 
         # obtain averages
         ocp_p_av = pybamm.average(ocp_p)
