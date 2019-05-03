@@ -192,7 +192,9 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
 
-    def get_explicit_combined(self, ocp_n, eta_r_n, c_e, epsilon=None, c_e_0=None):
+    def get_explicit_combined(
+        self, ocp_n, eta_r_n, c_e, phi_s_n, epsilon=None, c_e_0=None
+    ):
         """
         Provides and explicit combined leading and first order solution to the
         electrolyte current conservation equation where the constitutive equation is
@@ -206,7 +208,9 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         eta_r_n : :class:`pybamm.Symbol`
             Reaction overpotential in the negative electrode
         c_e : :class:`pybamm.Concatenation`
-            The eletrolyte concentration variable
+            The electrolyte concentration variable
+        phi_s_n : :class:`pybamm.Symbol`
+            The negative electrode potential
         epsilon : :class:`pybamm.Symbol`, optional
             Porosity. Default is None, in which case param.epsilon is used.
         c_e : :class:`pybamm.Concatenation`
@@ -217,7 +221,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
-        # import parameters and spatial vairables
+        # import parameters and spatial variables
         param = self.set_of_parameters
         l_n = param.l_n
         l_p = param.l_p
@@ -242,10 +246,9 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
 
         # get electrode averaged values
-        # TODO: fix this
-        ocp_n_left = pybamm.boundary_value(ocp_n, "left")
-        eta_r_n_left = pybamm.boundary_value(eta_r_n, "left")
-        c_e_n_left = pybamm.boundary_value(c_e_n, "left")
+        ocp_n_av = pybamm.average(ocp_n)
+        eta_r_n_av = pybamm.average(eta_r_n)
+        phi_s_n_av = pybamm.average(phi_s_n)
 
         # electrolyte current (leading-order approximation)
         i_e_n = i_cell * x_n / l_n
@@ -255,57 +258,62 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         # electrolyte potential (combined leading and first order)
         phi_e_const = (
-            -ocp_n_left
-            - eta_r_n_left
-            - (
-                2
-                * param.C_e
-                * (1 - param.t_plus)
-                * pybamm.Function(np.log, c_e_n_left / c_e_0)
-            )
-            + (
-                param.C_e
-                * i_cell
-                / param.gamma_e
-                * (-l_n / (2 * kappa_n) + (l_n / kappa_s))
-            )
+            -ocp_n_av
+            - eta_r_n_av
+            + phi_s_n_av
+            - 2 * (1 - param.t_plus) * pybamm.average(pybamm.Function(np.log, c_e_n))
+            - i_cell
+            * param.C_e
+            * l_n
+            / param.gamma_e
+            * (1 / (3 * kappa_n) - 1 / kappa_s)
         )
-        phi_e_n = phi_e_const + param.C_e * (
-            2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n / c_e_0)
-            - (i_cell / param.gamma_e)
+
+        phi_e_n = (
+            phi_e_const
+            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n)
+            - (i_cell * param.C_e / param.gamma_e)
             * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
         )
-        phi_e_s = phi_e_const + param.C_e * (
-            2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s / c_e_0)
-            - (i_cell / param.gamma_e) * (x_s / kappa_s)
+
+        phi_e_s = (
+            phi_e_const
+            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s)
+            - (i_cell * param.C_e / param.gamma_e) * (x_s / kappa_s)
         )
-        phi_e_p = phi_e_const + param.C_e * (
-            2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p / c_e_0)
-            - (i_cell / param.gamma_e)
+
+        phi_e_p = (
+            phi_e_const
+            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p)
+            - (i_cell * param.C_e / param.gamma_e)
             * (
-                (x_p * (2 - x_p) - l_p ** 2 - 1) / (2 * kappa_p * l_p)
+                (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
                 + (1 - l_p) / kappa_s
             )
         )
+
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         "Ohmic losses and overpotentials"
         # average electrolyte ohmic losses
         delta_phi_e_av = -(
-            param.C_e * i_cell / param.gamma_e / param.kappa_e(c_e_0)
+            param.C_e * i_cell / param.gamma_e
         ) * (
-            param.l_n / (3 * eps_n ** param.b)
-            + param.l_s / (eps_s ** param.b)
-            + param.l_p / (3 * eps_p ** param.b)
+            param.l_n / (3 * kappa_n)
+            + param.l_s / (kappa_s)
+            + param.l_p / (3 * kappa_p)
         )
 
-        # electrode-averaged electrolye concentrations (combined leading
-        # and first order)
-        c_e_n_av = pybamm.average(c_e_n)
-        c_e_p_av = pybamm.average(c_e_p)
-
         # concentration overpotential (combined leading and first order)
-        eta_c_av = 2 * param.C_e * (1 - param.t_plus) * (c_e_p_av - c_e_n_av)
+        eta_c_av = (
+            2
+            * (1 - param.t_plus)
+            * (
+                pybamm.average(pybamm.Function(np.log, c_e_p))
+                - pybamm.average(pybamm.Function(np.log, c_e_n))
+            )
+        )
+
         # electrolyte overpotential
         eta_e_av = eta_c_av + delta_phi_e_av
 

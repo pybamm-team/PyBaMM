@@ -70,7 +70,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
 
-        # Potentials
+        # OCP and Overpotentials
         ocp_n = param.U_n(c_s_n_surf)
         ocp_p = param.U_p(c_s_p_surf)
         eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
@@ -80,19 +80,26 @@ class SPMe(pybamm.LithiumIonBaseModel):
         eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
         self.variables.update({**ocp_vars, **eta_r_vars})
 
-        # Electrolyte current
+        # Load electrode and electrolyte models
+        electrode_model = pybamm.electrode.Ohm(param)
         electrolyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
             param
         )
+
+        # Negative electrode potential
+        phi_s_n = electrode_model.get_neg_pot_explicit_combined()
+
+        # Electrolyte potential
         electrolyte_vars = electrolyte_current_model.get_explicit_combined(
-            ocp_n, eta_r_n, c_e
+            ocp_n, eta_r_n, c_e, phi_s_n
         )
+        phi_e = electrolyte_vars["Electrolyte potential"]
         self.variables.update(electrolyte_vars)
 
-        # Electrode
-        electrode_model = pybamm.electrode.Ohm(param)
-        phi_e = self.variables["Electrolyte potential"]
-        electrode_vars = electrode_model.get_explicit_combined(ocp_p, eta_r_p, phi_e)
+        # Positive electrode potential
+        electrode_vars = electrode_model.get_explicit_combined(
+            phi_s_n, phi_e, ocp_p, eta_r_p
+        )
         self.variables.update(electrode_vars)
 
         "-----------------------------------------------------------------------------"
