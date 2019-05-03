@@ -39,15 +39,15 @@ class TestLeadAcidLOQS(unittest.TestCase):
         processed_variables = pybamm.post_process_variables(
             model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        conc = processed_variables["Electrolyte concentration"]
+        c_e = processed_variables["Electrolyte concentration"]
         voltage = processed_variables["Terminal voltage"]
 
         # check output
         # concentration and voltage should be monotonically decreasing for a discharge
-        np.testing.assert_array_less(conc.entries[:, 1:], conc.entries[:, :-1])
+        np.testing.assert_array_less(c_e.entries[:, 1:], c_e.entries[:, :-1])
         np.testing.assert_array_less(voltage.entries[1:], voltage.entries[:-1])
         # Make sure the concentration is always positive (cut-off event working)
-        np.testing.assert_array_less(0, conc.entries)
+        np.testing.assert_array_less(0, c_e.entries)
 
     def test_charge(self):
         model = pybamm.lead_acid.LOQS()
@@ -62,7 +62,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         processed_variables = pybamm.post_process_variables(
             model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        conc = processed_variables["Electrolyte concentration"]
+        c_e = processed_variables["Electrolyte concentration"]
         voltage = processed_variables["Terminal voltage"]
         # neg surf concentration should be monotonically increasing for a charge
         np.testing.assert_array_less(c_e.entries[:, :-1], c_e.entries[:, 1:])
@@ -81,7 +81,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         processed_variables = pybamm.post_process_variables(
             model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        conc = processed_variables["Electrolyte concentration"]
+        c_e = processed_variables["Electrolyte concentration"]
         voltage = processed_variables["Terminal voltage"]
         # variables should remain unchanged
         np.testing.assert_almost_equal(c_e.entries - c_e.entries[0], 0)

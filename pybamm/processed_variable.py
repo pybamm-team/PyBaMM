@@ -29,6 +29,7 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
         try:
             variables[var] = ProcessedVariable(eqn, t_sol, y_sol, mesh, interp_kind)
         except ValueError:
+            print("'{}' was not processed".format(var))
             pass
     return variables
 
@@ -112,9 +113,7 @@ class ProcessedVariable(object):
             elif entries.shape[0] == len(edges) - 2:
                 x_sol = edges[1:-1]
             else:
-                import ipdb
-
-                ipdb.set_trace()
+                raise ValueError
         else:
             # We must provide a mesh for reference x values  for interpolation
             raise ValueError("mesh must be provided for intepolation")

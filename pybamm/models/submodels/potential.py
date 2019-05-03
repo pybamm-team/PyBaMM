@@ -34,12 +34,6 @@ class Potential(pybamm.SubModel):
         # Load parameters and spatial variables
         param = self.set_of_parameters
 
-        # Broadcast if necessary
-        if ocp_n.domain == []:
-            ocp_n = pybamm.Broadcast(ocp_n, ["negative electrode"])
-        if ocp_p.domain == []:
-            ocp_p = pybamm.Broadcast(ocp_p, ["positive electrode"])
-
         # Dimensionless
         ocp_n_av = pybamm.average(ocp_n)
         ocp_p_av = pybamm.average(ocp_p)
@@ -87,12 +81,6 @@ class Potential(pybamm.SubModel):
         """
         # Load parameters and spatial variables
         param = self.set_of_parameters
-
-        # Broadcast if necessary
-        if eta_r_n.domain == []:
-            eta_r_n = pybamm.Broadcast(eta_r_n, ["negative electrode"])
-        if eta_r_p.domain == []:
-            eta_r_p = pybamm.Broadcast(eta_r_p, ["positive electrode"])
 
         # Derived and dimensional reaction overpotentials
         eta_r_n_av = pybamm.average(eta_r_n)
