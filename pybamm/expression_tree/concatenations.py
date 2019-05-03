@@ -283,7 +283,4 @@ class SparseStack(Concatenation):
 
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation.evaluate()`. """
-        if len(children_eval) == 0:
-            return np.array([])
-        else:
-            return vstack(children_eval)
+        return vstack(children_eval)
