@@ -91,9 +91,11 @@ class StandardModelTest(object):
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
 
-        # only test outputs of SPM for now
-        # if isinstance(self.model, pybamm.lithium_ion.spm.SPM):
-        self.test_outputs()
+        # only test outputs of lithium-ion models for now
+        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+            # cannot test dfn yet
+            if not isinstance(self.model, pybamm.lithium_ion.DFN):
+                self.test_outputs()
 
     def test_update_parameters(self, param):
         # check if geometry has changed, throw error if so (need to re-discretise)
