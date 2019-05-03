@@ -95,6 +95,8 @@ class VoltageTests(BaseOutputTest):
         self.Delta_Phi_e_av = self.get_var("Average electrolyte ohmic losses [V]")
         self.Delta_Phi_s_av = self.get_var("Average solid phase ohmic losses [V]")
 
+        self.eta_e_av = self.get_var("Average electrolyte overpotential [V]")
+
         self.ocp_n_av = self.get_var(
             "Average negative electrode open circuit potential [V]"
         )
@@ -203,11 +205,15 @@ class VoltageTests(BaseOutputTest):
         )
 
         np.testing.assert_array_almost_equal(
+            self.eta_e_av.entries, self.eta_c_av.entries + self.Delta_Phi_e_av.entries
+        )
+
+        # I am completely stumped as to why this test fails for SPMe
+        np.testing.assert_array_almost_equal(
             self.voltage.entries,
             self.ocv_av.entries
             + self.eta_r_av.entries
-            + self.eta_c_av.entries
-            + self.Delta_Phi_e_av.entries
+            + self.eta_e_av.entries
             + self.Delta_Phi_s_av.entries,
         )
 
@@ -265,16 +271,16 @@ class ParticleConcentrationTests(BaseOutputTest):
         # TODO: add an output for total lithium in particles
 
     def test_concentration_profile(self):
-        """Test that the concentration in the centre of the negative particles is 
-        greater than the average concentration in the particle and also that the 
-        concentration on the surface of the negative particle is less than the average 
-        concentration in the particle. Test opposite is true for the positive 
+        """Test that the concentration in the centre of the negative particles is
+        greater than the average concentration in the particle and also that the
+        concentration on the surface of the negative particle is less than the average
+        concentration in the particle. Test opposite is true for the positive
         particle."""
         # TODO: add an output for average particle concentration
 
     def test_fluxes(self):
-        """Test that no flux holds in the centre of the particle. Test that surface 
-        flux in the negative particles is less than zero and that the flux on the 
+        """Test that no flux holds in the centre of the particle. Test that surface
+        flux in the negative particles is less than zero and that the flux on the
         surface of the positive particles is greater than zeros during a discharge."""
         # TODO: implement after flux bug fix
 
@@ -323,9 +329,9 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         # np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
-        """Test continuity of the concentration profile. Test average concentration is 
-        as expected and that the concentration in the negative electrode is greater 
-        than the average and the concentration in the positive is less than the average 
+        """Test continuity of the concentration profile. Test average concentration is
+        as expected and that the concentration in the negative electrode is greater
+        than the average and the concentration in the positive is less than the average
         during a discharge."""
 
         # TODO: uncomment when have average concentrations
@@ -352,14 +358,14 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         #     np.testing.assert_array_equal(self.c_e_p_av.entries, self.c_e_av.entries)
 
     def test_fluxes(self):
-        """Test that the internal boundary fluxes are continuous. Test current 
+        """Test that the internal boundary fluxes are continuous. Test current
         collector fluxes are zero."""
 
         # TODO: fix flux bug
 
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,
-        separator, and positive electrode, we get the correct behaviour: continuous 
+        separator, and positive electrode, we get the correct behaviour: continuous
         solution and recover combined through concatenation."""
 
         c_e_combined = np.concatenate(
@@ -403,7 +409,7 @@ class PotentialTests(BaseOutputTest):
 
     def test_potential_differences(self):
         """Test electrolyte potential is less than the negative electrode potential.
-        Test that the positive electrode potential is greater than the negative 
+        Test that the positive electrode potential is greater than the negative
         electrode potential."""
 
         # TODO: these tests with averages
@@ -430,13 +436,13 @@ class CurrentTests(BaseOutputTest):
         self.j0_p = self.get_var("Positive electrode exchange-current density")
 
     def test_interfacial_current_average(self):
-        """Test that average of the interfacial current density is equal to the true 
+        """Test that average of the interfacial current density is equal to the true
         value."""
 
         # TODO: need averages
 
     def test_conservation(self):
-        """Test sum of electrode and electrolyte current densities give the applied 
+        """Test sum of electrode and electrolyte current densities give the applied
         current density"""
 
         # TODO: add a total function

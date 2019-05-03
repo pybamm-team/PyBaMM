@@ -56,11 +56,16 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
 
         ocp_n = pybamm.Scalar(0)
         eta_r_n = pybamm.Scalar(0)
+        phi_s_n = pybamm.Scalar(0)
+
+        # electrode model
+        # electrode_model = pybamm.electrode.Ohm(param)
+        # phi_s_n = electrode_model.get_neg_pot_explicit_combined()
 
         # Model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
         leading_order_vars = model.get_explicit_leading_order(ocp_n, eta_r_n)
-        combined_vars = model.get_explicit_combined(ocp_n, eta_r_n, c_e)
+        combined_vars = model.get_explicit_combined(ocp_n, eta_r_n, c_e, phi_s_n)
 
         # Get disc
         modeltest = tests.StandardModelTest(model)
@@ -103,7 +108,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
 
             if order == "leading":
                 self.assertEqual(delta_phi_e_eval, 0)
-            if order == "combined":
+            elif order == "combined":
                 self.assertLess(delta_phi_e_eval, 0)
 
             # check that left boundary of phi_e is approx 0
@@ -111,7 +116,23 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
             phi_e_left_disc = modeltest.disc.process_symbol(phi_e_left)
             phi_e_left_eval = phi_e_left_disc.evaluate(0, None)
 
-            np.testing.assert_almost_equal(phi_e_left_eval, 0, 3)  # extrapolation error
+            if order == "leading":
+                np.testing.assert_almost_equal(
+                    phi_e_left_eval, 0, 3
+                )  # extrapolation error
+            elif order == "combined":
+                i_cell = param.current_with_time
+                eps_n, _, _ = [e.orphans[0] for e in param.epsilon.orphans]
+                kappa_n = param.kappa_e(1) * eps_n ** param.b
+                true_val = param.C_e * i_cell * param.l_n / 6 / param.gamma_e / kappa_n
+
+                true_val_param = modeltest.parameter_values.process_symbol(true_val)
+                true_val_disc = modeltest.disc.process_symbol(true_val_param)
+                true_val_eval = true_val_disc.evaluate(0, None)
+
+                np.testing.assert_almost_equal(
+                    phi_e_left_eval, true_val_eval, 3
+                )  # extrapolation error
 
 
 if __name__ == "__main__":

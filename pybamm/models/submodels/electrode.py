@@ -207,7 +207,7 @@ class Ohm(pybamm.SubModel):
             ocp_p_av
             + eta_r_p_av
             + phi_e_p_av
-            + (i_cell / 6 / l_p / sigma_p_eff) * (2 * l_p ** 2 - 6 * l_p + 3)
+            - (i_cell / 6 / l_p / sigma_p_eff) * (2 * l_p ** 2 - 6 * l_p + 3)
         )
 
         phi_s_p = const - i_cell * x_p / (2 * l_p * sigma_p_eff) * (x_p + 2 * (l_p - 1))
