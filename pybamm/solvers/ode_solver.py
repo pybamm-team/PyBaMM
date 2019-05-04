@@ -62,10 +62,6 @@ class OdeSolver(pybamm.BaseSolver):
         else:
             jacobian = None
 
-        import ipdb
-
-        ipdb.set_trace()
-
         self.t, self.y = self.integrate(
             dydt,
             y0,

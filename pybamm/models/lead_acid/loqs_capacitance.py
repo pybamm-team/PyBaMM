@@ -9,11 +9,17 @@ import pybamm
 class LOQSCapacitance(pybamm.LeadAcidBaseModel):
     """Leading-Order Quasi-Static model for lead-acid, with capacitance effects
 
+    Parameters
+    ----------
+    use_capacitance : bool
+        Whether to use capacitance in the model or not. If True (default), solve
+        ODEs for delta_phi. If False, solve algebraic equations for delta_phi
+
     **Extends**: :class:`pybamm.LeadAcidBaseModel`
 
     """
 
-    def __init__(self):
+    def __init__(self, use_capacitance=True):
         super().__init__()
 
         "-----------------------------------------------------------------------------"
@@ -66,9 +72,13 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         eleclyte_conc_model.set_leading_order_system(c_e, reactions, epsilon=epsilon)
 
         # Electrolyte current
-        eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(
+            param, use_capacitance
+        )
         eleclyte_current_model_n.set_leading_order_system(delta_phi_n, reactions, neg)
-        eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(
+            param, use_capacitance
+        )
         eleclyte_current_model_p.set_leading_order_system(delta_phi_p, reactions, pos)
         self.update(
             porosity_model,
@@ -113,3 +123,9 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
 
         # ODE model, don't use Jacobian
         self.use_jacobian = False
+
+        # Different solver depending on whether we solve ODEs or DAEs
+        if use_capacitance:
+            self.default_solver = pybamm.ScikitsOdeSolver()
+        else:
+            self.default_solver = pybamm.ScikitsDaeSolver()

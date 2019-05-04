@@ -321,19 +321,25 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     ----------
     set_of_parameters : parameter class
         The parameters to use for this submodel
+    use_capacitance : bool
+        Whether to use capacitance in the model or not. If True (default), solve
+        ODEs for delta_phi. If False, solve algebraic equations for delta_phi
 
     *Extends:* :class:`ElectrolyteCurrentBaseModel`
     """
 
-    def __init__(self, set_of_parameters):
+    def __init__(self, set_of_parameters, use_capacitance=True):
         super().__init__(set_of_parameters)
+        self.use_capacitance = use_capacitance
+        # Different solver depending on whether we solve ODEs or DAEs
+        if use_capacitance:
+            self.default_solver = pybamm.ScikitsOdeSolver()
+        else:
+            self.default_solver = pybamm.ScikitsDaeSolver()
 
-    def set_differential_system(self, delta_phi, c_e, reactions, eps=None):
+    def set_full_system(self, delta_phi, c_e, reactions, eps=None):
         param = self.set_of_parameters
         i_cell = param.current_with_time
-
-        # ode model only
-        self.algebraic = {}
 
         if delta_phi.domain == ["negative electrode"]:
             if eps is None:
@@ -343,7 +349,10 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             i_e = (
                 param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
             ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e + pybamm.grad(delta_phi))
-            self.rhs = {delta_phi: 1 / param.C_dl_n * (pybamm.div(i_e) - j)}
+            if self.use_capacitance:
+                self.rhs = {delta_phi: 1 / param.C_dl_n * (pybamm.div(i_e) - j)}
+            else:
+                self.algebraic = {delta_phi: pybamm.div(i_e) - j}
             self.boundary_conditions = {i_e: {"left": 0, "right": i_cell}}
             self.initial_conditions = {delta_phi: param.U_n(param.c_e_init)}
             self.variables = {
@@ -358,7 +367,10 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             i_e = (
                 param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
             ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e + pybamm.grad(delta_phi))
-            self.rhs = {delta_phi: 1 / param.C_dl_p * (pybamm.div(i_e) - j)}
+            if self.use_capacitance:
+                self.rhs = {delta_phi: 1 / param.C_dl_p * (pybamm.div(i_e) - j)}
+            else:
+                self.algebraic = {delta_phi: pybamm.div(i_e) - j}
             self.boundary_conditions = {i_e: {"left": i_cell, "right": 0}}
             self.initial_conditions = {delta_phi: param.U_p(param.c_e_init)}
             self.variables = {
@@ -381,7 +393,11 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             x_n = pybamm.standard_spatial_vars.x_n
             i_e = i_cell * x_n / param.l_n
             j = reactions["main"]["neg"]["aj"]
-            self.rhs = {delta_phi: 1 / param.C_dl_n * (i_cell / param.l_n - j)}
+
+            if self.use_capacitance:
+                self.rhs = {delta_phi: 1 / param.C_dl_n * (i_cell / param.l_n - j)}
+            else:
+                self.algebraic = {delta_phi: i_cell / param.l_n - j}
             self.initial_conditions = {delta_phi: param.U_n(param.c_e_init)}
             self.variables = {
                 "Negative electrode potential difference": delta_phi,
@@ -392,7 +408,10 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             i_e = i_cell * (1 - x_p) / param.l_p
             j = reactions["main"]["pos"]["aj"]
 
-            self.rhs = {delta_phi: 1 / param.C_dl_p * (-i_cell / param.l_p - j)}
+            if self.use_capacitance:
+                self.rhs = {delta_phi: 1 / param.C_dl_p * (-i_cell / param.l_p - j)}
+            else:
+                self.algebraic = {delta_phi: -i_cell / param.l_p - j}
             self.initial_conditions = {delta_phi: param.U_p(param.c_e_init)}
             self.variables = {
                 "Positive electrode potential difference": delta_phi,

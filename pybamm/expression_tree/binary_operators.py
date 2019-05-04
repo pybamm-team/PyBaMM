@@ -820,12 +820,7 @@ class Multiplication(BinaryOperator):
             # Hadamard product is commutative, so we can switch right and left
             result = right.multiply(left)
         else:
-            try:
-                result = left * right
-            except ValueError:
-                import ipdb
-
-                ipdb.set_trace()
+            result = left * right
 
         if is_numpy_2d_col_vector(result):
             result = result.reshape(-1)
