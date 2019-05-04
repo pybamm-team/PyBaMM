@@ -25,7 +25,6 @@ class TestDFN(unittest.TestCase):
         processed_variables = pybamm.post_process_variables(
             model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
-        c_e = processed_variables["Electrolyte concentration"]
         voltage = processed_variables["Terminal voltage"]
         np.testing.assert_array_less(voltage.entries[1:], voltage.entries[:-1])
 

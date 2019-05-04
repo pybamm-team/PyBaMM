@@ -127,3 +127,14 @@ def get_discretisation_for_testing(npts=None):
     }
 
     return pybamm.Discretisation(mesh, spatial_methods)
+
+
+def get_p2d_discretisation_for_testing(npts=None, mpts=None):
+    mesh = get_p2d_mesh_for_testing(npts, mpts)
+    spatial_methods = {
+        "macroscale": SpatialMethodForTesting,
+        "negative particle": SpatialMethodForTesting,
+        "positive particle": SpatialMethodForTesting,
+    }
+
+    return pybamm.Discretisation(mesh, spatial_methods)

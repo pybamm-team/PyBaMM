@@ -72,19 +72,22 @@ class ProcessedVariable(object):
         self.y_sol = y_sol
         self.mesh = mesh
         self.interp_kind = interp_kind
+        self.domain = base_variable.domain
 
         self.base_eval = base_variable.evaluate(t_sol[0], y_sol[:, 0])
 
         if isinstance(self.base_eval, numbers.Number):
-            self.type = "number"
+            self.dimensions = 0
             self.entries = self.base_eval * np.ones_like(t_sol)
         elif len(self.base_eval.shape) == 0 or self.base_eval.shape[0] == 1:
-            self.initialise_vector()
+            self.initialise_1D()
         else:
-            self.initialise_matrix()
+            if len(self.mesh.combine_submeshes(*self.domain)) == 1:
+                self.initialise_2D()
+            else:
+                self.initialise_3D()
 
-    def initialise_vector(self):
-        self.type = "vector"
+    def initialise_1D(self):
         # initialise empty array of the correct size
         entries = np.empty(len(self.t_sol))
         # Evaluate the base_variable index-by-index
@@ -99,11 +102,11 @@ class ProcessedVariable(object):
         )
 
         self.entries = entries
+        self.dimensions = 1
 
-    def initialise_matrix(self):
-        self.type = "matrix"
-        len_x = self.base_eval.shape[0]
-        entries = np.empty((len_x, len(self.t_sol)))
+    def initialise_2D(self):
+        len_space = self.base_eval.shape[0]
+        entries = np.empty((len_space, len(self.t_sol)))
 
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
@@ -111,39 +114,83 @@ class ProcessedVariable(object):
                 self.t_sol[idx], self.y_sol[:, idx]
             )
 
-        if self.mesh is not None:
-            # Process the discretisation to get x values
-            nodes = self.mesh.combine_submeshes(*self.base_variable.domain)[0].nodes
-            edges = self.mesh.combine_submeshes(*self.base_variable.domain)[0].edges
-            if entries.shape[0] == len(nodes):
-                x_sol = nodes
-            elif entries.shape[0] == len(edges) - 2:
-                x_sol = edges[1:-1]
-            else:
-                raise ValueError
+        # Process the discretisation to get x values
+        nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
+        edges = self.mesh.combine_submeshes(*self.domain)[0].edges
+        if entries.shape[0] == len(nodes):
+            space = nodes
+        elif entries.shape[0] == len(edges) - 2:
+            space = edges[1:-1]
         else:
-            # We must provide a mesh for reference x values  for interpolation
-            raise ValueError("mesh must be provided for intepolation")
+            raise ValueError
+
+        # assign attributes for reference (either x_sol or r_sol)
+        self.entries = entries
+        self.dimensions = 2
+        if any("particle" in dom for dom in self.domain):
+            self.scale = "micro"
+            self.r_sol = space
+        else:
+            self.scale = "macro"
+            self.x_sol = space
+
+        # set up interpolation
+        # note that the order of 't' and 'space' is the reverse of what you'd expect
+        self._interpolation_function = interp.interp2d(
+            self.t_sol, space, entries, kind=self.interp_kind
+        )
+
+    def initialise_3D(self):
+        len_x = len(self.mesh.combine_submeshes(*self.domain))
+        len_r = self.base_eval.shape[0] // len_x
+        entries = np.empty((len_r, len_x, len(self.t_sol)))
+
+        # Evaluate the base_variable index-by-index
+        for idx in range(len(self.t_sol)):
+            entries[:, :, idx] = np.reshape(
+                self.base_variable.evaluate(self.t_sol[idx], self.y_sol[:, idx]),
+                [len_r, len_x],
+            )
+        # Process the discretisation to get x values
+        nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
+        edges = self.mesh.combine_submeshes(*self.domain)[0].edges
+        if entries.shape[0] == len(nodes):
+            r_sol = nodes
+        elif entries.shape[0] == len(edges) - 2:
+            r_sol = edges[1:-1]
+        else:
+            raise ValueError
+
+        # Get x values
+        if self.domain == ["negative particle"]:
+            x_sol = self.mesh["negative electrode"][0].nodes
+        elif self.domain == ["positive particle"]:
+            x_sol = self.mesh["positive electrode"][0].nodes
 
         # assign attributes for reference
         self.entries = entries
+        self.dimensions = 3
         self.x_sol = x_sol
+        self.r_sol = r_sol
 
         # set up interpolation
-        self._interpolation_function = interp.interp2d(
-            self.t_sol, x_sol, entries, kind=self.interp_kind
+        self._interpolation_function = interp.RegularGridInterpolator(
+            (r_sol, x_sol, self.t_sol), entries, method=self.interp_kind
         )
 
-    def __call__(self, t, x=None):
-        "Evaluate the variable at arbitrary t (and x), using interpolation"
-        if self.type == "number":
+    def __call__(self, t, x=None, r=None):
+        "Evaluate the variable at arbitrary t (and x and/or r), using interpolation"
+        if self.dimensions == 0:
             return self.value * np.ones_like(t)
-        elif self.type == "vector":
-            out = self._interpolation_function(t)
-            # make sure the output is 1D
-            if len(out.shape) == 2:
-                return out[0]
+        elif self.dimensions == 1:
+            return self._interpolation_function(t)
+        elif self.dimensions == 2:
+            if self.scale == "micro":
+                return self._interpolation_function(t, r)
             else:
-                return out
-        elif self.type == "matrix":
-            return self._interpolation_function(t, x)
+                return self._interpolation_function(t, x)
+        elif self.dimensions == 3:
+            import ipdb
+
+            ipdb.set_trace()
+            return self._interpolation_function(t, x, r)

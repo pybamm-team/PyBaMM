@@ -11,7 +11,7 @@ import unittest
 
 
 class TestProcessedVariable(unittest.TestCase):
-    def test_simple_processed_variable(self):
+    def test_processed_variable_1D(self):
         # without space
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
@@ -21,7 +21,7 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var, t_sol, y_sol)
         np.testing.assert_array_equal(processed_var.entries, t_sol * y_sol[0])
 
-    def test_processed_var_space(self):
+    def test_processed_variable_2D(self):
         t = pybamm.t
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
@@ -42,14 +42,27 @@ class TestProcessedVariable(unittest.TestCase):
             processed_eqn.entries, t_sol * y_sol + x_sol[:, np.newaxis]
         )
 
-    def test_failure(self):
-        var = pybamm.Vector(np.ones(10))
-        t_sol = np.linspace(0, 1)
-        y_sol = np.array([np.linspace(0, 5)])
-        with self.assertRaisesRegex(ValueError, "mesh must be provided"):
-            pybamm.ProcessedVariable(var, t_sol, y_sol)
+    def test_processed_variable_3D(self):
+        t = pybamm.t
+        var = pybamm.Variable("var", domain=["negative particle"])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
 
-    def test_processed_var_interpolation(self):
+        disc = tests.get_p2d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries
+        r_sol = disc.process_symbol(r).entries
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+        )
+
+    def test_processed_var_1D_interpolation(self):
         # without spatial dependence
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
