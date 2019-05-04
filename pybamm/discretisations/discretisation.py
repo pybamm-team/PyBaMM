@@ -435,14 +435,9 @@ class Discretisation(object):
             extrapolate_right = any(
                 [x.has_right_ghost_cell for x in new_left.pre_order()]
             )
-            try:
-                new_right = self._spatial_methods[bin_op.domain[0]].compute_diffusivity(
-                    new_right, extrapolate_left, extrapolate_right
-                )
-            except IndexError:
-                import ipdb
-
-                ipdb.set_trace()
+            new_right = self._spatial_methods[bin_op.domain[0]].compute_diffusivity(
+                new_right, extrapolate_left, extrapolate_right
+            )
         # If only right child has gradient, compute diffusivity for left child
         elif (
             right.has_gradient_and_not_divergence()
