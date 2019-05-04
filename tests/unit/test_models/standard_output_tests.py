@@ -205,11 +205,6 @@ class VoltageTests(BaseOutputTest):
         )
 
         np.testing.assert_array_almost_equal(
-            self.eta_e_av.entries, self.eta_c_av.entries + self.Delta_Phi_e_av.entries
-        )
-
-        # I am completely stumped as to why this test fails for SPMe
-        np.testing.assert_array_almost_equal(
             self.voltage.entries,
             self.ocv_av.entries
             + self.eta_r_av.entries

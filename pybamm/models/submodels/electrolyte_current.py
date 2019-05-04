@@ -126,7 +126,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         self.rhs = {}
 
         # Variables
-        # eta_c_av and delta_phi_e_av not defined?
+        # eta_c_av and delta_phi_e_av are not defined`independently
         eta_c_av = pybamm.Scalar(0)
         delta_phi_e_av = pybamm.Scalar(0)
 
@@ -261,7 +261,9 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
             -ocp_n_av
             - eta_r_n_av
             + phi_s_n_av
-            - 2 * (1 - param.t_plus) * pybamm.average(pybamm.Function(np.log, c_e_n))
+            - 2
+            * (1 - param.t_plus)
+            * pybamm.average(pybamm.Function(np.log, c_e_n / c_e_0))
             - i_cell
             * param.C_e
             * l_n
@@ -271,20 +273,20 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         phi_e_n = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n)
+            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n / c_e_0)
             - (i_cell * param.C_e / param.gamma_e)
             * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
         )
 
         phi_e_s = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s)
+            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s / c_e_0)
             - (i_cell * param.C_e / param.gamma_e) * (x_s / kappa_s)
         )
 
         phi_e_p = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p)
+            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p / c_e_0)
             - (i_cell * param.C_e / param.gamma_e)
             * (
                 (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
@@ -307,8 +309,8 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
             2
             * (1 - param.t_plus)
             * (
-                pybamm.average(pybamm.Function(np.log, c_e_p))
-                - pybamm.average(pybamm.Function(np.log, c_e_n))
+                pybamm.average(pybamm.Function(np.log, c_e_p / c_e_0))
+                - pybamm.average(pybamm.Function(np.log, c_e_n / c_e_0))
             )
         )
 

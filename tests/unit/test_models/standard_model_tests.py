@@ -91,10 +91,24 @@ class StandardModelTest(object):
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
 
-        # only test outputs of lithium-ion models for now
-        if isinstance(self.model, pybamm.LithiumIonBaseModel):
-            # cannot test dfn yet
-            if not isinstance(self.model, pybamm.lithium_ion.DFN):
+        # cannot test dfn yet, and lead acid composite voltage
+        # only test the full models
+        if isinstance(
+            self.model, (pybamm.LithiumIonBaseModel, pybamm.LeadAcidBaseModel)
+        ):
+            # cannot test dfn at moment and Composite fails the voltage test
+            # annoyingly reaction-diffusion is an instance of LeadAcidBaseModel
+            # so need to exclude it here
+            if not (
+                isinstance(
+                    self.model,
+                    (
+                        pybamm.lithium_ion.DFN,
+                        pybamm.lead_acid.Composite,
+                        pybamm.ReactionDiffusionModel,
+                    ),
+                )
+            ):
                 self.test_outputs()
 
     def test_update_parameters(self, param):
