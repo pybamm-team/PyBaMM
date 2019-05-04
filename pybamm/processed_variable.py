@@ -24,14 +24,22 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
         interpolation
     interp_kind : str
         The method to use for interpolation
+
+    Returns
+    -------
+    dict
+        Dictionary of processed variables
     """
+    processed_variables = {}
     for var, eqn in variables.items():
         try:
-            variables[var] = ProcessedVariable(eqn, t_sol, y_sol, mesh, interp_kind)
+            processed_variables[var] = ProcessedVariable(
+                eqn, t_sol, y_sol, mesh, interp_kind
+            )
         except ValueError:
             print("'{}' was not processed".format(var))
             pass
-    return variables
+    return processed_variables
 
 
 class ProcessedVariable(object):
@@ -56,7 +64,6 @@ class ProcessedVariable(object):
         interpolation
     interp_kind : str
         The method to use for interpolation
-
     """
 
     def __init__(self, base_variable, t_sol, y_sol, mesh=None, interp_kind="linear"):

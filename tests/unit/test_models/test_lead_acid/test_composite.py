@@ -11,12 +11,6 @@ import numpy as np
 
 
 class TestLeadAcidComposite(unittest.TestCase):
-    def test_basic_processing(self):
-        model = pybamm.lead_acid.Composite()
-
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-
     def test_optimisations(self):
         model = pybamm.lead_acid.Composite()
         optimtest = tests.OptimisationsTest(model)
@@ -36,12 +30,14 @@ class TestLeadAcidComposite(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
 
         # Post-process variables
+        import ipdb
+
+        ipdb.set_trace()
         processed_variables = pybamm.post_process_variables(
             model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )
         conc = processed_variables["Electrolyte concentration"]
         voltage = processed_variables["Terminal voltage"]
-
         # check output
         # concentration and voltage should be monotonically decreasing for a discharge
         np.testing.assert_array_less(conc.entries[:, 1:], conc.entries[:, :-1])
