@@ -139,6 +139,11 @@ class ProcessedVariable(object):
         if self.type == "number":
             return self.value * np.ones_like(t)
         elif self.type == "vector":
-            return self._interpolation_function(t)[0]
+            out = self._interpolation_function(t)
+            # make sure the output is 1D
+            if len(out.shape) == 2:
+                return out[0]
+            else:
+                return out
         elif self.type == "matrix":
             return self._interpolation_function(t, x)

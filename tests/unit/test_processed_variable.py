@@ -119,7 +119,7 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
         processed_vars = pybamm.post_process_variables(model.variables, t_sol, y_sol)
         np.testing.assert_array_almost_equal(
-            processed_vars["c"].entries[0], np.exp(-t_sol)
+            processed_vars["c"].entries, np.exp(-t_sol)
         )
 
         # with space
