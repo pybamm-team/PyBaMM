@@ -240,19 +240,6 @@ class TestDiscretise(unittest.TestCase):
                 eqn_disc.evaluate(None, y), var_disc.evaluate(None, y) ** 2
             )
 
-    def test_core_NotImplementedErrors(self):
-        # create spatial method
-        spatial_method = pybamm.SpatialMethod(None)
-
-        with self.assertRaises(NotImplementedError):
-            spatial_method.gradient(None, None, {})
-        with self.assertRaises(NotImplementedError):
-            spatial_method.divergence(None, None, {})
-        with self.assertRaises(NotImplementedError):
-            spatial_method.integral(None, None, None)
-        with self.assertRaises(NotImplementedError):
-            spatial_method.indefinite_integral(None, None, None)
-
     def test_process_dict(self):
         # one equation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
