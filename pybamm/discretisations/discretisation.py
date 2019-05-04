@@ -304,7 +304,19 @@ class Discretisation(object):
             Discretised symbol
 
         """
-        if isinstance(symbol, pybamm.Gradient):
+        if isinstance(symbol, pybamm.BinaryOperator):
+            # Pre-process children
+            left, right = symbol.children
+            disc_left = self.process_symbol(left)
+            disc_right = self.process_symbol(right)
+            if symbol.domain == []:
+                return symbol.__class__(disc_left, disc_right)
+            else:
+                return self._spatial_methods[symbol.domain[0]].process_binary_operators(
+                    symbol, left, right, disc_left, disc_right
+                )
+
+        elif isinstance(symbol, pybamm.Gradient):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
             return self._spatial_methods[child.domain[0]].gradient(
@@ -352,9 +364,6 @@ class Discretisation(object):
                 child, discretised_child, symbol.side
             )
 
-        elif isinstance(symbol, pybamm.BinaryOperator):
-            return self.process_binary_operators(symbol)
-
         elif isinstance(symbol, pybamm.Function):
             new_child = self.process_symbol(symbol.children[0])
             return pybamm.Function(symbol.func, new_child)
@@ -390,69 +399,6 @@ class Discretisation(object):
             raise NotImplementedError(
                 "Cannot discretise symbol of type '{}'".format(type(symbol))
             )
-
-    def process_binary_operators(self, bin_op):
-        """Discretise binary operators in model equations.  Performs appropriate
-        averaging of diffusivities if one of the children is a gradient operator, so
-        that discretised sizes match up.  This is mainly an issue for the Finite Volume
-        Discretisation: see
-        :meth:`pybamm.FiniteVolumeDiscretisation.compute_diffusivity()`
-
-        Parameters
-        ----------
-        bin_op : :class:`pybamm.BinaryOperator`
-            Binary operator to discretise
-
-        Returns
-        -------
-        :class:`pybamm.BinaryOperator`
-            Discretised binary operator
-
-        """
-        # Pre-process children
-        left, right = bin_op.children
-        new_left = self.process_symbol(left)
-        new_right = self.process_symbol(right)
-        # Post-processing to make sure discretised dimensions match
-        # If neither child has gradients, or both children have gradients
-        # no need to do any averaging
-        if (
-            left.has_gradient_and_not_divergence()
-            == right.has_gradient_and_not_divergence()
-        ):
-            pass
-        # If only left child has gradient, compute diffusivity for right child
-        elif (
-            left.has_gradient_and_not_divergence()
-            and not right.has_gradient_and_not_divergence()
-        ):
-            # Extrapolate at either end depending on the ghost cells (from gradient)
-            extrapolate_left = any(
-                [x.has_left_ghost_cell for x in new_left.pre_order()]
-            )
-            extrapolate_right = any(
-                [x.has_right_ghost_cell for x in new_left.pre_order()]
-            )
-            new_right = self._spatial_methods[bin_op.domain[0]].compute_diffusivity(
-                new_right, extrapolate_left, extrapolate_right
-            )
-        # If only right child has gradient, compute diffusivity for left child
-        elif (
-            right.has_gradient_and_not_divergence()
-            and not left.has_gradient_and_not_divergence()
-        ):
-            # Extrapolate at either end depending on the ghost cells (from gradient)
-            extrapolate_left = any(
-                [x.has_left_ghost_cell for x in new_right.pre_order()]
-            )
-            extrapolate_right = any(
-                [x.has_right_ghost_cell for x in new_right.pre_order()]
-            )
-            new_left = self._spatial_methods[bin_op.domain[0]].compute_diffusivity(
-                new_left, extrapolate_left, extrapolate_right
-            )
-        # Return new binary operator with appropriate class
-        return bin_op.__class__(new_left, new_right)
 
     def concatenate(self, *symbols):
         return pybamm.NumpyConcatenation(*symbols)

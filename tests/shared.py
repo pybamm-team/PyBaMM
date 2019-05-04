@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from scipy.sparse import eye, coo_matrix
+from scipy.sparse import eye
 
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):
@@ -14,11 +14,6 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
             for i in range(len(mesh[dom])):
                 mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
         super().__init__(mesh)
-
-    def spatial_variable(self, symbol):
-        # use the cell centres
-        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        return pybamm.Vector(symbol_mesh[0].nodes)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
@@ -40,21 +35,6 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
             n += self.mesh[domain][0].npts
         mass_matrix = pybamm.Matrix(eye(n))
         return mass_matrix
-
-    def boundary_value(self, symbol, discretised_symbol, side):
-        n = 0
-        for domain in symbol.domain:
-            n += self.mesh[domain][0].npts
-        if side == "left":
-            left_vector = coo_matrix(([1], ([0], [0])), shape=(1, n))
-            bv_vector = pybamm.Matrix(left_vector)
-        elif side == "right":
-            right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
-            bv_vector = pybamm.Matrix(right_vector)
-        out = bv_vector @ discretised_symbol
-        # boundary value removes domain
-        out.domain = []
-        return out
 
 
 def get_mesh_for_testing(npts=None):
