@@ -127,17 +127,12 @@ class TestMacInnesCapacitance(unittest.TestCase):
 
         # Interfacial current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        variables = int_curr_model.get_homogeneous_interfacial_current()
-        variables.update(
-            {
-                "Negative electrolyte concentration": c_e_n,
-                "Positive electrolyte concentration": c_e_p,
-            }
-        )
-
+        j_n = int_curr_model.get_homogeneous_interfacial_current(["negative electrode"])
+        j_p = int_curr_model.get_homogeneous_interfacial_current(["positive electrode"])
+        reactions = {"main": {"neg": {"aj": j_n}, "pos": {"aj": j_p}}}
         # Negative electrode
         model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        model_n.set_differential_system(delta_phi_n, variables)
+        model_n.set_differential_system(delta_phi_n, c_e_n, reactions)
         # Update model for tests
         model_n.rhs.update({c_e_n: pybamm.Scalar(0)})
         model_n.initial_conditions.update({c_e_n: pybamm.Scalar(1)})
@@ -147,27 +142,13 @@ class TestMacInnesCapacitance(unittest.TestCase):
 
         # Positive electrode
         model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        model_p.set_differential_system(delta_phi_p, variables)
+        model_p.set_differential_system(delta_phi_p, c_e_p, reactions)
         # Update model for tests
         model_p.rhs.update({c_e_p: pybamm.Scalar(0)})
         model_p.initial_conditions.update({c_e_p: pybamm.Scalar(1)})
         # Test
         modeltest_p = tests.StandardModelTest(model_p)
         modeltest_p.test_all()
-
-        # Both
-        model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        model_n.set_differential_system(delta_phi_n, variables)
-        model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        model_p.set_differential_system(delta_phi_p, variables)
-        model_n.update(model_p)
-        model_whole = model_n
-        model_whole.rhs.update({c_e_n: pybamm.Scalar(0), c_e_p: pybamm.Scalar(0)})
-        model_whole.initial_conditions.update(
-            {c_e_n: pybamm.Scalar(1), c_e_p: pybamm.Scalar(1)}
-        )
-        model_whole_test = tests.StandardModelTest(model_whole)
-        model_whole_test.test_all()
 
     def test_basic_processing_leading_order(self):
         # Parameters
@@ -179,31 +160,23 @@ class TestMacInnesCapacitance(unittest.TestCase):
 
         # Interfacial current density
         int_curr_model = pybamm.interface.InterfacialCurrent(param)
-        variables = int_curr_model.get_homogeneous_interfacial_current()
+        j_n = int_curr_model.get_homogeneous_interfacial_current(["negative electrode"])
+        j_p = int_curr_model.get_homogeneous_interfacial_current(["positive electrode"])
+        reactions = {"main": {"neg": {"aj": j_n}, "pos": {"aj": j_p}}}
 
         # Negative electrode
         model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        model_n.set_leading_order_system(delta_phi_n, variables)
+        model_n.set_leading_order_system(delta_phi_n, reactions, ["negative electrode"])
         # Test
         modeltest_n = tests.StandardModelTest(model_n)
         modeltest_n.test_all()
 
         # Positive electrode
         model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        model_p.set_leading_order_system(delta_phi_p, variables)
+        model_p.set_leading_order_system(delta_phi_p, reactions, ["positive electrode"])
         # Test
         modeltest_p = tests.StandardModelTest(model_p)
         modeltest_p.test_all()
-
-        # Both
-        model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        model_n.set_leading_order_system(delta_phi_n, variables)
-        model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        model_p.set_leading_order_system(delta_phi_p, variables)
-        model_n.update(model_p)
-        model_whole = model_n
-        model_whole_test = tests.StandardModelTest(model_whole)
-        model_whole_test.test_all()
 
 
 if __name__ == "__main__":
