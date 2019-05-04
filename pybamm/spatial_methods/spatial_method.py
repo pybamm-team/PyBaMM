@@ -33,7 +33,7 @@ class SpatialMethod:
     def spatial_variable(self, symbol):
         """
         Convert a :class:`pybamm.SpatialVariable` node to a linear algebra object that
-        can be evaluated (i.e. a :class:`pybamm.Vector`).
+        can be evaluated (here, a :class:`pybamm.Vector` on the nodes).
 
         Parameters
         -----------
@@ -45,12 +45,8 @@ class SpatialMethod:
         :class:`pybamm.Vector`
             Contains the discretised spatial variable
         """
-        # for finite volume we use the cell centres
-        if symbol.name in ["x_n", "x_s", "x_p", "r_n", "r_p", "x", "r"]:
-            symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
-        else:
-            raise NotImplementedError("3D meshes not yet implemented")
+        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+        return pybamm.Vector(symbol_mesh[0].nodes)
 
     def broadcast(self, symbol, domain):
         """

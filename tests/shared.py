@@ -10,9 +10,6 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
 
     def __init__(self, mesh):
-        for dom in mesh.keys():
-            for i in range(len(mesh[dom])):
-                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
         super().__init__(mesh)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
