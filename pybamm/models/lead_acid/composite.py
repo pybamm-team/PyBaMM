@@ -86,7 +86,9 @@ class Composite(pybamm.LeadAcidBaseModel):
         eleclyte_conc_model.set_differential_system(c_e, reactions, epsilon=eps)
 
         self.update(leading_order_model, porosity_model, eleclyte_conc_model)
+        import ipdb
 
+        ipdb.set_trace()
         "-----------------------------------------------------------------------------"
         "Post-Processing"
 

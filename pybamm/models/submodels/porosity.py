@@ -85,6 +85,3 @@ class Standard(pybamm.SubModel):
                     Domain + " porosity change": pybamm.Broadcast(deps_dt, domain),
                 }
             )
-            self.leading_order_variables.update(
-                {Domain + " porosity": eps, Domain + " porosity change": deps_dt}
-            )
