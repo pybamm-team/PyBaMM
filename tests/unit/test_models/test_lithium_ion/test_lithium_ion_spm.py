@@ -27,34 +27,34 @@ class TestSPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
 
-    # def test_surface_concentration(self):
-    #     model = pybamm.lithium_ion.SPM()
-    #     modeltest = tests.StandardModelTest(model)
-    #     modeltest.test_all()
-    #     t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
+    def test_surface_concentration(self):
+        model = pybamm.lithium_ion.SPM()
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+        t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
 
-    #     # check surface concentration decreases in negative particle and
-    #     # increases in positive particle for discharge
-    #     c_s_n_surf = pybamm.ProcessedVariable(
-    #         model.variables["Negative particle surface concentration"],
-    #         t_sol,
-    #         y_sol,
-    #         mesh=modeltest.disc.mesh,
-    #     )
-    #     c_s_p_surf = pybamm.ProcessedVariable(
-    #         model.variables["Positive particle surface concentration"],
-    #         t_sol,
-    #         y_sol,
-    #         mesh=modeltest.disc.mesh,
-    #     )
-    #     # neg surf concentration should be monotonically decreasing for a discharge
-    #     np.testing.assert_array_less(
-    #         c_s_n_surf.entries[:, 1:], c_s_n_surf.entries[:, :-1]
-    #     )
-    #     # pos surf concentration should be monotonically increasing for a discharge
-    #     np.testing.assert_array_less(
-    #         c_s_p_surf.entries[:, :-1], c_s_p_surf.entries[:, 1:]
-    #     )
+        # check surface concentration decreases in negative particle and
+        # increases in positive particle for discharge
+        c_s_n_surf = pybamm.ProcessedVariable(
+            model.variables["Negative particle surface concentration"],
+            t_sol,
+            y_sol,
+            mesh=modeltest.disc.mesh,
+        )
+        c_s_p_surf = pybamm.ProcessedVariable(
+            model.variables["Positive particle surface concentration"],
+            t_sol,
+            y_sol,
+            mesh=modeltest.disc.mesh,
+        )
+        # neg surf concentration should be monotonically decreasing for a discharge
+        np.testing.assert_array_less(
+            c_s_n_surf.entries[:, 1:], c_s_n_surf.entries[:, :-1]
+        )
+        # pos surf concentration should be monotonically increasing for a discharge
+        np.testing.assert_array_less(
+            c_s_p_surf.entries[:, :-1], c_s_p_surf.entries[:, 1:]
+        )
 
     # test that surface concentrations are all positive
 
