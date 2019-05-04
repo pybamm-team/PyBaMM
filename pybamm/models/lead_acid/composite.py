@@ -126,7 +126,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         phi_s_n = electrode_model.get_neg_pot_explicit_combined(eps0)
 
         # Electrolyte potential
-        electrolye_vars = electrolyte_current_model.get_explicit_combined(
+        electrolyte_vars = electrolyte_current_model.get_explicit_combined(
             ocp_n, eta_r_n, c_e, phi_s_n, eps0, c_e_0
         )
         phi_e = self.variables["Electrolyte potential"]
