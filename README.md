@@ -64,6 +64,7 @@ mkdir build-sundials-3.1.1
 cd build-sundials-3.1.1/
 cmake -DLAPACK_ENABLE=ON -DSUNDIALS_INDEX_TYPE=int32_t -DBUILD_ARKODE:BOOL=OFF -DEXAMPLES_ENABLE:BOOL=OFF -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR ../sundials-3.1.1/
 make install
+rm -r sundials-3.1.1
 ```
 
 Then install [scikits.odes](https://github.com/bmcage/odes), letting it know the sundials install location:

@@ -5,7 +5,6 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
 
-import copy
 import numpy as np
 from scipy.sparse import block_diag, csr_matrix
 
@@ -375,10 +374,22 @@ class Discretisation(object):
             new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
             return new_symbol
 
+        elif isinstance(symbol, pybamm.Scalar):
+            return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.Array):
+            return symbol.__class__(symbol.entries, symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.StateVector):
+            return symbol.__class__(symbol.y_slice, symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.Time):
+            return pybamm.Time()
+
         else:
-            new_symbol = copy.deepcopy(symbol)
-            new_symbol.parent = None
-            return new_symbol
+            raise NotImplementedError(
+                "Cannot discretise symbol of type '{}'".format(type(symbol))
+            )
 
     def process_binary_operators(self, bin_op):
         """Discretise binary operators in model equations.  Performs appropriate
