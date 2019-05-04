@@ -255,6 +255,9 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.SpatialVariable):
             return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
 
+        elif isinstance(symbol, pybamm.StateVector):
+            return symbol.__class__(symbol.y_slice, symbol.name, symbol.domain)
+
         elif isinstance(symbol, pybamm.Time):
             return pybamm.Time()
 

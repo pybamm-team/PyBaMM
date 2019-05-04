@@ -27,11 +27,8 @@ class TestDFN(unittest.TestCase):
         )
         c_e = processed_variables["Electrolyte concentration"]
         voltage = processed_variables["Terminal voltage"]
-        # neg surf concentration should be monotonically increasing for a charge
-        np.testing.assert_array_less(c_e.entries[:, :-1], c_e.entries[:, 1:])
-        np.testing.assert_array_less(voltage.entries[:-1], voltage.entries[1:])
+        np.testing.assert_array_less(voltage.entries[1:], voltage.entries[:-1])
 
-    @unittest.skip("")
     def test_optimisations(self):
         model = pybamm.lithium_ion.DFN()
         optimtest = tests.OptimisationsTest(model)

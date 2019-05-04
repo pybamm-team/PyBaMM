@@ -30,9 +30,6 @@ class TestLeadAcidComposite(unittest.TestCase):
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
 
         # Post-process variables
-        import ipdb
-
-        ipdb.set_trace()
         processed_variables = pybamm.post_process_variables(
             model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
         )

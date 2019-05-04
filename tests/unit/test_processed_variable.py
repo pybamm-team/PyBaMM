@@ -19,7 +19,7 @@ class TestProcessedVariable(unittest.TestCase):
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
         processed_var = pybamm.ProcessedVariable(var, t_sol, y_sol)
-        np.testing.assert_array_equal(processed_var.entries, t_sol * y_sol)
+        np.testing.assert_array_equal(processed_var.entries, t_sol * y_sol[0])
 
     def test_processed_var_space(self):
         t = pybamm.t
@@ -43,9 +43,11 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
     def test_failure(self):
-        var_with_domain = pybamm.Symbol("var", domain=["test"])
+        var = pybamm.Vector(np.ones(10))
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
         with self.assertRaisesRegex(ValueError, "mesh must be provided"):
-            pybamm.ProcessedVariable(var_with_domain, None, None)
+            pybamm.ProcessedVariable(var, t_sol, y_sol)
 
     def test_processed_var_interpolation(self):
         # without spatial dependence

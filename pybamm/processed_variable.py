@@ -77,7 +77,7 @@ class ProcessedVariable(object):
 
         if isinstance(self.base_eval, numbers.Number):
             self.type = "number"
-            self.value = self.base_eval
+            self.entries = self.base_eval * np.ones_like(t_sol)
         elif len(self.base_eval.shape) == 0 or self.base_eval.shape[0] == 1:
             self.initialise_vector()
         else:
