@@ -447,7 +447,7 @@ class Symbol(anytree.NodeMixin):
         search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
 
         # do the search, return true if no relevent nodes are found
-        return all([not (isinstance(n, search_types)) for n in self.pre_order()])
+        return not any((isinstance(n, search_types)) for n in self.pre_order())
 
     def evaluate_ignoring_errors(self):
         """
@@ -505,13 +505,11 @@ class Symbol(anytree.NodeMixin):
 
     def has_gradient(self):
         """Returns True if equation has a Gradient term."""
-        return any([isinstance(symbol, pybamm.Gradient) for symbol in self.pre_order()])
+        return any(isinstance(symbol, pybamm.Gradient) for symbol in self.pre_order())
 
     def has_divergence(self):
         """Returns True if equation has a Divergence term."""
-        return any(
-            [isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order()]
-        )
+        return any(isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order())
 
     def simplify(self):
         """
