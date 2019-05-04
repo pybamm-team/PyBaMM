@@ -190,7 +190,5 @@ class ProcessedVariable(object):
             else:
                 return self._interpolation_function(t, x)
         elif self.dimensions == 3:
-            import ipdb
-
-            ipdb.set_trace()
-            return self._interpolation_function(t, x, r)
+            raise NotImplementedError("Unclear how to read interpolated object")
+            # return self._interpolation_function(grid)
