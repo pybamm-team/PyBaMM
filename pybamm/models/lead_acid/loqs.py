@@ -91,7 +91,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # ODEs only (don't use jacobian, use base spatial method)
         self.use_jacobian = False
 
-        self.default_spatial_methods = self.default_spatial_methods = {
+        self.default_spatial_methods = {
             "macroscale": pybamm.SpatialMethod,
             "negative particle": pybamm.SpatialMethod,
             "positive particle": pybamm.SpatialMethod,
