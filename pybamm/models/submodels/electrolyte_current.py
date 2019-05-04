@@ -381,7 +381,6 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             x_n = pybamm.standard_spatial_vars.x_n
             i_e = i_cell * x_n / param.l_n
             j = reactions["main"]["neg"]["aj"]
-
             self.rhs = {delta_phi: 1 / param.C_dl_n * (i_cell / param.l_n - j)}
             self.initial_conditions = {delta_phi: param.U_n(param.c_e_init)}
             self.variables = {
