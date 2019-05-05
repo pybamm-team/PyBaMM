@@ -190,5 +190,14 @@ class ProcessedVariable(object):
             else:
                 return self._interpolation_function(t, x)
         elif self.dimensions == 3:
-            raise NotImplementedError("Unclear how to read interpolated object")
-            # return self._interpolation_function(grid)
+            if isinstance(r, np.ndarray):
+                if isinstance(x, np.ndarray) and isinstance(t, np.ndarray):
+                    r = r[:, np.newaxis, np.newaxis]
+                    x = x[:, np.newaxis]
+                elif isinstance(x, np.ndarray) or isinstance(t, np.ndarray):
+                    r = r[:, np.newaxis]
+            else:
+                if isinstance(x, np.ndarray) and isinstance(t, np.ndarray):
+                    x = x[:, np.newaxis]
+
+            return self._interpolation_function((r, x, t))
