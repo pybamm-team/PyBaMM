@@ -82,10 +82,16 @@ class Composite(pybamm.LeadAcidBaseModel):
                 "porosity change": porosity_model.variables["Porosity change"],
             }
         }
-        eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        eleclyte_conc_model.set_differential_system(c_e, reactions, epsilon=eps)
+        electrolyte_concentration_model = pybamm.electrolyte_diffusion.StefanMaxwell(
+            param
+        )
+        electrolyte_concentration_model.set_differential_system(
+            c_e, reactions, epsilon=eps
+        )
 
-        self.update(leading_order_model, porosity_model, eleclyte_conc_model)
+        self.update(
+            leading_order_model, porosity_model, electrolyte_concentration_model
+        )
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
@@ -130,7 +136,7 @@ class Composite(pybamm.LeadAcidBaseModel):
             ocp_n, eta_r_n, c_e, phi_s_n, eps0, c_e_0
         )
         phi_e = self.variables["Electrolyte potential"]
-        self.variables.update(electrolye_vars)
+        self.variables.update(electrolyte_vars)
 
         # Electrode
         electrode_vars = electrode_model.get_explicit_combined(
