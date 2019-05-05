@@ -2,6 +2,7 @@
 # Tests for the lead-acid Newman-Tiedemann capacitance model
 #
 import pybamm
+from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
 
 import unittest
@@ -14,7 +15,13 @@ class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skip("")
+    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+    def test_basic_processing_no_capacitance(self):
+        model = pybamm.lead_acid.NewmanTiedemannCapacitance(use_capacitance=False)
+        modeltest = tests.StandardModelTest(model)
+
+        modeltest.test_all()
+
     def test_optimisations(self):
         model = pybamm.lead_acid.NewmanTiedemannCapacitance()
         optimtest = tests.OptimisationsTest(model)

@@ -28,7 +28,7 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
     def __init__(self, use_capacitance=True):
         # Update own model with submodels
         super().__init__()
-        self.use_jacobian = False
+
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
@@ -85,11 +85,15 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
 
         # Electrolyte current
         reactions_av = {"main": {"neg": {"aj": j_n_av}, "pos": {"aj": j_p_av}}}
-        eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(
+            param, use_capacitance
+        )
         eleclyte_current_model_n.set_leading_order_system(
             delta_phi_n_av, reactions_av, neg
         )
-        eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(
+            param, use_capacitance
+        )
         eleclyte_current_model_p.set_leading_order_system(
             delta_phi_p_av, reactions_av, pos
         )
@@ -151,3 +155,15 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
             phi_s_n, phi_e, ocp_p, eta_r_p, eps0
         )
         self.variables.update(electrode_vars)
+
+        "-----------------------------------------------------------------------------"
+        "Extra settings"
+
+        # Don't use jacobian for now (simplifications failing)
+        self.use_jacobian = False
+
+        # Different solver depending on whether we solve ODEs or DAEs
+        if use_capacitance:
+            self.default_solver = pybamm.ScikitsOdeSolver()
+        else:
+            self.default_solver = pybamm.ScikitsDaeSolver()

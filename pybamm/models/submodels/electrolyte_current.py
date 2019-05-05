@@ -505,14 +505,9 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         # Concatenate
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
-        # Other variables
-        # eta_c_av and delta_phi_e_av not defined?
-        eta_c_av = pybamm.Scalar(0)
-        delta_phi_e_av = pybamm.Scalar(0)
-
         # average elecrolyte overpotential (ohmic + concentration overpotential)
         phi_e_n_av = pybamm.average(phi_e_n)
         phi_e_p_av = pybamm.average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
 
-        return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
+        return self.get_variables(phi_e, i_e, eta_e_av)

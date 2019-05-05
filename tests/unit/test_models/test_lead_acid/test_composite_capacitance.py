@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
 
 import unittest
@@ -14,6 +15,13 @@ class TestLeadAcidCompositeCapacitance(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.CompositeCapacitance()
         modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+    def test_basic_processing_no_capacitance(self):
+        model = pybamm.lead_acid.CompositeCapacitance(use_capacitance=False)
+        modeltest = tests.StandardModelTest(model)
+
         modeltest.test_all()
 
     def test_optimisations(self):
