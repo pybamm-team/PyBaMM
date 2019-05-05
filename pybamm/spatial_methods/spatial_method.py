@@ -158,7 +158,9 @@ class SpatialMethod:
     def boundary_value(self, symbol, discretised_symbol, side):
         """
         Returns the boundary value using the approriate expression for the
-        spatial method.
+        spatial method. To do this, we create a sparse vector 'bv_vector' that extracts
+        either the first (for side="left") or last (for side="right") point from
+        'discretised_symbol'.
 
         Parameters
         -----------
@@ -174,13 +176,15 @@ class SpatialMethod:
         :class:`pybamm.Variable`
             The variable representing the surface value.
         """
-        n = 0
-        for domain in symbol.domain:
-            n += self.mesh[domain][0].npts
+        n = sum(self.mesh[dom][0].npts for dom in symbol.domain)
         if side == "left":
+            # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
+            # (row[i], col[i]) for each index of data. Here we just want a single point
+            # with value 1 at (0,0).
             left_vector = coo_matrix(([1], ([0], [0])), shape=(1, n))
             bv_vector = pybamm.Matrix(left_vector)
         elif side == "right":
+            # as above, but now we want a single point with value 1 at (0, n-1)
             right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
             bv_vector = pybamm.Matrix(right_vector)
         out = bv_vector @ discretised_symbol
