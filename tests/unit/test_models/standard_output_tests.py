@@ -8,65 +8,40 @@ import pybamm
 import numpy as np
 
 
-class StandardOutputTests(object):
-    "Calls all the tests on the standard output variables."
+def standard_output_tests(model, disc, solver, parameter_values):
 
-    def __init__(self, model, disc, solver, parameter_values):
-        self.model = model
-        self.disc = disc
-        self.solver = solver
+    if isinstance(model, pybamm.LithiumIonBaseModel):
+        chemistry = "Lithium-ion"
+    elif isinstance(model, pybamm.LeadAcidBaseModel):
+        chemistry = "Lead acid"
 
-        if isinstance(self.model, pybamm.LithiumIonBaseModel):
-            self.chemistry = "Lithium-ion"
-        elif isinstance(self.model, pybamm.LeadAcidBaseModel):
-            self.chemistry = "Lead acid"
+    current_sign = np.sign(parameter_values["Typical current density"])
+    if current_sign == 1:
+        operating_condition = "discharge"
+    elif current_sign == -1:
+        operating_condition = "charge"
+    else:
+        operating_condition = "off"
 
-        current_sign = np.sign(parameter_values["Typical current density"])
-        if current_sign == 1:
-            self.operating_condition = "discharge"
-        elif current_sign == -1:
-            self.operating_condition = "charge"
-        else:
-            self.operating_condition = "off"
+    voltage_tests = VoltageTests(model, disc, solver, operating_condition)
+    voltage_tests.test_all()
 
-    def test_voltage(self):
-        tests = VoltageTests(
-            self.model, self.disc, self.solver, self.operating_condition
+    electrolyte_tests = ElectrolyteConcentrationTests(
+        model, disc, solver, operating_condition
+    )
+    electrolyte_tests.test_all()
+
+    potential_tests = PotentialTests(model, disc, solver, operating_condition)
+    potential_tests.test_all()
+
+    current_tests = CurrentTests(model, disc, solver, operating_condition)
+    current_tests.test_all()
+
+    if chemistry == "Lithium-ion":
+        particle_tests = ParticleConcentrationTests(
+            model, disc, solver, operating_condition
         )
-        tests.test_all()
-
-    def test_electrolyte(self):
-        tests = ElectrolyteConcentrationTests(
-            self.model, self.disc, self.solver, self.operating_condition
-        )
-        tests.test_all()
-
-    def test_potentials(self):
-        tests = PotentialTests(
-            self.model, self.disc, self.solver, self.operating_condition
-        )
-        tests.test_all()
-
-    def test_particles(self):
-        tests = ParticleConcentrationTests(
-            self.model, self.disc, self.solver, self.operating_condition
-        )
-        tests.test_all()
-
-    def test_currents(self):
-        tests = CurrentTests(
-            self.model, self.disc, self.solver, self.operating_condition
-        )
-        tests.test_all()
-
-    def test_all(self):
-        self.test_voltage()
-        self.test_electrolyte()
-        self.test_potentials()
-        self.test_currents()
-
-        if self.chemistry == "Lithium-ion":
-            self.test_particles()
+        particle_tests.test_all()
 
 
 class BaseOutputTest(object):
