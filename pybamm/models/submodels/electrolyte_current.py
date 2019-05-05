@@ -354,7 +354,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             else:
                 self.algebraic = {delta_phi: pybamm.div(i_e) - j}
             self.boundary_conditions = {i_e: {"left": 0, "right": i_cell}}
-            self.initial_conditions = {delta_phi: param.U_n(param.c_e_init)}
+            self.initial_conditions = {delta_phi: param.U_n(param.c_n_init)}
             self.variables = {
                 "Negative electrode potential difference": delta_phi,
                 "Negative electrolyte current density": i_e,
@@ -372,7 +372,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             else:
                 self.algebraic = {delta_phi: pybamm.div(i_e) - j}
             self.boundary_conditions = {i_e: {"left": i_cell, "right": 0}}
-            self.initial_conditions = {delta_phi: param.U_p(param.c_e_init)}
+            self.initial_conditions = {delta_phi: param.U_p(param.c_p_init)}
             self.variables = {
                 "Positive electrode potential difference": delta_phi,
                 "Positive electrolyte current density": i_e,
@@ -398,7 +398,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
                 self.rhs = {delta_phi: 1 / param.C_dl_n * (i_cell / param.l_n - j)}
             else:
                 self.algebraic = {delta_phi: i_cell / param.l_n - j}
-            self.initial_conditions = {delta_phi: param.U_n(param.c_e_init)}
+            self.initial_conditions = {delta_phi: param.U_n(param.c_n_init)}
             self.variables = {
                 "Negative electrode potential difference": delta_phi,
                 "Negative electrolyte current density": i_e,
@@ -412,7 +412,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
                 self.rhs = {delta_phi: 1 / param.C_dl_p * (-i_cell / param.l_p - j)}
             else:
                 self.algebraic = {delta_phi: -i_cell / param.l_p - j}
-            self.initial_conditions = {delta_phi: param.U_p(param.c_e_init)}
+            self.initial_conditions = {delta_phi: param.U_p(param.c_p_init)}
             self.variables = {
                 "Positive electrode potential difference": delta_phi,
                 "Positive electrolyte current density": i_e,

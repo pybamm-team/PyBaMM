@@ -114,6 +114,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
             np.testing.assert_almost_equal(phi_e_left_eval, 0, 3)  # extrapolation error
 
 
+@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
 class TestMacInnesCapacitance(unittest.TestCase):
     def test_basic_processing(self):
         # Parameters
@@ -124,17 +125,19 @@ class TestMacInnesCapacitance(unittest.TestCase):
         delta_phi_p = pybamm.standard_variables.delta_phi_p
         c_e_n = pybamm.standard_variables.c_e_n
         c_e_p = pybamm.standard_variables.c_e_p
+        c_s_n_surf = pybamm.Scalar(0.8)
+        c_s_p_surf = pybamm.Scalar(0.8)
 
         # Exchange-current density
         neg = ["negative electrode"]
         pos = ["positive electrode"]
         int_curr_model = pybamm.interface.LithiumIonReaction(param)
-        j0_n = int_curr_model.get_exchange_current_densities(c_e_n, neg)
-        j0_p = int_curr_model.get_exchange_current_densities(c_e_p, pos)
+        j0_n = int_curr_model.get_exchange_current_densities(c_e_n, c_s_n_surf, neg)
+        j0_p = int_curr_model.get_exchange_current_densities(c_e_p, c_s_p_surf, pos)
 
         # Open-circuit potential and reaction overpotential
-        ocp_n = param.U_n(c_e)
-        ocp_p = param.U_p(c_e)
+        ocp_n = param.U_n(c_s_n_surf)
+        ocp_p = param.U_p(c_s_p_surf)
         eta_r_n = delta_phi_n - ocp_n
         eta_r_p = delta_phi_p - ocp_p
 
@@ -169,21 +172,23 @@ class TestMacInnesCapacitance(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
 
         # Variables
-        c_e = pybamm.Variable("electrolyte concentration")
+        c_e = pybamm.Scalar(1)
         delta_phi_n = pybamm.Variable("negative electrode potential difference")
         delta_phi_p = pybamm.Variable("positive electrode potential difference")
+        c_s_n_surf = pybamm.Scalar(0.8)
+        c_s_p_surf = pybamm.Scalar(0.8)
 
         # Interfacial current density
         # Exchange-current density
         neg = ["negative electrode"]
         pos = ["positive electrode"]
         int_curr_model = pybamm.interface.LithiumIonReaction(param)
-        j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
-        j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)
+        j0_n = int_curr_model.get_exchange_current_densities(c_e, c_s_n_surf, neg)
+        j0_p = int_curr_model.get_exchange_current_densities(c_e, c_s_p_surf, pos)
 
         # Open-circuit potential and reaction overpotential
-        ocp_n = param.U_n(c_e)
-        ocp_p = param.U_p(c_e)
+        ocp_n = param.U_n(c_s_n_surf)
+        ocp_p = param.U_p(c_s_p_surf)
         eta_r_n = delta_phi_n - ocp_n
         eta_r_p = delta_phi_p - ocp_p
 

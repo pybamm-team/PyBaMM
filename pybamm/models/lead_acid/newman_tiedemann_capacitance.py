@@ -97,13 +97,9 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         # Electrolyte current
         eps_n, _, eps_p = eps.orphans
         eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        eleclyte_current_model_n.set_differential_system(
-            delta_phi_n, c_e_n, reactions, eps_n
-        )
+        eleclyte_current_model_n.set_full_system(delta_phi_n, c_e_n, reactions, eps_n)
         eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        eleclyte_current_model_p.set_differential_system(
-            delta_phi_p, c_e_p, reactions, eps_p
-        )
+        eleclyte_current_model_p.set_full_system(delta_phi_p, c_e_p, reactions, eps_p)
 
         "-----------------------------------------------------------------------------"
         "Combine Submodels"
