@@ -2,7 +2,7 @@
 # A general spatial method class
 #
 import pybamm
-from scipy.sparse import eye, kron
+from scipy.sparse import eye, kron, coo_matrix
 
 
 class SpatialMethod:
@@ -20,6 +20,10 @@ class SpatialMethod:
     """
 
     def __init__(self, mesh):
+        # add npts_for_broadcast to mesh domains for this particular discretisation
+        for dom in mesh.keys():
+            for i in range(len(mesh[dom])):
+                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
         self._mesh = mesh
 
     @property
@@ -29,7 +33,7 @@ class SpatialMethod:
     def spatial_variable(self, symbol):
         """
         Convert a :class:`pybamm.SpatialVariable` node to a linear algebra object that
-        can be evaluated (e.g. a :class:`pybamm.Vector`).
+        can be evaluated (here, a :class:`pybamm.Vector` on the nodes).
 
         Parameters
         -----------
@@ -41,7 +45,8 @@ class SpatialMethod:
         :class:`pybamm.Vector`
             Contains the discretised spatial variable
         """
-        raise NotImplementedError
+        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+        return pybamm.Vector(symbol_mesh[0].nodes)
 
     def broadcast(self, symbol, domain):
         """
@@ -153,7 +158,9 @@ class SpatialMethod:
     def boundary_value(self, symbol, discretised_symbol, side):
         """
         Returns the boundary value using the approriate expression for the
-        spatial method.
+        spatial method. To do this, we create a sparse vector 'bv_vector' that extracts
+        either the first (for side="left") or last (for side="right") point from
+        'discretised_symbol'.
 
         Parameters
         -----------
@@ -169,7 +176,21 @@ class SpatialMethod:
         :class:`pybamm.Variable`
             The variable representing the surface value.
         """
-        raise NotImplementedError
+        n = sum(self.mesh[dom][0].npts for dom in symbol.domain)
+        if side == "left":
+            # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
+            # (row[i], col[i]) for each index of data. Here we just want a single point
+            # with value 1 at (0,0).
+            left_vector = coo_matrix(([1], ([0], [0])), shape=(1, n))
+            bv_vector = pybamm.Matrix(left_vector)
+        elif side == "right":
+            # as above, but now we want a single point with value 1 at (0, n-1)
+            right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
+            bv_vector = pybamm.Matrix(right_vector)
+        out = bv_vector @ discretised_symbol
+        # boundary value removes domain
+        out.domain = []
+        return out
 
     def mass_matrix(self, symbol, boundary_conditions):
         """
@@ -208,12 +229,27 @@ class SpatialMethod:
         mass = kron(eye(sec_pts), prim_mass)
         return pybamm.Matrix(mass)
 
-    def compute_diffusivity(
-        self, symbol, extrapolate_left=None, extrapolate_right=None
-    ):
-        """Compute the diffusivity at edges of cells.
-        Could interpret this as: find diffusivity as
-        off grid locations
+    def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
+        """Discretise binary operators in model equations. Default behaviour is to
+        return a new binary operator with the discretised children.
+
+        Parameters
+        ----------
+        bin_op : :class:`pybamm.BinaryOperator`
+            Binary operator to discretise
+        left : :class:`pybamm.Symbol`
+            The left child of `bin_op`
+        right : :class:`pybamm.Symbol`
+            The right child of `bin_op`
+        disc_left : :class:`pybamm.Symbol`
+            The discretised left child of `bin_op`
+        disc_right : :class:`pybamm.Symbol`
+            The discretised right child of `bin_op`
+
+        Returns
+        -------
+        :class:`pybamm.BinaryOperator`
+            Discretised binary operator
+
         """
-        # Default behaviour (identity operator): return symbol
-        return symbol
+        return bin_op.__class__(disc_left, disc_right)

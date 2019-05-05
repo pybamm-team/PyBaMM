@@ -26,11 +26,11 @@ class FiniteVolume(pybamm.SpatialMethod):
     """
 
     def __init__(self, mesh):
+        super().__init__(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
             for i in range(len(mesh[dom])):
                 mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
-        super().__init__(mesh)
 
     def spatial_variable(self, symbol):
         """
@@ -565,6 +565,70 @@ class FiniteVolume(pybamm.SpatialMethod):
             boundary_value.domain = []
 
         return boundary_value
+
+    def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
+        """Discretise binary operators in model equations.  Performs appropriate
+        averaging of diffusivities if one of the children is a gradient operator, so
+        that discretised sizes match up.
+
+        Parameters
+        ----------
+        bin_op : :class:`pybamm.BinaryOperator`
+            Binary operator to discretise
+        left : :class:`pybamm.Symbol`
+            The left child of `bin_op`
+        right : :class:`pybamm.Symbol`
+            The right child of `bin_op`
+        disc_left : :class:`pybamm.Symbol`
+            The discretised left child of `bin_op`
+        disc_right : :class:`pybamm.Symbol`
+            The discretised right child of `bin_op`
+        Returns
+        -------
+        :class:`pybamm.BinaryOperator`
+            Discretised binary operator
+
+        """
+        # Post-processing to make sure discretised dimensions match
+        # If neither child has gradients, or both children have gradients
+        # no need to do any averaging
+        if (
+            left.has_gradient_and_not_divergence()
+            == right.has_gradient_and_not_divergence()
+        ):
+            pass
+        # If only left child has gradient, compute diffusivity for right child
+        elif (
+            left.has_gradient_and_not_divergence()
+            and not right.has_gradient_and_not_divergence()
+        ):
+            # Extrapolate at either end depending on the ghost cells (from gradient)
+            extrapolate_left = any(
+                [x.has_left_ghost_cell for x in disc_left.pre_order()]
+            )
+            extrapolate_right = any(
+                [x.has_right_ghost_cell for x in disc_left.pre_order()]
+            )
+            disc_right = self.compute_diffusivity(
+                disc_right, extrapolate_left, extrapolate_right
+            )
+        # If only right child has gradient, compute diffusivity for left child
+        elif (
+            right.has_gradient_and_not_divergence()
+            and not left.has_gradient_and_not_divergence()
+        ):
+            # Extrapolate at either end depending on the ghost cells (from gradient)
+            extrapolate_left = any(
+                [x.has_left_ghost_cell for x in disc_right.pre_order()]
+            )
+            extrapolate_right = any(
+                [x.has_right_ghost_cell for x in disc_right.pre_order()]
+            )
+            disc_left = self.compute_diffusivity(
+                disc_left, extrapolate_left, extrapolate_right
+            )
+        # Return new binary operator with appropriate class
+        return bin_op.__class__(disc_left, disc_right)
 
     def compute_diffusivity(
         self, discretised_symbol, extrapolate_left=False, extrapolate_right=False
