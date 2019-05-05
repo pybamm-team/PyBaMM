@@ -66,11 +66,8 @@ class VoltageTests(BaseOutputTest):
         self.eta_p = self.get_var("Positive reaction overpotential [V]")
         self.eta_r_av = self.get_var("Average reaction overpotential [V]")
 
-        self.eta_c_av = self.get_var("Average concentration overpotential [V]")
-        self.Delta_Phi_e_av = self.get_var("Average electrolyte ohmic losses [V]")
-        self.Delta_Phi_s_av = self.get_var("Average solid phase ohmic losses [V]")
-
         self.eta_e_av = self.get_var("Average electrolyte overpotential [V]")
+        self.Delta_Phi_s_av = self.get_var("Average solid phase ohmic losses [V]")
 
         self.ocp_n_av = self.get_var(
             "Average negative electrode open circuit potential [V]"
@@ -106,19 +103,16 @@ class VoltageTests(BaseOutputTest):
         tol = 0.001
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(self.eta_r_av.entries, tol)
-            np.testing.assert_array_less(self.eta_c_av.entries, tol)
-            np.testing.assert_array_less(self.Delta_Phi_e_av.entries, tol)
+            np.testing.assert_array_less(self.eta_e_av.entries, tol)
             np.testing.assert_array_less(self.Delta_Phi_s_av.entries, tol)
         elif self.operating_condition == "charge":
             np.testing.assert_array_less(-self.eta_r_av.entries, tol)
-            np.testing.assert_array_less(-self.eta_c_av.entries, tol)
-            np.testing.assert_array_less(-self.Delta_Phi_e_av.entries, tol)
+            np.testing.assert_array_less(-self.eta_e_av.entries, tol)
             np.testing.assert_array_less(-self.Delta_Phi_s_av.entries, tol)
 
         elif self.operating_condition == "off":
             np.testing.assert_array_equal(self.eta_r_av.entries, 0)
-            np.testing.assert_array_equal(self.eta_c_av.entries, 0)
-            np.testing.assert_array_equal(self.Delta_Phi_e_av.entries, 0)
+            np.testing.assert_array_equal(self.eta_e_av.entries, 0)
             np.testing.assert_array_equal(self.Delta_Phi_s_av.entries, 0)
 
     def test_ocps(self):

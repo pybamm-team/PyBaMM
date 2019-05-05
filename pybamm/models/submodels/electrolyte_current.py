@@ -23,7 +23,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_variables(self, phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av):
+    def get_variables(self, phi_e, i_e, eta_e_av):
         """
         Calculate dimensionless and dimensional variables for the electrolyte current
         submodel
@@ -56,17 +56,24 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             "Positive electrolyte potential": phi_e_p,
             "Electrolyte potential": phi_e,
             "Electrolyte current density": i_e,
-            "Average concentration overpotential": eta_c_av,
-            "Average electrolyte ohmic losses": delta_phi_e_av,
             "Average electrolyte overpotential": eta_e_av,
             "Negative electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_n,
             "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_s,
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
             "Electrolyte current density [A m-2]": param.i_typ * i_e,
+            "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
+        }
+
+    def get_split_electrolyte_overpotential(self, eta_c_av, delta_phi_e_av):
+        param = self.set_of_parameters
+        pot_scale = param.potential_scale
+
+        return {
+            "Average concentration overpotential": eta_c_av,
+            "Average electrolyte ohmic losses": delta_phi_e_av,
             "Average concentration overpotential [V]": pot_scale * eta_c_av,
             "Average electrolyte ohmic losses [V]": pot_scale * delta_phi_e_av,
-            "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
         }
 
 
@@ -126,19 +133,13 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         self.rhs = {}
 
         # Variables
-        # eta_c_av and delta_phi_e_av are not defined`independently
-        eta_c_av = pybamm.Scalar(0)
-        delta_phi_e_av = pybamm.Scalar(0)
-
-        # average elecrolyte overpotential (ohmic + concentration overpotential)
+        # average electrolyte overpotential (ohmic + concentration overpotential)
         phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
         phi_e_n_av = pybamm.average(phi_e_n)
         phi_e_p_av = pybamm.average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
 
-        self.variables = self.get_variables(
-            phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av
-        )
+        self.variables = self.get_variables(phi_e, i_e, eta_e_av)
 
         # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
@@ -190,7 +191,13 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         # electrolyte overpotential
         eta_e_av = eta_c_av + delta_phi_e_av
 
-        return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
+        variables = self.get_variables(phi_e, i_e, eta_e_av)
+        additional_vars = self.get_split_electrolyte_overpotential(
+            eta_c_av, delta_phi_e_av
+        )
+        variables.update(additional_vars)
+
+        return variables
 
     def get_explicit_combined(
         self, ocp_n, eta_r_n, c_e, phi_s_n, epsilon=None, c_e_0=None
@@ -317,5 +324,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         # electrolyte overpotential
         eta_e_av = eta_c_av + delta_phi_e_av
 
-        # Variables
-        return self.get_variables(phi_e, i_e, eta_c_av, delta_phi_e_av, eta_e_av)
+        # get variables
+        variables = self.get_variables(phi_e, i_e, eta_e_av)
+        additional_vars = self.get_split_electrolyte_overpotential(
+            eta_c_av, delta_phi_e_av
+        )
+
+        variables.update(additional_vars)
+
+        return variables
