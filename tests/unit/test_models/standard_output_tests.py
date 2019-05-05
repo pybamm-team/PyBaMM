@@ -121,9 +121,8 @@ class VoltageTests(BaseOutputTest):
             - charge: ocp_n decreases, ocp_p increases
             - off: ocp_n, ocp_p constant
         """
-
-        neg_end_vs_start = self.ocp_n_av.entries[:, -1] - self.ocp_n_av.entries[:, 1]
-        pos_end_vs_start = self.ocp_p_av.entries[:, -1] - self.ocp_p_av.entries[:, 1]
+        neg_end_vs_start = self.ocp_n_av.entries[-1] - self.ocp_n_av.entries[1]
+        pos_end_vs_start = self.ocp_p_av.entries[-1] - self.ocp_p_av.entries[1]
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(-neg_end_vs_start, 0)
             np.testing.assert_array_less(pos_end_vs_start, 0)
@@ -141,7 +140,7 @@ class VoltageTests(BaseOutputTest):
             - off: ocv constant
         """
 
-        end_vs_start = self.ocv_av.entries[:, -1] - self.ocv_av.entries[:, 1]
+        end_vs_start = self.ocv_av.entries[-1] - self.ocv_av.entries[1]
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(end_vs_start, 0)
@@ -156,7 +155,7 @@ class VoltageTests(BaseOutputTest):
             - charge: voltage increases
             - off: voltage constant
         """
-        end_vs_start = self.voltage.entries[:, -1] - self.voltage.entries[:, 1]
+        end_vs_start = self.voltage.entries[-1] - self.voltage.entries[1]
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(end_vs_start, 0)
@@ -414,4 +413,3 @@ class CurrentTests(BaseOutputTest):
     def test_all(self):
         self.test_interfacial_current_average()
         self.test_conservation()
-
