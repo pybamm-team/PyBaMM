@@ -43,7 +43,6 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
     def test_processed_variable_3D(self):
-        t = pybamm.t
         var = pybamm.Variable("var", domain=["negative particle"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
@@ -122,7 +121,6 @@ class TestProcessedVariable(unittest.TestCase):
         self.assertEqual(processed_eqn(0.5, x_sol[-1]).shape, (1,))
 
     def test_processed_var_3D_interpolation(self):
-        t = pybamm.t
         var = pybamm.Variable("var", domain=["negative particle"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
