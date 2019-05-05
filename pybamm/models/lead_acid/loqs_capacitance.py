@@ -1,5 +1,5 @@
 #
-# Lead-acid LOQS model
+# Lead-acid LOQS model, with capacitance
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -7,7 +7,8 @@ import pybamm
 
 
 class LOQSCapacitance(pybamm.LeadAcidBaseModel):
-    """Leading-Order Quasi-Static model for lead-acid, from [1]_, with capacitance
+    """
+    Leading-Order Quasi-Static model for lead-acid, from [2]_, with capacitance
     effects included
 
     Parameters
@@ -17,12 +18,12 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         ODEs for delta_phi. If False, solve algebraic equations for delta_phi
 
     References
-    ==========
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
+    ----------
+    .. [2] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
            Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
            arXiv preprint arXiv:1902.01774, 2019.
 
-   **Extends**: :class:`pybamm.LeadAcidBaseModel`
+    **Extends**: :class:`pybamm.LeadAcidBaseModel`
     """
 
     def __init__(self, use_capacitance=True):

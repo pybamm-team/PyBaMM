@@ -7,7 +7,8 @@ import pybamm
 
 
 class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
-    """Porous electrode model for lead-acid, from [1]_, with capacitance effects
+    """
+    Porous electrode model for lead-acid, from [2]_, with capacitance effects
     included.
 
     Parameters
@@ -17,12 +18,12 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         ODEs for delta_phi. If False, solve algebraic equations for delta_phi
 
     References
-    ==========
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
+    ----------
+    .. [2] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
            Battery Simulations from Porous-Electrode Theory: I. Physical Model.
            arXiv preprint arXiv:1902.01771, 2019.
 
-   **Extends:** :class:`pybamm.LeadAcidBaseModel`
+    **Extends:** :class:`pybamm.LeadAcidBaseModel`
     """
 
     def __init__(self, use_capacitance=True):

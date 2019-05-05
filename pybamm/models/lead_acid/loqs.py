@@ -10,7 +10,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
     """Leading-Order Quasi-Static model for lead-acid, from [1]_.
 
     References
-    ==========
+    ----------
     .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
            Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
            arXiv preprint arXiv:1902.01774, 2019.

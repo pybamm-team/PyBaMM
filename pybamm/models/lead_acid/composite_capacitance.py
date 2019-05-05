@@ -7,7 +7,8 @@ import pybamm
 
 
 class CompositeCapacitance(pybamm.LeadAcidBaseModel):
-    """Composite model for lead-acid, from [1]_, with capacitance effects included.
+    """
+    Composite model for lead-acid, from [2]_, with capacitance effects included.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
@@ -17,8 +18,8 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
         ODEs for delta_phi. If False, solve algebraic equations for delta_phi
 
     References
-    ==========
-    .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
+    ----------
+    .. [2] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
            Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
            arXiv preprint arXiv:1902.01774, 2019.
 

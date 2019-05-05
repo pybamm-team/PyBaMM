@@ -11,7 +11,7 @@ class Composite(pybamm.LeadAcidBaseModel):
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     References
-    ==========
+    ----------
     .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
            Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
            arXiv preprint arXiv:1902.01774, 2019.
