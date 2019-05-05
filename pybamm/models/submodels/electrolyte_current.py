@@ -12,12 +12,13 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
     """
     Base model for the potential and current in the electrolyte
 
+    **Extends:** :class:`pybamm.SubModel`
+
     Parameters
     ----------
     set_of_parameters : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.SubModel`
     """
 
     def __init__(self, set_of_parameters):
@@ -271,12 +272,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
     """MacInnes equation for the current in the electrolyte, derived from the
     Stefan-Maxwell equations.
 
+    **Extends:** :class:`ElectrolyteCurrentBaseModel`
+
     Parameters
     ----------
     set_of_parameters : parameter class
         The parameters to use for this submodel
-
-    *Extends:* :class:`ElectrolyteCurrentBaseModel`
     """
 
     def __init__(self, set_of_parameters):
@@ -340,6 +341,8 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     Stefan-Maxwell equations, with capacitance effects included. The MacInnes equation
     is rearranged to account for both solid and electrolyte potentials
 
+    **Extends:** :class:`ElectrolyteCurrentBaseModel`
+
     Parameters
     ----------
     set_of_parameters : parameter class
@@ -347,8 +350,6 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     use_capacitance : bool
         Whether to use capacitance in the model or not. If True (default), solve
         ODEs for delta_phi. If False, solve algebraic equations for delta_phi
-
-    *Extends:* :class:`ElectrolyteCurrentBaseModel`
     """
 
     def __init__(self, set_of_parameters, use_capacitance=True):

@@ -42,20 +42,20 @@ class Composite(pybamm.LeadAcidBaseModel):
         neg = ["negative electrode"]
         pos = ["positive electrode"]
         int_curr_model = pybamm.interface.LeadAcidReaction(param)
-        j_0_n = int_curr_model.get_homogeneous_interfacial_current(neg)
-        j_0_p = int_curr_model.get_homogeneous_interfacial_current(pos)
-        broad_j_0_n = pybamm.Broadcast(j_0_n, neg)
-        broad_j_0_p = pybamm.Broadcast(j_0_p, pos)
+        j_n = int_curr_model.get_homogeneous_interfacial_current(neg)
+        j_p = int_curr_model.get_homogeneous_interfacial_current(pos)
+        broad_j_n = pybamm.Broadcast(j_n, neg)
+        broad_j_p = pybamm.Broadcast(j_p, pos)
 
         # Porosity
         porosity_model = pybamm.porosity.Standard(param)
-        porosity_model.set_differential_system(eps, broad_j_0_n, broad_j_0_p)
+        porosity_model.set_differential_system(eps, broad_j_n, broad_j_p)
 
         # Electrolyte concentration
         reactions = {
             "main": {
-                "neg": {"s_plus": param.s_n, "aj": broad_j_0_n},
-                "pos": {"s_plus": param.s_p, "aj": broad_j_0_p},
+                "neg": {"s_plus": param.s_n, "aj": broad_j_n},
+                "pos": {"s_plus": param.s_p, "aj": broad_j_p},
                 "porosity change": porosity_model.variables["Porosity change"],
             }
         }
@@ -77,16 +77,14 @@ class Composite(pybamm.LeadAcidBaseModel):
         c_e_n, _, c_e_p = c_e.orphans
         j0_n = int_curr_model.get_exchange_current_densities(c_e_n, neg)
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p, pos)
-        j_0_vars = int_curr_model.get_derived_interfacial_currents(
-            j_0_n, j_0_p, j0_n, j0_p
-        )
-        self.variables.update(j_0_vars)
+        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
 
         # Potentials
         ocp_n = param.U_n(c_e_n)
         ocp_p = param.U_p(c_e_p)
-        eta_r_n = int_curr_model.get_inverse_butler_volmer(j_0_n, j0_n, neg)
-        eta_r_p = int_curr_model.get_inverse_butler_volmer(j_0_p, j0_p, pos)
+        eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
+        eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
         pot_model = pybamm.potential.Potential(param)
         ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
         eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
