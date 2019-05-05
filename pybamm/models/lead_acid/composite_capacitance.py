@@ -7,34 +7,14 @@ import pybamm
 
 
 class CompositeCapacitance(pybamm.LeadAcidBaseModel):
-    """Composite model for lead-acid, from [1]_.
+    """Composite model for lead-acid, from [1]_, with capacitance effects included.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
-    .. math::
-        \\frac{\\partial \\tilde{c}}{\\partial t}
-        = \\frac{1}{\\varepsilon^{(0)}}\\left(
-            \\frac{D^{\\text{eff}, (0)}}{\\mathcal{C}_\\text{e}}
-            \\frac{\\partial^2 \\tilde{c}}{\\partial x^2}
-            + \\left(
-                s + \\beta^{\\text{surf}}c^{(0)}
-            \\right)j^{(0)}
-        \\right)
-
-
-    **Notation for variables and parameters:**
-
-    * f_xy means :math:`f^{(x)}_\\text{y}` (x is the power for the asymptotic \
-    expansion and y is the domain). For example c_1n means :math:`c^{(1)}_\\text{n}`, \
-    the first-order concentration in the negative electrode
-    * fbar_n means :math:`\\bar{f}_n`, the average value of f in that domain, e.g.
-
-    .. math::
-        \\text{cbar_n}
-        = \\bar{c}_\\text{n}
-        = \\frac{1}{\\ell_\\text{n}}
-        \\int_0^{\\ell_\\text{n}} \\! c_\\text{n} \\, \\mathrm{d}x
-
-    **Extends:** :class:`pybamm.LeadAcidBaseModel`
+    Parameters
+    ----------
+    use_capacitance : bool
+        Whether to use capacitance in the model or not. If True (default), solve
+        ODEs for delta_phi. If False, solve algebraic equations for delta_phi
 
     References
     ==========
@@ -42,9 +22,10 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
            Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
            arXiv preprint arXiv:1902.01774, 2019.
 
+    **Extends:** :class:`pybamm.LeadAcidBaseModel`
     """
 
-    def __init__(self):
+    def __init__(self, use_capacitance=True):
         # Update own model with submodels
         super().__init__()
 
@@ -142,23 +123,31 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
         eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
         self.variables.update({**ocp_vars, **eta_r_vars})
 
-        # Electrolyte current
         eps0 = leading_order_model.variables["Porosity"]
         c_e_0 = (
             leading_order_model.variables["Electrolyte concentration"]
             .orphans[0]
             .orphans[0]
         )
-        eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        elyte_vars = eleclyte_current_model.get_explicit_combined(
-            ocp_n, eta_r_n, c_e, eps0, c_e_0
+
+        # Load electrolyte and electrode potentials
+        electrode_model = pybamm.electrode.Ohm(param)
+        electrolyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
+            param
         )
-        self.variables.update(elyte_vars)
+
+        # Negative electrode potential
+        phi_s_n = electrode_model.get_neg_pot_explicit_combined(eps0)
+
+        # Electrolyte potential
+        electrolyte_vars = electrolyte_current_model.get_explicit_combined(
+            ocp_n, eta_r_n, c_e, phi_s_n, eps0, c_e_0
+        )
+        phi_e = self.variables["Electrolyte potential"]
+        self.variables.update(electrolyte_vars)
 
         # Electrode
-        electrode_model = pybamm.electrode.Ohm(param)
-        phi_e = self.variables["Electrolyte potential"]
         electrode_vars = electrode_model.get_explicit_combined(
-            ocp_p, eta_r_p, phi_e, eps0
+            phi_s_n, phi_e, ocp_p, eta_r_p, eps0
         )
         self.variables.update(electrode_vars)
