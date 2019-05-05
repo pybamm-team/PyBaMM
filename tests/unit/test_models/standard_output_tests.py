@@ -174,6 +174,9 @@ class VoltageTests(BaseOutputTest):
             self.ocv_av.entries, self.ocp_p_av.entries - self.ocp_n_av.entries
         )
 
+        import ipdb
+
+        ipdb.set_trace()
         np.testing.assert_array_almost_equal(
             self.voltage.entries,
             self.ocv_av.entries

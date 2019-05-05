@@ -104,6 +104,7 @@ class StandardModelTest(object):
                     (
                         pybamm.lithium_ion.DFN,
                         pybamm.lead_acid.Composite,
+                        pybamm.lead_acid.CompositeCapacitance,
                         pybamm.ReactionDiffusionModel,
                     ),
                 )
