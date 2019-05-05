@@ -13,13 +13,13 @@ class TestSpatialMethod(unittest.TestCase):
         spatial_method = pybamm.SpatialMethod(mesh)
         self.assertEqual(spatial_method.mesh, mesh)
         with self.assertRaises(NotImplementedError):
-            spatial_method.spatial_variable(None)
-        with self.assertRaises(NotImplementedError):
             spatial_method.gradient(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.boundary_value(None, None, None)
+            spatial_method.integral(None, None, None)
+        with self.assertRaises(NotImplementedError):
+            spatial_method.indefinite_integral(None, None, None)
 
 
 if __name__ == "__main__":
