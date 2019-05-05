@@ -521,9 +521,6 @@ class Discretisation(object):
                         (pybamm.NumpyBroadcast, pybamm.Concatenation),
                     )
                 ):
-                    import ipdb
-
-                    ipdb.set_trace()
                     raise pybamm.ModelError(
                         """
                     variable and its eqn must have the same shape after discretisation
