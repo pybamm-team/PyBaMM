@@ -122,7 +122,39 @@ class Ohm(pybamm.SubModel):
 
         return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
-    def get_explicit_combined(self, ocp_p, eta_r_p, phi_e, epsilon=None):
+    def get_neg_pot_explicit_combined(self, epsilon=None):
+        """
+        Provides an explicit combined leading and first order solution to solid phase
+        current conservation with ohm's law in the negative electrode.
+
+        Parameters
+        ----------
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
+
+        Returns
+        -------
+        phi_s_n :class `pybamm.Symbol`
+            The negative electrode potential
+        """
+        # import parameters and spatial variables
+        param = self.set_of_parameters
+        l_n = param.l_n
+        i_cell = param.current_with_time
+        x_n = pybamm.standard_spatial_vars.x_n
+
+        # if porosity is not provided, use the input parameter
+        if epsilon is None:
+            epsilon = param.epsilon
+        eps_n, _, _ = [e.orphans[0] for e in epsilon.orphans]
+
+        # electrode potential
+        sigma_n_eff = param.sigma_n * (1 - eps_n)
+        phi_s_n = i_cell * x_n * (x_n - 2 * l_n) / (2 * sigma_n_eff * l_n)
+
+        return phi_s_n
+
+    def get_explicit_combined(self, phi_s_n, phi_e, ocp_p, eta_r_p, epsilon=None):
         """
         Provides an explicit combined leading and first order solution to solid phase
         current conservation with ohm's law. Note that the returned current density is
@@ -130,12 +162,14 @@ class Ohm(pybamm.SubModel):
 
         Parameters
         ----------
+        phi_s_n : :class:`pybamm.Symbol`
+            Negative electrode potential
+        phi_e : :class:`pybamm.Concatenation`
+            Eletrolyte potential
         ocp_p : :class:`pybamm.Symbol`
             Open-circuit potential in the positive electrode
         eta_r_p : :class:`pybamm.Symbol`
             Reaction overpotential in the positive electrode
-        phi_e : :class:`pybamm.Concatenation`
-            Eletrolyte potential
         epsilon : :class:`pybamm.Symbol`, optional
             Porosity. Default is None, in which case param.epsilon is used.
 
@@ -144,7 +178,7 @@ class Ohm(pybamm.SubModel):
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
-        # import parameters and spatial vairables
+        # import parameters and spatial variables
         param = self.set_of_parameters
         l_n = param.l_n
         l_p = param.l_p
@@ -156,29 +190,31 @@ class Ohm(pybamm.SubModel):
         if epsilon is None:
             epsilon = param.epsilon
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
+        _, _, phi_e_p = phi_e.orphans
 
-        # extract right-most ocp, overpotential, and electrolyte potential
-        ocp_p_right = pybamm.boundary_value(ocp_p, "right")
-        eta_r_p_right = pybamm.boundary_value(eta_r_p, "right")
-        phi_e_right = pybamm.boundary_value(phi_e, "right")
+        # obtain averages
+        ocp_p_av = pybamm.average(ocp_p)
+        eta_r_p_av = pybamm.average(eta_r_p)
+        phi_e_p_av = pybamm.average(phi_e_p)
 
         # electrode potential
         sigma_n_eff = param.sigma_n * (1 - eps_n)
         sigma_p_eff = param.sigma_p * (1 - eps_p)
-        phi_s_n = i_cell * x_n * (2 * l_n - x_n) / (2 * sigma_n_eff * l_n)
-        phi_s_p = (ocp_p_right + eta_r_p_right + phi_e_right) + i_cell * (
-            (1 - x_p) * (1 - 2 * l_p - x_p) / (2 * sigma_p_eff * l_p)
+
+        const = (
+            ocp_p_av
+            + eta_r_p_av
+            + phi_e_p_av
+            - (i_cell / 6 / l_p / sigma_p_eff) * (2 * l_p ** 2 - 6 * l_p + 3)
         )
+
+        phi_s_p = const - i_cell * x_p / (2 * l_p * sigma_p_eff) * (x_p + 2 * (l_p - 1))
 
         # electrode current
         i_s_n = i_cell - i_cell * x_n / l_n
         i_s_p = i_cell - i_cell * (1 - x_p) / l_p
 
-        delta_phi_s_av = (
-            -i_cell
-            / 3
-            * (l_p / param.sigma_p / (1 - eps_p) + l_n / param.sigma_n / (1 - eps_n))
-        )
+        delta_phi_s_av = -i_cell / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
 
         return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 

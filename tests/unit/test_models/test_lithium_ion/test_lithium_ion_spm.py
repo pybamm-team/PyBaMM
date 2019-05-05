@@ -56,9 +56,7 @@ class TestSPM(unittest.TestCase):
             c_s_p_surf.entries[:, :-1], c_s_p_surf.entries[:, 1:]
         )
 
-        # test that surface concentrations are all positive
-        np.testing.assert_array_less(0, c_s_n_surf.entries)
-        np.testing.assert_array_less(0, c_s_p_surf.entries)
+    # test that surface concentrations are all positive
 
     def test_charge(self):
         model = pybamm.lithium_ion.SPM()

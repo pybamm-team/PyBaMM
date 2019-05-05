@@ -98,12 +98,17 @@ class TestDiscretise(unittest.TestCase):
     def test_process_symbol_base(self):
         # create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {}
+        spatial_methods = {
+            "macroscale": pybamm.SpatialMethod,
+            "negative particle": pybamm.SpatialMethod,
+            "positive particle": pybamm.SpatialMethod,
+        }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         # variable
         var = pybamm.Variable("var")
-        disc._y_slices = {var.id: slice(53)}
+        var_vec = pybamm.Variable("var vec", domain=["negative electrode"])
+        disc._y_slices = {var.id: slice(53), var_vec.id: slice(53, 102)}
         var_disc = disc.process_symbol(var)
         self.assertIsInstance(var_disc, pybamm.StateVector)
         self.assertEqual(var_disc._y_slice, disc._y_slices[var.id])
@@ -146,6 +151,18 @@ class TestDiscretise(unittest.TestCase):
         un2_disc = disc.process_symbol(un2)
         self.assertIsInstance(un2_disc, pybamm.AbsoluteValue)
         self.assertIsInstance(un2_disc.children[0], pybamm.Scalar)
+
+        # boundary value
+        bv_left = pybamm.BoundaryValue(var_vec, "left")
+        bv_left_disc = disc.process_symbol(bv_left)
+        self.assertIsInstance(bv_left_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(bv_left_disc.left, pybamm.Matrix)
+        self.assertIsInstance(bv_left_disc.right, pybamm.StateVector)
+        bv_right = pybamm.BoundaryValue(var_vec, "left")
+        bv_right_disc = disc.process_symbol(bv_right)
+        self.assertIsInstance(bv_right_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(bv_right_disc.left, pybamm.Matrix)
+        self.assertIsInstance(bv_right_disc.right, pybamm.StateVector)
 
         # not implemented
         sym = pybamm.Symbol("sym")
@@ -239,19 +256,6 @@ class TestDiscretise(unittest.TestCase):
             np.testing.assert_array_equal(
                 eqn_disc.evaluate(None, y), var_disc.evaluate(None, y) ** 2
             )
-
-    def test_core_NotImplementedErrors(self):
-        # create spatial method
-        spatial_method = pybamm.SpatialMethod(None)
-
-        with self.assertRaises(NotImplementedError):
-            spatial_method.gradient(None, None, {})
-        with self.assertRaises(NotImplementedError):
-            spatial_method.divergence(None, None, {})
-        with self.assertRaises(NotImplementedError):
-            spatial_method.integral(None, None, None)
-        with self.assertRaises(NotImplementedError):
-            spatial_method.indefinite_integral(None, None, None)
 
     def test_process_dict(self):
         # one equation

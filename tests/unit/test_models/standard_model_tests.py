@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import tests
 
 import numpy as np
 
@@ -77,11 +78,37 @@ class StandardModelTest(object):
 
         self.solver.solve(self.model, t_eval)
 
+    def test_outputs(self):
+        # run the standard output tests
+        tests.standard_output_tests(
+            self.model, self.disc, self.solver, self.parameter_values
+        )
+
     def test_all(self, param=None, disc=None, solver=None, t_eval=None):
         self.model.check_well_posedness()
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
+
+        # cannot test dfn yet, and lead acid composite voltage
+        # only test the full models
+        if isinstance(
+            self.model, (pybamm.LithiumIonBaseModel, pybamm.LeadAcidBaseModel)
+        ):
+            # cannot test dfn at moment and Composite fails the voltage test
+            # annoyingly reaction-diffusion is an instance of LeadAcidBaseModel
+            # so need to exclude it here
+            if not (
+                isinstance(
+                    self.model,
+                    (
+                        pybamm.lithium_ion.DFN,
+                        pybamm.lead_acid.Composite,
+                        pybamm.ReactionDiffusionModel,
+                    ),
+                )
+            ):
+                self.test_outputs()
 
     def test_update_parameters(self, param):
         # check if geometry has changed, throw error if so (need to re-discretise)
