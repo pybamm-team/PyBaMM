@@ -8,40 +8,40 @@ import pybamm
 import numpy as np
 
 
-def standard_output_tests(model, disc, solver, parameter_values):
+class StandardOutputTests(object):
+    "Calls all the tests on the standard output variables."
 
-    if isinstance(model, pybamm.LithiumIonBaseModel):
-        chemistry = "Lithium-ion"
-    elif isinstance(model, pybamm.LeadAcidBaseModel):
-        chemistry = "Lead acid"
+    def __init__(self, model, disc, solver, parameter_values):
+        self.model = model
+        self.disc = disc
+        self.solver = solver
 
-    current_sign = np.sign(parameter_values["Typical current density"])
-    if current_sign == 1:
-        operating_condition = "discharge"
-    elif current_sign == -1:
-        operating_condition = "charge"
-    else:
-        operating_condition = "off"
+        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+            self.chemistry = "Lithium-ion"
+        elif isinstance(self.model, pybamm.LeadAcidBaseModel):
+            self.chemistry = "Lead acid"
 
-    voltage_tests = VoltageTests(model, disc, solver, operating_condition)
-    voltage_tests.test_all()
+        current_sign = np.sign(parameter_values["Typical current density"])
+        if current_sign == 1:
+            self.operating_condition = "discharge"
+        elif current_sign == -1:
+            self.operating_condition = "charge"
+        else:
+            self.operating_condition = "off"
 
-    electrolyte_tests = ElectrolyteConcentrationTests(
-        model, disc, solver, operating_condition
-    )
-    electrolyte_tests.test_all()
+    def run_test_class(self, ClassName):
+        "Run all tests from a class 'ClassName'"
+        tests = ClassName(self.model, self.disc, self.solver, self.operating_condition)
+        tests.test_all()
 
-    potential_tests = PotentialTests(model, disc, solver, operating_condition)
-    potential_tests.test_all()
+    def test_all(self):
+        self.run_test_class(VoltageTests)
+        self.run_test_class(ElectrolyteConcentrationTests)
+        self.run_test_class(PotentialTests)
+        self.run_test_class(CurrentTests)
 
-    current_tests = CurrentTests(model, disc, solver, operating_condition)
-    current_tests.test_all()
-
-    if chemistry == "Lithium-ion":
-        particle_tests = ParticleConcentrationTests(
-            model, disc, solver, operating_condition
-        )
-        particle_tests.test_all()
+        if self.chemistry == "Lithium-ion":
+            self.run_test_class(ParticleConcentrationTests)
 
 
 class BaseOutputTest(object):
@@ -414,4 +414,3 @@ class CurrentTests(BaseOutputTest):
     def test_all(self):
         self.test_interfacial_current_average()
         self.test_conservation()
-
