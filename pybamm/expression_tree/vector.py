@@ -26,7 +26,7 @@ class Vector(pybamm.Array):
 
     """
 
-    def __init__(self, entries, name=None, domain=[]):
+    def __init__(self, entries, name=None, domain=[], entries_string=None):
         # make sure that entries are a vector
         if entries.ndim != 1:
             raise ValueError(
@@ -34,7 +34,7 @@ class Vector(pybamm.Array):
             )
         if name is None:
             name = "Vector of length {!s}".format(entries.shape[0])
-        super().__init__(entries, name=name, domain=domain)
+        super().__init__(entries, name, domain, entries_string)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """

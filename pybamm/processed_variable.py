@@ -76,10 +76,11 @@ class ProcessedVariable(object):
 
         self.base_eval = base_variable.evaluate(t_sol[0], y_sol[:, 0])
 
-        if isinstance(self.base_eval, numbers.Number):
-            self.dimensions = 0
-            self.entries = self.base_eval * np.ones_like(t_sol)
-        elif len(self.base_eval.shape) == 0 or self.base_eval.shape[0] == 1:
+        if (
+            isinstance(self.base_eval, numbers.Number)
+            or len(self.base_eval.shape) == 0
+            or self.base_eval.shape[0] == 1
+        ):
             self.initialise_1D()
         else:
             if len(self.mesh.combine_submeshes(*self.domain)) == 1:
@@ -102,6 +103,7 @@ class ProcessedVariable(object):
         )
 
         self.entries = entries
+        self.t_x_r_sol = (self.t_sol, None, None)
         self.dimensions = 1
 
     def initialise_2D(self):
@@ -130,9 +132,11 @@ class ProcessedVariable(object):
         if any("particle" in dom for dom in self.domain):
             self.scale = "micro"
             self.r_sol = space
+            self.t_x_r_sol = (self.t_sol, None, self.r_sol)
         else:
             self.scale = "macro"
             self.x_sol = space
+            self.t_x_r_sol = (self.t_sol, self.x_sol, None)
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
@@ -172,6 +176,7 @@ class ProcessedVariable(object):
         self.dimensions = 3
         self.x_sol = x_sol
         self.r_sol = r_sol
+        self.t_x_r_sol = (self.t_sol, x_sol, r_sol)
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
@@ -190,5 +195,14 @@ class ProcessedVariable(object):
             else:
                 return self._interpolation_function(t, x)
         elif self.dimensions == 3:
-            raise NotImplementedError("Unclear how to read interpolated object")
-            # return self._interpolation_function(grid)
+            if isinstance(r, np.ndarray):
+                if isinstance(x, np.ndarray) and isinstance(t, np.ndarray):
+                    r = r[:, np.newaxis, np.newaxis]
+                    x = x[:, np.newaxis]
+                elif isinstance(x, np.ndarray) or isinstance(t, np.ndarray):
+                    r = r[:, np.newaxis]
+            else:
+                if isinstance(x, np.ndarray) and isinstance(t, np.ndarray):
+                    x = x[:, np.newaxis]
+
+            return self._interpolation_function((r, x, t))

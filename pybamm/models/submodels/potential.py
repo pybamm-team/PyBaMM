@@ -79,7 +79,7 @@ class Potential(pybamm.SubModel):
         eta_r_p : :class:`pybamm.Symbol`
             Dimensionless positive electrode reaction overpotential
         """
-        # Load parameters and spatial variables
+        # Load parameters
         param = self.set_of_parameters
 
         # Derived and dimensional reaction overpotentials

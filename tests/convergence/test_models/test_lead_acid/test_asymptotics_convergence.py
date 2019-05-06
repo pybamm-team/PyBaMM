@@ -53,41 +53,38 @@ class TestAsymptoticConvergence(unittest.TestCase):
             param.update_model(composite_model, comp_disc)
             param.update_model(full_model, full_disc)
             # Solve, make sure times are the same
-            t_eval = np.linspace(0, 0.1, 10)
+            t_eval = np.linspace(0, 0.6)
             solver_loqs = leading_order_model.default_solver
             solver_loqs.solve(leading_order_model, t_eval)
             solver_comp = composite_model.default_solver
             solver_comp.solve(composite_model, t_eval)
             solver_full = full_model.default_solver
             solver_full.solve(full_model, t_eval)
-            np.testing.assert_array_equal(solver_loqs.t, solver_comp.t)
-            np.testing.assert_array_equal(solver_loqs.t, solver_full.t)
 
             # Post-process variables
-            t, y_loqs = solver_loqs.t, solver_loqs.y
-            y_comp = solver_comp.y
-            y_full = solver_full.y
+            t_loqs, y_loqs = solver_loqs.t, solver_loqs.y
+            t_comp, y_comp = solver_comp.t, solver_comp.y
+            t_full, y_full = solver_full.t, solver_full.y
             voltage_loqs = pybamm.ProcessedVariable(
-                leading_order_model.variables["Terminal voltage"], t, y_loqs
+                leading_order_model.variables["Terminal voltage"], t_loqs, y_loqs
             )
             voltage_comp = pybamm.ProcessedVariable(
-                composite_model.variables["Terminal voltage"], t, y_comp
+                composite_model.variables["Terminal voltage"], t_comp, y_comp
             )
             voltage_full = pybamm.ProcessedVariable(
-                full_model.variables["Terminal voltage"], t, y_full
+                full_model.variables["Terminal voltage"], t_full, y_full
             )
 
             # Compare
-            norm = np.linalg.norm
-            loqs_error = norm(voltage_loqs(t) - voltage_full(t)) / norm(voltage_full(t))
-            comp_error = norm(voltage_comp(t) - voltage_full(t)) / norm(voltage_full(t))
+            t = t_full[: np.min([len(t_loqs), len(t_comp), len(t_full)])]
+            loqs_error = np.max(np.abs(voltage_loqs(t) - voltage_full(t)))
+            comp_error = np.max(np.abs(voltage_comp(t) - voltage_full(t)))
             return (loqs_error, comp_error)
 
         # Get errors
         currents = 0.5 / (2 ** np.arange(3))
         errs = np.array([get_l2_error(current) for current in currents])
         loqs_errs, comp_errs = [np.array(err) for err in zip(*errs)]
-
         # Get rates: expect linear convergence for loqs, quadratic for composite
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)

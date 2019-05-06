@@ -43,7 +43,6 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
     def test_processed_variable_3D(self):
-        t = pybamm.t
         var = pybamm.Variable("var", domain=["negative particle"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
@@ -122,7 +121,6 @@ class TestProcessedVariable(unittest.TestCase):
         self.assertEqual(processed_eqn(0.5, x_sol[-1]).shape, (1,))
 
     def test_processed_var_3D_interpolation(self):
-        t = pybamm.t
         var = pybamm.Variable("var", domain=["negative particle"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         r = pybamm.SpatialVariable("r", domain=["negative particle"])
@@ -136,10 +134,24 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        # 3 vectors
         np.testing.assert_array_equal(
-            processed_var(r_sol, x_sol, t_sol),
+            processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t_sol, x_sol, r_sol),
             np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
         )
+        # 2 vectors, 1 scalar
+        np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (10, 40))
+        np.testing.assert_array_equal(processed_var(t_sol, 0.2, r_sol).shape, (10, 50))
+        np.testing.assert_array_equal(processed_var(t_sol, x_sol, 0.5).shape, (40, 50))
+        # 1 vectors, 2 scalar
+        np.testing.assert_array_equal(processed_var(0.5, 0.2, r_sol).shape, (10,))
+        np.testing.assert_array_equal(processed_var(0.5, x_sol, 0.5).shape, (40,))
+        np.testing.assert_array_equal(processed_var(t_sol, 0.2, 0.5).shape, (50,))
+        # 3 scalars
+        np.testing.assert_array_equal(processed_var(0.2, 0.2, 0.2).shape, ())
 
     def test_processed_variable_ode_pde_solution(self):
         # without space

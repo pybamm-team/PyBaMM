@@ -19,6 +19,14 @@ phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 phi_s_n = pybamm.Variable("Negative electrode potential", ["negative electrode"])
 phi_s_p = pybamm.Variable("Positive electrode potential", ["positive electrode"])
 
+# Potential difference
+delta_phi_n = pybamm.Variable(
+    "Negative electrode potential difference", ["negative electrode"]
+)
+delta_phi_p = pybamm.Variable(
+    "Positive electrode potential difference", ["positive electrode"]
+)
+
 # Particle concentration
 c_s_n = pybamm.Variable("Negative particle concentration", ["negative particle"])
 c_s_p = pybamm.Variable("Positive particle concentration", ["positive particle"])

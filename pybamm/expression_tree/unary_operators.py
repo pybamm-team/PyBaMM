@@ -37,15 +37,6 @@ class UnaryOperator(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}({!s})".format(self.name, self.child)
 
-    def simplify(self):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        child = self.child.simplify()
-
-        # _binary_simplify defined in derived classes for specific rules
-        new_node = self._unary_simplify(child)
-
-        return pybamm.simplify_if_constant(new_node)
-
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
@@ -186,18 +177,14 @@ class Function(UnaryOperator):
         else:
             return self.func(child)
 
-    # Function needs its own simplify as it has a different __init__ signature
-    def simplify(self):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
+    def _unary_simplify(self, child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
         if self.takes_no_params:
             # If self.func() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.func())
         else:
             child = self.child.simplify()
-
-            new_node = pybamm.Function(self.func, child)
-
-            return pybamm.simplify_if_constant(new_node)
+            return pybamm.Function(self.func, child)
 
 
 class Index(UnaryOperator):

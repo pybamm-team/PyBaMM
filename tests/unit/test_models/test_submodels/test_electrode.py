@@ -77,7 +77,8 @@ class TestOhm(unittest.TestCase):
         # Model
         model = pybamm.electrode.Ohm(param)
         leading_order_vars = model.get_explicit_leading_order(ocp_p, eta_r_p, phi_e)
-        combined_vars = model.get_explicit_combined(ocp_p, eta_r_p, phi_e)
+        phi_s_n = model.get_neg_pot_explicit_combined()
+        combined_vars = model.get_explicit_combined(phi_s_n, phi_e, ocp_p, eta_r_p)
 
         # Get disc
         modeltest = tests.StandardModelTest(model)
@@ -131,7 +132,32 @@ class TestOhm(unittest.TestCase):
             phi_s_right_eval = phi_s_right_disc.evaluate(0, None)
 
             np.testing.assert_almost_equal(phi_s_left_eval, 0, 3)  # extrapolation error
-            np.testing.assert_almost_equal(phi_s_right_eval, 1, 3)
+
+            if order == "leading":
+                np.testing.assert_almost_equal(phi_s_right_eval, 1, 3)
+            if order == "combined":
+                # have ocp_p_av = eta_p_av = 0 and phi_e_p_av = 1
+                # so phi_s_p_av = 1
+
+                i_cell = param.current_with_time
+                _, _, eps_p = [e.orphans[0] for e in param.epsilon.orphans]
+                sigma_p_eff = param.sigma_p * (1 - eps_p)
+                voltage = 1 - i_cell * param.l_p / 3 / sigma_p_eff
+
+                voltage_param = modeltest.parameter_values.process_symbol(voltage)
+                voltage_disc = modeltest.disc.process_symbol(voltage_param)
+                voltage_eval = voltage_disc.evaluate(0, None)
+
+                np.testing.assert_almost_equal(
+                    phi_s_right_eval, voltage_eval, 3
+                )  # extrapolation error
+
+    def test_failure(self):
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.electrode.Ohm(param)
+        phi_s = pybamm.Symbol("sym", domain="test")
+        with self.assertRaises(pybamm.DomainError):
+            model.set_algebraic_system(phi_s, None)
 
 
 if __name__ == "__main__":
