@@ -364,6 +364,19 @@ class TestSimplify(unittest.TestCase):
         expr4simp = expr4.simplify()
         self.assertEqual(expr4.id, expr4simp.id)
 
+        m2 = pybamm.Matrix(np.ones((299, 300)))
+        v2 = pybamm.StateVector(slice(0, 300))
+        v3 = pybamm.Vector(np.ones(299))
+        exprs = [(m2 @ v2) * v3, (m2 @ v2) / v3]
+        for expr in exprs:
+            exprsimp = expr.simplify()
+            self.assertIsInstance(exprsimp, pybamm.MatrixMultiplication)
+            self.assertIsInstance(exprsimp.children[0], pybamm.Matrix)
+            self.assertIsInstance(exprsimp.children[1], pybamm.StateVector)
+            np.testing.assert_array_equal(
+                expr.evaluate(y=np.ones(300)), exprsimp.evaluate(y=np.ones(300))
+            )
+
     def test_domain_concatenation_simplify(self):
         # create discretisation
         disc = get_discretisation_for_testing()

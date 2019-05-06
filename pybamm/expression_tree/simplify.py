@@ -79,7 +79,7 @@ def simplify_addition_subtraction(myclass, left, right):
         """
         for child in [left_child, right_child]:
             if isinstance(child, (pybamm.Addition, pybamm.Subtraction)):
-                left, right = [simplify(child) for child in child.children]
+                left, right = child.orphans
                 flatten(child.__class__, left, right, in_subtraction)
 
             else:
@@ -252,7 +252,16 @@ def simplify_multiplication_division(myclass, left, right):
                 in_matrix_multiplication
                 or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
-                left, right = [simplify(child) for child in child.children]
+                left, right = child.orphans
+                if child == left_child and this_class == pybamm.Multiplication:
+                    # change (m @ v1) * v2 -> v2 * m @ v so can simplify correctly
+                    # (#341)
+                    numerator.append(other_child)
+                    numerator_types.append(previous_class)
+                    flatten(
+                        this_class, child.__class__, left, right, in_numerator, False
+                    )
+                    break
                 if child == left_child:
                     flatten(
                         previous_class, child.__class__, left, right, in_numerator, True
@@ -266,7 +275,7 @@ def simplify_multiplication_division(myclass, left, right):
                 isinstance(child, (pybamm.Multiplication, pybamm.Division))
                 and not in_matrix_multiplication
             ):
-                left, right = [simplify(child) for child in child.children]
+                left, right = child.orphans
                 if child == left_child:
                     flatten(
                         previous_class,
