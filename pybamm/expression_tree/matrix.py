@@ -23,9 +23,9 @@ class Matrix(pybamm.Array):
 
     """
 
-    def __init__(self, entries, name=None, domain=[]):
+    def __init__(self, entries, name=None, domain=[], entries_string=None):
         if name is None:
             name = "Matrix {!s}".format(entries.shape)
         if issparse(entries):
             name = "Sparse " + name
-        super().__init__(entries, name=name, domain=domain)
+        super().__init__(entries, name, domain, entries_string)
