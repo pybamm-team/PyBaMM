@@ -64,8 +64,8 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         model.set_differential_system(c_e, reactions)
 
-        # Dirichlet conditions
-        model.boundary_conditions = {c_e: {"left": 0, "right": 0}}
+        # Dirichlet conditions (don't clash with events)
+        model.boundary_conditions = {c_e: {"left": 0.1, "right": 0.1}}
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 

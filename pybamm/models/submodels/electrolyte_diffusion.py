@@ -46,7 +46,7 @@ class StefanMaxwell(pybamm.SubModel):
             deps_dt = pybamm.Scalar(0)
 
         # Flux
-        N_e = -(epsilon ** param.b) * pybamm.grad(c_e)
+        N_e = -(epsilon ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
 
         # Model
         j_n = reactions["main"]["neg"]["aj"]

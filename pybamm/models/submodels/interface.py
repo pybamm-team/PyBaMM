@@ -40,6 +40,8 @@ class InterfacialCurrent(pybamm.SubModel):
             return icell / pybamm.geometric_parameters.l_n
         elif domain == ["positive electrode"]:
             return -icell / pybamm.geometric_parameters.l_p
+        else:
+            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
     def get_butler_volmer(self, j0, eta_r, domain=None):
         """
@@ -71,6 +73,8 @@ class InterfacialCurrent(pybamm.SubModel):
             return 2 * j0 * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_r)
         elif domain == ["positive electrode"]:
             return 2 * j0 * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r)
+        else:
+            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
     def get_inverse_butler_volmer(self, j, j0, domain=None):
         """
@@ -99,6 +103,8 @@ class InterfacialCurrent(pybamm.SubModel):
             return (2 / param.ne_n) * pybamm.Function(np.arcsinh, j / (2 * j0))
         elif domain == ["positive electrode"]:
             return (2 / param.ne_p) * pybamm.Function(np.arcsinh, j / (2 * j0))
+        else:
+            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
     def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p):
         """
@@ -192,6 +198,8 @@ class LeadAcidReaction(InterfacialCurrent, pybamm.LeadAcidBaseModel):
         elif domain == ["positive electrode"]:
             c_w = param.c_w(c_e)
             return param.m_p * c_e ** 2 * c_w
+        else:
+            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
 
 class LithiumIonReaction(InterfacialCurrent):
@@ -238,3 +246,5 @@ class LithiumIonReaction(InterfacialCurrent):
             return (param.gamma_p / param.C_r_p) * (
                 c_e ** (1 / 2) * c_s_k_surf ** (1 / 2) * (1 - c_s_k_surf) ** (1 / 2)
             )
+        else:
+            raise pybamm.DomainError("domain '{}' not recognised".format(domain))

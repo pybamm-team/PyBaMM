@@ -402,11 +402,11 @@ class MatrixMultiplication(BinaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        # I think we only need the case where left is a matrix and right
+        # I think we only need the case where left is an array and right
         # is a (slice of a) state vector, e.g. for discretised spatial
         # operators of the form D @ u
         left, right = self.orphans
-        if isinstance(left, pybamm.Matrix):
+        if isinstance(left, pybamm.Array):
             return left @ right.jac(variable)
         else:
             raise NotImplementedError

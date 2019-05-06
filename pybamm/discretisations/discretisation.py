@@ -286,6 +286,7 @@ class Discretisation(object):
 
             # Process symbol (original or broadcasted)
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
         return new_var_eqn_dict
@@ -381,6 +382,7 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
+
             return new_symbol
 
         elif isinstance(symbol, pybamm.Scalar):
@@ -511,18 +513,21 @@ class Discretisation(object):
         # Be lenient with size check if the variable in model.variables is broadcasted
         for var in model.rhs.keys():
             if var.name in model.variables.keys():
-                assert model.rhs[var].evaluate(0, y0).shape == model.variables[
-                    var.name
-                ].evaluate(0, y0).shape or isinstance(
-                    model.variables[var.name],
-                    (pybamm.NumpyBroadcast, pybamm.Concatenation),
-                ), pybamm.ModelError(
-                    """
+                if not (
+                    model.rhs[var].evaluate(0, y0).shape
+                    == model.variables[var.name].evaluate(0, y0).shape
+                    or isinstance(
+                        model.variables[var.name],
+                        (pybamm.NumpyBroadcast, pybamm.Concatenation),
+                    )
+                ):
+                    raise pybamm.ModelError(
+                        """
                     variable and its eqn must have the same shape after discretisation
                     but variable.shape = {} and rhs.shape = {} for variable '{}'.
                     """.format(
-                        model.variables[var.name].evaluate(0, y0).shape,
-                        model.rhs[var].evaluate(0, y0).shape,
-                        var,
+                            model.variables[var.name].evaluate(0, y0).shape,
+                            model.rhs[var].evaluate(0, y0).shape,
+                            var,
+                        )
                     )
-                )
