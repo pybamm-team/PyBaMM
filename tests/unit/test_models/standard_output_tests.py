@@ -84,12 +84,13 @@ class VoltageTests(BaseOutputTest):
             - charge: eta_n < 0, eta_p > 0
             - off: eta_n == 0, eta_p == 0
             """
+        tol = 0.001
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(-self.eta_n.entries, 0)
-            np.testing.assert_array_less(self.eta_p.entries, 0)
+            np.testing.assert_array_less(-self.eta_n.entries, tol)
+            np.testing.assert_array_less(self.eta_p.entries, tol)
         elif self.operating_condition == "charge":
-            np.testing.assert_array_less(self.eta_n.entries, 0)
-            np.testing.assert_array_less(-self.eta_p.entries, 0)
+            np.testing.assert_array_less(self.eta_n.entries, tol)
+            np.testing.assert_array_less(-self.eta_p.entries, tol)
         elif self.operating_condition == "off":
             np.testing.assert_array_equal(self.eta_n.entries, 0)
             np.testing.assert_array_equal(-self.eta_p.entries, 0)

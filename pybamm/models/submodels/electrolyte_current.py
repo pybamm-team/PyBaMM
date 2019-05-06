@@ -12,137 +12,17 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
     """
     Base model for the potential and current in the electrolyte
 
-    Parameters
-    ----------
-    set_of_parameters : parameter class
-        The parameters to use for this submodel
-
-    *Extends:* :class:`pybamm.SubModel`
-    """
-
-    def __init__(self, set_of_parameters):
-        super().__init__(set_of_parameters)
-
-    def get_variables(self, phi_e, i_e, eta_e_av):
-        """
-        Calculate dimensionless and dimensional variables for the electrolyte current
-        submodel
-
-        Parameters
-        ----------
-        phi_e :class:`pybamm.Concatenation`
-            The electrolyte potential
-        i_e :class:`pybamm.Concatenation`
-            The electrolyte current density
-        delta_phi_e_av: :class:`pybamm.Symbol`
-            Average Ohmic losses in the electrolyte
-        eta_e_av: :class:`Pybamm.Symbol`
-            Average electrolyte overpotential
-
-        Returns
-        -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
-        """
-        param = self.set_of_parameters
-        pot_scale = param.potential_scale
-
-        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
-
-        # Set dimensionless and dimensional variables
-        return {
-            "Negative electrolyte potential": phi_e_n,
-            "Separator electrolyte potential": phi_e_s,
-            "Positive electrolyte potential": phi_e_p,
-            "Electrolyte potential": phi_e,
-            "Electrolyte current density": i_e,
-            "Average electrolyte overpotential": eta_e_av,
-            "Negative electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_n,
-            "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_s,
-            "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
-            "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
-            "Electrolyte current density [A m-2]": param.i_typ * i_e,
-            "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
-        }
-
-    def get_split_electrolyte_overpotential(self, eta_c_av, delta_phi_e_av):
-        param = self.set_of_parameters
-        pot_scale = param.potential_scale
-
-        return {
-            "Average concentration overpotential": eta_c_av,
-            "Average electrolyte ohmic losses": delta_phi_e_av,
-            "Average concentration overpotential [V]": pot_scale * eta_c_av,
-            "Average electrolyte ohmic losses [V]": pot_scale * delta_phi_e_av,
-        }
-
-
-class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
-    """MacInnes equation for the current in the electrolyte, derived from the
-    Stefan-Maxwell equations.
+    **Extends:** :class:`pybamm.SubModel`
 
     Parameters
     ----------
     set_of_parameters : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`ElectrolyteCurrentBaseModel`
     """
 
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
-
-    def set_algebraic_system(self, phi_e, c_e, reactions, epsilon=None):
-        """
-        PDE system for current in the electrolyte, derived from the Stefan-Maxwell
-        equations.
-
-        Parameters
-        ----------
-        phi_e : :class:`pybamm.Concatenation`
-            The eletrolyte potential variable
-        c_e : :class:`pybamm.Concatenation`
-            The eletrolyte concentration variable
-        reactions : dict
-            Dictionary of reaction variables
-        epsilon : :class:`pybamm.Symbol`, optional
-            Porosity. Default is None, in which case param.epsilon is used.
-        """
-        # Load parameters and spatial variables
-        param = self.set_of_parameters
-
-        # Unpack variables
-        j_n = reactions["main"]["neg"]["aj"]
-        j_p = reactions["main"]["pos"]["aj"]
-        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
-
-        # if porosity is not provided, use the input parameter
-        if epsilon is None:
-            epsilon = param.epsilon
-
-        # functions
-        i_e = (
-            param.kappa_e(c_e) * (epsilon ** param.b) * param.gamma_e / param.C_e
-        ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e))
-
-        # Equations (algebraic only)
-        self.algebraic = {phi_e: pybamm.div(i_e) - j}
-        self.boundary_conditions = {i_e: {"left": 0, "right": 0}}
-        self.initial_conditions = {phi_e: -param.U_n(param.c_n_init)}
-        # no differential equations
-        self.rhs = {}
-
-        # Variables
-        # average electrolyte overpotential (ohmic + concentration overpotential)
-        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
-        phi_e_n_av = pybamm.average(phi_e_n)
-        phi_e_p_av = pybamm.average(phi_e_p)
-        eta_e_av = phi_e_p_av - phi_e_n_av
-
-        self.variables = self.get_variables(phi_e, i_e, eta_e_av)
-
-        # Set default solver to DAE
-        self.default_solver = pybamm.ScikitsDaeSolver()
 
     def get_explicit_leading_order(self, ocp_n, eta_r_n):
         """
@@ -333,3 +213,302 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         variables.update(additional_vars)
 
         return variables
+
+    def get_variables(self, phi_e, i_e, eta_e_av):
+        """
+        Calculate dimensionless and dimensional variables for the electrolyte current
+        submodel
+
+        Parameters
+        ----------
+        phi_e :class:`pybamm.Concatenation`
+            The electrolyte potential
+        i_e :class:`pybamm.Concatenation`
+            The electrolyte current density
+        delta_phi_e_av: :class:`pybamm.Symbol`
+            Average Ohmic losses in the electrolyte
+        eta_e_av: :class:`Pybamm.Symbol`
+            Average electrolyte overpotential
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        param = self.set_of_parameters
+        pot_scale = param.potential_scale
+
+        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+
+        # Set dimensionless and dimensional variables
+        return {
+            "Negative electrolyte potential": phi_e_n,
+            "Separator electrolyte potential": phi_e_s,
+            "Positive electrolyte potential": phi_e_p,
+            "Electrolyte potential": phi_e,
+            "Electrolyte current density": i_e,
+            "Average electrolyte overpotential": eta_e_av,
+            "Negative electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_n,
+            "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_s,
+            "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
+            "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
+            "Electrolyte current density [A m-2]": param.i_typ * i_e,
+            "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
+        }
+
+    def get_split_electrolyte_overpotential(self, eta_c_av, delta_phi_e_av):
+        param = self.set_of_parameters
+        pot_scale = param.potential_scale
+
+        return {
+            "Average concentration overpotential": eta_c_av,
+            "Average electrolyte ohmic losses": delta_phi_e_av,
+            "Average concentration overpotential [V]": pot_scale * eta_c_av,
+            "Average electrolyte ohmic losses [V]": pot_scale * delta_phi_e_av,
+        }
+
+
+class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
+    """MacInnes equation for the current in the electrolyte, derived from the
+    Stefan-Maxwell equations.
+
+    **Extends:** :class:`ElectrolyteCurrentBaseModel`
+
+    Parameters
+    ----------
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
+    """
+
+    def __init__(self, set_of_parameters):
+        super().__init__(set_of_parameters)
+
+    def set_algebraic_system(self, phi_e, c_e, reactions, epsilon=None):
+        """
+        PDE system for current in the electrolyte, derived from the Stefan-Maxwell
+        equations.
+
+        Parameters
+        ----------
+        phi_e : :class:`pybamm.Concatenation`
+            The eletrolyte potential variable
+        c_e : :class:`pybamm.Concatenation`
+            The eletrolyte concentration variable
+        reactions : dict
+            Dictionary of reaction variables
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
+        """
+        # Load parameters and spatial variables
+        param = self.set_of_parameters
+
+        # Unpack variables
+        j_n = reactions["main"]["neg"]["aj"]
+        j_p = reactions["main"]["pos"]["aj"]
+        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
+
+        # if porosity is not provided, use the input parameter
+        if epsilon is None:
+            epsilon = param.epsilon
+
+        # functions
+        i_e = (
+            param.kappa_e(c_e) * (epsilon ** param.b) * param.gamma_e / param.C_e
+        ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e))
+
+        # Equations (algebraic only)
+        self.algebraic = {phi_e: pybamm.div(i_e) - j}
+        self.boundary_conditions = {i_e: {"left": 0, "right": 0}}
+        self.initial_conditions = {phi_e: -param.U_n(param.c_n_init)}
+        # no differential equations
+        self.rhs = {}
+
+        # Variables
+        # average electrolyte overpotential (ohmic + concentration overpotential)
+        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+        phi_e_n_av = pybamm.average(phi_e_n)
+        phi_e_p_av = pybamm.average(phi_e_p)
+        eta_e_av = phi_e_p_av - phi_e_n_av
+
+        self.variables = self.get_variables(phi_e, i_e, eta_e_av)
+
+        # Set default solver to DAE
+        self.default_solver = pybamm.ScikitsDaeSolver()
+
+
+class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
+    """MacInnes equation for the current in the electrolyte, derived from the
+    Stefan-Maxwell equations, with capacitance effects included. The MacInnes equation
+    is rearranged to account for both solid and electrolyte potentials
+
+    **Extends:** :class:`ElectrolyteCurrentBaseModel`
+
+    Parameters
+    ----------
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
+    use_capacitance : bool
+        Whether to use capacitance in the model or not. If True (default), solve
+        ODEs for delta_phi. If False, solve algebraic equations for delta_phi
+    """
+
+    def __init__(self, set_of_parameters, use_capacitance=True):
+        super().__init__(set_of_parameters)
+        self.use_capacitance = use_capacitance
+        # Different solver depending on whether we solve ODEs or DAEs
+        if use_capacitance:
+            self.default_solver = pybamm.ScikitsOdeSolver()
+        else:
+            self.default_solver = pybamm.ScikitsDaeSolver()
+
+    def set_full_system(self, delta_phi, c_e, reactions, eps=None):
+        param = self.set_of_parameters
+        i_cell = param.current_with_time
+
+        if delta_phi.domain == ["negative electrode"]:
+            if eps is None:
+                eps = param.epsilon_n
+            j = reactions["main"]["neg"]["aj"]
+
+            i_e = (
+                param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
+            ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e + pybamm.grad(delta_phi))
+            if self.use_capacitance:
+                self.rhs = {delta_phi: 1 / param.C_dl_n * (pybamm.div(i_e) - j)}
+            else:
+                self.algebraic = {delta_phi: pybamm.div(i_e) - j}
+            self.boundary_conditions = {i_e: {"left": 0, "right": i_cell}}
+            self.initial_conditions = {delta_phi: param.U_n(param.c_n_init)}
+            self.variables = {
+                "Negative electrode potential difference": delta_phi,
+                "Negative electrolyte current density": i_e,
+            }
+        elif delta_phi.domain == ["positive electrode"]:
+            if eps is None:
+                eps = param.epsilon_p
+            j = reactions["main"]["pos"]["aj"]
+
+            i_e = (
+                param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
+            ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e + pybamm.grad(delta_phi))
+            if self.use_capacitance:
+                self.rhs = {delta_phi: 1 / param.C_dl_p * (pybamm.div(i_e) - j)}
+            else:
+                self.algebraic = {delta_phi: pybamm.div(i_e) - j}
+            self.boundary_conditions = {i_e: {"left": i_cell, "right": 0}}
+            self.initial_conditions = {delta_phi: param.U_p(param.c_p_init)}
+            self.variables = {
+                "Positive electrode potential difference": delta_phi,
+                "Positive electrolyte current density": i_e,
+            }
+        else:
+            raise pybamm.DomainError(
+                "domain '{}' not recognised".format(delta_phi.domain)
+            )
+
+    def set_leading_order_system(self, delta_phi, reactions, domain):
+        param = self.set_of_parameters
+        i_cell = param.current_with_time
+
+        # ode model only
+        self.algebraic = {}
+
+        if domain == ["negative electrode"]:
+            x_n = pybamm.standard_spatial_vars.x_n
+            i_e = i_cell * x_n / param.l_n
+            j = reactions["main"]["neg"]["aj"]
+
+            if self.use_capacitance:
+                self.rhs = {delta_phi: 1 / param.C_dl_n * (i_cell / param.l_n - j)}
+            else:
+                self.algebraic = {delta_phi: i_cell / param.l_n - j}
+            self.initial_conditions = {delta_phi: param.U_n(param.c_n_init)}
+            self.variables = {
+                "Negative electrode potential difference": delta_phi,
+                "Negative electrolyte current density": i_e,
+            }
+        elif domain == ["positive electrode"]:
+            x_p = pybamm.standard_spatial_vars.x_p
+            i_e = i_cell * (1 - x_p) / param.l_p
+            j = reactions["main"]["pos"]["aj"]
+
+            if self.use_capacitance:
+                self.rhs = {delta_phi: 1 / param.C_dl_p * (-i_cell / param.l_p - j)}
+            else:
+                self.algebraic = {delta_phi: -i_cell / param.l_p - j}
+            self.initial_conditions = {delta_phi: param.U_p(param.c_p_init)}
+            self.variables = {
+                "Positive electrode potential difference": delta_phi,
+                "Positive electrolyte current density": i_e,
+            }
+        else:
+            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
+
+    def get_post_processed(self, delta_phi_n, delta_phi_p, i_e_n, i_e_p, c_e, eps=None):
+        """
+        Calculate dimensionless and dimensional variables for the capacitance submodel
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
+            already-calculated variables
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        # import parameters and spatial variables
+        param = self.set_of_parameters
+        i_cell = param.current_with_time
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_s = pybamm.standard_spatial_vars.x_s
+        x_p = pybamm.standard_spatial_vars.x_p
+
+        # Combine currents
+        i_e_s = pybamm.Broadcast(i_cell, ["separator"])
+        i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
+
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        if eps is None:
+            eps = param.epsilon
+        eps_n, eps_s, eps_p = eps.orphans
+
+        # Compute potentials
+        phi_e_children = [None] * 3
+        for i, (c_e, eps, i_e, x) in enumerate(
+            [
+                (c_e_n, eps_n, i_e_n, x_n),
+                (c_e_s, eps_s, i_e_s, x_s),
+                (c_e_p, eps_p, i_e_p, x_p),
+            ]
+        ):
+            chi_e = param.chi(c_e)
+            kappa_eff = param.kappa_e(c_e) * (eps ** param.b)
+            d_phi_e__d_x = chi_e / c_e * pybamm.grad(c_e) - param.C_e * i_e / kappa_eff
+            phi_e_children[i] = pybamm.IndefiniteIntegral(d_phi_e__d_x, x)
+
+        # Adjust for boundary conditions and continuity
+        phi_e_n, phi_e_s, phi_e_p = phi_e_children
+        phi_e_n = phi_e_n + pybamm.boundary_value(-delta_phi_n - phi_e_n, "left")
+        phi_e_s = (
+            phi_e_s
+            - pybamm.boundary_value(phi_e_s, "left")
+            + pybamm.boundary_value(phi_e_n, "right")
+        )
+        phi_e_p = (
+            phi_e_p
+            - pybamm.boundary_value(phi_e_p, "left")
+            + pybamm.boundary_value(phi_e_s, "right")
+        )
+
+        # Concatenate
+        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+
+        # average elecrolyte overpotential (ohmic + concentration overpotential)
+        phi_e_n_av = pybamm.average(phi_e_n)
+        phi_e_p_av = pybamm.average(phi_e_p)
+        eta_e_av = phi_e_p_av - phi_e_n_av
+
+        return self.get_variables(phi_e, i_e, eta_e_av)

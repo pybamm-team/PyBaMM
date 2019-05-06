@@ -81,6 +81,11 @@ class TestHomogeneousReaction(unittest.TestCase):
             (l_p * j_simp).evaluate(0, None)[npts_n + npts_s :], -1
         )
 
+    def test_failure(self):
+        model = pybamm.interface.InterfacialCurrent(None)
+        with self.assertRaises(pybamm.DomainError):
+            model.get_homogeneous_interfacial_current("not a domain")
+
 
 class TestButlerVolmer(unittest.TestCase):
     def setUp(self):
@@ -155,6 +160,13 @@ class TestButlerVolmer(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
         self.assertEqual(j.evaluate(None, y).shape, whole_cell_mesh[0].nodes.shape)
+
+    def test_failure(self):
+        model = pybamm.interface.InterfacialCurrent(None)
+        with self.assertRaises(pybamm.DomainError):
+            model.get_butler_volmer(None, None, "not a domain")
+        with self.assertRaises(pybamm.DomainError):
+            model.get_inverse_butler_volmer(None, None, "not a domain")
 
 
 class TestExchangeCurrentDensity(unittest.TestCase):
@@ -280,6 +292,14 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         self.assertEqual(
             j0_p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
         )
+
+    def test_failure(self):
+        model = pybamm.interface.LithiumIonReaction(None)
+        with self.assertRaises(pybamm.DomainError):
+            model.get_exchange_current_densities(None, None, "not a domain")
+        model = pybamm.interface.LeadAcidReaction(None)
+        with self.assertRaises(pybamm.DomainError):
+            model.get_exchange_current_densities(None, "not a domain")
 
 
 if __name__ == "__main__":

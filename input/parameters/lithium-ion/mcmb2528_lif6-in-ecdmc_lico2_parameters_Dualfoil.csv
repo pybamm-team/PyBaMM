@@ -52,6 +52,7 @@ Positive electrode reference exchange-current density,6E-07,Am-2(m3/mol)1.5,Scot
 Reference OCP vs SHE in the negative electrode,,V,,
 Reference OCP vs SHE in the positive electrode,,V,,
 Charge transfer coefficient,0.5,,Scott Moura FastDFN,
+Double-layer capacity,0.2,F.m-2,,
 ,,,,
 # Initial Conditions,,,,
 Initial concentration in electrolyte,1000,mol.m-3,Scott Moura FastDFN,

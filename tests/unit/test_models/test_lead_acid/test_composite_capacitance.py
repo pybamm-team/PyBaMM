@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid Newman-Tiedemann model
+# Tests for the lead-acid composite model
 #
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
@@ -11,18 +11,21 @@ import unittest
 import numpy as np
 
 
-@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
-class TestLeadAcidNewmanTiedemann(unittest.TestCase):
+class TestLeadAcidCompositeCapacitance(unittest.TestCase):
     def test_basic_processing(self):
-        model = pybamm.lead_acid.NewmanTiedemann()
-        # Make grid very coarse for quick test (note that r domain doesn't matter)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 1, var.r_p: 1}
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+        model = pybamm.lead_acid.CompositeCapacitance()
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+    def test_basic_processing_no_capacitance(self):
+        model = pybamm.lead_acid.CompositeCapacitance(use_capacitance=False)
+        modeltest = tests.StandardModelTest(model)
+
         modeltest.test_all()
 
     def test_optimisations(self):
-        model = pybamm.lead_acid.NewmanTiedemann()
+        model = pybamm.lead_acid.CompositeCapacitance()
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
