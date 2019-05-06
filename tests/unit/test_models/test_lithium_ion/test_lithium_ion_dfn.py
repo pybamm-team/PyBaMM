@@ -20,13 +20,6 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all()
 
-        t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
-        processed_variables = pybamm.post_process_variables(
-            model.variables, t_sol, y_sol, mesh=modeltest.disc.mesh
-        )
-        voltage = processed_variables["Terminal voltage"]
-        np.testing.assert_array_less(voltage.entries[1:], voltage.entries[:-1])
-
     def test_optimisations(self):
         model = pybamm.lithium_ion.DFN()
         optimtest = tests.OptimisationsTest(model)
