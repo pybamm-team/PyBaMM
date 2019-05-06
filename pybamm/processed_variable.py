@@ -32,13 +32,9 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
     """
     processed_variables = {}
     for var, eqn in variables.items():
-        try:
-            processed_variables[var] = ProcessedVariable(
-                eqn, t_sol, y_sol, mesh, interp_kind
-            )
-        except ValueError:
-            print("'{}' was not processed".format(var))
-            pass
+        processed_variables[var] = ProcessedVariable(
+            eqn, t_sol, y_sol, mesh, interp_kind
+        )
     return processed_variables
 
 
@@ -124,7 +120,7 @@ class ProcessedVariable(object):
         elif entries.shape[0] == len(edges) - 2:
             space = edges[1:-1]
         else:
-            raise ValueError
+            raise ValueError("variable shape does not match domain shape")
 
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
@@ -163,7 +159,7 @@ class ProcessedVariable(object):
         elif entries.shape[0] == len(edges) - 2:
             r_sol = edges[1:-1]
         else:
-            raise ValueError
+            raise ValueError("variable shape does not match domain shape")
 
         # Get x values
         if self.domain == ["negative particle"]:
@@ -185,9 +181,7 @@ class ProcessedVariable(object):
 
     def __call__(self, t, x=None, r=None):
         "Evaluate the variable at arbitrary t (and x and/or r), using interpolation"
-        if self.dimensions == 0:
-            return self.value * np.ones_like(t)
-        elif self.dimensions == 1:
+        if self.dimensions == 1:
             return self._interpolation_function(t)
         elif self.dimensions == 2:
             if self.scale == "micro":
@@ -205,4 +199,9 @@ class ProcessedVariable(object):
                 if isinstance(x, np.ndarray) and isinstance(t, np.ndarray):
                     x = x[:, np.newaxis]
 
-            return self._interpolation_function((r, x, t))
+            try:
+                return self._interpolation_function((r, x, t))
+            except ValueError:
+                import ipdb
+
+                ipdb.set_trace()

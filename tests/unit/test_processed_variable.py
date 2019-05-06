@@ -192,6 +192,24 @@ class TestProcessedVariable(unittest.TestCase):
             np.ones_like(x_sol)[:, np.newaxis] * np.exp(-t_sol),
         )
 
+    def test_failure(self):
+        t = np.ones(25)
+        y = np.ones((15, 25))
+        mat = pybamm.Vector(np.ones(15), domain=["negative electrode"])
+        disc = tests.get_discretisation_for_testing()
+        with self.assertRaisesRegex(
+            ValueError, "variable shape does not match domain shape"
+        ):
+            pybamm.ProcessedVariable(mat, t, y, disc.mesh)
+
+        y = np.ones((120, 25))
+        mat = pybamm.Vector(np.ones(120), domain=["negative particle"])
+        disc = tests.get_p2d_discretisation_for_testing()
+        with self.assertRaisesRegex(
+            ValueError, "variable shape does not match domain shape"
+        ):
+            pybamm.ProcessedVariable(mat, t, y, disc.mesh)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
