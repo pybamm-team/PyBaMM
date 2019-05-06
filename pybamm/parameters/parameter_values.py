@@ -250,7 +250,9 @@ class ParameterValues(dict):
             return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
 
         elif isinstance(symbol, pybamm.Array):
-            return symbol.__class__(symbol.entries, symbol.name, symbol.domain)
+            return symbol.__class__(
+                symbol.entries, symbol.name, symbol.domain, symbol.entries_string
+            )
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
@@ -282,6 +284,8 @@ class ParameterValues(dict):
                 # update any Scalar nodes if their name is in the parameter dict
                 try:
                     x.value = self.get_parameter_value(x)
+                    # update id
+                    x.set_id()
                 except KeyError:
                     # KeyError -> name not in parameter dict, don't update
                     continue

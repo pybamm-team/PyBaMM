@@ -80,9 +80,10 @@ class StandardModelTest(object):
 
     def test_outputs(self):
         # run the standard output tests
-        tests.standard_output_tests(
+        std_out_test = tests.StandardOutputTests(
             self.model, self.disc, self.solver, self.parameter_values
         )
+        std_out_test.test_all()
 
     def test_all(self, param=None, disc=None, solver=None, t_eval=None):
         self.model.check_well_posedness()

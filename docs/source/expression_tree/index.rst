@@ -14,3 +14,4 @@ Expression Tree
   unary_operator
   concatenations
   broadcasts
+  simplify
