@@ -256,6 +256,13 @@ class TestMacInnesCapacitance(unittest.TestCase):
             modeltest_p = tests.StandardModelTest(model_p)
             modeltest_p.test_all()
 
+    def test_failure(self):
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.electrolyte_current.MacInnesCapacitance(param)
+        delta_phi = pybamm.Symbol("sym", domain="test")
+        with self.assertRaises(pybamm.DomainError):
+            model.set_full_system(delta_phi, None, None)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

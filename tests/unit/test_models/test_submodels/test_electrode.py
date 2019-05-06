@@ -152,6 +152,13 @@ class TestOhm(unittest.TestCase):
                     phi_s_right_eval, voltage_eval, 3
                 )  # extrapolation error
 
+    def test_failure(self):
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.electrode.Ohm(param)
+        phi_s = pybamm.Symbol("sym", domain="test")
+        with self.assertRaises(pybamm.DomainError):
+            model.set_algebraic_system(phi_s, None)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
