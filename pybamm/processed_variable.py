@@ -76,10 +76,11 @@ class ProcessedVariable(object):
 
         self.base_eval = base_variable.evaluate(t_sol[0], y_sol[:, 0])
 
-        if isinstance(self.base_eval, numbers.Number):
-            self.dimensions = 0
-            self.entries = self.base_eval * np.ones_like(t_sol)
-        elif len(self.base_eval.shape) == 0 or self.base_eval.shape[0] == 1:
+        if (
+            isinstance(self.base_eval, numbers.Number)
+            or len(self.base_eval.shape) == 0
+            or self.base_eval.shape[0] == 1
+        ):
             self.initialise_1D()
         else:
             if len(self.mesh.combine_submeshes(*self.domain)) == 1:
