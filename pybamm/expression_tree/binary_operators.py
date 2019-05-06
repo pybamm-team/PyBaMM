@@ -236,6 +236,15 @@ def simplify_multiplication_division(myclass, left, right):
                 or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
                 left, right = child.orphans
+                if child == left_child and this_class == pybamm.Multiplication:
+                    # change (m @ v1) * v2 -> v2 * m @ v so can simplify correctly
+                    # (#341)
+                    numerator.append(other_child)
+                    numerator_types.append(previous_class)
+                    flatten(
+                        this_class, child.__class__, left, right, in_numerator, False
+                    )
+                    break
                 if child == left_child:
                     flatten(
                         previous_class, child.__class__, left, right, in_numerator, True
