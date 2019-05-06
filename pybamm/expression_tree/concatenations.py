@@ -67,6 +67,12 @@ class Concatenation(pybamm.Symbol):
                 children_eval[idx] = child.evaluate(t, y)
             return self._concatenation_evaluate(children_eval)
 
+    def _concatenation_simplify(self, children):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        new_symbol = self.__class__(*children)
+        new_symbol.domain = []
+        return new_symbol
+
 
 class NumpyConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of equations, when we
@@ -108,14 +114,6 @@ class NumpyConcatenation(Concatenation):
             return pybamm.Scalar(0)
         else:
             return SparseStack(*[child.jac(variable) for child in children])
-
-    def simplify(self):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        children = [child.simplify() for child in self.cached_children]
-
-        new_node = self.__class__(*children)
-
-        return pybamm.simplify_if_constant(new_node)
 
 
 class DomainConcatenation(Concatenation):
@@ -225,9 +223,8 @@ class DomainConcatenation(Concatenation):
         else:
             return SparseStack(*[child.jac(variable) for child in children])
 
-    def simplify(self):
+    def _concatenation_simplify(self, children):
         """ See :meth:`pybamm.Symbol.simplify()`. """
-        children = self.cached_children
         # Simplify Concatenation of StateVectors to a single StateVector
         if all([isinstance(x, pybamm.StateVector) for x in children]) and all(
             [
@@ -239,16 +236,13 @@ class DomainConcatenation(Concatenation):
                 slice(children[0].y_slice.start, children[-1].y_slice.stop)
             )
 
-        # Otherwise just simplify children and convert to array if constant
-        children = [child.simplify() for child in children]
-
-        new_node = self.__class__(children, self.mesh, self)
+        new_symbol = self.__class__(children, self.mesh, self)
 
         # TODO: this should not be needed, but somehow we are still getting domains in
         # the simplified children
-        new_node.domain = []
+        new_symbol.domain = []
 
-        return pybamm.simplify_if_constant(new_node)
+        return new_symbol
 
 
 class SparseStack(Concatenation):
@@ -289,15 +283,4 @@ class SparseStack(Concatenation):
 
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation.evaluate()`. """
-        if len(children_eval) == 0:
-            return np.array([])
-        else:
-            return vstack(children_eval)
-
-    def simplify(self):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        children = [child.simplify() for child in self.cached_children]
-
-        new_node = self.__class__(*children)
-
-        return pybamm.simplify_if_constant(new_node)
+        return vstack(children_eval)
