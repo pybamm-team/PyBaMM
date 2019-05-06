@@ -103,6 +103,7 @@ class ProcessedVariable(object):
         )
 
         self.entries = entries
+        self.t_x_r_sol = (self.t_sol, None, None)
         self.dimensions = 1
 
     def initialise_2D(self):
@@ -131,9 +132,11 @@ class ProcessedVariable(object):
         if any("particle" in dom for dom in self.domain):
             self.scale = "micro"
             self.r_sol = space
+            self.t_x_r_sol = (self.t_sol, None, self.r_sol)
         else:
             self.scale = "macro"
             self.x_sol = space
+            self.t_x_r_sol = (self.t_sol, self.x_sol, None)
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
@@ -173,6 +176,7 @@ class ProcessedVariable(object):
         self.dimensions = 3
         self.x_sol = x_sol
         self.r_sol = r_sol
+        self.t_x_r_sol = (self.t_sol, x_sol, r_sol)
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(

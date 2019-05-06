@@ -179,6 +179,7 @@ class VoltageTests(BaseOutputTest):
             + self.eta_r_av.entries
             + self.eta_e_av.entries
             + self.Delta_Phi_s_av.entries,
+            decimal=3,
         )
 
     def test_all(self):
@@ -208,8 +209,11 @@ class ParticleConcentrationTests(BaseOutputTest):
         """Test all concentrations in negative particles decrease and all
         concentrations in positive particles increase over a discharge."""
 
-        neg_end_vs_start = self.c_s_n.entries[:, -1] - self.c_s_n.entries[:, 1]
-        pos_end_vs_start = self.c_s_p.entries[:, -1] - self.c_s_p.entries[:, 1]
+        t, x_n, r_n = self.c_s_n.t_x_r_sol
+        t, x_p, r_p = self.c_s_p.t_x_r_sol
+
+        neg_end_vs_start = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
+        pos_end_vs_start = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(t[:-1], x_p, r_p)
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(neg_end_vs_start, 0)
@@ -363,7 +367,7 @@ class PotentialTests(BaseOutputTest):
         """Test that negative electrode potential is zero on left boundary. Test
         average negative electrode potential is less than or equal to zero."""
 
-        np.testing.assert_array_almost_equal(self.phi_s_n.entries[0], 0)
+        np.testing.assert_array_almost_equal(self.phi_s_n.entries[0], 0, decimal=5)
 
     def test_positive_electrode_potential_profile(self):
         """Test average positive electrode potential is less than the positive electrode

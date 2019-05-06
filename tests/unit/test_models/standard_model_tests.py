@@ -103,7 +103,6 @@ class StandardModelTest(object):
                 isinstance(
                     self.model,
                     (
-                        pybamm.lithium_ion.DFN,
                         pybamm.lead_acid.Composite,
                         pybamm.lead_acid.CompositeCapacitance,
                         pybamm.lead_acid.NewmanTiedemannCapacitance,
