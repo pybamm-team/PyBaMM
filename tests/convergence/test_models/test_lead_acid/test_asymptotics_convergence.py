@@ -53,7 +53,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
             param.update_model(composite_model, comp_disc)
             param.update_model(full_model, full_disc)
             # Solve, make sure times are the same
-            t_eval = np.linspace(0, 1)
+            t_eval = np.linspace(0, 0.6)
             solver_loqs = leading_order_model.default_solver
             solver_loqs.solve(leading_order_model, t_eval)
             solver_comp = composite_model.default_solver
@@ -77,18 +77,14 @@ class TestAsymptoticConvergence(unittest.TestCase):
 
             # Compare
             t = t_full[: np.min([len(t_loqs), len(t_comp), len(t_full)])]
-            norm = np.linalg.norm
-            loqs_error = norm(voltage_loqs(t) - voltage_full(t)) / norm(voltage_full(t))
-            comp_error = norm(voltage_comp(t) - voltage_full(t)) / norm(voltage_full(t))
+            loqs_error = np.max(np.abs(voltage_loqs(t) - voltage_full(t)))
+            comp_error = np.max(np.abs(voltage_comp(t) - voltage_full(t)))
             return (loqs_error, comp_error)
 
         # Get errors
         currents = 0.5 / (2 ** np.arange(3))
         errs = np.array([get_l2_error(current) for current in currents])
         loqs_errs, comp_errs = [np.array(err) for err in zip(*errs)]
-        import ipdb
-
-        ipdb.set_trace()
         # Get rates: expect linear convergence for loqs, quadratic for composite
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
