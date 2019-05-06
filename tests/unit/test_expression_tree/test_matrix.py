@@ -192,7 +192,6 @@ class TestMatrix(unittest.TestCase):
                 expr.evaluate(y=np.ones(300)), exprsimp.evaluate(y=np.ones(300))
             )
 
-
     def test_matrix_modification(self):
         exp = self.mat @ self.mat + self.mat
         self.A[0, 0] = -1
