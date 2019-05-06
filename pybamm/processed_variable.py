@@ -199,9 +199,4 @@ class ProcessedVariable(object):
                 if isinstance(x, np.ndarray) and isinstance(t, np.ndarray):
                     x = x[:, np.newaxis]
 
-            try:
-                return self._interpolation_function((r, x, t))
-            except ValueError:
-                import ipdb
-
-                ipdb.set_trace()
+            return self._interpolation_function((r, x, t))
