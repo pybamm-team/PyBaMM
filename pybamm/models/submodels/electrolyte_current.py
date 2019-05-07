@@ -318,7 +318,9 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         # Equations (algebraic only)
         self.algebraic = {phi_e: pybamm.div(i_e) - j}
-        self.boundary_conditions = {i_e: {"left": 0, "right": 0}}
+        self.boundary_conditions = {
+            phi_e: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
         self.initial_conditions = {phi_e: -param.U_n(param.c_n_init)}
         # no differential equations
         self.rhs = {}
