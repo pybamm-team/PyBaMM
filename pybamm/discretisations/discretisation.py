@@ -284,7 +284,6 @@ class Discretisation(object):
                             eqn, eqn_key.domain
                         )
 
-            # Process symbol (original or broadcasted)
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
             # note we are sending in the key.id here so we don't have to
