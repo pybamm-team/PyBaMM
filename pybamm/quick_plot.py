@@ -181,7 +181,7 @@ class QuickPlot(object):
         )
         plt.axis(self.axis["Terminal voltage [V]"])
 
-    def dynamic_plot(self):
+    def dynamic_plot(self, testing=False):
 
         # create an initial plot at time 0
         self.plot(0)
@@ -195,7 +195,8 @@ class QuickPlot(object):
             top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
         )
 
-        plt.show()
+        if not testing:
+            plt.show()
 
     def update(self, val):
         t = self.sfreq.val
