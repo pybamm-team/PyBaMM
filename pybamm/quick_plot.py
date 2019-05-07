@@ -6,7 +6,7 @@ from matplotlib.widgets import Slider
 
 class QuickPlot(object):
     """
-    Generates a quick plot of a subset of key outputs of the model so that the model 
+    Generates a quick plot of a subset of key outputs of the model so that the model
     outputs can be easily assessed. The axis limits can be set using:
         self.axis["Variable name"] = [x_min, x_max, y_min, y_max]
     They can be reset to the default values by using self.reset_axis.
@@ -66,7 +66,7 @@ class QuickPlot(object):
 
     def reset_axis(self):
         """
-        Reset the axis limits to the default values. 
+        Reset the axis limits to the default values.
         """
         self.axis = {
             "Negative particle surface concentration": [0, self.l_n, 0, 1],
@@ -189,7 +189,8 @@ class QuickPlot(object):
 
     def dynamic_plot(self, testing=False):
         """
-        Generate a dynamic plot with a slider to control the time.
+        Generate a dynamic plot with a slider to control the time. We recommend using
+        ipywidgets instead of this function if you are using jupyter notebooks
         """
 
         # create an initial plot at time 0
