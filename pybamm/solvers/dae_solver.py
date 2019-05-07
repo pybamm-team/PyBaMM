@@ -65,10 +65,7 @@ class DaeSolver(pybamm.BaseSolver):
         y0 = self.calculate_consistent_initial_conditions(
             rhs, algebraic, model.concatenated_initial_conditions
         )
-        print(model.concatenated_algebraic.children[2].left.right.evaluate(0, y0))
-        import ipdb
 
-        ipdb.set_trace()
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))
@@ -124,7 +121,7 @@ class DaeSolver(pybamm.BaseSolver):
             return algebraic(0, y0)
 
         # Find the values of y0_alg that are roots of the algebraic equations
-        sol = optimize.root(root_fun, y0_alg_guess, method="hybr", tol=1e-14)
+        sol = optimize.root(root_fun, y0_alg_guess, method="hybr")
         # Return full set of consistent initial conditions (y0_diff unchanged)
         y0_consistent = np.concatenate([y0_diff, sol.x])
 
