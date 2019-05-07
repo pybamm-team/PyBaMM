@@ -59,7 +59,9 @@ class StefanMaxwell(pybamm.SubModel):
         }
 
         self.initial_conditions = {c_e: param.c_e_init}
-        self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
+        self.boundary_conditions = {
+            c_e: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         self.variables = self.get_variables(c_e, N_e)
 
         # Cut off if concentration goes negative

@@ -113,14 +113,10 @@ class ParameterValues(dict):
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
-            if "left" in bcs.keys():
-                new_boundary_conditions[processed_variable][
-                    "left"
-                ] = processing_function(bcs["left"])
-            if "right" in bcs.keys():
-                new_boundary_conditions[processed_variable][
-                    "right"
-                ] = processing_function(bcs["right"])
+            for side in ["left", "right"]:
+                bc, type = bcs[side]
+                processed_bc = (processing_function(bc), type)
+                new_boundary_conditions[processed_variable][side] = processed_bc
         model.boundary_conditions = new_boundary_conditions
 
         for variable, equation in model.variables.items():
