@@ -114,10 +114,18 @@ class BaseModel(object):
         for var, bcs in boundary_conditions.items():
             for side, bc in bcs.items():
                 if isinstance(bc[0], numbers.Number):
-                    # type is the type of the bc, e.g. "Dirichlet" or "Newmann"
+                    # type is the type of the bc, e.g. "Dirichlet" or "Neumann"
                     eqn, type = boundary_conditions[var][side]
                     boundary_conditions[var][side] = (pybamm.Scalar(eqn), type)
-
+                # Check types
+                if bc[1] not in ["Dirichlet", "Neumann"]:
+                    raise pybamm.ModelError(
+                        """
+                        boundary condition types must be Dirichlet or Neumann, not '{}'
+                        """.format(
+                            bc[1]
+                        )
+                    )
         self._boundary_conditions = boundary_conditions
 
     @property
