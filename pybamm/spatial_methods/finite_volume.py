@@ -531,7 +531,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             return pybamm.Matrix(matrix) @ array
 
         # If discretised_symbol evaluates to number there is no need to average
-        # NOTE: Doing this check every time might be slow?
         if discretised_symbol.evaluates_to_number():
             return discretised_symbol
         else:
