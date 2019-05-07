@@ -63,24 +63,14 @@ class QuickPlot(object):
 
     def reset_axis(self):
         self.axis = {
-            "Negative particle surface concentration": [
-                0,
-                self.l_n,
-                np.min(self.c_s_n_surf(self.t, self.x_n)),
-                np.max(self.c_s_n_surf(self.t, self.x_n)),
-            ],
+            "Negative particle surface concentration": [0, self.l_n, 0, 1],
             "Electrolyte concentration": [
                 0,
                 1,
-                np.min(self.c_e(self.t, self.x)),
-                np.max(self.c_e(self.t, self.x)),
+                np.min(self.c_e(self.t, self.x) - 0.2),
+                np.max(self.c_e(self.t, self.x) + 0.2),
             ],
-            "Positive particle surface concentration": [
-                1 - self.l_p,
-                1,
-                np.min(self.c_s_p_surf(self.t, self.x_p)),
-                np.max(self.c_s_p_surf(self.t, self.x_p)),
-            ],
+            "Positive particle surface concentration": [1 - self.l_p, 1, 0, 1],
             "Total current density": [
                 self.t[0],
                 self.t[-1],
@@ -90,8 +80,8 @@ class QuickPlot(object):
             "Negative electrode potential [V]": [
                 0,
                 self.l_n,
-                np.min(self.phi_s_n(self.t, self.x_n)),
-                np.max(self.phi_s_n(self.t, self.x_n)),
+                np.min(self.phi_s_n(self.t, self.x_n)) - 0.01,
+                np.max(self.phi_s_n(self.t, self.x_n)) + 0.01,
             ],
             "Electrolyte potential [V]": [
                 0,
@@ -122,7 +112,8 @@ class QuickPlot(object):
             Time at which to plot.
         """
         self.fig, self.ax = plt.subplots(figsize=(15, 8))
-        plt.subplots_adjust(left=0.25, bottom=0.25)
+        plt.tight_layout()
+        plt.subplots_adjust(left=-0.1)
 
         plt.subplot(241)
         plt.xlabel("x")
@@ -142,7 +133,7 @@ class QuickPlot(object):
         plt.xlabel("x_p")
         plt.ylabel("Positive particle surface concentration")
         self.positive_particle_concentration, = plt.plot(
-            self.x_p, self.c_s_n_surf(t, self.x_p), lw=2
+            self.x_p, self.c_s_p_surf(t, self.x_p), lw=2
         )
         plt.axis(self.axis["Positive particle surface concentration"])
 
@@ -189,7 +180,7 @@ class QuickPlot(object):
             [t], [self.V(t)], marker="o", markersize=5, color="red"
         )
         plt.axis(self.axis["Terminal voltage [V]"])
-    
+
     def dynamic_plot(self):
 
         # create an initial plot at time 0
