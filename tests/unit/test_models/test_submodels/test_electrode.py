@@ -38,7 +38,6 @@ class TestOhm(unittest.TestCase):
         model_p = pybamm.electrode.Ohm(param)
         model_p.set_algebraic_system(phi_s_p, reactions)
         # overwrite boundary conditions for purposes of the test
-        i_s_p = model_p.variables["Positive electrode current density"]
         model_p.boundary_conditions = {
             phi_s_p: {"left": (0, "Neumann"), "right": (0, "Dirichlet")}
         }
@@ -53,8 +52,6 @@ class TestOhm(unittest.TestCase):
         model_n.update(model_p)
         model_whole = model_n
         # overwrite boundary conditions for purposes of the test
-        i_s_n = model_whole.variables["Negative electrode current density"]
-        i_s_p = model_whole.variables["Positive electrode current density"]
         model_whole.boundary_conditions = {
             phi_s_n: {"left": (0, "Dirichlet"), "right": (0, "Neumann")},
             phi_s_p: {"left": (0, "Neumann"), "right": (0, "Dirichlet")},
