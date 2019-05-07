@@ -11,4 +11,5 @@ from .shared import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
     get_discretisation_for_testing,
+    get_p2d_discretisation_for_testing,
 )
