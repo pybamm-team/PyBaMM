@@ -6,7 +6,10 @@ from matplotlib.widgets import Slider
 
 class QuickPlot(object):
     """
-    Generates a quick plot of a subset of key outputs of the model so that the model outputs can be easily assessed.
+    Generates a quick plot of a subset of key outputs of the model so that the model 
+    outputs can be easily assessed. The axis limits can be set using:
+        self.axis["Variable name"] = [x_min, x_max, y_min, y_max]
+    They can be reset to the default values by using self.reset_axis.
 
     Parameters
     ----------
@@ -62,6 +65,9 @@ class QuickPlot(object):
         )
 
     def reset_axis(self):
+        """
+        Reset the axis limits to the default values. 
+        """
         self.axis = {
             "Negative particle surface concentration": [0, self.l_n, 0, 1],
             "Electrolyte concentration": [
@@ -182,6 +188,9 @@ class QuickPlot(object):
         plt.axis(self.axis["Terminal voltage [V]"])
 
     def dynamic_plot(self, testing=False):
+        """
+        Generate a dynamic plot with a slider to control the time.
+        """
 
         # create an initial plot at time 0
         self.plot(0)
@@ -199,6 +208,9 @@ class QuickPlot(object):
             plt.show()
 
     def update(self, val):
+        """
+        Update the plot in self.plot() with values at new time
+        """
         t = self.sfreq.val
         self.negative_particle_concentration.set_ydata(self.c_s_n_surf(t, self.x_n))
         self.electrolyte_concentration.set_ydata(self.c_e(t, self.x))
