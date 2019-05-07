@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
 
-def quick_plot(model, param, mesh, solver):
+class QuickPlot(object):
     """
     Generates a quick plot of a subset of key outputs of the model so that the model outputs can be easily assessed.
 
@@ -18,160 +18,205 @@ def quick_plot(model, param, mesh, solver):
         The numerical solver for the model which contained the solution to the model.
     """
 
-    # obtain parameters values
+    def __init__(self, model, param, mesh, solver):
 
-    l_n = param.process_symbol(pybamm.geometric_parameters.l_n).evaluate(0, 0)
-    l_s = param.process_symbol(pybamm.geometric_parameters.l_s).evaluate(0, 0)
-    l_p = param.process_symbol(pybamm.geometric_parameters.l_p).evaluate(0, 0)
+        # geometric parameters
+        self.l_n = param.process_symbol(pybamm.geometric_parameters.l_n).evaluate(0, 0)
+        self.l_s = param.process_symbol(pybamm.geometric_parameters.l_s).evaluate(0, 0)
+        self.l_p = param.process_symbol(pybamm.geometric_parameters.l_p).evaluate(0, 0)
 
-    # TODO: change mesh interface at somepoint (cannot just )
-    # unpack the mesh to obtain discrete spatial variables
+        # spatial and temporal variables
+        self.x_n = np.linspace(0, self.l_n, 40)
+        self.x_p = np.linspace(self.l_n + self.l_s, 1, 40)
+        self.x = np.linspace(0, 1, 100)
+        self.t = solver.t
 
-    x_n = np.linspace(0, l_n, 40)
-    x_s = np.linspace(l_n, l_n + l_s, 20)
-    x_p = np.linspace(l_n + l_s, 1, 40)
-    x = np.linspace(0, 1, 100)
+        self.set_output_variables(solver.y, model, mesh)
+        self.reset_axis()
 
-    r_n = np.linspace(0, 1, 100)
-    r_p = np.linspace(0, 1, 100)
+    def set_output_variables(self, y, model, mesh):
+        self.c_s_n_surf = pybamm.ProcessedVariable(
+            model.variables["Negative particle surface concentration"], self.t, y, mesh
+        )
+        self.c_e = pybamm.ProcessedVariable(
+            model.variables["Electrolyte concentration"], self.t, y, mesh
+        )
 
-    all_time = solver.t
+        self.c_s_p_surf = pybamm.ProcessedVariable(
+            model.variables["Positive particle surface concentration"], self.t, y, mesh
+        )
+        self.i_cell = pybamm.ProcessedVariable(
+            model.variables["Total current density"], self.t, y, mesh
+        )
+        self.phi_s_n = pybamm.ProcessedVariable(
+            model.variables["Negative electrode potential [V]"], self.t, y, mesh
+        )
+        self.phi_e = pybamm.ProcessedVariable(
+            model.variables["Electrolyte potential [V]"], self.t, y, mesh
+        )
+        self.phi_s_p = pybamm.ProcessedVariable(
+            model.variables["Positive electrode potential [V]"], self.t, y, mesh
+        )
+        self.V = pybamm.ProcessedVariable(
+            model.variables["Terminal voltage [V]"], self.t, y, mesh
+        )
 
-    fig, ax = plt.subplots(figsize=(15, 8))
-    plt.subplots_adjust(left=0.25, bottom=0.25)
+    def reset_axis(self):
+        self.axis = {
+            "Negative particle surface concentration": [
+                0,
+                self.l_n,
+                np.min(self.c_s_n_surf(self.t, self.x_n)),
+                np.max(self.c_s_n_surf(self.t, self.x_n)),
+            ],
+            "Electrolyte concentration": [
+                0,
+                1,
+                np.min(self.c_e(self.t, self.x)),
+                np.max(self.c_e(self.t, self.x)),
+            ],
+            "Positive particle surface concentration": [
+                1 - self.l_p,
+                1,
+                np.min(self.c_s_p_surf(self.t, self.x_p)),
+                np.max(self.c_s_p_surf(self.t, self.x_p)),
+            ],
+            "Total current density": [
+                self.t[0],
+                self.t[-1],
+                np.min(self.i_cell(self.t)) - 1,
+                np.max(self.i_cell(self.t)) + 1,
+            ],
+            "Negative electrode potential [V]": [
+                0,
+                self.l_n,
+                np.min(self.phi_s_n(self.t, self.x_n)),
+                np.max(self.phi_s_n(self.t, self.x_n)),
+            ],
+            "Electrolyte potential [V]": [
+                0,
+                1,
+                np.min(self.phi_e(self.t, self.x)),
+                np.max(self.phi_e(self.t, self.x)),
+            ],
+            "Positive electrode potential [V]": [
+                1 - self.l_p,
+                1,
+                np.min(self.phi_s_p(self.t, self.x_p)),
+                np.max(self.phi_s_p(self.t, self.x_p)),
+            ],
+            "Terminal voltage [V]": [
+                self.t[0],
+                self.t[-1],
+                np.min(self.V(self.t)),
+                np.max(self.V(self.t)),
+            ],
+        }
 
-    # electrolyte concentration
+    def plot(self, t):
+        """Produces a quick plot with the internal states at time t.
 
-    c_e = pybamm.ProcessedVariable(
-        model.variables["Electrolyte concentration"], solver.t, solver.y, mesh=mesh
-    )
+        Parameters
+        ----------
+        t : float
+            Time at which to plot.
+        """
+        self.fig, self.ax = plt.subplots(figsize=(15, 8))
+        plt.subplots_adjust(left=0.25, bottom=0.25)
 
-    plt.subplot(342)
-    plt.title("Electrolyte Concentration")
-    plt.xlabel("x")
-    plt.ylabel("c_e")
-    electrolyte_concentration, = plt.plot(x, c_e(t=0, x=x), lw=2)
-    plt.axis([0, 1, np.min(c_e(all_time, x)), np.max(c_e(all_time, x))])
+        plt.subplot(241)
+        plt.xlabel("x")
+        plt.ylabel("Negative particle surface concentration")
+        self.negative_particle_concentration, = plt.plot(
+            self.x_n, self.c_s_n_surf(t, self.x_n), lw=2
+        )
+        plt.axis(self.axis["Negative particle surface concentration"])
 
-    # plt.subplot(342)
-    # plt.title("Negative Electrode")
-    # plt.xlabel("x")
-    # plt.ylabel("Lithium concentration")
-    # negCon, = plt.plot(sol.grid.xn, sol.cn[:, 1, 0], lw=2)
-    # plt.axis([0, sol.grid.xn[-1], 0, 1])
+        plt.subplot(242)
+        plt.xlabel("x")
+        plt.ylabel("Electrolyte concentration")
+        self.electrolyte_concentration, = plt.plot(self.x, self.c_e(t, self.x), lw=2)
+        plt.axis(self.axis["Electrolyte concentration"])
 
-    # plt.subplot(343)
-    # plt.title("Positive Electrode")
-    # plt.xlabel("x")
-    # plt.ylabel("Lithium concentration")
-    # posCon, = plt.plot(sol.grid.xp, sol.cn[:, 1, 0], lw=2)
-    # plt.axis([sol.grid.xp[0], sol.grid.xp[-1], 0, 1])
+        plt.subplot(243)
+        plt.xlabel("x_p")
+        plt.ylabel("Positive particle surface concentration")
+        self.positive_particle_concentration, = plt.plot(
+            self.x_p, self.c_s_n_surf(t, self.x_p), lw=2
+        )
+        plt.axis(self.axis["Positive particle surface concentration"])
 
-    # plt.subplot(344)
-    # plt.xlabel("Time")
-    # plt.ylabel("Current")
-    # curr, = plt.plot(sol.time, sol.current * np.ones(np.shape(sol.time)), lw=2)
-    # plt.hold(True)
-    # curr_point, = plt.plot(
-    #     [sol.time[0]], [sol.current], marker="o", markersize=5, color="red"
-    # )
+        plt.subplot(244)
+        plt.xlabel("Time")
+        plt.ylabel("Total current density")
+        self.current, = plt.plot(self.t, self.i_cell(self.t), lw=2)
+        self.current_point, = plt.plot(
+            [t], [self.i_cell(t)], marker="o", markersize=5, color="red"
+        )
+        plt.axis(self.axis["Total current density"])
 
-    # plt.subplot(345)
-    # plt.xlabel("x")
-    # plt.ylabel("Electrolyte Potential")
-    # Psi, = plt.plot(
-    #     sol.grid.x,
-    #     np.concatenate((sol.Psi_n[:, 0], sol.Psi_s[:, 0], sol.Psi_p[:, 0])),
-    #     lw=2,
-    # )
-    # plt.axis([0, 1, np.min(sol.Psi_n), np.max(sol.Psi_p)])
+        # negative electrode potential
+        plt.subplot(245)
+        plt.xlabel("x")
+        plt.ylabel("Negative electrode potential [V]")
+        self.negative_electrode_potential, = plt.plot(
+            self.x_n, self.phi_s_n(t, self.x_n), lw=2
+        )
+        plt.axis(self.axis["Negative electrode potential [V]"])
 
-    # plt.subplot(346)
-    # plt.xlabel("x")
-    # plt.ylabel("Electrode Potential")
-    # psi_n, = plt.plot(sol.grid.xn, sol.psi_n[:, 0], lw=2)
-    # plt.axis([sol.grid.xn[0], sol.grid.xn[-1], -1, 1])
+        # electrolyte potential
+        plt.subplot(246)
+        plt.xlabel("x")
+        plt.ylabel("Electrolyte potential [V]")
+        self.electrolyte_potential, = plt.plot(self.x, self.phi_e(t, self.x), lw=2)
+        plt.axis(self.axis["Electrolyte potential [V]"])
 
-    # plt.subplot(347)
-    # plt.xlabel("x")
-    # plt.ylabel("Electrode Potential")
-    # psi_p, = plt.plot(sol.grid.xp, sol.psi_p[:, 0], lw=2)
-    # plt.axis([sol.grid.xp[0], sol.grid.xp[-1], 0, 5])
+        # positive electrode potential
+        plt.subplot(247)
+        plt.xlabel("x")
+        plt.ylabel("Positive electrode potential [V]")
+        self.positive_electrode_potential, = plt.plot(
+            self.x_p, self.phi_s_p(t, self.x_p), lw=2
+        )
+        plt.axis(self.axis["Positive electrode potential [V]"])
 
-    # plt.subplot(348)
-    # plt.xlabel("Time")
-    # plt.ylabel("Voltage")
-    # voltage, = plt.plot(sol.time, sol.voltage, lw=2)
-    # plt.hold(True)
-    # voltage_point, = plt.plot(
-    #     [sol.time[0]], [sol.voltage[0]], marker="o", markersize=5, color="red"
-    # )
-    # # plt.axis([sol.time[0], sol.time[-1], -1, 1])
+        # voltage
+        plt.subplot(248)
+        plt.xlabel("Time")
+        plt.ylabel("Terminal voltage [V]")
+        self.voltage, = plt.plot(self.t, self.V(self.t), lw=2)
+        self.voltage_point, = plt.plot(
+            [t], [self.V(t)], marker="o", markersize=5, color="red"
+        )
+        plt.axis(self.axis["Terminal voltage [V]"])
+    
+    def dynamic_plot(self):
 
-    # plt.subplot(349)
-    # plt.xlabel("x")
-    # plt.ylabel("Electrolyte Current")
-    # J_sol = np.concatenate(
-    #     (sol.Jn[:, 0], sol.current * np.ones((sol.grid.sep - 1)), sol.Jp[:, 0])
-    # )
-    # J, = plt.plot(sol.grid.x_edge, J_sol, lw=2)
-    # # plt.axis([sol.grid.x[0], sol.grid.x[-1], 0, 1])
+        # create an initial plot at time 0
+        self.plot(0)
 
-    # plt.subplot(3, 4, 10)
-    # plt.xlabel("x")
-    # plt.ylabel("Electrode Current")
-    # jn, = plt.plot(sol.grid.xn_edge, sol.jn[:, 0], lw=2)
+        axcolor = "lightgoldenrodyellow"
+        axfreq = plt.axes([0.315, 0.05, 0.37, 0.03], facecolor=axcolor)
+        self.sfreq = Slider(axfreq, "Time", 0, self.t.max(), valinit=0)
+        self.sfreq.on_changed(self.update)
 
-    # plt.subplot(3, 4, 11)
-    # plt.xlabel("x")
-    # plt.ylabel("Electrode Current")
-    # jp, = plt.plot(sol.grid.xp_edge, sol.jp[:, 0], lw=2)
+        plt.subplots_adjust(
+            top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
+        )
 
-    # plt.subplot(3, 4, 12)
-    # plt.xlabel("Time")
-    # plt.ylabel("Normalised Capacity")
-    # plt.plot(sol.time, sol.capacity, lw=2)
-    # plt.hold(True)
-    # cap_point, = plt.plot(
-    #     [sol.time[0]], [sol.capacity[0]], marker="o", markersize=5, color="red"
-    # )
-    # plt.axis([sol.time[0], sol.time[-1], 0.9, 1.1])
+        plt.show()
 
-    axcolor = "lightgoldenrodyellow"
-    axfreq = plt.axes([0.315, 0.05, 0.37, 0.03], facecolor=axcolor)
-    sfreq = Slider(axfreq, "Time", 0, all_time.max(), valinit=0)
+    def update(self, val):
+        t = self.sfreq.val
+        self.negative_particle_concentration.set_ydata(self.c_s_n_surf(t, self.x_n))
+        self.electrolyte_concentration.set_ydata(self.c_e(t, self.x))
+        self.positive_particle_concentration.set_ydata(self.c_s_p_surf(t, self.x_p))
 
-    def update(val):
-        # t = int(round(sfreq.val))
-        time = sfreq.val
-        electrolyte_concentration.set_ydata(c_e(t=time, x=x))
-        # negCon.set_ydata(sol.cn[:, -1, t])
-        # posCon.set_ydata(sol.cp[:, -1, t])
-        # Psi.set_ydata(
-        #     np.concatenate((sol.Psi_n[:, t], sol.Psi_s[:, t], sol.Psi_p[:, t]))
-        # )
-        # psi_n.set_ydata(sol.psi_n[:, t])
-        # psi_p.set_ydata(sol.psi_p[:, t])
+        self.current_point.set_data([t], [self.i_cell(t)])
 
-        # voltage_point.set_data([sol.time[t]], [sol.voltage[t]])
-        # curr_point.set_data([sol.time[t]], [sol.current])
-        # cap_point.set_data([sol.time[t]], [sol.capacity[t]])
+        self.negative_electrode_potential.set_ydata(self.phi_s_n(t, self.x_n))
+        self.electrolyte_potential.set_ydata(self.phi_e(t, self.x))
+        self.positive_electrode_potential.set_ydata(self.phi_s_p(t, self.x_p))
 
-        # J_sol = np.concatenate(
-        #     (sol.Jn[:, t], sol.current * np.ones((sol.grid.sep - 1)), sol.Jp[:, t])
-        # )
-        # J.set_ydata(J_sol)
-
-        # jn.set_ydata(sol.jn[:, t])
-        # jp.set_ydata(sol.jp[:, t])
-
-        fig.canvas.draw_idle()
-
-    sfreq.on_changed(update)
-
-    plt.subplots_adjust(
-        top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
-    )
-
-    plt.show()
-
+        self.voltage_point.set_data([t], [self.V(t)])
+        self.fig.canvas.draw_idle()

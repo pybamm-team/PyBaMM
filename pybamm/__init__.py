@@ -194,7 +194,7 @@ from .solvers.scikits_ode_solver import ScikitsOdeSolver
 # other
 #
 from .processed_variable import ProcessedVariable
-from .quick_plot import quick_plot
+from .quick_plot import QuickPlot
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
