@@ -139,6 +139,36 @@ def simplify_addition_subtraction(myclass, left, right):
                     ret -= child
         return ret
 
+    # simplify identical terms
+    i = 0
+    while i < len(numerator) - 1:
+        if isinstance(numerator[i], pybamm.Multiplication) and \
+                isinstance(numerator[i].children[0], pybamm.Scalar):
+            term_i = numerator[i].orphans[1]
+            term_i_count = numerator[i].children[0].evaluate()
+        else:
+            term_i = numerator[i]
+            term_i_count = 1
+
+        # loop through rest of numerator counting up and deleting identical terms
+        for j, (term_j, typ_j) in \
+                enumerate(zip(numerator[i + 1:], numerator_types[i + 1:])):
+            if term_i.id == term_j.id:
+                if typ_j == pybamm.Addition:
+                    term_i_count += 1
+                elif typ_j == pybamm.Subtraction:
+                    term_i_count -= 1
+                del numerator[j + i + 1]
+                del numerator_types[j + i + 1]
+
+        # replace this term by count * term if count > 1
+        if term_i_count != 1:
+            # simplify the result just in case
+            # (e.g. count == 0, or can fold constant into the term)
+            numerator[i] = (term_i_count * term_i).simplify()
+
+        i += 1
+
     # can reorder the numerator
     (constant, nonconstant, constant_types, nonconstant_types) = partition_by_constant(
         numerator, numerator_types

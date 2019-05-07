@@ -148,8 +148,9 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr, pybamm.Addition)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 4.0)
-        self.assertIsInstance(expr.children[1], pybamm.Addition)
-        self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
+        self.assertIsInstance(expr.children[1], pybamm.Multiplication)
+        self.assertIsInstance(expr.children[1].children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[1].children[0].evaluate(), 2)
         self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
 
         expr = ((-1 + c) - (c + 1) + (c - 1)).simplify()
@@ -209,6 +210,31 @@ class TestSimplify(unittest.TestCase):
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):
             sym.simplify()
+
+        # A + A = 2A (#323)
+        a = pybamm.Variable('A')
+        expr = (a + a).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2)
+        self.assertIsInstance(expr.children[1], pybamm.Variable)
+
+        expr = (a + a + a + a).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 4)
+        self.assertIsInstance(expr.children[1], pybamm.Variable)
+
+        expr = (a - a + a - a + a + a).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2)
+        self.assertIsInstance(expr.children[1], pybamm.Variable)
+
+        # A - A = 0 (#323)
+        expr = (a - a).simplify()
+        self.assertIsInstance(expr, pybamm.Scalar)
+        self.assertEqual(expr.evaluate(), 0)
 
     def test_function_simplify(self):
         a = pybamm.Parameter("a")
@@ -376,6 +402,25 @@ class TestSimplify(unittest.TestCase):
             np.testing.assert_array_equal(
                 expr.evaluate(y=np.ones(300)), exprsimp.evaluate(y=np.ones(300))
             )
+
+        # A + A = 2A (#323)
+        a = pybamm.StateVector(slice(0, 300))
+        expr = (a + a).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2)
+        self.assertIsInstance(expr.children[1], pybamm.StateVector)
+
+        expr = (a + a + a + a).simplify()
+        self.assertIsInstance(expr, pybamm.Multiplication)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 4)
+        self.assertIsInstance(expr.children[1], pybamm.StateVector)
+
+        # A - A = 0 (#323)
+        expr = (a - a).simplify()
+        self.assertIsInstance(expr, pybamm.Scalar)
+        self.assertEqual(expr.evaluate(), 0)
 
     def test_domain_concatenation_simplify(self):
         # create discretisation
