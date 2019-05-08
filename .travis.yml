@@ -29,10 +29,10 @@ matrix:
         #   env:
         #     - PYBAMM_UNIT=true
         #   if: type != cron
-        # - python: "3.5"
-        #   env:
-        #     - PYBAMM_UNIT=true
-        #   if: type != cron
+        - python: "3.5"
+          env:
+            - PYBAMM_UNIT=true
+          if: type != cron
         - python: "3.6"
           env:
             - PYBAMM_UNIT=true

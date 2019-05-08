@@ -396,22 +396,22 @@ class TestDiscretise(unittest.TestCase):
 
         disc.process_model(model)
         y0 = model.concatenated_initial_conditions
-        np.testing.assert_array_equal(
-            y0,
-            np.concatenate(
-                [
-                    2 * np.ones_like(combined_submesh[0].nodes),
-                    5 * np.ones_like(mesh["negative electrode"][0].nodes),
-                    8 * np.ones_like(mesh["negative electrode"][0].nodes),
-                ]
-            ),
-        )
+        y0_expect = np.array([])
+        for var, init in model.initial_conditions.items():
+            if var.id == c.id:
+                vect = init.evaluate() * np.ones_like(combined_submesh[0].nodes)
+            else:
+                vect = init.evaluate() * np.ones_like(mesh[var.domain[0]][0].nodes)
+
+            y0_expect = np.concatenate([y0_expect,vect])
+
+        np.testing.assert_array_equal(y0,y0_expect)
+
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
-        c0, T0, S0 = np.split(
-            y0,
-            np.cumsum([combined_submesh[0].npts, mesh["negative electrode"][0].npts]),
-        )
+
+        S0 = model.initial_conditions[S].evaluate() * np.ones_like(mesh[S.domain[0]][0].nodes)
+        T0 = model.initial_conditions[T].evaluate() * np.ones_like(mesh[T.domain[0]][0].nodes)
         np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
 
         # mass matrix is identity
