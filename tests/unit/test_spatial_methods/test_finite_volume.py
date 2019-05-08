@@ -60,6 +60,20 @@ class TestFiniteVolume(unittest.TestCase):
         self.assertEqual(extrap_left_disc.evaluate(None, linear_y), 0)
         self.assertEqual(extrap_right_disc.evaluate(None, linear_y), 3)
 
+        # Fluxes
+        extrap_flux_left = pybamm.BoundaryFlux(2 * var, "left")
+        extrap_flux_right = pybamm.BoundaryFlux(1 - var, "right")
+        extrap_flux_left_disc = disc.process_symbol(extrap_flux_left)
+        extrap_flux_right_disc = disc.process_symbol(extrap_flux_right)
+
+        # check constant extrapolates to constant
+        self.assertEqual(extrap_flux_left_disc.evaluate(None, constant_y), 0)
+        self.assertEqual(extrap_flux_right_disc.evaluate(None, constant_y), 0)
+
+        # check linear variable extrapolates correctly
+        self.assertEqual(extrap_flux_left_disc.evaluate(None, linear_y), 2)
+        self.assertEqual(extrap_flux_right_disc.evaluate(None, linear_y), -1)
+
         # Microscale
         # create variable
         var = pybamm.Variable("var", domain="negative particle")
