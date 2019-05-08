@@ -117,8 +117,8 @@ class ProcessedVariable(object):
         edges = self.mesh.combine_submeshes(*self.domain)[0].edges
         if entries.shape[0] == len(nodes):
             space = nodes
-        elif entries.shape[0] == len(edges) - 2:
-            space = edges[1:-1]
+        elif entries.shape[0] == len(edges):
+            space = edges
         else:
             raise ValueError("variable shape does not match domain shape")
 
@@ -156,8 +156,8 @@ class ProcessedVariable(object):
         edges = self.mesh.combine_submeshes(*self.domain)[0].edges
         if entries.shape[0] == len(nodes):
             r_sol = nodes
-        elif entries.shape[0] == len(edges) - 2:
-            r_sol = edges[1:-1]
+        elif entries.shape[0] == len(edges):
+            r_sol = edges
         else:
             raise ValueError("variable shape does not match domain shape")
 
