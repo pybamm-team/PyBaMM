@@ -374,7 +374,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
             i_e = (
                 param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
-            ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e + pybamm.grad(delta_phi))
+            ) * ((param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi))
             if self.use_capacitance:
                 self.rhs = {delta_phi: 1 / param.C_dl_n * (pybamm.div(i_e) - j)}
             else:
@@ -403,7 +403,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
             i_e = (
                 param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
-            ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e + pybamm.grad(delta_phi))
+            ) * ((param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi))
             if self.use_capacitance:
                 self.rhs = {delta_phi: 1 / param.C_dl_p * (pybamm.div(i_e) - j)}
             else:
