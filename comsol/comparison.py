@@ -6,7 +6,7 @@ import numpy as np
 # load the comsol voltage data
 comsol = pd.read_csv("comsol/Voltage.csv", sep=",", header=None)
 
-time = comsol[0].values
+comsol_time = comsol[0].values
 comsol_voltage = comsol[1].values
 
 
@@ -18,8 +18,8 @@ geometry = model.default_geometry
 param = model.default_parameter_values
 
 # update C_rate
-C_rate = 1
-param["Typical current density"] = 24 * C_rate
+# C_rate = 1
+# param["Typical current density"] = 24 * C_rate
 
 param.process_model(model)
 param.process_geometry(geometry)
@@ -57,6 +57,7 @@ t = solver.t * tau_eval / 60 / 60
 
 plt.plot(time, comsol_voltage, "r")
 plt.plot(t, voltage_sol, ":b")
+
 plt.legend(["comsol", "pybamm"])
 plt.show()
 
