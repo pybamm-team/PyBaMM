@@ -6,8 +6,9 @@ language: python
 
 addons:
   apt:
+    sources:
+    - deadsnakes
     packages:
-    - python3-dev
     - gfortran
     - gcc
     - libopenblas-dev
@@ -30,10 +31,18 @@ matrix:
         #     - PYBAMM_UNIT=true
         #   if: type != cron
         - python: "3.5"
+          addons:
+            apt:
+              packages:
+              - python3.5-dev
           env:
             - PYBAMM_UNIT=true
           if: type != cron
         - python: "3.6"
+          addons:
+            apt:
+              packages:
+              - python3.6-dev
           env:
             - PYBAMM_UNIT=true
           if: type != cron
@@ -57,11 +66,19 @@ matrix:
             - PYBAMM_STYLE=true
           if: type != cron
         - python: "3.6"
+           addons:
+            apt:
+              packages:
+              - python3.6-dev
           env:
             - PYBAMM_COVER=true
           if: type != cron
           # Cron jobs
         - python: "3.6"
+          addons:
+            apt:
+              packages:
+              - python3.6-dev
           if: type == cron
 
 # Install dependencies
