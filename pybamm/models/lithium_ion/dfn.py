@@ -32,8 +32,8 @@ class DFN(pybamm.LithiumIonBaseModel):
         "Submodels"
         # Exchange-current density
         c_e_n, _, c_e_p = c_e.orphans
-        c_s_n_surf = pybamm.surf(c_s_n)
-        c_s_p_surf = pybamm.surf(c_s_p)
+        c_s_n_surf = pybamm.surf(c_s_n, set_domain=True)
+        c_s_p_surf = pybamm.surf(c_s_p, set_domain=True)
         int_curr_model = pybamm.interface.LithiumIonReaction(param)
         j0_n = int_curr_model.get_exchange_current_densities(c_e_n, c_s_n_surf)
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p, c_s_p_surf)

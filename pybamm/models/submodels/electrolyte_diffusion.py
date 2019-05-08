@@ -64,8 +64,9 @@ class StefanMaxwell(pybamm.SubModel):
         }
         self.variables = self.get_variables(c_e, N_e)
 
-        # Cut off if concentration goes negative
-        self.events = [pybamm.Function(np.min, c_e)]
+        # Cut off if concentration goes too small
+        # (open-circuit potential poorly defined)
+        self.events = [pybamm.Function(np.min, c_e) - 0.002]
 
     def set_leading_order_system(self, c_e, reactions, epsilon=None):
         """
@@ -116,8 +117,9 @@ class StefanMaxwell(pybamm.SubModel):
         )
         self.variables = self.get_variables(c_e_var, N_e)
 
-        # Cut off if concentration goes negative
-        self.events = [pybamm.Function(np.min, c_e)]
+        # Cut off if concentration goes too small
+        # (open-circuit potential poorly defined)
+        self.events = [c_e - 0.002]
 
     def get_variables(self, c_e, N_e):
         """

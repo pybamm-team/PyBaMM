@@ -12,18 +12,15 @@ import numpy as np
 class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.NewmanTiedemannCapacitance()
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 1, var.r_p: 1}
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all()
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all(skip_output_tests=True)
 
     @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
     def test_basic_processing_no_capacitance(self):
         model = pybamm.lead_acid.NewmanTiedemannCapacitance(use_capacitance=False)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 1, var.r_p: 1}
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all()
+        modeltest = tests.StandardModelTest(model)
+
+        modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
         model = pybamm.lead_acid.NewmanTiedemannCapacitance()

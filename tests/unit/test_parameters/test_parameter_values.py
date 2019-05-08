@@ -128,6 +128,12 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_f, pybamm.Matrix)
         np.testing.assert_array_equal(processed_f.evaluate(), np.ones((5, 6)))
 
+        # process statevector
+        g = pybamm.StateVector(slice(0, 10))
+        processed_g = parameter_values.process_symbol(g)
+        self.assertIsInstance(processed_g, pybamm.StateVector)
+        np.testing.assert_array_equal(processed_g.evaluate(y=np.ones(10)), np.ones(10))
+
         # not implemented
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):

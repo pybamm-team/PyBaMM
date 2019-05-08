@@ -467,7 +467,7 @@ def div(expression):
 #
 
 
-def surf(variable):
+def surf(variable, set_domain=False):
     """convenience function for creating a right :class:`BoundaryValue`, usually in the
     spherical geometry
 
@@ -483,8 +483,13 @@ def surf(variable):
     :class:`GetSurfaceValue`
         the surface value of ``variable``
     """
-
-    return boundary_value(variable, "right")
+    out = boundary_value(variable, "right")
+    if set_domain:
+        if variable.domain == ["negative particle"]:
+            out.domain = ["negative electrode"]
+        elif variable.domain == ["positive particle"]:
+            out.domain = ["positive electrode"]
+    return out
 
 
 def average(symbol):

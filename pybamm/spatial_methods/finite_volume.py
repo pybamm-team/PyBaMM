@@ -404,6 +404,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 new_discretised_symbol, concatenated_sub_disc_symbol
             )
 
+        # Keep same domain
+        new_discretised_symbol.domain = discretised_symbol.domain
+
         return new_discretised_symbol
 
     def boundary_value_or_flux(self, symbol, discretised_child):
@@ -451,7 +454,14 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Return boundary value with domain removed
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
-        boundary_value.domain = []
+
+        if sec_pts > 1:
+            if symbol.domain == ["negative particle"]:
+                boundary_value.domain = ["negative electrode"]
+            elif symbol.domain == ["positive particle"]:
+                boundary_value.domain = ["positive electrode"]
+        else:
+            boundary_value.domain = []
 
         return boundary_value
 
