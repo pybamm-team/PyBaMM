@@ -63,9 +63,10 @@ class Ohm(pybamm.SubModel):
             if eps is None:
                 eps = param.epsilon_p
             # liion sigma_p may already account for porosity
-            i_s_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
+            conductivity = param.sigma_p * (1 - eps) ** param.b
+            i_s_p = -conductivity * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_p) + j}
-            rbc = icell / (-param.sigma_p * (1 - eps) ** param.b)
+            rbc = icell / pybamm.boundary_value(-conductivity, "right")
             self.boundary_conditions = {
                 phi_s: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
             }
