@@ -24,7 +24,7 @@ class Discretisation(object):
 
     def __init__(self, mesh=None, spatial_methods=None):
         self._mesh = mesh
-        if mesh == None:
+        if mesh is None:
             self._spatial_methods = {}
         else:
             # Unpack macroscale to the constituent subdomains
