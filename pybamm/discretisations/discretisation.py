@@ -22,17 +22,20 @@ class Discretisation(object):
             domain. The keys correspond to the keys in a pybamm.Model
     """
 
-    def __init__(self, mesh, spatial_methods):
+    def __init__(self, mesh=None, spatial_methods=None):
         self._mesh = mesh
-        # Unpack macroscale to the constituent subdomains
-        if "macroscale" in spatial_methods.keys():
-            method = spatial_methods["macroscale"]
-            spatial_methods["negative electrode"] = method
-            spatial_methods["separator"] = method
-            spatial_methods["positive electrode"] = method
-        self._spatial_methods = {
-            dom: method(mesh) for dom, method in spatial_methods.items()
-        }
+        if mesh == None:
+            self._spatial_methods = {}
+        else:
+            # Unpack macroscale to the constituent subdomains
+            if "macroscale" in spatial_methods.keys():
+                method = spatial_methods["macroscale"]
+                spatial_methods["negative electrode"] = method
+                spatial_methods["separator"] = method
+                spatial_methods["positive electrode"] = method
+            self._spatial_methods = {
+                dom: method(mesh) for dom, method in spatial_methods.items()
+            }
         self._bcs = {}
         self._y_slices = {}
 
