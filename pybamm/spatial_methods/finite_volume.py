@@ -456,9 +456,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
 
         if sec_pts > 1:
-            if symbol.domain == ["negative particle"]:
+            if discretised_child.domain == ["negative particle"]:
                 boundary_value.domain = ["negative electrode"]
-            elif symbol.domain == ["positive particle"]:
+            elif discretised_child.domain == ["positive particle"]:
                 boundary_value.domain = ["positive electrode"]
         else:
             boundary_value.domain = []
