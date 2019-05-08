@@ -85,33 +85,21 @@ class StandardModelTest(object):
         )
         std_out_test.test_all()
 
-    def test_all(self, param=None, disc=None, solver=None, t_eval=None):
+    def test_all(
+        self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False
+    ):
         self.model.check_well_posedness()
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
 
-        # cannot test dfn yet, and lead acid composite voltage
-        # only test the full models
-        if isinstance(
-            self.model, (pybamm.LithiumIonBaseModel, pybamm.LeadAcidBaseModel)
+        if (
+            isinstance(
+                self.model, (pybamm.LithiumIonBaseModel, pybamm.LeadAcidBaseModel)
+            )
+            and not skip_output_tests
         ):
-            # cannot test dfn at moment and Composite fails the voltage test
-            # annoyingly reaction-diffusion is an instance of LeadAcidBaseModel
-            # so need to exclude it here
-            if not (
-                isinstance(
-                    self.model,
-                    (
-                        pybamm.lithium_ion.DFN,
-                        pybamm.lead_acid.Composite,
-                        pybamm.lead_acid.CompositeCapacitance,
-                        pybamm.lead_acid.NewmanTiedemannCapacitance,
-                        pybamm.ReactionDiffusionModel,
-                    ),
-                )
-            ):
-                self.test_outputs()
+            self.test_outputs()
 
     def test_update_parameters(self, param):
         # check if geometry has changed, throw error if so (need to re-discretise)

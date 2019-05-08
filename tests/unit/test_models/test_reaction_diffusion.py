@@ -15,7 +15,7 @@ class TestReactionDiffusionModel(unittest.TestCase):
         model = pybamm.ReactionDiffusionModel()
 
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+        modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
         model = pybamm.ReactionDiffusionModel()

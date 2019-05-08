@@ -122,9 +122,8 @@ class VoltageTests(BaseOutputTest):
             - charge: ocp_n decreases, ocp_p increases
             - off: ocp_n, ocp_p constant
         """
-
-        neg_end_vs_start = self.ocp_n_av.entries[:, -1] - self.ocp_n_av.entries[:, 1]
-        pos_end_vs_start = self.ocp_p_av.entries[:, -1] - self.ocp_p_av.entries[:, 1]
+        neg_end_vs_start = self.ocp_n_av.entries[-1] - self.ocp_n_av.entries[1]
+        pos_end_vs_start = self.ocp_p_av.entries[-1] - self.ocp_p_av.entries[1]
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(-neg_end_vs_start, 0)
             np.testing.assert_array_less(pos_end_vs_start, 0)
@@ -142,7 +141,7 @@ class VoltageTests(BaseOutputTest):
             - off: ocv constant
         """
 
-        end_vs_start = self.ocv_av.entries[:, -1] - self.ocv_av.entries[:, 1]
+        end_vs_start = self.ocv_av.entries[-1] - self.ocv_av.entries[1]
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(end_vs_start, 0)
@@ -157,7 +156,7 @@ class VoltageTests(BaseOutputTest):
             - charge: voltage increases
             - off: voltage constant
         """
-        end_vs_start = self.voltage.entries[:, -1] - self.voltage.entries[:, 1]
+        end_vs_start = self.voltage.entries[-1] - self.voltage.entries[1]
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(end_vs_start, 0)
@@ -180,6 +179,7 @@ class VoltageTests(BaseOutputTest):
             + self.eta_r_av.entries
             + self.eta_e_av.entries
             + self.Delta_Phi_s_av.entries,
+            decimal=3,
         )
 
     def test_all(self):
@@ -201,16 +201,18 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.c_s_n_surf = self.get_var("Negative particle surface concentration")
         self.c_s_p_surf = self.get_var("Positive particle surface concentration")
 
-        # TODO: fix flux bug
-        # self.N_s_n = self.get_var("Negative particle flux")
-        # self.N_s_p = self.get_var("Positive particle flux")
+        self.N_s_n = self.get_var("Negative particle flux")
+        self.N_s_p = self.get_var("Positive particle flux")
 
     def test_concentration_increase_decrease(self):
         """Test all concentrations in negative particles decrease and all
         concentrations in positive particles increase over a discharge."""
 
-        neg_end_vs_start = self.c_s_n.entries[:, -1] - self.c_s_n.entries[:, 1]
-        pos_end_vs_start = self.c_s_p.entries[:, -1] - self.c_s_p.entries[:, 1]
+        t, x_n, r_n = self.c_s_n.t_x_r_sol
+        t, x_p, r_p = self.c_s_p.t_x_r_sol
+
+        neg_end_vs_start = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
+        pos_end_vs_start = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(t[:-1], x_p, r_p)
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(neg_end_vs_start, 0)
@@ -245,9 +247,20 @@ class ParticleConcentrationTests(BaseOutputTest):
 
     def test_fluxes(self):
         """Test that no flux holds in the centre of the particle. Test that surface
-        flux in the negative particles is less than zero and that the flux on the
-        surface of the positive particles is greater than zeros during a discharge."""
-        # TODO: implement after flux bug fix
+        flux in the negative particles is greater than zero and that the flux in the
+        positive particles is less than zero during a discharge."""
+        t, x_n, r_n = self.N_s_n.t_x_r_sol
+        t, x_p, r_p = self.N_s_p.t_x_r_sol
+
+        if self.operating_condition == "discharge":
+            np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n))
+            np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p), 0)
+        if self.operating_condition == "charge":
+            np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n), 0)
+            np.testing.assert_array_less(0, self.N_s_p(t[1:], x_p, r_p))
+        if self.operating_condition == "off":
+            np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
+            np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
 
     def test_all(self):
         self.test_concentration_increase_decrease()
@@ -273,14 +286,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         # self.c_e_s_av = self.get_var("Average separator electrolyte concentration")
         # self.c_e_p_av = self.get_var("Average positive electrolyte concentration")
 
-        # TODO: fix flux bug
         # self.N_e = self.get_var("Electrolyte flux")
-
-        # self.N_e_n = self.get_var("Negative electrolyte flux")
-        # self.N_e_s = self.get_var("Separator electrolyte flux")
-        # self.N_e_p = self.get_var("Positive electrolyte flux")
-
-        # self.N_e_hat = self.get_var("Reduced cation flux")
+        self.N_e_hat = self.get_var("Reduced cation flux")
 
     def test_concentration_limit(self):
         "Test that the electrolyte concentration is always greater than zero."
@@ -326,7 +333,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         """Test that the internal boundary fluxes are continuous. Test current
         collector fluxes are zero."""
 
-        # TODO: fix flux bug
+        # TODO: fix extrapolation to test boundary values
 
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,
@@ -363,8 +370,9 @@ class PotentialTests(BaseOutputTest):
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
         average negative electrode potential is less than or equal to zero."""
+        t, x, _ = self.phi_s_n.t_x_r_sol
 
-        np.testing.assert_array_almost_equal(self.phi_s_n.entries[0], 0)
+        np.testing.assert_array_almost_equal(self.phi_s_n(t, x=0), 0, decimal=5)
 
     def test_positive_electrode_potential_profile(self):
         """Test average positive electrode potential is less than the positive electrode
