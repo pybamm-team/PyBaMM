@@ -42,8 +42,8 @@ class Standard(pybamm.SubModel):
             )
 
         if c.domain[0] == "negative particle":
-            N = -(1 / param.C_n) * pybamm.grad(c)
-            self.rhs = {c: -pybamm.div(N)}
+            N = -pybamm.grad(c)
+            self.rhs = {c: -(1 / param.C_n) * pybamm.div(N)}
             self.algebraic = {}
             self.initial_conditions = {c: param.c_n_init}
             self.boundary_conditions = {
@@ -51,8 +51,8 @@ class Standard(pybamm.SubModel):
             }
             self.variables = self.get_variables(c, N, broadcast)
         elif c.domain[0] == "positive particle":
-            N = -(1 / param.C_p) * pybamm.grad(c)
-            self.rhs = {c: -pybamm.div(N)}
+            N = -pybamm.grad(c)
+            self.rhs = {c: -(1 / param.C_p) * pybamm.div(N)}
             self.algebraic = {}
             self.initial_conditions = {c: param.c_p_init}
             self.boundary_conditions = {

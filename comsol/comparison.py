@@ -32,7 +32,7 @@ time = time / tau_eval
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 30, var.x_s: 10, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 6, var.r_p: 6}
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
@@ -41,7 +41,8 @@ disc.process_model(model)
 
 # solve model
 solver = model.default_solver
-solver.solve(model, time)  # use time from the comsol simulation (doesn't really matter)
+t = np.linspace(0, 2, 500)
+solver.solve(model, t)  # use time from the comsol simulation (doesn't really matter)
 
 # extract the voltage
 voltage = pybamm.ProcessedVariable(
@@ -54,8 +55,11 @@ voltage_sol = voltage(solver.t)
 time = time * tau_eval / 60 / 60
 t = solver.t * tau_eval / 60 / 60
 
-# plt.plot(time, comsol_voltage, "r")
-# plt.plot(t, voltage_sol, ":b")
-# plt.legend(["comsol", "pybamm"])
-# plt.show()
+plt.plot(time, comsol_voltage, "r")
+plt.plot(t, voltage_sol, ":b")
+plt.legend(["comsol", "pybamm"])
+plt.show()
 
+quick_plot = pybamm.QuickPlot(model, param, mesh, solver)
+
+quick_plot.dynamic_plot()
