@@ -409,43 +409,56 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_discretised_symbol
 
-    def boundary_value(self, symbol, discretised_symbol, side):
+    def boundary_value_or_flux(self, symbol, discretised_child):
         """
-        Uses linear extrapolation to get the boundary value of a variable in the
+        Uses linear extrapolation to get the boundary value or flux of a variable in the
         Finite Volume Method.
 
         See :meth:`pybamm.SpatialMethod.boundary_value`
         """
 
         # Find the number of submeshes
-        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        submesh_list = self.mesh.combine_submeshes(*discretised_child.domain)
         if isinstance(submesh_list[0].npts, list):
             NotImplementedError("Can only take in 1D primary directions")
 
         prim_pts = submesh_list[0].npts
         sec_pts = len(submesh_list)
 
-        # Create submatrix to compute boundary values
-        if side == "left":
-            sub_matrix = csr_matrix(
-                ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, prim_pts)
-            )
-        elif side == "right":
-            sub_matrix = csr_matrix(
-                ([-0.5, 1.5], ([0, 0], [prim_pts - 2, prim_pts - 1])),
-                shape=(1, prim_pts),
-            )
+        # Create submatrix to compute boundary values or fluxes
+        if isinstance(symbol, pybamm.BoundaryValue):
+            if symbol.side == "left":
+                sub_matrix = csr_matrix(
+                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, prim_pts)
+                )
+            elif symbol.side == "right":
+                sub_matrix = csr_matrix(
+                    ([-0.5, 1.5], ([0, 0], [prim_pts - 2, prim_pts - 1])),
+                    shape=(1, prim_pts),
+                )
+        elif isinstance(symbol, pybamm.BoundaryFlux):
+            if symbol.side == "left":
+                dx = submesh_list[0].d_nodes[0]
+                sub_matrix = (1 / dx) * csr_matrix(
+                    ([-1, 1], ([0, 0], [0, 1])), shape=(1, prim_pts)
+                )
+            elif symbol.side == "right":
+                dx = submesh_list[0].d_nodes[-1]
+                sub_matrix = (1 / dx) * csr_matrix(
+                    ([-1, 1], ([0, 0], [prim_pts - 2, prim_pts - 1])),
+                    shape=(1, prim_pts),
+                )
 
         # Generate full matrix from the submatrix
         matrix = kron(eye(sec_pts), sub_matrix)
 
         # Return boundary value with domain removed
-        boundary_value = pybamm.Matrix(matrix) @ discretised_symbol
+        boundary_value = pybamm.Matrix(matrix) @ discretised_child
 
         if sec_pts > 1:
-            if symbol.domain == ["negative particle"]:
+            if discretised_child.domain == ["negative particle"]:
                 boundary_value.domain = ["negative electrode"]
-            elif symbol.domain == ["positive particle"]:
+            elif discretised_child.domain == ["positive particle"]:
                 boundary_value.domain = ["positive electrode"]
         else:
             boundary_value.domain = []
@@ -541,7 +554,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             return pybamm.Matrix(matrix) @ array
 
         # If discretised_symbol evaluates to number there is no need to average
-        # NOTE: Doing this check every time might be slow?
         if discretised_symbol.evaluates_to_number():
             return discretised_symbol
         else:

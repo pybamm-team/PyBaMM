@@ -265,9 +265,7 @@ class TestDiscretise(unittest.TestCase):
         rhs = {c: pybamm.div(N)}
         initial_conditions = {c: pybamm.Scalar(3)}
         variables = {"c_squared": c ** 2}
-        boundary_conditions = {
-            N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
-        }
+        boundary_conditions = {c.id: {"left": (0, "Neumann"), "right": (0, "Neumann")}}
 
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -341,7 +339,7 @@ class TestDiscretise(unittest.TestCase):
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(3)}
         model.boundary_conditions = {
-            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
         }
         model.variables = {"c": c, "N": N}
 
@@ -388,9 +386,9 @@ class TestDiscretise(unittest.TestCase):
             S: pybamm.Scalar(8),
         }
         model.boundary_conditions = {
-            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)},
-            q: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)},
-            p: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)},
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            T: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            S: {"left": (0, "Neumann"), "right": (0, "Neumann")},
         }
         model.variables = {"ST": S * T}
 
@@ -447,7 +445,7 @@ class TestDiscretise(unittest.TestCase):
         model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
 
         model.boundary_conditions = {
-            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
         }
         model.variables = {"c": c, "N": N, "d": d}
 
@@ -531,7 +529,9 @@ class TestDiscretise(unittest.TestCase):
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(3)}
 
-        model.boundary_conditions = {N: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         model.check_well_posedness()
 
         # create discretisation
@@ -557,7 +557,9 @@ class TestDiscretise(unittest.TestCase):
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(3)}
-        model.boundary_conditions = {N: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         model.check_well_posedness()
 
         # create discretisation

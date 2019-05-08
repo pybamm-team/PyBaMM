@@ -218,8 +218,9 @@ class ParameterValues(dict):
                 new_symbol = pybamm.Function(symbol.func, new_child)
             elif isinstance(symbol, pybamm.Integral):
                 new_symbol = symbol.__class__(new_child, symbol.integration_variable)
-            elif isinstance(symbol, pybamm.BoundaryValue):
-                new_symbol = pybamm.BoundaryValue(new_child, symbol.side)
+            elif isinstance(symbol, pybamm.BoundaryOperator):
+                # BoundaryValue or BoundaryFlux
+                new_symbol = symbol.__class__(new_child, symbol.side)
             else:
                 new_symbol = symbol.__class__(new_child)
             # ensure domain remains the same

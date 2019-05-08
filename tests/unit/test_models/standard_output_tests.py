@@ -253,14 +253,17 @@ class ParticleConcentrationTests(BaseOutputTest):
         t, x_p, r_p = self.N_s_p.t_x_r_sol
 
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n))
-            np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p), 0)
+            np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
+            np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
         if self.operating_condition == "charge":
-            np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n), 0)
-            np.testing.assert_array_less(0, self.N_s_p(t[1:], x_p, r_p))
+            np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n[1:]), 0)
+            np.testing.assert_array_less(0, self.N_s_p(t[1:], x_p, r_p[1:]))
         if self.operating_condition == "off":
             np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
             np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
+
+        np.testing.assert_array_equal(0, self.N_s_n(t, x_n, r_n[0]))
+        np.testing.assert_array_equal(0, self.N_s_p(t, x_p, r_p[0]))
 
     def test_all(self):
         self.test_concentration_increase_decrease()
@@ -332,8 +335,9 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
     def test_fluxes(self):
         """Test that the internal boundary fluxes are continuous. Test current
         collector fluxes are zero."""
-
-        # TODO: fix extrapolation to test boundary values
+        t, x, _ = self.N_e_hat.t_x_r_sol
+        np.testing.assert_array_equal(self.N_e_hat(t, x[0]), 0)
+        np.testing.assert_array_equal(self.N_e_hat(t, x[-1]), 0)
 
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,

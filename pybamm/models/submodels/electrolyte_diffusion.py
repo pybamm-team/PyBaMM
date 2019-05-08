@@ -145,6 +145,11 @@ class StefanMaxwell(pybamm.SubModel):
             c_e_s = pybamm.Broadcast(c_e, domain=["separator"])
             c_e_p = pybamm.Broadcast(c_e, domain=["positive electrode"])
             c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        if N_e.domain == []:
+            N_e_n = pybamm.Broadcast(N_e, domain=["negative electrode"])
+            N_e_s = pybamm.Broadcast(N_e, domain=["separator"])
+            N_e_p = pybamm.Broadcast(N_e, domain=["positive electrode"])
+            N_e = pybamm.Concatenation(N_e_n, N_e_s, N_e_p)
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
         return {

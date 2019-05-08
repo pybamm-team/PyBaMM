@@ -155,39 +155,39 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def boundary_value(self, symbol, discretised_symbol, side):
+    def boundary_value_or_flux(self, symbol, discretised_child):
         """
-        Returns the boundary value using the approriate expression for the
+        Returns the boundary value or flux using the approriate expression for the
         spatial method. To do this, we create a sparse vector 'bv_vector' that extracts
         either the first (for side="left") or last (for side="right") point from
-        'discretised_symbol'.
+        'discretised_child'.
 
         Parameters
         -----------
         symbol: :class:`pybamm.Symbol`
-            The symbol to which is being integrated
-        discretised_symbol : :class:`pybamm.StateVector`
+            The boundary value or flux symbol
+        discretised_child : :class:`pybamm.StateVector`
             The discretised variable from which to calculate the boundary value
-        side : str
-            Which side to take the boundary value on ("left" or "right")
 
         Returns
         -------
         :class:`pybamm.Variable`
             The variable representing the surface value.
         """
-        n = sum(self.mesh[dom][0].npts for dom in symbol.domain)
-        if side == "left":
+        n = sum(self.mesh[dom][0].npts for dom in discretised_child.domain)
+        if isinstance(symbol, pybamm.BoundaryFlux):
+            raise TypeError("Cannot process BoundaryFlux in base spatial method")
+        if symbol.side == "left":
             # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
             # (row[i], col[i]) for each index of data. Here we just want a single point
             # with value 1 at (0,0).
             left_vector = coo_matrix(([1], ([0], [0])), shape=(1, n))
             bv_vector = pybamm.Matrix(left_vector)
-        elif side == "right":
+        elif symbol.side == "right":
             # as above, but now we want a single point with value 1 at (0, n-1)
             right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
             bv_vector = pybamm.Matrix(right_vector)
-        out = bv_vector @ discretised_symbol
+        out = bv_vector @ discretised_child
         # boundary value removes domain
         out.domain = []
         return out
