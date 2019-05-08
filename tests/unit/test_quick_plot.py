@@ -36,6 +36,8 @@ class TestQuickPlot(unittest.TestCase):
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
 
+        quick_plot.update(0.01)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
