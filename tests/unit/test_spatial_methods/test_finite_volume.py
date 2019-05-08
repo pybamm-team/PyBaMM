@@ -197,6 +197,12 @@ class TestFiniteVolume(unittest.TestCase):
             TypeError, "discretised_symbol must be a StateVector or Concatenation"
         ):
             pybamm.FiniteVolume(mesh).add_ghost_nodes(var, pybamm.Scalar(1), None)
+        bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
+        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+            pybamm.FiniteVolume(mesh).add_ghost_nodes(var, discretised_symbol, bcs)
+        bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
+        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
+            pybamm.FiniteVolume(mesh).add_ghost_nodes(var, discretised_symbol, bcs)
 
     def test_add_ghost_nodes_concatenation(self):
         # Set up
