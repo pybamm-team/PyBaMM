@@ -32,9 +32,7 @@ C_rate = abs(I_typ / Q)
 n_electrodes_parallel = pybamm.Parameter(
     "Number of electrodes connected in parallel to make a cell"
 )
-i_typ = pybamm.Function(
-    abs_non_zero, (I_typ / (n_electrodes_parallel * pybamm.geometric_parameters.A_cc))
-)
+i_typ = pybamm.Function(abs_non_zero, (I_typ / (n_electrodes_parallel)))
 voltage_low_cut_dimensional = pybamm.Parameter("Lower voltage cut-off")
 voltage_high_cut_dimensional = pybamm.Parameter("Upper voltage cut-off")
 current_with_time = pybamm.FunctionParameter(
