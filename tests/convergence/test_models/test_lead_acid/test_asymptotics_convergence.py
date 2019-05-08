@@ -74,9 +74,6 @@ class TestAsymptoticConvergence(unittest.TestCase):
             t = t_full[: np.min([len(t_loqs), len(t_comp), len(t_full)])]
             loqs_error = np.max(np.abs(voltage_loqs(t) - voltage_full(t)))
             comp_error = np.max(np.abs(voltage_comp(t) - voltage_full(t)))
-            import ipdb
-
-            ipdb.set_trace()
             return (loqs_error, comp_error)
 
         # Get errors

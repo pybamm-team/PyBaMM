@@ -46,7 +46,7 @@ class SpatialMethod:
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        return pybamm.Vector(symbol_mesh[0].nodes)
+        return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
     def broadcast(self, symbol, domain):
         """
