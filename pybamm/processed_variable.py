@@ -122,6 +122,14 @@ class ProcessedVariable(object):
         else:
             raise ValueError("variable shape does not match domain shape")
 
+        # add points outside domain for extrapolation to boundaries
+        extrap_space_left = np.array([2 * space[0] - space[1]])
+        extrap_space_right = np.array([2 * space[-1] - space[-2]])
+        space = np.concatenate([extrap_space_left, space, extrap_space_right])
+        extrap_entries_left = 2 * entries[0] - entries[1]
+        extrap_entries_right = 2 * entries[-1] - entries[-2]
+        entries = np.vstack([extrap_entries_left, entries, extrap_entries_right])
+
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 2
@@ -136,6 +144,7 @@ class ProcessedVariable(object):
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
+
         self._interpolation_function = interp.interp2d(
             self.t_sol, space, entries, kind=self.interp_kind
         )

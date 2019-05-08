@@ -36,10 +36,17 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = np.ones_like(x_sol)[:, np.newaxis] * np.linspace(0, 5)
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
-        np.testing.assert_array_equal(processed_var.entries, y_sol)
+        np.testing.assert_array_equal(processed_var.entries[1:-1], y_sol)
+        np.testing.assert_array_equal(processed_var(t_sol, x_sol), y_sol)
         processed_eqn = pybamm.ProcessedVariable(eqn_sol, t_sol, y_sol, mesh=disc.mesh)
         np.testing.assert_array_equal(
-            processed_eqn.entries, t_sol * y_sol + x_sol[:, np.newaxis]
+            processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
+        )
+
+        # Test extrapolation
+        np.testing.assert_array_equal(processed_var.entries[0], 2 * y_sol[0] - y_sol[1])
+        np.testing.assert_array_equal(
+            processed_var.entries[1], 2 * y_sol[-1] - y_sol[-2]
         )
 
     def test_processed_variable_3D(self):
@@ -164,9 +171,7 @@ class TestProcessedVariable(unittest.TestCase):
         modeltest.test_all()
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
         processed_vars = pybamm.post_process_variables(model.variables, t_sol, y_sol)
-        np.testing.assert_array_almost_equal(
-            processed_vars["c"].entries, np.exp(-t_sol)
-        )
+        np.testing.assert_array_almost_equal(processed_vars["c"](t_sol), np.exp(-t_sol))
 
         # with space
         # set up and solve model
@@ -188,7 +193,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         # test
         np.testing.assert_array_almost_equal(
-            processed_vars["c"].entries,
+            processed_vars["c"](t_sol, x_sol),
             np.ones_like(x_sol)[:, np.newaxis] * np.exp(-t_sol),
         )
 
