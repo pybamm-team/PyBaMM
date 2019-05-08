@@ -79,10 +79,13 @@ class TestAsymptoticConvergence(unittest.TestCase):
             t = t_full[: np.min([len(t_loqs), len(t_comp), len(t_full)])]
             loqs_error = np.max(np.abs(voltage_loqs(t) - voltage_full(t)))
             comp_error = np.max(np.abs(voltage_comp(t) - voltage_full(t)))
+            import ipdb
+
+            ipdb.set_trace()
             return (loqs_error, comp_error)
 
         # Get errors
-        currents = 0.5 / (2 ** np.arange(3))
+        currents = 0.005 / (2 ** np.arange(3))
         errs = np.array([get_l2_error(current) for current in currents])
         loqs_errs, comp_errs = [np.array(err) for err in zip(*errs)]
         # Get rates: expect linear convergence for loqs, quadratic for composite
