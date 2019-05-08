@@ -46,7 +46,7 @@ class Standard(pybamm.SubModel):
             self.rhs = {c: -(1 / param.C_n) * pybamm.div(N)}
             self.algebraic = {}
             self.initial_conditions = {c: param.c_n_init}
-            rbc = -param.C_n * j / param.a_n
+            rbc = -param.C_n ** 2 * j / param.a_n
             self.boundary_conditions = {
                 c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
             }
@@ -56,7 +56,7 @@ class Standard(pybamm.SubModel):
             self.rhs = {c: -(1 / param.C_p) * pybamm.div(N)}
             self.algebraic = {}
             self.initial_conditions = {c: param.c_p_init}
-            rbc = -param.C_p * j / param.a_p / param.gamma_p
+            rbc = -param.C_p ** 2 * j / param.a_p / param.gamma_p
             self.boundary_conditions = {
                 c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
             }
