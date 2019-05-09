@@ -6,19 +6,20 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class ReactionDiffusionModel(pybamm.LeadAcidBaseModel):
+class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
     """Reaction-diffusion model.
 
-    **Extends**: :class:`pybamm.BaseModel`
+    **Extends**: :class:`pybamm.StandardBatteryBaseModel`
 
     """
 
     def __init__(self):
         super().__init__()
+        self.variables = {}
+
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
-        self.variables = {}
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -61,3 +62,10 @@ class ReactionDiffusionModel(pybamm.LeadAcidBaseModel):
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p, pos)
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
+
+        "-----------------------------------------------------------------------------"
+        "Defaults and Solver Conditions"
+        # default geometry
+        self.default_parameter_values = (
+            pybamm.LeadAcidBaseModel().default_parameter_values
+        )

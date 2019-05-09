@@ -39,14 +39,14 @@ class TestUpdateParameters(unittest.TestCase):
         model1 = pybamm.ReactionDiffusionModel()
         modeltest1 = tests.StandardModelTest(model1)
         t_eval = np.linspace(0, 0.9)
-        modeltest1.test_all(t_eval=t_eval, skip_output_tests=True)
+        modeltest1.test_all(t_eval=t_eval)
         Y1 = modeltest1.solver.y
 
         # double initial conditions
         model2 = pybamm.ReactionDiffusionModel()
         # process and solve the model a first time
         modeltest2 = tests.StandardModelTest(model2)
-        modeltest2.test_all(skip_output_tests=True)
+        modeltest2.test_all()
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
             base_parameters=model2.default_parameter_values,
@@ -64,7 +64,7 @@ class TestUpdateParameters(unittest.TestCase):
         model1 = pybamm.ReactionDiffusionModel()
         modeltest1 = tests.StandardModelTest(model1)
         t_eval = np.linspace(0, 0.9)
-        modeltest1.test_all(t_eval=t_eval, skip_output_tests=True)
+        modeltest1.test_all(t_eval=t_eval)
 
         T1, Y1 = modeltest1.solver.t, modeltest1.solver.y
 
@@ -92,9 +92,7 @@ class TestUpdateParameters(unittest.TestCase):
         )
         # nb: need to be careful make parameters a reasonable size
         modeltest2 = tests.StandardModelTest(model2)
-        modeltest2.test_all(
-            param=parameter_values_update, t_eval=t_eval, skip_output_tests=True
-        )
+        modeltest2.test_all(param=parameter_values_update, t_eval=t_eval)
         T2, Y2 = modeltest2.solver.t, modeltest2.solver.y
         # results should be different
         for idx in range(len(T1)):
