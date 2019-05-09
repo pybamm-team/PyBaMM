@@ -114,7 +114,9 @@ For example, we might wish to output the terminal voltage which is given by
 
     self.variables = {"Terminal voltage [V]": V}
 
-Note that we indicate that the quanitity is dimensional by including the dimensions, Volts in square brackets. We do this to distinguish between dimensional and dimensionless outputs which may otherwise share the same name. 
+Note that we indicate that the quanitity is dimensional by including the dimensions, Volts in square brackets. We do this to distinguish between dimensional and dimensionless outputs which may otherwise share the same name.
+
+Note that if your model inherits from :class:`pybamm.StandardBatteryBaseModel`, then there is a standard set of output parameters which is enforced to ensure consistency across models so that they can be easily tested and compared.
 
 
 Events
