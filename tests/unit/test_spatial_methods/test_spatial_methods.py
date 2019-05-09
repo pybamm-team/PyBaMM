@@ -20,6 +20,10 @@ class TestSpatialMethod(unittest.TestCase):
             spatial_method.integral(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.indefinite_integral(None, None, None)
+        child = pybamm.Symbol("sym", domain=["negative electrode"])
+        symbol = pybamm.BoundaryFlux(child, "left")
+        with self.assertRaisesRegex(TypeError, "Cannot process BoundaryFlux"):
+            spatial_method.boundary_value_or_flux(symbol, child)
 
 
 if __name__ == "__main__":
