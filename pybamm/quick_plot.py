@@ -56,15 +56,15 @@ class QuickPlot(object):
         else:
             raise ValueError("must provide the same number of models and solutions")
 
-        # Time parameters
-        self.ts = [solver.t for solver in solvers]
-        self.min_t = np.min([t[0] for t in self.ts])
-        self.max_t = np.max([t[-1] for t in self.ts])
-
         # Scales
         vars = models[0].variables
         self.x_scale = (vars["x [m]"] / vars["x"]).evaluate()[-1]
         self.time_scale = (vars["Time [h]"] / vars["Time"]).evaluate(t=1)
+
+        # Time parameters
+        self.ts = [solver.t for solver in solvers]
+        self.min_t = np.min([t[0] for t in self.ts]) * self.time_scale
+        self.max_t = np.max([t[-1] for t in self.ts]) * self.time_scale
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
@@ -130,12 +130,7 @@ class QuickPlot(object):
             if variable[0].dimensions == 1:
                 y_min = np.min([ax_min(v(self.ts[i])) for i, v in enumerate(variable)])
                 y_max = np.max([ax_max(v(self.ts[i])) for i, v in enumerate(variable)])
-                self.axis[name] = [
-                    self.min_t * self.time_scale,
-                    self.max_t * self.time_scale,
-                    y_min,
-                    y_max,
-                ]
+                self.axis[name] = [self.min_t, self.max_t, y_min, y_max]
             elif variable[0].dimensions == 2:
                 x = self.x_values[name]
                 x_scaled = x * self.x_scale
@@ -155,6 +150,7 @@ class QuickPlot(object):
         t : float
             Time at which to plot.
         """
+        t /= self.time_scale
         self.fig, self.ax = plt.subplots(figsize=(15, 8))
         plt.tight_layout()
         plt.subplots_adjust(left=-0.1)
@@ -195,7 +191,11 @@ class QuickPlot(object):
                         label=labels[i],
                     )
                     y_min, y_max = self.axis[name][2:]
-                    self.time_lines[name], = plt.plot([t, t], [y_min, y_max], "k--")
+                    self.time_lines[name], = plt.plot(
+                        [t * self.time_scale, t * self.time_scale],
+                        [y_min, y_max],
+                        "k--",
+                    )
         self.fig.legend(loc="lower right")
 
     def dynamic_plot(self, testing=False):
@@ -224,11 +224,12 @@ class QuickPlot(object):
         Update the plot in self.plot() with values at new time
         """
         t = self.sfreq.val
+        t_dimensionless = t / self.time_scale
         for var, plot in self.plots.items():
             if self.variables[var][0].dimensions == 2:
                 x = self.x_values[var]
                 for i in range(self.num_models):
-                    plot[i].set_ydata(self.variables[var][i](t, x))
+                    plot[i].set_ydata(self.variables[var][i](t_dimensionless, x))
             else:
                 self.time_lines[var].set_xdata([t])
 
