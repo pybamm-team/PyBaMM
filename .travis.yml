@@ -34,7 +34,7 @@ matrix:
           addons:
             apt:
               packages:
-              - python3.5-dev
+                - python3.5-dev
           env:
             - PYBAMM_UNIT=true
           if: type != cron
@@ -42,7 +42,7 @@ matrix:
           addons:
             apt:
               packages:
-              - python3.6-dev
+                - python3.6-dev
           env:
             - PYBAMM_UNIT=true
           if: type != cron
@@ -69,7 +69,7 @@ matrix:
           addons:
             apt:
               packages:
-              - python3.6-dev
+                - python3.6-dev
           env:
             - PYBAMM_COVER=true
           if: type != cron
@@ -78,7 +78,7 @@ matrix:
           addons:
             apt:
               packages:
-              - python3.6-dev
+                - python3.6-dev
           if: type == cron
 
 # Install dependencies
