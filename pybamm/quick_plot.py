@@ -109,6 +109,9 @@ class QuickPlot(object):
                 self.x_values[var] = mesh.combine_submeshes(*domain)[0].edges
             self.subplot_positions[var] = (n, m, k + 1)
 
+        # Set labels
+        self.labels = [model.name for model in models]
+
         # Don't allow 3D variables
         if self.variables[var][0].dimensions == 3:
             raise NotImplementedError("cannot plot 3D variables")
@@ -147,27 +150,36 @@ class QuickPlot(object):
         self.plots = {}
         self.time_lines = {}
 
-        for name, variable in self.variables.items():
+        for k, name in enumerate(self.variables.keys()):
+            variable = self.variables[name]
             plt.subplot(*self.subplot_positions[name])
-            plt.ylabel(name)
+            plt.ylabel(name, fontsize=15)
             plt.axis(self.axis[name])
             self.plots[name] = [None] * self.num_models
+            # Set labels
+            if k == 0:
+                labels = self.labels
+            else:
+                labels = [None] * len(self.labels)
             if variable[0].dimensions == 2:
                 # 2D plot: plot as a function of x at time t
-                plt.xlabel("Position")
+                plt.xlabel("Position", fontsize=15)
                 x_value = self.x_values[name]
                 for i in range(self.num_models):
                     self.plots[name][i], = plt.plot(
-                        x_value, variable[i](t, x_value), lw=2
+                        x_value, variable[i](t, x_value), lw=2, label=labels[i]
                     )
             else:
                 # 1D plot: plot as a function of time, indicating time t
-                plt.xlabel("Time")
+                plt.xlabel("Time", fontsize=15)
                 for i in range(self.num_models):
                     full_t = self.ts[i]
-                    self.plots[name][i], = plt.plot(full_t, variable[i](full_t), lw=2)
+                    self.plots[name][i], = plt.plot(
+                        full_t, variable[i](full_t), lw=2, label=labels[i]
+                    )
                     y_min, y_max = self.axis[name][2:]
                     self.time_lines[name], = plt.plot([t, t], [y_min, y_max], "k--")
+        self.fig.legend(loc="right")
 
     def dynamic_plot(self, testing=False):
         """

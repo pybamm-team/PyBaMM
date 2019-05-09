@@ -20,6 +20,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.name = "Newman-Tiedemann model"
 
         "-----------------------------------------------------------------------------"
         "Parameters"

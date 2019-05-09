@@ -22,7 +22,7 @@ class Composite(pybamm.LeadAcidBaseModel):
     def __init__(self):
         # Update own model with submodels
         super().__init__()
-
+        self.name = "Composite model"
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
