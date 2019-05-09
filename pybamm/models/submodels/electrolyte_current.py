@@ -318,7 +318,9 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         # Equations (algebraic only)
         self.algebraic = {phi_e: pybamm.div(i_e) - j}
-        self.boundary_conditions = {i_e: {"left": 0, "right": 0}}
+        self.boundary_conditions = {
+            phi_e: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         self.initial_conditions = {phi_e: -param.U_n(param.c_n_init)}
         # no differential equations
         self.rhs = {}
@@ -372,12 +374,23 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
             i_e = (
                 param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
-            ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e + pybamm.grad(delta_phi))
+            ) * ((param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi))
             if self.use_capacitance:
                 self.rhs = {delta_phi: 1 / param.C_dl_n * (pybamm.div(i_e) - j)}
             else:
                 self.algebraic = {delta_phi: pybamm.div(i_e) - j}
-            self.boundary_conditions = {i_e: {"left": 0, "right": i_cell}}
+            c_e_flux_right = pybamm.BoundaryFlux(c_e, "right")
+            rbc = (
+                i_cell
+                / pybamm.BoundaryValue(
+                    param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e,
+                    "right",
+                )
+            ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "right") * c_e_flux_right
+            self.boundary_conditions = {
+                delta_phi: {"left": (0, "Neumann"), "right": (rbc, "Neumann")},
+                c_e: {"left": (0, "Neumann"), "right": (c_e_flux_right, "Neumann")},
+            }
             self.initial_conditions = {delta_phi: param.U_n(param.c_n_init)}
             self.variables = {
                 "Negative electrode potential difference": delta_phi,
@@ -390,12 +403,23 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
             i_e = (
                 param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
-            ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e + pybamm.grad(delta_phi))
+            ) * ((param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi))
             if self.use_capacitance:
                 self.rhs = {delta_phi: 1 / param.C_dl_p * (pybamm.div(i_e) - j)}
             else:
                 self.algebraic = {delta_phi: pybamm.div(i_e) - j}
-            self.boundary_conditions = {i_e: {"left": i_cell, "right": 0}}
+            c_e_flux_left = pybamm.BoundaryFlux(c_e, "left")
+            lbc = (
+                i_cell
+                / pybamm.BoundaryValue(
+                    param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e,
+                    "left",
+                )
+            ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux_left
+            self.boundary_conditions = {
+                delta_phi: {"left": (lbc, "Neumann"), "right": (0, "Neumann")},
+                c_e: {"left": (c_e_flux_left, "Neumann"), "right": (0, "Neumann")},
+            }
             self.initial_conditions = {delta_phi: param.U_p(param.c_p_init)}
             self.variables = {
                 "Positive electrode potential difference": delta_phi,

@@ -160,6 +160,12 @@ class TestUnaryOperators(unittest.TestCase):
         un5 = pybamm.UnaryOperator("test", d)
         self.assertNotEqual(un1.id, un5.id)
 
+    def test_boundary_operators(self):
+        a = pybamm.Symbol("a")
+        boundary_a = pybamm.BoundaryOperator("boundary", a, "right")
+        self.assertEqual(boundary_a.side, "right")
+        self.assertEqual(boundary_a.child.id, a.id)
+
     def test_boundary_value(self):
         a = pybamm.Symbol("a")
         boundary_a = pybamm.boundary_value(a, "right")
