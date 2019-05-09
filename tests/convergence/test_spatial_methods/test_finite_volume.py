@@ -18,7 +18,10 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(np.sin(1) ** 2)}
+            var.id: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(np.sin(1) ** 2), "Dirichlet"),
+            }
         }
 
         # Function for convergence testing
@@ -68,15 +71,11 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             combined_submesh = mesh.combine_submeshes(*whole_cell)
             x = combined_submesh[0].nodes
-            x_edge = combined_submesh[0].edges[1:-1]
+            x_edge = combined_submesh[0].edges
 
             # Define flux and bcs
             N = pybamm.Vector(x_edge ** 2 * np.cos(x_edge), domain=whole_cell)
             div_eqn = pybamm.div(N)
-            boundary_conditions = {
-                N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(np.cos(1))}
-            }
-            disc._bcs = boundary_conditions
             # Define exact solutions
             # N = x**2 * cos(x) --> dNdx = x*(2cos(x) - xsin(x))
             div_exact = x * (2 * np.cos(x) - x * np.sin(x))
@@ -107,17 +106,13 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
             r = submesh[0].nodes
-            r_edge = submesh[0].edges[1:-1]
+            r_edge = submesh[0].edges
 
             # Define flux and bcs
             N = pybamm.Vector(
                 r_edge ** 2 * np.sin(r_edge), domain=["negative particle"]
             )
             div_eqn = pybamm.div(N)
-            boundary_conditions = {
-                N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(np.sin(1))}
-            }
-            disc._bcs = boundary_conditions
             # Define exact solutions
             # N = r**3 --> div(N) = 5 * r**2
             div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
@@ -148,15 +143,11 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
             r = submesh[0].nodes
-            r_edge = submesh[0].edges[1:-1]
+            r_edge = submesh[0].edges
 
             # Define flux and bcs
             N = pybamm.Vector(r_edge * np.sin(r_edge), domain=["negative particle"])
             div_eqn = pybamm.div(N)
-            boundary_conditions = {
-                N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(np.sin(1))}
-            }
-            disc._bcs = boundary_conditions
             # Define exact solutions
             # N = r*sin(r) --> div(N) = 3*sin(r) + r*cos(r)
             div_exact = 3 * np.sin(r) + r * np.cos(r)
@@ -187,17 +178,13 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
             r = submesh[0].nodes
-            r_edge = submesh[0].edges[1:-1]
+            r_edge = submesh[0].edges
 
             N = pybamm.Matrix(
                 np.kron(np.ones(len(submesh)), r_edge ** 2 * np.sin(r_edge)),
                 domain=["negative particle"],
             )
             div_eqn = pybamm.div(N)
-            boundary_conditions = {
-                N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(np.sin(1))}
-            }
-            disc._bcs = boundary_conditions
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
             div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
@@ -228,7 +215,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh_r = mesh["negative particle"]
             r = submesh_r[0].nodes
-            r_edge = submesh_r[0].edges[1:-1]
+            r_edge = submesh_r[0].edges
             x = pybamm.Vector(mesh["negative electrode"][0].nodes)
 
             N = pybamm.Matrix(
@@ -236,13 +223,6 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
                 domain=["negative particle"],
             )
             div_eqn = pybamm.div(N)
-            boundary_conditions = {
-                N.id: {
-                    "left": pybamm.Scalar(0) * x,
-                    "right": pybamm.Scalar(np.sin(1)) * x,
-                }
-            }
-            disc._bcs = boundary_conditions
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
             div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
