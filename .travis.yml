@@ -33,18 +33,34 @@ matrix:
         - python: "3.5"
           addons:
             apt:
+              sources:
+                - deadsnakes
               packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
                 - python3.5-dev
           env:
             - PYBAMM_UNIT=true
+            - PYBAMM_BOOKS=true
           if: type != cron
         - python: "3.6"
           addons:
             apt:
+              sources:
+                - deadsnakes
               packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
                 - python3.6-dev
           env:
             - PYBAMM_UNIT=true
+            - PYBAMM_BOOKS=true
           if: type != cron
         #- python: "3.7"
         #  env:
@@ -58,17 +74,46 @@ matrix:
         #   if: type != cron
         # Docs, style and cover checking, latest Python version only
         - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
           env:
             - PYBAMM_DOCS=true
           if: type != cron
         - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
           env:
             - PYBAMM_STYLE=true
           if: type != cron
         - python: "3.6"
           addons:
             apt:
+              sources:
+                - deadsnakes
               packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
                 - python3.6-dev
           env:
             - PYBAMM_COVER=true
@@ -77,7 +122,14 @@ matrix:
         - python: "3.6"
           addons:
             apt:
+              sources:
+                - deadsnakes
               packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
                 - python3.6-dev
           if: type == cron
 
@@ -106,7 +158,7 @@ script:
   - if [[ $PYBAMM_DOCS == true ]]; then python run-tests.py --doctest; fi;
   - if [[ $PYBAMM_STYLE == true ]]; then python -m flake8; fi;
   - if [[ $PYBAMM_COVER == true ]]; then coverage run run-tests.py --nosub; fi;
-  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then travis_wait 120 python run-tests.py --books; fi;
+  - if [[ $PYBAMM_BOOKS == true ]]; then travis_wait 120 python run-tests.py --books; fi;
 
 after_success:
   - if [[ $PYBAMM_COVER == true ]]; then codecov; fi;
