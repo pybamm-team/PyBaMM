@@ -9,19 +9,26 @@ class TestQuickPlot(unittest.TestCase):
     """
 
     def test_plot_creation(self):
-        model = pybamm.lithium_ion.SPMe()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        param.process_model(model)
+        spm = pybamm.lithium_ion.SPM()
+        spme = pybamm.lithium_ion.SPMe()
+        geometry = spme.default_geometry
+        param = spme.default_parameter_values
+        param.process_model(spm)
+        param.process_model(spme)
         param.process_geometry(geometry)
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        solver = model.default_solver
+        mesh = pybamm.Mesh(geometry, spme.default_submesh_types, spme.default_var_pts)
+        disc = pybamm.Discretisation(mesh, spme.default_spatial_methods)
+        disc.process_model(spm)
+        disc.process_model(spme)
+        solver_spm = spm.default_solver
+        solver_spme = spme.default_solver
         t_eval = np.linspace(0, 2, 100)
-        solver.solve(model, t_eval)
+        solver_spm.solve(spm, t_eval)
+        solver_spme.solve(spme, t_eval)
 
-        quick_plot = pybamm.QuickPlot(model, param, mesh, solver)
+        quick_plot = pybamm.QuickPlot(
+            [spm, spme], param, mesh, [solver_spm, solver_spme]
+        )
         quick_plot.plot(0)
 
         # update the axis
