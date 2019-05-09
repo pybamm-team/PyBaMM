@@ -139,18 +139,29 @@ class InterfacialCurrent(pybamm.SubModel):
         if j0_p.domain == []:
             j0_p = pybamm.Broadcast(j0_p, ["positive electrode"])
 
+        # Concatenations
         j = pybamm.Concatenation(*[j_n, pybamm.Broadcast(0, ["separator"]), j_p])
         j0 = pybamm.Concatenation(*[j0_n, pybamm.Broadcast(0, ["separator"]), j0_p])
+
+        # Averages
+        j_n_av = pybamm.average(j_n)
+        j_p_av = pybamm.average(j_p)
 
         return {
             "Negative electrode interfacial current density": j_n,
             "Positive electrode interfacial current density": j_p,
+            "Average negative electrode interfacial current density": j_n_av,
+            "Average positive electrode interfacial current density": j_p_av,
             "Interfacial current density": j,
             "Negative electrode exchange-current density": j0_n,
             "Positive electrode exchange-current density": j0_p,
             "Exchange-current density": j0,
             "Negative electrode interfacial current density [A m-2]": i_typ * j_n,
             "Positive electrode interfacial current density [A m-2]": i_typ * j_p,
+            "Average negative electrode interfacial current density [A m-2]": i_typ
+            * j_n_av,
+            "Average positive electrode interfacial current density [A m-2]": i_typ
+            * j_p_av,
             "Interfacial current density [A m-2]": i_typ * j,
             "Negative electrode exchange-current density [A m-2]": i_typ * j0_n,
             "Positive electrode exchange-current density [A m-2]": i_typ * j0_p,

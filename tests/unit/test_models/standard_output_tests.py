@@ -11,8 +11,9 @@ import numpy as np
 class StandardOutputTests(object):
     "Calls all the tests on the standard output variables."
 
-    def __init__(self, model, disc, solver, parameter_values):
+    def __init__(self, model, parameter_values, disc, solver):
         self.model = model
+        self.parameter_values = parameter_values
         self.disc = disc
         self.solver = solver
 
@@ -31,7 +32,13 @@ class StandardOutputTests(object):
 
     def run_test_class(self, ClassName):
         "Run all tests from a class 'ClassName'"
-        tests = ClassName(self.model, self.disc, self.solver, self.operating_condition)
+        tests = ClassName(
+            self.model,
+            self.parameter_values,
+            self.disc,
+            self.solver,
+            self.operating_condition,
+        )
         tests.test_all()
 
     def test_all(self):
@@ -45,7 +52,7 @@ class StandardOutputTests(object):
 
 
 class BaseOutputTest(object):
-    def __init__(self, model, disc, solver, operating_condition):
+    def __init__(self, model, param, disc, solver, operating_condition):
         self.model = model
         self.disc = disc
         self.solver = solver
@@ -68,6 +75,13 @@ class BaseOutputTest(object):
         self.r_n_edge = disc.mesh["negative particle"][0].edges
         self.r_p_edge = disc.mesh["positive particle"][0].edges
 
+        # Useful parameters
+        self.l_n = param.process_symbol(pybamm.geometric_parameters.l_n).evaluate()
+        self.l_p = param.process_symbol(pybamm.geometric_parameters.l_p).evaluate()
+        self.i_cell = param.process_symbol(
+            pybamm.electrical_parameters.current_with_time
+        ).evaluate(self.t)
+
     def get_var(self, var):
         "Helper function to reduce repeated code."
         return pybamm.ProcessedVariable(
@@ -76,8 +90,8 @@ class BaseOutputTest(object):
 
 
 class VoltageTests(BaseOutputTest):
-    def __init__(self, model, disc, solver, operating_condition):
-        super().__init__(model, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solver, operating_condition):
+        super().__init__(model, param, disc, solver, operating_condition)
 
         self.eta_n = self.get_var("Negative reaction overpotential [V]")
         self.eta_p = self.get_var("Positive reaction overpotential [V]")
@@ -191,6 +205,16 @@ class VoltageTests(BaseOutputTest):
             self.ocv_av(self.t), self.ocp_p_av(self.t) - self.ocp_n_av(self.t)
         )
 
+        with open("debug2.txt", "w") as f:
+            f.write(
+                "{}\n{}\n{}\n{}\n{}\n".format(
+                    self.voltage(self.t),
+                    self.ocv_av(self.t),
+                    self.eta_r_av(self.t),
+                    self.eta_e_av(self.t),
+                    self.Delta_Phi_s_av(self.t),
+                )
+            )
         np.testing.assert_array_almost_equal(
             self.voltage(self.t),
             self.ocv_av(self.t)
@@ -210,8 +234,8 @@ class VoltageTests(BaseOutputTest):
 
 
 class ParticleConcentrationTests(BaseOutputTest):
-    def __init__(self, model, disc, solver, operating_condition):
-        super().__init__(model, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solver, operating_condition):
+        super().__init__(model, param, disc, solver, operating_condition)
 
         self.c_s_n = self.get_var("Negative particle concentration")
         self.c_s_p = self.get_var("Positive particle concentration")
@@ -291,8 +315,8 @@ class ParticleConcentrationTests(BaseOutputTest):
 
 
 class ElectrolyteConcentrationTests(BaseOutputTest):
-    def __init__(self, model, disc, solver, operating_condition):
-        super().__init__(model, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solver, operating_condition):
+        super().__init__(model, param, disc, solver, operating_condition)
 
         self.c_e = self.get_var("Electrolyte concentration")
 
@@ -376,8 +400,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
 
 
 class PotentialTests(BaseOutputTest):
-    def __init__(self, model, disc, solver, operating_condition):
-        super().__init__(model, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solver, operating_condition):
+        super().__init__(model, param, disc, solver, operating_condition)
 
         self.phi_s_n = self.get_var("Negative electrode potential [V]")
         self.phi_s_p = self.get_var("Positive electrode potential [V]")
@@ -417,14 +441,20 @@ class PotentialTests(BaseOutputTest):
 
 
 class CurrentTests(BaseOutputTest):
-    def __init__(self, model, disc, solver, operating_condition):
-        super().__init__(model, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solver, operating_condition):
+        super().__init__(model, param, disc, solver, operating_condition)
 
         self.j = self.get_var("Interfacial current density")
         self.j0 = self.get_var("Exchange-current density")
 
         self.j_n = self.get_var("Negative electrode interfacial current density")
         self.j_p = self.get_var("Positive electrode interfacial current density")
+        self.j_n_av = self.get_var(
+            "Average negative electrode interfacial current density"
+        )
+        self.j_p_av = self.get_var(
+            "Average positive electrode interfacial current density"
+        )
 
         self.j0_n = self.get_var("Negative electrode exchange-current density")
         self.j0_p = self.get_var("Positive electrode exchange-current density")
@@ -435,8 +465,12 @@ class CurrentTests(BaseOutputTest):
     def test_interfacial_current_average(self):
         """Test that average of the interfacial current density is equal to the true
         value."""
-
-        # TODO: need averages
+        np.testing.assert_array_almost_equal(
+            self.j_n_av(self.t), self.i_cell / self.l_n
+        )
+        np.testing.assert_array_almost_equal(
+            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=5
+        )
 
     def test_conservation(self):
         """Test sum of electrode and electrolyte current densities give the applied

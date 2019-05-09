@@ -13,9 +13,11 @@ import numpy as np
 class TestLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.Composite()
+        model.default_parameter_values.update({"Typical current density": 0.1})
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
+        modeltest.test_all()
 
+    @unittest.skip("")
     def test_optimisations(self):
         model = pybamm.lead_acid.Composite()
         optimtest = tests.OptimisationsTest(model)
