@@ -18,8 +18,8 @@ geometry = model.default_geometry
 param = model.default_parameter_values
 
 # update C_rate
-# C_rate = 1
-# param["Typical current density"] = 24 * C_rate
+C_rate = 1
+param["Typical current density"] = 24 * C_rate
 
 param.process_model(model)
 param.process_geometry(geometry)
@@ -28,7 +28,7 @@ param.process_geometry(geometry)
 tau = pybamm.standard_parameters_lithium_ion.tau_discharge
 tau_eval = param.process_symbol(tau).evaluate(0, 0)
 
-time = time / tau_eval
+time = comsol_time / tau_eval
 
 # create mesh
 var = pybamm.standard_spatial_vars
