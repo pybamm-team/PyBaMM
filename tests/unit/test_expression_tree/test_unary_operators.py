@@ -69,12 +69,6 @@ class TestUnaryOperators(unittest.TestCase):
         funcd = pybamm.Function(test_const_function, d)
         self.assertEqual(funcd.evaluate(), 1)
 
-    def test_function_simplify(self):
-        a = pybamm.Symbol("a")
-        funca = pybamm.Function(test_const_function, a).simplify()
-        self.assertIsInstance(funca, pybamm.Scalar)
-        self.assertEqual(funca.evaluate(), 1)
-
     def test_gradient(self):
         a = pybamm.Symbol("a")
         grad = pybamm.Gradient(a)
@@ -100,18 +94,12 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta.integration_variable, x)
         self.assertEqual(inta.domain, [])
 
-        # # Indefinite
-        # for inta in [
-        #     pybamm.Integral(a, x, definite=False),
-        #     pybamm.IndefiniteIntegral(a, x),
-        # ]:
-        #     self.assertEqual(
-        #         inta.name, "indefinite integral dspace (['negative electrode'])"
-        #     )
-        #     self.assertFalse(inta.definite)
-        #     self.assertEqual(inta.children[0].name, a.name)
-        #     self.assertEqual(inta.integration_variable, x)
-        #     self.assertEqual(inta.domain, [])
+        # Indefinite
+        inta = pybamm.IndefiniteIntegral(a, x)
+        self.assertEqual(inta.name, "a integrated w.r.t x on ['negative electrode']")
+        self.assertEqual(inta.children[0].name, a.name)
+        self.assertEqual(inta.integration_variable, x)
+        self.assertEqual(inta.domain, ["negative electrode"])
 
         # expected errors
         a = pybamm.Symbol("a", domain=["negative electrode"])
@@ -171,6 +159,45 @@ class TestUnaryOperators(unittest.TestCase):
         d = pybamm.Scalar(42)
         un5 = pybamm.UnaryOperator("test", d)
         self.assertNotEqual(un1.id, un5.id)
+
+    def test_boundary_operators(self):
+        a = pybamm.Symbol("a")
+        boundary_a = pybamm.BoundaryOperator("boundary", a, "right")
+        self.assertEqual(boundary_a.side, "right")
+        self.assertEqual(boundary_a.child.id, a.id)
+
+    def test_boundary_value(self):
+        a = pybamm.Symbol("a")
+        boundary_a = pybamm.boundary_value(a, "right")
+        self.assertEqual(boundary_a.id, a.id)
+
+        boundary_broad_a = pybamm.boundary_value(
+            pybamm.Broadcast(a, ["negative electrode"]), "left"
+        )
+        self.assertEqual(boundary_broad_a.id, a.id)
+
+        a = pybamm.Symbol("a", domain=["separator"])
+        boundary_a = pybamm.boundary_value(a, "right")
+        self.assertIsInstance(boundary_a, pybamm.BoundaryValue)
+        self.assertEqual(boundary_a.side, "right")
+        self.assertEqual(boundary_a.domain, [])
+
+    def test_average(self):
+        a = pybamm.Symbol("a")
+        average_a = pybamm.average(a)
+        self.assertEqual(average_a.id, a.id)
+
+        average_broad_a = pybamm.average(pybamm.Broadcast(a, ["negative electrode"]))
+        self.assertEqual(average_broad_a.id, a.id)
+
+        for domain in [["negative electrode"], ["separator"], ["positive electrode"]]:
+            a = pybamm.Symbol("a", domain=domain)
+            x = pybamm.SpatialVariable("x", domain)
+            av_a = pybamm.average(a)
+            self.assertIsInstance(av_a, pybamm.Division)
+            self.assertIsInstance(av_a.children[0], pybamm.Integral)
+            self.assertEqual(av_a.children[0].integration_variable.domain, x.domain)
+            self.assertEqual(av_a.domain, [])
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
 Lithium-ion Single Particle Model (SPM)
 =======================================
 
-.. autoclass:: pybamm.lithium_ion.spm
+.. autoclass:: pybamm.lithium_ion.SPM
     :members:
-

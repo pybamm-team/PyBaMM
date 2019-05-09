@@ -21,6 +21,7 @@ Contents
 .. module:: pybamm
 
 .. toctree::
+    :maxdepth: 2
 
     source/expression_tree/index
     source/geometry/index
@@ -46,6 +47,10 @@ Contributing
 There are many ways to contribute to PyBaMM:
 
 .. toctree::
+    :maxdepth: 1
+
+    tutorials/add-parameter-values
     tutorials/add-spatial-method
+    tutorials/add-solver
 
 Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.

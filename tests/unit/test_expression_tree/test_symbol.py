@@ -8,7 +8,6 @@ import pybamm
 import unittest
 import numpy as np
 import os
-import math
 
 
 class TestSymbol(unittest.TestCase):
@@ -17,188 +16,27 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(sym.name, "a symbol")
         self.assertEqual(str(sym), "a symbol")
 
-    def test_symbol_simplify(self):
-        a = pybamm.Scalar(0)
-        b = pybamm.Scalar(1)
-        d = pybamm.Scalar(-1)
-        e = pybamm.Scalar(2)
+    def test_cached_children(self):
+        symc1 = pybamm.Symbol("child1")
+        symc2 = pybamm.Symbol("child2")
+        symc3 = pybamm.Symbol("child3")
+        symp = pybamm.Symbol("parent", children=[symc1, symc2])
 
-        # negate
-        self.assertIsInstance((-a).simplify(), pybamm.Scalar)
-        self.assertEqual((-a).simplify().evaluate(), 0)
-        self.assertIsInstance((-b).simplify(), pybamm.Scalar)
-        self.assertEqual((-b).simplify().evaluate(), -1)
+        # test tuples of children for equality based on their name
+        def check_are_equal(children1, children2):
+            self.assertEqual(len(children1), len(children2))
+            for i in range(len(children1)):
+                self.assertEqual(children1[i].name, children2[i].name)
 
-        # absolute value
-        self.assertIsInstance((abs(a)).simplify(), pybamm.Scalar)
-        self.assertEqual((abs(a)).simplify().evaluate(), 0)
-        self.assertIsInstance((abs(d)).simplify(), pybamm.Scalar)
-        self.assertEqual((abs(d)).simplify().evaluate(), 1)
+        check_are_equal(symp.children, super(pybamm.Symbol, symp).children)
+        check_are_equal(symp.children, (symc1, symc2))
 
-        # function
-        def sin(x):
-            return math.sin(x)
+        # update children, since we cache the children they will be unchanged
+        symc3.parent = symp
+        check_are_equal(symp.children, (symc1, symc2))
 
-        f = pybamm.Function(sin, b)
-        self.assertIsInstance((f).simplify(), pybamm.Scalar)
-        self.assertEqual((f).simplify().evaluate(), math.sin(1))
-
-        # Gradient
-        self.assertIsInstance((pybamm.grad(a)).simplify(), pybamm.Scalar)
-        self.assertEqual((pybamm.grad(a)).simplify().evaluate(), 0)
-        v = pybamm.Variable("v")
-        self.assertIsInstance((pybamm.grad(v)).simplify(), pybamm.Gradient)
-
-        # Divergence
-        self.assertIsInstance((pybamm.div(a)).simplify(), pybamm.Scalar)
-        self.assertEqual((pybamm.div(a)).simplify().evaluate(), 0)
-        self.assertIsInstance((pybamm.div(v)).simplify(), pybamm.Divergence)
-
-        # Integral
-        self.assertIsInstance(
-            (pybamm.integrate(a, pybamm.t)).simplify(), pybamm.Integral
-        )
-
-        # BoundaryValue
-        self.assertIsInstance((pybamm.surf(v)).simplify(), pybamm.BoundaryValue)
-
-        # addition
-        self.assertIsInstance((a + b).simplify(), pybamm.Scalar)
-        self.assertEqual((a + b).simplify().evaluate(), 1)
-        self.assertIsInstance((b + b).simplify(), pybamm.Scalar)
-        self.assertEqual((b + b).simplify().evaluate(), 2)
-        self.assertIsInstance((b + a).simplify(), pybamm.Scalar)
-        self.assertEqual((b + a).simplify().evaluate(), 1)
-
-        # subtraction
-        self.assertIsInstance((a - b).simplify(), pybamm.Scalar)
-        self.assertEqual((a - b).simplify().evaluate(), -1)
-        self.assertIsInstance((b - b).simplify(), pybamm.Scalar)
-        self.assertEqual((b - b).simplify().evaluate(), 0)
-        self.assertIsInstance((b - a).simplify(), pybamm.Scalar)
-        self.assertEqual((b - a).simplify().evaluate(), 1)
-
-        # multiplication
-        self.assertIsInstance((a * b).simplify(), pybamm.Scalar)
-        self.assertEqual((a * b).simplify().evaluate(), 0)
-        self.assertIsInstance((b * a).simplify(), pybamm.Scalar)
-        self.assertEqual((b * a).simplify().evaluate(), 0)
-        self.assertIsInstance((b * b).simplify(), pybamm.Scalar)
-        self.assertEqual((b * b).simplify().evaluate(), 1)
-        self.assertIsInstance((a * a).simplify(), pybamm.Scalar)
-        self.assertEqual((a * a).simplify().evaluate(), 0)
-
-        # test when other node is a parameter
-        c = pybamm.Parameter("c")
-        self.assertIsInstance((a + c).simplify(), pybamm.Parameter)
-        self.assertIsInstance((c + a).simplify(), pybamm.Parameter)
-        self.assertIsInstance((c + b).simplify(), pybamm.Addition)
-        self.assertIsInstance((b + c).simplify(), pybamm.Addition)
-        self.assertIsInstance((a * c).simplify(), pybamm.Scalar)
-        self.assertEqual((a * c).simplify().evaluate(), 0)
-        self.assertIsInstance((c * a).simplify(), pybamm.Scalar)
-        self.assertEqual((c * a).simplify().evaluate(), 0)
-        self.assertIsInstance((b * c).simplify(), pybamm.Parameter)
-        self.assertIsInstance((e * c).simplify(), pybamm.Multiplication)
-
-        expr = (e * (e * c)).simplify()
-        self.assertIsInstance(expr, pybamm.Multiplication)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
-
-        expr = (e / (e * c)).simplify()
-        self.assertIsInstance(expr, pybamm.Division)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 1.0)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
-
-        expr = (e * (e / c)).simplify()
-        self.assertIsInstance(expr, pybamm.Division)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 4.0)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
-
-        expr = (e * (c / e)).simplify()
-        self.assertIsInstance(expr, pybamm.Multiplication)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 1.0)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
-
-        expr = ((e * c) * (c / e)).simplify()
-        self.assertIsInstance(expr, pybamm.Multiplication)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 1.0)
-        self.assertIsInstance(expr.children[1], pybamm.Multiplication)
-        self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
-        self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
-
-        expr = (e + (e + c)).simplify()
-        self.assertIsInstance(expr, pybamm.Addition)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 4.0)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
-
-        expr = (e + (e - c)).simplify()
-        self.assertIsInstance(expr, pybamm.Subtraction)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 4.0)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
-
-        expr = ((2 + c) + (c + 2)).simplify()
-        self.assertIsInstance(expr, pybamm.Addition)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 4.0)
-        self.assertIsInstance(expr.children[1], pybamm.Addition)
-        self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
-        self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
-
-        expr = ((-1 + c) - (c + 1) + (c - 1)).simplify()
-        self.assertIsInstance(expr, pybamm.Addition)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), -3.0)
-
-        # check these don't simplify
-        self.assertIsInstance((c * e).simplify(), pybamm.Multiplication)
-        self.assertIsInstance((e / c).simplify(), pybamm.Division)
-        self.assertIsInstance((c).simplify(), pybamm.Parameter)
-        c1 = pybamm.Parameter("c1")
-        self.assertIsInstance((c1 * c).simplify(), pybamm.Multiplication)
-
-        # should simplify division to multiply
-        self.assertIsInstance((c / e).simplify(), pybamm.Multiplication)
-
-        self.assertIsInstance((c / b).simplify(), pybamm.Parameter)
-        self.assertIsInstance((c * b).simplify(), pybamm.Parameter)
-
-        # negation with parameter
-        self.assertIsInstance((-c).simplify(), pybamm.Negate)
-
-        self.assertIsInstance((a + b + a).simplify(), pybamm.Scalar)
-        self.assertEqual((a + b + a).simplify().evaluate(), 1)
-        self.assertIsInstance((b + a + a).simplify(), pybamm.Scalar)
-        self.assertEqual((b + a + a).simplify().evaluate(), 1)
-        self.assertIsInstance((a * b * b).simplify(), pybamm.Scalar)
-        self.assertEqual((a * b * b).simplify().evaluate(), 0)
-        self.assertIsInstance((b * a * b).simplify(), pybamm.Scalar)
-        self.assertEqual((b * a * b).simplify().evaluate(), 0)
-
-        # power simplification
-        self.assertIsInstance((c ** a).simplify(), pybamm.Scalar)
-        self.assertEqual((c ** a).simplify().evaluate(), 1)
-        self.assertIsInstance((a ** c).simplify(), pybamm.Scalar)
-        self.assertEqual((a ** c).simplify().evaluate(), 0)
-        d = pybamm.Scalar(2)
-        self.assertIsInstance((c ** d).simplify(), pybamm.Power)
-
-        # division
-        self.assertIsInstance((a / b).simplify(), pybamm.Scalar)
-        self.assertEqual((a / b).simplify().evaluate(), 0)
-        self.assertIsInstance((b / a).simplify(), pybamm.Scalar)
-        self.assertEqual((b / a).simplify().evaluate(), np.inf)
-        self.assertIsInstance((a / a).simplify(), pybamm.Scalar)
-        self.assertTrue(np.isnan((a / a).simplify().evaluate()))
-        self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
-        self.assertEqual((b / b).simplify().evaluate(), 1)
+        # check that the *actual* children are updated
+        check_are_equal(super(pybamm.Symbol, symp).children, (symc1, symc2, symc3))
 
     def test_symbol_domains(self):
         a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])
@@ -416,11 +254,14 @@ class TestSymbol(unittest.TestCase):
     def test_symbol_visualise(self):
         param = pybamm.standard_parameters_lithium_ion
 
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c = pybamm.Variable("c", whole_cell)
-        j = pybamm.Variable("j", whole_cell)
-        model = pybamm.electrolyte_diffusion.StefanMaxwell(c, j, param)
-        c_e = list(model.rhs.keys())[0]
+        c_e = pybamm.standard_variables.c_e
+        onen = pybamm.Broadcast(1, ["negative electrode"])
+        onep = pybamm.Broadcast(1, ["positive electrode"])
+        reactions = {
+            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+        }
+        model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        model.set_differential_system(c_e, reactions)
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test.png")
         self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
@@ -457,18 +298,16 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(a.id, a_orp.id)
         self.assertEqual(b.id, b_orp.id)
 
-    def test_ghost_cell_flaf(self):
-        a = pybamm.Symbol("a")
-        self.assertFalse(a.has_left_ghost_cell)
-        self.assertFalse(a.has_right_ghost_cell)
+    def test_shape(self):
+        scal = pybamm.Scalar(1)
+        self.assertEqual(scal.shape, ())
 
-        a.has_left_ghost_cell = True
-        self.assertTrue(a.has_left_ghost_cell)
-        self.assertFalse(a.has_right_ghost_cell)
+        state = pybamm.StateVector(slice(10, 25))
+        self.assertEqual(state.shape, (15,))
 
-        a.has_right_ghost_cell = True
-        self.assertTrue(a.has_left_ghost_cell)
-        self.assertTrue(a.has_right_ghost_cell)
+        sym = pybamm.Symbol("sym")
+        with self.assertRaises(NotImplementedError):
+            sym.shape
 
 
 if __name__ == "__main__":

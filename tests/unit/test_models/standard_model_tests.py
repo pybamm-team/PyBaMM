@@ -4,6 +4,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import tests
 
 import numpy as np
 
@@ -77,11 +78,28 @@ class StandardModelTest(object):
 
         self.solver.solve(self.model, t_eval)
 
-    def test_all(self, param=None, disc=None, solver=None, t_eval=None):
+    def test_outputs(self):
+        # run the standard output tests
+        std_out_test = tests.StandardOutputTests(
+            self.model, self.disc, self.solver, self.parameter_values
+        )
+        std_out_test.test_all()
+
+    def test_all(
+        self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False
+    ):
         self.model.check_well_posedness()
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
+
+        if (
+            isinstance(
+                self.model, (pybamm.LithiumIonBaseModel, pybamm.LeadAcidBaseModel)
+            )
+            and not skip_output_tests
+        ):
+            self.test_outputs()
 
     def test_update_parameters(self, param):
         # check if geometry has changed, throw error if so (need to re-discretise)

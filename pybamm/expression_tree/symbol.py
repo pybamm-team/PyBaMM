@@ -11,25 +11,6 @@ import copy
 import autograd.numpy as np
 
 from anytree.exporter import DotExporter
-from scipy.sparse import issparse
-
-
-def simplify_if_constant(new_node):
-    """
-    Utility function to simplify an expression tree if it evalutes to a constant
-    scalar, vector or matrix
-    """
-    if new_node.is_constant():
-        result = new_node.evaluate_ignoring_errors()
-        if result is not None:
-            if isinstance(result, numbers.Number):
-                return pybamm.Scalar(result, domain=new_node.domain)
-            elif isinstance(result, np.ndarray) or issparse(result):
-                if result.ndim == 1:
-                    return pybamm.Vector(result, domain=new_node.domain)
-                else:
-                    return pybamm.Matrix(result, domain=new_node.domain)
-    return new_node
 
 
 class Symbol(anytree.NodeMixin):
@@ -50,24 +31,32 @@ class Symbol(anytree.NodeMixin):
 
     def __init__(self, name, children=[], domain=[]):
         super(Symbol, self).__init__()
-        self._name = name
+        self.name = name
 
         for child in children:
             # copy child before adding
             # this also adds copy.copy(child) to self.children
             copy.copy(child).parent = self
 
+        # cache children
+        self.cached_children = super(Symbol, self).children
+
         # Set domain (and hence id)
         self.domain = domain
 
-        # useful flags
-        self._has_left_ghost_cell = False
-        self._has_right_ghost_cell = False
+    @property
+    def children(self):
+        return self.cached_children
 
     @property
     def name(self):
         """name of the node"""
         return self._name
+
+    @name.setter
+    def name(self, value):
+        assert isinstance(value, str)
+        self._name = value
 
     @property
     def domain(self):
@@ -352,6 +341,23 @@ class Symbol(anytree.NodeMixin):
         else:
             return pybamm.Scalar(0)
 
+    def jac(self, variable):
+        """
+        Differentiate a symbol with respect to a (slice of) a State Vector.
+        Default behaviour is to return `1` if differentiating with respect to
+        yourself and zero otherwise. Binary and Unary Operators override this.
+
+        Parameters
+        ----------
+        variable : :class:`pybamm.Symbol`
+            The variable with respect to which to differentiate
+
+        """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            return pybamm.Scalar(0)
+
     def _base_evaluate(self, t=None, y=None):
         """evaluate expression tree
 
@@ -418,7 +424,7 @@ class Symbol(anytree.NodeMixin):
         search_types = (pybamm.Variable, pybamm.StateVector, pybamm.IndependentVariable)
 
         # do the search, return true if no relevent nodes are found
-        return all([not (isinstance(n, search_types)) for n in self.pre_order()])
+        return not any((isinstance(n, search_types)) for n in self.pre_order())
 
     def evaluate_ignoring_errors(self):
         """
@@ -476,45 +482,36 @@ class Symbol(anytree.NodeMixin):
 
     def has_gradient(self):
         """Returns True if equation has a Gradient term."""
-        return any([isinstance(symbol, pybamm.Gradient) for symbol in self.pre_order()])
+        return any(isinstance(symbol, pybamm.Gradient) for symbol in self.pre_order())
 
     def has_divergence(self):
         """Returns True if equation has a Divergence term."""
-        return any(
-            [isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order()]
-        )
+        return any(isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order())
 
     def simplify(self):
-        """
-        Simplify the expression tree.
-
-        This function recurses down the tree, applying any simplifications defined in
-        classes derived from pybamm.Symbol. E.g. any expression multiplied by a
-        pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0)
-        """
-
-        new_symbol = copy.deepcopy(self)
-        # strip out domain info by default, so that conflicting domains are not an issue
-        # during simplification. This should only be run after the model is discretised,
-        # after which domains are no longer an issue
-        new_symbol.domain = []
-        new_symbol.parent = None
-        return simplify_if_constant(new_symbol)
+        """ Simplify the expression tree. See :meth:`pybamm.simplify()`. """
+        return pybamm.simplify(self)
 
     @property
-    def has_left_ghost_cell(self):
-        return self._has_left_ghost_cell
+    def shape(self):
+        """
+        Shape of an object, found by evaluating it with appropriate t and y
 
-    @has_left_ghost_cell.setter
-    def has_left_ghost_cell(self, value):
-        assert isinstance(value, bool)
-        self._has_left_ghost_cell = value
-
-    @property
-    def has_right_ghost_cell(self):
-        return self._has_right_ghost_cell
-
-    @has_right_ghost_cell.setter
-    def has_right_ghost_cell(self, value):
-        assert isinstance(value, bool)
-        self._has_right_ghost_cell = value
+        Raises
+        ------
+        NotImplementedError
+            If trying to find the shape of an object that cannot be evaluated
+        """
+        state_vectors_in_node = [
+            x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
+        ]
+        if state_vectors_in_node == []:
+            y = None
+        else:
+            min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
+            y = np.ones(min_y_size)
+        eval = self.evaluate(t=0, y=y)
+        if isinstance(eval, numbers.Number):
+            return ()
+        else:
+            return eval.shape

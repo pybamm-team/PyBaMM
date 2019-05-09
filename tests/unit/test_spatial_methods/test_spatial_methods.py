@@ -13,13 +13,17 @@ class TestSpatialMethod(unittest.TestCase):
         spatial_method = pybamm.SpatialMethod(mesh)
         self.assertEqual(spatial_method.mesh, mesh)
         with self.assertRaises(NotImplementedError):
-            spatial_method.spatial_variable(None)
-        with self.assertRaises(NotImplementedError):
             spatial_method.gradient(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.boundary_value(None)
+            spatial_method.integral(None, None, None)
+        with self.assertRaises(NotImplementedError):
+            spatial_method.indefinite_integral(None, None, None)
+        child = pybamm.Symbol("sym", domain=["negative electrode"])
+        symbol = pybamm.BoundaryFlux(child, "left")
+        with self.assertRaisesRegex(TypeError, "Cannot process BoundaryFlux"):
+            spatial_method.boundary_value_or_flux(symbol, child)
 
 
 if __name__ == "__main__":

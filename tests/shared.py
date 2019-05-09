@@ -3,36 +3,35 @@
 #
 import pybamm
 
-import numpy as np
+from scipy.sparse import eye
 
 
 class SpatialMethodForTesting(pybamm.SpatialMethod):
     """Identity operators, no boundary conditions."""
 
     def __init__(self, mesh):
-        for dom in mesh.keys():
-            for i in range(len(mesh[dom])):
-                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
         super().__init__(mesh)
-
-    def spatial_variable(self, symbol):
-        # use the cell centres
-        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        return pybamm.Vector(symbol_mesh[0].nodes)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain][0].npts
-        gradient_matrix = pybamm.Matrix(np.eye(n))
+        gradient_matrix = pybamm.Matrix(eye(n))
         return gradient_matrix @ discretised_symbol
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
             n += self.mesh[domain][0].npts
-        divergence_matrix = pybamm.Matrix(np.eye(n))
+        divergence_matrix = pybamm.Matrix(eye(n))
         return divergence_matrix @ discretised_symbol
+
+    def mass_matrix(self, symbol, boundary_conditions):
+        n = 0
+        for domain in symbol.domain:
+            n += self.mesh[domain][0].npts
+        mass_matrix = pybamm.Matrix(eye(n))
+        return mass_matrix
 
 
 def get_mesh_for_testing(npts=None):
@@ -108,6 +107,17 @@ def get_p2d_mesh_for_testing(npts=None, mpts=None):
 
 def get_discretisation_for_testing(npts=None):
     mesh = get_mesh_for_testing(npts)
+    spatial_methods = {
+        "macroscale": SpatialMethodForTesting,
+        "negative particle": SpatialMethodForTesting,
+        "positive particle": SpatialMethodForTesting,
+    }
+
+    return pybamm.Discretisation(mesh, spatial_methods)
+
+
+def get_p2d_discretisation_for_testing(npts=None, mpts=None):
+    mesh = get_p2d_mesh_for_testing(npts, mpts)
     spatial_methods = {
         "macroscale": SpatialMethodForTesting,
         "negative particle": SpatialMethodForTesting,

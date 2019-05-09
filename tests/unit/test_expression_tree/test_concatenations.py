@@ -142,28 +142,6 @@ class TestConcatenations(unittest.TestCase):
             (mesh[b_dom[0]][0].npts + mesh[a_dom[0]][0].npts + mesh[b_dom[1]][0].npts,),
         )
 
-    def test_domain_concatenation_simplify(self):
-        # create discretisation
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
-
-        a_dom = ["negative electrode"]
-        b_dom = ["positive electrode"]
-        a = pybamm.NumpyBroadcast(pybamm.Scalar(2), a_dom, mesh)
-        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
-
-        conc = pybamm.DomainConcatenation([a, b], mesh)
-        conc_simp = conc.simplify()
-
-        # should be simplified to a vector
-        self.assertIsInstance(conc_simp, pybamm.Vector)
-        np.testing.assert_array_equal(
-            conc_simp.evaluate(),
-            np.concatenate(
-                [np.full(mesh[a_dom[0]][0].npts, 2), np.full(mesh[b_dom[0]][0].npts, 1)]
-            ),
-        )
-
     def test_concatenation_orphans(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
@@ -290,23 +268,7 @@ class TestConcatenations(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.DomainError, "domain cannot be empty"):
             pybamm.DomainConcatenation([a, b], None)
 
-    def test_simplify_concatenation_state_vectors(self):
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
-
-        a = pybamm.Variable("a", domain=["negative electrode"])
-        b = pybamm.Variable("b", domain=["separator"])
-        c = pybamm.Variable("c", domain=["positive electrode"])
-        conc = pybamm.Concatenation(a, b, c)
-        disc.set_variable_slices([a, b, c])
-        conc_disc = disc.process_symbol(conc)
-        conc_simp = conc_disc.simplify()
-
-        y = mesh.combine_submeshes(*conc.domain)[0].nodes ** 2
-        self.assertIsInstance(conc_simp, pybamm.StateVector)
-        self.assertEqual(conc_simp.y_slice.start, 0)
-        self.assertEqual(conc_simp.y_slice.stop, len(y))
-        np.testing.assert_array_equal(conc_disc.evaluate(y=y), conc_simp.evaluate(y=y))
+    # def test_sparse_stack(self):
 
 
 if __name__ == "__main__":

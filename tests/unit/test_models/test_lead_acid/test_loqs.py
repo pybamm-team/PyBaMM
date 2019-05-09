@@ -14,7 +14,6 @@ class TestLeadAcidLOQS(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.LOQS()
         modeltest = tests.StandardModelTest(model)
-
         modeltest.test_all()
 
     def test_optimisations(self):
@@ -29,27 +28,19 @@ class TestLeadAcidLOQS(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
 
-    def test_solution(self):
+    def test_charge(self):
         model = pybamm.lead_acid.LOQS()
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(t_eval=np.linspace(0, 2))
-        t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
+        parameter_values = model.default_parameter_values
+        parameter_values.update({"Typical current density": -1})
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
 
-        # Post-process variables
-        conc = pybamm.ProcessedVariable(
-            model.variables["Electrolyte concentration"],
-            t_sol,
-            y_sol,
-            mesh=modeltest.disc.mesh,
-        )
-        voltage = pybamm.ProcessedVariable(model.variables["Voltage"], t_sol, y_sol)
-
-        # check output
-        # concentration and voltage should be monotonically decreasing for a discharge
-        np.testing.assert_array_less(conc.entries[:, 1:], conc.entries[:, :-1])
-        np.testing.assert_array_less(voltage.entries[1:], voltage.entries[:-1])
-        # Make sure the concentration is always positive (cut-off event working)
-        np.testing.assert_array_less(0, conc.entries)
+    def test_zero_current(self):
+        model = pybamm.lead_acid.LOQS()
+        parameter_values = model.default_parameter_values
+        parameter_values.update({"Typical current density": 0})
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
 
 
 if __name__ == "__main__":

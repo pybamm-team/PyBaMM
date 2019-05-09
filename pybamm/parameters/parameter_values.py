@@ -6,7 +6,6 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import pandas as pd
-import copy
 
 
 class ParameterValues(dict):
@@ -114,14 +113,10 @@ class ParameterValues(dict):
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
-            if "left" in bcs.keys():
-                new_boundary_conditions[processed_variable][
-                    "left"
-                ] = processing_function(bcs["left"])
-            if "right" in bcs.keys():
-                new_boundary_conditions[processed_variable][
-                    "right"
-                ] = processing_function(bcs["right"])
+            for side in ["left", "right"]:
+                bc, typ = bcs[side]
+                processed_bc = (processing_function(bc), typ)
+                new_boundary_conditions[processed_variable][side] = processed_bc
         model.boundary_conditions = new_boundary_conditions
 
         for variable, equation in model.variables.items():
@@ -222,9 +217,10 @@ class ParameterValues(dict):
             elif isinstance(symbol, pybamm.Function):
                 new_symbol = pybamm.Function(symbol.func, new_child)
             elif isinstance(symbol, pybamm.Integral):
-                new_symbol = pybamm.Integral(new_child, symbol.integration_variable)
-            elif isinstance(symbol, pybamm.BoundaryValue):
-                new_symbol = pybamm.BoundaryValue(new_child, symbol.side)
+                new_symbol = symbol.__class__(new_child, symbol.integration_variable)
+            elif isinstance(symbol, pybamm.BoundaryOperator):
+                # BoundaryValue or BoundaryFlux
+                new_symbol = symbol.__class__(new_child, symbol.side)
             else:
                 new_symbol = symbol.__class__(new_child)
             # ensure domain remains the same
@@ -243,10 +239,31 @@ class ParameterValues(dict):
                 # Concatenation or NumpyConcatenation
                 return symbol.__class__(*new_children)
 
+        # Other cases: return new variable to avoid tree internal corruption
+        elif isinstance(symbol, pybamm.Variable):
+            return pybamm.Variable(symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.Scalar):
+            return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.Array):
+            return symbol.__class__(
+                symbol.entries, symbol.name, symbol.domain, symbol.entries_string
+            )
+
+        elif isinstance(symbol, pybamm.SpatialVariable):
+            return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
+
+        elif isinstance(symbol, pybamm.StateVector):
+            return symbol.__class__(symbol.y_slice, symbol.name, symbol.domain)
+
+        elif isinstance(symbol, pybamm.Time):
+            return pybamm.Time()
+
         else:
-            new_symbol = copy.deepcopy(symbol)
-            new_symbol.parent = None
-            return new_symbol
+            raise NotImplementedError(
+                "Cannot process parameters for symbol of type '{}'".format(type(symbol))
+            )
 
     def update_scalars(self, symbol):
         """Update the value of any Scalars in the expression tree.
@@ -267,6 +284,8 @@ class ParameterValues(dict):
                 # update any Scalar nodes if their name is in the parameter dict
                 try:
                     x.value = self.get_parameter_value(x)
+                    # update id
+                    x.set_id()
                 except KeyError:
                     # KeyError -> name not in parameter dict, don't update
                     continue

@@ -18,8 +18,10 @@ class TestStandardParticle(unittest.TestCase):
         j_n = pybamm.Scalar(1)
         j_p = pybamm.Scalar(1)
 
-        pybamm.models.submodels.particle.Standard(c_n, j_n, param)
-        pybamm.models.submodels.particle.Standard(c_p, j_p, param)
+        model_n = pybamm.particle.Standard(param)
+        model_n.set_differential_system(c_n, j_n)
+        model_p = pybamm.particle.Standard(param)
+        model_p.set_differential_system(c_p, j_p)
 
     def test_basic_processing(self):
         param = pybamm.standard_parameters_lithium_ion
@@ -30,13 +32,14 @@ class TestStandardParticle(unittest.TestCase):
         j_n = pybamm.Scalar(1)
         j_p = pybamm.Scalar(1)
 
-        model_n = pybamm.models.submodels.particle.Standard(c_n, j_n, param)
-        model_p = pybamm.models.submodels.particle.Standard(c_p, j_p, param)
+        model_n = pybamm.particle.Standard(param)
+        model_n.set_differential_system(c_n, j_n)
+        model_p = pybamm.particle.Standard(param)
+        model_p.set_differential_system(c_p, j_p)
 
-        param = model_n.default_parameter_values
-        param = model_p.default_parameter_values
-        param.process_model(model_n)
-        param.process_model(model_p)
+        parameter_values = model_n.default_parameter_values
+        parameter_values.process_model(model_n)
+        parameter_values.process_model(model_p)
 
 
 if __name__ == "__main__":

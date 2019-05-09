@@ -6,7 +6,9 @@ from __future__ import print_function, unicode_literals
 import pybamm
 
 import autograd
+import copy
 import numpy as np
+from scipy.sparse import csr_matrix
 from inspect import signature
 
 
@@ -29,19 +31,11 @@ class UnaryOperator(pybamm.Symbol):
 
     def __init__(self, name, child):
         super().__init__(name, children=[child], domain=child.domain)
+        self.child = self.children[0]
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{}({!s})".format(self.name, self.children[0])
-
-    def simplify(self):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        child = self.children[0].simplify()
-
-        # _binary_simplify defined in derived classes for specific rules
-        new_node = self._unary_simplify(child)
-
-        return pybamm.simplify_if_constant(new_node)
+        return "{}({!s})".format(self.name, self.child)
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
@@ -56,11 +50,11 @@ class UnaryOperator(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
         if known_evals is not None:
             if self.id not in known_evals:
-                child, known_evals = self.children[0].evaluate(t, y, known_evals)
+                child, known_evals = self.child.evaluate(t, y, known_evals)
                 known_evals[self.id] = self._unary_evaluate(child)
             return known_evals[self.id], known_evals
         else:
-            child = self.children[0].evaluate(t, y)
+            child = self.child.evaluate(t, y)
             return self._unary_evaluate(child)
 
 
@@ -76,14 +70,18 @@ class Negate(UnaryOperator):
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{}{!s}".format(self.name, self.children[0])
+        return "{}{!s}".format(self.name, self.child)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            return -self.children[0].diff(variable)
+            return -self.child.diff(variable)
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        return -self.child.jac(variable)
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
@@ -102,6 +100,11 @@ class AbsoluteValue(UnaryOperator):
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
+        # Derivative is not well-defined
+        raise NotImplementedError("Derivative of absolute function is not defined")
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
         # Derivative is not well-defined
         raise NotImplementedError("Derivative of absolute function is not defined")
 
@@ -150,6 +153,23 @@ class Function(UnaryOperator):
                 # otherwise the derivative of the function is zero
                 return pybamm.Scalar(0)
 
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        child = self.orphans[0]
+        if child.evaluates_to_number():
+            # return zeros of right size
+            variable_y_indices = np.arange(
+                variable.y_slice.start, variable.y_slice.stop
+            )
+            jac = csr_matrix((1, np.size(variable_y_indices)))
+            return pybamm.Matrix(jac)
+        else:
+            jac_fun = Function(autograd.elementwise_grad(self.func), child) * child.jac(
+                variable
+            )
+            jac_fun.domain = self.domain
+            return jac_fun
+
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
         if self.takes_no_params:
@@ -157,18 +177,14 @@ class Function(UnaryOperator):
         else:
             return self.func(child)
 
-    # Function needs its own simplify as it has a different __init__ signature
-    def simplify(self):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
+    def _unary_simplify(self, child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
         if self.takes_no_params:
             # If self.func() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.func())
         else:
-            child = self.children[0].simplify()
-
-            new_node = pybamm.Function(self.func, child)
-
-            return pybamm.simplify_if_constant(new_node)
+            child = self.child.simplify()
+            return pybamm.Function(self.func, child)
 
 
 class Index(UnaryOperator):
@@ -219,6 +235,10 @@ class SpatialOperator(UnaryOperator):
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # We shouldn't need this
+        raise NotImplementedError
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
         raise NotImplementedError
 
     def _unary_simplify(self, child):
@@ -307,7 +327,7 @@ class Integral(SpatialOperator):
         return self.__class__(child, self.integration_variable)
 
 
-class IndefiniteIntegral(SpatialOperator):
+class IndefiniteIntegral(Integral):
     """A node in the expression tree representing an indefinite integral operator
 
     .. math::
@@ -323,47 +343,29 @@ class IndefiniteIntegral(SpatialOperator):
     integration_variable : :class:`pybamm.IndependentVariable`
         The variable over which to integrate
 
-    **Extends:** :class:`SpatialOperator`
+    **Extends:** :class:`Integral`
     """
 
     def __init__(self, child, integration_variable):
+        super().__init__(child, integration_variable)
+        # Overwrite the name
+        self.name = "{} integrated w.r.t {}".format(
+            child.name, integration_variable.name
+        )
         if isinstance(integration_variable, pybamm.SpatialVariable):
-            # Check that child and integration_variable domains agree
-            if child.domain != integration_variable.domain:
-                raise pybamm.DomainError(
-                    """child and integration_variable must have the same domain"""
-                )
-        elif not isinstance(integration_variable, pybamm.IndependentVariable):
-            raise ValueError(
-                """integration_variable must be of type pybamm.IndependentVariable,
-                   not {}""".format(
-                    type(integration_variable)
-                )
-            )
-        name = "{} integrated w.r.t {}".format(child.name, integration_variable.name)
-        if isinstance(integration_variable, pybamm.SpatialVariable):
-            name += "on {}".format(integration_variable.domain)
-        super().__init__(name, child)
-        self._integration_variable = integration_variable
+            self.name += " on {}".format(integration_variable.domain)
         # the integrated variable has the same domain as the child
         self.domain = child.domain
 
-    @property
-    def integration_variable(self):
-        return self._integration_variable
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-
-        return self.__class__(child, self.integration_variable)
-
-
-class BoundaryValue(SpatialOperator):
+class BoundaryOperator(SpatialOperator):
     """A node in the expression tree which gets the boundary value of a variable.
 
     Parameters
     ----------
-    child : `pybamm.Symbol`
+    name : str
+        The name of the symbol
+    child : :class:`pybamm.Symbol`
         The variable whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
@@ -371,17 +373,50 @@ class BoundaryValue(SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, side):
-        super().__init__("boundary", child)
+    def __init__(self, name, child, side):
+        super().__init__(name, child)
         self.side = side
-        # Domain of BoundaryValue must be ([]) so that expressions can be formed
+        # Domain of Boundary must be ([]) so that expressions can be formed
         # of boundary values of variables in different domains
         self.domain = []
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-
         return self.__class__(child, self.side)
+
+
+class BoundaryValue(BoundaryOperator):
+    """A node in the expression tree which gets the boundary value of a variable.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
+
+    **Extends:** :class:`BoundaryOperator`
+    """
+
+    def __init__(self, child, side):
+        super().__init__("boundary value", child, side)
+
+
+class BoundaryFlux(BoundaryOperator):
+    """A node in the expression tree which gets the boundary flux of a variable.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary flux to take
+    side : str
+        Which side to take the boundary flux on ("left" or "right")
+
+    **Extends:** :class:`BoundaryOperator`
+    """
+
+    def __init__(self, child, side):
+        super().__init__("boundary flux", child, side)
 
 
 #
@@ -432,8 +467,9 @@ def div(expression):
 #
 
 
-def surf(variable):
-    """convenience function for creating a :class:`SurfaceValue`
+def surf(variable, set_domain=False):
+    """convenience function for creating a right :class:`BoundaryValue`, usually in the
+    spherical geometry
 
     Parameters
     ----------
@@ -447,26 +483,74 @@ def surf(variable):
     :class:`GetSurfaceValue`
         the surface value of ``variable``
     """
+    out = boundary_value(variable, "right")
+    if set_domain:
+        if variable.domain == ["negative particle"]:
+            out.domain = ["negative electrode"]
+        elif variable.domain == ["positive particle"]:
+            out.domain = ["positive electrode"]
+    return out
 
-    return BoundaryValue(variable, "right")
+
+def average(symbol):
+    """convenience function for creating an average
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # If symbol doesn't have a domain, its average value is itself
+    if symbol.domain == []:
+        new_symbol = copy.deepcopy(symbol)
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    # Otherwise, use Integral to calculate average value
+    else:
+        if symbol.domain == ["negative electrode"]:
+            x = pybamm.standard_spatial_vars.x_n
+            l = pybamm.geometric_parameters.l_n
+        elif symbol.domain == ["separator"]:
+            x = pybamm.standard_spatial_vars.x_s
+            l = pybamm.geometric_parameters.l_s
+        elif symbol.domain == ["positive electrode"]:
+            x = pybamm.standard_spatial_vars.x_p
+            l = pybamm.geometric_parameters.l_p
+
+        return Integral(symbol, x) / l
 
 
-def integrate(expression, variable):
+def boundary_value(symbol, side):
     """convenience function for creating a :class:`Integral`
 
     Parameters
     ----------
-
-    expression : :class:`pybamm.Symbol`
-        The function to be integrated
-    integration_variable : :class:`pybamm.IndependentVariable`
-        The variable over which to integrate
+    symbol : `pybamm.Symbol`
+        The symbol whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
 
     Returns
     -------
-
-    :class:`Integral`
+    :class:`BoundaryValue`
         the new integrated expression tree
     """
-
-    return Integral(expression, variable)
+    # If symbol doesn't have a domain, its boundary value is itself
+    if symbol.domain == []:
+        new_symbol = copy.deepcopy(symbol)
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its boundary value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    # Otherwise, calculate boundary value
+    else:
+        return BoundaryValue(symbol, side)

@@ -25,10 +25,12 @@ class Array(pybamm.Symbol):
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, entries, name=None, domain=[]):
+    def __init__(self, entries, name=None, domain=[], entries_string=None):
         if name is None:
             name = "Array of shape {!s}".format(entries.shape)
         self._entries = entries
+        # Use known entries string to avoid re-hashing, where possible
+        self.entries_string = entries_string
         super().__init__(name, domain=domain)
 
     @property
@@ -50,19 +52,28 @@ class Array(pybamm.Symbol):
         """ returns the total number of entries in the tensor"""
         return self._entries.size
 
-    def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()`. """
+    @property
+    def entries_string(self):
+        return self._entries_string
+
+    @entries_string.setter
+    def entries_string(self, value):
         # We must include the entries in the hash, since different arrays can be
         # indistinguishable by class, name and domain alone
         # Slightly different syntax for sparse and non-sparse matrices
-        entries = self._entries
-        if issparse(entries):
-            entries_str = entries.data.tostring()
+        if value is not None:
+            self._entries_string = value
         else:
-            entries_str = entries.tostring()
+            entries = self._entries
+            if issparse(entries):
+                self._entries_string = str(entries.__dict__)
+            else:
+                self._entries_string = entries.tostring()
 
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()`. """
         self._id = hash(
-            (self.__class__, self.name) + tuple(self.domain) + tuple(entries_str)
+            (self.__class__, self.name, self.entries_string) + tuple(self.domain)
         )
 
     def _base_evaluate(self, t=None, y=None):

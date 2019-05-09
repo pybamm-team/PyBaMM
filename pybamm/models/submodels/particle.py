@@ -4,25 +4,37 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 import pybamm
+import autograd.numpy as np
 
 
-class Standard(pybamm.BaseModel):
-    """A class that generates the expression tree for Stefan-Maxwell Current in the
-    electrolyte.
+class Standard(pybamm.SubModel):
+    """Diffusion in the particles
 
     Parameters
     ----------
-    c: :class:`pybamm.Variable`
-        A variable representing the lithium concentration in the particle
-    j : :class:`pybamm.Concatenation`
-        An expression tree that represents the current density at the
-        electrode-electrolyte interface
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
 
-    *Extends:* :class:`BaseModel`
+    *Extends:* :class:`pybamm.SubModel`
     """
 
-    def __init__(self, c, j, param):
-        super().__init__()
+    def __init__(self, set_of_parameters):
+        super().__init__(set_of_parameters)
+
+    def set_differential_system(self, c, j, broadcast=False):
+        """
+        PDE system for diffusion in the particles
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Variable`
+            The particle concentration variable
+        j : :class:`pybamm.Concatenation`
+            Interfacial current density
+        broadcast : bool
+            Whether to broadcast variables when computing standard variables
+        """
+        param = self.set_of_parameters
 
         if len(c.domain) != 1:
             raise NotImplementedError(
@@ -30,39 +42,65 @@ class Standard(pybamm.BaseModel):
             )
 
         if c.domain[0] == "negative particle":
-            N = -(1 / param.C_n) * pybamm.grad(c)
-            self.rhs = {c: -pybamm.div(N)}
+            N = -pybamm.grad(c)
+            self.rhs = {c: -(1 / param.C_n) * pybamm.div(N)}
             self.algebraic = {}
             self.initial_conditions = {c: param.c_n_init}
+            rbc = -param.C_n * j / param.a_n
             self.boundary_conditions = {
-                N: {"left": pybamm.Scalar(0), "right": param.C_n * j / param.a_n}
+                c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
             }
-            self.variables = {
-                "Negative particle concentration": c,
-                "Negative particle surface concentration": pybamm.surf(c),
-                "Negative particle flux": N,
-                "Negative particle concentration [mols m-3]": param.c_n_max * c,
-                "Negative particle surface concentration [mols m-3]": param.c_n_max
-                * pybamm.surf(c),
-            }
+            self.variables = self.get_variables(c, N, broadcast)
         elif c.domain[0] == "positive particle":
-            N = -(1 / param.C_p) * pybamm.grad(c)
-            self.rhs = {c: -pybamm.div(N)}
+            N = -pybamm.grad(c)
+            self.rhs = {c: -(1 / param.C_p) * pybamm.div(N)}
             self.algebraic = {}
             self.initial_conditions = {c: param.c_p_init}
+            rbc = -param.C_p * j / param.a_p / param.gamma_p
             self.boundary_conditions = {
-                N: {
-                    "left": pybamm.Scalar(0),
-                    "right": param.C_p * j / param.a_p / param.gamma_p,
-                }
+                c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
             }
-            self.variables = {
-                "Positive particle concentration": c,
-                "Positive particle surface concentration": pybamm.surf(c),
-                "Positive particle flux": N,
-                "Positive particle concentration [mols m-3]": param.c_p_max * c,
-                "Positive particle surface concentration [mols m-3]": param.c_p_max
-                * pybamm.surf(c),
-            }
+            self.variables = self.get_variables(c, N, broadcast)
         else:
             raise pybamm.ModelError("Domain not valid for the particle equations")
+
+        self.events = [pybamm.Function(np.min, c), pybamm.Function(np.max, c) - 1]
+
+    def get_variables(self, c, N, broadcast):
+        """
+        Calculate dimensionless and dimensional variables for the electrolyte submodel
+
+        Parameters
+        ----------
+        c : :class:`pybamm.Concatenation`
+            The particle concentration variable
+        N : :class:`pybamm.Symbol`
+            The flux of lithium in the particles
+        broadcast : bool
+            Whether to broadcast variables when computing standard variables
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        if c.domain == ["negative particle"]:
+            conc_scale = self.set_of_parameters.c_n_max
+            domain = "Negative particle"
+            broadcast_domain = ["negative electrode"]
+        elif c.domain == ["positive particle"]:
+            conc_scale = self.set_of_parameters.c_p_max
+            domain = "Positive particle"
+            broadcast_domain = ["positive electrode"]
+
+        c_surf = pybamm.surf(c)
+        if broadcast:
+            c_surf = pybamm.Broadcast(c_surf, broadcast_domain)
+
+        return {
+            domain + " concentration": c,
+            domain + " surface concentration": c_surf,
+            domain + " flux": N,
+            domain + " concentration [mols m-3]": conc_scale * c,
+            domain + " surface concentration [mols m-3]": conc_scale * c_surf,
+        }
