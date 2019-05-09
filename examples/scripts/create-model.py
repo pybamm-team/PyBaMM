@@ -3,6 +3,9 @@
 # that notebook
 
 import pybamm
+import numpy as np
+import autograd.numpy as auto_np
+import matplotlib.pyplot as plt
 
 # 1. Initialise model ------------------------------------------------------------------
 model = pybamm.BaseModel()
@@ -30,7 +33,7 @@ def D(cc):
 
 
 # Define variables
-c = pybamm.Variable("Solvent concentration")  # this probably needs a domain
+c = pybamm.Variable("Solvent concentration", domain="negative electrode")
 L = pybamm.Variable("SEI thickness")
 
 # 3. State governing equations ---------------------------------------------------------
@@ -62,3 +65,61 @@ model.variables = {
     "SEI growth rate [m/s]": (D_dim(c_inf_dim) / L_0_dim) * dLdt,
     "Solvent concentration [mols/m^3]": c_inf_dim * c,
 }
+
+"--------------------------------------------------------------------------------------"
+"Using the model"
+
+# define geometry
+x = pybamm.SpatialVariable("x", domain="negative electrode", coord_sys="cartesian")
+geometry = {
+    "negative electrode": {
+        "primary": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+    }
+}
+
+
+# diffusivity function
+def Diffusivity(cc):
+    return 10 ** (-12) * auto_np.exp(-cc)
+
+
+# parameter values
+param = pybamm.ParameterValues(
+    {
+        "Reaction rate constant": 10,
+        "Initial thickness": 0.1,
+        "Partial molar volume": 0.01,
+        "Bulk electrolyte solvent concentration": 100,
+        "Diffusivity": Diffusivity,
+    }
+)
+
+param.process_symbol(D_dim(c))
+
+# process model and geometry
+param.process_model(model)
+param.process_geometry(geometry)
+
+# mesh and discretise
+submesh_types = {"negative electrode": pybamm.Uniform1DSubMesh}
+var_pts = {x: 100}
+mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+spatial_methods = {"negative electrode": pybamm.FiniteVolume}
+disc = pybamm.Discretisation(mesh, spatial_methods)
+disc.process_model(model)
+
+# solve
+solver = pybamm.ScipySolver()
+t = np.linspace(0, 1, 100)
+solver.solve(model, t)
+
+# Extract output variables
+L_dim_out = pybamm.ProcessedVariable(
+    model.variables["SEI thickness"], solver.t, solver.y, mesh
+)
+pybamm.LithiumIonBaseModel().defa
+# plot
+plt.plot(solver.t, L_dim_out(solver.t))
+plt.show()
+

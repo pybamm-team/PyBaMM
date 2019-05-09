@@ -60,23 +60,6 @@ class ParameterValues(dict):
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df.Name, df.Value)}
 
-    def get_parameter_value(self, parameter):
-        """
-        Get the value of a Parameter.
-        Different ParameterValues classes may implement this differently.
-
-        Parameters
-        ----------
-        parameter : :class:`pybamm.Parameter` instance
-            The parameter whose value to obtain
-
-        Returns
-        -------
-        value : int or float
-            The value of the parameter
-        """
-        return self[parameter.name]
-
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
@@ -181,14 +164,21 @@ class ParameterValues(dict):
 
         """
         if isinstance(symbol, pybamm.Parameter):
-            value = self.get_parameter_value(symbol)
+            value = self[symbol.name]
             # Scalar inherits name (for updating parameters) and domain (for Broadcast)
             return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_child = self.process_symbol(symbol.children[0])
-            function_name = self.get_parameter_value(symbol)
-            function = pybamm.Function(pybamm.load_function(function_name), new_child)
+            function_name = self[symbol.name]
+
+            if callable(function_name):
+                function = pybamm.Function(function_name, new_child)
+            else:
+                function = pybamm.Function(
+                    pybamm.load_function(function_name), new_child
+                )
+
             if symbol.diff_variable is None:
                 return function
             else:
@@ -283,7 +273,7 @@ class ParameterValues(dict):
             if isinstance(x, pybamm.Scalar):
                 # update any Scalar nodes if their name is in the parameter dict
                 try:
-                    x.value = self.get_parameter_value(x)
+                    x.value = self[x.name]
                     # update id
                     x.set_id()
                 except KeyError:
