@@ -39,6 +39,7 @@ In this file create a new class which inherits from :class:`pybamm.BaseModel`
 .. code-block:: python
 
     class MyNewModel(pybamm.BaseModel):
+        def
 
 and add the class to ``pybamm/__init__.py``:
 
@@ -133,5 +134,32 @@ It can be useful for testing, and quickly running a model to have a default setu
 :class:`pybamm.SpatialMethod`. Finally, ``self.default_var_pts`` is required to be a dictionary with keys which are an instance of :class:`pybamm.SpatialVariable` and values which are integers. 
 
 
+Using submodels
+~~~~~~~~~~~~~~~
+The inbuilt models in PyBaMM do not add all the model attributes within their own file. Instead, they make use of inbuilt submodel (a particle model, an electrolyte model, etc). There are two main reasons for this. First, the code in the submodels can then be used by multiple models cutting down on repeated code. This makes it easier to maintain the codebase because fixing an issue in a submodel fixes that issue everywhere the submodel is called (instead of having to track down the issue in every model). Secondly, it allows for the user to easily switch a submodel out for another and study the effect. For example, we may be using standard diffusion in the particles but decide that we would like to switch in particles which are phase separating. With submodels all we need to do is switch the submodel instead of re-writing the whole sections of the model. Submodel contributions are highly encouraged so where possible, try to divide your model into submodels.
+
+
 Unit tests for a MyNewModel
 ---------------------------
+We stongly recommend testing your model to ensure that it is behaving correctly. To do this, first create a new file ``test_my_new_model.py`` within ``tests/unit/test_models`` (or the appropriate subdirectory). Within this file, add the following code
+
+.. code-block:: python 
+
+    from __future__ import absolute_import, division
+    from __future__ import print_function, unicode_literals
+    import pybamm
+    import unittest
+
+    class TestMyNewModel(unittest.TestCase): 
+        def my_first_test(self):
+            # add test here
+
+    if __name__ == "__main__":
+        print("Add -v for more debug output")
+        import sys
+
+        if "-v" in sys.argv:
+            debug = True
+        unittest.main()
+
+We can now add functions such as :meth:`my_first_test` to :class:`TestMyNewModel` which run specific tests. As a first test, we recommend you make use of :class:`tests.StandardModelTest` which runs a suite of basic tests. If your new model is a full model of a battery and therefore an instance :class:`pybamm.StandardBatteryBaseModel` then :class:`tests.StandardBatteryTest` will also check the set of outputs are producing reasonable behaviour. 
