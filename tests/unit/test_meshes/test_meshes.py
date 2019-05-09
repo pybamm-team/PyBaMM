@@ -123,12 +123,10 @@ class TestMesh(unittest.TestCase):
         submesh = mesh.combine_submeshes("negative electrode", "separator")
         self.assertEqual(submesh[0].edges[0], 0)
         self.assertEqual(submesh[0].edges[-1], mesh["separator"][0].edges[-1])
-        self.assertAlmostEqual(
-            np.linalg.norm(
-                submesh[0].nodes
-                - np.concatenate(
-                    [mesh["negative electrode"][0].nodes, mesh["separator"][0].nodes]
-                )
+        np.testing.assert_almost_equal(
+            submesh[0].nodes
+            - np.concatenate(
+                [mesh["negative electrode"][0].nodes, mesh["separator"][0].nodes]
             ),
             0,
         )
