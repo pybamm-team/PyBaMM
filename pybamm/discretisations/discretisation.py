@@ -195,6 +195,7 @@ class Discretisation(object):
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
         # Concatenate rhs into a single state vector
+
         # Need to concatenate in order as the ordering of equations could be different
         # in processed_rhs and model.rhs (for Python Version <= 3.5)
         processed_concatenated_rhs = self._concatenate_in_order(processed_rhs)
@@ -202,8 +203,6 @@ class Discretisation(object):
         # Discretise and concatenate algebraic equations
         processed_algebraic = self.process_dict(model.algebraic)
 
-        # Need to concatenate in order as the ordering of equations could be different
-        # in processed_rhs and model.rhs (for Python Version <= 3.5)
         processed_concatenated_algebraic = self._concatenate_in_order(
             processed_algebraic
         )
@@ -235,8 +234,23 @@ class Discretisation(object):
         # diagonal mass matrix for the model
         mass_list = []
 
+        # get a list of model rhs variables that are sorted according to
+        # where they are in the state vector
+        model_variables = model.rhs.keys()
+        model_slices = []
+        for v in model_variables:
+            if isinstance(v, pybamm.Concatenation):
+                model_slices.append(
+                    slice(self._y_slices[v.children[0].id].start,
+                          self._y_slices[v.children[-1].id].stop)
+                )
+            else:
+                model_slices.append(self._y_slices[v.id])
+        sorted_model_variables = [v for _, v in
+                                  sorted(zip(model_slices, model_variables))]
+
         # Process mass matrices for the differential equations
-        for var in model.rhs.keys():
+        for var in sorted_model_variables:
             if var.domain == []:
                 # If variable domain empty then mass matrix is just 1
                 mass_list.append(1.0)
@@ -431,11 +445,17 @@ class Discretisation(object):
         """
         # Unpack symbols in variables that are concatenations of variables
         unpacked_variables = []
+        slices = []
         for symbol in var_eqn_dict.keys():
             if isinstance(symbol, pybamm.Concatenation):
                 unpacked_variables.extend([var for var in symbol.children])
+                slices.append(
+                    slice(self._y_slices[symbol.children[0].id].start,
+                          self._y_slices[symbol.children[-1].id].stop)
+                )
             else:
                 unpacked_variables.append(symbol)
+                slices.append(self._y_slices[symbol.id])
 
         if check_complete:
             # Check keys from the given var_eqn_dict against self._y_slices
@@ -448,7 +468,6 @@ class Discretisation(object):
                 )
 
         equations = list(var_eqn_dict.values())
-        slices = [self._y_slices[var.id] for var in unpacked_variables]
 
         # sort equations according to slices
         sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
