@@ -51,6 +51,23 @@ class BaseOutputTest(object):
         self.solver = solver
         self.operating_condition = operating_condition
 
+        self.t = solver.t
+
+        self.x_n = disc.mesh["negative electrode"][0].nodes
+        self.x_s = disc.mesh["separator"][0].nodes
+        self.x_p = disc.mesh["positive electrode"][0].nodes
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        self.x = disc.mesh.combine_submeshes(*whole_cell)[0].nodes
+        self.x_n_edge = disc.mesh["negative electrode"][0].edges
+        self.x_s_edge = disc.mesh["separator"][0].edges
+        self.x_p_edge = disc.mesh["positive electrode"][0].edges
+        self.x_edge = disc.mesh.combine_submeshes(*whole_cell)[0].edges
+
+        self.r_n = disc.mesh["negative particle"][0].nodes
+        self.r_p = disc.mesh["positive particle"][0].nodes
+        self.r_n_edge = disc.mesh["negative particle"][0].edges
+        self.r_p_edge = disc.mesh["positive particle"][0].edges
+
     def get_var(self, var):
         "Helper function to reduce repeated code."
         return pybamm.ProcessedVariable(
@@ -85,15 +102,16 @@ class VoltageTests(BaseOutputTest):
             - off: eta_n == 0, eta_p == 0
             """
         tol = 0.001
+        t, x_n, x_p = self.t, self.x_n, self.x_p
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(-self.eta_n.entries, tol)
-            np.testing.assert_array_less(self.eta_p.entries, tol)
+            np.testing.assert_array_less(-self.eta_n(t, x_n), tol)
+            np.testing.assert_array_less(self.eta_p(t, x_p), tol)
         elif self.operating_condition == "charge":
-            np.testing.assert_array_less(self.eta_n.entries, tol)
-            np.testing.assert_array_less(-self.eta_p.entries, tol)
+            np.testing.assert_array_less(self.eta_n(t, x_n), tol)
+            np.testing.assert_array_less(-self.eta_p(t, x_p), tol)
         elif self.operating_condition == "off":
-            np.testing.assert_array_equal(self.eta_n.entries, 0)
-            np.testing.assert_array_equal(-self.eta_p.entries, 0)
+            np.testing.assert_array_equal(self.eta_n(t, x_n), 0)
+            np.testing.assert_array_equal(-self.eta_p(t, x_p), 0)
 
     def test_overpotentials(self):
         """Testing that all are:
@@ -103,18 +121,18 @@ class VoltageTests(BaseOutputTest):
         """
         tol = 0.001
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(self.eta_r_av.entries, tol)
-            np.testing.assert_array_less(self.eta_e_av.entries, tol)
-            np.testing.assert_array_less(self.Delta_Phi_s_av.entries, tol)
+            np.testing.assert_array_less(self.eta_r_av(self.t), tol)
+            np.testing.assert_array_less(self.eta_e_av(self.t), tol)
+            np.testing.assert_array_less(self.Delta_Phi_s_av(self.t), tol)
         elif self.operating_condition == "charge":
-            np.testing.assert_array_less(-self.eta_r_av.entries, tol)
-            np.testing.assert_array_less(-self.eta_e_av.entries, tol)
-            np.testing.assert_array_less(-self.Delta_Phi_s_av.entries, tol)
+            np.testing.assert_array_less(-self.eta_r_av(self.t), tol)
+            np.testing.assert_array_less(-self.eta_e_av(self.t), tol)
+            np.testing.assert_array_less(-self.Delta_Phi_s_av(self.t), tol)
 
         elif self.operating_condition == "off":
-            np.testing.assert_array_equal(self.eta_r_av.entries, 0)
-            np.testing.assert_array_equal(self.eta_e_av.entries, 0)
-            np.testing.assert_array_equal(self.Delta_Phi_s_av.entries, 0)
+            np.testing.assert_array_equal(self.eta_r_av(self.t), 0)
+            np.testing.assert_array_equal(self.eta_e_av(self.t), 0)
+            np.testing.assert_array_equal(self.Delta_Phi_s_av(self.t), 0)
 
     def test_ocps(self):
         """ Testing that:
@@ -122,8 +140,8 @@ class VoltageTests(BaseOutputTest):
             - charge: ocp_n decreases, ocp_p increases
             - off: ocp_n, ocp_p constant
         """
-        neg_end_vs_start = self.ocp_n_av.entries[-1] - self.ocp_n_av.entries[1]
-        pos_end_vs_start = self.ocp_p_av.entries[-1] - self.ocp_p_av.entries[1]
+        neg_end_vs_start = self.ocp_n_av(self.t[-1]) - self.ocp_n_av(self.t[1])
+        pos_end_vs_start = self.ocp_p_av(self.t[-1]) - self.ocp_p_av(self.t[1])
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(-neg_end_vs_start, 0)
             np.testing.assert_array_less(pos_end_vs_start, 0)
@@ -141,7 +159,7 @@ class VoltageTests(BaseOutputTest):
             - off: ocv constant
         """
 
-        end_vs_start = self.ocv_av.entries[-1] - self.ocv_av.entries[1]
+        end_vs_start = self.ocv_av(self.t[-1]) - self.ocv_av(self.t[1])
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(end_vs_start, 0)
@@ -156,7 +174,7 @@ class VoltageTests(BaseOutputTest):
             - charge: voltage increases
             - off: voltage constant
         """
-        end_vs_start = self.voltage.entries[-1] - self.voltage.entries[1]
+        end_vs_start = self.voltage(self.t[-1]) - self.voltage(self.t[1])
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(end_vs_start, 0)
@@ -170,15 +188,15 @@ class VoltageTests(BaseOutputTest):
         correctly"""
 
         np.testing.assert_array_almost_equal(
-            self.ocv_av.entries, self.ocp_p_av.entries - self.ocp_n_av.entries
+            self.ocv_av(self.t), self.ocp_p_av(self.t) - self.ocp_n_av(self.t)
         )
 
         np.testing.assert_array_almost_equal(
-            self.voltage.entries,
-            self.ocv_av.entries
-            + self.eta_r_av.entries
-            + self.eta_e_av.entries
-            + self.Delta_Phi_s_av.entries,
+            self.voltage(self.t),
+            self.ocv_av(self.t)
+            + self.eta_r_av(self.t)
+            + self.eta_e_av(self.t)
+            + self.Delta_Phi_s_av(self.t),
             decimal=3,
         )
 
@@ -208,8 +226,7 @@ class ParticleConcentrationTests(BaseOutputTest):
         """Test all concentrations in negative particles decrease and all
         concentrations in positive particles increase over a discharge."""
 
-        t, x_n, r_n = self.c_s_n.t_x_r_sol
-        t, x_p, r_p = self.c_s_p.t_x_r_sol
+        t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
 
         neg_end_vs_start = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
         pos_end_vs_start = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(t[:-1], x_p, r_p)
@@ -226,12 +243,13 @@ class ParticleConcentrationTests(BaseOutputTest):
 
     def test_concentration_limits(self):
         "Test that concentrations do not go below 0 or exceed the maximum."
+        t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
 
-        np.testing.assert_array_less(-self.c_s_n.entries, 0)
-        np.testing.assert_array_less(-self.c_s_p.entries, 0)
+        np.testing.assert_array_less(-self.c_s_n(t, x_n, r_n), 0)
+        np.testing.assert_array_less(-self.c_s_p(t, x_p, r_p), 0)
 
-        np.testing.assert_array_less(self.c_s_n.entries, 1)
-        np.testing.assert_array_less(self.c_s_p.entries, 1)
+        np.testing.assert_array_less(self.c_s_n(t, x_n, r_n), 1)
+        np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), 1)
 
     def test_conservation(self):
         "Test amount of lithium stored across all particles is constant."
@@ -249,18 +267,20 @@ class ParticleConcentrationTests(BaseOutputTest):
         """Test that no flux holds in the centre of the particle. Test that surface
         flux in the negative particles is greater than zero and that the flux in the
         positive particles is less than zero during a discharge."""
-        t, x_n, r_n = self.N_s_n.t_x_r_sol
-        t, x_p, r_p = self.N_s_p.t_x_r_sol
+        t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n_edge, self.r_p_edge
 
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n))
-            np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p), 0)
+            np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
+            np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
         if self.operating_condition == "charge":
-            np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n), 0)
-            np.testing.assert_array_less(0, self.N_s_p(t[1:], x_p, r_p))
+            np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n[1:]), 0)
+            np.testing.assert_array_less(0, self.N_s_p(t[1:], x_p, r_p[1:]))
         if self.operating_condition == "off":
             np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
             np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
+
+        np.testing.assert_array_equal(0, self.N_s_n(t, x_n, r_n[0]))
+        np.testing.assert_array_equal(0, self.N_s_p(t, x_p, r_p[0]))
 
     def test_all(self):
         self.test_concentration_increase_decrease()
@@ -291,7 +311,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
 
     def test_concentration_limit(self):
         "Test that the electrolyte concentration is always greater than zero."
-        np.testing.assert_array_less(-self.c_e.entries, 0)
+        np.testing.assert_array_less(-self.c_e(self.t, self.x), 0)
 
     def test_conservation(self):
         "Test conservation of species in the electrolyte."
@@ -332,19 +352,20 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
     def test_fluxes(self):
         """Test that the internal boundary fluxes are continuous. Test current
         collector fluxes are zero."""
-
-        # TODO: fix extrapolation to test boundary values
+        t, x = self.t, self.x_edge
+        np.testing.assert_array_equal(self.N_e_hat(t, x[0]), 0)
+        np.testing.assert_array_equal(self.N_e_hat(t, x[-1]), 0)
 
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,
         separator, and positive electrode, we get the correct behaviour: continuous
         solution and recover combined through concatenation."""
-
+        t, x_n, x_s, x_p, x = self.t, self.x_n, self.x_s, self.x_p, self.x
         c_e_combined = np.concatenate(
-            (self.c_e_n.entries, self.c_e_s.entries, self.c_e_p.entries), axis=0
+            (self.c_e_n(t, x_n), self.c_e_s(t, x_s), self.c_e_p(t, x_p)), axis=0
         )
 
-        np.testing.assert_array_equal(self.c_e.entries, c_e_combined)
+        np.testing.assert_array_equal(self.c_e(t, x), c_e_combined)
 
     def test_all(self):
         self.test_concentration_limit()
@@ -387,7 +408,7 @@ class PotentialTests(BaseOutputTest):
 
         # TODO: these tests with averages
 
-        np.testing.assert_array_less(-self.phi_s_p.entries, 0)
+        np.testing.assert_array_less(-self.phi_s_p(self.t, self.x_p), 0)
 
     def test_all(self):
         self.test_negative_electrode_potential_profile()
@@ -408,6 +429,9 @@ class CurrentTests(BaseOutputTest):
         self.j0_n = self.get_var("Negative electrode exchange-current density")
         self.j0_p = self.get_var("Positive electrode exchange-current density")
 
+        self.i_s_n = self.get_var("Negative electrode current density")
+        self.i_s_p = self.get_var("Positive electrode current density")
+
     def test_interfacial_current_average(self):
         """Test that average of the interfacial current density is equal to the true
         value."""
@@ -420,6 +444,19 @@ class CurrentTests(BaseOutputTest):
 
         # TODO: add a total function
 
+    def test_current_density_boundaries(self):
+        """Test the boundary values of the current densities"""
+        t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
+
+        current_param = pybamm.electrical_parameters.current_with_time
+        parameter_values = self.model.default_parameter_values
+        i_cell = parameter_values.process_symbol(current_param).evaluate(t=t)
+        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell)
+        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[-1]), 0)
+        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[-1]), i_cell)
+        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[0]), 0)
+
     def test_all(self):
         self.test_interfacial_current_average()
         self.test_conservation()
+        self.test_current_density_boundaries()

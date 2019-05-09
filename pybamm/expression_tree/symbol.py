@@ -44,10 +44,6 @@ class Symbol(anytree.NodeMixin):
         # Set domain (and hence id)
         self.domain = domain
 
-        # useful flags
-        self._has_left_ghost_cell = False
-        self._has_right_ghost_cell = False
-
     @property
     def children(self):
         return self.cached_children
@@ -495,24 +491,6 @@ class Symbol(anytree.NodeMixin):
     def simplify(self):
         """ Simplify the expression tree. See :meth:`pybamm.simplify()`. """
         return pybamm.simplify(self)
-
-    @property
-    def has_left_ghost_cell(self):
-        return self._has_left_ghost_cell
-
-    @has_left_ghost_cell.setter
-    def has_left_ghost_cell(self, value):
-        assert isinstance(value, bool)
-        self._has_left_ghost_cell = value
-
-    @property
-    def has_right_ghost_cell(self):
-        return self._has_right_ghost_cell
-
-    @has_right_ghost_cell.setter
-    def has_right_ghost_cell(self, value):
-        assert isinstance(value, bool)
-        self._has_right_ghost_cell = value
 
     @property
     def shape(self):
