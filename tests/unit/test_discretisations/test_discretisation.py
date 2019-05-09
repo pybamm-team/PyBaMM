@@ -27,7 +27,7 @@ class TestDiscretise(unittest.TestCase):
         disc._y_slices = {c.id: slice(0, 1), a.id: slice(2, 3), b.id: slice(3, 4)}
         result = disc._concatenate_in_order(initial_conditions)
 
-        self.assertIsInstance(result, pybamm.NumpyConcatenation, check_complete=True)
+        self.assertIsInstance(result, pybamm.NumpyConcatenation)
         self.assertEqual(result.children[0].evaluate(), 1)
         self.assertEqual(result.children[1].evaluate(), 2)
         self.assertEqual(result.children[2].evaluate(), 3)
@@ -397,11 +397,13 @@ class TestDiscretise(unittest.TestCase):
         disc.process_model(model)
         y0 = model.concatenated_initial_conditions
         y0_expect = np.array([])
-        for var, init in model.initial_conditions.items():
-            if var.id == c.id:
-                vect = init.evaluate() * np.ones_like(combined_submesh[0].nodes)
+        for var_id, _ in sorted(disc._y_slices.items(), key=lambda kv: kv[1]):
+            if var_id == c.id:
+                vect = 2 * np.ones_like(combined_submesh[0].nodes)
+            elif var_id == T.id:
+                vect = 5 * np.ones_like(mesh["negative electrode"][0].nodes)
             else:
-                vect = init.evaluate() * np.ones_like(mesh[var.domain[0]][0].nodes)
+                vect = 8 * np.ones_like(mesh["negative electrode"][0].nodes)
 
             y0_expect = np.concatenate([y0_expect, vect])
 
