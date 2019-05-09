@@ -537,6 +537,9 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
             },
         )
 
+        # Overwrite geometry
+        self.default_geometry = pybamm.Geometry("1D macro")
+
         # Current
         icell = pybamm.electrical_parameters.current_with_time
         icell_dim = pybamm.electrical_parameters.dimensional_current_with_time

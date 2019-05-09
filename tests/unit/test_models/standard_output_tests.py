@@ -63,10 +63,11 @@ class BaseOutputTest(object):
         self.x_p_edge = disc.mesh["positive electrode"][0].edges
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell)[0].edges
 
-        self.r_n = disc.mesh["negative particle"][0].nodes
-        self.r_p = disc.mesh["positive particle"][0].nodes
-        self.r_n_edge = disc.mesh["negative particle"][0].edges
-        self.r_p_edge = disc.mesh["positive particle"][0].edges
+        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+            self.r_n = disc.mesh["negative particle"][0].nodes
+            self.r_p = disc.mesh["positive particle"][0].nodes
+            self.r_n_edge = disc.mesh["negative particle"][0].edges
+            self.r_p_edge = disc.mesh["positive particle"][0].edges
 
     def get_var(self, var):
         "Helper function to reduce repeated code."
