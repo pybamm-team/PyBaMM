@@ -5,6 +5,7 @@ from matplotlib.widgets import Slider
 
 
 def ax_min(data):
+    "Calculate appropriate minimum axis value for plotting"
     data_min = np.min(data)
     if data_min <= 0:
         return 1.1 * data_min
@@ -13,6 +14,7 @@ def ax_min(data):
 
 
 def ax_max(data):
+    "Calculate appropriate maximum axis value for plotting"
     data_max = np.max(data)
     if data_max <= 0:
         return 0.9 * data_max
@@ -29,15 +31,18 @@ class QuickPlot(object):
 
     Parameters
     ----------
-    model: :class: pybamm.BaseModel
-        The model to plot the outputs of.
-    mesh: :class: pybamm.Mesh
+    models: (iter of) :class:`pybamm.BaseModel`
+        The model(s) to plot the outputs of.
+    mesh: :class:`pybamm.Mesh`
         The mesh on which the model solved
-    solver: :class: pybamm.Solver
-        The numerical solver for the model which contained the solution to the model.
+    solvers: (iter of) :class:`pybamm.Solver`
+        The numerical solver(s) for the model(s) which contained the solution to the
+        model(s).
+    output_variables : list of str
+        List of variables to plot
     """
 
-    def __init__(self, models, param, mesh, solvers, output_variables=None):
+    def __init__(self, models, mesh, solvers, output_variables=None):
         if isinstance(models, pybamm.BaseModel):
             models = [models]
         elif not isinstance(models, list):
@@ -59,25 +64,25 @@ class QuickPlot(object):
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
             if isinstance(models[0], pybamm.LithiumIonBaseModel):
-                output_variables = {
-                    "Negative particle surface concentration": ((2, 4, 1), "x"),
-                    "Electrolyte concentration": ((2, 4, 2), "x"),
-                    "Positive particle surface concentration": ((2, 4, 3), "x"),
-                    "Total current density": ((2, 4, 4), "t"),
-                    "Negative electrode potential [V]": ((2, 4, 5), "x"),
-                    "Electrolyte potential [V]": ((2, 4, 6), "x"),
-                    "Positive electrode potential [V]": ((2, 4, 7), "x"),
-                    "Terminal voltage [V]": ((2, 4, 8), "t"),
-                }
+                output_variables = [
+                    "Negative particle surface concentration",
+                    "Electrolyte concentration",
+                    "Positive particle surface concentration",
+                    "Total current density",
+                    "Negative electrode potential [V]",
+                    "Electrolyte potential [V]",
+                    "Positive electrode potential [V]",
+                    "Terminal voltage [V]",
+                ]
             elif isinstance(models[0], pybamm.LeadAcidBaseModel):
-                output_variables = {
-                    "Interfacial current density": ((2, 3, 1), "x"),
-                    "Electrolyte concentration": ((2, 3, 2), "x"),
-                    "Total current density": ((2, 3, 3), "t"),
-                    "Porosity": ((2, 3, 4), "x"),
-                    "Electrolyte potential [V]": ((2, 3, 5), "x"),
-                    "Terminal voltage [V]": ((2, 3, 6), "t"),
-                }
+                output_variables = [
+                    "Interfacial current density",
+                    "Electrolyte concentration",
+                    "Total current density",
+                    "Porosity",
+                    "Electrolyte potential [V]",
+                    "Terminal voltage [V]",
+                ]
         self.set_output_variables(output_variables, solvers, models, mesh)
         self.reset_axis()
 
@@ -85,20 +90,28 @@ class QuickPlot(object):
         # Set up output variables
         self.variables = {}
         self.x_values = {}
+
+        # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
-        self.independent_variables = {}
-        for var, (subplot_position, indep_var) in output_variables.items():
+        n = int(len(output_variables) // np.sqrt(len(output_variables)))
+        m = np.ceil(len(output_variables) / n)
+
+        # Process output variables into a form that can be plotted
+        for k, var in enumerate(output_variables):
             self.variables[var] = [
                 pybamm.ProcessedVariable(
                     models[i].variables[var], solvers[i].t, solvers[i].y, mesh
                 )
                 for i in range(len(models))
             ]
-            domain = models[0].variables[var].domain
-            self.subplot_positions[var] = subplot_position
-            self.independent_variables[var] = indep_var
-            if indep_var == "x":
+            if self.variables[var][0].dimensions == 2:
+                domain = models[0].variables[var].domain
                 self.x_values[var] = mesh.combine_submeshes(*domain)[0].edges
+            self.subplot_positions[var] = (n, m, k + 1)
+
+        # Don't allow 3D variables
+        if self.variables[var][0].dimensions == 3:
+            raise NotImplementedError("cannot plot 3D variables")
 
     def reset_axis(self):
         """
@@ -106,7 +119,11 @@ class QuickPlot(object):
         """
         self.axis = {}
         for name, variable in self.variables.items():
-            if self.independent_variables[name] == "x":
+            if variable[0].dimensions == 1:
+                y_min = np.min([ax_min(v(self.ts[i])) for i, v in enumerate(variable)])
+                y_max = np.max([ax_max(v(self.ts[i])) for i, v in enumerate(variable)])
+                self.axis[name] = [self.min_t, self.max_t, y_min, y_max]
+            elif variable[0].dimensions == 2:
                 x = self.x_values[name]
                 y_min = np.min(
                     [ax_min(v(self.ts[i], x)) for i, v in enumerate(variable)]
@@ -115,10 +132,6 @@ class QuickPlot(object):
                     [ax_max(v(self.ts[i], x)) for i, v in enumerate(variable)]
                 )
                 self.axis[name] = [x[0], x[-1], y_min, y_max]
-            elif self.independent_variables[name] == "t":
-                y_min = np.min([ax_min(v(self.ts[i])) for i, v in enumerate(variable)])
-                y_max = np.max([ax_max(v(self.ts[i])) for i, v in enumerate(variable)])
-                self.axis[name] = [self.min_t, self.max_t, y_min, y_max]
 
     def plot(self, t):
         """Produces a quick plot with the internal states at time t.
@@ -139,7 +152,8 @@ class QuickPlot(object):
             plt.ylabel(name)
             plt.axis(self.axis[name])
             self.plots[name] = [None] * self.num_models
-            if self.independent_variables[name] == "x":
+            if variable[0].dimensions == 2:
+                # 2D plot: plot as a function of x at time t
                 plt.xlabel("Position")
                 x_value = self.x_values[name]
                 for i in range(self.num_models):
@@ -147,6 +161,7 @@ class QuickPlot(object):
                         x_value, variable[i](t, x_value), lw=2
                     )
             else:
+                # 1D plot: plot as a function of time, indicating time t
                 plt.xlabel("Time")
                 for i in range(self.num_models):
                     full_t = self.ts[i]
@@ -181,7 +196,7 @@ class QuickPlot(object):
         """
         t = self.sfreq.val
         for var, plot in self.plots.items():
-            if self.independent_variables[var] == "x":
+            if self.variables[var][0].dimensions == 2:
                 x = self.x_values[var]
                 for i in range(self.num_models):
                     plot[i].set_ydata(self.variables[var][i](t, x))
