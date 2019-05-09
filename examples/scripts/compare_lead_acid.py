@@ -5,7 +5,7 @@ import numpy as np
 models = [
     pybamm.lead_acid.LOQS(),
     pybamm.lead_acid.Composite(),
-    # pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.NewmanTiedemann(),
 ]
 
 # create geometry
@@ -13,7 +13,7 @@ geometry = models[-1].default_geometry
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current": 2})
+param.update({"Typical current": 20})
 for model in models:
     param.process_model(model)
 param.process_geometry(geometry)

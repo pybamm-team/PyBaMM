@@ -79,6 +79,14 @@ class BaseModel(object):
         return dict
 
     @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
     def rhs(self):
         return self._rhs
 

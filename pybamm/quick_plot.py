@@ -130,6 +130,9 @@ class QuickPlot(object):
             if variable[0].dimensions == 1:
                 y_min = np.min([ax_min(v(self.ts[i])) for i, v in enumerate(variable)])
                 y_max = np.max([ax_max(v(self.ts[i])) for i, v in enumerate(variable)])
+                if y_min == y_max:
+                    y_min -= 1
+                    y_max += 1
                 self.axis[name] = [self.min_t, self.max_t, y_min, y_max]
             elif variable[0].dimensions == 2:
                 x = self.x_values[name]
@@ -140,6 +143,9 @@ class QuickPlot(object):
                 y_max = np.max(
                     [ax_max(v(self.ts[i], x)) for i, v in enumerate(variable)]
                 )
+                if y_min == y_max:
+                    y_min -= 1
+                    y_max += 1
                 self.axis[name] = [x_scaled[0], x_scaled[-1], y_min, y_max]
 
     def plot(self, t):
