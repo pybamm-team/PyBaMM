@@ -145,9 +145,9 @@ class ParameterValues(dict):
         self.process_model(model, processing="update")
 
         # update discretised quantities using disc
-        model.concatenated_rhs = disc.concatenate(*model.rhs.values())
-        model.concatenated_algebraic = disc.concatenate(*model.algebraic.values())
-        model.concatenated_initial_conditions = disc._concatenate_init(
+        model.concatenated_rhs = disc._concatenate_in_order(model.rhs)
+        model.concatenated_algebraic = disc._concatenate_in_order(model.algebraic)
+        model.concatenated_initial_conditions = disc._concatenate_in_order(
             model.initial_conditions
         ).evaluate(0, None)
 

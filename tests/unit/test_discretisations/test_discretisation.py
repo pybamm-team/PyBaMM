@@ -10,7 +10,7 @@ from scipy.sparse import block_diag
 
 
 class TestDiscretise(unittest.TestCase):
-    def test_concatenate_init(self):
+    def test_concatenate_in_order(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
         c = pybamm.Variable("c")
@@ -25,16 +25,16 @@ class TestDiscretise(unittest.TestCase):
         disc = get_discretisation_for_testing()
 
         disc._y_slices = {c.id: slice(0, 1), a.id: slice(2, 3), b.id: slice(3, 4)}
-        result = disc._concatenate_init(initial_conditions)
+        result = disc._concatenate_in_order(initial_conditions)
 
-        self.assertIsInstance(result, pybamm.NumpyConcatenation)
+        self.assertIsInstance(result, pybamm.NumpyConcatenation, check_complete=True)
         self.assertEqual(result.children[0].evaluate(), 1)
         self.assertEqual(result.children[1].evaluate(), 2)
         self.assertEqual(result.children[2].evaluate(), 3)
 
         initial_conditions = {a: pybamm.Scalar(2), b: pybamm.Scalar(3)}
         with self.assertRaises(pybamm.ModelError):
-            result = disc._concatenate_init(initial_conditions)
+            result = disc._concatenate_in_order(initial_conditions, check_complete=True)
 
     def test_discretise_slicing(self):
         # create discretisation
@@ -403,15 +403,17 @@ class TestDiscretise(unittest.TestCase):
             else:
                 vect = init.evaluate() * np.ones_like(mesh[var.domain[0]][0].nodes)
 
-            y0_expect = np.concatenate([y0_expect,vect])
+            y0_expect = np.concatenate([y0_expect, vect])
 
-        np.testing.assert_array_equal(y0,y0_expect)
+        np.testing.assert_array_equal(y0, y0_expect)
 
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
 
-        S0 = model.initial_conditions[S].evaluate() * np.ones_like(mesh[S.domain[0]][0].nodes)
-        T0 = model.initial_conditions[T].evaluate() * np.ones_like(mesh[T.domain[0]][0].nodes)
+        S0 = model.initial_conditions[S].evaluate(
+        ) * np.ones_like(mesh[S.domain[0]][0].nodes)
+        T0 = model.initial_conditions[T].evaluate(
+        ) * np.ones_like(mesh[T.domain[0]][0].nodes)
         np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
 
         # mass matrix is identity

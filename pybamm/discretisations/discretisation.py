@@ -169,8 +169,8 @@ class Discretisation(object):
 
         # Concatenate initial conditions into a single vector
         # check that all initial conditions are set
-        processed_concatenated_initial_conditions = self._concatenate_init(
-            processed_initial_conditions
+        processed_concatenated_initial_conditions = self._concatenate_in_order(
+            processed_initial_conditions, check_complete=True
         ).evaluate(0, None)
 
         return processed_initial_conditions, processed_concatenated_initial_conditions
@@ -195,12 +195,17 @@ class Discretisation(object):
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
         # Concatenate rhs into a single state vector
-        processed_concatenated_rhs = self.concatenate(*processed_rhs.values())
+        # Need to concatenate in order as the ordering of equations could be different
+        # in processed_rhs and model.rhs (for Python Version <= 3.5)
+        processed_concatenated_rhs = self._concatenate_in_order(processed_rhs)
 
         # Discretise and concatenate algebraic equations
         processed_algebraic = self.process_dict(model.algebraic)
-        processed_concatenated_algebraic = self.concatenate(
-            *processed_algebraic.values()
+
+        # Need to concatenate in order as the ordering of equations could be different
+        # in processed_rhs and model.rhs (for Python Version <= 3.5)
+        processed_concatenated_algebraic = self._concatenate_in_order(
+            processed_algebraic
         )
 
         return (
@@ -404,10 +409,9 @@ class Discretisation(object):
     def concatenate(self, *symbols):
         return pybamm.NumpyConcatenation(*symbols)
 
-    def _concatenate_init(self, var_eqn_dict):
+    def _concatenate_in_order(self, var_eqn_dict, check_complete=False):
         """
-        Concatenate a dictionary of {variable: equation} initial conditions using
-        self._y_slices
+        Concatenate a dictionary of {variable: equation} using self._y_slices
 
         The keys/variables in `var_eqn_dict` must be the same as the ids in
         `self._y_slices`.
@@ -432,14 +436,16 @@ class Discretisation(object):
                 unpacked_variables.extend([var for var in symbol.children])
             else:
                 unpacked_variables.append(symbol)
-        # Check keys from the given var_eqn_dict against self._y_slices
-        ids = {v.id for v in unpacked_variables}
-        if ids != self._y_slices.keys():
-            given_variable_names = [v.name for v in var_eqn_dict.keys()]
-            raise pybamm.ModelError(
-                "Initial conditions are insufficient. Only "
-                "provided for {} ".format(given_variable_names)
-            )
+
+        if check_complete:
+            # Check keys from the given var_eqn_dict against self._y_slices
+            ids = {v.id for v in unpacked_variables}
+            if ids != self._y_slices.keys():
+                given_variable_names = [v.name for v in var_eqn_dict.keys()]
+                raise pybamm.ModelError(
+                    "Initial conditions are insufficient. Only "
+                    "provided for {} ".format(given_variable_names)
+                )
 
         equations = list(var_eqn_dict.values())
         slices = [self._y_slices[var.id] for var in unpacked_variables]
