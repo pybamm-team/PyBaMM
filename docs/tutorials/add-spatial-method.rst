@@ -40,7 +40,7 @@ with a single class that inherits from :class:`pybamm.SpatialMethod`, such as:
 
 .. code-block:: python
 
-    def MyFastMethod(pybamm.SpatialMethod):
+    class MyFastMethod(pybamm.SpatialMethod):
 
 and add the class to ``pybamm/__init__.py``:
 
