@@ -191,9 +191,9 @@ class Discretisation(object):
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
             for side, bc in bcs.items():
-                eqn, type = bc
+                eqn, typ = bc
                 processed_eqn = self.process_symbol(eqn)
-                processed_bcs[key.id][side] = (processed_eqn, type)
+                processed_bcs[key.id][side] = (processed_eqn, typ)
 
         return processed_bcs
 

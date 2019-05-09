@@ -114,8 +114,8 @@ class ParameterValues(dict):
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
             for side in ["left", "right"]:
-                bc, type = bcs[side]
-                processed_bc = (processing_function(bc), type)
+                bc, typ = bcs[side]
+                processed_bc = (processing_function(bc), typ)
                 new_boundary_conditions[processed_variable][side] = processed_bc
         model.boundary_conditions = new_boundary_conditions
 

@@ -114,9 +114,9 @@ class BaseModel(object):
         for var, bcs in boundary_conditions.items():
             for side, bc in bcs.items():
                 if isinstance(bc[0], numbers.Number):
-                    # type is the type of the bc, e.g. "Dirichlet" or "Neumann"
-                    eqn, type = boundary_conditions[var][side]
-                    boundary_conditions[var][side] = (pybamm.Scalar(eqn), type)
+                    # typ is the type of the bc, e.g. "Dirichlet" or "Neumann"
+                    eqn, typ = boundary_conditions[var][side]
+                    boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
                 # Check types
                 if bc[1] not in ["Dirichlet", "Neumann"]:
                     raise pybamm.ModelError(
