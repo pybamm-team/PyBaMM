@@ -20,7 +20,7 @@ You'll need the following requirements:
 
 - Python 3.5+
 - Git (`git` package on Ubuntu distributions)
-- Python libraries: `venv` (`python3-dev` package on Ubuntu distributions)
+- Python libraries: `venv` (`python3-venv` package on Ubuntu distributions)
 
 The first step is to get the code by cloning this repository
 
@@ -53,8 +53,8 @@ deactivate
 
 PyBaMM has the following python libraries as dependencies: `numpy`, `scipy`, `pandas`,
 `matplotlib`. These, along with PyBaMM, can easily be installed using `pip`. First, make
-sure you have activated your virtual environment as above, and then make sure you have
-the latest version of pip installed:
+sure you have activated your virtual environment as above, and that you have the latest 
+version of pip installed:
 
 ```bash
 pip install --upgrade pip
