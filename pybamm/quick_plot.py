@@ -61,6 +61,11 @@ class QuickPlot(object):
         self.min_t = np.min([t[0] for t in self.ts])
         self.max_t = np.max([t[-1] for t in self.ts])
 
+        # Scales
+        vars = models[0].variables
+        self.x_scale = (vars["x [m]"] / vars["x"]).evaluate()[-1]
+        self.time_scale = (vars["Time [h]"] / vars["Time"]).evaluate(t=1)
+
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
             if isinstance(models[0], pybamm.LithiumIonBaseModel):
@@ -68,7 +73,7 @@ class QuickPlot(object):
                     "Negative particle surface concentration",
                     "Electrolyte concentration",
                     "Positive particle surface concentration",
-                    "Total current density",
+                    "Current [A]",
                     "Negative electrode potential [V]",
                     "Electrolyte potential [V]",
                     "Positive electrode potential [V]",
@@ -76,9 +81,9 @@ class QuickPlot(object):
                 ]
             elif isinstance(models[0], pybamm.LeadAcidBaseModel):
                 output_variables = [
-                    "Interfacial current density",
-                    "Electrolyte concentration",
-                    "Total current density",
+                    "Interfacial current density [A m-2]",
+                    "Electrolyte concentration [mols m-3]",
+                    "Current [A]",
                     "Porosity",
                     "Electrolyte potential [V]",
                     "Terminal voltage [V]",
@@ -125,16 +130,22 @@ class QuickPlot(object):
             if variable[0].dimensions == 1:
                 y_min = np.min([ax_min(v(self.ts[i])) for i, v in enumerate(variable)])
                 y_max = np.max([ax_max(v(self.ts[i])) for i, v in enumerate(variable)])
-                self.axis[name] = [self.min_t, self.max_t, y_min, y_max]
+                self.axis[name] = [
+                    self.min_t * self.time_scale,
+                    self.max_t * self.time_scale,
+                    y_min,
+                    y_max,
+                ]
             elif variable[0].dimensions == 2:
                 x = self.x_values[name]
+                x_scaled = x * self.x_scale
                 y_min = np.min(
                     [ax_min(v(self.ts[i], x)) for i, v in enumerate(variable)]
                 )
                 y_max = np.max(
                     [ax_max(v(self.ts[i], x)) for i, v in enumerate(variable)]
                 )
-                self.axis[name] = [x[0], x[-1], y_min, y_max]
+                self.axis[name] = [x_scaled[0], x_scaled[-1], y_min, y_max]
 
     def plot(self, t):
         """Produces a quick plot with the internal states at time t.
@@ -153,7 +164,7 @@ class QuickPlot(object):
         for k, name in enumerate(self.variables.keys()):
             variable = self.variables[name]
             plt.subplot(*self.subplot_positions[name])
-            plt.ylabel(name, fontsize=15)
+            plt.ylabel(name, fontsize=14)
             plt.axis(self.axis[name])
             self.plots[name] = [None] * self.num_models
             # Set labels
@@ -163,23 +174,29 @@ class QuickPlot(object):
                 labels = [None] * len(self.labels)
             if variable[0].dimensions == 2:
                 # 2D plot: plot as a function of x at time t
-                plt.xlabel("Position", fontsize=15)
+                plt.xlabel("Position [m]", fontsize=14)
                 x_value = self.x_values[name]
                 for i in range(self.num_models):
                     self.plots[name][i], = plt.plot(
-                        x_value, variable[i](t, x_value), lw=2, label=labels[i]
+                        x_value * self.x_scale,
+                        variable[i](t, x_value),
+                        lw=2,
+                        label=labels[i],
                     )
             else:
-                # 1D plot: plot as a function of time, indicating time t
-                plt.xlabel("Time", fontsize=15)
+                # 1D plot: plot as a function of time, indicating time t with a line
+                plt.xlabel("Time [h]", fontsize=14)
                 for i in range(self.num_models):
                     full_t = self.ts[i]
                     self.plots[name][i], = plt.plot(
-                        full_t, variable[i](full_t), lw=2, label=labels[i]
+                        full_t * self.time_scale,
+                        variable[i](full_t),
+                        lw=2,
+                        label=labels[i],
                     )
                     y_min, y_max = self.axis[name][2:]
                     self.time_lines[name], = plt.plot([t, t], [y_min, y_max], "k--")
-        self.fig.legend(loc="right")
+        self.fig.legend(loc="lower right")
 
     def dynamic_plot(self, testing=False):
         """
@@ -191,7 +208,7 @@ class QuickPlot(object):
         self.plot(0)
 
         axcolor = "lightgoldenrodyellow"
-        axfreq = plt.axes([0.315, 0.05, 0.37, 0.03], facecolor=axcolor)
+        axfreq = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
         self.sfreq = Slider(axfreq, "Time", 0, self.max_t, valinit=0)
         self.sfreq.on_changed(self.update)
 

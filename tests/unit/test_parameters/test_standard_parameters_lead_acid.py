@@ -34,7 +34,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
-                "Typical current density": 1,
+                "Typical current": 1,
                 "Electrolyte diffusivity": os.path.join(
                     input_path, "electrolyte_diffusivity_Gu1997.py"
                 ),
@@ -69,7 +69,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
         # process parameters and discretise
         parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv", {"Typical current density": 1}
+            "input/parameters/lead-acid/default.csv", {"Typical current": 1}
         )
         disc = get_discretisation_for_testing()
         processed_s = disc.process_symbol(parameter_values.process_symbol(s_param))
@@ -83,7 +83,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_current_functions(self):
         # create current functions
         dimensional_current = (
-            pybamm.standard_parameters_lead_acid.dimensional_current_with_time
+            pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
         )
         dimensionless_current = pybamm.standard_parameters_lead_acid.current_with_time
 
@@ -93,7 +93,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
                 "Electrode height": 0.1,
                 "Electrode depth": 0.1,
                 "Number of electrodes connected in parallel to make a cell": 8,
-                "Typical current density": 2,
+                "Typical current": 2,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
@@ -129,7 +129,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
-                "Typical current density": 1,
+                "Typical current": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",

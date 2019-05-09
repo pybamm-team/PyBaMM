@@ -13,6 +13,7 @@ class DFN(pybamm.LithiumIonBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.name = "Doyle-Fuller-Newman model"
 
         "-----------------------------------------------------------------------------"
         "Parameters"

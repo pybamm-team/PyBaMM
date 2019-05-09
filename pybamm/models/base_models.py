@@ -339,7 +339,7 @@ class StandardBatteryBaseModel(BaseModel):
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
             {
-                "Typical current density": 1,
+                "Typical current": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
@@ -394,11 +394,6 @@ class StandardBatteryBaseModel(BaseModel):
             self.default_solver = pybamm.ScipySolver()
 
         # Standard output variables
-        # Current
-        self.variables.update(
-            {"Total current density": None, "Total current density [A m-2]": None}
-        )
-
         # Interfacial current
         self.variables.update(
             {
@@ -485,6 +480,35 @@ class StandardBatteryBaseModel(BaseModel):
             }
         )
 
+        # Current
+        icell = pybamm.electrical_parameters.current_with_time
+        icell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
+        I = pybamm.electrical_parameters.dimensional_current_with_time
+        self.variables.update(
+            {
+                "Total current density": icell,
+                "Total current density [A m-2]": icell_dim,
+                "Current [A]": I,
+            }
+        )
+        # Time
+        self.variables.update({"Time": pybamm.t})
+        # x-position
+        var = pybamm.standard_spatial_vars
+        L_x = pybamm.geometric_parameters.L_x
+        self.variables.update(
+            {
+                "x": var.x,
+                "x [m]": var.x * L_x,
+                "x_n": var.x_n,
+                "x_n [m]": var.x_n * L_x,
+                "x_s": var.x_s,
+                "x_s [m]": var.x_s * L_x,
+                "x_p": var.x_p,
+                "x_p [m]": var.x_p * L_x,
+            }
+        )
+
 
 class SubModel(StandardBatteryBaseModel):
     def __init__(self, set_of_parameters):
@@ -511,7 +535,7 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
-                "Typical current density": 1,
+                "Typical current": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
@@ -540,12 +564,9 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
         # Overwrite geometry
         self.default_geometry = pybamm.Geometry("1D macro")
 
-        # Current
-        icell = pybamm.electrical_parameters.current_with_time
-        icell_dim = pybamm.electrical_parameters.dimensional_current_with_time
-        self.variables.update(
-            {"Total current density": icell, "Total current density [A m-2]": icell_dim}
-        )
+        # Standard time variable
+        time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
+        self.variables.update({"Time [h]": pybamm.t * time_scale / 3600})
 
 
 class LithiumIonBaseModel(StandardBatteryBaseModel):
@@ -561,14 +582,11 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
         super().__init__()
 
         # Additional standard output variables
-        # Current
-        icell = pybamm.electrical_parameters.current_with_time
-        icell_dim = pybamm.electrical_parameters.dimensional_current_with_time
-        self.variables.update(
-            {"Total current density": icell, "Total current density [A m-2]": icell_dim}
-        )
+        # Time
+        time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
+        self.variables.update({"Time [h]": pybamm.t * time_scale / 3600})
 
-        # Particle concentration
+        # Particle concentration and position
         self.variables.update(
             {
                 "Negative particle concentration": None,
@@ -579,5 +597,15 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
                 "Positive particle concentration [mols m-3]": None,
                 "Negative particle surface concentration [mols m-3]": None,
                 "Positive particle surface concentration [mols m-3]": None,
+            }
+        )
+        var = pybamm.standard_spatial_vars
+        param = pybamm.geometric_parameters
+        self.variables.update(
+            {
+                "r_n": var.r_n,
+                "r_n [m]": var.r_n * param.R_n,
+                "r_p": var.r_p,
+                "r_p [m]": var.r_p * param.R_p,
             }
         )

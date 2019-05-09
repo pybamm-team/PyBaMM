@@ -50,7 +50,7 @@ class TestUpdateParameters(unittest.TestCase):
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
             base_parameters=model2.default_parameter_values,
-            optional_parameters={"Typical current density": 2},
+            optional_parameters={"Typical current": 2},
         )
         modeltest2.test_update_parameters(parameter_values_update)
         modeltest2.test_solving(t_eval=t_eval)

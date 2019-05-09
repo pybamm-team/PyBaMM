@@ -31,14 +31,14 @@ class TestLeadAcidLOQS(unittest.TestCase):
     def test_charge(self):
         model = pybamm.lead_acid.LOQS()
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Typical current density": -1})
+        parameter_values.update({"Typical current": -1})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
     def test_zero_current(self):
         model = pybamm.lead_acid.LOQS()
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Typical current density": 0})
+        parameter_values.update({"Typical current": 0})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
