@@ -44,7 +44,6 @@ matrix:
                 - python3.5-dev
           env:
             - PYBAMM_UNIT=true
-            - PYBAMM_BOOKS=true
           if: type != cron
         - python: "3.6"
           addons:
@@ -74,7 +73,6 @@ matrix:
                 - python3.6-dev
           env:
             - PYBAMM_UNIT=true
-            - PYBAMM_BOOKS=true
           if: type != cron
         #- python: "3.7"
         #  env:
@@ -145,6 +143,8 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.6-dev
+          env:
+            - PYBAMM_BOOKS=true
           if: type == cron
 
 # Install dependencies
