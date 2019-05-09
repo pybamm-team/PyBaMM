@@ -67,17 +67,28 @@ class TestBaseModel(unittest.TestCase):
 
     def test_boundary_conditions_set_get(self):
         model = pybamm.BaseModel()
-        boundary_conditions = {"c": {"left": "epsilon", "right": "eta"}}
+        boundary_conditions = {
+            "c": {"left": ("epsilon", "Dirichlet"), "right": ("eta", "Dirichlet")}
+        }
         model.boundary_conditions = boundary_conditions
         self.assertEqual(boundary_conditions, model.boundary_conditions)
 
         # Test number input
         c0 = pybamm.Symbol("c0")
-        model.boundary_conditions = {c0: {"left": -2, "right": 4}}
-        self.assertIsInstance(model.boundary_conditions[c0]["left"], pybamm.Scalar)
-        self.assertIsInstance(model.boundary_conditions[c0]["right"], pybamm.Scalar)
-        self.assertEqual(model.boundary_conditions[c0]["left"].value, -2)
-        self.assertEqual(model.boundary_conditions[c0]["right"].value, 4)
+        model.boundary_conditions = {
+            c0: {"left": (-2, "Dirichlet"), "right": (4, "Dirichlet")}
+        }
+        self.assertIsInstance(model.boundary_conditions[c0]["left"][0], pybamm.Scalar)
+        self.assertIsInstance(model.boundary_conditions[c0]["right"][0], pybamm.Scalar)
+        self.assertEqual(model.boundary_conditions[c0]["left"][0].value, -2)
+        self.assertEqual(model.boundary_conditions[c0]["right"][0].value, 4)
+        self.assertEqual(model.boundary_conditions[c0]["left"][1], "Dirichlet")
+        self.assertEqual(model.boundary_conditions[c0]["right"][1], "Dirichlet")
+
+        # Check bad bc type
+        bad_bcs = {c0: {"left": (-2, "bad type"), "right": (4, "bad type")}}
+        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
+            model.boundary_conditions = bad_bcs
 
     def test_variables_set_get(self):
         model = pybamm.BaseModel()
@@ -100,7 +111,7 @@ class TestBaseModel(unittest.TestCase):
         c = pybamm.Variable("c", domain=whole_cell)
         rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
         initial_conditions = {c: 1}
-        boundary_conditions = {c: {"left": 0, "right": 0}}
+        boundary_conditions = {c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}}
         variables = {"c": c}
         model.rhs = rhs
         model.initial_conditions = initial_conditions
@@ -114,7 +125,9 @@ class TestBaseModel(unittest.TestCase):
             d: 5 * pybamm.div(pybamm.grad(c)) + pybamm.div(pybamm.grad(d)) - 1
         }
         submodel.initial_conditions = {d: 3}
-        submodel.boundary_conditions = {d: {"left": 4, "right": 7}}
+        submodel.boundary_conditions = {
+            d: {"left": (4, "Dirichlet"), "right": (7, "Dirichlet")}
+        }
         submodel.variables = {"d": d}
         model.update(submodel)
 
@@ -142,7 +155,9 @@ class TestBaseModel(unittest.TestCase):
             e: 5 * pybamm.div(pybamm.grad(d)) + pybamm.div(pybamm.grad(e)) - 1
         }
         submodel2.initial_conditions = {e: 3}
-        submodel2.boundary_conditions = {e: {"left": 4, "right": 7}}
+        submodel2.boundary_conditions = {
+            e: {"left": (4, "Dirichlet"), "right": (7, "Dirichlet")}
+        }
 
         model = pybamm.BaseModel()
         model.update(submodel1, submodel2)
@@ -163,8 +178,8 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c}
         model.initial_conditions = {c: 1, d: 2}
         model.boundary_conditions = {
-            c: {"left": 0, "right": 0},
-            d: {"left": 0, "right": 0},
+            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
+            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
         }
         model.check_well_posedness()
 
@@ -238,11 +253,15 @@ class TestBaseModel(unittest.TestCase):
         c = pybamm.Variable("c", domain=whole_cell)
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
         model.initial_conditions = {c: 1}
-        model.boundary_conditions = {2 * c: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
         model.check_well_posedness()
 
         # Well-posed model - Neumann
-        model.boundary_conditions = {3 * pybamm.grad(c) + 2: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         model.check_well_posedness()
 
         # Model with bad initial conditions (expect assertion error)
@@ -254,14 +273,18 @@ class TestBaseModel(unittest.TestCase):
         # Model with bad boundary conditions - Dirichlet (expect assertion error)
         d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {c: 3}
-        model.boundary_conditions = {d: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
 
         # Model with bad boundary conditions - Neumann (expect assertion error)
         d = pybamm.Variable("d", domain=whole_cell)
         model.initial_conditions = {c: 3}
-        model.boundary_conditions = {4 * pybamm.grad(d): {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            d: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
 
@@ -269,13 +292,19 @@ class TestBaseModel(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         model = pybamm.BaseModel()
         model.algebraic = {c: 5 * pybamm.div(pybamm.grad(c)) - 1}
-        model.boundary_conditions = {2 * c: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
         model.check_well_posedness()
-        model.boundary_conditions = {pybamm.grad(c): {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         model.check_well_posedness()
 
         # Algebraic model with bad boundary conditions
-        model.boundary_conditions = {d: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+        }
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.check_well_posedness()
 
@@ -287,8 +316,8 @@ class TestBaseModel(unittest.TestCase):
         model.rhs = {c: 5 * pybamm.div(pybamm.grad(d)) - 1, d: -c}
         model.initial_conditions = {c: 1, d: 2}
         model.boundary_conditions = {
-            c: {"left": 0, "right": 0},
-            d: {"left": 0, "right": 0},
+            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
+            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
         }
         model._variables = {"something": None}
         with self.assertRaisesRegex(pybamm.ModelError, "standard output variable"):

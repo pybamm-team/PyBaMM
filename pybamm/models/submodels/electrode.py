@@ -49,7 +49,9 @@ class Ohm(pybamm.SubModel):
             # liion sigma_n may already account for porosity
             i_s_n = -param.sigma_n * (1 - eps) ** param.b * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_n) + j}
-            self.boundary_conditions = {phi_s: {"left": 0}, i_s_n: {"right": 0}}
+            self.boundary_conditions = {
+                phi_s: {"left": (0, "Dirichlet"), "right": (0, "Neumann")}
+            }
             self.initial_conditions = {phi_s: 0}
             self.variables = {
                 "Negative electrode potential": phi_s,
@@ -61,9 +63,13 @@ class Ohm(pybamm.SubModel):
             if eps is None:
                 eps = param.epsilon_p
             # liion sigma_p may already account for porosity
-            i_s_p = -param.sigma_p * (1 - eps) ** param.b * pybamm.grad(phi_s)
+            conductivity = param.sigma_p * (1 - eps) ** param.b
+            i_s_p = -conductivity * pybamm.grad(phi_s)
             self.algebraic = {phi_s: pybamm.div(i_s_p) + j}
-            self.boundary_conditions = {i_s_p: {"left": 0, "right": icell}}
+            rbc = icell / pybamm.boundary_value(-conductivity, "right")
+            self.boundary_conditions = {
+                phi_s: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
+            }
             self.initial_conditions = {
                 phi_s: param.U_p(param.c_p_init) - param.U_n(param.c_n_init)
             }

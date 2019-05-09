@@ -32,13 +32,11 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         model.set_algebraic_system(phi_e, c_e, reactions)
 
         # some small changes so that tests pass
-        i_e = model.variables["Electrolyte current density"]
         model.algebraic.update({c_e: c_e - pybamm.Scalar(1)})
         model.initial_conditions.update({c_e: pybamm.Scalar(1)})
         model.boundary_conditions = {
-            c_e: {"left": 1},
-            phi_e: {"left": 0},
-            i_e: {"right": 0},
+            c_e: {"left": (1, "Dirichlet"), "right": (1, "Dirichlet")},
+            phi_e: {"left": (0, "Dirichlet"), "right": (0, "Neumann")},
         }
 
         # Test

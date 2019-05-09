@@ -72,10 +72,7 @@ class Discretisation(object):
         self.set_variable_slices(variables)
 
         # set boundary conditions (only need key ids for boundary_conditions)
-        self._bcs = {
-            key.id: self.process_dict(value)
-            for key, value in model.boundary_conditions.items()
-        }
+        self._bcs = self.process_boundary_conditions(model)
 
         # set up inplace vs not inplace
         if inplace:
@@ -177,6 +174,31 @@ class Discretisation(object):
         ).evaluate(0, None)
 
         return processed_initial_conditions, processed_concatenated_initial_conditions
+
+    def process_boundary_conditions(self, model):
+        """Discretise model boundary_conditions, also converting keys to ids
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+
+        Returns
+        -------
+        dict
+            Dictionary of processed boundary conditions
+
+        """
+        processed_bcs = {}
+        for key, bcs in model.boundary_conditions.items():
+            processed_bcs[key.id] = {}
+            for side, bc in bcs.items():
+                eqn, typ = bc
+                processed_eqn = self.process_symbol(eqn)
+                processed_bcs[key.id][side] = (processed_eqn, typ)
+
+        return processed_bcs
 
     def process_rhs_and_algebraic(self, model):
         """Discretise model equations - differential ('rhs') and algebraic.
@@ -360,11 +382,11 @@ class Discretisation(object):
                 )
             return symbol
 
-        elif isinstance(symbol, pybamm.BoundaryValue):
+        elif isinstance(symbol, pybamm.BoundaryOperator):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[child.domain[0]].boundary_value(
-                child, discretised_child, symbol.side
+            return self._spatial_methods[child.domain[0]].boundary_value_or_flux(
+                symbol, discretised_child
             )
 
         elif isinstance(symbol, pybamm.Function):
