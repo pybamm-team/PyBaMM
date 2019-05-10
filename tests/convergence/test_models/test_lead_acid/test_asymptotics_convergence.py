@@ -38,7 +38,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
         full_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
         full_disc.process_model(full_model)
 
-        def get_l2_error(current):
+        def get_max_error(current):
             # Update current (and hence C_e) in the parameters
             param = pybamm.ParameterValues(
                 base_parameters=full_model.default_parameter_values,
@@ -78,7 +78,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
 
         # Get errors
         currents = 0.005 / (2 ** np.arange(3))
-        errs = np.array([get_l2_error(current) for current in currents])
+        errs = np.array([get_max_error(current) for current in currents])
         loqs_errs, comp_errs = [np.array(err) for err in zip(*errs)]
         # Get rates: expect linear convergence for loqs, quadratic for composite
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])

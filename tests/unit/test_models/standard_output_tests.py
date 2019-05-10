@@ -452,7 +452,7 @@ class CurrentTests(BaseOutputTest):
         current_param = pybamm.electrical_parameters.current_with_time
         parameter_values = self.model.default_parameter_values
         i_cell = parameter_values.process_symbol(current_param).evaluate(t=t)
-        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell)
+        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=5)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[-1]), 0)
         np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[-1]), i_cell)
         np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[0]), 0)

@@ -1,7 +1,5 @@
 import numpy as np
 import pybamm
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
 
 
 def ax_min(data):
@@ -154,8 +152,11 @@ class QuickPlot(object):
         Parameters
         ----------
         t : float
-            Time at which to plot.
+            Dimensional time at which to plot.
         """
+
+        import matplotlib.pyplot as plt
+
         t /= self.time_scale
         self.fig, self.ax = plt.subplots(figsize=(15, 8))
         plt.tight_layout()
@@ -209,6 +210,9 @@ class QuickPlot(object):
         Generate a dynamic plot with a slider to control the time. We recommend using
         ipywidgets instead of this function if you are using jupyter notebooks
         """
+
+        import matplotlib.pyplot as plt
+        from matplotlib.widgets import Slider
 
         # create an initial plot at time 0
         self.plot(0)
