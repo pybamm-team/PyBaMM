@@ -62,7 +62,7 @@ Within the initialisation function of :class:`MyNewModel` you must then define t
 - ``self.initial_conditions``
 - ``self.variables``
 
-You may also optionally provide also provide: 
+You may also optionally also provide: 
 
 - ``self.events``
 - ``self.default_geometry``
@@ -78,7 +78,7 @@ Governing equations
 ~~~~~~~~~~~~~~~~~~~
 The governing equations which can either be parabolic or elliptic are entered into the 
 ``self.rhs`` and ``self.algebraic`` dictionaries, respectively. We associate each governing equation with a subject variable, which is the variable that is found when 
-the equation is solved. We use this subject variable as the key of the dictionary. For parabolic equations, we rearrange the equation so that the time derivative of the subject variable is the only term on the left hand side of the equation. We then simply write the resulting right hand side into the ``self.rhs`` dictionary with the subject variable as the key. For elliptic equation, we rearrange so that the left hand side of the equation if zero and then write the subject variable, right hand side pair into the ``self.algebraic`` dictionary in the same way. The resulting dictionary should look like:
+the equation is solved. We use this subject variable as the key of the dictionary. For parabolic equations, we rearrange the equation so that the time derivative of the subject variable is the only term on the left hand side of the equation. We then simply write the resulting right hand side into the ``self.rhs`` dictionary with the subject variable as the key. For elliptic equations, we rearrange so that the left hand side of the equation if zero and then write the right hand side into the ``self.algebraic`` dictionary in the same way. The resulting dictionary should look like:
 
 .. code-block:: python
 
@@ -94,7 +94,6 @@ a Neumann condition of :math:`\nabla c = 2` on the right boundary, we then have:
 
     self.boundary_conditions = {c: {"left": (1, "Dirichlet"), "right": (2, "Neumann")}}
 
-Note that PyBaMM currently only supports one-dimensional equations. 
 
 Initial conditions
 ~~~~~~~~~~~~~~~~~~
@@ -131,14 +130,25 @@ Events will stop the solver whenever they return either 0 or a negative number.
 
 Setting defaults
 ~~~~~~~~~~~~~~~~
-It can be useful for testing, and quickly running a model to have a default setup. Each of the defaults listed above should adhere to the API requirements but in short, we require ``self.default_geometry`` to be an instance of :class:`pybamm.Geometry`, ``self.default_solver`` to be an instance of :class:`pybamm.Solver`, and 
-``self.default_parameter_values`` to be an instance of :class:`pybamm.ParameterValues`. We also require that ``self.default_submesh_types`` is a dictionary with keys which are strings corresponding to the regions of the battery (e.g. "negative electrode") and values which are an instance of :class:`pybamm.Submesh`. The ``self.default_spatial_methods`` attribute is also required to be a dictionary with keys corresponding to the regions of the battery but with values which are an instance of 
+It can be useful for testing, and quickly running a model to have a default setup. Each of the defaults listed above should adhere to the API requirements but in short, we require ``self.default_geometry`` to be an instance of :class:`pybamm.Geometry`, ``self.default_solver`` to be an instance of :class:`pybamm.BaseSolver`, and 
+``self.default_parameter_values`` to be an instance of :class:`pybamm.ParameterValues`. We also require that ``self.default_submesh_types`` is a dictionary with keys which are strings corresponding to the regions of the battery (e.g. "negative electrode") and values which are an instance of :class:`pybamm.SubMesh1D`. The ``self.default_spatial_methods`` attribute is also required to be a dictionary with keys corresponding to the regions of the battery but with values which are an instance of 
 :class:`pybamm.SpatialMethod`. Finally, ``self.default_var_pts`` is required to be a dictionary with keys which are an instance of :class:`pybamm.SpatialVariable` and values which are integers. 
 
 
 Using submodels
 ~~~~~~~~~~~~~~~
 The inbuilt models in PyBaMM do not add all the model attributes within their own file. Instead, they make use of inbuilt submodel (a particle model, an electrolyte model, etc). There are two main reasons for this. First, the code in the submodels can then be used by multiple models cutting down on repeated code. This makes it easier to maintain the codebase because fixing an issue in a submodel fixes that issue everywhere the submodel is called (instead of having to track down the issue in every model). Secondly, it allows for the user to easily switch a submodel out for another and study the effect. For example, we may be using standard diffusion in the particles but decide that we would like to switch in particles which are phase separating. With submodels all we need to do is switch the submodel instead of re-writing the whole sections of the model. Submodel contributions are highly encouraged so where possible, try to divide your model into submodels.
+
+In addition to calling submodels, common sets of variables and parameters found in
+lithium-ion and lead acid batteries are provided in
+`standard_variables.py`,
+`standard_parameters_lithium_ion.py`,
+`standard_parameters_lead_acid.py`,
+`electrical_parameters.py`,
+`geometric_parameters.py`,
+and `standard_spatial_vars.py`
+which we encourage use of to save redefining the same parameters and variables in 
+every model and submodel.
 
 
 Unit tests for a MyNewModel
@@ -164,4 +174,9 @@ We stongly recommend testing your model to ensure that it is behaving correctly.
             debug = True
         unittest.main()
 
-We can now add functions such as :meth:`my_first_test` to :class:`TestMyNewModel` which run specific tests. As a first test, we recommend you make use of :class:`tests.StandardModelTest` which runs a suite of basic tests. If your new model is a full model of a battery and therefore an instance :class:`pybamm.StandardBatteryBaseModel` then :class:`tests.StandardBatteryTest` will also check the set of outputs are producing reasonable behaviour. 
+We can now add functions such as :meth:`my_first_test` to :class:`TestMyNewModel` which run specific tests. As a first test, we recommend you make use of :class:`tests.StandardModelTest` which runs a suite of basic tests. If your new model is a full model of a battery and therefore inherits from :class:`pybamm.StandardBatteryBaseModel` then :class:`tests.StandardBatteryTest` will also check the set of outputs are producing reasonable behaviour. 
+
+Please see the tests of the inbuilt models to get a further idea of how to test the your model.
+
+
+
