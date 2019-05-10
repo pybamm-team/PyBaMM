@@ -116,7 +116,7 @@ class DomainConcatenation(Concatenation):
     careful about domains.
 
     It is assumed that each child has a domain, and the final concatenated vector will
-    respect the sizes and ordering of domains established in mesh.known_domains
+    respect the sizes and ordering of domains established in mesh keys
 
     **Extends**: :class:`pybamm.Concatenation`
 
@@ -144,8 +144,8 @@ class DomainConcatenation(Concatenation):
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
 
-        # ensure domain is sorted according to mesh.known_domains
-        domain_dict = {d: mesh.known_domains.index(d) for d in self.domain}
+        # ensure domain is sorted according to mesh keys
+        domain_dict = {d: list(mesh.keys()).index(d) for d in self.domain}
         self.domain = sorted(domain_dict, key=domain_dict.__getitem__)
 
         if copy_this is None:

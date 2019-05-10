@@ -59,9 +59,6 @@ class Mesh(dict):
         # add ghost meshes
         self.add_ghost_meshes()
 
-        # set known domains
-        self.known_domains = list(geometry.keys())
-
     def combine_submeshes(self, *submeshnames):
         """Combine submeshes into a new submesh, using self.submeshclass
         Raises pybamm.DomainError if submeshes to be combined do not match up (edges are
