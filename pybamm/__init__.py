@@ -1,6 +1,6 @@
 #
 # Root of the pybamm module.
-# Provides access to all shared functionality (simulation, models, etc.).
+# Provides access to all shared functionality (models, solvers, etc.).
 #
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
@@ -176,11 +176,6 @@ from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 #
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
-
-#
-# Simulation class
-#
-from .simulation import Simulation
 
 #
 # Solver classes
