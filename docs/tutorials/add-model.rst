@@ -15,7 +15,7 @@ The role of models
 
 One of the main motivations for PyBaMM is to allow for new models of batteries to be easily be added, solved, tested, and compared without requiring a detailed knowledge of sophisticated numerical methods. It has therefore been our focus to make the process of adding a new model as simple as possible. To achieve this, all models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_, which abstract away the details of computation. 
 
-The fundamental building blocks of a PyBaMM expression tree are Symbols. There are different types of Symbol: Variables, Parameters, Addition, Multiplication, Gradient etc which have been created so that each component of a model written out in PyBaMM mirrors exactly the written mathematics. For example, the expression:
+The fundamental building blocks of a PyBaMM expression tree are :class:`pybamm.Symbol`. There are different types of :class:`pybamm.Symbol`: :class:`pybamm.Variable`, :class:`pybamm.Parameter`, :class:`pybamm.Addition`, :class:`pybamm.Multiplication`, :class:`pybamm.Gradient` etc which have been created so that each component of a model written out in PyBaMM mirrors exactly the written mathematics. For example, the expression:
 
 .. math::
     \nabla \cdot \left(D(c) \nabla c \right) + a F j
