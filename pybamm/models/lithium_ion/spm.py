@@ -13,6 +13,7 @@ class SPM(pybamm.LithiumIonBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.name = "Single Particle Model"
 
         "-----------------------------------------------------------------------------"
         "Parameters"
