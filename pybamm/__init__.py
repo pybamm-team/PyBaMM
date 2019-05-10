@@ -113,7 +113,6 @@ from .expression_tree.simplify import (
 #
 # Model classes
 #
-from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard variables
 from .models import standard_variables
 from .models.base_models import (
     BaseModel,

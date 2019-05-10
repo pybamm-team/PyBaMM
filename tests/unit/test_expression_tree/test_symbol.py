@@ -39,18 +39,12 @@ class TestSymbol(unittest.TestCase):
         check_are_equal(super(pybamm.Symbol, symp).children, (symc1, symc2, symc3))
 
     def test_symbol_domains(self):
-        a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[0])
-        self.assertEqual(a.domain, [pybamm.KNOWN_DOMAINS[0]])
-        a = pybamm.Symbol("a", domain=pybamm.KNOWN_DOMAINS[:2])
-        self.assertEqual(a.domain, pybamm.KNOWN_DOMAINS[:2])
+        a = pybamm.Symbol("a", domain="test")
+        self.assertEqual(a.domain, ["test"])
+        a = pybamm.Symbol("a", domain=["t", "e", "s"])
+        self.assertEqual(a.domain, ["t", "e", "s"])
         with self.assertRaises(TypeError):
             a = pybamm.Symbol("a", domain=1)
-        with self.assertRaises(ValueError):
-            a = pybamm.Symbol("a", domain=["unknown domain"])
-        with self.assertRaises(ValueError):
-            a = pybamm.Symbol(
-                "a", domain=[pybamm.KNOWN_DOMAINS[1], pybamm.KNOWN_DOMAINS[0]]
-            )
 
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")

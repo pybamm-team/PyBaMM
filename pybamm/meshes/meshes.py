@@ -7,15 +7,6 @@ from __future__ import print_function, unicode_literals
 import numpy as np
 import pybamm
 
-KNOWN_DOMAINS = [
-    "negative electrode",
-    "separator",
-    "positive electrode",
-    "test",
-    "negative particle",
-    "positive particle",
-]
-
 
 class Mesh(dict):
     """
@@ -64,10 +55,12 @@ class Mesh(dict):
             self[domain] = [
                 submesh_types[domain](geometry[domain]["primary"], submesh_pts[domain])
             ] * repeats
-        self.add_ghost_meshes()
 
         # add ghost meshes
         self.add_ghost_meshes()
+
+        # set known domains
+        self.known_domains = list(geometry.keys())
 
     def combine_submeshes(self, *submeshnames):
         """Combine submeshes into a new submesh, using self.submeshclass
