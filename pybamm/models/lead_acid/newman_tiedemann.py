@@ -113,10 +113,8 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         )
         self.variables.update(volt_vars)
 
-        # Voltage cut-off
-        voltage = pybamm.BoundaryValue(phi_s_p, "right") - pybamm.BoundaryValue(
-            phi_s_n, "left"
-        )
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"

@@ -92,6 +92,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
         )
         self.variables.update(electrode_vars)
 
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
+        self.events.append(voltage - param.voltage_low_cut)
+
         "-----------------------------------------------------------------------------"
         "Settings"
         # ODEs only (don't use jacobian, use base spatial method)

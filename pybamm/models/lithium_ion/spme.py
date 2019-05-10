@@ -58,6 +58,10 @@ class SPMe(pybamm.LithiumIonBaseModel):
             electrolyte_diffusion_model,
         )
 
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
+        self.events.append(voltage - param.voltage_low_cut)
+
         "-----------------------------------------------------------------------------"
         "Post-Processing"
         # Exchange-current density

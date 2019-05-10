@@ -13,7 +13,6 @@ class SPM(pybamm.LithiumIonBaseModel):
 
     def __init__(self):
         super().__init__()
-        self.name = "Single Particle Model"
 
         "-----------------------------------------------------------------------------"
         "Parameters"
@@ -82,6 +81,10 @@ class SPM(pybamm.LithiumIonBaseModel):
             ocp_p, eta_r_p, phi_e
         )
         self.variables.update(electrode_vars)
+
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
+        self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"
         "Defaults and Solver Conditions"
