@@ -6,8 +6,9 @@ language: python
 
 addons:
   apt:
+    sources:
+    - deadsnakes
     packages:
-    - python3-dev
     - gfortran
     - gcc
     - libopenblas-dev
@@ -29,11 +30,49 @@ matrix:
         #   env:
         #     - PYBAMM_UNIT=true
         #   if: type != cron
-        # - python: "3.5"
-        #   env:
-        #     - PYBAMM_UNIT=true
-        #   if: type != cron
+        - python: "3.5"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.5-dev
+          env:
+            - PYBAMM_UNIT=true
+            - PYBAMM_BOOKS=true
+          if: type != cron
         - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
+          env:
+            - PYBAMM_UNIT=true
+            - PYBAMM_BOOKS=true
+        - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
           env:
             - PYBAMM_UNIT=true
           if: type != cron
@@ -49,19 +88,65 @@ matrix:
         #   if: type != cron
         # Docs, style and cover checking, latest Python version only
         - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
           env:
             - PYBAMM_DOCS=true
           if: type != cron
         - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
           env:
             - PYBAMM_STYLE=true
           if: type != cron
         - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
           env:
             - PYBAMM_COVER=true
           if: type != cron
           # Cron jobs
         - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
+          env:
+            - PYBAMM_BOOKS=true
           if: type == cron
 
 # Install dependencies
@@ -72,8 +157,7 @@ install:
   - pip install pip==18
   - pip install .
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -e .[docs]; fi;
-  - if [[ $PYBAMM_STYLE == true ]]; then pip install -e .[dev]; fi;
-  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then pip install -e .[dev]; fi;
+  - if [[ $PYBAMM_STYLE == true || $PYBAMM_BOOKS ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
   - source scripts/install_scikits_odes.sh
 
@@ -89,7 +173,7 @@ script:
   - if [[ $PYBAMM_DOCS == true ]]; then python run-tests.py --doctest; fi;
   - if [[ $PYBAMM_STYLE == true ]]; then python -m flake8; fi;
   - if [[ $PYBAMM_COVER == true ]]; then coverage run run-tests.py --nosub; fi;
-  - if [[ $TRAVIS_EVENT_TYPE == 'cron' ]]; then travis_wait 120 python run-tests.py --books; fi;
+  - if [[ $PYBAMM_BOOKS == true ]]; then travis_wait 120 python run-tests.py --books; fi;
 
 after_success:
   - if [[ $PYBAMM_COVER == true ]]; then codecov; fi;
