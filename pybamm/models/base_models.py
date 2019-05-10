@@ -112,10 +112,20 @@ class BaseModel(object):
     def boundary_conditions(self, boundary_conditions):
         # Convert any numbers to a pybamm.Scalar
         for var, bcs in boundary_conditions.items():
-            for side, eqn in bcs.items():
-                if isinstance(eqn, numbers.Number):
-                    boundary_conditions[var][side] = pybamm.Scalar(eqn)
-
+            for side, bc in bcs.items():
+                if isinstance(bc[0], numbers.Number):
+                    # typ is the type of the bc, e.g. "Dirichlet" or "Neumann"
+                    eqn, typ = boundary_conditions[var][side]
+                    boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
+                # Check types
+                if bc[1] not in ["Dirichlet", "Neumann"]:
+                    raise pybamm.ModelError(
+                        """
+                        boundary condition types must be Dirichlet or Neumann, not '{}'
+                        """.format(
+                            bc[1]
+                        )
+                    )
         self._boundary_conditions = boundary_conditions
 
     @property
@@ -264,7 +274,7 @@ class BaseModel(object):
             # After the model has been defined, each algebraic equation key should
             # appear in that algebraic equation
             for var, eqn in self.algebraic.items():
-                if not any([x.id == var.id for x in eqn.pre_order()]):
+                if not any(x.id == var.id for x in eqn.pre_order()):
                     raise pybamm.ModelError(
                         "each variable in the algebraic eqn keys must appear in the eqn"
                     )
@@ -273,9 +283,7 @@ class BaseModel(object):
             # with the state vectors in the algebraic equations. Instead, we check
             # that each algebraic equation contains some StateVector
             for eqn in self.algebraic.values():
-                if not any(
-                    [isinstance(x, pybamm.StateVector) for x in eqn.pre_order()]
-                ):
+                if not any(isinstance(x, pybamm.StateVector) for x in eqn.pre_order()):
                     raise pybamm.ModelError(
                         "each algebraic equation must contain at least one StateVector"
                     )
@@ -290,18 +298,13 @@ class BaseModel(object):
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
             if eqn.has_spatial_derivatives():
-                # Variable must be in at least one expression in the boundary condition
-                # keys (to account for both Dirichlet and Neumann boundary conditions)
+                # Variable must be in the boundary conditions
                 if not any(
-                    [
-                        any([var.id == symbol.id for symbol in key.pre_order()])
-                        for key in self.boundary_conditions.keys()
-                    ]
+                    var.id == symbol.id for symbol in self.boundary_conditions.keys()
                 ):
                     raise pybamm.ModelError(
                         """
-                        no boundary condition given for variable '{}'
-                        with equation '{}'
+                        no boundary condition given for variable '{}' with equation '{}'
                         """.format(
                             var, eqn
                         )

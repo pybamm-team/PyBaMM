@@ -22,17 +22,20 @@ class Discretisation(object):
             domain. The keys correspond to the keys in a pybamm.Model
     """
 
-    def __init__(self, mesh, spatial_methods):
+    def __init__(self, mesh=None, spatial_methods=None):
         self._mesh = mesh
-        # Unpack macroscale to the constituent subdomains
-        if "macroscale" in spatial_methods.keys():
-            method = spatial_methods["macroscale"]
-            spatial_methods["negative electrode"] = method
-            spatial_methods["separator"] = method
-            spatial_methods["positive electrode"] = method
-        self._spatial_methods = {
-            dom: method(mesh) for dom, method in spatial_methods.items()
-        }
+        if mesh is None:
+            self._spatial_methods = {}
+        else:
+            # Unpack macroscale to the constituent subdomains
+            if "macroscale" in spatial_methods.keys():
+                method = spatial_methods["macroscale"]
+                spatial_methods["negative electrode"] = method
+                spatial_methods["separator"] = method
+                spatial_methods["positive electrode"] = method
+            self._spatial_methods = {
+                dom: method(mesh) for dom, method in spatial_methods.items()
+            }
         self._bcs = {}
         self._y_slices = {}
 
@@ -69,10 +72,7 @@ class Discretisation(object):
         self.set_variable_slices(variables)
 
         # set boundary conditions (only need key ids for boundary_conditions)
-        self._bcs = {
-            key.id: self.process_dict(value)
-            for key, value in model.boundary_conditions.items()
-        }
+        self._bcs = self.process_boundary_conditions(model)
 
         # set up inplace vs not inplace
         if inplace:
@@ -169,11 +169,36 @@ class Discretisation(object):
 
         # Concatenate initial conditions into a single vector
         # check that all initial conditions are set
-        processed_concatenated_initial_conditions = self._concatenate_init(
-            processed_initial_conditions
+        processed_concatenated_initial_conditions = self._concatenate_in_order(
+            processed_initial_conditions, check_complete=True
         ).evaluate(0, None)
 
         return processed_initial_conditions, processed_concatenated_initial_conditions
+
+    def process_boundary_conditions(self, model):
+        """Discretise model boundary_conditions, also converting keys to ids
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            Model to dicretise. Must have attributes rhs, initial_conditions and
+            boundary_conditions (all dicts of {variable: equation})
+
+        Returns
+        -------
+        dict
+            Dictionary of processed boundary conditions
+
+        """
+        processed_bcs = {}
+        for key, bcs in model.boundary_conditions.items():
+            processed_bcs[key.id] = {}
+            for side, bc in bcs.items():
+                eqn, typ = bc
+                processed_eqn = self.process_symbol(eqn)
+                processed_bcs[key.id][side] = (processed_eqn, typ)
+
+        return processed_bcs
 
     def process_rhs_and_algebraic(self, model):
         """Discretise model equations - differential ('rhs') and algebraic.
@@ -195,12 +220,16 @@ class Discretisation(object):
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
         # Concatenate rhs into a single state vector
-        processed_concatenated_rhs = self.concatenate(*processed_rhs.values())
+
+        # Need to concatenate in order as the ordering of equations could be different
+        # in processed_rhs and model.rhs (for Python Version <= 3.5)
+        processed_concatenated_rhs = self._concatenate_in_order(processed_rhs)
 
         # Discretise and concatenate algebraic equations
         processed_algebraic = self.process_dict(model.algebraic)
-        processed_concatenated_algebraic = self.concatenate(
-            *processed_algebraic.values()
+
+        processed_concatenated_algebraic = self._concatenate_in_order(
+            processed_algebraic
         )
 
         return (
@@ -230,8 +259,23 @@ class Discretisation(object):
         # diagonal mass matrix for the model
         mass_list = []
 
+        # get a list of model rhs variables that are sorted according to
+        # where they are in the state vector
+        model_variables = model.rhs.keys()
+        model_slices = []
+        for v in model_variables:
+            if isinstance(v, pybamm.Concatenation):
+                model_slices.append(
+                    slice(self._y_slices[v.children[0].id].start,
+                          self._y_slices[v.children[-1].id].stop)
+                )
+            else:
+                model_slices.append(self._y_slices[v.id])
+        sorted_model_variables = [v for _, v in
+                                  sorted(zip(model_slices, model_variables))]
+
         # Process mass matrices for the differential equations
-        for var in model.rhs.keys():
+        for var in sorted_model_variables:
             if var.domain == []:
                 # If variable domain empty then mass matrix is just 1
                 mass_list.append(1.0)
@@ -357,11 +401,11 @@ class Discretisation(object):
                 )
             return symbol
 
-        elif isinstance(symbol, pybamm.BoundaryValue):
+        elif isinstance(symbol, pybamm.BoundaryOperator):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
-            return self._spatial_methods[child.domain[0]].boundary_value(
-                child, discretised_child, symbol.side
+            return self._spatial_methods[child.domain[0]].boundary_value_or_flux(
+                symbol, discretised_child
             )
 
         elif isinstance(symbol, pybamm.Function):
@@ -404,10 +448,9 @@ class Discretisation(object):
     def concatenate(self, *symbols):
         return pybamm.NumpyConcatenation(*symbols)
 
-    def _concatenate_init(self, var_eqn_dict):
+    def _concatenate_in_order(self, var_eqn_dict, check_complete=False):
         """
-        Concatenate a dictionary of {variable: equation} initial conditions using
-        self._y_slices
+        Concatenate a dictionary of {variable: equation} using self._y_slices
 
         The keys/variables in `var_eqn_dict` must be the same as the ids in
         `self._y_slices`.
@@ -427,22 +470,29 @@ class Discretisation(object):
         """
         # Unpack symbols in variables that are concatenations of variables
         unpacked_variables = []
+        slices = []
         for symbol in var_eqn_dict.keys():
             if isinstance(symbol, pybamm.Concatenation):
                 unpacked_variables.extend([var for var in symbol.children])
+                slices.append(
+                    slice(self._y_slices[symbol.children[0].id].start,
+                          self._y_slices[symbol.children[-1].id].stop)
+                )
             else:
                 unpacked_variables.append(symbol)
-        # Check keys from the given var_eqn_dict against self._y_slices
-        ids = {v.id for v in unpacked_variables}
-        if ids != self._y_slices.keys():
-            given_variable_names = [v.name for v in var_eqn_dict.keys()]
-            raise pybamm.ModelError(
-                "Initial conditions are insufficient. Only "
-                "provided for {} ".format(given_variable_names)
-            )
+                slices.append(self._y_slices[symbol.id])
+
+        if check_complete:
+            # Check keys from the given var_eqn_dict against self._y_slices
+            ids = {v.id for v in unpacked_variables}
+            if ids != self._y_slices.keys():
+                given_variable_names = [v.name for v in var_eqn_dict.keys()]
+                raise pybamm.ModelError(
+                    "Initial conditions are insufficient. Only "
+                    "provided for {} ".format(given_variable_names)
+                )
 
         equations = list(var_eqn_dict.values())
-        slices = [self._y_slices[var.id] for var in unpacked_variables]
 
         # sort equations according to slices
         sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]

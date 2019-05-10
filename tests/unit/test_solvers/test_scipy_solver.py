@@ -162,6 +162,7 @@ class TestScipySolver(unittest.TestCase):
         var2 = pybamm.Variable("var2", domain=whole_cell)
         model.rhs = {var1: var1, var2: 1 - var1}
         model.initial_conditions = {var1: 1.0, var2: -1.0}
+        model.variables = {"var1": var1, "var2": var2}
 
         # create discretisation
         mesh = get_mesh_for_testing()
@@ -175,10 +176,18 @@ class TestScipySolver(unittest.TestCase):
         )
         N = combined_submesh[0].npts
 
+        # construct jacobian in order of model.rhs
+        J = []
+        for var in model.rhs.keys():
+            if var.id == var1.id:
+                J.append([np.eye(N), np.zeros((N, N))])
+            else:
+                J.append([-1.0 * np.eye(N), np.zeros((N, N))])
+
+        J = np.block(J)
+
         def jacobian(t, y):
-            return np.block(
-                [[np.eye(N), np.zeros((N, N))], [-1.0 * np.eye(N), np.zeros((N, N))]]
-            )
+            return J
 
         model.jacobian = jacobian
 
@@ -187,8 +196,16 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         solver.solve(model, t_eval)
         np.testing.assert_array_equal(solver.t, t_eval)
-        np.testing.assert_allclose(solver.y[0], np.exp(solver.t))
-        np.testing.assert_allclose(solver.y[-1], solver.t - np.exp(solver.t))
+
+        T, Y = solver.t, solver.y
+        np.testing.assert_array_almost_equal(
+            model.variables["var1"].evaluate(T, Y),
+            np.ones((N, T.size)) * np.exp(T[np.newaxis, :])
+        )
+        np.testing.assert_array_almost_equal(
+            model.variables["var2"].evaluate(T, Y),
+            np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :]))
+        )
 
 
 if __name__ == "__main__":

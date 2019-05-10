@@ -117,10 +117,18 @@ class ProcessedVariable(object):
         edges = self.mesh.combine_submeshes(*self.domain)[0].edges
         if entries.shape[0] == len(nodes):
             space = nodes
-        elif entries.shape[0] == len(edges) - 2:
-            space = edges[1:-1]
+        elif entries.shape[0] == len(edges):
+            space = edges
         else:
             raise ValueError("variable shape does not match domain shape")
+
+        # add points outside domain for extrapolation to boundaries
+        extrap_space_left = np.array([2 * space[0] - space[1]])
+        extrap_space_right = np.array([2 * space[-1] - space[-2]])
+        space = np.concatenate([extrap_space_left, space, extrap_space_right])
+        extrap_entries_left = 2 * entries[0] - entries[1]
+        extrap_entries_right = 2 * entries[-1] - entries[-2]
+        entries = np.vstack([extrap_entries_left, entries, extrap_entries_right])
 
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
@@ -136,6 +144,7 @@ class ProcessedVariable(object):
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
+
         self._interpolation_function = interp.interp2d(
             self.t_sol, space, entries, kind=self.interp_kind
         )
@@ -143,21 +152,21 @@ class ProcessedVariable(object):
     def initialise_3D(self):
         len_x = len(self.mesh.combine_submeshes(*self.domain))
         len_r = self.base_eval.shape[0] // len_x
-        entries = np.empty((len_r, len_x, len(self.t_sol)))
+        entries = np.empty((len_x, len_r, len(self.t_sol)))
 
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
             entries[:, :, idx] = np.reshape(
                 self.base_variable.evaluate(self.t_sol[idx], self.y_sol[:, idx]),
-                [len_r, len_x],
+                [len_x, len_r],
             )
         # Process the discretisation to get x values
         nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
         edges = self.mesh.combine_submeshes(*self.domain)[0].edges
-        if entries.shape[0] == len(nodes):
+        if entries.shape[1] == len(nodes):
             r_sol = nodes
-        elif entries.shape[0] == len(edges) - 2:
-            r_sol = edges[1:-1]
+        elif entries.shape[1] == len(edges):
+            r_sol = edges
         else:
             raise ValueError("variable shape does not match domain shape")
 
@@ -176,7 +185,7 @@ class ProcessedVariable(object):
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
-            (r_sol, x_sol, self.t_sol), entries, method=self.interp_kind
+            (x_sol, r_sol, self.t_sol), entries, method=self.interp_kind
         )
 
     def __call__(self, t, x=None, r=None):
@@ -189,14 +198,14 @@ class ProcessedVariable(object):
             else:
                 return self._interpolation_function(t, x)
         elif self.dimensions == 3:
-            if isinstance(r, np.ndarray):
-                if isinstance(x, np.ndarray) and isinstance(t, np.ndarray):
-                    r = r[:, np.newaxis, np.newaxis]
-                    x = x[:, np.newaxis]
-                elif isinstance(x, np.ndarray) or isinstance(t, np.ndarray):
+            if isinstance(x, np.ndarray):
+                if isinstance(r, np.ndarray) and isinstance(t, np.ndarray):
+                    x = x[:, np.newaxis, np.newaxis]
                     r = r[:, np.newaxis]
-            else:
-                if isinstance(x, np.ndarray) and isinstance(t, np.ndarray):
+                elif isinstance(r, np.ndarray) or isinstance(t, np.ndarray):
                     x = x[:, np.newaxis]
+            else:
+                if isinstance(r, np.ndarray) and isinstance(t, np.ndarray):
+                    r = r[:, np.newaxis]
 
-            return self._interpolation_function((r, x, t))
+            return self._interpolation_function((x, r, t))

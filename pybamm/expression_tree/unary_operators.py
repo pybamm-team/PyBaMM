@@ -358,12 +358,14 @@ class IndefiniteIntegral(Integral):
         self.domain = child.domain
 
 
-class BoundaryValue(SpatialOperator):
+class BoundaryOperator(SpatialOperator):
     """A node in the expression tree which gets the boundary value of a variable.
 
     Parameters
     ----------
-    child : `pybamm.Symbol`
+    name : str
+        The name of the symbol
+    child : :class:`pybamm.Symbol`
         The variable whose boundary value to take
     side : str
         Which side to take the boundary value on ("left" or "right")
@@ -371,17 +373,50 @@ class BoundaryValue(SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, side):
-        super().__init__("boundary", child)
+    def __init__(self, name, child, side):
+        super().__init__(name, child)
         self.side = side
-        # Domain of BoundaryValue must be ([]) so that expressions can be formed
+        # Domain of Boundary must be ([]) so that expressions can be formed
         # of boundary values of variables in different domains
         self.domain = []
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-
         return self.__class__(child, self.side)
+
+
+class BoundaryValue(BoundaryOperator):
+    """A node in the expression tree which gets the boundary value of a variable.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary value to take
+    side : str
+        Which side to take the boundary value on ("left" or "right")
+
+    **Extends:** :class:`BoundaryOperator`
+    """
+
+    def __init__(self, child, side):
+        super().__init__("boundary value", child, side)
+
+
+class BoundaryFlux(BoundaryOperator):
+    """A node in the expression tree which gets the boundary flux of a variable.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The variable whose boundary flux to take
+    side : str
+        Which side to take the boundary flux on ("left" or "right")
+
+    **Extends:** :class:`BoundaryOperator`
+    """
+
+    def __init__(self, child, side):
+        super().__init__("boundary flux", child, side)
 
 
 #

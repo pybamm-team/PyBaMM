@@ -113,14 +113,10 @@ class ParameterValues(dict):
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
-            if "left" in bcs.keys():
-                new_boundary_conditions[processed_variable][
-                    "left"
-                ] = processing_function(bcs["left"])
-            if "right" in bcs.keys():
-                new_boundary_conditions[processed_variable][
-                    "right"
-                ] = processing_function(bcs["right"])
+            for side in ["left", "right"]:
+                bc, typ = bcs[side]
+                processed_bc = (processing_function(bc), typ)
+                new_boundary_conditions[processed_variable][side] = processed_bc
         model.boundary_conditions = new_boundary_conditions
 
         for variable, equation in model.variables.items():
@@ -145,9 +141,9 @@ class ParameterValues(dict):
         self.process_model(model, processing="update")
 
         # update discretised quantities using disc
-        model.concatenated_rhs = disc.concatenate(*model.rhs.values())
-        model.concatenated_algebraic = disc.concatenate(*model.algebraic.values())
-        model.concatenated_initial_conditions = disc._concatenate_init(
+        model.concatenated_rhs = disc._concatenate_in_order(model.rhs)
+        model.concatenated_algebraic = disc._concatenate_in_order(model.algebraic)
+        model.concatenated_initial_conditions = disc._concatenate_in_order(
             model.initial_conditions
         ).evaluate(0, None)
 
@@ -222,8 +218,9 @@ class ParameterValues(dict):
                 new_symbol = pybamm.Function(symbol.func, new_child)
             elif isinstance(symbol, pybamm.Integral):
                 new_symbol = symbol.__class__(new_child, symbol.integration_variable)
-            elif isinstance(symbol, pybamm.BoundaryValue):
-                new_symbol = pybamm.BoundaryValue(new_child, symbol.side)
+            elif isinstance(symbol, pybamm.BoundaryOperator):
+                # BoundaryValue or BoundaryFlux
+                new_symbol = symbol.__class__(new_child, symbol.side)
             else:
                 new_symbol = symbol.__class__(new_child)
             # ensure domain remains the same

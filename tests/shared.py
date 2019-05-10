@@ -59,8 +59,13 @@ def get_mesh_for_testing(npts=None):
     if npts is None:
         var_pts = {var.x_n: 40, var.x_s: 25, var.x_p: 35, var.r_n: 10, var.r_p: 10}
     else:
-        n = 3 * round(npts / 3)
-        var_pts = {var.x_n: n, var.x_s: n, var.x_p: n, var.r_n: npts, var.r_p: npts}
+        var_pts = {
+            var.x_n: npts,
+            var.x_s: npts,
+            var.x_p: npts,
+            var.r_n: npts,
+            var.r_p: npts,
+        }
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
@@ -89,8 +94,13 @@ def get_p2d_mesh_for_testing(npts=None, mpts=None):
     if mpts is None:
         var_pts = {var.x_n: 40, var.x_s: 25, var.x_p: 35, var.r_n: 10, var.r_p: 10}
     else:
-        n = 3 * round(npts / 3)
-        var_pts = {var.x_n: n, var.x_s: n, var.x_p: n, var.r_n: mpts, var.r_p: mpts}
+        var_pts = {
+            var.x_n: npts,
+            var.x_s: npts,
+            var.x_p: npts,
+            var.r_n: mpts,
+            var.r_p: mpts,
+        }
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 

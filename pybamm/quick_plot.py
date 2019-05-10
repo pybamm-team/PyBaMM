@@ -1,7 +1,5 @@
 import numpy as np
 import pybamm
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
 
 
 class QuickPlot(object):
@@ -117,6 +115,9 @@ class QuickPlot(object):
         t : float
             Time at which to plot.
         """
+
+        import matplotlib.pyplot as plt
+
         self.fig, self.ax = plt.subplots(figsize=(15, 8))
         plt.tight_layout()
         plt.subplots_adjust(left=-0.1)
@@ -192,6 +193,9 @@ class QuickPlot(object):
         Generate a dynamic plot with a slider to control the time. We recommend using
         ipywidgets instead of this function if you are using jupyter notebooks
         """
+
+        import matplotlib.pyplot as plt
+        from matplotlib.widgets import Slider
 
         # create an initial plot at time 0
         self.plot(0)
