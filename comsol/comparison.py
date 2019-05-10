@@ -68,10 +68,11 @@ for key, C_rate in C_rates.items():
     )
 
 # add labels etc.
+plt.xlim([0, 26])
 plt.ylim([3.2, 3.9])
 plt.legend(loc="best")
 plt.xlabel(r"Discharge Capacity (Ah/m$^2$)")
-plt.ylabel("Voltage Loss (V)")
+plt.ylabel("Voltage (V)")
 plt.title(r"Comsol $\cdots$ PyBaMM $-$")
 plt.tight_layout()
 plt.savefig("DischargeCurve.eps", format="eps", dpi=1000)
