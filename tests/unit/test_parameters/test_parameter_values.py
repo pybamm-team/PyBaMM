@@ -161,6 +161,24 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         self.assertEqual(processed_diff_func.evaluate(), 123)
 
+    def test_process_inline_function_parameters(self):
+        def D(c):
+            return c ** 2
+
+        parameter_values = pybamm.ParameterValues({"a": 3, "Diffusivity": D})
+
+        a = pybamm.Parameter("a")
+        func = pybamm.FunctionParameter("Diffusivity", a)
+
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.Function)
+        self.assertEqual(processed_func.evaluate(), 9)
+
+        # process differentiated function parameter
+        diff_func = func.diff(a)
+        processed_diff_func = parameter_values.process_symbol(diff_func)
+        self.assertEqual(processed_diff_func.evaluate(), 6)
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
