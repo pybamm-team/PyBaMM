@@ -46,6 +46,13 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def children(self):
+        """
+        returns the cached children of this node.
+
+        Note: it is assumed that children of a node are not modified after initial
+        creation
+
+        """
         return self.cached_children
 
     @property
