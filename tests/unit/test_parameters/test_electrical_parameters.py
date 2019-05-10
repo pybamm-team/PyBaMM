@@ -19,7 +19,7 @@ class TestElectricalParameters(unittest.TestCase):
                 "Electrode height": 0.1,
                 "Electrode depth": 0.1,
                 "Number of electrodes connected in parallel to make a cell": 8,
-                "Typical current density": 2,
+                "Typical current [A]": 2,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
