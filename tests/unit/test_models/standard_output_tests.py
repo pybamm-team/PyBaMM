@@ -22,7 +22,7 @@ class StandardOutputTests(object):
         elif isinstance(self.model, pybamm.LeadAcidBaseModel):
             self.chemistry = "Lead acid"
 
-        current_sign = np.sign(parameter_values["Typical current density"])
+        current_sign = np.sign(parameter_values["Typical current"])
         if current_sign == 1:
             self.operating_condition = "discharge"
         elif current_sign == -1:
@@ -70,10 +70,11 @@ class BaseOutputTest(object):
         self.x_p_edge = disc.mesh["positive electrode"][0].edges
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell)[0].edges
 
-        self.r_n = disc.mesh["negative particle"][0].nodes
-        self.r_p = disc.mesh["positive particle"][0].nodes
-        self.r_n_edge = disc.mesh["negative particle"][0].edges
-        self.r_p_edge = disc.mesh["positive particle"][0].edges
+        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+            self.r_n = disc.mesh["negative particle"][0].nodes
+            self.r_p = disc.mesh["positive particle"][0].nodes
+            self.r_n_edge = disc.mesh["negative particle"][0].edges
+            self.r_p_edge = disc.mesh["positive particle"][0].edges
 
         # Useful parameters
         self.l_n = param.process_symbol(pybamm.geometric_parameters.l_n).evaluate()
@@ -205,16 +206,6 @@ class VoltageTests(BaseOutputTest):
             self.ocv_av(self.t), self.ocp_p_av(self.t) - self.ocp_n_av(self.t)
         )
 
-        with open("debug2.txt", "w") as f:
-            f.write(
-                "{}\n{}\n{}\n{}\n{}\n".format(
-                    self.voltage(self.t),
-                    self.ocv_av(self.t),
-                    self.eta_r_av(self.t),
-                    self.eta_e_av(self.t),
-                    self.Delta_Phi_s_av(self.t),
-                )
-            )
         np.testing.assert_array_almost_equal(
             self.voltage(self.t),
             self.ocv_av(self.t)

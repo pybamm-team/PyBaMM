@@ -29,7 +29,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
 
         # Discretise (same mesh, create different discretisations)
         var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 1, var.r_p: 1}
+        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3}
         mesh = pybamm.Mesh(geometry, full_model.default_submesh_types, var_pts)
         loqs_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
         loqs_disc.process_model(leading_order_model)
@@ -42,7 +42,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
             # Update current (and hence C_e) in the parameters
             param = pybamm.ParameterValues(
                 base_parameters=full_model.default_parameter_values,
-                optional_parameters={"Typical current density": current},
+                optional_parameters={"Typical current": current},
             )
             param.update_model(leading_order_model, loqs_disc)
             param.update_model(composite_model, comp_disc)

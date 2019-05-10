@@ -20,6 +20,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.name = "LOQS model"
 
         "-----------------------------------------------------------------------------"
         "Parameters"
