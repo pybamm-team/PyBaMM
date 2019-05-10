@@ -339,7 +339,7 @@ class StandardBatteryBaseModel(BaseModel):
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
             {
-                "Typical current density": 1,
+                "Typical current": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
@@ -511,7 +511,7 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
-                "Typical current density": 1,
+                "Typical current": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",

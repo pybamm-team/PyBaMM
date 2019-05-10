@@ -145,7 +145,7 @@ class DomainConcatenation(Concatenation):
         super().__init__(*children, name="domain concatenation")
 
         # ensure domain is sorted according to mesh keys
-        domain_dict = {d: list(mesh.keys()).index(d) for d in self.domain}
+        domain_dict = {d: mesh.domain_order.index(d) for d in self.domain}
         self.domain = sorted(domain_dict, key=domain_dict.__getitem__)
 
         if copy_this is None:

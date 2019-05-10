@@ -26,7 +26,7 @@ def abs_non_zero(x):
 # --------------------------------------------------------------------------------------
 "Dimensional Parameters"
 # Electrical
-I_typ = pybamm.Parameter("Typical current density")
+I_typ = pybamm.Parameter("Typical current")
 Q = pybamm.Parameter("Cell capacity")
 C_rate = abs(I_typ / Q)
 n_electrodes_parallel = pybamm.Parameter(

@@ -33,7 +33,7 @@ class Mesh(dict):
 
         # create submesh_pts from var_pts
         submesh_pts = {}
-        for domain in list(geometry.keys()):
+        for domain in geometry:
             submesh_pts[domain] = {}
             for prim_sec in list(geometry[domain].keys()):
                 for var in list(geometry[domain][prim_sec].keys()):
@@ -45,6 +45,17 @@ class Mesh(dict):
                         )
                     submesh_pts[domain][var.id] = var_id_pts[var.id]
         self.submesh_pts = submesh_pts
+
+        # Input domain order manually
+        self.domain_order = []
+        # First the macroscale domains, whose order we care about
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            if domain in geometry:
+                self.domain_order.append(domain)
+        # Then the remaining domains
+        for domain in geometry:
+            if domain not in ["negative electrode", "separator", "positive electrode"]:
+                self.domain_order.append(domain)
 
         for domain in geometry:
             if "secondary" in geometry[domain].keys():
