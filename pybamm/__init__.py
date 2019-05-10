@@ -102,7 +102,7 @@ from .expression_tree.independent_variable import (
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
-from .expression_tree.exceptions import DomainError, ModelError
+from .expression_tree.exceptions import DomainError, ModelError, SolverError
 from .expression_tree.simplify import (
     simplify,
     simplify_if_constant,

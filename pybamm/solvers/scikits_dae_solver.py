@@ -81,18 +81,18 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0)
             if sparse.issparse(jac_y0_t0):
+
                 def jacfn(t, y, ydot, residuals, cj, J):
                     jac_eval = jacobian(t, y) - cj * mass_matrix
                     J[:][:] = jac_eval.toarray()
 
             else:
+
                 def jacfn(t, y, ydot, residuals, cj, J):
                     jac_eval = jacobian(t, y) - cj * mass_matrix
                     J[:][:] = jac_eval
 
-            extra_options.update({
-                "jacfn": jacfn
-            })
+            extra_options.update({"jacfn": jacfn})
 
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
@@ -105,4 +105,9 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         sol = dae_solver.solve(t_eval, y0, ydot0)
 
         # return solution, we need to tranpose y to match scipy's interface
-        return sol.values.t, np.transpose(sol.values.y)
+        if sol.flag in [0, 2]:
+            # 0 = solved for all t_eval
+            # 2 = found root(s)
+            return sol.values.t, np.transpose(sol.values.y)
+        else:
+            raise pybamm.SolverError(sol.message)

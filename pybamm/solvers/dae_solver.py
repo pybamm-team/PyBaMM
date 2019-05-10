@@ -125,7 +125,12 @@ class DaeSolver(pybamm.BaseSolver):
         # Return full set of consistent initial conditions (y0_diff unchanged)
         y0_consistent = np.concatenate([y0_diff, sol.x])
 
-        return y0_consistent
+        if sol.success:
+            return y0_consistent
+        else:
+            raise pybamm.SolverError(
+                "Could not find consistent initial conditions: {}".format(sol.message)
+            )
 
     def integrate(
         self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None
