@@ -3,12 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-# load the comsol voltage data
-comsol = pd.read_csv("comsol/Voltage.csv", sep=",", header=None)
-
-comsol_time = comsol[0].values
-comsol_voltage = comsol[1].values
-
+# C_rates dict
+C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
 
 # load model and geometry
 model = pybamm.lithium_ion.DFN()
@@ -16,51 +12,67 @@ geometry = model.default_geometry
 
 # load parameters and process model and geometry
 param = model.default_parameter_values
-
-# update C_rate
-C_rate = 1
-param["Typical current density"] = 24 * C_rate
-
 param.process_model(model)
 param.process_geometry(geometry)
 
-# convert time to dimensionless form
-tau = pybamm.standard_parameters_lithium_ion.tau_discharge
-tau_eval = param.process_symbol(tau).evaluate(0, 0)
-
-time = comsol_time / tau_eval
-
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 6, var.r_p: 6}
+var_pts = {var.x_n: 11, var.x_s: 5, var.x_p: 11, var.r_n: 11, var.r_p: 11}
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
-# solve model
-solver = model.default_solver
-t = np.linspace(0, 2, 500)
-solver.solve(model, t)  # use time from the comsol simulation (doesn't really matter)
+# loop over C_rates dict to create plot
+plt.figure(figsize=(15, 8))
+ax = plt.gca()
 
-# extract the voltage
-voltage = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], solver.t, solver.y, mesh=mesh
-)
+for key, C_rate in C_rates.items():
 
-voltage_sol = voltage(solver.t)
+    # load the comsol voltage data
+    comsol = pd.read_csv("comsol/Voltage{}.csv".format(key), sep=",", header=None)
+    comsol_time = comsol[0].values
+    comsol_voltage = comsol[1].values
 
-# dimensional time
-time = time * tau_eval / 60 / 60
-t = solver.t * tau_eval / 60 / 60
+    # update current density
+    param["Typical current density"] = 24 * C_rate
+    param.update_model(model, disc)
 
-plt.plot(time, comsol_voltage, "r")
-plt.plot(t, voltage_sol, ":b")
+    # solve model
+    solver = model.default_solver
+    t = np.linspace(0, 1, 500)
+    solver.solve(model, t)
 
-plt.legend(["comsol", "pybamm"])
+    # extract the voltage
+    voltage = pybamm.ProcessedVariable(
+        model.variables["Terminal voltage [V]"], solver.t, solver.y, mesh=mesh
+    )
+    voltage_sol = voltage(solver.t)
+
+    # convert solver time discharge Capacity
+    tau = pybamm.standard_parameters_lithium_ion.tau_discharge
+    tau_eval = param.process_symbol(tau).evaluate(0, 0)
+    discharge_capacity = solver.t * tau_eval * param["Typical current density"] / 3600
+    comsol_discharge_capacity = comsol_time * param["Typical current density"] / 3600
+
+    # plot discharge curves
+    color = next(ax._get_lines.prop_cycler)["color"]
+    plt.plot(comsol_discharge_capacity, comsol_voltage, color=color, linestyle=":")
+    plt.plot(
+        discharge_capacity,
+        voltage_sol,
+        color=color,
+        linestyle="-",
+        label="{} C".format(C_rate),
+    )
+
+# add labels etc.
+plt.ylim([3.2, 3.9])
+plt.legend(loc="best")
+plt.xlabel(r"Discharge Capacity (Ah/m$^2$)")
+plt.ylabel("Voltage Loss (V)")
+plt.title(r"Comsol $\cdots$ PyBaMM $-$")
+plt.tight_layout()
+plt.savefig("DischargeCurve.eps", format="eps", dpi=1000)
 plt.show()
-
-quick_plot = pybamm.QuickPlot(model, param, mesh, solver)
-
-quick_plot.dynamic_plot()
