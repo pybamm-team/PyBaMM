@@ -574,7 +574,15 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
 
         # Standard time variable
         time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
-        self.variables.update({"Time [h]": pybamm.t * time_scale / 3600})
+        I = pybamm.electrical_parameters.dimensional_current_with_time
+        self.variables.update(
+            {
+                "Time [s]": pybamm.t * time_scale,
+                "Time [min]": pybamm.t * time_scale / 60,
+                "Time [h]": pybamm.t * time_scale / 3600,
+                "Discharge capacity [Ah]": I * pybamm.t * time_scale / 3600,
+            }
+        )
 
 
 class LithiumIonBaseModel(StandardBatteryBaseModel):
@@ -592,7 +600,15 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
         # Additional standard output variables
         # Time
         time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
-        self.variables.update({"Time [h]": pybamm.t * time_scale / 3600})
+        I = pybamm.electrical_parameters.dimensional_current_with_time
+        self.variables.update(
+            {
+                "Time [s]": pybamm.t * time_scale,
+                "Time [min]": pybamm.t * time_scale / 60,
+                "Time [h]": pybamm.t * time_scale / 3600,
+                "Discharge capacity [Ah]": I * pybamm.t * time_scale / 3600,
+            }
+        )
 
         # Particle concentration and position
         self.variables.update(

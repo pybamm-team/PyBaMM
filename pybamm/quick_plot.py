@@ -152,7 +152,7 @@ class QuickPlot(object):
         Parameters
         ----------
         t : float
-            Dimensional time at which to plot.
+            Dimensional time (in hours) at which to plot.
         """
 
         import matplotlib.pyplot as plt
