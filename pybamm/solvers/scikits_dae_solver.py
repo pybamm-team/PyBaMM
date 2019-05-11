@@ -1,8 +1,6 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -81,18 +79,18 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0)
             if sparse.issparse(jac_y0_t0):
+
                 def jacfn(t, y, ydot, residuals, cj, J):
                     jac_eval = jacobian(t, y) - cj * mass_matrix
                     J[:][:] = jac_eval.toarray()
 
             else:
+
                 def jacfn(t, y, ydot, residuals, cj, J):
                     jac_eval = jacobian(t, y) - cj * mass_matrix
                     J[:][:] = jac_eval
 
-            extra_options.update({
-                "jacfn": jacfn
-            })
+            extra_options.update({"jacfn": jacfn})
 
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})

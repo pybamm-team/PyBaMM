@@ -1,9 +1,6 @@
 #
 # Standard tests on the standard set of model outputs
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
-
 import pybamm
 import numpy as np
 
@@ -63,10 +60,11 @@ class BaseOutputTest(object):
         self.x_p_edge = disc.mesh["positive electrode"][0].edges
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell)[0].edges
 
-        self.r_n = disc.mesh["negative particle"][0].nodes
-        self.r_p = disc.mesh["positive particle"][0].nodes
-        self.r_n_edge = disc.mesh["negative particle"][0].edges
-        self.r_p_edge = disc.mesh["positive particle"][0].edges
+        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+            self.r_n = disc.mesh["negative particle"][0].nodes
+            self.r_p = disc.mesh["positive particle"][0].nodes
+            self.r_n_edge = disc.mesh["negative particle"][0].edges
+            self.r_p_edge = disc.mesh["positive particle"][0].edges
 
     def get_var(self, var):
         "Helper function to reduce repeated code."
@@ -451,10 +449,10 @@ class CurrentTests(BaseOutputTest):
         current_param = pybamm.electrical_parameters.current_with_time
         parameter_values = self.model.default_parameter_values
         i_cell = parameter_values.process_symbol(current_param).evaluate(t=t)
-        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=5)
-        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[-1]), 0)
-        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[-1]), i_cell)
-        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[0]), 0)
+        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=4)
+        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[-1]), 0, decimal=4)
+        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[-1]), i_cell, decimal=4)
+        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[0]), 0, decimal=4)
 
     def test_all(self):
         self.test_interfacial_current_average()

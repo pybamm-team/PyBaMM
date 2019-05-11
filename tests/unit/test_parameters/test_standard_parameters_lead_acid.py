@@ -1,8 +1,6 @@
 #
 # Test for the standard lead acid parameters
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 from tests import get_discretisation_for_testing
 
@@ -83,7 +81,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_current_functions(self):
         # create current functions
         dimensional_current = (
-            pybamm.standard_parameters_lead_acid.dimensional_current_with_time
+            pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
         )
         dimensionless_current = pybamm.standard_parameters_lead_acid.current_with_time
 

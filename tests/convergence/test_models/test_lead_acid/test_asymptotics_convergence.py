@@ -1,8 +1,6 @@
 #
 # Tests for the asymptotic convergence of the simplified models
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -29,7 +27,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
 
         # Discretise (same mesh, create different discretisations)
         var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 1, var.r_p: 1}
+        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3}
         mesh = pybamm.Mesh(geometry, full_model.default_submesh_types, var_pts)
         loqs_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
         loqs_disc.process_model(leading_order_model)

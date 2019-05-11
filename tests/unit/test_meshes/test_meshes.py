@@ -49,6 +49,17 @@ class TestMesh(unittest.TestCase):
         for domain in mesh:
             self.assertEqual(len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1)
 
+    def test_init_failure(self):
+        geometry = pybamm.Geometry1DMacro()
+        with self.assertRaises(KeyError):
+            pybamm.Mesh(geometry, None, {})
+
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12}
+        geometry = pybamm.Geometry1p1DMicro()
+        with self.assertRaises(KeyError):
+            pybamm.Mesh(geometry, None, var_pts)
+
     def test_mesh_sizes(self):
         param = pybamm.ParameterValues(
             base_parameters={

@@ -5,8 +5,6 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import re
 import os
 import sys
