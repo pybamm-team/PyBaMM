@@ -12,7 +12,7 @@ class TestParameterValues(unittest.TestCase):
         data = pybamm.ParameterValues().read_parameters_csv(
             "input/parameters/lead-acid/default.csv"
         )
-        self.assertEqual(data["Reference temperature"], 294.85)
+        self.assertEqual(data["Reference temperature [K]"], 294.85)
 
     def test_init(self):
         # from dict
@@ -20,7 +20,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(param["a"], 1)
         # from file
         param = pybamm.ParameterValues("input/parameters/lead-acid/default.csv")
-        self.assertEqual(param["Reference temperature"], 294.85)
+        self.assertEqual(param["Reference temperature [K]"], 294.85)
 
     def test_overwrite(self):
         # from dicts
@@ -36,8 +36,8 @@ class TestParameterValues(unittest.TestCase):
             base_parameters="input/parameters/lead-acid/default.csv",
             optional_parameters="input/parameters/lead-acid/optional_test.csv",
         )
-        self.assertEqual(param["Reference temperature"], 294.85)
-        self.assertEqual(param["Negative electrode width"], 0.5)
+        self.assertEqual(param["Reference temperature [K]"], 294.85)
+        self.assertEqual(param["Negative electrode width [m]"], 0.5)
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2})
