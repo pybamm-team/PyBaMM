@@ -1,9 +1,6 @@
 #
 # Native PyBaMM Meshes
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
-
 import numpy as np
 import pybamm
 
@@ -47,11 +44,12 @@ class Mesh(dict):
             for prim_sec in list(geometry[domain].keys()):
                 for var in list(geometry[domain][prim_sec].keys()):
                     if var.id not in var_id_pts.keys():
-                        raise KeyError(
-                            "Points not given for a variable in domain {}".format(
-                                domain
+                        if var.domain[0] in geometry.keys():
+                            raise KeyError(
+                                "Points not given for a variable in domain {}".format(
+                                    domain
+                                )
                             )
-                        )
                     submesh_pts[domain][var.id] = var_id_pts[var.id]
         self.submesh_pts = submesh_pts
 

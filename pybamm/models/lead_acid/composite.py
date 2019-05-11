@@ -1,8 +1,6 @@
 #
 # Lead-acid Composite model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 
@@ -22,6 +20,7 @@ class Composite(pybamm.LeadAcidBaseModel):
     def __init__(self):
         # Update own model with submodels
         super().__init__()
+        self.name = "Composite model"
 
         "-----------------------------------------------------------------------------"
         "Parameters"
