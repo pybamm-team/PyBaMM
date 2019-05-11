@@ -13,6 +13,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.name = "Single Particle Model with electrolyte"
 
         "-----------------------------------------------------------------------------"
         "Parameters"
