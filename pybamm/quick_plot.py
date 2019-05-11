@@ -2,6 +2,24 @@ import numpy as np
 import pybamm
 
 
+def ax_min(data):
+    "Calculate appropriate minimum axis value for plotting"
+    data_min = np.min(data)
+    if data_min <= 0:
+        return 1.1 * data_min
+    else:
+        return 0.9 * data_min
+
+
+def ax_max(data):
+    "Calculate appropriate maximum axis value for plotting"
+    data_max = np.max(data)
+    if data_max <= 0:
+        return 0.9 * data_max
+    else:
+        return 1.1 * data_max
+
+
 class QuickPlot(object):
     """
     Generates a quick plot of a subset of key outputs of the model so that the model
@@ -11,101 +29,122 @@ class QuickPlot(object):
 
     Parameters
     ----------
-    model: :class: pybamm.BaseModel
-        The model to plot the outputs of.
-    mesh: :class: pybamm.Mesh
+    models: (iter of) :class:`pybamm.BaseModel`
+        The model(s) to plot the outputs of.
+    mesh: :class:`pybamm.Mesh`
         The mesh on which the model solved
-    solver: :class: pybamm.Solver
-        The numerical solver for the model which contained the solution to the model.
+    solvers: (iter of) :class:`pybamm.Solver`
+        The numerical solver(s) for the model(s) which contained the solution to the
+        model(s).
+    output_variables : list of str
+        List of variables to plot
     """
 
-    def __init__(self, model, param, mesh, solver):
+    def __init__(self, models, mesh, solvers, output_variables=None):
+        if isinstance(models, pybamm.BaseModel):
+            models = [models]
+        elif not isinstance(models, list):
+            raise TypeError("'models' must be 'pybamm.BaseModel' or list")
+        if isinstance(solvers, pybamm.BaseSolver):
+            solvers = [solvers]
+        elif not isinstance(solvers, list):
+            raise TypeError("'solvers' must be 'pybamm.BaseSolver' or list")
+        if len(models) == len(solvers):
+            self.num_models = len(models)
+        else:
+            raise ValueError("must provide the same number of models and solutions")
 
-        # geometric parameters
-        self.l_n = param.process_symbol(pybamm.geometric_parameters.l_n).evaluate(0, 0)
-        self.l_s = param.process_symbol(pybamm.geometric_parameters.l_s).evaluate(0, 0)
-        self.l_p = param.process_symbol(pybamm.geometric_parameters.l_p).evaluate(0, 0)
+        # Scales
+        vars = models[0].variables
+        self.x_scale = (vars["x [m]"] / vars["x"]).evaluate()[-1]
+        self.time_scale = (vars["Time [h]"] / vars["Time"]).evaluate(t=1)
 
-        # spatial and temporal variables
-        self.x_n = np.linspace(0, self.l_n, 40)
-        self.x_p = np.linspace(self.l_n + self.l_s, 1, 40)
-        self.x = np.linspace(0, 1, 100)
-        self.t = solver.t
+        # Time parameters
+        self.ts = [solver.t for solver in solvers]
+        self.min_t = np.min([t[0] for t in self.ts]) * self.time_scale
+        self.max_t = np.max([t[-1] for t in self.ts]) * self.time_scale
 
-        self.set_output_variables(solver.y, model, mesh)
+        # Default output variables for lead-acid and lithium-ion
+        if output_variables is None:
+            if isinstance(models[0], pybamm.LithiumIonBaseModel):
+                output_variables = [
+                    "Negative particle surface concentration",
+                    "Electrolyte concentration",
+                    "Positive particle surface concentration",
+                    "Current [A]",
+                    "Negative electrode potential [V]",
+                    "Electrolyte potential [V]",
+                    "Positive electrode potential [V]",
+                    "Terminal voltage [V]",
+                ]
+            elif isinstance(models[0], pybamm.LeadAcidBaseModel):
+                output_variables = [
+                    "Interfacial current density [A m-2]",
+                    "Electrolyte concentration [mols m-3]",
+                    "Current [A]",
+                    "Porosity",
+                    "Electrolyte potential [V]",
+                    "Terminal voltage [V]",
+                ]
+        self.set_output_variables(output_variables, solvers, models, mesh)
         self.reset_axis()
 
-    def set_output_variables(self, y, model, mesh):
-        self.c_s_n_surf = pybamm.ProcessedVariable(
-            model.variables["Negative particle surface concentration"], self.t, y, mesh
-        )
-        self.c_e = pybamm.ProcessedVariable(
-            model.variables["Electrolyte concentration"], self.t, y, mesh
-        )
+    def set_output_variables(self, output_variables, solvers, models, mesh):
+        # Set up output variables
+        self.variables = {}
+        self.x_values = {}
 
-        self.c_s_p_surf = pybamm.ProcessedVariable(
-            model.variables["Positive particle surface concentration"], self.t, y, mesh
-        )
-        self.i_cell = pybamm.ProcessedVariable(
-            model.variables["Total current density"], self.t, y, mesh
-        )
-        self.phi_s_n = pybamm.ProcessedVariable(
-            model.variables["Negative electrode potential [V]"], self.t, y, mesh
-        )
-        self.phi_e = pybamm.ProcessedVariable(
-            model.variables["Electrolyte potential [V]"], self.t, y, mesh
-        )
-        self.phi_s_p = pybamm.ProcessedVariable(
-            model.variables["Positive electrode potential [V]"], self.t, y, mesh
-        )
-        self.V = pybamm.ProcessedVariable(
-            model.variables["Terminal voltage [V]"], self.t, y, mesh
-        )
+        # Calculate subplot positions based on number of variables supplied
+        self.subplot_positions = {}
+        n = int(len(output_variables) // np.sqrt(len(output_variables)))
+        m = np.ceil(len(output_variables) / n)
+
+        # Process output variables into a form that can be plotted
+        for k, var in enumerate(output_variables):
+            self.variables[var] = [
+                pybamm.ProcessedVariable(
+                    models[i].variables[var], solvers[i].t, solvers[i].y, mesh
+                )
+                for i in range(len(models))
+            ]
+            if self.variables[var][0].dimensions == 2:
+                domain = models[0].variables[var].domain
+                self.x_values[var] = mesh.combine_submeshes(*domain)[0].edges
+            self.subplot_positions[var] = (n, m, k + 1)
+
+        # Set labels
+        self.labels = [model.name for model in models]
+
+        # Don't allow 3D variables
+        if self.variables[var][0].dimensions == 3:
+            raise NotImplementedError("cannot plot 3D variables")
 
     def reset_axis(self):
         """
         Reset the axis limits to the default values.
         """
-        self.axis = {
-            "Negative particle surface concentration": [0, self.l_n, 0, 1],
-            "Electrolyte concentration": [
-                0,
-                1,
-                np.min(self.c_e(self.t, self.x) - 0.2),
-                np.max(self.c_e(self.t, self.x) + 0.2),
-            ],
-            "Positive particle surface concentration": [1 - self.l_p, 1, 0, 1],
-            "Total current density": [
-                self.t[0],
-                self.t[-1],
-                np.min(self.i_cell(self.t)) - 1,
-                np.max(self.i_cell(self.t)) + 1,
-            ],
-            "Negative electrode potential [V]": [
-                0,
-                self.l_n,
-                np.min(self.phi_s_n(self.t, self.x_n)) - 0.01,
-                np.max(self.phi_s_n(self.t, self.x_n)) + 0.01,
-            ],
-            "Electrolyte potential [V]": [
-                0,
-                1,
-                np.min(self.phi_e(self.t, self.x)),
-                np.max(self.phi_e(self.t, self.x)),
-            ],
-            "Positive electrode potential [V]": [
-                1 - self.l_p,
-                1,
-                np.min(self.phi_s_p(self.t, self.x_p)),
-                np.max(self.phi_s_p(self.t, self.x_p)),
-            ],
-            "Terminal voltage [V]": [
-                self.t[0],
-                self.t[-1],
-                np.min(self.V(self.t)),
-                np.max(self.V(self.t)),
-            ],
-        }
+        self.axis = {}
+        for name, variable in self.variables.items():
+            if variable[0].dimensions == 1:
+                y_min = np.min([ax_min(v(self.ts[i])) for i, v in enumerate(variable)])
+                y_max = np.max([ax_max(v(self.ts[i])) for i, v in enumerate(variable)])
+                if y_min == y_max:
+                    y_min -= 1
+                    y_max += 1
+                self.axis[name] = [self.min_t, self.max_t, y_min, y_max]
+            elif variable[0].dimensions == 2:
+                x = self.x_values[name]
+                x_scaled = x * self.x_scale
+                y_min = np.min(
+                    [ax_min(v(self.ts[i], x)) for i, v in enumerate(variable)]
+                )
+                y_max = np.max(
+                    [ax_max(v(self.ts[i], x)) for i, v in enumerate(variable)]
+                )
+                if y_min == y_max:
+                    y_min -= 1
+                    y_max += 1
+                self.axis[name] = [x_scaled[0], x_scaled[-1], y_min, y_max]
 
     def plot(self, t):
         """Produces a quick plot with the internal states at time t.
@@ -113,80 +152,58 @@ class QuickPlot(object):
         Parameters
         ----------
         t : float
-            Time at which to plot.
+            Dimensional time (in hours) at which to plot.
         """
 
         import matplotlib.pyplot as plt
 
+        t /= self.time_scale
         self.fig, self.ax = plt.subplots(figsize=(15, 8))
         plt.tight_layout()
         plt.subplots_adjust(left=-0.1)
+        self.plots = {}
+        self.time_lines = {}
 
-        plt.subplot(241)
-        plt.xlabel("x")
-        plt.ylabel("Negative particle surface concentration")
-        self.negative_particle_concentration, = plt.plot(
-            self.x_n, self.c_s_n_surf(t, self.x_n), lw=2
-        )
-        plt.axis(self.axis["Negative particle surface concentration"])
-
-        plt.subplot(242)
-        plt.xlabel("x")
-        plt.ylabel("Electrolyte concentration")
-        self.electrolyte_concentration, = plt.plot(self.x, self.c_e(t, self.x), lw=2)
-        plt.axis(self.axis["Electrolyte concentration"])
-
-        plt.subplot(243)
-        plt.xlabel("x_p")
-        plt.ylabel("Positive particle surface concentration")
-        self.positive_particle_concentration, = plt.plot(
-            self.x_p, self.c_s_p_surf(t, self.x_p), lw=2
-        )
-        plt.axis(self.axis["Positive particle surface concentration"])
-
-        plt.subplot(244)
-        plt.xlabel("Time")
-        plt.ylabel("Total current density")
-        self.current, = plt.plot(self.t, self.i_cell(self.t), lw=2)
-        self.current_point, = plt.plot(
-            [t], [self.i_cell(t)], marker="o", markersize=5, color="red"
-        )
-        plt.axis(self.axis["Total current density"])
-
-        # negative electrode potential
-        plt.subplot(245)
-        plt.xlabel("x")
-        plt.ylabel("Negative electrode potential [V]")
-        self.negative_electrode_potential, = plt.plot(
-            self.x_n, self.phi_s_n(t, self.x_n), lw=2
-        )
-        plt.axis(self.axis["Negative electrode potential [V]"])
-
-        # electrolyte potential
-        plt.subplot(246)
-        plt.xlabel("x")
-        plt.ylabel("Electrolyte potential [V]")
-        self.electrolyte_potential, = plt.plot(self.x, self.phi_e(t, self.x), lw=2)
-        plt.axis(self.axis["Electrolyte potential [V]"])
-
-        # positive electrode potential
-        plt.subplot(247)
-        plt.xlabel("x")
-        plt.ylabel("Positive electrode potential [V]")
-        self.positive_electrode_potential, = plt.plot(
-            self.x_p, self.phi_s_p(t, self.x_p), lw=2
-        )
-        plt.axis(self.axis["Positive electrode potential [V]"])
-
-        # voltage
-        plt.subplot(248)
-        plt.xlabel("Time")
-        plt.ylabel("Terminal voltage [V]")
-        self.voltage, = plt.plot(self.t, self.V(self.t), lw=2)
-        self.voltage_point, = plt.plot(
-            [t], [self.V(t)], marker="o", markersize=5, color="red"
-        )
-        plt.axis(self.axis["Terminal voltage [V]"])
+        for k, name in enumerate(self.variables.keys()):
+            variable = self.variables[name]
+            plt.subplot(*self.subplot_positions[name])
+            plt.ylabel(name, fontsize=14)
+            plt.axis(self.axis[name])
+            self.plots[name] = [None] * self.num_models
+            # Set labels
+            if k == 0:
+                labels = self.labels
+            else:
+                labels = [None] * len(self.labels)
+            if variable[0].dimensions == 2:
+                # 2D plot: plot as a function of x at time t
+                plt.xlabel("Position [m]", fontsize=14)
+                x_value = self.x_values[name]
+                for i in range(self.num_models):
+                    self.plots[name][i], = plt.plot(
+                        x_value * self.x_scale,
+                        variable[i](t, x_value),
+                        lw=2,
+                        label=labels[i],
+                    )
+            else:
+                # 1D plot: plot as a function of time, indicating time t with a line
+                plt.xlabel("Time [h]", fontsize=14)
+                for i in range(self.num_models):
+                    full_t = self.ts[i]
+                    self.plots[name][i], = plt.plot(
+                        full_t * self.time_scale,
+                        variable[i](full_t),
+                        lw=2,
+                        label=labels[i],
+                    )
+                    y_min, y_max = self.axis[name][2:]
+                    self.time_lines[name], = plt.plot(
+                        [t * self.time_scale, t * self.time_scale],
+                        [y_min, y_max],
+                        "k--",
+                    )
+        self.fig.legend(loc="lower right")
 
     def dynamic_plot(self, testing=False):
         """
@@ -201,8 +218,8 @@ class QuickPlot(object):
         self.plot(0)
 
         axcolor = "lightgoldenrodyellow"
-        axfreq = plt.axes([0.315, 0.05, 0.37, 0.03], facecolor=axcolor)
-        self.sfreq = Slider(axfreq, "Time", 0, self.t.max(), valinit=0)
+        axfreq = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
+        self.sfreq = Slider(axfreq, "Time", 0, self.max_t, valinit=0)
         self.sfreq.on_changed(self.update)
 
         plt.subplots_adjust(
@@ -217,15 +234,13 @@ class QuickPlot(object):
         Update the plot in self.plot() with values at new time
         """
         t = self.sfreq.val
-        self.negative_particle_concentration.set_ydata(self.c_s_n_surf(t, self.x_n))
-        self.electrolyte_concentration.set_ydata(self.c_e(t, self.x))
-        self.positive_particle_concentration.set_ydata(self.c_s_p_surf(t, self.x_p))
+        t_dimensionless = t / self.time_scale
+        for var, plot in self.plots.items():
+            if self.variables[var][0].dimensions == 2:
+                x = self.x_values[var]
+                for i in range(self.num_models):
+                    plot[i].set_ydata(self.variables[var][i](t_dimensionless, x))
+            else:
+                self.time_lines[var].set_xdata([t])
 
-        self.current_point.set_data([t], [self.i_cell(t)])
-
-        self.negative_electrode_potential.set_ydata(self.phi_s_n(t, self.x_n))
-        self.electrolyte_potential.set_ydata(self.phi_e(t, self.x))
-        self.positive_electrode_potential.set_ydata(self.phi_s_p(t, self.x_p))
-
-        self.voltage_point.set_data([t], [self.V(t)])
         self.fig.canvas.draw_idle()

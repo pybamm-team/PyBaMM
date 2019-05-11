@@ -1,8 +1,6 @@
 #
 # Tests for the Broadcast classes
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 from tests import get_discretisation_for_testing
 import unittest

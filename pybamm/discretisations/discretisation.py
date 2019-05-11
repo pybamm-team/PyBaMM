@@ -1,8 +1,6 @@
 #
 # Interface for discretisation
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -266,13 +264,16 @@ class Discretisation(object):
         for v in model_variables:
             if isinstance(v, pybamm.Concatenation):
                 model_slices.append(
-                    slice(self._y_slices[v.children[0].id].start,
-                          self._y_slices[v.children[-1].id].stop)
+                    slice(
+                        self._y_slices[v.children[0].id].start,
+                        self._y_slices[v.children[-1].id].stop,
+                    )
                 )
             else:
                 model_slices.append(self._y_slices[v.id])
-        sorted_model_variables = [v for _, v in
-                                  sorted(zip(model_slices, model_variables))]
+        sorted_model_variables = [
+            v for _, v in sorted(zip(model_slices, model_variables))
+        ]
 
         # Process mass matrices for the differential equations
         for var in sorted_model_variables:
@@ -475,8 +476,10 @@ class Discretisation(object):
             if isinstance(symbol, pybamm.Concatenation):
                 unpacked_variables.extend([var for var in symbol.children])
                 slices.append(
-                    slice(self._y_slices[symbol.children[0].id].start,
-                          self._y_slices[symbol.children[-1].id].stop)
+                    slice(
+                        self._y_slices[symbol.children[0].id].start,
+                        self._y_slices[symbol.children[-1].id].stop,
+                    )
                 )
             else:
                 unpacked_variables.append(symbol)

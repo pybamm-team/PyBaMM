@@ -1,8 +1,6 @@
 #
 # Tests for the lead-acid Newman-Tiedemann model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
@@ -17,7 +15,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         model = pybamm.lead_acid.NewmanTiedemann()
         # Make grid very coarse for quick test (note that r domain doesn't matter)
         var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 1, var.r_p: 1}
+        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3}
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all()
 
