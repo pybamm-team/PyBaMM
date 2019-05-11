@@ -44,9 +44,7 @@ class TestDaeSolver(unittest.TestCase):
         solver = pybamm.DaeSolver()
         y0 = np.array([2])
         with self.assertRaises(pybamm.SolverError):
-            init_cond = solver.calculate_consistent_initial_conditions(
-                rhs, algebraic, y0
-            )
+            solver.calculate_consistent_initial_conditions(rhs, algebraic, y0)
 
 
 if __name__ == "__main__":

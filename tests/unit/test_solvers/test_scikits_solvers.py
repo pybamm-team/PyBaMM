@@ -220,7 +220,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
         np.testing.assert_allclose(y_sol[1], 2 * np.exp(-0.1 * t_sol))
 
-    def test_ode_integrate_failure(self):
+    def test_dae_integrate_failure(self):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
 
         def constant_growth_dae(t, y, ydot):

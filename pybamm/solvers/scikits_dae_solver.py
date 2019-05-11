@@ -25,13 +25,17 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     tolerance : float, optional
         The tolerance for the solver (default is 1e-8). Set as the both reltol and
         abstol in solve_ivp.
+    root_method : str, optional
+        The method to use to find initial conditions (default is "lm")
+    tolerance : float, optional
+        The tolerance for the initial-condition solver (default is 1e-8).
     """
 
-    def __init__(self, method="ida", tol=1e-8):
+    def __init__(self, method="ida", tol=1e-8, root_method="lm", root_tol=1e-6):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(tol)
+        super().__init__(tol, root_method, root_tol)
         self._method = method
 
     @property
