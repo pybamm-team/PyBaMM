@@ -132,7 +132,4 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             # 2 = found root(s)
             return sol.values.t, np.transpose(sol.values.y)
         else:
-            import ipdb
-
-            ipdb.set_trace()
             raise pybamm.SolverError(sol.message)

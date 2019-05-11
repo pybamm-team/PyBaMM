@@ -2,10 +2,10 @@
 # Tests for the Scipy Solver class
 #
 import pybamm
-
 import unittest
 import numpy as np
 from tests import get_mesh_for_testing
+import warnings
 
 
 class TestScipySolver(unittest.TestCase):
@@ -32,6 +32,23 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(exponential_decay, y0, t_eval)
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
+
+    def test_integrate_failure(self):
+        # Turn off warnings to ignore sqrt error
+        warnings.simplefilter("ignore")
+
+        def sqrt_decay(t, y):
+            return -np.sqrt(y)
+
+        y0 = np.array([1])
+        t_eval = np.linspace(0, 3, 100)
+        solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
+        # Expect solver to fail when y goes negative
+        with self.assertRaises(pybamm.SolverError):
+            solver.integrate(sqrt_decay, y0, t_eval)
+
+        # Turn warnings back on
+        warnings.simplefilter("default")
 
     def test_integrate_with_event(self):
         # Constant
