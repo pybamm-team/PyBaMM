@@ -1,8 +1,6 @@
 #
 # Test for the Symbol class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 from tests import get_discretisation_for_testing
 
@@ -212,7 +210,7 @@ class TestSimplify(unittest.TestCase):
             sym.simplify()
 
         # A + A = 2A (#323)
-        a = pybamm.Variable('A')
+        a = pybamm.Variable("A")
         expr = (a + a).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)

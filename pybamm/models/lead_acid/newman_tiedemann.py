@@ -1,8 +1,6 @@
 #
 # Lead-acid Newman-Tiedemann model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 
@@ -113,10 +111,8 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         )
         self.variables.update(volt_vars)
 
-        # Voltage cut-off
-        voltage = pybamm.BoundaryValue(phi_s_p, "right") - pybamm.BoundaryValue(
-            phi_s_n, "left"
-        )
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"

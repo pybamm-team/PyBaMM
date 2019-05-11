@@ -16,7 +16,7 @@ setup(
     url="https://github.com/pybamm-team/PyBaMM",
     # List of dependencies
     install_requires=[
-        "numpy>=1.14",
+        "numpy>=1.16",
         "scipy>=1.0",
         "pandas>=0.23",
         "anytree>=2.4.3",

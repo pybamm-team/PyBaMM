@@ -1,8 +1,6 @@
 #
 # Doyle-Fuller-Newman (DFN) Model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 
@@ -107,10 +105,8 @@ class DFN(pybamm.LithiumIonBaseModel):
         )
         self.variables.update(volt_vars)
 
-        # Voltage cut-off
-        voltage = pybamm.BoundaryValue(phi_s_p, "right") - pybamm.BoundaryValue(
-            phi_s_n, "left"
-        )
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"

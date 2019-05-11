@@ -1,8 +1,6 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -82,13 +80,16 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0)
             if sparse.issparse(jac_y0_t0):
+
                 def jacfn(t, y, fy, J):
                     J[:][:] = jacobian(t, y).toarray()
 
                 def jac_times_vecfn(v, Jv, t, y, userdata):
                     Jv[:] = userdata._jac_eval * v
                     return 0
+
             else:
+
                 def jacfn(t, y, fy, J):
                     J[:][:] = jacobian(t, y)
 
@@ -100,20 +101,24 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
                 userdata._jac_eval = jacobian(t, y)
                 return 0
 
-        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol,
-                         "linsolver": self.linsolver}
+        extra_options = {
+            "old_api": False,
+            "rtol": self.tol,
+            "atol": self.tol,
+            "linsolver": self.linsolver,
+        }
 
         if jacobian:
-            if self.linsolver in ('dense', 'lapackdense'):
-                extra_options.update({
-                    "jacfn": jacfn
-                })
-            elif self.linsolver in ('spgmr', 'spbcgs', 'sptfqmr'):
-                extra_options.update({
-                    "jac_times_setupfn": jac_times_setupfn,
-                    "jac_times_vecfn": jac_times_vecfn,
-                    "user_data": self
-                })
+            if self.linsolver in ("dense", "lapackdense"):
+                extra_options.update({"jacfn": jacfn})
+            elif self.linsolver in ("spgmr", "spbcgs", "sptfqmr"):
+                extra_options.update(
+                    {
+                        "jac_times_setupfn": jac_times_setupfn,
+                        "jac_times_vecfn": jac_times_vecfn,
+                        "user_data": self,
+                    }
+                )
 
         if events:
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
