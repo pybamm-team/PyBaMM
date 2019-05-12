@@ -139,6 +139,8 @@ class VariablesComparison(BaseOutputComparison):
         self.compare("Electrolyte concentration")
         self.compare("Reduced cation flux")
         # Potentials
+        self.compare("Negative reaction overpotential")
+        self.compare("Positive reaction overpotential")
         self.compare("Negative electrode potential")
         self.compare("Positive electrode potential")
         self.compare("Electrolyte potential")

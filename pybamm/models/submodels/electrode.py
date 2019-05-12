@@ -112,10 +112,12 @@ class Ohm(pybamm.SubModel):
 
         # Take boundary values
         phi_e_right = pybamm.boundary_value(phi_e, "right")
+        ocp_p_right = pybamm.boundary_value(ocp_p, "right")
+        eta_r_p_right = pybamm.boundary_value(eta_r_p, "right")
 
         # electode potential
         phi_s_n = pybamm.Broadcast(0, ["negative electrode"])
-        v = ocp_p + eta_r_p + phi_e_right
+        v = ocp_p_right + eta_r_p_right + phi_e_right
         phi_s_p = pybamm.Broadcast(v, ["positive electrode"])
 
         # electrode current
