@@ -95,35 +95,7 @@ class NumpyBroadcast(Broadcast):
 
     def _unary_evaluate(self, child):
         """ See :meth:`pybamm.UnaryOperator._unary_evaluate()`. """
-        # Different broadcasting based on the shape of child
-        try:
-            child_size = child.size
-        except AttributeError:
-            child_size = 0
-
-        if child_size <= 1:
-            return child * self.broadcasting_vector
-        if child_size > 1:
-            # Possible shapes for a child with a shape:
-            # (n,) -> (e.g. time-like object) broadcast to (n, broadcasting_size)
-            # (1,n) -> (e.g. state-vector-like object) broadcast to
-            #          (n, broadcasting_size)
-            # (n,1) -> error
-            # (n,m) -> error
-            # (n,m,k,...) -> error
-            if child.ndim == 1:
-                # shape (n,)
-                return np.repeat(
-                    child[np.newaxis, :], self.broadcasting_vector_size, axis=0
-                )
-            elif child.ndim == 2:
-                if child.shape[0] == 1:
-                    # shape (1, m) since size > 1
-                    return np.repeat(child, self.broadcasting_vector_size, axis=0)
-            # All other cases
-            raise ValueError(
-                "cannot broadcast child with shape '{}'".format(child.shape)
-            )
+        return child * self.broadcasting_vector
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """

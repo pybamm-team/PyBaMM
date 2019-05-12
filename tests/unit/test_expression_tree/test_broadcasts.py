@@ -47,36 +47,13 @@ class TestBroadcasts(unittest.TestCase):
         )
         self.assertEqual(broad.domain, whole_cell)
 
-        # time
-        t = 3 * pybamm.t + 4
-        broad = pybamm.NumpyBroadcast(t, whole_cell, mesh)
-        self.assertEqual(broad.domain, whole_cell)
-        np.testing.assert_array_equal(
-            broad.evaluate(t=3), 13 * np.ones_like(combined_submeshes[0].nodes)
-        )
-        np.testing.assert_array_equal(
-            broad.evaluate(t=np.linspace(0, 1)),
-            (
-                (3 * np.linspace(0, 1) + 4)[:, np.newaxis]
-                * np.ones_like(combined_submeshes[0].nodes)
-            ).T,
-        )
-
         # state vector
         state_vec = pybamm.StateVector(slice(1, 2))
         broad = pybamm.NumpyBroadcast(state_vec, whole_cell, mesh)
-        y = np.vstack([np.linspace(0, 1), np.linspace(0, 2)])
+        y = np.linspace(0, 1)
         np.testing.assert_array_equal(
-            broad.evaluate(y=y),
-            (y[1:2].T * np.ones_like(combined_submeshes[0].nodes)).T,
+            broad.evaluate(y=y), (y[1:2] * np.ones_like(combined_submeshes[0].nodes))
         )
-
-        # state vector - bad input
-        state_vec = pybamm.StateVector(slice(1, 5))
-        broad = pybamm.NumpyBroadcast(state_vec, whole_cell, mesh)
-        y = np.vstack([np.linspace(0, 1), np.linspace(0, 2)]).T
-        with self.assertRaisesRegex(ValueError, "cannot broadcast child with shape"):
-            broad.evaluate(y=y)
 
 
 if __name__ == "__main__":
