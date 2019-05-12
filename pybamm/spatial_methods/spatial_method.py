@@ -65,13 +65,10 @@ class SpatialMethod:
         broadcasted_symbol: class: `pybamm.Symbol`
             The discretised symbol of the correct size for the spatial method
         """
-        if domain == []:
-            vector_size = 1
-        else:
-            vector_size = 0
-            for dom in domain:
-                for i in range(len(self.mesh[dom])):
-                    vector_size += self.mesh[dom][i].npts_for_broadcast
+        vector_size = 0
+        for dom in domain:
+            for i in range(len(self.mesh[dom])):
+                vector_size += self.mesh[dom][i].npts_for_broadcast
 
         return symbol * pybamm.Vector(np.ones(vector_size), domain=domain)
 

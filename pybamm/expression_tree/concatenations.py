@@ -270,12 +270,7 @@ class SparseStack(Concatenation):
                 children_eval = [None] * len(children)
                 for idx, child in enumerate(children):
                     children_eval[idx], known_evals = child.evaluate(t, y, known_evals)
-                try:
-                    known_evals[self.id] = self._concatenation_evaluate(children_eval)
-                except ValueError:
-                    import ipdb
-
-                    ipdb.set_trace()
+                known_evals[self.id] = self._concatenation_evaluate(children_eval)
             return known_evals[self.id], known_evals
         else:
             children_eval = [None] * len(children)
