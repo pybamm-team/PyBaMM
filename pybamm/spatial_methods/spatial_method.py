@@ -2,6 +2,7 @@
 # A general spatial method class
 #
 import pybamm
+import numpy as np
 from scipy.sparse import eye, kron, coo_matrix
 
 
@@ -65,8 +66,15 @@ class SpatialMethod:
         broadcasted_symbol: class: `pybamm.Symbol`
             The discretised symbol of the correct size for the spatial method
         """
+        if domain == []:
+            vector_size = 1
+        else:
+            vector_size = 0
+            for dom in domain:
+                for i in range(len(self.mesh[dom])):
+                    vector_size += self.mesh[dom][i].npts_for_broadcast
         # Default behaviour: use NumpyBroadcast
-        return pybamm.NumpyBroadcast(symbol, domain, self.mesh)
+        return symbol * pybamm.Vector(np.ones(vector_size), domain=domain)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """

@@ -2,7 +2,7 @@
 # Tests for the Broadcast classes
 #
 import pybamm
-from tests import get_discretisation_for_testing
+from tests import get_mesh_for_testing
 import unittest
 import numpy as np
 
@@ -31,9 +31,7 @@ class TestBroadcasts(unittest.TestCase):
             pybamm.Broadcast(b, ["separator"])
 
     def test_numpy_broadcast(self):
-        # create discretisation
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
+        mesh = get_mesh_for_testing()
         for dom in mesh.keys():
             mesh[dom][0].npts_for_broadcast = mesh[dom][0].npts
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -54,6 +52,33 @@ class TestBroadcasts(unittest.TestCase):
         np.testing.assert_array_equal(
             broad.evaluate(y=y), (y[1:2] * np.ones_like(combined_submeshes[0].nodes))
         )
+
+    @unittest.skip("")
+    def test_broadcast_jac(self):
+        mesh = get_mesh_for_testing()
+        for dom in mesh.keys():
+            mesh[dom][0].npts_for_broadcast = mesh[dom][0].npts
+        a = pybamm.Scalar(7)
+        y = pybamm.StateVector(slice(2, 3))
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        submesh = mesh.combine_submeshes(*whole_cell)
+
+        broad_a = pybamm.NumpyBroadcast(a, whole_cell, mesh)
+        broad_y = pybamm.NumpyBroadcast(y, whole_cell, mesh)
+        broad_y2 = pybamm.NumpyBroadcast(y ** 2, whole_cell, mesh)
+
+        # Create a y vector that is bigger than the mesh
+        y_jac = pybamm.StateVector(slice(0, 4))
+
+        y0 = np.ones(4)
+
+        dbroad_a_dyjac = broad_a.jac(y_jac).evaluate()
+        dbroad_y_dyjac = broad_y.jac(y_jac).evaluate()
+        dbroad_y2_dyjac = broad_y2.jac(y_jac).evaluate(y=y0)
+        import ipdb
+
+        ipdb.set_trace()
+        np.testing.assert_array_equal()
 
 
 if __name__ == "__main__":
