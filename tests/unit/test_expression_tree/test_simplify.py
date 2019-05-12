@@ -427,7 +427,7 @@ class TestSimplify(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a = pybamm.NumpyBroadcast(pybamm.Scalar(2), a_dom, mesh)
+        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
         b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
 
         conc = pybamm.DomainConcatenation([a, b], mesh)

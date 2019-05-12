@@ -395,7 +395,7 @@ class Discretisation(object):
             # Broadcast new_child to the domain specified by symbol.domain
             # Different discretisations may broadcast differently
             if symbol.domain == []:
-                symbol = pybamm.NumpyBroadcast(new_child, symbol.domain, {})
+                symbol = pybamm.SpatialMethod(self.mesh).broadcast(new_child, [])
             else:
                 symbol = self._spatial_methods[symbol.domain[0]].broadcast(
                     new_child, symbol.domain

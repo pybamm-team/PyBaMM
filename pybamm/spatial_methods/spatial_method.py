@@ -51,8 +51,7 @@ class SpatialMethod:
 
     def broadcast(self, symbol, domain):
         """
-        Broadcast symbol to a specified domain. To do this, calls
-        :class:`pybamm.NumpyBroadcast`
+        Broadcast symbol to a specified domain.
 
         Parameters
         ----------
@@ -73,7 +72,7 @@ class SpatialMethod:
             for dom in domain:
                 for i in range(len(self.mesh[dom])):
                     vector_size += self.mesh[dom][i].npts_for_broadcast
-        # Default behaviour: use NumpyBroadcast
+
         return symbol * pybamm.Vector(np.ones(vector_size), domain=domain)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):

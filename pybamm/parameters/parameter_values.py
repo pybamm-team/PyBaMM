@@ -196,11 +196,7 @@ class ParameterValues(dict):
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
-            if isinstance(symbol, pybamm.NumpyBroadcast):
-                new_symbol = pybamm.NumpyBroadcast(
-                    new_child, symbol.domain, symbol.mesh
-                )
-            elif isinstance(symbol, pybamm.Broadcast):
+            if isinstance(symbol, pybamm.Broadcast):
                 new_symbol = pybamm.Broadcast(new_child, symbol.domain)
             elif isinstance(symbol, pybamm.Function):
                 new_symbol = pybamm.Function(symbol.func, new_child)
