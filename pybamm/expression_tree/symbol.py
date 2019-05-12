@@ -82,27 +82,6 @@ class Symbol(anytree.NodeMixin):
         except TypeError:
             raise TypeError("Domain: argument domain is not iterable")
         else:
-            # check that domains are all known domains
-            try:
-                indicies = [pybamm.KNOWN_DOMAINS.index(d) for d in domain]
-            except ValueError:
-                raise ValueError(
-                    """domain "{}" is not in known domains ({})""".format(
-                        domain, str(pybamm.KNOWN_DOMAINS)
-                    )
-                )
-
-            # check that domains are sorted correctly
-            is_sorted = all(a <= b for a, b in zip(indicies, indicies[1:]))
-            if not is_sorted:
-                raise ValueError(
-                    """
-                    domain "{}" is not sorted according to known domains ({})
-                    """.format(
-                        domain, str(pybamm.KNOWN_DOMAINS)
-                    )
-                )
-
             self._domain = domain
             # Update id since domain has changed
             self.set_id()

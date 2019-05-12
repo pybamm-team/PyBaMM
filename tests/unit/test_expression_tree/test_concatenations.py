@@ -2,7 +2,7 @@
 # Tests for the Concatenation class and subclasses
 #
 import pybamm
-from tests import get_discretisation_for_testing
+from tests import get_mesh_for_testing, get_discretisation_for_testing
 import numpy as np
 import unittest
 
@@ -39,13 +39,6 @@ class TestConcatenations(unittest.TestCase):
         d = pybamm.Symbol("d", domain=["separator"])
         with self.assertRaises(pybamm.DomainError):
             pybamm.Concatenation(a, b, d)
-
-        # ensure concatenated domains are sorted correctly
-        conc = pybamm.Concatenation(c, a, b)
-        self.assertEqual(
-            conc.domain,
-            ["negative electrode", "separator", "positive electrode", "test"],
-        )
 
     def test_numpy_concatenation_vectors(self):
         # with entries
@@ -140,6 +133,23 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(
             conc.shape,
             (mesh[b_dom[0]][0].npts + mesh[a_dom[0]][0].npts + mesh[b_dom[1]][0].npts,),
+        )
+
+    def test_domain_concatenation_domains(self):
+        mesh = get_mesh_for_testing()
+        # ensure concatenated domains are sorted correctly
+        a = pybamm.Symbol("a", domain=["negative electrode"])
+        b = pybamm.Symbol("b", domain=["separator", "positive electrode"])
+        c = pybamm.Symbol("c", domain=["negative particle"])
+        conc = pybamm.DomainConcatenation([c, a, b], mesh)
+        self.assertEqual(
+            conc.domain,
+            [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+                "negative particle",
+            ],
         )
 
     def test_concatenation_orphans(self):
