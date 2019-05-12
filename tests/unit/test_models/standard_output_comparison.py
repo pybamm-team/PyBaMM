@@ -51,17 +51,21 @@ class StandardOutputComparison(object):
                 np.testing.assert_array_equal(submesh0[0].edges, submesh[0].edges)
         return disc0.mesh
 
-    def run_test_class(self, ClassName):
+    def run_test_class(self, ClassName, skip_first_timestep=False):
         "Run all tests from a class 'ClassName'"
-        tests = ClassName(self.models, self.t, self.mesh, self.solvers)
+        if skip_first_timestep:
+            t = self.t[1:]
+        else:
+            t = self.t
+        tests = ClassName(self.models, t, self.mesh, self.solvers)
         tests.test_all()
 
-    def test_averages(self):
-        self.run_test_class(AveragesComparison)
+    def test_averages(self, skip_first_timestep=False):
+        self.run_test_class(AveragesComparison, skip_first_timestep)
 
-    def test_all(self):
-        self.test_averages()
-        self.run_test_class(VariablesComparison)
+    def test_all(self, skip_first_timestep=False):
+        self.test_averages(skip_first_timestep)
+        self.run_test_class(VariablesComparison, skip_first_timestep)
 
         if self.chemistry == "Lithium-ion":
             self.run_test_class(ParticleConcentrationComparison)
@@ -80,7 +84,10 @@ class BaseOutputComparison(object):
         "Helper function to reduce repeated code."
         return [
             pybamm.ProcessedVariable(
-                model.variables[var], self.t, self.solvers[model].y, mesh=self.mesh
+                model.variables[var],
+                self.solvers[model].t,
+                self.solvers[model].y,
+                mesh=self.mesh,
             )
             for model in self.models
         ]
@@ -111,18 +118,14 @@ class BaseOutputComparison(object):
 
 
 class AveragesComparison(BaseOutputComparison):
+    "Compare variables whose average value should be the same across all models"
+
     def __init__(self, models, time, mesh, solvers):
         super().__init__(models, time, mesh, solvers)
 
     def test_all(self):
         # Potentials
-        self.compare("Average reaction overpotential")
-        self.compare("Average electrolyte overpotential")
-        self.compare("Average solid phase ohmic losses")
-        self.compare("Average negative electrode open circuit potential")
-        self.compare("Average positive electrode open circuit potential")
         self.compare("Average open circuit voltage")
-        self.compare("Terminal voltage")
         # Currents
         self.compare("Average negative electrode interfacial current density")
         self.compare("Average positive electrode interfacial current density")
@@ -131,6 +134,8 @@ class AveragesComparison(BaseOutputComparison):
 
 
 class VariablesComparison(BaseOutputComparison):
+    "Compare variables that vary across models"
+
     def __init__(self, models, time, mesh, solvers):
         super().__init__(models, time, mesh, solvers)
 
@@ -139,6 +144,14 @@ class VariablesComparison(BaseOutputComparison):
         self.compare("Electrolyte concentration")
         self.compare("Reduced cation flux")
         # Potentials
+        # Some of these are 'average' but aren't expected to be the same across all
+        # models
+        self.compare("Average reaction overpotential")
+        self.compare("Average negative electrode open circuit potential")
+        self.compare("Average positive electrode open circuit potential")
+        self.compare("Terminal voltage")
+        self.compare("Average electrolyte overpotential")
+        self.compare("Average solid phase ohmic losses")
         self.compare("Negative reaction overpotential")
         self.compare("Positive reaction overpotential")
         self.compare("Negative electrode potential")
