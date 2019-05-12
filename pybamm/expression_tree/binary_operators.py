@@ -372,16 +372,11 @@ class Multiplication(BinaryOperator):
 
         # if one of the children is a zero matrix, we have to be careful about shapes
         if is_matrix_zero(left) or is_matrix_zero(right):
-            left_shape = left.shape
-            right_shape = right.shape
-            if len(left_shape) == 0:
-                first_dim = 1
+            shape = (left * right).shape
+            if len(shape) == 1:
+                return pybamm.Vector(np.zeros(shape))
             else:
-                first_dim = left_shape[0]
-            if len(right_shape) == 1:
-                return pybamm.Vector(np.zeros(first_dim * right.shape[0]))
-            else:
-                return pybamm.Matrix(csr_matrix((first_dim, right_shape[1])))
+                return pybamm.Matrix(csr_matrix(shape))
 
         # anything multiplied by a scalar one returns itself
         if is_one(left):

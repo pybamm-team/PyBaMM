@@ -234,6 +234,17 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr, pybamm.Scalar)
         self.assertEqual(expr.evaluate(), 0)
 
+    def test_vector_zero_simplify(self):
+        a1 = pybamm.Scalar(0)
+        v1 = pybamm.Vector(np.zeros(10))
+        a2 = pybamm.Scalar(1)
+        v2 = pybamm.Vector(np.ones(10))
+
+        # for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
+        for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
+            self.assertIsInstance(expr.simplify(), pybamm.Vector)
+            np.testing.assert_array_equal(expr.simplify().entries, np.zeros(10))
+
     def test_function_simplify(self):
         a = pybamm.Parameter("a")
         funca = pybamm.Function(test_const_function, a).simplify()
