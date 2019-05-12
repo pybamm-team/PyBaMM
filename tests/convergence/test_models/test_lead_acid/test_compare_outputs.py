@@ -22,7 +22,7 @@ class TestCompareOutputs(unittest.TestCase):
 
         # load parameter values (same for all models)
         param = models[0].default_parameter_values
-        param.update({"Typical current": 20})
+        param.update({"Typical current": 0.001})
         for model in models:
             param.process_model(model)
 
