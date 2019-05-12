@@ -60,6 +60,7 @@ class StandardOutputComparison(object):
         self.run_test_class(AveragesComparison)
 
     def test_all(self):
+        self.test_averages()
         self.run_test_class(VariablesComparison)
 
         if self.chemistry == "Lithium-ion":
@@ -133,18 +134,18 @@ class VariablesComparison(BaseOutputComparison):
     def __init__(self, models, time, mesh, solvers):
         super().__init__(models, time, mesh, solvers)
 
-        def test_all(self):
-            # Concentrations
-            self.compare("Electrolyte concentration")
-            self.compare("Reduced cation flux")
-            # Potentials
-            self.compare("Negative electrode potential")
-            self.compare("Positive electrode potential")
-            self.compare("Electrolyte potential")
-            # Currents
-            self.compare("Exchange-current density")
-            self.compare("Negative electrode current density")
-            self.compare("Positive electrode current density")
+    def test_all(self):
+        # Concentrations
+        self.compare("Electrolyte concentration")
+        self.compare("Reduced cation flux")
+        # Potentials
+        self.compare("Negative electrode potential")
+        self.compare("Positive electrode potential")
+        self.compare("Electrolyte potential")
+        # Currents
+        self.compare("Exchange-current density")
+        self.compare("Negative electrode current density")
+        self.compare("Positive electrode current density")
 
 
 class ParticleConcentrationComparison(BaseOutputComparison):

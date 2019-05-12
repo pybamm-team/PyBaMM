@@ -48,9 +48,13 @@ class TestCompareOutputs(unittest.TestCase):
             solver.solve(model, t_eval)
             solvers[model] = solver
 
-        # test
+        # test averages
         comparison = StandardOutputComparison(models, param, discs, solvers)
         comparison.test_averages()
+
+        # compare leading and first order
+        comparison = StandardOutputComparison(models[:2], param, discs, solvers)
+        comparison.test_all()
 
 
 if __name__ == "__main__":
