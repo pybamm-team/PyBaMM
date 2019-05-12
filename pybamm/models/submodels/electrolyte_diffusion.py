@@ -150,13 +150,18 @@ class StefanMaxwell(pybamm.SubModel):
             N_e = pybamm.Concatenation(N_e_n, N_e_s, N_e_p)
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
+
+        c_e_av = pybamm.average(c_e)
+
         return {
             "Electrolyte concentration": c_e,
+            "Average electrolyte concentration": c_e_av,
             "Negative electrolyte concentration": c_e_n,
             "Separator electrolyte concentration": c_e_s,
             "Positive electrolyte concentration": c_e_p,
             "Reduced cation flux": N_e,
             "Electrolyte concentration [mols m-3]": c_e_typ * c_e,
+            "Average electrolyte concentration [mols m-3]": c_e_typ * c_e_av,
             "Negative electrolyte concentration [mols m-3]": c_e_typ * c_e_n,
             "Separator electrolyte concentration [mols m-3]": c_e_typ * c_e_s,
             "Positive electrolyte concentration [mols m-3]": c_e_typ * c_e_p,

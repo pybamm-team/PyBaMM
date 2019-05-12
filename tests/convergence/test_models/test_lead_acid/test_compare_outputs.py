@@ -17,12 +17,12 @@ class TestCompareOutputs(unittest.TestCase):
         models = [
             pybamm.lead_acid.LOQS(),
             pybamm.lead_acid.Composite(),
-            # pybamm.lead_acid.NewmanTiedemann(),
+            pybamm.lead_acid.NewmanTiedemann(),
         ]
 
         # load parameter values (same for all models)
         param = models[0].default_parameter_values
-        param.update({"Typical current": 0.001})
+        param.update({"Typical current": 0.01})
         for model in models:
             param.process_model(model)
 
@@ -50,7 +50,7 @@ class TestCompareOutputs(unittest.TestCase):
 
         # test
         comparison = StandardOutputComparison(models, param, discs, solvers)
-        comparison.test_all()
+        comparison.test_averages()
 
 
 if __name__ == "__main__":
