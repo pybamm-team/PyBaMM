@@ -359,8 +359,16 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         # anything multiplied by a scalar zero returns a scalar zero
-        if is_scalar_zero(left) or is_scalar_zero(right):
-            return pybamm.Scalar(0)
+        if is_scalar_zero(left):
+            if isinstance(right, pybamm.Array):
+                return pybamm.Array(np.zeros(right.shape))
+            else:
+                return pybamm.Scalar(0)
+        if is_scalar_zero(right):
+            if isinstance(left, pybamm.Array):
+                return pybamm.Array(np.zeros(left.shape))
+            else:
+                return pybamm.Scalar(0)
 
         # if one of the children is a zero matrix, we have to be careful about shapes
         if is_matrix_zero(left) or is_matrix_zero(right):

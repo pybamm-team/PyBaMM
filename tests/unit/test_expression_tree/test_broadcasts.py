@@ -1,10 +1,9 @@
 #
-# Tests for the Broadcast classes
+# Tests for the Broadcast class
 #
 import pybamm
-from tests import get_mesh_for_testing
-import unittest
 import numpy as np
+import unittest
 
 
 class TestBroadcasts(unittest.TestCase):
@@ -22,8 +21,8 @@ class TestBroadcasts(unittest.TestCase):
     def test_broadcast_number(self):
         broad_a = pybamm.Broadcast(1, ["negative electrode"])
         self.assertEqual(broad_a.name, "broadcast")
-        self.assertIsInstance(broad_a.children[0], pybamm.Symbol)
-        self.assertEqual(broad_a.children[0].name, str(1.0))
+        self.assertIsInstance(broad_a.children[0], pybamm.Vector)
+        self.assertEqual(broad_a.children[0].evaluate(), np.array([1]))
         self.assertEqual(broad_a.domain, ["negative electrode"])
 
         b = pybamm.Symbol("b", domain=["negative electrode"])
