@@ -142,7 +142,7 @@ class VariablesComparison(BaseOutputComparison):
     def test_all(self):
         # Concentrations
         self.compare("Electrolyte concentration")
-        self.compare("Reduced cation flux")
+        # self.compare("Reduced cation flux")
         # Potentials
         # Some of these are 'average' but aren't expected to be the same across all
         # models
@@ -150,6 +150,9 @@ class VariablesComparison(BaseOutputComparison):
         self.compare("Average negative electrode open circuit potential")
         self.compare("Average positive electrode open circuit potential")
         self.compare("Terminal voltage")
+        import ipdb
+
+        ipdb.set_trace()
         self.compare("Average electrolyte overpotential")
         self.compare("Average solid phase ohmic losses")
         self.compare("Negative reaction overpotential")

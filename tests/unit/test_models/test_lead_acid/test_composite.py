@@ -14,7 +14,6 @@ class TestLeadAcidComposite(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skip("")
     def test_optimisations(self):
         model = pybamm.lead_acid.Composite()
         optimtest = tests.OptimisationsTest(model)

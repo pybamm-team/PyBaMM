@@ -111,6 +111,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         # import parameters and spatial variables
         param = self.set_of_parameters
         l_n = param.l_n
+        l_s = param.l_s
         l_p = param.l_p
         i_cell = param.current_with_time
         x_n = pybamm.standard_spatial_vars.x_n
@@ -127,10 +128,11 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             c_e_0 = pybamm.Scalar(1)
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 
-        # bulk conductivities (leading order)
-        kappa_n = param.kappa_e(c_e_0) * eps_n ** param.b
-        kappa_s = param.kappa_e(c_e_0) * eps_s ** param.b
-        kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
+        # bulk conductivities and thermodynamic factor (leading order)
+        kappa_0_n = param.kappa_e(c_e_0) * eps_n ** param.b
+        kappa_0_s = param.kappa_e(c_e_0) * eps_s ** param.b
+        kappa_0_p = param.kappa_e(c_e_0) * eps_p ** param.b
+        chi_e_0 = param.chi(c_e_0)
 
         # get electrode averaged values
         ocp_n_av = pybamm.average(ocp_n)
@@ -144,40 +146,31 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte potential (combined leading and first order)
-        phi_e_const = (
-            -ocp_n_av
-            - eta_r_n_av
-            + phi_s_n_av
-            - 2
-            * (1 - param.t_plus)
-            * pybamm.average(pybamm.Function(np.log, c_e_n / c_e_0))
-            - i_cell
-            * param.C_e
-            * l_n
-            / param.gamma_e
-            * (1 / (3 * kappa_n) - 1 / kappa_s)
-        )
+        delta_phi_n_av = eta_r_n_av + ocp_n_av
+        phi_e_const = -delta_phi_n_av - chi_e_0 / c_e_0 * pybamm.average(c_e_n)
 
         phi_e_n = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n / c_e_0)
+            + chi_e_0 / c_e_0 * c_e_n
             - (i_cell * param.C_e / param.gamma_e)
-            * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
+            * ((3 * x_n ** 2 - l_n ** 2) / (6 * kappa_0_n * l_n))
         )
 
         phi_e_s = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s / c_e_0)
-            - (i_cell * param.C_e / param.gamma_e) * (x_s / kappa_s)
+            + chi_e_0 / c_e_0 * c_e_s
+            - (i_cell * param.C_e / param.gamma_e)
+            * (l_n / (3 * kappa_0_n) + (x_s - l_n) / kappa_0_s)
         )
 
         phi_e_p = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p / c_e_0)
+            + chi_e_0 / c_e_0 * c_e_p
             - (i_cell * param.C_e / param.gamma_e)
             * (
-                (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
-                + (1 - l_p) / kappa_s
+                l_n / (3 * kappa_0_n)
+                + l_s / kappa_0_s
+                + (l_p ** 2 - (1 - x_p) ** 2) / (2 * kappa_0_p * l_p)
             )
         )
 
@@ -186,20 +179,13 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         "Ohmic losses and overpotentials"
         # average electrolyte ohmic losses
         delta_phi_e_av = -(param.C_e * i_cell / param.gamma_e) * (
-            param.l_n / (3 * kappa_n)
-            + param.l_s / (kappa_s)
-            + param.l_p / (3 * kappa_p)
+            param.l_n / (3 * kappa_0_n)
+            + param.l_s / (kappa_0_s)
+            + param.l_p / (3 * kappa_0_p)
         )
 
         # concentration overpotential (combined leading and first order)
-        eta_c_av = (
-            2
-            * (1 - param.t_plus)
-            * (
-                pybamm.average(pybamm.Function(np.log, c_e_p / c_e_0))
-                - pybamm.average(pybamm.Function(np.log, c_e_n / c_e_0))
-            )
-        )
+        eta_c_av = chi_e_0 / c_e_0 * (pybamm.average(c_e_p) - pybamm.average(c_e_n))
 
         # electrolyte overpotential
         eta_e_av = eta_c_av + delta_phi_e_av
@@ -211,7 +197,6 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         )
 
         variables.update(additional_vars)
-
         return variables
 
     def get_variables(self, phi_e, i_e, eta_e_av):

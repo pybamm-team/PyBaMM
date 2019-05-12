@@ -93,10 +93,12 @@ class VoltageTests(BaseOutputTest):
 
         self.eta_n = self.get_var("Negative reaction overpotential [V]")
         self.eta_p = self.get_var("Positive reaction overpotential [V]")
+        self.eta_r_n_av = self.get_var("Average negative reaction overpotential [V]")
+        self.eta_r_p_av = self.get_var("Average positive reaction overpotential [V]")
         self.eta_r_av = self.get_var("Average reaction overpotential [V]")
 
         self.eta_e_av = self.get_var("Average electrolyte overpotential [V]")
-        self.Delta_Phi_s_av = self.get_var("Average solid phase ohmic losses [V]")
+        self.delta_phi_s_av = self.get_var("Average solid phase ohmic losses [V]")
 
         self.ocp_n_av = self.get_var(
             "Average negative electrode open circuit potential [V]"
@@ -135,16 +137,16 @@ class VoltageTests(BaseOutputTest):
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(self.eta_r_av(self.t), tol)
             np.testing.assert_array_less(self.eta_e_av(self.t), tol)
-            np.testing.assert_array_less(self.Delta_Phi_s_av(self.t), tol)
+            np.testing.assert_array_less(self.delta_phi_s_av(self.t), tol)
         elif self.operating_condition == "charge":
             np.testing.assert_array_less(-self.eta_r_av(self.t), tol)
             np.testing.assert_array_less(-self.eta_e_av(self.t), tol)
-            np.testing.assert_array_less(-self.Delta_Phi_s_av(self.t), tol)
+            np.testing.assert_array_less(-self.delta_phi_s_av(self.t), tol)
 
         elif self.operating_condition == "off":
             np.testing.assert_array_equal(self.eta_r_av(self.t), 0)
             np.testing.assert_array_equal(self.eta_e_av(self.t), 0)
-            np.testing.assert_array_equal(self.Delta_Phi_s_av(self.t), 0)
+            np.testing.assert_array_equal(self.delta_phi_s_av(self.t), 0)
 
     def test_ocps(self):
         """ Testing that:
@@ -202,13 +204,16 @@ class VoltageTests(BaseOutputTest):
         np.testing.assert_array_almost_equal(
             self.ocv_av(self.t), self.ocp_p_av(self.t) - self.ocp_n_av(self.t)
         )
+        np.testing.assert_array_almost_equal(
+            self.eta_r_av(self.t), self.eta_r_p_av(self.t) - self.eta_r_n_av(self.t)
+        )
 
         np.testing.assert_array_almost_equal(
             self.voltage(self.t),
             self.ocv_av(self.t)
             + self.eta_r_av(self.t)
             + self.eta_e_av(self.t)
-            + self.Delta_Phi_s_av(self.t),
+            + self.delta_phi_s_av(self.t),
             decimal=3,
         )
 
