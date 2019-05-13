@@ -34,7 +34,7 @@ model creation to solution.
 
 ### Models
 
-The following models are implemented and can easily be used or [compared](./compare-models.ipynb). We always welcome [new models](./add-model.ipynb)!
+The following models are implemented and can easily be used or [compared](./models/lead-acid.ipynb). We always welcome [new models](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)!
 
 #### Lithium-ion models
 
