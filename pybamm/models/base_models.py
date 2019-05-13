@@ -333,12 +333,9 @@ class BaseModel(object):
                 pybamm.ModelWarning,
                 stacklevel=2,
             )
-            # New standard output variables dict with missing entries removed
-            self._variables = {
-                output: expression
-                for output, expression in self._variables.items()
-                if expression is not None
-            }
+            # Remove missing entries
+            for output in missing_vars:
+                del self._variables[output]
 
 
 class StandardBatteryBaseModel(BaseModel):
