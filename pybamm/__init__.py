@@ -89,7 +89,7 @@ from .expression_tree.unary_operators import (
     boundary_value,
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
+from .expression_tree.broadcasts import Broadcast
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import (
