@@ -410,10 +410,12 @@ class TestDiscretise(unittest.TestCase):
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
 
-        S0 = model.initial_conditions[S].evaluate(
-        ) * np.ones_like(mesh[S.domain[0]][0].nodes)
-        T0 = model.initial_conditions[T].evaluate(
-        ) * np.ones_like(mesh[T.domain[0]][0].nodes)
+        S0 = model.initial_conditions[S].evaluate() * np.ones_like(
+            mesh[S.domain[0]][0].nodes
+        )
+        T0 = model.initial_conditions[T].evaluate() * np.ones_like(
+            mesh[T.domain[0]][0].nodes
+        )
         np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
 
         # mass matrix is identity
@@ -601,14 +603,17 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(broad.domain, whole_cell)
 
         broad_disc = disc.process_symbol(broad)
-        self.assertIsInstance(broad_disc, pybamm.NumpyBroadcast)
+        self.assertIsInstance(broad_disc, pybamm.Multiplication)
+        self.assertIsInstance(broad_disc.children[0], pybamm.Scalar)
+        self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
 
         # process Broadcast variable
         disc._y_slices = {var.id: slice(53)}
         broad1 = pybamm.Broadcast(var, ["negative electrode"])
         broad1_disc = disc.process_symbol(broad1)
-        self.assertIsInstance(broad1_disc, pybamm.NumpyBroadcast)
+        self.assertIsInstance(broad1_disc, pybamm.Multiplication)
         self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
+        self.assertIsInstance(broad1_disc.children[1], pybamm.Vector)
 
     def test_concatenation(self):
         a = pybamm.Symbol("a")
