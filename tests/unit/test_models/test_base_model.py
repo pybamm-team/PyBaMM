@@ -317,9 +317,19 @@ class TestBaseModel(unittest.TestCase):
             c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
             d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
         }
-        model._variables = {"something": None}
-        with self.assertRaisesRegex(pybamm.ModelError, "standard output variable"):
+        model._variables = {
+            "something": None,
+            "something else": c,
+            "another thing": None,
+        }
+
+        # Check warning raised
+        with self.assertWarns(pybamm.ModelWarning):
             model.check_well_posedness()
+
+        # Check None entries have been removed from the variables dictionary
+        for key, item in model._variables.items():
+            self.assertIsNotNone(item)
 
 
 if __name__ == "__main__":

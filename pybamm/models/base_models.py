@@ -5,6 +5,7 @@ import pybamm
 
 import numbers
 import os
+import warnings
 
 
 class BaseModel(object):
@@ -317,14 +318,27 @@ class BaseModel(object):
                     )
 
         # Standard Output Variables
+        missing_vars = []
         for output, expression in self._variables.items():
             if expression is None:
-                raise pybamm.ModelError(
-                    """The standard output variable '{}' which is
-                    required for testing has not been supplied.""".format(
-                        output
-                    )
-                )
+                missing_vars.append(output)
+        if len(missing_vars) > 0:
+            warnings.warn(
+                """
+                The standard output variable(s) '{}' have not been supplied.
+                These may be required for testing or comparison with other models.
+                """.format(
+                    missing_vars
+                ),
+                pybamm.ModelWarning,
+                stacklevel=2,
+            )
+            # New standard output variables dict with missing entries removed
+            self._variables = {
+                output: expression
+                for output, expression in self._variables.items()
+                if expression is not None
+            }
 
 
 class StandardBatteryBaseModel(BaseModel):
