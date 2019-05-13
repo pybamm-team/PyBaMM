@@ -1,8 +1,6 @@
 #
 # Lead-acid LOQS model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 
@@ -20,6 +18,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.name = "LOQS model"
 
         "-----------------------------------------------------------------------------"
         "Parameters"
@@ -90,6 +89,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
             ocp_p, eta_r_p, phi_e
         )
         self.variables.update(electrode_vars)
+
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
+        self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"
         "Settings"

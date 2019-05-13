@@ -10,7 +10,7 @@ from scipy.sparse import block_diag
 
 
 class TestDiscretise(unittest.TestCase):
-    def test_concatenate_init(self):
+    def test_concatenate_in_order(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
         c = pybamm.Variable("c")
@@ -25,7 +25,7 @@ class TestDiscretise(unittest.TestCase):
         disc = get_discretisation_for_testing()
 
         disc._y_slices = {c.id: slice(0, 1), a.id: slice(2, 3), b.id: slice(3, 4)}
-        result = disc._concatenate_init(initial_conditions)
+        result = disc._concatenate_in_order(initial_conditions)
 
         self.assertIsInstance(result, pybamm.NumpyConcatenation)
         self.assertEqual(result.children[0].evaluate(), 1)
@@ -34,7 +34,7 @@ class TestDiscretise(unittest.TestCase):
 
         initial_conditions = {a: pybamm.Scalar(2), b: pybamm.Scalar(3)}
         with self.assertRaises(pybamm.ModelError):
-            result = disc._concatenate_init(initial_conditions)
+            result = disc._concatenate_in_order(initial_conditions, check_complete=True)
 
     def test_discretise_slicing(self):
         # create discretisation
@@ -265,9 +265,7 @@ class TestDiscretise(unittest.TestCase):
         rhs = {c: pybamm.div(N)}
         initial_conditions = {c: pybamm.Scalar(3)}
         variables = {"c_squared": c ** 2}
-        boundary_conditions = {
-            N.id: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
-        }
+        boundary_conditions = {c.id: {"left": (0, "Neumann"), "right": (0, "Neumann")}}
 
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -341,7 +339,7 @@ class TestDiscretise(unittest.TestCase):
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(3)}
         model.boundary_conditions = {
-            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
         }
         model.variables = {"c": c, "N": N}
 
@@ -388,29 +386,35 @@ class TestDiscretise(unittest.TestCase):
             S: pybamm.Scalar(8),
         }
         model.boundary_conditions = {
-            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)},
-            q: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)},
-            p: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)},
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            T: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            S: {"left": (0, "Neumann"), "right": (0, "Neumann")},
         }
         model.variables = {"ST": S * T}
 
         disc.process_model(model)
         y0 = model.concatenated_initial_conditions
-        np.testing.assert_array_equal(
-            y0,
-            np.concatenate(
-                [
-                    2 * np.ones_like(combined_submesh[0].nodes),
-                    5 * np.ones_like(mesh["negative electrode"][0].nodes),
-                    8 * np.ones_like(mesh["negative electrode"][0].nodes),
-                ]
-            ),
-        )
+        y0_expect = np.array([])
+        for var_id, _ in sorted(disc._y_slices.items(), key=lambda kv: kv[1]):
+            if var_id == c.id:
+                vect = 2 * np.ones_like(combined_submesh[0].nodes)
+            elif var_id == T.id:
+                vect = 5 * np.ones_like(mesh["negative electrode"][0].nodes)
+            else:
+                vect = 8 * np.ones_like(mesh["negative electrode"][0].nodes)
+
+            y0_expect = np.concatenate([y0_expect, vect])
+
+        np.testing.assert_array_equal(y0, y0_expect)
+
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
-        c0, T0, S0 = np.split(
-            y0,
-            np.cumsum([combined_submesh[0].npts, mesh["negative electrode"][0].npts]),
+
+        S0 = model.initial_conditions[S].evaluate() * np.ones_like(
+            mesh[S.domain[0]][0].nodes
+        )
+        T0 = model.initial_conditions[T].evaluate() * np.ones_like(
+            mesh[T.domain[0]][0].nodes
         )
         np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
 
@@ -447,7 +451,7 @@ class TestDiscretise(unittest.TestCase):
         model.initial_conditions = {d: pybamm.Scalar(6), c: pybamm.Scalar(3)}
 
         model.boundary_conditions = {
-            N: {"left": pybamm.Scalar(0), "right": pybamm.Scalar(0)}
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
         }
         model.variables = {"c": c, "N": N, "d": d}
 
@@ -531,7 +535,9 @@ class TestDiscretise(unittest.TestCase):
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(3)}
 
-        model.boundary_conditions = {N: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         model.check_well_posedness()
 
         # create discretisation
@@ -557,7 +563,9 @@ class TestDiscretise(unittest.TestCase):
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(3)}
-        model.boundary_conditions = {N: {"left": 0, "right": 0}}
+        model.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         model.check_well_posedness()
 
         # create discretisation
@@ -595,14 +603,17 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(broad.domain, whole_cell)
 
         broad_disc = disc.process_symbol(broad)
-        self.assertIsInstance(broad_disc, pybamm.NumpyBroadcast)
+        self.assertIsInstance(broad_disc, pybamm.Multiplication)
+        self.assertIsInstance(broad_disc.children[0], pybamm.Scalar)
+        self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
 
         # process Broadcast variable
         disc._y_slices = {var.id: slice(53)}
         broad1 = pybamm.Broadcast(var, ["negative electrode"])
         broad1_disc = disc.process_symbol(broad1)
-        self.assertIsInstance(broad1_disc, pybamm.NumpyBroadcast)
+        self.assertIsInstance(broad1_disc, pybamm.Multiplication)
         self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
+        self.assertIsInstance(broad1_disc.children[1], pybamm.Vector)
 
     def test_concatenation(self):
         a = pybamm.Symbol("a")

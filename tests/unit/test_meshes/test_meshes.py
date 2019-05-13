@@ -49,6 +49,17 @@ class TestMesh(unittest.TestCase):
         for domain in mesh:
             self.assertEqual(len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1)
 
+    def test_init_failure(self):
+        geometry = pybamm.Geometry1DMacro()
+        with self.assertRaises(KeyError):
+            pybamm.Mesh(geometry, None, {})
+
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12}
+        geometry = pybamm.Geometry1p1DMicro()
+        with self.assertRaises(KeyError):
+            pybamm.Mesh(geometry, None, var_pts)
+
     def test_mesh_sizes(self):
         param = pybamm.ParameterValues(
             base_parameters={
@@ -123,12 +134,10 @@ class TestMesh(unittest.TestCase):
         submesh = mesh.combine_submeshes("negative electrode", "separator")
         self.assertEqual(submesh[0].edges[0], 0)
         self.assertEqual(submesh[0].edges[-1], mesh["separator"][0].edges[-1])
-        self.assertAlmostEqual(
-            np.linalg.norm(
-                submesh[0].nodes
-                - np.concatenate(
-                    [mesh["negative electrode"][0].nodes, mesh["separator"][0].nodes]
-                )
+        np.testing.assert_almost_equal(
+            submesh[0].nodes
+            - np.concatenate(
+                [mesh["negative electrode"][0].nodes, mesh["separator"][0].nodes]
             ),
             0,
         )

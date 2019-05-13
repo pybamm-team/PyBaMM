@@ -1,8 +1,6 @@
 #
 # Dimensional and dimensionless parameter values, and scales
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import pandas as pd
@@ -60,23 +58,6 @@ class ParameterValues(dict):
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df.Name, df.Value)}
 
-    def get_parameter_value(self, parameter):
-        """
-        Get the value of a Parameter.
-        Different ParameterValues classes may implement this differently.
-
-        Parameters
-        ----------
-        parameter : :class:`pybamm.Parameter` instance
-            The parameter whose value to obtain
-
-        Returns
-        -------
-        value : int or float
-            The value of the parameter
-        """
-        return self[parameter.name]
-
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
@@ -113,14 +94,10 @@ class ParameterValues(dict):
         for variable, bcs in model.boundary_conditions.items():
             processed_variable = processing_function(variable)
             new_boundary_conditions[processed_variable] = {}
-            if "left" in bcs.keys():
-                new_boundary_conditions[processed_variable][
-                    "left"
-                ] = processing_function(bcs["left"])
-            if "right" in bcs.keys():
-                new_boundary_conditions[processed_variable][
-                    "right"
-                ] = processing_function(bcs["right"])
+            for side in ["left", "right"]:
+                bc, typ = bcs[side]
+                processed_bc = (processing_function(bc), typ)
+                new_boundary_conditions[processed_variable][side] = processed_bc
         model.boundary_conditions = new_boundary_conditions
 
         for variable, equation in model.variables.items():
@@ -145,9 +122,9 @@ class ParameterValues(dict):
         self.process_model(model, processing="update")
 
         # update discretised quantities using disc
-        model.concatenated_rhs = disc.concatenate(*model.rhs.values())
-        model.concatenated_algebraic = disc.concatenate(*model.algebraic.values())
-        model.concatenated_initial_conditions = disc._concatenate_init(
+        model.concatenated_rhs = disc._concatenate_in_order(model.rhs)
+        model.concatenated_algebraic = disc._concatenate_in_order(model.algebraic)
+        model.concatenated_initial_conditions = disc._concatenate_in_order(
             model.initial_conditions
         ).evaluate(0, None)
 
@@ -185,14 +162,21 @@ class ParameterValues(dict):
 
         """
         if isinstance(symbol, pybamm.Parameter):
-            value = self.get_parameter_value(symbol)
+            value = self[symbol.name]
             # Scalar inherits name (for updating parameters) and domain (for Broadcast)
             return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_child = self.process_symbol(symbol.children[0])
-            function_name = self.get_parameter_value(symbol)
-            function = pybamm.Function(pybamm.load_function(function_name), new_child)
+            function_name = self[symbol.name]
+
+            if callable(function_name):
+                function = pybamm.Function(function_name, new_child)
+            else:
+                function = pybamm.Function(
+                    pybamm.load_function(function_name), new_child
+                )
+
             if symbol.diff_variable is None:
                 return function
             else:
@@ -212,18 +196,15 @@ class ParameterValues(dict):
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
-            if isinstance(symbol, pybamm.NumpyBroadcast):
-                new_symbol = pybamm.NumpyBroadcast(
-                    new_child, symbol.domain, symbol.mesh
-                )
-            elif isinstance(symbol, pybamm.Broadcast):
+            if isinstance(symbol, pybamm.Broadcast):
                 new_symbol = pybamm.Broadcast(new_child, symbol.domain)
             elif isinstance(symbol, pybamm.Function):
                 new_symbol = pybamm.Function(symbol.func, new_child)
             elif isinstance(symbol, pybamm.Integral):
                 new_symbol = symbol.__class__(new_child, symbol.integration_variable)
-            elif isinstance(symbol, pybamm.BoundaryValue):
-                new_symbol = pybamm.BoundaryValue(new_child, symbol.side)
+            elif isinstance(symbol, pybamm.BoundaryOperator):
+                # BoundaryValue or BoundaryFlux
+                new_symbol = symbol.__class__(new_child, symbol.side)
             else:
                 new_symbol = symbol.__class__(new_child)
             # ensure domain remains the same
@@ -286,7 +267,7 @@ class ParameterValues(dict):
             if isinstance(x, pybamm.Scalar):
                 # update any Scalar nodes if their name is in the parameter dict
                 try:
-                    x.value = self.get_parameter_value(x)
+                    x.value = self[x.name]
                     # update id
                     x.set_id()
                 except KeyError:

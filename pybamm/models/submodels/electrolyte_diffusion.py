@@ -1,8 +1,6 @@
 #
 # Equation classes for the electrolyte concentration
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -59,7 +57,9 @@ class StefanMaxwell(pybamm.SubModel):
         }
 
         self.initial_conditions = {c_e: param.c_e_init}
-        self.boundary_conditions = {N_e: {"left": 0, "right": 0}}
+        self.boundary_conditions = {
+            c_e: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+        }
         self.variables = self.get_variables(c_e, N_e)
 
         # Cut off if concentration goes too small
@@ -143,6 +143,11 @@ class StefanMaxwell(pybamm.SubModel):
             c_e_s = pybamm.Broadcast(c_e, domain=["separator"])
             c_e_p = pybamm.Broadcast(c_e, domain=["positive electrode"])
             c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        if N_e.domain == []:
+            N_e_n = pybamm.Broadcast(N_e, domain=["negative electrode"])
+            N_e_s = pybamm.Broadcast(N_e, domain=["separator"])
+            N_e_p = pybamm.Broadcast(N_e, domain=["positive electrode"])
+            N_e = pybamm.Concatenation(N_e_n, N_e_s, N_e_p)
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
         return {

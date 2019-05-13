@@ -1,8 +1,6 @@
 #
 # Tests for the electrolyte submodels
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
@@ -38,8 +36,9 @@ class TestOhm(unittest.TestCase):
         model_p = pybamm.electrode.Ohm(param)
         model_p.set_algebraic_system(phi_s_p, reactions)
         # overwrite boundary conditions for purposes of the test
-        i_s_p = model_p.variables["Positive electrode current density"]
-        model_p.boundary_conditions = {phi_s_p: {"right": 0}, i_s_p: {"left": 0}}
+        model_p.boundary_conditions = {
+            phi_s_p: {"left": (0, "Neumann"), "right": (0, "Dirichlet")}
+        }
         model_p_test = tests.StandardModelTest(model_p)
         model_p_test.test_all()
 
@@ -51,13 +50,9 @@ class TestOhm(unittest.TestCase):
         model_n.update(model_p)
         model_whole = model_n
         # overwrite boundary conditions for purposes of the test
-        i_s_n = model_whole.variables["Negative electrode current density"]
-        i_s_p = model_whole.variables["Positive electrode current density"]
         model_whole.boundary_conditions = {
-            phi_s_n: {"left": 0},
-            i_s_n: {"right": 0},
-            phi_s_p: {"right": 0},
-            i_s_p: {"left": 0},
+            phi_s_n: {"left": (0, "Dirichlet"), "right": (0, "Neumann")},
+            phi_s_p: {"left": (0, "Neumann"), "right": (0, "Dirichlet")},
         }
         model_whole_test = tests.StandardModelTest(model_whole)
         model_whole_test.test_all()

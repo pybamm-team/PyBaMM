@@ -75,7 +75,7 @@ To test this, add something like the following test to one of the model test fil
         parameter_values = pybamm.ParameterValues(
             "path/to/parameter/file.csv",
             {
-                "Typical current density": 1,
+                "Typical current": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",

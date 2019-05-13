@@ -1,13 +1,11 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
 import importlib
-from scipy.sparse import issparse
+import scipy.sparse as sparse
 
 scikits_odes_spec = importlib.util.find_spec("scikits")
 if scikits_odes_spec is not None:
@@ -15,11 +13,6 @@ if scikits_odes_spec is not None:
     if scikits_odes_spec is not None:
         scikits_odes = importlib.util.module_from_spec(scikits_odes_spec)
         scikits_odes_spec.loader.exec_module(scikits_odes)
-        from scikits.odes.sundials import ida
-
-        jac_class = ida.IDA_JacRhsFunction
-else:
-    jac_class = object
 
 
 class ScikitsDaeSolver(pybamm.DaeSolver):
@@ -32,13 +25,17 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
     tolerance : float, optional
         The tolerance for the solver (default is 1e-8). Set as the both reltol and
         abstol in solve_ivp.
+    root_method : str, optional
+        The method to use to find initial conditions (default is "lm")
+    tolerance : float, optional
+        The tolerance for the initial-condition solver (default is 1e-8).
     """
 
-    def __init__(self, method="ida", tol=1e-8):
+    def __init__(self, method="ida", tol=1e-8, root_method="lm", root_tol=1e-6):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(tol)
+        super().__init__(tol, root_method, root_tol)
         self._method = method
 
     @property
@@ -84,9 +81,19 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol}
 
         if jacobian:
-            # Put the user-supplied Jacobian into the SUNDIALS Class
-            jacfn = JacobianFunctionIDA()
-            jacfn.set_jacobian(mass_matrix, jacobian)
+            jac_y0_t0 = jacobian(t_eval[0], y0)
+            if sparse.issparse(jac_y0_t0):
+
+                def jacfn(t, y, ydot, residuals, cj, J):
+                    jac_eval = jacobian(t, y) - cj * mass_matrix
+                    J[:][:] = jac_eval.toarray()
+
+            else:
+
+                def jacfn(t, y, ydot, residuals, cj, J):
+                    jac_eval = jacobian(t, y) - cj * mass_matrix
+                    J[:][:] = jac_eval
+
             extra_options.update({"jacfn": jacfn})
 
         if events:
@@ -100,31 +107,9 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         sol = dae_solver.solve(t_eval, y0, ydot0)
 
         # return solution, we need to tranpose y to match scipy's interface
-        return sol.values.t, np.transpose(sol.values.y)
-
-
-class JacobianFunctionIDA(jac_class):
-    def set_jacobian(self, mass_matrix, jacobian):
-        """
-        Sets the user supplied mass matrix and Jacobian function for the DAE model.
-
-        Parameters
-        ----------
-        mass_matrix : array_like
-            The (sparse) mass matrix for the chosen spatial method.
-        jacobian : method
-            A function that takes in t and y and returns the Jacobian.
-
-        """
-        self.mass_matrix = mass_matrix
-        self.jacobian = jacobian
-
-    def evaluate(self, t, y, ydot, residuals, cj, return_jacobian):
-        # scikits_odes requires the full (dense) jacobian
-        jac_eval = self.jacobian(t, y) - cj * self.mass_matrix
-        if issparse(jac_eval):
-            return_jacobian[:][:] = jac_eval.toarray()
+        if sol.flag in [0, 2]:
+            # 0 = solved for all t_eval
+            # 2 = found root(s)
+            return sol.values.t, np.transpose(sol.values.y)
         else:
-            return_jacobian[:][:] = jac_eval
-
-        return 0
+            raise pybamm.SolverError(sol.message)

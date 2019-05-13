@@ -1,8 +1,6 @@
 #
 # Tests for the lithium-ion SPM model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 import tests
 import numpy as np
@@ -30,14 +28,14 @@ class TestSPM(unittest.TestCase):
     def test_charge(self):
         model = pybamm.lithium_ion.SPM()
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Typical current density": -1})
+        parameter_values.update({"Typical current": -1})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
     def test_zero_current(self):
         model = pybamm.lithium_ion.SPM()
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Typical current density": 0})
+        parameter_values.update({"Typical current": 0})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 

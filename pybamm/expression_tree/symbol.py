@@ -1,8 +1,6 @@
 #
 # Base Symbol Class for the expression tree
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import anytree
@@ -44,12 +42,15 @@ class Symbol(anytree.NodeMixin):
         # Set domain (and hence id)
         self.domain = domain
 
-        # useful flags
-        self._has_left_ghost_cell = False
-        self._has_right_ghost_cell = False
-
     @property
     def children(self):
+        """
+        returns the cached children of this node.
+
+        Note: it is assumed that children of a node are not modified after initial
+        creation
+
+        """
         return self.cached_children
 
     @property
@@ -81,27 +82,6 @@ class Symbol(anytree.NodeMixin):
         except TypeError:
             raise TypeError("Domain: argument domain is not iterable")
         else:
-            # check that domains are all known domains
-            try:
-                indicies = [pybamm.KNOWN_DOMAINS.index(d) for d in domain]
-            except ValueError:
-                raise ValueError(
-                    """domain "{}" is not in known domains ({})""".format(
-                        domain, str(pybamm.KNOWN_DOMAINS)
-                    )
-                )
-
-            # check that domains are sorted correctly
-            is_sorted = all(a <= b for a, b in zip(indicies, indicies[1:]))
-            if not is_sorted:
-                raise ValueError(
-                    """
-                    domain "{}" is not sorted according to known domains ({})
-                    """.format(
-                        domain, str(pybamm.KNOWN_DOMAINS)
-                    )
-                )
-
             self._domain = domain
             # Update id since domain has changed
             self.set_id()
@@ -495,24 +475,6 @@ class Symbol(anytree.NodeMixin):
     def simplify(self):
         """ Simplify the expression tree. See :meth:`pybamm.simplify()`. """
         return pybamm.simplify(self)
-
-    @property
-    def has_left_ghost_cell(self):
-        return self._has_left_ghost_cell
-
-    @has_left_ghost_cell.setter
-    def has_left_ghost_cell(self, value):
-        assert isinstance(value, bool)
-        self._has_left_ghost_cell = value
-
-    @property
-    def has_right_ghost_cell(self):
-        return self._has_right_ghost_cell
-
-    @has_right_ghost_cell.setter
-    def has_right_ghost_cell(self, value):
-        assert isinstance(value, bool)
-        self._has_right_ghost_cell = value
 
     @property
     def shape(self):

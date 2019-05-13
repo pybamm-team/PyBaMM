@@ -1,8 +1,6 @@
 #
 # Tests for the electrolyte submodels
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 import tests
 
@@ -65,22 +63,26 @@ class TestStefanMaxwellDiffusion(unittest.TestCase):
         model.set_differential_system(c_e, reactions)
 
         # Dirichlet conditions (don't clash with events)
-        model.boundary_conditions = {c_e: {"left": 0.1, "right": 0.1}}
+        model.boundary_conditions = {
+            c_e: {"left": (0.1, "Dirichlet"), "right": (0.1, "Dirichlet")}
+        }
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
         # Dirichlet and Neumann conditions
         model2 = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         model2.set_differential_system(c_e, reactions)
-        N_e = model2.variables["Reduced cation flux"]
-        model2.boundary_conditions = {c_e: {"left": 0}, N_e: {"right": 0}}
+        model2.boundary_conditions = {
+            c_e: {"left": (0, "Dirichlet"), "right": (0, "Neumann")}
+        }
         modeltest2 = tests.StandardModelTest(model2)
         modeltest2.test_all()
 
         model3 = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         model3.set_differential_system(c_e, reactions)
-        N_e = model3.variables["Reduced cation flux"]
-        model3.boundary_conditions = {N_e: {"left": 0}, c_e: {"right": 0}}
+        model3.boundary_conditions = {
+            c_e: {"left": (0, "Neumann"), "right": (0, "Dirichlet")}
+        }
         modeltest3 = tests.StandardModelTest(model3)
         modeltest3.test_all()
 

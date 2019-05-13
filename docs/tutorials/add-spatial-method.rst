@@ -40,7 +40,7 @@ with a single class that inherits from :class:`pybamm.SpatialMethod`, such as:
 
 .. code-block:: python
 
-    def MyFastMethod(pybamm.SpatialMethod):
+    class MyFastMethod(pybamm.SpatialMethod):
 
 and add the class to ``pybamm/__init__.py``:
 
@@ -55,6 +55,7 @@ In particular, any spatial method *must* have the following functions (from the 
 - :meth:`pybamm.SpatialMethod.divergence`
 - :meth:`pybamm.SpatialMethod.integral`
 - :meth:`pybamm.SpatialMethod.indefinite integral`
+- :meth:`pybamm.SpatialMethod.boundary_value_or_flux`
 
 Optionally, a new spatial method can also overwrite the default behaviour for the following functions:
 
@@ -62,7 +63,6 @@ Optionally, a new spatial method can also overwrite the default behaviour for th
 - :meth:`pybamm.SpatialMethod.broadcast`
 - :meth:`pybamm.SpatialMethod.mass_matrix`
 - :meth:`pybamm.SpatialMethod.process_binary_operators`
-- :meth:`pybamm.SpatialMethod.boundary_value`
 
 For an example of an existing spatial method implementation, see the Finite Volume
 `API docs <https://pybamm.readthedocs.io/en/latest/source/spatial_methods/finite_volume.html>`_

@@ -1,8 +1,6 @@
 #
 # Vector classes
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -38,7 +36,7 @@ class Vector(pybamm.Array):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        # Get inices of state vector
+        # Get indices of state vector
         variable_y_indices = np.arange(variable.y_slice.start, variable.y_slice.stop)
         # Return zeros of correct size
         jac = csr_matrix((np.size(self), np.size(variable_y_indices)))

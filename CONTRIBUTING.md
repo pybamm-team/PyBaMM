@@ -92,13 +92,6 @@ black {source_file_or_directory}
 
 2. Editor: black can be [configured](https://black.readthedocs.io/en/stable/editor_integration.html) to automatically reformat a python script each time the script is saved in an editor.
 
-By default, black sets the max line length to 88. To change this to the more common standard of 79, and you are using black from the command line, save the following to a file called `pyproject.toml`:
-```
-[tool.black]
-line-length = 79
-```
-This file is ignored by git as it breaks Travis CI during installation at the line `pip install .`.
-
 If you want to use black in your editor, you may need to change the max line length in your editor settings.
 
 Even when code has been formatted by black, you should still make sure that it adheres to the PEP8 standard set by [Flake8](#flake8).
@@ -108,20 +101,6 @@ Even when code has been formatted by black, you should still make sure that it a
 Naming is hard. In general, we aim for descriptive class, method, and argument names. Avoid abbreviations when possible without making names overly long, so `mean` is better than `mu`, but a class name like `MyClass` is fine.
 
 Class names are CamelCase, and start with an upper case letter, for example `MyOtherClass`. Method and variable names are lower case, and use underscores for word separation, for example `x` or `iteration_count`.
-
-### Python 2 and 3
-
-Python is currently in a long, long transition phase from Python 2 to Python 3. PyBaMM supports both Python 2 (version 2.7 and upwards) and Python 3 (version 3.4 and upwards).
-The easiest way to write code that works on both versions is to write for Python 3, (avoiding the more spectacular new features) and [then test on both versions](#testing).
-
-In addition, most scripts start with these lines:
-
-```
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
-```
-
-These [future imports](https://docs.python.org/2/library/__future__.html) are ignored by Python 3, but tell Python 2 to mimmick some of its features. Notably, the ``division`` package changes the result of ``3 / 2`` from ``1`` to ``1.5`` (this means you can write ``1 / x`` instead of ``1.0 / x``).
 
 
 ## Dependencies and reusing code

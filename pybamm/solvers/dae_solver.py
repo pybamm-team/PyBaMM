@@ -1,9 +1,6 @@
 #
 # Base solver class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
-
 import pybamm
 import numpy as np
 from scipy import optimize
@@ -16,10 +13,32 @@ class DaeSolver(pybamm.BaseSolver):
     ----------
     tolerance : float, optional
         The tolerance for the solver (default is 1e-8).
+    root_method : str, optional
+        The method to use to find initial conditions (default is "lm")
+    tolerance : float, optional
+        The tolerance for the initial-condition solver (default is 1e-8).
     """
 
-    def __init__(self, tol=1e-8):
+    def __init__(self, tol=1e-8, root_method="lm", root_tol=1e-6):
         super().__init__(tol)
+        self.root_method = root_method
+        self.root_tol = root_tol
+
+    @property
+    def root_method(self):
+        return self._root_method
+
+    @root_method.setter
+    def root_method(self, method):
+        self._root_method = method
+
+    @property
+    def root_tol(self):
+        return self._root_tol
+
+    @root_tol.setter
+    def root_tol(self, tol):
+        self._root_tol = tol
 
     def solve(self, model, t_eval):
         """Calculate the solution of the model at specified times.
@@ -121,11 +140,18 @@ class DaeSolver(pybamm.BaseSolver):
             return algebraic(0, y0)
 
         # Find the values of y0_alg that are roots of the algebraic equations
-        sol = optimize.root(root_fun, y0_alg_guess, method="hybr")
+        sol = optimize.root(
+            root_fun, y0_alg_guess, method=self.root_method, tol=self.root_tol
+        )
         # Return full set of consistent initial conditions (y0_diff unchanged)
         y0_consistent = np.concatenate([y0_diff, sol.x])
 
-        return y0_consistent
+        if sol.success and np.all(sol.fun < self.root_tol):
+            return y0_consistent
+        else:
+            raise pybamm.SolverError(
+                "Could not find consistent initial conditions: {}".format(sol.message)
+            )
 
     def integrate(
         self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None

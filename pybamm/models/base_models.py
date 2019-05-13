@@ -1,8 +1,6 @@
 #
 # Base model class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numbers
@@ -79,6 +77,14 @@ class BaseModel(object):
         return dict
 
     @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+    @property
     def rhs(self):
         return self._rhs
 
@@ -112,10 +118,20 @@ class BaseModel(object):
     def boundary_conditions(self, boundary_conditions):
         # Convert any numbers to a pybamm.Scalar
         for var, bcs in boundary_conditions.items():
-            for side, eqn in bcs.items():
-                if isinstance(eqn, numbers.Number):
-                    boundary_conditions[var][side] = pybamm.Scalar(eqn)
-
+            for side, bc in bcs.items():
+                if isinstance(bc[0], numbers.Number):
+                    # typ is the type of the bc, e.g. "Dirichlet" or "Neumann"
+                    eqn, typ = boundary_conditions[var][side]
+                    boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
+                # Check types
+                if bc[1] not in ["Dirichlet", "Neumann"]:
+                    raise pybamm.ModelError(
+                        """
+                        boundary condition types must be Dirichlet or Neumann, not '{}'
+                        """.format(
+                            bc[1]
+                        )
+                    )
         self._boundary_conditions = boundary_conditions
 
     @property
@@ -264,7 +280,7 @@ class BaseModel(object):
             # After the model has been defined, each algebraic equation key should
             # appear in that algebraic equation
             for var, eqn in self.algebraic.items():
-                if not any([x.id == var.id for x in eqn.pre_order()]):
+                if not any(x.id == var.id for x in eqn.pre_order()):
                     raise pybamm.ModelError(
                         "each variable in the algebraic eqn keys must appear in the eqn"
                     )
@@ -273,9 +289,7 @@ class BaseModel(object):
             # with the state vectors in the algebraic equations. Instead, we check
             # that each algebraic equation contains some StateVector
             for eqn in self.algebraic.values():
-                if not any(
-                    [isinstance(x, pybamm.StateVector) for x in eqn.pre_order()]
-                ):
+                if not any(isinstance(x, pybamm.StateVector) for x in eqn.pre_order()):
                     raise pybamm.ModelError(
                         "each algebraic equation must contain at least one StateVector"
                     )
@@ -290,18 +304,13 @@ class BaseModel(object):
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
             if eqn.has_spatial_derivatives():
-                # Variable must be in at least one expression in the boundary condition
-                # keys (to account for both Dirichlet and Neumann boundary conditions)
+                # Variable must be in the boundary conditions
                 if not any(
-                    [
-                        any([var.id == symbol.id for symbol in key.pre_order()])
-                        for key in self.boundary_conditions.keys()
-                    ]
+                    var.id == symbol.id for symbol in self.boundary_conditions.keys()
                 ):
                     raise pybamm.ModelError(
                         """
-                        no boundary condition given for variable '{}'
-                        with equation '{}'
+                        no boundary condition given for variable '{}' with equation '{}'
                         """.format(
                             var, eqn
                         )
@@ -336,7 +345,7 @@ class StandardBatteryBaseModel(BaseModel):
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
             {
-                "Typical current density": 1,
+                "Typical current": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
@@ -391,11 +400,6 @@ class StandardBatteryBaseModel(BaseModel):
             self.default_solver = pybamm.ScipySolver()
 
         # Standard output variables
-        # Current
-        self.variables.update(
-            {"Total current density": None, "Total current density [A m-2]": None}
-        )
-
         # Interfacial current
         self.variables.update(
             {
@@ -482,6 +486,35 @@ class StandardBatteryBaseModel(BaseModel):
             }
         )
 
+        # Current
+        icell = pybamm.electrical_parameters.current_with_time
+        icell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
+        I = pybamm.electrical_parameters.dimensional_current_with_time
+        self.variables.update(
+            {
+                "Total current density": icell,
+                "Total current density [A m-2]": icell_dim,
+                "Current [A]": I,
+            }
+        )
+        # Time
+        self.variables.update({"Time": pybamm.t})
+        # x-position
+        var = pybamm.standard_spatial_vars
+        L_x = pybamm.geometric_parameters.L_x
+        self.variables.update(
+            {
+                "x": var.x,
+                "x [m]": var.x * L_x,
+                "x_n": var.x_n,
+                "x_n [m]": var.x_n * L_x,
+                "x_s": var.x_s,
+                "x_s [m]": var.x_s * L_x,
+                "x_p": var.x_p,
+                "x_p [m]": var.x_p * L_x,
+            }
+        )
+
 
 class SubModel(StandardBatteryBaseModel):
     def __init__(self, set_of_parameters):
@@ -508,7 +541,7 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
-                "Typical current density": 1,
+                "Typical current": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
@@ -534,11 +567,19 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
             },
         )
 
-        # Current
-        icell = pybamm.electrical_parameters.current_with_time
-        icell_dim = pybamm.electrical_parameters.dimensional_current_with_time
+        # Overwrite geometry
+        self.default_geometry = pybamm.Geometry("1D macro")
+
+        # Standard time variable
+        time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
+        I = pybamm.electrical_parameters.dimensional_current_with_time
         self.variables.update(
-            {"Total current density": icell, "Total current density [A m-2]": icell_dim}
+            {
+                "Time [s]": pybamm.t * time_scale,
+                "Time [min]": pybamm.t * time_scale / 60,
+                "Time [h]": pybamm.t * time_scale / 3600,
+                "Discharge capacity [Ah]": I * pybamm.t * time_scale / 3600,
+            }
         )
 
 
@@ -555,14 +596,19 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
         super().__init__()
 
         # Additional standard output variables
-        # Current
-        icell = pybamm.electrical_parameters.current_with_time
-        icell_dim = pybamm.electrical_parameters.dimensional_current_with_time
+        # Time
+        time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
+        I = pybamm.electrical_parameters.dimensional_current_with_time
         self.variables.update(
-            {"Total current density": icell, "Total current density [A m-2]": icell_dim}
+            {
+                "Time [s]": pybamm.t * time_scale,
+                "Time [min]": pybamm.t * time_scale / 60,
+                "Time [h]": pybamm.t * time_scale / 3600,
+                "Discharge capacity [Ah]": I * pybamm.t * time_scale / 3600,
+            }
         )
 
-        # Particle concentration
+        # Particle concentration and position
         self.variables.update(
             {
                 "Negative particle concentration": None,
@@ -573,5 +619,15 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
                 "Positive particle concentration [mols m-3]": None,
                 "Negative particle surface concentration [mols m-3]": None,
                 "Positive particle surface concentration [mols m-3]": None,
+            }
+        )
+        var = pybamm.standard_spatial_vars
+        param = pybamm.geometric_parameters
+        self.variables.update(
+            {
+                "r_n": var.r_n,
+                "r_n [m]": var.r_n * param.R_n,
+                "r_p": var.r_p,
+                "r_p [m]": var.r_p * param.R_p,
             }
         )

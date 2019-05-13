@@ -1,8 +1,6 @@
 #
 # Tests for the asymptotic convergence of the simplified models
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -28,13 +26,8 @@ class TestAsymptoticConvergence(unittest.TestCase):
         parameter_values.process_geometry(geometry)
 
         # Discretise (same mesh, create different discretisations)
-        var_pts = {
-            pybamm.standard_spatial_vars.x_n: 3,
-            pybamm.standard_spatial_vars.x_s: 3,
-            pybamm.standard_spatial_vars.x_p: 3,
-            pybamm.standard_spatial_vars.r_n: 1,
-            pybamm.standard_spatial_vars.r_p: 1,
-        }
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3}
         mesh = pybamm.Mesh(geometry, full_model.default_submesh_types, var_pts)
         loqs_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
         loqs_disc.process_model(leading_order_model)
@@ -43,11 +36,11 @@ class TestAsymptoticConvergence(unittest.TestCase):
         full_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
         full_disc.process_model(full_model)
 
-        def get_l2_error(current):
+        def get_max_error(current):
             # Update current (and hence C_e) in the parameters
             param = pybamm.ParameterValues(
                 base_parameters=full_model.default_parameter_values,
-                optional_parameters={"Typical current density": current},
+                optional_parameters={"Typical current": current},
             )
             param.update_model(leading_order_model, loqs_disc)
             param.update_model(composite_model, comp_disc)
@@ -82,8 +75,8 @@ class TestAsymptoticConvergence(unittest.TestCase):
             return (loqs_error, comp_error)
 
         # Get errors
-        currents = 0.5 / (2 ** np.arange(3))
-        errs = np.array([get_l2_error(current) for current in currents])
+        currents = 0.005 / (2 ** np.arange(3))
+        errs = np.array([get_max_error(current) for current in currents])
         loqs_errs, comp_errs = [np.array(err) for err in zip(*errs)]
         # Get rates: expect linear convergence for loqs, quadratic for composite
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])

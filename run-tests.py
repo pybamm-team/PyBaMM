@@ -5,8 +5,6 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import re
 import os
 import sys
@@ -244,8 +242,7 @@ if __name__ == "__main__":
     # Set up argument parsing
     parser = argparse.ArgumentParser(
         description="Run unit tests for PyBaMM.",
-        epilog="To run individual unit tests, use e.g."
-        " $ pybamm/tests/test_simulation.py",
+        epilog="To run individual unit tests, use e.g. '$ tests/unit/test_timer.py'",
     )
     # Unit tests
     parser.add_argument(
