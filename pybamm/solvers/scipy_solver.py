@@ -84,4 +84,7 @@ class ScipySolver(pybamm.OdeSolver):
             **extra_options
         )
 
-        return sol.t, sol.y
+        if sol.success:
+            return sol.t, sol.y
+        else:
+            raise pybamm.SolverError(sol.message)

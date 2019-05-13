@@ -127,4 +127,9 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         sol = ode_solver.solve(t_eval, y0)
 
         # return solution, we need to tranpose y to match scipy's ivp interface
-        return sol.values.t, np.transpose(sol.values.y)
+        if sol.flag in [0, 2]:
+            # 0 = solved for all t_eval
+            # 2 = found root(s)
+            return sol.values.t, np.transpose(sol.values.y)
+        else:
+            raise pybamm.SolverError(sol.message)

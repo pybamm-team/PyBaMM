@@ -1,6 +1,6 @@
 #
 # Root of the pybamm module.
-# Provides access to all shared functionality (simulation, models, etc.).
+# Provides access to all shared functionality (models, solvers, etc.).
 #
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
@@ -89,7 +89,7 @@ from .expression_tree.unary_operators import (
     boundary_value,
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import Broadcast, NumpyBroadcast
+from .expression_tree.broadcasts import Broadcast
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import (
@@ -100,7 +100,7 @@ from .expression_tree.independent_variable import (
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
-from .expression_tree.exceptions import DomainError, ModelError
+from .expression_tree.exceptions import DomainError, ModelError, SolverError
 from .expression_tree.simplify import (
     simplify,
     simplify_if_constant,
@@ -111,7 +111,6 @@ from .expression_tree.simplify import (
 #
 # Model classes
 #
-from .meshes.meshes import KNOWN_DOMAINS  # need this for importing standard variables
 from .models import standard_variables
 from .models.base_models import (
     BaseModel,
@@ -174,11 +173,6 @@ from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
 #
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
-
-#
-# Simulation class
-#
-from .simulation import Simulation
 
 #
 # Solver classes

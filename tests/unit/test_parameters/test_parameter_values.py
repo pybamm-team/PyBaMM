@@ -89,8 +89,8 @@ class TestParameterValues(unittest.TestCase):
         processed_broad = parameter_values.process_symbol(broad)
         self.assertIsInstance(processed_broad, pybamm.Broadcast)
         self.assertEqual(processed_broad.domain, whole_cell)
-        self.assertIsInstance(processed_broad.children[0], pybamm.Scalar)
-        self.assertEqual(processed_broad.children[0].value, 1)
+        self.assertIsInstance(processed_broad.children[0], pybamm.Vector)
+        self.assertEqual(processed_broad.children[0].evaluate(), np.array([1]))
 
         # process concatenation
         conc = pybamm.Concatenation(a, b)
