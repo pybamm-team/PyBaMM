@@ -18,7 +18,7 @@ The easiest way to start with PyBaMM is by running and comparing some of the inb
 - [Compare models](./models/lead-acid.ipynb)
 
 It is also easy to new models or change the setting that are used:
-- [Add a model](./add-model.ipynb)
+- [Add a model](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)
 - [Change the settings](./change-settings.ipynb) (parameters, spatial method or solver)
 
 For more advanced usage, new sets of parameters, spatial methods and solvers can be added:
