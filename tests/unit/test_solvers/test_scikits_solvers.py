@@ -1,17 +1,17 @@
 #
-# Tests for the Scikits Solver class
+# Tests for the Scikits Solver classes
 #
 import pybamm
+import numpy as np
+import scipy.sparse as sparse
+import unittest
+import warnings
 from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 
-import unittest
-import numpy as np
-import scipy.sparse as sparse
-
 
 @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
-class TestScikitsSolver(unittest.TestCase):
+class TestScikitsSolvers(unittest.TestCase):
     def test_ode_integrate(self):
         # Constant
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
@@ -35,6 +35,23 @@ class TestScikitsSolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(exponential_decay, y0, t_eval)
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
+
+    def test_ode_integrate_failure(self):
+        # Turn off warnings to ignore sqrt error
+        warnings.simplefilter("ignore")
+
+        def sqrt_decay(t, y):
+            return -np.sqrt(y)
+
+        y0 = np.array([1])
+        t_eval = np.linspace(0, 3, 100)
+        solver = pybamm.ScikitsOdeSolver()
+        # Expect solver to fail when y goes negative
+        with self.assertRaises(pybamm.SolverError):
+            solver.integrate(sqrt_decay, y0, t_eval)
+
+        # Turn warnings back on
+        warnings.simplefilter("default")
 
     def test_ode_integrate_with_event(self):
         # Constant
@@ -202,6 +219,17 @@ class TestScikitsSolver(unittest.TestCase):
         t_sol, y_sol = solver.integrate(exponential_decay_dae, y0, t_eval)
         np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
         np.testing.assert_allclose(y_sol[1], 2 * np.exp(-0.1 * t_sol))
+
+    def test_dae_integrate_failure(self):
+        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+
+        def constant_growth_dae(t, y, ydot):
+            return [0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]]
+
+        y0 = np.array([0, 1])
+        t_eval = np.linspace(0, 1, 100)
+        with self.assertRaises(pybamm.SolverError):
+            solver.integrate(constant_growth_dae, y0, t_eval)
 
     def test_dae_integrate_bad_ics(self):
         # Constant
