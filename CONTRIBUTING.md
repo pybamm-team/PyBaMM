@@ -156,10 +156,11 @@ Next, add some simple (and speedy!) tests of your main features. If these run wi
 
 ### Running more tests
 
-If you want to check your tests on Python 2 and 3, type
+The tests are divided into `unit` tests, whose aim is to check individual bits of code (e.g. discretising a gradient operator, or solving a simple ODE), and `integration` tests, which check how parts of the program interact as a whole (e.g. solving a full model).
+If you want to check integration tests as well as unit tests, type
 
 ```bash
-python run-tests.py --unit2 --unit3
+python run-tests.py --unit --folder all
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
@@ -178,6 +179,51 @@ If notebooks fail because of changes to pybamm, it can be a bit of a hassle to d
 python run-tests.py --debook examples/notebooks/notebook-name.ipynb script.py
 ```
 
+### Debugging
+
+Often, the code you write won't pass the tests straight away, at which stage it will become necessary to debug.
+The key to successful debugging is to isolate the problem by finding the smallest possible example that causes the bug.
+In practice, there are a few tricks to help you to do this:
+1. Run individual test scripts instead of the whole test suite:
+```bash
+python3 tests/unit/path/to/test
+```
+You can further restrict which tests are run from a particular script by using the skipping decorator:
+```python3
+@unittest.skip("")
+def test_bit_of_code(self):
+    ...
+```
+or by just commenting out all the tests you don't want to run
+2. Set break points, either in your IDE or using the python debugging module. To use the latter, add the following line where you want to set the break point
+```python3
+import ipdb; ipdb.set_trace()
+```
+This will start the [Python interactive debugger](https://gist.github.com/mono0926/6326015). If you want to be able to use magic commands from `ipython`, such as `%timeit`, then set
+```python3
+from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+```
+at the break point instead.
+Figuring out where to start the debugger is the real challenge. Some
+  a. try: except
+  b. warnings to errors
+  c. stepping through the expression tree
+3. Turn off jacobian and simplifications
+4. If a model still isn't giving the answer you expect, you can try comparing it to other models. For example, you can investigate parameter limits in which two models should give the same answer. The `StandardOutputComparison` class can be used to compare some standard outputs from battery models.
+
+Once you've isolated the issue, it's a good idea to add a unit test that replicates this issue, so that you can easily check whether it's been fixed, and make sure that it's easily picked up if it crops up again.
+This also means that, if you can't fix the bug yourself, it will be much easier to ask for help (by opening a [bug-report issue](https://github.com/pybamm-team/PyBaMM/issues/new?template=bug_report.md)).
+
+### Profiling
+
+Sometimes, a bit of code will take much longer than you expect to run. In this case, you can set
+```python3
+from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+```
+as above, and then use some of the profiling tools. In order of increasing detail:
+1. %timeit
+2. %prun
+3. snakeviz
 
 ## Documentation
 
@@ -237,7 +283,8 @@ Configuration files:
 .travis.yaml
 ```
 
-Unit tests and flake8 testing is done for every commit. A nightly cronjob also tests the notebooks. Notebooks listed in `.slow-books` are excluded from these tests.
+For every commit, Travis runs unit tests, integration tests, doc tests, flake8 and notebook tests.
+<!-- Unit tests and flake8 testing is done for every commit. A nightly cronjob also tests the notebooks. Notebooks listed in `.slow-books` are excluded from these tests. -->
 
 <!-- ### Appveyor
 
