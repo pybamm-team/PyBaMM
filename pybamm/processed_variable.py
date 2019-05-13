@@ -95,7 +95,7 @@ class ProcessedVariable(object):
 
         # No discretisation provided, or variable has no domain (function of t only)
         self._interpolation_function = interp.interp1d(
-            self.t_sol, entries, kind=self.interp_kind
+            self.t_sol, entries, kind=self.interp_kind, fill_value=np.nan
         )
 
         self.entries = entries
@@ -146,7 +146,7 @@ class ProcessedVariable(object):
         # note that the order of 't' and 'space' is the reverse of what you'd expect
 
         self._interpolation_function = interp.interp2d(
-            self.t_sol, space, entries, kind=self.interp_kind
+            self.t_sol, space, entries, kind=self.interp_kind, fill_value=np.nan
         )
 
     def initialise_3D(self):
@@ -185,7 +185,10 @@ class ProcessedVariable(object):
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
-            (x_sol, r_sol, self.t_sol), entries, method=self.interp_kind
+            (x_sol, r_sol, self.t_sol),
+            entries,
+            method=self.interp_kind,
+            fill_value=np.nan,
         )
 
     def __call__(self, t, x=None, r=None):

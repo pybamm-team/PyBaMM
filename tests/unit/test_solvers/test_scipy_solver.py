@@ -1,8 +1,6 @@
 #
 # Tests for the Scipy Solver class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import unittest
@@ -200,11 +198,11 @@ class TestScipySolver(unittest.TestCase):
         T, Y = solver.t, solver.y
         np.testing.assert_array_almost_equal(
             model.variables["var1"].evaluate(T, Y),
-            np.ones((N, T.size)) * np.exp(T[np.newaxis, :])
+            np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
         )
         np.testing.assert_array_almost_equal(
             model.variables["var2"].evaluate(T, Y),
-            np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :]))
+            np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
         )
 
 

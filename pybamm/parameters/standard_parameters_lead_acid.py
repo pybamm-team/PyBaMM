@@ -41,8 +41,8 @@ i_typ = pybamm.electrical_parameters.i_typ
 voltage_low_cut_dimensional = pybamm.electrical_parameters.voltage_low_cut_dimensional
 voltage_high_cut_dimensional = pybamm.electrical_parameters.voltage_high_cut_dimensional
 current_with_time = pybamm.electrical_parameters.current_with_time
-dimensional_current_with_time = (
-    pybamm.electrical_parameters.dimensional_current_with_time
+dimensional_current_density_with_time = (
+    pybamm.electrical_parameters.dimensional_current_density_with_time
 )
 
 # Electrolyte properties

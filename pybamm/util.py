@@ -4,9 +4,6 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
-
 import cProfile
 import importlib
 import os
@@ -100,20 +97,21 @@ def load_function(filename):
         The python function loaded from the file.
     """
 
-    if not filename.endswith('.py'):
+    if not filename.endswith(".py"):
         raise ValueError("Expected filename.py, but got {}".format(filename))
 
     # If it's an absolute path, find that exact file
     if os.path.isabs(filename):
         if not os.path.isfile(filename):
             raise ValueError(
-                "{} is an absolute path, but the file is not found".format(filename))
+                "{} is an absolute path, but the file is not found".format(filename)
+            )
 
         valid_filename = filename
 
     # Else, search in the whole PyBaMM directory for matches
     else:
-        search_path = os.path.commonpath([pth for pth in sys.path if 'PyBaMM' in pth])
+        search_path = os.path.commonpath([pth for pth in sys.path if "PyBaMM" in pth])
         head, tail = os.path.split(filename)
 
         matching_files = []
@@ -127,10 +125,12 @@ def load_function(filename):
 
         if len(matching_files) == 0:
             raise ValueError(
-                "{} cannot be found in the PyBaMM directory".format(filename))
+                "{} cannot be found in the PyBaMM directory".format(filename)
+            )
         elif len(matching_files) > 1:
             raise ValueError(
-                "{} found multiple times in the PyBaMM directory".format(filename))
+                "{} found multiple times in the PyBaMM directory".format(filename)
+            )
 
         valid_filename = matching_files[0]
 
@@ -143,12 +143,13 @@ def load_function(filename):
     sys.path.append(valid_path)
 
     # Load the module, which must be the leaf of filename, minus the .py extension
-    valid_module = valid_leaf.replace('.py', '')
+    valid_module = valid_leaf.replace(".py", "")
     module_object = importlib.import_module(valid_module)
 
     # Check that a function of the same name exists in the loaded module
     if valid_module not in dir(module_object):
         raise ValueError(
-            "No function {} found in module {}".format(valid_module, valid_module))
+            "No function {} found in module {}".format(valid_module, valid_module)
+        )
 
     return getattr(module_object, valid_module)

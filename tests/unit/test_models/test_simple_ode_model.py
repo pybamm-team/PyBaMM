@@ -1,8 +1,6 @@
 #
 # Tests for the simple ODE model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 import tests
 
@@ -32,26 +30,23 @@ class TestSimpleODEModel(unittest.TestCase):
     def test_solution(self):
         model = pybamm.SimpleODEModel()
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-        T, Y = modeltest.solver.t, modeltest.solver.y
+        t_eval = np.linspace(0, 1, 50)
+        modeltest.test_all(t_eval=t_eval)
+        t, y = modeltest.solver.t, modeltest.solver.y
         mesh = modeltest.disc.mesh
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         # check output
+        processed_variables = pybamm.post_process_variables(model.variables, t, y, mesh)
+        np.testing.assert_array_almost_equal(processed_variables["a"](t), 2 * t)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        x = mesh.combine_submeshes(*whole_cell)[0].nodes
         np.testing.assert_array_almost_equal(
-            model.variables["a"].evaluate(T, Y), 2 * T[np.newaxis, :]
+            processed_variables["b broadcasted"](t, x), np.ones((len(x), len(t)))
         )
+        x_n_s = mesh.combine_submeshes("negative electrode", "separator")[0].nodes
         np.testing.assert_array_almost_equal(
-            model.variables["b broadcasted"].evaluate(T, Y),
-            np.ones((combined_submesh[0].npts, T.size)),
-        )
-        np.testing.assert_array_almost_equal(
-            model.variables["c broadcasted"].evaluate(T, Y),
-            np.ones(
-                sum([mesh[d][0].npts for d in ["negative electrode", "separator"]])
-            )[:, np.newaxis]
-            * np.exp(-T),
+            processed_variables["c broadcasted"](t, x_n_s),
+            np.ones_like(x_n_s)[:, np.newaxis] * np.exp(-t),
         )
 
 

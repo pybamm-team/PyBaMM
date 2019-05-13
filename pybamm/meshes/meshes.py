@@ -1,20 +1,8 @@
 #
 # Native PyBaMM Meshes
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
-
 import numpy as np
 import pybamm
-
-KNOWN_DOMAINS = [
-    "negative electrode",
-    "separator",
-    "positive electrode",
-    "test",
-    "negative particle",
-    "positive particle",
-]
 
 
 class Mesh(dict):
@@ -42,18 +30,30 @@ class Mesh(dict):
 
         # create submesh_pts from var_pts
         submesh_pts = {}
-        for domain in list(geometry.keys()):
+        for domain in geometry:
             submesh_pts[domain] = {}
             for prim_sec in list(geometry[domain].keys()):
                 for var in list(geometry[domain][prim_sec].keys()):
                     if var.id not in var_id_pts.keys():
-                        raise KeyError(
-                            "Points not given for a variable in domain {}".format(
-                                domain
+                        if var.domain[0] in geometry.keys():
+                            raise KeyError(
+                                "Points not given for a variable in domain {}".format(
+                                    domain
+                                )
                             )
-                        )
                     submesh_pts[domain][var.id] = var_id_pts[var.id]
         self.submesh_pts = submesh_pts
+
+        # Input domain order manually
+        self.domain_order = []
+        # First the macroscale domains, whose order we care about
+        for domain in ["negative electrode", "separator", "positive electrode"]:
+            if domain in geometry:
+                self.domain_order.append(domain)
+        # Then the remaining domains
+        for domain in geometry:
+            if domain not in ["negative electrode", "separator", "positive electrode"]:
+                self.domain_order.append(domain)
 
         for domain in geometry:
             if "secondary" in geometry[domain].keys():
@@ -64,7 +64,6 @@ class Mesh(dict):
             self[domain] = [
                 submesh_types[domain](geometry[domain]["primary"], submesh_pts[domain])
             ] * repeats
-        self.add_ghost_meshes()
 
         # add ghost meshes
         self.add_ghost_meshes()

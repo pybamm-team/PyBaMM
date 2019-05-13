@@ -28,8 +28,9 @@ For more advanced usage, new sets of parameters, spatial methods and solvers can
 
 ## Expression tree structure
 
-PyBaMM is built around an expression tree structure. [This](expression-tree.ipynb)
-notebook explains how this works, from model creation to solution.
+PyBaMM is built around an expression tree structure.
+[This](expression_tree/expression-tree.ipynb) notebook explains how this works, from
+model creation to solution.
 
 ### Models
 

@@ -1,8 +1,6 @@
 #
 # Single Particle Model with Electrolyte (SPMe)
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 
@@ -13,6 +11,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.name = "Single Particle Model with electrolyte"
 
         "-----------------------------------------------------------------------------"
         "Parameters"
