@@ -1,8 +1,6 @@
 #
 # Tests for the Reaction diffusion model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -40,13 +38,13 @@ class TestReactionDiffusionModel(unittest.TestCase):
             )
 
         # Get concentrations
-        ns = 2 ** np.arange(8)
+        ns = 2 ** np.arange(7)
         concs = [get_concs(int(n)) for n in ns]
 
         # Test the value at a range of times
-        for t in np.linspace(0.01, 1, 5):
+        for t in np.linspace(0.01, 0.9, 5):
             # Get errors at the points from the coarsest solution
-            x = concs[0].x_sol
+            x = concs[0].x_sol[1:-1]
             # Use inf norm (max abs error), comparing each solution to the finest sol
             errs = np.array(
                 [

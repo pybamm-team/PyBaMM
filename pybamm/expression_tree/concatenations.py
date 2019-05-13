@@ -1,8 +1,6 @@
 #
 # Concatenation classes
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -40,11 +38,6 @@ class Concatenation(pybamm.Symbol):
                 domain += child_domain
             else:
                 raise pybamm.DomainError("""domain of children must be disjoint""")
-
-        # ensure domain is sorted according to KNOWN_DOMAINS
-        domain_dict = {d: pybamm.KNOWN_DOMAINS.index(d) for d in domain}
-        domain = sorted(domain_dict, key=domain_dict.__getitem__)
-
         return domain
 
     def _concatenation_evaluate(self, children_eval):
@@ -97,7 +90,7 @@ class NumpyConcatenation(Concatenation):
         # so that we can concatenate them
         for i, child in enumerate(children):
             if child.evaluates_to_number():
-                children[i] = pybamm.NumpyBroadcast(child, [], None)
+                children[i] = child * pybamm.Vector(np.array([1]))
         super().__init__(*children, name="numpy concatenation", check_domain=False)
 
     def _concatenation_evaluate(self, children_eval):
@@ -121,7 +114,7 @@ class DomainConcatenation(Concatenation):
     careful about domains.
 
     It is assumed that each child has a domain, and the final concatenated vector will
-    respect the sizes and ordering of domains established in pybamm.KNOWN_DOMAINS
+    respect the sizes and ordering of domains established in mesh keys
 
     **Extends**: :class:`pybamm.Concatenation`
 
@@ -148,6 +141,10 @@ class DomainConcatenation(Concatenation):
 
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")
+
+        # ensure domain is sorted according to mesh keys
+        domain_dict = {d: mesh.domain_order.index(d) for d in self.domain}
+        self.domain = sorted(domain_dict, key=domain_dict.__getitem__)
 
         if copy_this is None:
             # store mesh

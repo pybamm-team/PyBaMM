@@ -1,8 +1,6 @@
 #
 # Interface for discretisation
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numpy as np
@@ -266,13 +264,16 @@ class Discretisation(object):
         for v in model_variables:
             if isinstance(v, pybamm.Concatenation):
                 model_slices.append(
-                    slice(self._y_slices[v.children[0].id].start,
-                          self._y_slices[v.children[-1].id].stop)
+                    slice(
+                        self._y_slices[v.children[0].id].start,
+                        self._y_slices[v.children[-1].id].stop,
+                    )
                 )
             else:
                 model_slices.append(self._y_slices[v.id])
-        sorted_model_variables = [v for _, v in
-                                  sorted(zip(model_slices, model_variables))]
+        sorted_model_variables = [
+            v for _, v in sorted(zip(model_slices, model_variables))
+        ]
 
         # Process mass matrices for the differential equations
         for var in sorted_model_variables:
@@ -394,7 +395,7 @@ class Discretisation(object):
             # Broadcast new_child to the domain specified by symbol.domain
             # Different discretisations may broadcast differently
             if symbol.domain == []:
-                symbol = pybamm.NumpyBroadcast(new_child, symbol.domain, {})
+                symbol = new_child * pybamm.Vector(np.array([1]))
             else:
                 symbol = self._spatial_methods[symbol.domain[0]].broadcast(
                     new_child, symbol.domain
@@ -475,8 +476,10 @@ class Discretisation(object):
             if isinstance(symbol, pybamm.Concatenation):
                 unpacked_variables.extend([var for var in symbol.children])
                 slices.append(
-                    slice(self._y_slices[symbol.children[0].id].start,
-                          self._y_slices[symbol.children[-1].id].stop)
+                    slice(
+                        self._y_slices[symbol.children[0].id].start,
+                        self._y_slices[symbol.children[-1].id].stop,
+                    )
                 )
             else:
                 unpacked_variables.append(symbol)
@@ -560,14 +563,18 @@ class Discretisation(object):
 
         # Check variables in variable list against rhs
         # Be lenient with size check if the variable in model.variables is broadcasted
-        for var in model.rhs.keys():
-            if var.name in model.variables.keys():
+        # If broadcasted, variable is a multiplication with a vector of ones
+        for rhs_var in model.rhs.keys():
+            if rhs_var.name in model.variables.keys():
+                var = model.variables[rhs_var.name]
                 if not (
-                    model.rhs[var].evaluate(0, y0).shape
-                    == model.variables[var.name].evaluate(0, y0).shape
-                    or isinstance(
-                        model.variables[var.name],
-                        (pybamm.NumpyBroadcast, pybamm.Concatenation),
+                    model.rhs[rhs_var].evaluate(0, y0).shape
+                    == var.evaluate(0, y0).shape
+                    or isinstance(var, pybamm.Concatenation)
+                    or (
+                        isinstance(var, pybamm.Multiplication)
+                        and isinstance(var.right, pybamm.Vector)
+                        and np.all(var.right.entries == 1)
                     )
                 ):
                     raise pybamm.ModelError(
@@ -575,8 +582,8 @@ class Discretisation(object):
                     variable and its eqn must have the same shape after discretisation
                     but variable.shape = {} and rhs.shape = {} for variable '{}'.
                     """.format(
-                            model.variables[var.name].evaluate(0, y0).shape,
-                            model.rhs[var].evaluate(0, y0).shape,
+                            var.evaluate(0, y0).shape,
+                            model.rhs[rhs_var].evaluate(0, y0).shape,
                             var,
                         )
                     )

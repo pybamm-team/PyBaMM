@@ -44,6 +44,7 @@ matrix:
                 - python3.5-dev
           env:
             - PYBAMM_UNIT=true
+            - PYBAMM_BOOKS=true
           if: type != cron
         - python: "3.6"
           addons:
@@ -59,6 +60,7 @@ matrix:
                 - python3.6-dev
           env:
             - PYBAMM_UNIT=true
+            - PYBAMM_BOOKS=true
         - python: "3.6"
           addons:
             apt:

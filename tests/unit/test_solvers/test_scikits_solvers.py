@@ -1,8 +1,6 @@
 #
 # Tests for the Scikits Solver class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 from tests import get_mesh_for_testing, get_discretisation_for_testing
@@ -104,7 +102,8 @@ class TestScikitsSolver(unittest.TestCase):
         y0 = np.array([0.0, 0.0])
         t_eval = np.linspace(0, 1, 100)
         t_sol, y_sol = solver.integrate(
-            linear_ode, y0, t_eval, jacobian=sparse_jacobian)
+            linear_ode, y0, t_eval, jacobian=sparse_jacobian
+        )
 
         np.testing.assert_array_equal(t_sol, t_eval)
         np.testing.assert_allclose(2.0 * t_sol - 0.25 * t_sol ** 2, y_sol[1], rtol=1e-4)
@@ -118,7 +117,8 @@ class TestScikitsSolver(unittest.TestCase):
         np.testing.assert_allclose(2.0 * t_sol - 0.25 * t_sol ** 2, y_sol[1], rtol=1e-4)
 
         t_sol, y_sol = solver.integrate(
-            linear_ode, y0, t_eval, jacobian=sparse_jacobian)
+            linear_ode, y0, t_eval, jacobian=sparse_jacobian
+        )
 
         np.testing.assert_array_equal(t_sol, t_eval)
         np.testing.assert_allclose(2.0 * t_sol - 0.25 * t_sol ** 2, y_sol[1], rtol=1e-4)
@@ -149,7 +149,7 @@ class TestScikitsSolver(unittest.TestCase):
         )
 
         t_sol, y_sol = solver.integrate(
-            exponential_growth, y0, t_eval, jacobian=sparse_jacobian,
+            exponential_growth, y0, t_eval, jacobian=sparse_jacobian
         )
         np.testing.assert_array_equal(t_sol, t_eval)
         np.testing.assert_allclose(np.exp(t_sol), y_sol[0], rtol=1e-4)
@@ -169,7 +169,7 @@ class TestScikitsSolver(unittest.TestCase):
         )
 
         t_sol, y_sol = solver.integrate(
-            exponential_growth, y0, t_eval, jacobian=sparse_jacobian,
+            exponential_growth, y0, t_eval, jacobian=sparse_jacobian
         )
         np.testing.assert_array_equal(t_sol, t_eval)
         np.testing.assert_allclose(np.exp(t_sol), y_sol[0], rtol=1e-4)
@@ -413,11 +413,11 @@ class TestScikitsSolver(unittest.TestCase):
         T, Y = solver.t, solver.y
         np.testing.assert_array_almost_equal(
             model.variables["var1"].evaluate(T, Y),
-            np.ones((N, T.size)) * np.exp(T[np.newaxis, :])
+            np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
         )
         np.testing.assert_array_almost_equal(
             model.variables["var2"].evaluate(T, Y),
-            np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :]))
+            np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
         )
 
     def test_model_solver_dae(self):
