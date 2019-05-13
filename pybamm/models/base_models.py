@@ -597,7 +597,7 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
 
         # Additional standard output variables
         # Time
-        time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
+        time_scale = pybamm.standard_parameters_lithium_ion.tau_discharge
         I = pybamm.electrical_parameters.dimensional_current_with_time
         self.variables.update(
             {
