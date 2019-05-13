@@ -44,10 +44,9 @@ The following models are implemented and can easily be used or [compared](./mode
 
 #### Lead-acid models
 
-- [Full porous-electrode](./models/lead-acid-full.ipynb)
-- [Leading-Order Quasi-Static](./models/lead-acid-LOQS.ipynb)
-- [First-Order Quasi-Static](./models/lead-acid-FOQS.ipynb)
-- [Composite](./models/lead-acid-composite.ipynb)
+- [Full porous-electrode](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/newman_tiedemann.html)
+- [Leading-Order Quasi-Static](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/loqs.html)
+- [Composite](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/composite.html)
 
 ### Spatial Methods
 
