@@ -1,4 +1,4 @@
-Name [Units],Value,Meaning,Reference
+Name [units],Value,Meaning,Reference
 # Geometric parameters,,,,
 Negative electrode width [m],0.5,,
 Separator width [m],0.5,,

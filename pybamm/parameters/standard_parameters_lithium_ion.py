@@ -68,8 +68,8 @@ m_n_dimensional = pybamm.Parameter(
 m_p_dimensional = pybamm.Parameter(
     "Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
 )
-ne_n = pybamm.Parameter("Negative electrode electrons in reaction [-]")
-ne_p = pybamm.Parameter("Positive electrode electrons in reaction [-]")
+ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
+ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
 C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
 
 
@@ -174,9 +174,9 @@ l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
 
 # Microscale geometry
-epsilon_n = pybamm.Parameter("Negative electrode porosity [-]")
-epsilon_s = pybamm.Parameter("Separator porosity [-]")
-epsilon_p = pybamm.Parameter("Positive electrode porosity [-]")
+epsilon_n = pybamm.Parameter("Negative electrode porosity")
+epsilon_s = pybamm.Parameter("Separator porosity")
+epsilon_p = pybamm.Parameter("Positive electrode porosity")
 epsilon = pybamm.Concatenation(
     pybamm.Broadcast(epsilon_n, ["negative electrode"]),
     pybamm.Broadcast(epsilon_s, ["separator"]),
@@ -190,7 +190,7 @@ sigma_n = sigma_n_dimensional * potential_scale / i_typ / L_x
 sigma_p = sigma_p_dimensional * potential_scale / i_typ / L_x
 
 # Electrolyte Properties
-t_plus = pybamm.Parameter("Cation transference number [-]")
+t_plus = pybamm.Parameter("Cation transference number")
 beta_surf = 0
 s = 1
 

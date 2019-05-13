@@ -149,12 +149,12 @@ class InterfacialCurrent(pybamm.SubModel):
             "Negative electrode exchange-current density": j0_n,
             "Positive electrode exchange-current density": j0_p,
             "Exchange-current density": j0,
-            "Negative electrode interfacial current density [A m-2]": i_typ * j_n,
-            "Positive electrode interfacial current density [A m-2]": i_typ * j_p,
-            "Interfacial current density [A m-2]": i_typ * j,
-            "Negative electrode exchange-current density [A m-2]": i_typ * j0_n,
-            "Positive electrode exchange-current density [A m-2]": i_typ * j0_p,
-            "Exchange-current density [A m-2]": i_typ * j0,
+            "Negative electrode interfacial current density [A.m-2]": i_typ * j_n,
+            "Positive electrode interfacial current density [A.m-2]": i_typ * j_p,
+            "Interfacial current density [A.m-2]": i_typ * j,
+            "Negative electrode exchange-current density [A.m-2]": i_typ * j0_n,
+            "Positive electrode exchange-current density [A.m-2]": i_typ * j0_p,
+            "Exchange-current density [A.m-2]": i_typ * j0,
         }
 
 

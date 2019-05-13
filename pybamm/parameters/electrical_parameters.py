@@ -30,7 +30,7 @@ I_typ = pybamm.Parameter("Typical current [A]")
 Q = pybamm.Parameter("Cell capacity [A.h]")
 C_rate = abs(I_typ / Q)
 n_electrodes_parallel = pybamm.Parameter(
-    "Number of electrodes connected in parallel to make a cell [-]"
+    "Number of electrodes connected in parallel to make a cell"
 )
 i_typ = pybamm.Function(
     abs_non_zero, (I_typ / (n_electrodes_parallel * pybamm.geometric_parameters.A_cc))

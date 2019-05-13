@@ -56,7 +56,7 @@ class ParameterValues(dict):
         df = pd.read_csv(filename, comment="#", skip_blank_lines=True)
         # Drop rows that are all NaN (seems to not work with skip_blank_lines)
         df.dropna(how="all", inplace=True)
-        return {k: v for (k, v) in zip(df["Name [Units]"], df["Value"])}
+        return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.

@@ -90,7 +90,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             {
                 "Electrode height [m]": 0.1,
                 "Electrode depth [m]": 0.1,
-                "Number of electrodes connected in parallel to make a cell [-]": 8,
+                "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
                 "Current function": os.path.join(
                     os.getcwd(),
