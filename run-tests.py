@@ -23,7 +23,7 @@ def run_code_tests(executable=None, folder: str = "unit"):
         If given, tests are run in subprocesses using the given executable (e.g.
         'python2' or 'python3').
     folder : str
-        Which folder to run the tests from (unit, convergence or both ('all'))
+        Which folder to run the tests from (unit, integration or both ('all'))
 
     """
     if folder == "all":
@@ -270,7 +270,7 @@ if __name__ == "__main__":
         "--folder",
         nargs=1,
         default=["unit"],
-        choices=["unit", "convergence", "all"],
+        choices=["unit", "integration", "all"],
         help="Which folder to run the tests from.",
     )
     # Notebook tests
@@ -312,7 +312,7 @@ if __name__ == "__main__":
 
     # Run tests
     has_run = False
-    # Unit vs convergence
+    # Unit vs integration
     folder = args.folder[0]
     # Unit tests
     if args.unit:
