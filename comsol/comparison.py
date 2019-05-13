@@ -12,6 +12,8 @@ geometry = model.default_geometry
 
 # load parameters and process model and geometry
 param = model.default_parameter_values
+param["Electrode depth"] = 1
+param["Electrode height"] = 1
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -36,7 +38,7 @@ for key, C_rate in C_rates.items():
     comsol_voltage = comsol[1].values
 
     # update current density
-    param["Typical current density"] = 24 * C_rate
+    param["Typical current"] = 24 * C_rate
     param.update_model(model, disc)
 
     # solve model
@@ -50,17 +52,16 @@ for key, C_rate in C_rates.items():
     )
     voltage_sol = voltage(solver.t)
 
-    # convert solver time discharge Capacity
-    tau = pybamm.standard_parameters_lithium_ion.tau_discharge
-    tau_eval = param.process_symbol(tau).evaluate(0, 0)
-    discharge_capacity = solver.t * tau_eval * param["Typical current density"] / 3600
-    comsol_discharge_capacity = comsol_time * param["Typical current density"] / 3600
+    # convert to discharge capacity
+    discharge_capacity = pybamm.ProcessedVariable(model.variables["Discharge capacity [Ah]"], solver.t, solver.y, mesh=mesh)
+    discharge_capacity_sol = discharge_capacity(solver.t)
+    comsol_discharge_capacity = comsol_time * param["Typical current"] / 3600
 
     # plot discharge curves
     color = next(ax._get_lines.prop_cycler)["color"]
     plt.plot(comsol_discharge_capacity, comsol_voltage, color=color, linestyle=":")
     plt.plot(
-        discharge_capacity,
+        discharge_capacity_sol,
         voltage_sol,
         color=color,
         linestyle="-",
@@ -71,7 +72,7 @@ for key, C_rate in C_rates.items():
 plt.xlim([0, 26])
 plt.ylim([3.2, 3.9])
 plt.legend(loc="best")
-plt.xlabel(r"Discharge Capacity (Ah/m$^2$)")
+plt.xlabel(r"Discharge Capacity (Ah)")
 plt.ylabel("Voltage (V)")
 plt.title(r"Comsol $\cdots$ PyBaMM $-$")
 plt.tight_layout()
