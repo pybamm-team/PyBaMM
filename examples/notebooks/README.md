@@ -15,7 +15,7 @@ from your local PyBaMM repository, or used online through [Binder](https://mybin
 
 The easiest way to start with PyBaMM is by running and comparing some of the inbuilt models:
 - [Run the Single Particle Model (SPM)](./models/SPM.ipynb)
-- [Compare models](./compare-models.ipynb)
+- [Compare models](./models/lead-acid.ipynb)
 
 It is also easy to new models or change the setting that are used:
 - [Add a model](./add-model.ipynb)
@@ -28,8 +28,9 @@ For more advanced usage, new sets of parameters, spatial methods and solvers can
 
 ## Expression tree structure
 
-PyBaMM is built around an expression tree structure. [This](expression-tree.ipynb)
-notebook explains how this works, from model creation to solution.
+PyBaMM is built around an expression tree structure.
+[This](expression_tree/expression-tree.ipynb) notebook explains how this works, from
+model creation to solution.
 
 ### Models
 

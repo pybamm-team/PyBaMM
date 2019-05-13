@@ -150,9 +150,6 @@ class VariablesComparison(BaseOutputComparison):
         self.compare("Average negative electrode open circuit potential")
         self.compare("Average positive electrode open circuit potential")
         self.compare("Terminal voltage")
-        import ipdb
-
-        ipdb.set_trace()
         self.compare("Average electrolyte overpotential")
         self.compare("Average solid phase ohmic losses")
         self.compare("Negative reaction overpotential")

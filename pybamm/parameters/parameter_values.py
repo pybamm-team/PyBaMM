@@ -56,7 +56,7 @@ class ParameterValues(dict):
         df = pd.read_csv(filename, comment="#", skip_blank_lines=True)
         # Drop rows that are all NaN (seems to not work with skip_blank_lines)
         df.dropna(how="all", inplace=True)
-        return {k: v for (k, v) in zip(df.Name, df.Value)}
+        return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.
@@ -196,11 +196,7 @@ class ParameterValues(dict):
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.children[0])
-            if isinstance(symbol, pybamm.NumpyBroadcast):
-                new_symbol = pybamm.NumpyBroadcast(
-                    new_child, symbol.domain, symbol.mesh
-                )
-            elif isinstance(symbol, pybamm.Broadcast):
+            if isinstance(symbol, pybamm.Broadcast):
                 new_symbol = pybamm.Broadcast(new_child, symbol.domain)
             elif isinstance(symbol, pybamm.Function):
                 new_symbol = pybamm.Function(symbol.func, new_child)

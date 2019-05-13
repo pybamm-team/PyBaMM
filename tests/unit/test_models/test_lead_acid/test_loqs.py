@@ -26,19 +26,19 @@ class TestLeadAcidLOQS(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
 
-    # def test_charge(self):
-    #     model = pybamm.lead_acid.LOQS()
-    #     parameter_values = model.default_parameter_values
-    #     parameter_values.update({"Typical current": -1})
-    #     modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
-    #     modeltest.test_all()
-    #
-    # def test_zero_current(self):
-    #     model = pybamm.lead_acid.LOQS()
-    #     parameter_values = model.default_parameter_values
-    #     parameter_values.update({"Typical current": 0})
-    #     modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
-    #     modeltest.test_all()
+    def test_charge(self):
+        model = pybamm.lead_acid.LOQS()
+        parameter_values = model.default_parameter_values
+        parameter_values.update({"Typical current [A]": -1})
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_zero_current(self):
+        model = pybamm.lead_acid.LOQS()
+        parameter_values = model.default_parameter_values
+        parameter_values.update({"Typical current [A]": 0})
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
 
 
 if __name__ == "__main__":
