@@ -3,10 +3,6 @@ import unittest
 
 
 class TestQuickPlot(unittest.TestCase):
-    """
-    Tests that QuickPlot is created correctly
-    """
-
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "'models' must be"):
             pybamm.QuickPlot(1, None, None)
