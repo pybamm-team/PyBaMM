@@ -121,15 +121,15 @@ def run_notebook_and_scripts(skip_slow_books=False, executable="python"):
 
     # Scan and run
     print("Testing notebooks and scripts with executable `" + str(executable) + "`")
-    if not scan_for_notebooks_and_scripts("examples", True, executable, ignore_list):
+    if not scan_for_nb_and_scripts("examples", True, executable, ignore_list):
         print("\nErrors encountered in notebooks")
         sys.exit(1)
     print("\nOK")
 
 
-def scan_for_notebooks_and_scripts(root, recursive=True, executable="python", ignore_list=[]):
+def scan_for_nb_and_scripts(root, recursive=True, executable="python", ignore_list=[]):
     """
-    Scans for, and tests, all notebooks in a directory.
+    Scans for, and tests, all notebooks and scripts in a directory.
     """
     ok = True
     debug = False
@@ -146,7 +146,7 @@ def scan_for_notebooks_and_scripts(root, recursive=True, executable="python", ig
             # Ignore hidden directories
             if filename[:1] == ".":
                 continue
-            ok &= scan_for_notebooks_and_scripts(path, recursive, executable)
+            ok &= scan_for_nb_and_scripts(path, recursive, executable)
 
         # Test notebooks
         if os.path.splitext(path)[1] == ".ipynb":
@@ -222,7 +222,6 @@ def test_script(path, executable="python"):
     """
     Tests a single notebook, exists if it doesn't finish.
     """
-    import nbconvert
     import pybamm
 
     b = pybamm.Timer()
