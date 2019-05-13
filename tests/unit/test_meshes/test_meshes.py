@@ -10,9 +10,9 @@ class TestMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
             base_parameters={
-                "Negative electrode width": 0.1,
-                "Separator width": 0.2,
-                "Positive electrode width": 0.3,
+                "Negative electrode width [m]": 0.1,
+                "Separator width [m]": 0.2,
+                "Positive electrode width [m]": 0.3,
             }
         )
 
@@ -63,9 +63,9 @@ class TestMesh(unittest.TestCase):
     def test_mesh_sizes(self):
         param = pybamm.ParameterValues(
             base_parameters={
-                "Negative electrode width": 0.1,
-                "Separator width": 0.2,
-                "Positive electrode width": 0.3,
+                "Negative electrode width [m]": 0.1,
+                "Separator width [m]": 0.2,
+                "Positive electrode width [m]": 0.3,
             }
         )
 
@@ -105,9 +105,9 @@ class TestMesh(unittest.TestCase):
     def test_combine_submeshes(self):
         param = pybamm.ParameterValues(
             base_parameters={
-                "Negative electrode width": 0.1,
-                "Separator width": 0.2,
-                "Positive electrode width": 0.3,
+                "Negative electrode width [m]": 0.1,
+                "Separator width [m]": 0.2,
+                "Positive electrode width [m]": 0.3,
             }
         )
 
@@ -147,9 +147,9 @@ class TestMesh(unittest.TestCase):
     def test_ghost_cells(self):
         param = pybamm.ParameterValues(
             base_parameters={
-                "Negative electrode width": 0.1,
-                "Separator width": 0.2,
-                "Positive electrode width": 0.3,
+                "Negative electrode width [m]": 0.1,
+                "Separator width [m]": 0.2,
+                "Positive electrode width [m]": 0.3,
             }
         )
 
@@ -188,9 +188,9 @@ class TestMesh(unittest.TestCase):
     def test_multiple_meshes(self):
         param = pybamm.ParameterValues(
             base_parameters={
-                "Negative electrode width": 0.1,
-                "Separator width": 0.2,
-                "Positive electrode width": 0.3,
+                "Negative electrode width [m]": 0.1,
+                "Separator width [m]": 0.2,
+                "Positive electrode width [m]": 0.3,
             }
         )
 
@@ -223,9 +223,9 @@ class TestMesh(unittest.TestCase):
     def test_mesh_coord_sys(self):
         param = pybamm.ParameterValues(
             base_parameters={
-                "Negative electrode width": 0.1,
-                "Separator width": 0.2,
-                "Positive electrode width": 0.3,
+                "Negative electrode width [m]": 0.1,
+                "Separator width [m]": 0.2,
+                "Positive electrode width [m]": 0.3,
             }
         )
 

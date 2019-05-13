@@ -79,8 +79,8 @@ class QuickPlot(object):
                 ]
             elif isinstance(models[0], pybamm.LeadAcidBaseModel):
                 output_variables = [
-                    "Interfacial current density [A m-2]",
-                    "Electrolyte concentration [mols m-3]",
+                    "Interfacial current density [A.m-2]",
+                    "Electrolyte concentration [mol.m-3]",
                     "Current [A]",
                     "Porosity",
                     "Electrolyte potential [V]",

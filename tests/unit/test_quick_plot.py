@@ -44,7 +44,7 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.update(0.01)
 
         # Update parameters, solve, plot again
-        param.update({"Typical current": 0})
+        param.update({"Typical current [A]": 0})
         param.update_model(spm, disc_spm)
         solver_spm.solve(spm, t_eval)
         quick_plot = pybamm.QuickPlot(spm, mesh, solver_spm)
