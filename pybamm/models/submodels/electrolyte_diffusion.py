@@ -156,8 +156,8 @@ class StefanMaxwell(pybamm.SubModel):
             "Separator electrolyte concentration": c_e_s,
             "Positive electrolyte concentration": c_e_p,
             "Reduced cation flux": N_e,
-            "Electrolyte concentration [mols m-3]": c_e_typ * c_e,
-            "Negative electrolyte concentration [mols m-3]": c_e_typ * c_e_n,
-            "Separator electrolyte concentration [mols m-3]": c_e_typ * c_e_s,
-            "Positive electrolyte concentration [mols m-3]": c_e_typ * c_e_p,
+            "Electrolyte concentration [mol.m-3]": c_e_typ * c_e,
+            "Negative electrolyte concentration [mol.m-3]": c_e_typ * c_e_n,
+            "Separator electrolyte concentration [mol.m-3]": c_e_typ * c_e_s,
+            "Positive electrolyte concentration [mol.m-3]": c_e_typ * c_e_p,
         }

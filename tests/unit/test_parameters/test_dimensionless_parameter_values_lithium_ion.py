@@ -21,7 +21,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
             {
-                "Typical current": 1,
+                "Typical current [A]": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",

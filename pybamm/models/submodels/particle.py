@@ -99,6 +99,6 @@ class Standard(pybamm.SubModel):
             domain + " concentration": c,
             domain + " surface concentration": c_surf,
             domain + " flux": N,
-            domain + " concentration [mols m-3]": conc_scale * c,
-            domain + " surface concentration [mols m-3]": conc_scale * c_surf,
+            domain + " concentration [mol.m-3]": conc_scale * c,
+            domain + " surface concentration [mol.m-3]": conc_scale * c_surf,
         }

@@ -250,7 +250,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_s,
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
-            "Electrolyte current density [A m-2]": param.i_typ * i_e,
+            "Electrolyte current density [A.m-2]": param.i_typ * i_e,
             "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
         }
 
