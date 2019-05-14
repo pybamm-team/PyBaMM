@@ -25,5 +25,5 @@ t_eval = np.linspace(0, 2, 100)
 solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(model, param, mesh, solver)
+plot = pybamm.QuickPlot(model, mesh, solver)
 plot.dynamic_plot()
