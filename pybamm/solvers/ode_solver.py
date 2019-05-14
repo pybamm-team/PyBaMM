@@ -30,9 +30,12 @@ class OdeSolver(pybamm.BaseSolver):
 
         """
 
-        # create simplified rhs and event expressions
-        concatenated_rhs = model.concatenated_rhs.simplify()
-        events = [event.simplify() for event in model.events]
+        concatenated_rhs = model.concatenated_rhs
+        events = model.events
+        if model.use_simplify:
+            # create simplified rhs and event expressions
+            concatenated_rhs = concatenated_rhs.simplify()
+            events = [event.simplify() for event in events]
 
         def dydt(t, y):
             return concatenated_rhs.evaluate(t, y, known_evals={})[0]
@@ -51,7 +54,9 @@ class OdeSolver(pybamm.BaseSolver):
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))
-            jac_rhs = concatenated_rhs.jac(y).simplify()
+            jac_rhs = concatenated_rhs.jac(y)
+            if model.use_simplify:
+                jac_rhs = jac_rhs.simplify()
 
             def jacobian(t, y):
                 return jac_rhs.evaluate(t, y, known_evals={})[0]

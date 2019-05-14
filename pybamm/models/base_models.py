@@ -51,8 +51,9 @@ class BaseModel(object):
         self._mass_matrix = None
         self._jacobian = None
 
-        # Default behaviour is to use the jacobian
+        # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
+        self.use_simplify = True
 
     def _set_dict(self, dict, name):
         """
