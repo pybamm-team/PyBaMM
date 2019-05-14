@@ -19,7 +19,7 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 11, var.x_s: 5, var.x_p: 11, var.r_n: 11, var.r_p: 11}
+var_pts = {var.x_n: 11, var.x_s: 7, var.x_p: 11, var.r_n: 11, var.r_p: 11}
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
@@ -33,7 +33,9 @@ ax = plt.gca()
 for key, C_rate in C_rates.items():
 
     # load the comsol voltage data
-    comsol = pd.read_csv("comsol/Voltage_C{}.csv".format(key), sep=",", header=None)
+    comsol = pd.read_csv(
+        "comsol/data/Voltage_C{}.csv".format(key), sep=",", header=None
+    )
     comsol_time = comsol[0].values
     comsol_voltage = comsol[1].values
 
