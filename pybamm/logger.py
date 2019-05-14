@@ -12,5 +12,6 @@ logging.basicConfig(format=format, datefmt="%Y-%m-%d %H:%M:%S")
 # Create a custom logger
 logger = logging.getLogger(__name__)
 
+
 def set_logging_level(level):
     logger.setLevel(level)
