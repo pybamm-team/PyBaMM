@@ -429,22 +429,14 @@ class Discretisation(object):
 
             return new_symbol
 
-        elif isinstance(symbol, pybamm.Scalar):
-            return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Array):
-            return symbol.__class__(symbol.entries, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.StateVector):
-            return symbol.__class__(symbol.y_slice, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Time):
-            return pybamm.Time()
-
         else:
-            raise NotImplementedError(
-                "Cannot discretise symbol of type '{}'".format(type(symbol))
-            )
+            # Backup option: return new copy of the object
+            try:
+                return pybamm.make_new_copy(symbol)
+            except NotImplementedError:
+                raise NotImplementedError(
+                    "Cannot discretise symbol of type '{}'".format(type(symbol))
+                )
 
     def concatenate(self, *symbols):
         return pybamm.NumpyConcatenation(*symbols)

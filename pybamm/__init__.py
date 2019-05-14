@@ -100,13 +100,19 @@ from .expression_tree.independent_variable import (
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
-from .expression_tree.exceptions import DomainError, ModelError, SolverError, ModelWarning
+from .expression_tree.exceptions import (
+    DomainError,
+    ModelError,
+    SolverError,
+    ModelWarning,
+)
 from .expression_tree.simplify import (
     simplify,
     simplify_if_constant,
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
+from .expression_tree.copy import make_new_copy
 
 #
 # Model classes

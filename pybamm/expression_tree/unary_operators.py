@@ -35,10 +35,18 @@ class UnaryOperator(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}({!s})".format(self.name, self.child)
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+    def _unary_new_copy(self, child):
+        """Make a new copy of the unary operator, with child `child`"""
 
         return self.__class__(child)
+
+    def _unary_simplify(self, simplified_child):
+        """
+        Simplify a unary operator. Default behaviour is to make a new copy, with
+        simplified child.
+        """
+
+        return self._unary_new_copy(simplified_child)
 
     def _unary_evaluate(self, child):
         """Perform unary operation on a child. """
@@ -175,14 +183,17 @@ class Function(UnaryOperator):
         else:
             return self.func(child)
 
-    def _unary_simplify(self, child):
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return pybamm.Function(self.func, child)
+
+    def _unary_simplify(self, simplified_child):
         """ See :meth:`UnaryOperator._unary_simplify()`. """
         if self.takes_no_params:
             # If self.func() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.func())
         else:
-            child = self.child.simplify()
-            return pybamm.Function(self.func, child)
+            return pybamm.Function(self.func, simplified_child)
 
 
 class Index(UnaryOperator):
@@ -200,8 +211,8 @@ class Index(UnaryOperator):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
         return child[self.index]
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
         return self.__class__(child, self.index)
 
@@ -319,8 +330,8 @@ class Integral(SpatialOperator):
     def integration_variable(self):
         return self._integration_variable
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
         return self.__class__(child, self.integration_variable)
 
@@ -378,8 +389,8 @@ class BoundaryOperator(SpatialOperator):
         # of boundary values of variables in different domains
         self.domain = []
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return self.__class__(child, self.side)
 
 
@@ -505,7 +516,7 @@ def average(symbol):
     """
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
-        new_symbol = copy.deepcopy(symbol)
+        new_symbol = pybamm.make_new_copy(symbol)
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its average value is its child
@@ -543,7 +554,7 @@ def boundary_value(symbol, side):
     """
     # If symbol doesn't have a domain, its boundary value is itself
     if symbol.domain == []:
-        new_symbol = copy.deepcopy(symbol)
+        new_symbol = pybamm.make_new_copy(symbol)
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its boundary value is its child

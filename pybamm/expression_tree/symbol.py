@@ -110,15 +110,10 @@ class Symbol(anytree.NodeMixin):
     @property
     def orphans(self):
         """
-        Returning deepcopies of the children, with parents removed to avoid corrupting
+        Returning new copies of the children, with parents removed to avoid corrupting
         the expression tree internal data
         """
-        orp = []
-        for child in self.children:
-            new_child = copy.deepcopy(child)
-            new_child.parent = None
-            orp.append(new_child)
-        return tuple(orp)
+        return tuple([pybamm.make_new_copy(child) for child in self.children])
 
     def render(self):
         """print out a visual representation of the tree (this node and its

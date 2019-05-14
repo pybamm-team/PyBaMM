@@ -185,17 +185,16 @@ class ParameterValues(dict):
                 return function.diff(new_diff_variable)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            left, right = symbol.children
             # process children
-            new_left = self.process_symbol(left)
-            new_right = self.process_symbol(right)
+            new_left = self.process_symbol(symbol.left)
+            new_right = self.process_symbol(symbol.right)
             # make new symbol, ensure domain remains the same
             new_symbol = symbol.__class__(new_left, new_right)
             new_symbol.domain = symbol.domain
             return new_symbol
 
         elif isinstance(symbol, pybamm.UnaryOperator):
-            new_child = self.process_symbol(symbol.children[0])
+            new_child = self.process_symbol(symbol.child)
             if isinstance(symbol, pybamm.Broadcast):
                 new_symbol = pybamm.Broadcast(new_child, symbol.domain)
             elif isinstance(symbol, pybamm.Function):
@@ -223,31 +222,16 @@ class ParameterValues(dict):
                 # Concatenation or NumpyConcatenation
                 return symbol.__class__(*new_children)
 
-        # Other cases: return new variable to avoid tree internal corruption
-        elif isinstance(symbol, pybamm.Variable):
-            return pybamm.Variable(symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Scalar):
-            return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Array):
-            return symbol.__class__(
-                symbol.entries, symbol.name, symbol.domain, symbol.entries_string
-            )
-
-        elif isinstance(symbol, pybamm.SpatialVariable):
-            return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
-
-        elif isinstance(symbol, pybamm.StateVector):
-            return symbol.__class__(symbol.y_slice, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Time):
-            return pybamm.Time()
-
         else:
-            raise NotImplementedError(
-                "Cannot process parameters for symbol of type '{}'".format(type(symbol))
-            )
+            # Backup option: return new copy of the object
+            try:
+                return pybamm.make_new_copy(symbol)
+            except NotImplementedError:
+                raise NotImplementedError(
+                    "Cannot process parameters for symbol of type '{}'".format(
+                        type(symbol)
+                    )
+                )
 
     def update_scalars(self, symbol):
         """Update the value of any Scalars in the expression tree.

@@ -142,8 +142,9 @@ def simplify_addition_subtraction(myclass, left, right):
     # simplify identical terms
     i = 0
     while i < len(numerator) - 1:
-        if isinstance(numerator[i], pybamm.Multiplication) and \
-                isinstance(numerator[i].children[0], pybamm.Scalar):
+        if isinstance(numerator[i], pybamm.Multiplication) and isinstance(
+            numerator[i].children[0], pybamm.Scalar
+        ):
             term_i = numerator[i].orphans[1]
             term_i_count = numerator[i].children[0].evaluate()
         else:
@@ -151,8 +152,9 @@ def simplify_addition_subtraction(myclass, left, right):
             term_i_count = 1
 
         # loop through rest of numerator counting up and deleting identical terms
-        for j, (term_j, typ_j) in \
-                enumerate(zip(numerator[i + 1:], numerator_types[i + 1:])):
+        for j, (term_j, typ_j) in enumerate(
+            zip(numerator[i + 1 :], numerator_types[i + 1 :])
+        ):
             if term_i.id == term_j.id:
                 if typ_j == pybamm.Addition:
                     term_i_count += 1
@@ -558,33 +560,16 @@ def simplify(symbol):
         return simplify_if_constant(new_symbol)
 
     elif isinstance(symbol, pybamm.Concatenation):
-        new_children = [child.simplify() for child in symbol.cached_children]
+        new_children = [simplify(child) for child in symbol.cached_children]
         new_symbol = symbol._concatenation_simplify(new_children)
 
         return simplify_if_constant(new_symbol)
 
-    # Other cases: return new variable to avoid tree internal corruption
-    elif isinstance(symbol, (pybamm.Parameter, pybamm.Variable)):
-        return symbol.__class__(symbol.name, symbol.domain)
-
-    elif isinstance(symbol, pybamm.StateVector):
-        return pybamm.StateVector(symbol.y_slice, symbol.name)
-
-    elif isinstance(symbol, pybamm.Scalar):
-        return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
-
-    elif isinstance(symbol, pybamm.Array):
-        return symbol.__class__(
-            symbol.entries, symbol.name, symbol.domain, symbol.entries_string
-        )
-
-    elif isinstance(symbol, pybamm.SpatialVariable):
-        return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
-
-    elif isinstance(symbol, pybamm.Time):
-        return pybamm.Time()
-
     else:
-        raise NotImplementedError(
-            "Cannot simplify symbol of type '{}'".format(type(symbol))
-        )
+        # Backup option: return new copy of the object
+        try:
+            return pybamm.make_new_copy(symbol)
+        except NotImplementedError:
+            raise NotImplementedError(
+                "Cannot simplify symbol of type '{}'".format(type(symbol))
+            )
