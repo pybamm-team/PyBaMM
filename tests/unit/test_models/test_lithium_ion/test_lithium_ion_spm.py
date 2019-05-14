@@ -30,8 +30,8 @@ class TestSPM(unittest.TestCase):
         parameter_values = model.default_parameter_values
         parameter_values.update({"Typical current [A]": -1})
         initial_conditions = {
-            "Initial concentration in negative electrode [mol.m-3]": 5000,
-            "Initial concentration in positive electrode [mol.m-3]": 48000,
+            "Initial concentration in negative electrode [mol.m-3]": 7495,
+            "Initial concentration in positive electrode [mol.m-3]": 44558.79,
         }
         parameter_values.update(initial_conditions)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
