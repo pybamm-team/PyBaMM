@@ -37,9 +37,9 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
 def get_mesh_for_testing(npts=None):
     param = pybamm.ParameterValues(
         base_parameters={
-            "Negative electrode width": 0.3,
-            "Separator width": 0.3,
-            "Positive electrode width": 0.3,
+            "Negative electrode width [m]": 0.3,
+            "Separator width [m]": 0.3,
+            "Positive electrode width [m]": 0.3,
         }
     )
 
@@ -72,9 +72,9 @@ def get_mesh_for_testing(npts=None):
 def get_p2d_mesh_for_testing(npts=None, mpts=None):
     param = pybamm.ParameterValues(
         base_parameters={
-            "Negative electrode width": 0.3,
-            "Separator width": 0.2,
-            "Positive electrode width": 0.3,
+            "Negative electrode width [m]": 0.3,
+            "Separator width [m]": 0.2,
+            "Positive electrode width [m]": 0.3,
         }
     )
 

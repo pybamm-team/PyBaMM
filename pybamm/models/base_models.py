@@ -5,6 +5,7 @@ import pybamm
 
 import numbers
 import os
+import warnings
 
 
 class BaseModel(object):
@@ -317,14 +318,23 @@ class BaseModel(object):
                     )
 
         # Standard Output Variables
+        missing_vars = []
         for output, expression in self._variables.items():
             if expression is None:
-                raise pybamm.ModelError(
-                    """The standard output variable '{}' which is
-                    required for testing has not been supplied.""".format(
-                        output
-                    )
-                )
+                missing_vars.append(output)
+        if len(missing_vars) > 0:
+            warnings.warn(
+                "the standard output variable(s) '{}' have not been supplied. "
+                "These may be required for testing or comparison with other "
+                "models.".format(
+                    missing_vars
+                ),
+                pybamm.ModelWarning,
+                stacklevel=2,
+            )
+            # Remove missing entries
+            for output in missing_vars:
+                del self._variables[output]
 
 
 class StandardBatteryBaseModel(BaseModel):
@@ -345,7 +355,7 @@ class StandardBatteryBaseModel(BaseModel):
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
             {
-                "Typical current": 1,
+                "Typical current [A]": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
@@ -413,11 +423,11 @@ class StandardBatteryBaseModel(BaseModel):
 
         self.variables.update(
             {
-                "Negative electrode current density [A m-2]": None,
-                "Positive electrode current density [A m-2]": None,
-                "Electrolyte current density [A m-2]": None,
-                "Interfacial current density [A m-2]": None,
-                "Exchange-current density [A m-2]": None,
+                "Negative electrode current density [A.m-2]": None,
+                "Positive electrode current density [A.m-2]": None,
+                "Electrolyte current density [A.m-2]": None,
+                "Interfacial current density [A.m-2]": None,
+                "Exchange-current density [A.m-2]": None,
             }
         )
         # Voltage
@@ -473,7 +483,7 @@ class StandardBatteryBaseModel(BaseModel):
         self.variables.update(
             {
                 "Electrolyte concentration": None,
-                "Electrolyte concentration [mols m-3]": None,
+                "Electrolyte concentration [mol.m-3]": None,
             }
         )
 
@@ -493,7 +503,7 @@ class StandardBatteryBaseModel(BaseModel):
         self.variables.update(
             {
                 "Total current density": icell,
-                "Total current density [A m-2]": icell_dim,
+                "Total current density [A.m-2]": icell_dim,
                 "Current [A]": I,
             }
         )
@@ -541,7 +551,7 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
         self.default_parameter_values = pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
-                "Typical current": 1,
+                "Typical current [A]": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
@@ -578,7 +588,7 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
                 "Time [s]": pybamm.t * time_scale,
                 "Time [min]": pybamm.t * time_scale / 60,
                 "Time [h]": pybamm.t * time_scale / 3600,
-                "Discharge capacity [Ah]": I * pybamm.t * time_scale / 3600,
+                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
             }
         )
 
@@ -604,7 +614,7 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
                 "Time [s]": pybamm.t * time_scale,
                 "Time [min]": pybamm.t * time_scale / 60,
                 "Time [h]": pybamm.t * time_scale / 3600,
-                "Discharge capacity [Ah]": I * pybamm.t * time_scale / 3600,
+                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
             }
         )
 
@@ -615,10 +625,10 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
                 "Positive particle concentration": None,
                 "Negative particle surface concentration": None,
                 "Positive particle surface concentration": None,
-                "Negative particle concentration [mols m-3]": None,
-                "Positive particle concentration [mols m-3]": None,
-                "Negative particle surface concentration [mols m-3]": None,
-                "Positive particle surface concentration [mols m-3]": None,
+                "Negative particle concentration [mol.m-3]": None,
+                "Positive particle concentration [mol.m-3]": None,
+                "Negative particle surface concentration [mol.m-3]": None,
+                "Positive particle surface concentration [mol.m-3]": None,
             }
         )
         var = pybamm.standard_spatial_vars

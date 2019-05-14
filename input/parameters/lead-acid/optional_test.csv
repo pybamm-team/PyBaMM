@@ -1,5 +1,5 @@
-Name,Value,Units,Meaning,Reference
+Name [units],Value,Meaning,Reference
 # Geometric parameters,,,,
-Negative electrode width,0.5,,,
-Separator width,0.5,,,
-Positive electrode width,0.5,,,
+Negative electrode width [m],0.5,,
+Separator width [m],0.5,,
+Positive electrode width [m],0.5,,

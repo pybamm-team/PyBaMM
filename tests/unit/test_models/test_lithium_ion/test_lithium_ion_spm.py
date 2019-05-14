@@ -28,14 +28,14 @@ class TestSPM(unittest.TestCase):
     def test_charge(self):
         model = pybamm.lithium_ion.SPM()
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Typical current": -1})
+        parameter_values.update({"Typical current [A]": -1})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
     def test_zero_current(self):
         model = pybamm.lithium_ion.SPM()
         parameter_values = model.default_parameter_values
-        parameter_values.update({"Typical current": 0})
+        parameter_values.update({"Typical current [A]": 0})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 

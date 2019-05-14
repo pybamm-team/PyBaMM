@@ -21,7 +21,7 @@ from scipy import constants
 # Physical constants
 R = pybamm.Scalar(constants.R)
 F = pybamm.Scalar(constants.physical_constants["Faraday constant"][0])
-T_ref = pybamm.Parameter("Reference temperature")
+T_ref = pybamm.Parameter("Reference temperature [K]")
 
 # Macroscale geometry
 L_n = pybamm.geometric_parameters.L_n
@@ -46,43 +46,43 @@ dimensional_current_density_with_time = (
 )
 
 # Electrolyte properties
-c_e_typ = pybamm.Parameter("Typical electrolyte concentration")
+c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 t_plus = pybamm.Parameter("Cation transference number")
-V_w = pybamm.Parameter("Partial molar volume of water")
-V_plus = pybamm.Parameter("Partial molar volume of cations")
-V_minus = pybamm.Parameter("Partial molar volume of anions")
+V_w = pybamm.Parameter("Partial molar volume of water [m3.mol-1]")
+V_plus = pybamm.Parameter("Partial molar volume of cations [m3.mol-1]")
+V_minus = pybamm.Parameter("Partial molar volume of anions [m3.mol-1]")
 V_e = V_minus + V_plus  # Partial molar volume of electrolyte [m3.mol-1]
 nu_plus = pybamm.Parameter("Cation stoichiometry")
 nu_minus = pybamm.Parameter("Anion stoichiometry")
 nu = nu_plus + nu_minus
 
 # Electrode properties
-sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity")
-sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity")
+sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 
 # Microstructure
-a_n_dim = pybamm.Parameter("Negative electrode surface area density")
-a_p_dim = pybamm.Parameter("Positive electrode surface area density")
+a_n_dim = pybamm.Parameter("Negative electrode surface area density [m-1]")
+a_p_dim = pybamm.Parameter("Positive electrode surface area density [m-1]")
 b = pybamm.Parameter("Bruggeman coefficient")
 
 # Electrochemical reactions
 m_n_dimensional = pybamm.Parameter(
-    "Negative electrode reference exchange-current density"
+    "Negative electrode reference exchange-current density [A.m-2]"
 )
 m_p_dimensional = pybamm.Parameter(
-    "Positive electrode reference exchange-current density"
+    "Positive electrode reference exchange-current density [A.m-2]"
 )
 s_plus_n = pybamm.Parameter("Negative electrode cation signed stoichiometry")
 s_plus_p = pybamm.Parameter("Positive electrode cation signed stoichiometry")
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
-C_dl_dimensional = pybamm.Parameter("Double-layer capacity")
+C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
 
 
 # Electrolyte properties
-M_w = pybamm.Parameter("Molar mass of water")
-M_p = pybamm.Parameter("Molar mass of cations")
-M_n = pybamm.Parameter("Molar mass of anions")
+M_w = pybamm.Parameter("Molar mass of water [kg.mol-1]")
+M_p = pybamm.Parameter("Molar mass of cations [kg.mol-1]")
+M_n = pybamm.Parameter("Molar mass of anions [kg.mol-1]")
 M_e = M_n + M_p  # Molar mass of electrolyte [kg.mol-1]
 
 DeltaVliq_n = (
@@ -93,12 +93,12 @@ DeltaVliq_p = (
 )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
 
 # Electrode properties
-V_Pb = pybamm.Parameter("Molar volume of lead")
-V_PbO2 = pybamm.Parameter("Molar volume of lead-dioxide")
-V_PbSO4 = pybamm.Parameter("Molar volume of lead sulfate")
+V_Pb = pybamm.Parameter("Molar volume of lead [m3.mol-1]")
+V_PbO2 = pybamm.Parameter("Molar volume of lead-dioxide [m3.mol-1]")
+V_PbSO4 = pybamm.Parameter("Molar volume of lead sulfate [m3.mol-1]")
 DeltaVsurf_n = V_Pb - V_PbSO4  # Net Molar Volume consumed in neg electrode [m3.mol-1]
 DeltaVsurf_p = V_PbSO4 - V_PbO2  # Net Molar Volume consumed in pos electrode [m3.mol-1]
-d = pybamm.Parameter("Pore size")
+d = pybamm.Parameter("Pore size [m]")
 eps_n_max = pybamm.Parameter("Maximum porosity of negative electrode")
 eps_s_max = pybamm.Parameter("Maximum porosity of separator")
 eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
@@ -278,9 +278,9 @@ q_max = (
 epsDelta_n = beta_surf_n / L_n * q_max
 epsDelta_p = beta_surf_p / L_p * q_max
 c_e_init = q_init
-eps_n_init = eps_n_max - epsDelta_n * (1 - q_init)  # Initial pororsity (neg) [-]
-eps_s_init = eps_s_max  # Initial pororsity (sep) [-]
-eps_p_init = eps_p_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos) [-]
+eps_n_init = eps_n_max - epsDelta_n * (1 - q_init)  # Initial pororsity (neg)
+eps_s_init = eps_s_max  # Initial pororsity (sep)
+eps_p_init = eps_p_max - epsDelta_p * (1 - q_init)  # Initial pororsity (pos)
 eps_init = pybamm.Concatenation(
     pybamm.Broadcast(eps_n_init, ["negative electrode"]),
     pybamm.Broadcast(eps_s_init, ["separator"]),
