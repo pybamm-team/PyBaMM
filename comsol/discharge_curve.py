@@ -12,8 +12,8 @@ geometry = model.default_geometry
 
 # load parameters and process model and geometry
 param = model.default_parameter_values
-param["Electrode depth"] = 1
-param["Electrode height"] = 1
+param["Electrode depth [m]"] = 1
+param["Electrode height [m]"] = 1
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -38,7 +38,7 @@ for key, C_rate in C_rates.items():
     comsol_voltage = comsol[1].values
 
     # update current density
-    param["Typical current"] = 24 * C_rate
+    param["Typical current [A]"] = 24 * C_rate
     param.update_model(model, disc)
 
     # solve model
@@ -54,10 +54,10 @@ for key, C_rate in C_rates.items():
 
     # convert to discharge capacity
     discharge_capacity = pybamm.ProcessedVariable(
-        model.variables["Discharge capacity [Ah]"], solver.t, solver.y, mesh=mesh
+        model.variables["Discharge capacity [A.h]"], solver.t, solver.y, mesh=mesh
     )
     discharge_capacity_sol = discharge_capacity(solver.t)
-    comsol_discharge_capacity = comsol_time * param["Typical current"] / 3600
+    comsol_discharge_capacity = comsol_time * param["Typical current [A]"] / 3600
 
     # plot discharge curves
     color = next(ax._get_lines.prop_cycler)["color"]

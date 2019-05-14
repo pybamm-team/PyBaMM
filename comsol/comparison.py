@@ -32,15 +32,15 @@ geometry = model.default_geometry
 
 # load parameters and process model and geometry
 param = model.default_parameter_values
-param["Electrode depth"] = 1
-param["Electrode height"] = 1
-param["Typical current"] = 24 * C_rate
+param["Electrode depth [m]"] = 1
+param["Electrode height [m]"] = 1
+param["Typical current [A]"] = 24 * C_rate
 param.process_model(model)
 param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 21, var.x_s: 15, var.x_p: 21, var.r_n: 11, var.r_p: 11}
+var_pts = {var.x_n: 11, var.x_s: 5, var.x_p: 11, var.r_n: 11, var.r_p: 11}
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
@@ -63,10 +63,10 @@ x = np.linspace(0, 1, 100)
 comsol_x_electrolyte = comsol_c_e_pts / comsol_c_e_pts[-1]
 
 discharge_capacity = pybamm.ProcessedVariable(
-    model.variables["Discharge capacity [Ah]"], solver.t, solver.y, mesh=mesh
+    model.variables["Discharge capacity [A.h]"], solver.t, solver.y, mesh=mesh
 )
 discharge_capacity_sol = discharge_capacity(solver.t)
-comsol_discharge_capacity = comsol_time * param["Typical current"] / 3600
+comsol_discharge_capacity = comsol_time * param["Typical current [A]"] / 3600
 
 voltage = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solver.t, solver.y, mesh=mesh
@@ -74,7 +74,7 @@ voltage = pybamm.ProcessedVariable(
 voltage_sol = voltage(solver.t)
 
 c_e = pybamm.ProcessedVariable(
-    model.variables["Electrolyte concentration [mols m-3]"],
+    model.variables["Electrolyte concentration [mol.m-3]"],
     solver.t,
     solver.y,
     mesh=mesh,
