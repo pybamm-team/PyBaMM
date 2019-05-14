@@ -186,6 +186,15 @@ class BaseModel(object):
     def jacobian(self, jacobian):
         self._jacobian = jacobian
 
+    @property
+    def use_capacitance(self):
+        return self._use_capacitance
+
+    @use_capacitance.setter
+    def use_capacitance(self, use_capacitance):
+        assert isinstance(use_capacitance, bool)
+        self._use_capacitance = use_capacitance
+
     def __getitem__(self, key):
         return self.rhs[key]
 
