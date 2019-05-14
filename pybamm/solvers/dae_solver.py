@@ -55,9 +55,13 @@ class DaeSolver(pybamm.BaseSolver):
         pybamm.logger.info("Start solving {}".format(model.name))
 
         # create simplified rhs algebraic and event expressions
-        concatenated_rhs = model.concatenated_rhs.simplify()
-        concatenated_algebraic = model.concatenated_algebraic.simplify()
-        events = [event.simplify() for event in model.events]
+        concatenated_rhs = model.concatenated_rhs
+        concatenated_algebraic = model.concatenated_algebraic
+        events = model.events
+        if model.use_simplify:
+            concatenated_rhs = concatenated_rhs.simplify()
+            concatenated_algebraic = concatenated_algebraic.simplify()
+            events = [event.simplify() for event in events]
 
         def residuals(t, y, ydot):
             pybamm.logger.debug("Solving {}, t={}".format(model.name, t))
@@ -90,8 +94,12 @@ class DaeSolver(pybamm.BaseSolver):
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))
-            jac_rhs = concatenated_rhs.jac(y).simplify()
-            jac_algebraic = concatenated_algebraic.jac(y).simplify()
+            jac_rhs = concatenated_rhs.jac(y)
+            jac_algebraic = concatenated_algebraic.jac(y)
+            if model.use_simplify:
+                jac_rhs = jac_rhs.simplify()
+                jac_algebraic = jac_algebraic.simplify()
+
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
 
             def jacobian(t, y):

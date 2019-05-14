@@ -156,20 +156,21 @@ Next, add some simple (and speedy!) tests of your main features. If these run wi
 
 ### Running more tests
 
-If you want to check your tests on Python 2 and 3, type
+The tests are divided into `unit` tests, whose aim is to check individual bits of code (e.g. discretising a gradient operator, or solving a simple ODE), and `integration` tests, which check how parts of the program interact as a whole (e.g. solving a full model).
+If you want to check integration tests as well as unit tests, type
 
 ```bash
-python run-tests.py --unit2 --unit3
+python run-tests.py --unit --folder all
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
 
 ### Testing notebooks
 
-To test all example notebooks, type
+To test all example scripts and notebooks, type
 
 ```bash
-python run-tests.py --books
+python run-tests.py --examples
 ```
 
 If notebooks fail because of changes to pybamm, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
@@ -178,6 +179,84 @@ If notebooks fail because of changes to pybamm, it can be a bit of a hassle to d
 python run-tests.py --debook examples/notebooks/notebook-name.ipynb script.py
 ```
 
+### Debugging
+
+Often, the code you write won't pass the tests straight away, at which stage it will become necessary to debug.
+The key to successful debugging is to isolate the problem by finding the smallest possible example that causes the bug.
+In practice, there are a few tricks to help you to do this, which we give below.
+Once you've isolated the issue, it's a good idea to add a unit test that replicates this issue, so that you can easily check whether it's been fixed, and make sure that it's easily picked up if it crops up again.
+This also means that, if you can't fix the bug yourself, it will be much easier to ask for help (by opening a [bug-report issue](https://github.com/pybamm-team/PyBaMM/issues/new?template=bug_report.md)).
+
+1. Run individual test scripts instead of the whole test suite:
+```bash
+python tests/unit/path/to/test
+```
+You can also run an individual test from a particular script, e.g.
+```bash
+python tests/unit/test_quick_plot.py TestQuickPlot.test_failure
+```
+If you want to run several, but not all, the tests from a script, you can restrict which tests are run from a particular script by using the skipping decorator:
+```python
+@unittest.skip("")
+def test_bit_of_code(self):
+    ...
+```
+or by just commenting out all the tests you don't want to run
+2. Set break points, either in your IDE or using the python debugging module. To use the latter, add the following line where you want to set the break point
+```python
+import ipdb; ipdb.set_trace()
+```
+This will start the [Python interactive debugger](https://gist.github.com/mono0926/6326015). If you want to be able to use magic commands from `ipython`, such as `%timeit`, then set
+```python
+from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+```
+at the break point instead.
+Figuring out where to start the debugger is the real challenge. Some good ways to set debugging break points are:
+  a. Try-except blocks. Suppose the line `do_something_complicated()` is raising a `ValueError`. Then you can put a try-except block around that line as:
+  ```python
+  try:
+      do_something_complicated()
+  except ValueError:
+      import ipdb; ipdb.set_trace()
+  ```
+  This will start the debugger at the point where the `ValueError` was raised, and allow you to investigate further. Sometimes, it is more informative to put the try-except block further up the call stack than exactly where the error is raised.
+  b. Warnings. If functions are raising warnings instead of errors, it can be hard to pinpoint where this is coming from. Here, you can use the `warnings` module to convert warnings to errors:
+  ```python
+  import warnings
+  warnings.simplefilter("error")
+  ```
+  Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
+  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+  ```python
+  expression_tree.render()
+  ```
+  You can then step through the expression tree, using the `children` attribute, to pinpoint exactly where a bug is coming from. For example, if `expression_tree.jac(y)` is failing, you can check `expression_tree.children[0].jac(y)`, then `expression_tree.children[0].children[0].jac(y)`, etc.
+3. To isolate whether a bug is in a model, its jacobian or its simplified version, you can set the `use_jacobian` and/or `use_simplify` attributes of the model to `False` (they are both `True` by default for most models).
+4. If a model isn't giving the answer you expect, you can try comparing it to other models. For example, you can investigate parameter limits in which two models should give the same answer by setting some parameters to be small or zero. The `StandardOutputComparison` class can be used to compare some standard outputs from battery models.
+
+### Profiling
+
+Sometimes, a bit of code will take much longer than you expect to run. In this case, you can set
+```python
+from IPython import embed; embed(); import ipdb; ipdb.set_trace()
+```
+as above, and then use some of the profiling tools. In order of increasing detail:
+1. Simple timer. In ipython, the command
+```
+%time command_to_time()
+```
+tells you how long the line `command_to_time()` takes. You can use `%timeit` instead to run the command several times and obtain more accurate timings.
+2. Simple profiler. Using `%prun` instead of `%time` will give a brief profiling report
+3. Detailed profiler. You can install the detailed profiler `snakeviz` through pip:
+```bash
+pip install snakeviz
+```
+and then, in ipython, run
+```
+%load_ext snakeviz
+%snakeviz command_to_time()
+```
+This will open a window in your browser with detailed profiling information.
 
 ## Documentation
 
@@ -237,7 +316,8 @@ Configuration files:
 .travis.yaml
 ```
 
-Unit tests and flake8 testing is done for every commit. A nightly cronjob also tests the notebooks. Notebooks listed in `.slow-books` are excluded from these tests.
+For every commit, Travis runs unit tests, integration tests, doc tests, flake8 and notebook tests.
+<!-- Unit tests and flake8 testing is done for every commit. A nightly cronjob also tests the notebooks. Notebooks listed in `.slow-books` are excluded from these tests. -->
 
 <!-- ### Appveyor
 
