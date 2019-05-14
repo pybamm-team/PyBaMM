@@ -324,10 +324,9 @@ class BaseModel(object):
                 missing_vars.append(output)
         if len(missing_vars) > 0:
             warnings.warn(
-                """
-                The standard output variable(s) '{}' have not been supplied.
-                These may be required for testing or comparison with other models.
-                """.format(
+                "the standard output variable(s) '{}' have not been supplied. "
+                "These may be required for testing or comparison with other "
+                "models.".format(
                     missing_vars
                 ),
                 pybamm.ModelWarning,
