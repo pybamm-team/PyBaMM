@@ -51,4 +51,9 @@ class Broadcast(pybamm.SpatialOperator):
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
-        return self.__class__(child, self.domain)
+        return Broadcast(child, self.domain)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+
+        return Broadcast(child, self.domain)

@@ -280,8 +280,8 @@ class TestSymbol(unittest.TestCase):
         self.assertFalse(algebraic_eqn.has_divergence())
 
     def test_orphans(self):
-        a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
         sum = a + b
 
         a_orp, b_orp = sum.orphans
