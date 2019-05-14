@@ -153,12 +153,13 @@ every model and submodel.
 
 Unit tests for a MyNewModel
 ---------------------------
-We stongly recommend testing your model to ensure that it is behaving correctly. To do this, first create a new file ``test_my_new_model.py`` within ``tests/unit/test_models`` (or the appropriate subdirectory). Within this file, add the following code
+We strongly recommend testing your model to ensure that it is behaving correctly. To do
+this, first create a new file ``test_my_new_model.py`` within
+``tests/integration/test_models`` (or the appropriate subdirectory). Within this file,
+add the following code
 
 .. code-block:: python 
 
-    from __future__ import absolute_import, division
-    from __future__ import print_function, unicode_literals
     import pybamm
     import unittest
 
@@ -177,6 +178,4 @@ We stongly recommend testing your model to ensure that it is behaving correctly.
 We can now add functions such as :meth:`my_first_test` to :class:`TestMyNewModel` which run specific tests. As a first test, we recommend you make use of :class:`tests.StandardModelTest` which runs a suite of basic tests. If your new model is a full model of a battery and therefore inherits from :class:`pybamm.StandardBatteryBaseModel` then :class:`tests.StandardBatteryTest` will also check the set of outputs are producing reasonable behaviour. 
 
 Please see the tests of the inbuilt models to get a further idea of how to test the your model.
-
-
 
