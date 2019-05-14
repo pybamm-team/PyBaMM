@@ -21,3 +21,11 @@ class SolverError(Exception):
     """
 
     pass
+
+
+class ModelWarning(UserWarning):
+    """
+    Model warning: the model does not contain all of the standard output variables
+    """
+
+    pass

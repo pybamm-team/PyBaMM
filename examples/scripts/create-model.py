@@ -4,7 +4,6 @@
 
 import pybamm
 import numpy as np
-import autograd.numpy as auto_np
 import matplotlib.pyplot as plt
 
 # 1. Initialise model ------------------------------------------------------------------
@@ -32,20 +31,23 @@ def D(cc):
     return D_dim(c_dim) / D_dim(c_inf_dim)
 
 
-# Define variables
+# variables
 c = pybamm.Variable("Solvent concentration", domain="SEI layer")
 L = pybamm.Variable("SEI thickness")
 
 # 3. State governing equations ---------------------------------------------------------
-R = -k * pybamm.BoundaryValue(c, "left")  # SEI reaction flux
+R = k * pybamm.BoundaryValue(c, "left")  # SEI reaction flux
 N = -(1 / L) * D(c) * pybamm.grad(c)  # solvent flux
 dcdt = -(1 / L) * pybamm.div(N)  # solvent concentration governing equation
-dLdt = -V_hat * R  # SEI thickness governing equation
+dLdt = V_hat * R  # SEI thickness governing equation
 
 model.rhs = {c: dcdt, L: dLdt}  # add to model
 
 # 4. State boundary conditions ---------------------------------------------------------
-grad_c_left = L * R / D(pybamm.BoundaryValue(c, "left"))  # left bc
+D_left = pybamm.BoundaryValue(
+    D(c), "left"
+)  # pybamm requires BoundaryValue(D(c)) and not D(BoundaryValue(c))
+grad_c_left = L * R / D_left  # left bc
 c_right = pybamm.Scalar(1)  # right bc
 
 # add to model
@@ -78,13 +80,13 @@ geometry = {
 
 # diffusivity function
 def Diffusivity(cc):
-    return 10 ** (-12) * auto_np.exp(-cc)
+    return cc * 10 ** (-5)
 
 
 # parameter values
 param = pybamm.ParameterValues(
     {
-        "Reaction rate constant": 10,
+        "Reaction rate constant": 1e1,
         "Initial thickness": 2,
         "Partial molar volume": 10,
         "Bulk electrolyte solvent concentration": 1,
@@ -111,10 +113,12 @@ t = np.linspace(0, 1, 100)
 solver.solve(model, t)
 
 # Extract output variables
-L_dim_out = pybamm.ProcessedVariable(
+L_out = pybamm.ProcessedVariable(
     model.variables["SEI thickness"], solver.t, solver.y, mesh
 )
 
 # plot
-plt.plot(solver.t, L_dim_out(solver.t))
+plt.plot(solver.t, L_out(solver.t))
+plt.xlabel("Time")
+plt.ylabel("SEI thickness")
 plt.show()
