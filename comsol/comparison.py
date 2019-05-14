@@ -10,18 +10,30 @@ import numpy as np
 # C_rate
 C_rate = 1
 
-# load the comsol data
+# time-voltage
 comsol = pd.read_csv("comsol/Voltage_C{}.csv".format(C_rate), sep=",", header=None)
 comsol_time = comsol[0].values
-comsol_tpts = len(comsol_time)
+comsol_time_npts = len(comsol_time)
 comsol_voltage = comsol[1].values
-comsol = pd.read_csv("comsol/c_e_C{}.csv".format(C_rate), sep=",", header=None)
 
-comsol_c_e_npts = int(len(comsol[0].values) / comsol_tpts)
-comsol_c_e_pts = comsol[0].values[0:comsol_c_e_npts]
+# electrolyte concentration
+comsol = pd.read_csv("comsol/c_e_C{}.csv".format(C_rate), sep=",", header=None)
+comsol_x_npts = int(len(comsol[0].values) / comsol_time_npts)
+comsol_x = comsol[0].values[0:comsol_x_npts]
 comsol_c_e_vals = np.reshape(
-    comsol[1].values, (comsol_c_e_npts, comsol_tpts), order="F"
+    comsol[1].values, (comsol_x_npts, comsol_time_npts), order="F"
 )
+
+# electrolyte potential
+comsol = pd.read_csv("comsol/phi_e_C{}.csv".format(C_rate), sep=",", header=None)
+comsol_phi_e_vals = np.reshape(
+    comsol[1].values, (comsol_x_npts, comsol_time_npts), order="F"
+)
+
+# negative electrode potential
+
+# positive electrode potential
+
 
 "-----------------------------------------------------------------------------"
 "Create and solve pybamm model"
@@ -40,7 +52,8 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 11, var.x_s: 5, var.x_p: 11, var.r_n: 11, var.r_p: 11}
+# Same number of points as default lionsimba
+var_pts = {var.x_n: 31, var.x_s: 31, var.x_p: 31, var.r_n: 11, var.r_p: 11}
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
@@ -55,24 +68,33 @@ solver.solve(model, t)
 "-----------------------------------------------------------------------------"
 "Get variables for comparison"
 
-tau = pybamm.standard_parameters_lithium_ion.tau_discharge
-tau_eval = param.process_symbol(tau).evaluate(0, 0)
-time = comsol_time / tau_eval
+# discharge timescale
+tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge).evaluate(0, 0)
+time = comsol_time / tau
 
-x = np.linspace(0, 1, 100)
-comsol_x_electrolyte = comsol_c_e_pts / comsol_c_e_pts[-1]
-
+# discharge capacity
 discharge_capacity = pybamm.ProcessedVariable(
     model.variables["Discharge capacity [A.h]"], solver.t, solver.y, mesh=mesh
 )
 discharge_capacity_sol = discharge_capacity(solver.t)
 comsol_discharge_capacity = comsol_time * param["Typical current [A]"] / 3600
 
+# spatial points
+l_n = param.process_symbol(pybamm.geometric_parameters.l_n).evaluate(0, 0)
+l_s = param.process_symbol(pybamm.geometric_parameters.l_s).evaluate(0, 0)
+l_p = param.process_symbol(pybamm.geometric_parameters.l_p).evaluate(0, 0)
+x_n = np.linspace(0, l_n, 40)
+x_s = np.linspace(l_n, l_n + l_s, 20)
+x_p = np.linspace(l_n + l_s, 1, 40)
+x = np.linspace(0, 1, 100)
+
+# voltage
 voltage = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solver.t, solver.y, mesh=mesh
 )
 voltage_sol = voltage(solver.t)
 
+# electrolyte concentration
 c_e = pybamm.ProcessedVariable(
     model.variables["Electrolyte concentration [mol.m-3]"],
     solver.t,
@@ -104,7 +126,7 @@ plt.legend(loc="best")
 # electrolyte concentration
 plt.subplot(122)
 c_e_plot, = plt.plot(x, c_e(time[0], x), "b-")
-comsol_c_e_plot, = plt.plot(comsol_x_electrolyte, comsol_c_e_vals[:, 0], "r:")
+comsol_c_e_plot, = plt.plot(comsol_x / comsol_x[-1], comsol_c_e_vals[:, 0], "r:")
 plt.axis([0, 1, 700, 1300])
 plt.xlabel(r"$x$")
 plt.ylabel(r"$c_e$ (mol/m$^3$)")
