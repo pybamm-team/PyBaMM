@@ -44,7 +44,7 @@ matrix:
                 - python3.5-dev
           env:
             - PYBAMM_UNIT=true
-            - PYBAMM_BOOKS=true
+            - PYBAMM_EXAMPLES=true
           if: type != cron
         - python: "3.6"
           addons:
@@ -60,7 +60,7 @@ matrix:
                 - python3.6-dev
           env:
             - PYBAMM_UNIT=true
-            - PYBAMM_BOOKS=true
+            - PYBAMM_EXAMPLES=true
         - python: "3.6"
           addons:
             apt:
@@ -146,7 +146,7 @@ matrix:
                 - graphviz
                 - python3.6-dev
           env:
-            - PYBAMM_BOOKS=true
+            - PYBAMM_EXAMPLES=true
           if: type == cron
 
 # Install dependencies
@@ -157,7 +157,7 @@ install:
   - pip install pip==18
   - pip install .
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -e .[docs]; fi;
-  - if [[ $PYBAMM_STYLE == true || $PYBAMM_BOOKS ]]; then pip install -e .[dev]; fi;
+  - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
   - source scripts/install_scikits_odes.sh
 
@@ -173,7 +173,7 @@ script:
   - if [[ $PYBAMM_DOCS == true ]]; then python run-tests.py --doctest; fi;
   - if [[ $PYBAMM_STYLE == true ]]; then python -m flake8; fi;
   - if [[ $PYBAMM_COVER == true ]]; then coverage run run-tests.py --nosub; fi;
-  - if [[ $PYBAMM_BOOKS == true ]]; then travis_wait 120 python run-tests.py --books; fi;
+  - if [[ $PYBAMM_EXAMPLES == true ]]; then travis_wait 120 python run-tests.py --examples; fi;
 
 after_success:
   - if [[ $PYBAMM_COVER == true ]]; then codecov; fi;
