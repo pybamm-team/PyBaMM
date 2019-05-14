@@ -29,13 +29,14 @@ class OdeSolver(pybamm.BaseSolver):
             The times at which to compute the solution
 
         """
-        pybamm.logger.info("Solving {} ...".format(model.name))
+        pybamm.logger.info("Start solving {}".format(model.name))
 
         # create simplified rhs and event expressions
         concatenated_rhs = model.concatenated_rhs.simplify()
         events = [event.simplify() for event in model.events]
 
         def dydt(t, y):
+            pybamm.logger.debug("Solving {}, t={}".format(model.name, t))
             return concatenated_rhs.evaluate(t, y, known_evals={})[0]
 
         # Create event-dependent function to evaluate events
@@ -69,7 +70,7 @@ class OdeSolver(pybamm.BaseSolver):
             jacobian=jacobian,
         )
 
-        pybamm.logger.info("Finished solving {}".format(model.name))
+        pybamm.logger.info("Finish solving {}".format(model.name))
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None

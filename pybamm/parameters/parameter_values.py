@@ -74,7 +74,7 @@ class ParameterValues(dict):
             model (update the value of any Scalars in the expression tree.)
 
         """
-        pybamm.logger.info("Setting parameters for {} ...".format(model.name))
+        pybamm.logger.info("Start setting parameters for {}".format(model.name))
 
         if processing == "process":
             processing_function = self.process_symbol
@@ -107,7 +107,7 @@ class ParameterValues(dict):
         for idx, equation in enumerate(model.events):
             model.events[idx] = processing_function(equation)
 
-        pybamm.logger.info("Finished setting parameters for {} ...".format(model.name))
+        pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
     def update_model(self, model, disc):
         """Process a discretised model.
@@ -164,6 +164,8 @@ class ParameterValues(dict):
             Symbol with Parameter instances replaced by Value
 
         """
+        pybamm.logger.debug("Set parameters for {!s}".format(symbol))
+
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
             # Scalar inherits name (for updating parameters) and domain (for Broadcast)
