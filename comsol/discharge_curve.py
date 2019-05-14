@@ -53,7 +53,9 @@ for key, C_rate in C_rates.items():
     voltage_sol = voltage(solver.t)
 
     # convert to discharge capacity
-    discharge_capacity = pybamm.ProcessedVariable(model.variables["Discharge capacity [Ah]"], solver.t, solver.y, mesh=mesh)
+    discharge_capacity = pybamm.ProcessedVariable(
+        model.variables["Discharge capacity [Ah]"], solver.t, solver.y, mesh=mesh
+    )
     discharge_capacity_sol = discharge_capacity(solver.t)
     comsol_discharge_capacity = comsol_time * param["Typical current"] / 3600
 

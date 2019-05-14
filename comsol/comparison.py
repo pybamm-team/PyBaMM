@@ -1,6 +1,7 @@
 import pybamm
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
 import numpy as np
 
 "-----------------------------------------------------------------------------"
@@ -39,7 +40,7 @@ param.process_geometry(geometry)
 
 # create mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 11, var.x_s: 5, var.x_p: 11, var.r_n: 11, var.r_p: 11}
+var_pts = {var.x_n: 21, var.x_s: 15, var.x_p: 21, var.r_n: 11, var.r_p: 11}
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
@@ -58,11 +59,8 @@ tau = pybamm.standard_parameters_lithium_ion.tau_discharge
 tau_eval = param.process_symbol(tau).evaluate(0, 0)
 time = comsol_time / tau_eval
 
-x_electrolyte = comsol_c_e_pts / (
-    param["Negative electrode width"]
-    + param["Separator width"]
-    + param["Positive electrode width"]
-)
+x = np.linspace(0, 1, 100)
+comsol_x_electrolyte = comsol_c_e_pts / comsol_c_e_pts[-1]
 
 discharge_capacity = pybamm.ProcessedVariable(
     model.variables["Discharge capacity [Ah]"], solver.t, solver.y, mesh=mesh
@@ -85,27 +83,48 @@ c_e = pybamm.ProcessedVariable(
 "-----------------------------------------------------------------------------"
 "Make plots"
 
+fig, ax = plt.subplots(figsize=(15, 8))
+plt.tight_layout()
+plt.subplots_adjust(left=-0.1)
+
 # discharge curve
+v_min = 3.2
+v_max = 3.9
+plt.subplot(121)
+time_tracer, = plt.plot(
+    [comsol_discharge_capacity[0], comsol_discharge_capacity[0]], [v_min, v_max], "k--"
+)
 plt.plot(comsol_discharge_capacity, comsol_voltage, "r:", label="Comsol")
 plt.plot(discharge_capacity_sol, voltage_sol, "b-", label="PyBaMM")
-plt.xlim([0, 26])
-plt.ylim([3.2, 3.9])
-plt.legend(loc="best")
+plt.axis([0, 26, v_min, v_max])
 plt.xlabel("Discharge Capacity (Ah)")
 plt.ylabel("Voltage (V)")
-plt.tight_layout()
-plt.show()
-
+plt.legend(loc="best")
 
 # electrolyte concentration
-def plot_electrolyte_concentrations(ind):
-    plt.figure(figsize=(15, 8))
-    plt.plot(x_electrolyte, c_e(time[ind], x_electrolyte), "b-")
-    plt.plot(x_electrolyte, comsol_c_e_vals[:, ind], "r:")
-    plt.xlabel(r"$x$")
-    plt.ylabel(r"$c_e$ (mol/m$^3$)")
-    plt.show()
+plt.subplot(122)
+c_e_plot, = plt.plot(x, c_e(time[0], x), "b-")
+comsol_c_e_plot, = plt.plot(comsol_x_electrolyte, comsol_c_e_vals[:, 0], "r:")
+plt.axis([0, 1, 700, 1300])
+plt.xlabel(r"$x$")
+plt.ylabel(r"$c_e$ (mol/m$^3$)")
+
+axcolor = "lightgoldenrodyellow"
+axfreq = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
+sfreq = Slider(axfreq, "Time", 0, comsol_time[-1], valinit=0)
 
 
-for ind in range(comsol_tpts):
-    plot_electrolyte_concentrations(ind)
+def update_plot(t):
+    # find t index
+    ind = (np.abs(comsol_time - t)).argmin()
+    # update time
+    time_tracer.set_xdata(comsol_discharge_capacity[ind])
+    # update electrolyte concentration
+    c_e_plot.set_ydata(c_e(time[ind], x))
+    comsol_c_e_plot.set_ydata(comsol_c_e_vals[:, ind])
+    fig.canvas.draw_idle()
+
+
+sfreq.on_changed(update_plot)
+plt.subplots_adjust(top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5)
+plt.show()
