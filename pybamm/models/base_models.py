@@ -40,6 +40,9 @@ class BaseModel(object):
     """
 
     def __init__(self):
+        # Default name
+        self.name = "Unnamed Model"
+
         # Initialise empty model
         self._rhs = {}
         self._algebraic = {}
@@ -326,9 +329,7 @@ class BaseModel(object):
             warnings.warn(
                 "the standard output variable(s) '{}' have not been supplied. "
                 "These may be required for testing or comparison with other "
-                "models.".format(
-                    missing_vars
-                ),
+                "models.".format(missing_vars),
                 pybamm.ModelWarning,
                 stacklevel=2,
             )

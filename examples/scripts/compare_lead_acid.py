@@ -1,5 +1,7 @@
-import pybamm
 import numpy as np
+import pybamm
+
+pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [

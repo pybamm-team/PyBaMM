@@ -52,6 +52,7 @@ class DaeSolver(pybamm.BaseSolver):
             The times at which to compute the solution
 
         """
+        pybamm.logger.info("Solving {} ...".format(model.name))
 
         # create simplified rhs algebraic and event expressions
         concatenated_rhs = model.concatenated_rhs.simplify()
@@ -106,6 +107,8 @@ class DaeSolver(pybamm.BaseSolver):
             mass_matrix=model.mass_matrix.entries,
             jacobian=jacobian,
         )
+
+        pybamm.logger.info("Finished solving {}".format(model.name))
 
     def calculate_consistent_initial_conditions(self, rhs, algebraic, y0_guess):
         """
