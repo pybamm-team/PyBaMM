@@ -67,11 +67,12 @@ class Standard(pybamm.SubModel):
             raise pybamm.ModelError("Domain not valid for the particle equations")
 
         c_surf = self.variables[capitalised_domain + " surface concentration"]
+        tol = 0.1
         self.events = [
-            pybamm.Function(np.min, c),
-            1 - pybamm.Function(np.max, c),
-            pybamm.Function(np.min, c_surf),
-            1 - pybamm.Function(np.max, c_surf),
+            pybamm.Function(np.min, c) - tol,
+            (1 - tol) - pybamm.Function(np.max, c),
+            pybamm.Function(np.min, c_surf) - tol,
+            (1 - tol) - pybamm.Function(np.max, c_surf),
         ]
 
     def get_variables(self, c, N, broadcast):

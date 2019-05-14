@@ -29,6 +29,11 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         parameter_values = model.default_parameter_values
         parameter_values.update({"Typical current [A]": -1})
+        initial_conditions = {
+            "Initial concentration in negative electrode [mol.m-3]": 5000,
+            "Initial concentration in positive electrode [mol.m-3]": 48000,
+        }
+        parameter_values.update(initial_conditions)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
