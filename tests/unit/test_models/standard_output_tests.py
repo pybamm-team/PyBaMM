@@ -38,7 +38,7 @@ class StandardOutputTests(object):
         )
         tests.test_all()
 
-    def test_all(self):
+    def test_all(self, skip_first_timestep=False):
         self.run_test_class(VoltageTests)
         self.run_test_class(ElectrolyteConcentrationTests)
         self.run_test_class(PotentialTests)
@@ -484,6 +484,9 @@ class CurrentTests(BaseOutputTest):
         np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[0]), 0, decimal=4)
 
     def test_all(self):
-        self.test_interfacial_current_average()
         self.test_conservation()
         self.test_current_density_boundaries()
+        # Skip average current test if capacitance is used, since average interfacial
+        # current density will be affected slightly by capacitance effects
+        if not self.model.use_capacitance:
+            self.test_interfacial_current_average()

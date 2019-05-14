@@ -8,9 +8,8 @@ import numpy as np
 class StandardOutputComparison(object):
     "Calls all the tests comparing standard output variables."
 
-    def __init__(self, models, parameter_values, discs, solvers):
+    def __init__(self, models, discs, solvers):
         self.models = models
-        self.parameter_values = parameter_values
         self.discs = discs
         self.solvers = solvers
 

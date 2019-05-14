@@ -55,6 +55,9 @@ class BaseModel(object):
         # Default behaviour is to use the jacobian
         self.use_jacobian = True
 
+        # Default behaviour: no capacitance in the model
+        self.use_capacitance = False
+
     def _set_dict(self, dict, name):
         """
         Convert any scalar equations in dict to 'pybamm.Scalar'
@@ -326,9 +329,7 @@ class BaseModel(object):
             warnings.warn(
                 "the standard output variable(s) '{}' have not been supplied. "
                 "These may be required for testing or comparison with other "
-                "models.".format(
-                    missing_vars
-                ),
+                "models.".format(missing_vars),
                 pybamm.ModelWarning,
                 stacklevel=2,
             )
