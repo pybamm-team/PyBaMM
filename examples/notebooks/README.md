@@ -15,10 +15,10 @@ from your local PyBaMM repository, or used online through [Binder](https://mybin
 
 The easiest way to start with PyBaMM is by running and comparing some of the inbuilt models:
 - [Run the Single Particle Model (SPM)](./models/SPM.ipynb)
-- [Compare models](./compare-models.ipynb)
+- [Compare models](./models/lead-acid.ipynb)
 
 It is also easy to new models or change the setting that are used:
-- [Add a model](./add-model.ipynb)
+- [Add a model](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)
 - [Change the settings](./change-settings.ipynb) (parameters, spatial method or solver)
 
 For more advanced usage, new sets of parameters, spatial methods and solvers can be added:
@@ -28,12 +28,13 @@ For more advanced usage, new sets of parameters, spatial methods and solvers can
 
 ## Expression tree structure
 
-PyBaMM is built around an expression tree structure. [This](expression-tree.ipynb)
-notebook explains how this works, from model creation to solution.
+PyBaMM is built around an expression tree structure.
+[This](expression_tree/expression-tree.ipynb) notebook explains how this works, from
+model creation to solution.
 
 ### Models
 
-The following models are implemented and can easily be used or [compared](./compare-models.ipynb). We always welcome [new models](./add-model.ipynb)!
+The following models are implemented and can easily be used or [compared](./models/lead-acid.ipynb). We always welcome [new models](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)!
 
 #### Lithium-ion models
 
@@ -43,10 +44,9 @@ The following models are implemented and can easily be used or [compared](./comp
 
 #### Lead-acid models
 
-- [Full porous-electrode](./models/lead-acid-full.ipynb)
-- [Leading-Order Quasi-Static](./models/lead-acid-LOQS.ipynb)
-- [First-Order Quasi-Static](./models/lead-acid-FOQS.ipynb)
-- [Composite](./models/lead-acid-composite.ipynb)
+- [Full porous-electrode](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/newman_tiedemann.html)
+- [Leading-Order Quasi-Static](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/loqs.html)
+- [Composite](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/composite.html)
 
 ### Spatial Methods
 

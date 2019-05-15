@@ -21,7 +21,7 @@ from scipy import constants
 # Physical constants
 R = pybamm.Scalar(constants.R)
 F = pybamm.Scalar(constants.physical_constants["Faraday constant"][0])
-T_ref = pybamm.Parameter("Reference temperature")
+T_ref = pybamm.Parameter("Reference temperature [K]")
 
 # Macroscale geometry
 L_n = pybamm.geometric_parameters.L_n
@@ -46,13 +46,13 @@ dimensional_current_density_with_time = (
 )
 
 # Electrolyte properties
-c_e_typ = pybamm.Parameter("Typical electrolyte concentration")
+c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 
 # Electrode properties
-c_n_max = pybamm.Parameter("Maximum concentration in negative electrode")
-c_p_max = pybamm.Parameter("Maximum concentration in positive electrode")
-sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity")
-sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity")
+c_n_max = pybamm.Parameter("Maximum concentration in negative electrode [mol.m-3]")
+c_p_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
+sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 
 # Microscale geometry
 a_n_dim = pybamm.geometric_parameters.a_n_dim
@@ -63,20 +63,26 @@ b = pybamm.geometric_parameters.b
 
 # Electrochemical reactions
 m_n_dimensional = pybamm.Parameter(
-    "Negative electrode reference exchange-current density"
+    "Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
 )
 m_p_dimensional = pybamm.Parameter(
-    "Positive electrode reference exchange-current density"
+    "Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
 )
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
-C_dl_dimensional = pybamm.Parameter("Double-layer capacity")
+C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
 
 
 # Initial conditions
-c_e_init_dimensional = pybamm.Parameter("Initial concentration in electrolyte")
-c_n_init_dimensional = pybamm.Parameter("Initial concentration in negative electrode")
-c_p_init_dimensional = pybamm.Parameter("Initial concentration in positive electrode")
+c_e_init_dimensional = pybamm.Parameter(
+    "Initial concentration in electrolyte [mol.m-3]"
+)
+c_n_init_dimensional = pybamm.Parameter(
+    "Initial concentration in negative electrode [mol.m-3]"
+)
+c_p_init_dimensional = pybamm.Parameter(
+    "Initial concentration in positive electrode [mol.m-3]"
+)
 
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"

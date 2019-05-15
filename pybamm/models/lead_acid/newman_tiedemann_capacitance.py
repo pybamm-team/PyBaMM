@@ -26,6 +26,7 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
 
     def __init__(self, use_capacitance=True):
         super().__init__()
+        self.use_capacitance = use_capacitance
 
         "-----------------------------------------------------------------------------"
         "Parameters"

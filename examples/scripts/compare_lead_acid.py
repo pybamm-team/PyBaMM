@@ -13,7 +13,7 @@ geometry = models[-1].default_geometry
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current": 10})
+param.update({"Typical current [A]": 20})
 for model in models:
     param.process_model(model)
 param.process_geometry(geometry)
@@ -38,14 +38,12 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    "Interfacial current density [A m-2]",
-    "Electrolyte concentration [mols m-3]",
+    "Interfacial current density [A.m-2]",
+    "Electrolyte concentration [mol.m-3]",
     "Current [A]",
     "Porosity",
     "Electrolyte potential [V]",
     "Terminal voltage [V]",
-    "Negative reaction overpotential [V]",
-    "Positive reaction overpotential [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solvers, output_variables)
 plot.dynamic_plot()

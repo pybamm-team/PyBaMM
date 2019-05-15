@@ -291,9 +291,9 @@ class Ohm(pybamm.SubModel):
             "Negative electrode potential [V]": phi_s_n_dim,
             "Positive electrode potential [V]": phi_s_p_dim,
             "Electrode potential [V]": phi_s_dim,
-            "Negative electrode current density [A m-2]": i_s_n_dim,
-            "Positive electrode current density [A m-2]": i_s_p_dim,
-            "Electrode current density [A m-2]": i_s_dim,
+            "Negative electrode current density [A.m-2]": i_s_n_dim,
+            "Positive electrode current density [A.m-2]": i_s_p_dim,
+            "Electrode current density [A.m-2]": i_s_dim,
             "Average solid phase ohmic losses [V]": delta_phi_s_av_dim,
             "Terminal voltage [V]": v_dim,
         }

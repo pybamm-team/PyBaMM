@@ -54,10 +54,14 @@ class QuickPlot(object):
         else:
             raise ValueError("must provide the same number of models and solutions")
 
-        # Scales
+        # Scales (default to 1 if information not in model)
         vars = models[0].variables
-        self.x_scale = (vars["x [m]"] / vars["x"]).evaluate()[-1]
-        self.time_scale = (vars["Time [h]"] / vars["Time"]).evaluate(t=1)
+        self.x_scale = 1
+        self.time_scale = 1
+        if "x [m]" and "x" in vars:
+            self.x_scale = (vars["x [m]"] / vars["x"]).evaluate()[-1]
+        if "Time [m]" and "Time" in vars:
+            self.time_scale = (vars["Time [h]"] / vars["Time"]).evaluate(t=1)
 
         # Time parameters
         self.ts = [solver.t for solver in solvers]
@@ -79,13 +83,17 @@ class QuickPlot(object):
                 ]
             elif isinstance(models[0], pybamm.LeadAcidBaseModel):
                 output_variables = [
-                    "Interfacial current density [A m-2]",
-                    "Electrolyte concentration [mols m-3]",
+                    "Interfacial current density [A.m-2]",
+                    "Electrolyte concentration [mol.m-3]",
                     "Current [A]",
                     "Porosity",
                     "Electrolyte potential [V]",
                     "Terminal voltage [V]",
                 ]
+            # else plot all variables in first model
+            else:
+                output_variables = models[0].variables
+
         self.set_output_variables(output_variables, solvers, models, mesh)
         self.reset_axis()
 

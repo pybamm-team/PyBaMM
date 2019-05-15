@@ -40,7 +40,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
             # Update current (and hence C_e) in the parameters
             param = pybamm.ParameterValues(
                 base_parameters=full_model.default_parameter_values,
-                optional_parameters={"Typical current": current},
+                optional_parameters={"Typical current [A]": current},
             )
             param.update_model(leading_order_model, loqs_disc)
             param.update_model(composite_model, comp_disc)
