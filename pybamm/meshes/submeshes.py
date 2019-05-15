@@ -1,9 +1,6 @@
 #
 # Native PyBaMM Meshes
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
-
 import numpy as np
 
 
@@ -39,8 +36,13 @@ class Uniform1DSubMesh(SubMesh1D):
         # currently accept lims and npts as dicts. This may get changed at a future
         # date depending on the form of mesh we desire for 2D/3D
 
-        spatial_lims = list(lims.values())[0]
-        npts = list(npts.values())[0]
+        # check that only one variable passed in
+        if len(lims) != 1:
+            raise ValueError("lims should only contain a single variable")
+
+        var = list(lims.keys())[0]
+        spatial_lims = lims[var]
+        npts = npts[var.id]
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
 

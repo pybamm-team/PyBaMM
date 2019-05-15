@@ -1,8 +1,6 @@
 #
 # Base solver class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 
 
 class BaseSolver(object):
@@ -50,7 +48,7 @@ class BaseSolver(object):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
         t_eval : numeric type

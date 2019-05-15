@@ -1,8 +1,6 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import scipy.integrate as it
@@ -14,7 +12,7 @@ class ScipySolver(pybamm.OdeSolver):
 
     Parameters
     ----------
-    method : string, optional
+    method : str, optional
         The method to use in solve_ivp (default is "BDF")
     tolerance : float, optional
         The tolerance for the solver (default is 1e-8). Set as the both reltol and
@@ -86,4 +84,7 @@ class ScipySolver(pybamm.OdeSolver):
             **extra_options
         )
 
-        return sol.t, sol.y
+        if sol.success:
+            return sol.t, sol.y
+        else:
+            raise pybamm.SolverError(sol.message)

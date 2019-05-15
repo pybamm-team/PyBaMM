@@ -1,10 +1,8 @@
 #
 # Base solver class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
-
 import pybamm
+import numpy as np
 
 
 class OdeSolver(pybamm.BaseSolver):
@@ -24,20 +22,25 @@ class OdeSolver(pybamm.BaseSolver):
 
         Parameters
         ----------
-        model : :class:`pybamm.BaseModel` (or subclass)
+        model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
 
         """
+        pybamm.logger.info("Start solving {}".format(model.name))
 
-        # create simplified rhs and event expressions
-        concatenated_rhs = model.concatenated_rhs.simplify()
-        events = [event.simplify() for event in model.events]
+        concatenated_rhs = model.concatenated_rhs
+        events = model.events
+        if model.use_simplify:
+            # create simplified rhs and event expressions
+            concatenated_rhs = concatenated_rhs.simplify()
+            events = [event.simplify() for event in events]
 
         def dydt(t, y):
-            return concatenated_rhs.evaluate(t, y)
+            pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
+            return concatenated_rhs.evaluate(t, y, known_evals={})[0]
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
@@ -50,14 +53,29 @@ class OdeSolver(pybamm.BaseSolver):
 
         y0 = model.concatenated_initial_conditions
 
+        if model.use_jacobian:
+            # Create Jacobian from simplified rhs
+            y = pybamm.StateVector(slice(0, np.size(y0)))
+            jac_rhs = concatenated_rhs.jac(y)
+            if model.use_simplify:
+                jac_rhs = jac_rhs.simplify()
+
+            def jacobian(t, y):
+                return jac_rhs.evaluate(t, y, known_evals={})[0]
+
+        else:
+            jacobian = None
+
         self.t, self.y = self.integrate(
             dydt,
             y0,
             t_eval,
             events=events,
             mass_matrix=model.mass_matrix.entries,
-            jacobian=model.jacobian,
+            jacobian=jacobian,
         )
+
+        pybamm.logger.info("Finish solving {}".format(model.name))
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None

@@ -1,22 +1,30 @@
 #
 # A general spatial method class
 #
+import pybamm
+import numpy as np
+from scipy.sparse import eye, kron, coo_matrix
 
 
 class SpatialMethod:
     """
-    A general spatial methods class.
+    A general spatial methods class, with default (trivial) behaviour for broadcast,
+    mass_matrix and compute_diffusivity.
     All spatial methods will follow the general form of SpatialMethod in
     that they contain a method for broadcasting variables onto a mesh,
     a gradient operator, and a diverence operator.
 
     Parameters
     ----------
-    mesh : :class: `pybamm.Mesh` (or subclass)
+    mesh : :class: `pybamm.Mesh`
         Contains all the submeshes for discretisation
     """
 
     def __init__(self, mesh):
+        # add npts_for_broadcast to mesh domains for this particular discretisation
+        for dom in mesh.keys():
+            for i in range(len(mesh[dom])):
+                mesh[dom][i].npts_for_broadcast = mesh[dom][i].npts
         self._mesh = mesh
 
     @property
@@ -25,8 +33,8 @@ class SpatialMethod:
 
     def spatial_variable(self, symbol):
         """
-        Creates a discretised spatial variable compatible with
-        the FiniteVolume method.
+        Convert a :class:`pybamm.SpatialVariable` node to a linear algebra object that
+        can be evaluated (here, a :class:`pybamm.Vector` on the nodes).
 
         Parameters
         -----------
@@ -38,7 +46,8 @@ class SpatialMethod:
         :class:`pybamm.Vector`
             Contains the discretised spatial variable
         """
-        raise NotImplementedError
+        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+        return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
     def broadcast(self, symbol, domain):
         """
@@ -48,16 +57,20 @@ class SpatialMethod:
         ----------
         symbol : :class:`pybamm.Symbol`
             The symbol to be broadcasted
-        domain : iterable of string
+        domain : iterable of strings
             The domain to broadcast to
 
         Returns
         -------
-        broadcasted_symbol: class: `pybamm.Array`
-            The discretised symbol of the correct size for
-            the spatial method
+        broadcasted_symbol: class: `pybamm.Symbol`
+            The discretised symbol of the correct size for the spatial method
         """
-        raise NotImplementedError
+        vector_size = 0
+        for dom in domain:
+            for i in range(len(self.mesh[dom])):
+                vector_size += self.mesh[dom][i].npts_for_broadcast
+
+        return symbol * pybamm.Vector(np.ones(vector_size), domain=domain)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """
@@ -67,7 +80,7 @@ class SpatialMethod:
         ----------
         symbol: :class:`pybamm.Symbol`
             The symbol that we will take the gradient of.
-        discretised_symbol: class: pybamm.Array
+        discretised_symbol: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
 
         boundary_conditions : dict
@@ -90,7 +103,7 @@ class SpatialMethod:
         ----------
         symbol: :class:`pybamm.Symbol`
             The symbol that we will take the gradient of.
-        discretised_symbol: class: pybamm.Array
+        discretised_symbol: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
         boundary_conditions : dict
             The boundary conditions of the model
@@ -104,7 +117,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def integral(self, domain, discretised_symbol):
+    def integral(self, domain, symbol, discretised_symbol):
         """
         Implements the integral for a spatial method.
 
@@ -112,7 +125,9 @@ class SpatialMethod:
         ----------
         domain: iterable of strings
             The domain in which to integrate
-        discretised_symbol: class: pybamm.Array
+        symbol: :class:`pybamm.Symbol`
+            The symbol to which is being integrated
+        discretised_symbol: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
 
         Returns
@@ -123,23 +138,63 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def surface_value(self, discretised_symbol):
+    def indefinite_integral(self, domain, symbol, discretised_symbol):
         """
-        Returns the surface value using the approriate expression for the
-        spatial method.
+        Implements the indefinite integral for a spatial method.
+
+        Parameters
+        ----------
+        domain: iterable of strings
+            The domain in which to integrate
+        symbol: :class:`pybamm.Symbol`
+            The symbol to which is being integrated
+        discretised_symbol: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+
+        Returns
+        -------
+        :class: `pybamm.Array`
+            Contains the result of acting the discretised indefinite integral on
+            the child discretised_symbol
+        """
+        raise NotImplementedError
+
+    def boundary_value_or_flux(self, symbol, discretised_child):
+        """
+        Returns the boundary value or flux using the approriate expression for the
+        spatial method. To do this, we create a sparse vector 'bv_vector' that extracts
+        either the first (for side="left") or last (for side="right") point from
+        'discretised_child'.
 
         Parameters
         -----------
-        discretised_symbol : :class:`pybamm.StateVector`
-            The discretised variable (a state vector) from which to calculate
-            the surface value.
+        symbol: :class:`pybamm.Symbol`
+            The boundary value or flux symbol
+        discretised_child : :class:`pybamm.StateVector`
+            The discretised variable from which to calculate the boundary value
 
         Returns
         -------
         :class:`pybamm.Variable`
             The variable representing the surface value.
         """
-        raise NotImplementedError
+        n = sum(self.mesh[dom][0].npts for dom in discretised_child.domain)
+        if isinstance(symbol, pybamm.BoundaryFlux):
+            raise TypeError("Cannot process BoundaryFlux in base spatial method")
+        if symbol.side == "left":
+            # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
+            # (row[i], col[i]) for each index of data. Here we just want a single point
+            # with value 1 at (0,0).
+            left_vector = coo_matrix(([1], ([0], [0])), shape=(1, n))
+            bv_vector = pybamm.Matrix(left_vector)
+        elif symbol.side == "right":
+            # as above, but now we want a single point with value 1 at (0, n-1)
+            right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
+            bv_vector = pybamm.Matrix(right_vector)
+        out = bv_vector @ discretised_child
+        # boundary value removes domain
+        out.domain = []
+        return out
 
     def mass_matrix(self, symbol, boundary_conditions):
         """
@@ -159,14 +214,46 @@ class SpatialMethod:
         :class:`pybamm.Matrix`
             The (sparse) mass matrix for the spatial method.
         """
-        raise NotImplementedError
+        # NOTE: for different spatial methods the matrix may need to be adjusted
+        # to account for Dirichlet boundary conditions. Here, we just have the default
+        # behaviour that the mass matrix is the identity.
 
-    # We could possibly move the following outside of SpatialMethod
-    # depending on the requirements of the FiniteVolume
+        # Create appropriate submesh by combining submeshes in domain
+        submesh = self.mesh.combine_submeshes(*symbol.domain)
 
-    def compute_diffusivity(self, extrapolate_left=False, extrapolate_right=False):
-        """Compute the diffusivity at edges of cells.
-        Could interpret this as: find diffusivity as
-        off grid locations
+        # Get number of points in primary dimension
+        n = submesh[0].npts
+
+        # Create mass matrix for primary dimension
+        prim_mass = eye(n)
+
+        # Get number of points in secondary dimension
+        sec_pts = len(submesh)
+
+        mass = kron(eye(sec_pts), prim_mass)
+        return pybamm.Matrix(mass)
+
+    def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
+        """Discretise binary operators in model equations. Default behaviour is to
+        return a new binary operator with the discretised children.
+
+        Parameters
+        ----------
+        bin_op : :class:`pybamm.BinaryOperator`
+            Binary operator to discretise
+        left : :class:`pybamm.Symbol`
+            The left child of `bin_op`
+        right : :class:`pybamm.Symbol`
+            The right child of `bin_op`
+        disc_left : :class:`pybamm.Symbol`
+            The discretised left child of `bin_op`
+        disc_right : :class:`pybamm.Symbol`
+            The discretised right child of `bin_op`
+
+        Returns
+        -------
+        :class:`pybamm.BinaryOperator`
+            Discretised binary operator
+
         """
-        raise NotImplementedError
+        return bin_op.__class__(disc_left, disc_right)

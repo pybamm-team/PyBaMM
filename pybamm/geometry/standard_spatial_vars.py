@@ -12,6 +12,7 @@ x_s = pybamm.SpatialVariable("x_s", domain=["separator"], coord_sys="cartesian")
 x_p = pybamm.SpatialVariable(
     "x_p", domain=["positive electrode"], coord_sys="cartesian"
 )
+x = pybamm.SpatialVariable("x", domain=whole_cell, coord_sys="cartesian")
 
 y = pybamm.SpatialVariable("y", domain=whole_cell, coord_sys="cartesian")
 z = pybamm.SpatialVariable("z", domain=whole_cell, coord_sys="cartesian")

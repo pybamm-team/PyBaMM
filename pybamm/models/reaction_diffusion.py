@@ -1,39 +1,69 @@
 #
 # Reaction-diffusion model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class ReactionDiffusionModel(pybamm.BaseModel):
+class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
     """Reaction-diffusion model.
 
-    **Extends**: :class:`pybamm.BaseModel`
+    **Extends**: :class:`pybamm.StandardBatteryBaseModel`
 
     """
 
     def __init__(self):
         super().__init__()
-        # Parameters
-        param = pybamm.standard_parameters_lithium_ion
+        self.variables = {}
 
-        # Variables and parameters
-        #
-        # Define concentration variable
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        c_e = pybamm.Variable("Concentration", whole_cell)
+        "-----------------------------------------------------------------------------"
+        "Parameters"
+        param = pybamm.standard_parameters_lead_acid
 
-        #
-        # Submodels
-        #
-        # Load reaction flux from submodels
-        j = pybamm.interface.homogeneous_reaction(whole_cell)
-        # Load diffusion model from submodels
-        diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(c_e, j, param)
+        "-----------------------------------------------------------------------------"
+        "Model Variables"
 
-        # Create own model from diffusion model
-        self.update(diffusion_model)
+        c_e = pybamm.standard_variables.c_e
 
-        # Add j to variables dict
-        self.variables.update({"Interfacial current density": j})
+        "-----------------------------------------------------------------------------"
+        "Submodels"
+
+        # Interfacial current density
+        int_curr_model = pybamm.interface.LeadAcidReaction(param)
+        j_n = int_curr_model.get_homogeneous_interfacial_current(["negative electrode"])
+        j_p = int_curr_model.get_homogeneous_interfacial_current(["positive electrode"])
+
+        # Porosity
+        epsilon = pybamm.Scalar(1)
+
+        # Electrolyte concentration
+        j_n = pybamm.Broadcast(j_n, ["negative electrode"])
+        j_p = pybamm.Broadcast(j_p, ["positive electrode"])
+        reactions = {
+            "main": {
+                "neg": {"s_plus": 1, "aj": j_n},
+                "pos": {"s_plus": 1, "aj": j_p},
+                "porosity change": 0,
+            }
+        }
+        eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        eleclyte_conc_model.set_differential_system(c_e, reactions, epsilon)
+        self.update(eleclyte_conc_model)
+
+        "-----------------------------------------------------------------------------"
+        "Post-Processing"
+
+        # Exchange-current density
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        c_e_n, _, c_e_p = c_e.orphans
+        j0_n = int_curr_model.get_exchange_current_densities(c_e_n, neg)
+        j0_p = int_curr_model.get_exchange_current_densities(c_e_p, pos)
+        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
+
+        "-----------------------------------------------------------------------------"
+        "Defaults and Solver Conditions"
+        # default geometry
+        self.default_parameter_values = (
+            pybamm.LeadAcidBaseModel().default_parameter_values
+        )

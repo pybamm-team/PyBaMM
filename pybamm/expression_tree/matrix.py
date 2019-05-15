@@ -1,9 +1,9 @@
 #
 # Matrix class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
+
+from scipy.sparse import issparse
 
 
 class Matrix(pybamm.Array):
@@ -21,7 +21,9 @@ class Matrix(pybamm.Array):
 
     """
 
-    def __init__(self, entries, name=None, domain=[]):
+    def __init__(self, entries, name=None, domain=[], entries_string=None):
         if name is None:
             name = "Matrix {!s}".format(entries.shape)
-        super().__init__(entries, name=name, domain=domain)
+            if issparse(entries):
+                name = "Sparse " + name
+        super().__init__(entries, name, domain, entries_string)

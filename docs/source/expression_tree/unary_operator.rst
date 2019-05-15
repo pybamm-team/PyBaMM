@@ -22,7 +22,13 @@ Unary Operators
 .. autoclass:: pybamm.Divergence
   :members:
 
+.. autoclass:: pybamm.BoundaryOperator
+  :members:
+  
 .. autoclass:: pybamm.BoundaryValue
+  :members:
+
+.. autoclass:: pybamm.BoundaryFlux
   :members:
 
 .. autoclass:: pybamm.Integral
@@ -33,3 +39,7 @@ Unary Operators
 .. autofunction:: pybamm.div
 
 .. autofunction:: pybamm.surf
+
+.. autofunction:: pybamm.boundary_value
+
+.. autofunction:: pybamm.average

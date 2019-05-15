@@ -5,8 +5,6 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import re
 import os
 import sys
@@ -15,19 +13,28 @@ import unittest
 import subprocess
 
 
-def run_unit_tests(executable=None):
+def run_code_tests(executable=None, folder: str = "unit"):
     """
-    Runs unit tests, exits if they don't finish.
+    Runs tests, exits if they don't finish.
 
-    If an ``executable`` is given, tests are run in subprocesses using the
-    given executable (e.g. ``python2`` or ``python3``).
+    Parameters
+    ----------
+    executable : str (default None)
+        If given, tests are run in subprocesses using the given executable (e.g.
+        'python2' or 'python3').
+    folder : str
+        Which folder to run the tests from (unit, integration or both ('all'))
+
     """
-    tests = "tests/"
+    if folder == "all":
+        tests = "tests/"
+    else:
+        tests = "tests/" + folder
     if executable is None:
         suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
-        print("Running unit tests with executable `" + executable + "`")
+        print("Running {} tests with executable '{}'".format(folder, executable))
         cmd = [executable] + ["-m", "unittest", "discover", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
@@ -68,7 +75,7 @@ def run_flake8():
         sys.exit(ret)
 
 
-def run_doctests():
+def run_doc_tests():
     """
     Checks if the documentation can be built, runs any doctests (currently not
     used).
@@ -92,7 +99,7 @@ def run_doctests():
         sys.exit(ret)
 
 
-def run_notebook_tests(skip_slow_books=False, executable="python"):
+def run_notebook_and_scripts(skip_slow_books=False, executable="python"):
     """
     Runs Jupyter notebook tests. Exits if they fail.
     """
@@ -113,16 +120,16 @@ def run_notebook_tests(skip_slow_books=False, executable="python"):
                 ignore_list.append(line)
 
     # Scan and run
-    print("Testing notebooks with executable `" + str(executable) + "`")
-    if not scan_for_notebooks("examples", True, executable, ignore_list):
+    print("Testing notebooks and scripts with executable `" + str(executable) + "`")
+    if not scan_for_nb_and_scripts("examples", True, executable, ignore_list):
         print("\nErrors encountered in notebooks")
         sys.exit(1)
     print("\nOK")
 
 
-def scan_for_notebooks(root, recursive=True, executable="python", ignore_list=[]):
+def scan_for_nb_and_scripts(root, recursive=True, executable="python", ignore_list=[]):
     """
-    Scans for, and tests, all notebooks in a directory.
+    Scans for, and tests, all notebooks and scripts in a directory.
     """
     ok = True
     debug = False
@@ -139,7 +146,7 @@ def scan_for_notebooks(root, recursive=True, executable="python", ignore_list=[]
             # Ignore hidden directories
             if filename[:1] == ".":
                 continue
-            ok &= scan_for_notebooks(path, recursive, executable)
+            ok &= scan_for_nb_and_scripts(path, recursive, executable)
 
         # Test notebooks
         if os.path.splitext(path)[1] == ".ipynb":
@@ -147,6 +154,12 @@ def scan_for_notebooks(root, recursive=True, executable="python", ignore_list=[]
                 print(path)
             else:
                 ok &= test_notebook(path, executable)
+        # Test scripts
+        elif os.path.splitext(path)[1] == ".py":
+            if debug:
+                print(path)
+            else:
+                ok &= test_script(path, executable)
 
     # Return True if every notebook is ok
     return ok
@@ -190,9 +203,50 @@ def test_notebook(path, executable="python"):
                 j = str(1 + i)
                 print(j + " " * (5 - len(j)) + line)
             print("-- stdout " + "-" * (79 - 10))
-            print(stdout)
+            print(str(stdout, 'utf-8'))
             print("-- stderr " + "-" * (79 - 10))
-            print(stderr)
+            print(str(stderr, 'utf-8'))
+            print("-" * 79)
+            return False
+    except KeyboardInterrupt:
+        p.terminate()
+        print("ABORTED")
+        sys.exit(1)
+
+    # Sucessfully run
+    print("ok (" + b.format() + ")")
+    return True
+
+
+def test_script(path, executable="python"):
+    """
+    Tests a single notebook, exists if it doesn't finish.
+    """
+    import pybamm
+
+    b = pybamm.Timer()
+    print("Test " + path + " ... ", end="")
+    sys.stdout.flush()
+
+    # Tell matplotlib not to produce any figures
+    env = dict(os.environ)
+    env["MPLBACKEND"] = "Template"
+
+    # Run in subprocess
+    cmd = [executable] + [path]
+    try:
+        p = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
+        )
+        stdout, stderr = p.communicate()
+        # TODO: Use p.communicate(timeout=3600) if Python3 only
+        if p.returncode != 0:
+            # Show failing code, output and errors before returning
+            print("ERROR")
+            print("-- stdout " + "-" * (79 - 10))
+            print(str(stdout, 'utf-8'))
+            print("-- stderr " + "-" * (79 - 10))
+            print(str(stderr, 'utf-8'))
             print("-" * 79)
             return False
     except KeyboardInterrupt:
@@ -234,41 +288,48 @@ def export_notebook(ipath, opath):
 if __name__ == "__main__":
     # Set up argument parsing
     parser = argparse.ArgumentParser(
-        description="Run unit tests for Pints.",
-        epilog="To run individual unit tests, use e.g."
-        " $ pybamm/tests/test_simulation.py",
+        description="Run unit tests for PyBaMM.",
+        epilog="To run individual unit tests, use e.g. '$ tests/unit/test_timer.py'",
     )
     # Unit tests
     parser.add_argument(
         "--unit",
         action="store_true",
-        help="Run all unit tests using the `python` interpreter.",
+        help="Run unit tests using the `python` interpreter.",
     )
     parser.add_argument(
         "--unit2",
         action="store_true",
-        help="Run all unit tests using the `python2` interpreter.",
+        help="Run unit tests using the `python2` interpreter.",
     )
     parser.add_argument(
         "--unit3",
         action="store_true",
-        help="Run all unit tests using the `python3` interpreter.",
+        help="Run unit tests using the `python3` interpreter.",
     )
     parser.add_argument(
         "--nosub",
         action="store_true",
-        help="Run all unit tests without starting a subprocess.",
+        help="Run unit tests without starting a subprocess.",
+    )
+    # Daily tests vs unit tests
+    parser.add_argument(
+        "--folder",
+        nargs=1,
+        default=["unit"],
+        choices=["unit", "integration", "all"],
+        help="Which folder to run the tests from.",
     )
     # Notebook tests
     parser.add_argument(
-        "--books",
+        "--examples",
         action="store_true",
-        help="Test only the fast Jupyter notebooks in `examples`.",
+        help="Test only the fast Jupyter notebooks and scripts in `examples`.",
     )
     parser.add_argument(
-        "--allbooks",
+        "--allexamples",
         action="store_true",
-        help="Test all Jupyter notebooks in `examples`.",
+        help="Test all Jupyter notebooks and scripts in `examples`.",
     )
     parser.add_argument(
         "-debook",
@@ -298,20 +359,22 @@ if __name__ == "__main__":
 
     # Run tests
     has_run = False
+    # Unit vs integration
+    folder = args.folder[0]
     # Unit tests
     if args.unit:
         has_run = True
-        run_unit_tests("python")
+        run_code_tests("python", folder)
     if args.unit2:
         raise NotImplementedError
         has_run = True
-        run_unit_tests("python2")
+        run_code_tests("python2", folder)
     if args.unit3:
         has_run = True
-        run_unit_tests("python3")
+        run_code_tests("python3", folder)
     if args.nosub:
         has_run = True
-        run_unit_tests()
+        run_code_tests(folder=folder)
     # Flake8
     if args.flake8:
         has_run = True
@@ -319,14 +382,14 @@ if __name__ == "__main__":
     # Doctests
     if args.doctest:
         has_run = True
-        run_doctests()
+        run_doc_tests()
     # Notebook tests
-    if args.allbooks:
+    if args.allexamples:
         has_run = True
-        run_notebook_tests()
-    elif args.books:
+        run_notebook_and_scripts()
+    elif args.examples:
         has_run = True
-        run_notebook_tests(True)
+        run_notebook_and_scripts(True)
     if args.debook:
         has_run = True
         export_notebook(*args.debook)
@@ -334,8 +397,8 @@ if __name__ == "__main__":
     if args.quick:
         has_run = True
         run_flake8()
-        run_unit_tests()
-        run_doctests()
+        run_code_tests(folder=folder)
+        run_doc_tests()
     # Help
     if not has_run:
         parser.print_help()

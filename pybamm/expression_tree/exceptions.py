@@ -1,8 +1,6 @@
 #
 # Exception classes
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 
 
 class DomainError(Exception):
@@ -13,5 +11,21 @@ class DomainError(Exception):
 
 class ModelError(Exception):
     """Model error: the model is not well-posed (can be before or after processing)"""
+
+    pass
+
+
+class SolverError(Exception):
+    """
+    Solver error: a solution to the model could not be found with the chosen settings
+    """
+
+    pass
+
+
+class ModelWarning(UserWarning):
+    """
+    Model warning: the model does not contain all of the standard output variables
+    """
 
     pass

@@ -4,8 +4,6 @@
 """
 Standard Parameters for lead-acid battery models
 """
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 from scipy import constants
 
@@ -23,7 +21,7 @@ from scipy import constants
 # Physical constants
 R = pybamm.Scalar(constants.R)
 F = pybamm.Scalar(constants.physical_constants["Faraday constant"][0])
-T_ref = pybamm.Parameter("Reference temperature")
+T_ref = pybamm.Parameter("Reference temperature [K]")
 
 # Macroscale geometry
 L_n = pybamm.geometric_parameters.L_n
@@ -46,48 +44,48 @@ i_typ = pybamm.electrical_parameters.i_typ
 voltage_low_cut_dimensional = pybamm.electrical_parameters.voltage_low_cut_dimensional
 voltage_high_cut_dimensional = pybamm.electrical_parameters.voltage_high_cut_dimensional
 current_with_time = pybamm.electrical_parameters.current_with_time
-dimensional_current_with_time = (
-    pybamm.electrical_parameters.dimensional_current_with_time
+dimensional_current_density_with_time = (
+    pybamm.electrical_parameters.dimensional_current_density_with_time
 )
 
 # Electrolyte properties
-c_e_typ = pybamm.Parameter("Typical electrolyte concentration")
+c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 t_plus = pybamm.Parameter("Cation transference number")
-V_w = pybamm.Parameter("Partial molar volume of water")
-V_plus = pybamm.Parameter("Partial molar volume of cations")
-V_minus = pybamm.Parameter("Partial molar volume of anions")
+V_w = pybamm.Parameter("Partial molar volume of water [m3.mol-1]")
+V_plus = pybamm.Parameter("Partial molar volume of cations [m3.mol-1]")
+V_minus = pybamm.Parameter("Partial molar volume of anions [m3.mol-1]")
 V_e = V_minus + V_plus  # Partial molar volume of electrolyte [m3.mol-1]
 nu_plus = pybamm.Parameter("Cation stoichiometry")
 nu_minus = pybamm.Parameter("Anion stoichiometry")
 nu = nu_plus + nu_minus
 
 # Electrode properties
-sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity")
-sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity")
+sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 
 # Microstructure
-a_n_dimensional = pybamm.Parameter("Negative electrode surface area density")
-a_p_dimensional = pybamm.Parameter("Positive electrode surface area density")
+a_n_dimensional = pybamm.Parameter("Negative electrode surface area density [m-1]")
+a_p_dimensional = pybamm.Parameter("Positive electrode surface area density [m-1]")
 b = pybamm.Parameter("Bruggeman coefficient")
 
 # Electrochemical reactions
 j0_n_S_ref_dimensional = pybamm.Parameter(
-    "Negative electrode reference exchange-current density"
+    "Negative electrode reference exchange-current density [A.m-2]"
 )
 j0_p_S_ref_dimensional = pybamm.Parameter(
-    "Positive electrode reference exchange-current density"
+    "Positive electrode reference exchange-current density [A.m-2]"
 )
 j0_n_Ox_ref_dimensional = pybamm.Parameter(
-    "Negative electrode reference exchange-current density (oxygen)"
+    "Negative electrode reference exchange-current density (oxygen) [A.m-2]"
 )
 j0_p_Ox_ref_dimensional = pybamm.Parameter(
-    "Positive electrode reference exchange-current density (oxygen)"
+    "Positive electrode reference exchange-current density (oxygen) [A.m-2]"
 )
 j0_n_Hy_ref_dimensional = pybamm.Parameter(
-    "Negative electrode reference exchange-current density (hydrogen)"
+    "Negative electrode reference exchange-current density (hydrogen) [A.m-2]"
 )
 j0_p_Hy_ref_dimensional = pybamm.Parameter(
-    "Positive electrode reference exchange-current density (hydrogen)"
+    "Positive electrode reference exchange-current density (hydrogen) [A.m-2]"
 )
 s_plus_n_S_dim = pybamm.Parameter("Negative electrode cation signed stoichiometry")
 s_plus_p_S_dim = pybamm.Parameter("Positive electrode cation signed stoichiometry")
@@ -97,17 +95,17 @@ s_plus_Ox_dim = pybamm.Parameter("Signed stoichiometry of cations (oxygen reacti
 s_w_Ox_dim = pybamm.Parameter("Signed stoichiometry of water (oxygen reaction)")
 s_ox_Ox_dim = pybamm.Parameter("Signed stoichiometry of oxygen (oxygen reaction)")
 ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
-c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration")
+c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration [mol.m-3")
 s_plus_Hy_dim = pybamm.Parameter("Signed stoichiometry of cations (hydrogen reaction)")
 s_hy_Hy_dim = pybamm.Parameter("Signed stoichiometry of hydrogen (hydrogen reaction)")
 ne_Hy = pybamm.Parameter("Electrons in hydrogen reaction")
-C_dl_dimensional = pybamm.Parameter("Double-layer capacity")
+C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
 
 
 # Electrolyte properties
-M_w = pybamm.Parameter("Molar mass of water")
-M_plus = pybamm.Parameter("Molar mass of cations")
-M_minus = pybamm.Parameter("Molar mass of anions")
+M_w = pybamm.Parameter("Molar mass of water [kg.mol-1]")
+M_plus = pybamm.Parameter("Molar mass of cations [kg.mol-1]")
+M_minus = pybamm.Parameter("Molar mass of anions [kg.mol-1]")
 M_e = M_minus + M_plus  # Molar mass of electrolyte [kg.mol-1]
 
 DeltaVliq_n = (
@@ -120,23 +118,23 @@ DeltaVliq_p = (
 # Other species properties
 D_ox_dimensional = pybamm.Parameter("Oxygen diffusivity")
 D_hy_dimensional = pybamm.Parameter("Hydrogen diffusivity")
-V_ox = pybamm.Parameter("Partial molar volume of oxygen molecules")
-V_hy = pybamm.Parameter("Partial molar volume of hydrogen molecules")
-M_ox = pybamm.Parameter("Molar mass of oxygen molecules")
-M_hy = pybamm.Parameter("Molar mass of hydrogen molecules")
+V_ox = pybamm.Parameter("Partial molar volume of oxygen molecules [m3.mol-1]")
+V_hy = pybamm.Parameter("Partial molar volume of hydrogen molecules [m3.mol-1]")
+M_ox = pybamm.Parameter("Molar mass of oxygen molecules [kg.mol-1]")
+M_hy = pybamm.Parameter("Molar mass of hydrogen molecules [kg.mol-1]")
 
 # Electrode properties
-V_Pb = pybamm.Parameter("Molar volume of lead")
-V_PbO2 = pybamm.Parameter("Molar volume of lead-dioxide")
-V_PbSO4 = pybamm.Parameter("Molar volume of lead sulfate")
+V_Pb = pybamm.Parameter("Molar volume of lead [m3.mol-1]")
+V_PbO2 = pybamm.Parameter("Molar volume of lead-dioxide [m3.mol-1]")
+V_PbSO4 = pybamm.Parameter("Molar volume of lead sulfate [m3.mol-1]")
 DeltaVsurf_n = V_Pb - V_PbSO4  # Net Molar Volume consumed in neg electrode [m3.mol-1]
 DeltaVsurf_p = V_PbSO4 - V_PbO2  # Net Molar Volume consumed in pos electrode [m3.mol-1]
-d = pybamm.Parameter("Pore size")
+d = pybamm.Parameter("Pore size [m]")
 eps_n_max = pybamm.Parameter("Maximum porosity of negative electrode")
 eps_s_max = pybamm.Parameter("Maximum porosity of separator")
 eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
-Q_n_max_dimensional = pybamm.Parameter("Negative electrode volumetric capacity")
-Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity")
+Q_n_max_dimensional = pybamm.Parameter("Negative electrode volumetric capacity [C.m-3]")
+Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [C.m-3]")
 
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
@@ -156,14 +154,21 @@ def chi_dimensional(c_e):
     return pybamm.FunctionParameter("Darken thermodynamic factor", c_e)
 
 
-def c_T(c_e, c_ox, c_hy):
+def c_w_dimensional(c_e, c_ox=0, c_hy=0):
+    """
+    Water concentration [mol.m-3], from thermodynamics. c_k in [mol.m-3].
+    """
+    return (1 - c_e * V_e - c_ox * V_ox - c_hy * V_hy) / V_w
+
+
+def c_T(c_e, c_ox=0, c_hy=0):
     """
     Total liquid molarity [mol.m-3], from thermodynamics. c_k in [mol.m-3].
     """
     return (1 + (2 * V_w - V_e) * c_e + (V_w - V_ox) * c_ox + (V_w - V_hy) * c_hy) / V_w
 
 
-def rho_dimensional(c_e, c_ox, c_hy):
+def rho_dimensional(c_e, c_ox=0, c_hy=0):
     """
     Dimensional density of electrolyte [kg.m-3], from thermodynamics. c_k in [mol.m-3].
     """
@@ -201,7 +206,7 @@ def U_p_dimensional(c_e):
 
 
 D_e_typ = D_e_dimensional(c_e_typ)
-rho_typ = rho_dimensional(c_e_typ, 0, 0)
+rho_typ = rho_dimensional(c_e_typ)
 mu_typ = mu_dimensional(c_e_typ)
 U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(1))
 U_p_ref = pybamm.FunctionParameter("Positive electrode OCV", pybamm.Scalar(1))
@@ -298,6 +303,8 @@ C_dl_n = (
 C_dl_p = (
     C_dl_dimensional * potential_scale / interfacial_current_scale_p / tau_discharge
 )
+ne_n = ne_n_S
+ne_p = ne_p_S
 
 # Electrolyte properties
 beta_surf_n = -c_e_typ * DeltaVsurf_n / ne_n_S  # Molar volume change (lead)
@@ -365,13 +372,18 @@ def kappa_e(c_e):
 
 # (1-2*t_plus) is for Nernst-Planck
 # 2*(1-t_plus) for Stefan-Maxwell
-def chi(c_e):
+def chi(c_e, c_ox=0, c_hy=0):
     return (
         chi_dimensional(c_e_typ * c_e)
         * 2
         * (1 - t_plus)
         / (V_w * c_T(c_e_typ * c_e, c_e_typ * c_ox, c_e_typ * c_hy))
     )
+
+
+def c_w(c_e):
+    "Dimensionless water concentration"
+    return c_w_dimensional(c_e_typ * c_e) / c_w_dimensional(c_e_typ)
 
 
 def U_n(c_en):

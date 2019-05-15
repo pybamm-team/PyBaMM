@@ -1,12 +1,10 @@
 #
 # Simple ODE Model
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 
-class SimpleODEModel(pybamm.BaseModel):
+class SimpleODEModel(pybamm.StandardBatteryBaseModel):
     """A model consisting of only ODEs.
     Useful for testing solution when variables have domain '[]', and for testing
     broadcasting.
@@ -17,6 +15,8 @@ class SimpleODEModel(pybamm.BaseModel):
 
     def __init__(self):
         super().__init__()
+        self.name = "Simple ODE Model"
+
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Create variables: domain is explicitly empty since these variables are only
         # functions of time
@@ -40,3 +40,8 @@ class SimpleODEModel(pybamm.BaseModel):
             "b broadcasted": pybamm.Broadcast(b, whole_cell),
             "c broadcasted": pybamm.Broadcast(c, ["negative electrode", "separator"]),
         }
+
+        "-----------------------------------------------------------------------------"
+        "Settings"
+        # ODEs only (don't use jacobian)
+        self.use_jacobian = False

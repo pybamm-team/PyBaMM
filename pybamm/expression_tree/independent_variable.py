@@ -1,8 +1,6 @@
 #
 # IndependentVariable class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 KNOWN_SPATIAL_VARS = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
@@ -36,8 +34,8 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
-    def evaluate(self, t, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+    def _base_evaluate(self, t, y=None):
+        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if t is None:
             raise ValueError("t must be provided")
         return t

@@ -1,8 +1,6 @@
 #
 # Parameter classes
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 
@@ -28,7 +26,9 @@ class Parameter(pybamm.Symbol):
 class FunctionParameter(pybamm.UnaryOperator):
     """A node in the expression tree representing a function parameter
 
-    This node will be replaced by a :class:`pybamm.Function` node
+    This node will be replaced by a :class:`pybamm.Function` node if a callable function
+    is passed to the parameter values, and otherwise (in some rarer cases, such as
+    constant current) a :class:`pybamm.Scalar` node.
 
     Parameters
     ----------
@@ -54,3 +54,8 @@ class FunctionParameter(pybamm.UnaryOperator):
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
         return FunctionParameter(self.name, self.orphans[0], diff_variable=variable)
+
+    def _unary_simplify(self, child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+        child = self.child.simplify()
+        return pybamm.FunctionParameter(self.name, child, self.diff_variable)

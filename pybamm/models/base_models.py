@@ -1,12 +1,11 @@
 #
 # Base model class
 #
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
 import pybamm
 
 import numbers
 import os
+import warnings
 
 
 class BaseModel(object):
@@ -41,6 +40,9 @@ class BaseModel(object):
     """
 
     def __init__(self):
+        # Default name
+        self.name = "Unnamed Model"
+
         # Initialise empty model
         self._rhs = {}
         self._algebraic = {}
@@ -53,65 +55,12 @@ class BaseModel(object):
         self._mass_matrix = None
         self._jacobian = None
 
-        # Default parameter values, geometry, submesh, spatial methods and solver
+        # Default behaviour is to use the jacobian and simplify
+        self.use_jacobian = True
+        self.use_simplify = True
 
-        # Lion parameters left as default parameter set for tests
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        self.default_parameter_values = pybamm.ParameterValues(
-            os.path.join(
-                input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
-            ),
-            {
-                "Typical current density": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Capiglia1999.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Capiglia1999.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "graphite_mcmb2528_ocp_Dualfoil.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lico2_ocp_Dualfoil.py"
-                ),
-                "Negative electrode diffusivity": os.path.join(
-                    input_path, "graphite_mcmb2528_diffusivity_Dualfoil.py"
-                ),
-                "Positive electrode diffusivity": os.path.join(
-                    input_path, "lico2_diffusivity_Dualfoil.py"
-                ),
-            },
-        )
-        self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
-        var = pybamm.standard_spatial_vars
-        self.default_var_pts = {
-            var.x_n: 40,
-            var.x_s: 25,
-            var.x_p: 35,
-            var.r_n: 10,
-            var.r_p: 10,
-        }
-        self.default_submesh_types = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "negative particle": pybamm.Uniform1DSubMesh,
-            "positive particle": pybamm.Uniform1DSubMesh,
-        }
-        self.default_spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "negative particle": pybamm.FiniteVolume,
-            "positive particle": pybamm.FiniteVolume,
-        }
-        self.default_solver = pybamm.ScikitsOdeSolver()
+        # Default behaviour: no capacitance in the model
+        self._use_capacitance = False
 
     def _set_dict(self, dict, name):
         """
@@ -134,6 +83,14 @@ class BaseModel(object):
             )
 
         return dict
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
 
     @property
     def rhs(self):
@@ -169,10 +126,20 @@ class BaseModel(object):
     def boundary_conditions(self, boundary_conditions):
         # Convert any numbers to a pybamm.Scalar
         for var, bcs in boundary_conditions.items():
-            for side, eqn in bcs.items():
-                if isinstance(eqn, numbers.Number):
-                    boundary_conditions[var][side] = pybamm.Scalar(eqn)
-
+            for side, bc in bcs.items():
+                if isinstance(bc[0], numbers.Number):
+                    # typ is the type of the bc, e.g. "Dirichlet" or "Neumann"
+                    eqn, typ = boundary_conditions[var][side]
+                    boundary_conditions[var][side] = (pybamm.Scalar(eqn), typ)
+                # Check types
+                if bc[1] not in ["Dirichlet", "Neumann"]:
+                    raise pybamm.ModelError(
+                        """
+                        boundary condition types must be Dirichlet or Neumann, not '{}'
+                        """.format(
+                            bc[1]
+                        )
+                    )
         self._boundary_conditions = boundary_conditions
 
     @property
@@ -223,6 +190,10 @@ class BaseModel(object):
     def jacobian(self, jacobian):
         self._jacobian = jacobian
 
+    @property
+    def use_capacitance(self):
+        return self._use_capacitance
+
     def __getitem__(self, key):
         return self.rhs[key]
 
@@ -232,7 +203,7 @@ class BaseModel(object):
 
         Parameters
         ----------
-        submodel : iterable of submodels (subclasses of :class:`pybamm.BaseModel`)
+        submodel : iterable of :class:`pybamm.BaseModel`
             The submodels from which to create new model
         """
         for submodel in submodels:
@@ -246,16 +217,15 @@ class BaseModel(object):
             self.check_and_combine_dict(
                 self._boundary_conditions, submodel.boundary_conditions
             )
-            self._variables.update(submodel.variables)  # keys are strings so no check
+            self.variables.update(submodel.variables)  # keys are strings so no check
             self._events.extend(submodel.events)
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
         ids1 = set(x.id for x in dict1.keys())
         ids2 = set(x.id for x in dict2.keys())
-        assert len(ids1.intersection(ids2)) == 0, pybamm.ModelError(
-            "Submodel incompatible: duplicate variables"
-        )
+        if len(ids1.intersection(ids2)) != 0:
+            raise pybamm.ModelError("Submodel incompatible: duplicate variables")
         dict1.update(dict2)
 
     def check_well_posedness(self, post_discretisation=False):
@@ -322,7 +292,7 @@ class BaseModel(object):
             # After the model has been defined, each algebraic equation key should
             # appear in that algebraic equation
             for var, eqn in self.algebraic.items():
-                if not any([x.id == var.id for x in eqn.pre_order()]):
+                if not any(x.id == var.id for x in eqn.pre_order()):
                     raise pybamm.ModelError(
                         "each variable in the algebraic eqn keys must appear in the eqn"
                     )
@@ -331,9 +301,7 @@ class BaseModel(object):
             # with the state vectors in the algebraic equations. Instead, we check
             # that each algebraic equation contains some StateVector
             for eqn in self.algebraic.values():
-                if not any(
-                    [isinstance(x, pybamm.StateVector) for x in eqn.pre_order()]
-                ):
+                if not any(isinstance(x, pybamm.StateVector) for x in eqn.pre_order()):
                     raise pybamm.ModelError(
                         "each algebraic equation must contain at least one StateVector"
                     )
@@ -348,99 +316,55 @@ class BaseModel(object):
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
             if eqn.has_spatial_derivatives():
-                # Variable must be in at least one expression in the boundary condition
-                # keys (to account for both Dirichlet and Neumann boundary conditions)
+                # Variable must be in the boundary conditions
                 if not any(
-                    [
-                        any([var.id == symbol.id for symbol in key.pre_order()])
-                        for key in self.boundary_conditions.keys()
-                    ]
+                    var.id == symbol.id for symbol in self.boundary_conditions.keys()
                 ):
                     raise pybamm.ModelError(
                         """
-                        no boundary condition given for variable '{}'
-                        with equation '{}'
+                        no boundary condition given for variable '{}' with equation '{}'
                         """.format(
                             var, eqn
                         )
                     )
 
         # Standard Output Variables
+        missing_vars = []
         for output, expression in self._variables.items():
             if expression is None:
-                raise pybamm.ModelError(
-                    """The standard output variable '{}' which is
-                    required for testing has not been supplied.""".format(
-                        output
-                    )
-                )
+                missing_vars.append(output)
+        if len(missing_vars) > 0:
+            warnings.warn(
+                "the standard output variable(s) '{}' have not been supplied. "
+                "These may be required for testing or comparison with other "
+                "models.".format(missing_vars),
+                pybamm.ModelWarning,
+                stacklevel=2,
+            )
+            # Remove missing entries
+            for output in missing_vars:
+                del self._variables[output]
 
 
-class LeadAcidBaseModel(BaseModel):
+class StandardBatteryBaseModel(BaseModel):
     """
-    Overwrites default parameters from Base Model with default parameters for
-    lead-acid models
+    Base model class with some default settings and required variables
 
-    **Extends:** :class:`BaseModel`
-
-    """
-
-    def __init__(self):
-        super().__init__()
-
-        # Overwrite default parameter values
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
-        self.default_parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
-            {
-                "Typical current density": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Gu1997.py"
-                ),
-                "Electrolyte conductivity": os.path.join(
-                    input_path, "electrolyte_conductivity_Gu1997.py"
-                ),
-                "Electrolyte viscosity": os.path.join(
-                    input_path, "electrolyte_viscosity_Chapman1968.py"
-                ),
-                "Darken thermodynamic factor": os.path.join(
-                    input_path, "darken_thermodynamic_factor_Chapman1968.py"
-                ),
-                "Negative electrode OCV": os.path.join(
-                    input_path, "lead_electrode_ocv_Bode1977.py"
-                ),
-                "Positive electrode OCV": os.path.join(
-                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
-                ),
-            },
-        )
-
-
-class LithiumIonBaseModel(BaseModel):
-    """
-    Overwrites default parameters from Base Model with default parameters for
-    lithium-ion models
-
-    **Extends:** :class:`BaseModel`
-
+    **Extends:** :class:`StandardBatteryBaseModel`
     """
 
     def __init__(self):
         super().__init__()
+
+        # Default parameter values, geometry, submesh, spatial methods and solver
+        # Lion parameters left as default parameter set for tests
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
         self.default_parameter_values = pybamm.ParameterValues(
             os.path.join(
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
             {
-                "Typical current density": 1,
+                "Typical current [A]": 1,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
@@ -468,32 +392,55 @@ class LithiumIonBaseModel(BaseModel):
                 ),
             },
         )
+        self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
+        var = pybamm.standard_spatial_vars
+        self.default_var_pts = {
+            var.x_n: 40,
+            var.x_s: 25,
+            var.x_p: 35,
+            var.r_n: 10,
+            var.r_p: 10,
+        }
+        self.default_submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+        }
+        self.default_spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        try:
+            self.default_solver = pybamm.ScikitsOdeSolver()
+        except ImportError:
+            self.default_solver = pybamm.ScipySolver()
 
         # Standard output variables
-        # Current
-        self._variables.update(
+        # Interfacial current
+        self.variables.update(
             {
-                "Total current density": None,
                 "Negative electrode current density": None,
                 "Positive electrode current density": None,
                 "Electrolyte current density": None,
                 "Interfacial current density": None,
-                "Exchange current density": None,
+                "Exchange-current density": None,
             }
         )
 
-        self._variables.update(
+        self.variables.update(
             {
-                "Total current density [A m-2]": None,
-                "Negative electrode current density [A m-2]": None,
-                "Positive electrode current density [A m-2]": None,
-                "Electrolyte current density [A m-2]": None,
-                "Interfacial current density [A m-2]": None,
-                "Exchange current density [A m-2]": None,
+                "Negative electrode current density [A.m-2]": None,
+                "Positive electrode current density [A.m-2]": None,
+                "Electrolyte current density [A.m-2]": None,
+                "Interfacial current density [A.m-2]": None,
+                "Exchange-current density [A.m-2]": None,
             }
         )
         # Voltage
-        self._variables.update(
+        self.variables.update(
             {
                 "Negative electrode open circuit potential": None,
                 "Positive electrode open circuit potential": None,
@@ -505,7 +452,7 @@ class LithiumIonBaseModel(BaseModel):
             }
         )
 
-        self._variables.update(
+        self.variables.update(
             {
                 "Negative electrode open circuit potential [V]": None,
                 "Positive electrode open circuit potential [V]": None,
@@ -518,7 +465,7 @@ class LithiumIonBaseModel(BaseModel):
         )
 
         # Overpotentials
-        self._variables.update(
+        self.variables.update(
             {
                 "Negative reaction overpotential": None,
                 "Positive reaction overpotential": None,
@@ -530,7 +477,7 @@ class LithiumIonBaseModel(BaseModel):
             }
         )
 
-        self._variables.update(
+        self.variables.update(
             {
                 "Negative reaction overpotential [V]": None,
                 "Positive reaction overpotential [V]": None,
@@ -542,31 +489,164 @@ class LithiumIonBaseModel(BaseModel):
             }
         )
         # Concentration
-        self._variables.update(
+        self.variables.update(
+            {
+                "Electrolyte concentration": None,
+                "Electrolyte concentration [mol.m-3]": None,
+            }
+        )
+
+        # Potential
+        self.variables.update(
+            {
+                "Negative electrode potential [V]": None,
+                "Positive electrode potential [V]": None,
+                "Electrolyte potential [V]": None,
+            }
+        )
+
+        # Current
+        icell = pybamm.electrical_parameters.current_with_time
+        icell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
+        I = pybamm.electrical_parameters.dimensional_current_with_time
+        self.variables.update(
+            {
+                "Total current density": icell,
+                "Total current density [A.m-2]": icell_dim,
+                "Current [A]": I,
+            }
+        )
+        # Time
+        self.variables.update({"Time": pybamm.t})
+        # x-position
+        var = pybamm.standard_spatial_vars
+        L_x = pybamm.geometric_parameters.L_x
+        self.variables.update(
+            {
+                "x": var.x,
+                "x [m]": var.x * L_x,
+                "x_n": var.x_n,
+                "x_n [m]": var.x_n * L_x,
+                "x_s": var.x_s,
+                "x_s [m]": var.x_s * L_x,
+                "x_p": var.x_p,
+                "x_p [m]": var.x_p * L_x,
+            }
+        )
+
+
+class SubModel(StandardBatteryBaseModel):
+    def __init__(self, set_of_parameters):
+        super().__init__()
+        self.set_of_parameters = set_of_parameters
+        # Initialise empty variables (to avoid overwriting with 'None')
+        self.variables = {}
+
+
+class LeadAcidBaseModel(StandardBatteryBaseModel):
+    """
+    Overwrites default parameters from Base Model with default parameters for
+    lead-acid models
+
+    **Extends:** :class:`StandardBatteryBaseModel`
+
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        # Overwrite default parameter values
+        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
+        self.default_parameter_values = pybamm.ParameterValues(
+            "input/parameters/lead-acid/default.csv",
+            {
+                "Typical current [A]": 1,
+                "Current function": os.path.join(
+                    os.getcwd(),
+                    "pybamm",
+                    "parameters",
+                    "standard_current_functions",
+                    "constant_current.py",
+                ),
+                "Electrolyte diffusivity": os.path.join(
+                    input_path, "electrolyte_diffusivity_Gu1997.py"
+                ),
+                "Electrolyte conductivity": os.path.join(
+                    input_path, "electrolyte_conductivity_Gu1997.py"
+                ),
+                "Darken thermodynamic factor": os.path.join(
+                    input_path, "darken_thermodynamic_factor_Chapman1968.py"
+                ),
+                "Negative electrode OCV": os.path.join(
+                    input_path, "lead_electrode_ocv_Bode1977.py"
+                ),
+                "Positive electrode OCV": os.path.join(
+                    input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
+                ),
+            },
+        )
+
+        # Overwrite geometry
+        self.default_geometry = pybamm.Geometry("1D macro")
+
+        # Standard time variable
+        time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
+        I = pybamm.electrical_parameters.dimensional_current_with_time
+        self.variables.update(
+            {
+                "Time [s]": pybamm.t * time_scale,
+                "Time [min]": pybamm.t * time_scale / 60,
+                "Time [h]": pybamm.t * time_scale / 3600,
+                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
+            }
+        )
+
+
+class LithiumIonBaseModel(StandardBatteryBaseModel):
+    """
+    Overwrites default parameters from Base Model with default parameters for
+    lithium-ion models
+
+    **Extends:** :class:`StandardBatteryBaseModel`
+
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        # Additional standard output variables
+        # Time
+        time_scale = pybamm.standard_parameters_lithium_ion.tau_discharge
+        I = pybamm.electrical_parameters.dimensional_current_with_time
+        self.variables.update(
+            {
+                "Time [s]": pybamm.t * time_scale,
+                "Time [min]": pybamm.t * time_scale / 60,
+                "Time [h]": pybamm.t * time_scale / 3600,
+                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
+            }
+        )
+
+        # Particle concentration and position
+        self.variables.update(
             {
                 "Negative particle concentration": None,
                 "Positive particle concentration": None,
                 "Negative particle surface concentration": None,
                 "Positive particle surface concentration": None,
-                "Electrolyte concentration": None,
+                "Negative particle concentration [mol.m-3]": None,
+                "Positive particle concentration [mol.m-3]": None,
+                "Negative particle surface concentration [mol.m-3]": None,
+                "Positive particle surface concentration [mol.m-3]": None,
             }
         )
-
-        self._variables.update(
+        var = pybamm.standard_spatial_vars
+        param = pybamm.geometric_parameters
+        self.variables.update(
             {
-                "Negative particle concentration [mols m-3]": None,
-                "Positive particle concentration [mols m-3]": None,
-                "Negative particle surface concentration [mols m-3]": None,
-                "Positive particle surface concentration [mols m-3]": None,
-                "Electrolyte concentration [mols m-3]": None,
-            }
-        )
-
-        # Potential
-        self._variables.update(
-            {
-                "Negative electrode potential [V]": None,
-                "Positive electrode potential [V]": None,
-                "Electrolyte potential [V]": None,
+                "r_n": var.r_n,
+                "r_n [m]": var.r_n * param.R_n,
+                "r_p": var.r_p,
+                "r_p [m]": var.r_p * param.R_p,
             }
         )
