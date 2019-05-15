@@ -52,6 +52,7 @@ class DaeSolver(pybamm.BaseSolver):
             The times at which to compute the solution
 
         """
+        pybamm.logger.info("Start solving {}".format(model.name))
 
         # create simplified rhs algebraic and event expressions
         concatenated_rhs = model.concatenated_rhs
@@ -63,6 +64,9 @@ class DaeSolver(pybamm.BaseSolver):
             events = [event.simplify() for event in events]
 
         def residuals(t, y, ydot):
+            pybamm.logger.debug(
+                "Evaluating residuals for {} at t={}".format(model.name, t)
+            )
             rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
             # reuse known_evals
             concat_evals = concatenated_algebraic.evaluate(
@@ -114,6 +118,8 @@ class DaeSolver(pybamm.BaseSolver):
             mass_matrix=model.mass_matrix.entries,
             jacobian=jacobian,
         )
+
+        pybamm.logger.info("Finish solving {}".format(model.name))
 
     def calculate_consistent_initial_conditions(self, rhs, algebraic, y0_guess):
         """
