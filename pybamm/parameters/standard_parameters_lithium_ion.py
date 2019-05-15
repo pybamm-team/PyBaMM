@@ -192,7 +192,7 @@ sigma_p = sigma_p_dimensional * potential_scale / i_typ / L_x
 # Electrolyte Properties
 t_plus = pybamm.Parameter("Cation transference number")
 beta_surf = 0
-s = 1
+s = 1 - t_plus
 
 
 # (1-2*t_plus) is for Nernst-Planck
