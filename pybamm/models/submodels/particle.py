@@ -51,7 +51,6 @@ class Standard(pybamm.SubModel):
                 c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
             }
             self.variables = self.get_variables(c, N, broadcast)
-            capitalised_domain = "Negative particle"
         elif domain == "positive particle":
             N = -pybamm.grad(c)
             self.rhs = {c: -(1 / param.C_p) * pybamm.div(N)}
@@ -62,11 +61,10 @@ class Standard(pybamm.SubModel):
                 c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
             }
             self.variables = self.get_variables(c, N, broadcast)
-            capitalised_domain = "Positive particle"
         else:
             raise pybamm.ModelError("Domain not valid for the particle equations")
 
-        c_surf = self.variables[capitalised_domain + " surface concentration"]
+        c_surf = self.variables[domain.capitalize() + " surface concentration"]
         tol = 0.01
         self.events = [
             pybamm.Function(np.min, c) - tol,
