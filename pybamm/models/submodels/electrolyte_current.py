@@ -354,7 +354,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
     def __init__(self, set_of_parameters, use_capacitance=True):
         super().__init__(set_of_parameters)
-        self.use_capacitance = use_capacitance
+        self._use_capacitance = use_capacitance
         # Different solver depending on whether we solve ODEs or DAEs
         if use_capacitance:
             self.default_solver = pybamm.ScikitsOdeSolver()

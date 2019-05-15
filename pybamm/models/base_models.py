@@ -56,7 +56,7 @@ class BaseModel(object):
         self.use_jacobian = True
 
         # Default behaviour: no capacitance in the model
-        self.use_capacitance = False
+        self._use_capacitance = False
 
     def _set_dict(self, dict, name):
         """
@@ -189,11 +189,6 @@ class BaseModel(object):
     @property
     def use_capacitance(self):
         return self._use_capacitance
-
-    @use_capacitance.setter
-    def use_capacitance(self, use_capacitance):
-        assert isinstance(use_capacitance, bool)
-        self._use_capacitance = use_capacitance
 
     def __getitem__(self, key):
         return self.rhs[key]

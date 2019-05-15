@@ -133,7 +133,7 @@ class AveragesComparison(BaseOutputComparison):
 
 
 class VariablesComparison(BaseOutputComparison):
-    "Compare variables that vary across models"
+    "Compare variables across models"
 
     def __init__(self, models, time, mesh, solvers):
         super().__init__(models, time, mesh, solvers)

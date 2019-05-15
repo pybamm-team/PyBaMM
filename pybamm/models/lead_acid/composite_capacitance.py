@@ -27,7 +27,7 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
     def __init__(self, use_capacitance=True):
         # Update own model with submodels
         super().__init__()
-        self.use_capacitance = use_capacitance
+        self._use_capacitance = use_capacitance
 
         "-----------------------------------------------------------------------------"
         "Parameters"
