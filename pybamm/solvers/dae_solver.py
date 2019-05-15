@@ -64,7 +64,9 @@ class DaeSolver(pybamm.BaseSolver):
             events = [event.simplify() for event in events]
 
         def residuals(t, y, ydot):
-            pybamm.logger.debug("Evaluating residuals for {} at t={}".format(model.name, t))
+            pybamm.logger.debug(
+                "Evaluating residuals for {} at t={}".format(model.name, t)
+            )
             rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
             # reuse known_evals
             concat_evals = concatenated_algebraic.evaluate(
