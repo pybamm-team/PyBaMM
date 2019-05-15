@@ -22,7 +22,7 @@ ignore = [
 ]
 
 
-def print_parameters(parameter_values, parameters, output_file=None):
+def print_parameters(parameters, parameter_values, output_file=None):
     """
     Evaluate and print parameters to an output file.
     For dimensionless parameters that depend on the C-rate, the value is given as a
@@ -30,10 +30,10 @@ def print_parameters(parameter_values, parameters, output_file=None):
 
     Parameters
     ----------
+    parameters : class or dict containing :class:`pybamm.Parameter` objects
+        Class or dictionary containing all the parameters to be evaluated
     parameter_values : :class:`pybamm.ParameterValues`
         The class of parameter values
-    parameters : class containing :class:`pybamm.Parameter` objects
-        A class containing all the parameters to be evaluated
     output_file : string, optional
         The file to print parameters to. If None, the parameters are not printed, and
         this function simply acts as a test that all the parameters can be evaluated
@@ -43,17 +43,23 @@ def print_parameters(parameter_values, parameters, output_file=None):
     evaluated_parameters : defaultdict
         The evaluated parameters, for further processing if needed
     """
+    # If 'parameters' is a class, extract the dict
+    if not isinstance(parameters, dict):
+        parameters = {k: v for k, v in parameters.__dict__.items() if k not in ignore}
 
     evaluated_parameters = defaultdict(list)
     # Calculate the currents required for C-rates of 1C and C / 10
-    current_for_1C = parameter_values["Cell capacity [A.h]"]
+    try:
+        current_for_1C = parameter_values["Cell capacity [A.h]"]
+    except KeyError:
+        current_for_1C = 1
     current_for_C_over_10 = current_for_1C / 10
     # Calculate parameters for each C-rate
     for current in [current_for_1C, current_for_C_over_10]:
         # Update Crate
         parameter_values.update({"Typical current [A]": current})
-        for name, symbol in parameters.__dict__.items():
-            if name not in ignore and not callable(symbol):
+        for name, symbol in parameters.items():
+            if not callable(symbol):
                 proc_symbol = parameter_values.process_symbol(symbol)
                 if not (
                     callable(proc_symbol)
