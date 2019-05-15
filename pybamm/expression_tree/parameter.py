@@ -54,3 +54,7 @@ class FunctionParameter(pybamm.UnaryOperator):
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
         return FunctionParameter(self.name, self.orphans[0], diff_variable=variable)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return FunctionParameter(self.name, child, diff_variable=self.diff_variable)

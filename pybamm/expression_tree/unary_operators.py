@@ -1,13 +1,11 @@
 #
 # Unary operator classes and methods
 #
-import pybamm
-
 import autograd
-import copy
 import numpy as np
-from scipy.sparse import csr_matrix
+import pybamm
 from inspect import signature
+from scipy.sparse import csr_matrix
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -330,6 +328,11 @@ class Integral(SpatialOperator):
     def integration_variable(self):
         return self._integration_variable
 
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+
+        return self.__class__(simplified_child, self.integration_variable)
+
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
@@ -388,6 +391,11 @@ class BoundaryOperator(SpatialOperator):
         # Domain of Boundary must be ([]) so that expressions can be formed
         # of boundary values of variables in different domains
         self.domain = []
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+
+        return self.__class__(simplified_child, self.side)
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
