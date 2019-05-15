@@ -95,7 +95,7 @@ s_plus_Ox_dim = pybamm.Parameter("Signed stoichiometry of cations (oxygen reacti
 s_w_Ox_dim = pybamm.Parameter("Signed stoichiometry of water (oxygen reaction)")
 s_ox_Ox_dim = pybamm.Parameter("Signed stoichiometry of oxygen (oxygen reaction)")
 ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
-c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration [mol.m-3")
+c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration [mol.m-3]")
 s_plus_Hy_dim = pybamm.Parameter("Signed stoichiometry of cations (hydrogen reaction)")
 s_hy_Hy_dim = pybamm.Parameter("Signed stoichiometry of hydrogen (hydrogen reaction)")
 ne_Hy = pybamm.Parameter("Electrons in hydrogen reaction")
@@ -116,8 +116,8 @@ DeltaVliq_p = (
 )  # Net Molar Volume consumed in electrolyte (neg) [m3.mol-1]
 
 # Other species properties
-D_ox_dimensional = pybamm.Parameter("Oxygen diffusivity")
-D_hy_dimensional = pybamm.Parameter("Hydrogen diffusivity")
+D_ox_dimensional = pybamm.Parameter("Oxygen diffusivity [m2.s-1]")
+D_hy_dimensional = pybamm.Parameter("Hydrogen diffusivity [m2.s-1]")
 V_ox = pybamm.Parameter("Partial molar volume of oxygen molecules [m3.mol-1]")
 V_hy = pybamm.Parameter("Partial molar volume of hydrogen molecules [m3.mol-1]")
 M_ox = pybamm.Parameter("Molar mass of oxygen molecules [kg.mol-1]")

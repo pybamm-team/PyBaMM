@@ -15,6 +15,12 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         F = pybamm.standard_parameters_lead_acid.F
         self.assertAlmostEqual(F.evaluate(), 96485, places=0)
 
+    def test_all_defined(self):
+        parameters = pybamm.standard_parameters_lead_acid
+        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        output_file = "results/sulzer_thesis/parameters.txt"
+        pybamm.print_parameters(parameter_values, parameters, output_file)
+
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
         parameters = {
