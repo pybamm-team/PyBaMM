@@ -10,6 +10,10 @@ class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
         model = pybamm.lead_acid.NewmanTiedemannCapacitance()
         model.check_well_posedness()
 
+    def test_well_posed_no_capacitance(self):
+        model = pybamm.lead_acid.NewmanTiedemannCapacitance(use_capacitance=False)
+        model.check_well_posedness()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

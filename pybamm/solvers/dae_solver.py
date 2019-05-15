@@ -69,10 +69,8 @@ class DaeSolver(pybamm.BaseSolver):
             )
             rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
             # reuse known_evals
-            concat_evals = concatenated_algebraic.evaluate(
-                t, y, known_evals=known_evals
-            )[0]
-            return np.concatenate((rhs_eval - ydot[: rhs_eval.shape[0]], concat_evals))
+            alg_eval = concatenated_algebraic.evaluate(t, y, known_evals=known_evals)[0]
+            return np.concatenate((rhs_eval - ydot[: rhs_eval.shape[0]], alg_eval))
 
         def rhs(t, y):
             return concatenated_rhs.evaluate(t, y, known_evals={})[0]

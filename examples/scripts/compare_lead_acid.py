@@ -39,5 +39,13 @@ for i, model in enumerate(models):
     solvers[i] = solver
 
 # plot
-plot = pybamm.QuickPlot(models, mesh, solvers)
+output_variables = [
+    "Interfacial current density [A.m-2]",
+    "Electrolyte concentration [mol.m-3]",
+    "Current [A]",
+    "Porosity",
+    "Electrolyte potential [V]",
+    "Terminal voltage [V]",
+]
+plot = pybamm.QuickPlot(models, mesh, solvers, output_variables)
 plot.dynamic_plot()

@@ -530,6 +530,17 @@ def average(symbol):
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.orphans[0]
+    # If symbol is a concatenation of Broadcasts, its average value is its child
+    elif (
+        isinstance(symbol, pybamm.Concatenation)
+        and all(isinstance(child, pybamm.Broadcast) for child in symbol.children)
+        and symbol.domain == ["negative electrode", "separator", "positive electrode"]
+    ):
+        l_n = pybamm.geometric_parameters.l_n
+        l_s = pybamm.geometric_parameters.l_s
+        l_p = pybamm.geometric_parameters.l_p
+        a, b, c = [orp.orphans[0] for orp in symbol.orphans]
+        return (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
     # Otherwise, use Integral to calculate average value
     else:
         if symbol.domain == ["negative electrode"]:
@@ -541,6 +552,9 @@ def average(symbol):
         elif symbol.domain == ["positive electrode"]:
             x = pybamm.standard_spatial_vars.x_p
             l = pybamm.geometric_parameters.l_p
+        elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
+            x = pybamm.standard_spatial_vars.x
+            l = pybamm.Scalar(1)
 
         return Integral(symbol, x) / l
 

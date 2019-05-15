@@ -12,7 +12,7 @@ class TestLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.Composite()
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
+        modeltest.test_all()
 
     def test_optimisations(self):
         model = pybamm.lead_acid.Composite()

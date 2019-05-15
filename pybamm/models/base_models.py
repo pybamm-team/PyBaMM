@@ -59,6 +59,9 @@ class BaseModel(object):
         self.use_jacobian = True
         self.use_simplify = True
 
+        # Default behaviour: no capacitance in the model
+        self._use_capacitance = False
+
     def _set_dict(self, dict, name):
         """
         Convert any scalar equations in dict to 'pybamm.Scalar'
@@ -186,6 +189,10 @@ class BaseModel(object):
     @jacobian.setter
     def jacobian(self, jacobian):
         self._jacobian = jacobian
+
+    @property
+    def use_capacitance(self):
+        return self._use_capacitance
 
     def __getitem__(self, key):
         return self.rhs[key]

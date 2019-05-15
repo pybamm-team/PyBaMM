@@ -39,7 +39,9 @@ class Standard(pybamm.SubModel):
                 "Only implemented when c_k is on exactly 1 subdomain"
             )
 
-        if c.domain[0] == "negative particle":
+        domain = c.domain[0]
+
+        if domain == "negative particle":
             N = -pybamm.grad(c)
             self.rhs = {c: -(1 / param.C_n) * pybamm.div(N)}
             self.algebraic = {}
@@ -49,7 +51,7 @@ class Standard(pybamm.SubModel):
                 c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
             }
             self.variables = self.get_variables(c, N, broadcast)
-        elif c.domain[0] == "positive particle":
+        elif domain == "positive particle":
             N = -pybamm.grad(c)
             self.rhs = {c: -(1 / param.C_p) * pybamm.div(N)}
             self.algebraic = {}
@@ -62,7 +64,14 @@ class Standard(pybamm.SubModel):
         else:
             raise pybamm.ModelError("Domain not valid for the particle equations")
 
-        self.events = [pybamm.Function(np.min, c), pybamm.Function(np.max, c) - 1]
+        c_surf = self.variables[domain.capitalize() + " surface concentration"]
+        tol = 0.01
+        self.events = [
+            pybamm.Function(np.min, c) - tol,
+            (1 - tol) - pybamm.Function(np.max, c),
+            pybamm.Function(np.min, c_surf) - tol,
+            (1 - tol) - pybamm.Function(np.max, c_surf),
+        ]
 
     def get_variables(self, c, N, broadcast):
         """

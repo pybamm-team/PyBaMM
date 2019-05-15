@@ -27,6 +27,7 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
     def __init__(self, use_capacitance=True):
         # Update own model with submodels
         super().__init__()
+        self._use_capacitance = use_capacitance
 
         "-----------------------------------------------------------------------------"
         "Parameters"
@@ -146,8 +147,8 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
         electrolyte_vars = electrolyte_current_model.get_explicit_combined(
             ocp_n, eta_r_n, c_e, phi_s_n, eps0, c_e_0
         )
-        phi_e = self.variables["Electrolyte potential"]
         self.variables.update(electrolyte_vars)
+        phi_e = electrolyte_vars["Electrolyte potential"]
 
         # Electrode
         electrode_vars = electrode_model.get_explicit_combined(
