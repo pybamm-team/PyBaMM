@@ -62,6 +62,8 @@ class Discretisation(object):
             ``inplace`` is False, model != model_disc
 
         """
+        pybamm.logger.info("Start discretising {}".format(model.name))
+
         # Prepare discretisation
         # set variables (we require the full variable not just id)
         variables = list(model.rhs.keys()) + list(model.algebraic.keys())
@@ -107,6 +109,8 @@ class Discretisation(object):
 
         # Check that resulting model makes sense
         self.check_model(model_disc)
+
+        pybamm.logger.info("Finish discretising {}".format(model.name))
 
         return model_disc
 
@@ -349,6 +353,8 @@ class Discretisation(object):
             Discretised symbol
 
         """
+        pybamm.logger.debug("Discretise {!s}".format(symbol))
+
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
             left, right = symbol.children

@@ -544,6 +544,8 @@ def simplify(symbol):
     :class:`pybamm.Symbol`
         Simplified symbol
     """
+    pybamm.logger.debug("Simplify {!s}".format(symbol))
+
     if isinstance(symbol, pybamm.BinaryOperator):
         left, right = symbol.children
         # process children
