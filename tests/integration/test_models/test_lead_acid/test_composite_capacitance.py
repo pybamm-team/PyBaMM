@@ -13,14 +13,14 @@ class TestLeadAcidCompositeCapacitance(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.CompositeCapacitance()
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
+        modeltest.test_all()
 
     @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
     def test_basic_processing_no_capacitance(self):
         model = pybamm.lead_acid.CompositeCapacitance(use_capacitance=False)
         modeltest = tests.StandardModelTest(model)
 
-        modeltest.test_all(skip_output_tests=True)
+        modeltest.test_all()
 
     def test_optimisations(self):
         model = pybamm.lead_acid.CompositeCapacitance()
