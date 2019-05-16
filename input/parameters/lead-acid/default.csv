@@ -28,7 +28,7 @@ Partial molar volume of cations [m3.mol-1],1.35E-05,,
 Cation stoichiometry,1,,Hydrogen cations
 Anion stoichiometry,1,,Hydrogen sulfate anions
 Molar mass of water [kg.mol-1],0.01801,,
-Molar mass of cations [kg.mol-1],0.01,lide1992crc,Hydrogen cations
+Molar mass of cations [kg.mol-1],0.001,lide1992crc,Hydrogen cations
 Molar mass of anions [kg.mol-1],0.097,lide1992crc,Hydrogen sulfate anions
 ,,,
 # Other species properties,,,
@@ -64,7 +64,7 @@ Negative electrode cation signed stoichiometry,-1,,
 Positive electrode cation signed stoichiometry,-3,,
 Negative electrode electrons in reaction,2,,
 Positive electrode electrons in reaction,2,,
-Negative electrode reference exchange-current density [A.m-2],0.0496,srinivasan2003mathematical,
+Negative electrode reference exchange-current density [A.m-2],0.06,srinivasan2003mathematical,
 Positive electrode reference exchange-current density [A.m-2],0.004,srinivasan2003mathematical,
 Signed stoichiometry of cations (oxygen reaction),-4,,
 Signed stoichiometry of water (oxygen reaction),1,,

@@ -160,6 +160,10 @@ class DaeSolver(pybamm.BaseSolver):
 
         if sol.success and np.all(sol.fun < self.root_tol):
             return y0_consistent
+        elif np.any(sol.fun > self.root_tol):
+            raise pybamm.SolverError(
+                "Could not find consistent initial conditions: solution above tolerance"
+            )
         else:
             raise pybamm.SolverError(
                 "Could not find consistent initial conditions: {}".format(sol.message)

@@ -13,6 +13,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
         Check that the leading-order model solution converges linearly in C_e to the
         full model solution
         """
+        pybamm.set_logging_level("INFO")
         # Create models
         leading_order_model = pybamm.lead_acid.LOQS()
         composite_model = pybamm.lead_acid.Composite()
@@ -27,7 +28,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
 
         # Discretise (same mesh, create different discretisations)
         var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3}
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10}
         mesh = pybamm.Mesh(geometry, full_model.default_submesh_types, var_pts)
         loqs_disc = pybamm.Discretisation(mesh, full_model.default_spatial_methods)
         loqs_disc.process_model(leading_order_model)
@@ -37,6 +38,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
         full_disc.process_model(full_model)
 
         def get_max_error(current):
+            pybamm.logger.info("current = {}".format(current))
             # Update current (and hence C_e) in the parameters
             param = pybamm.ParameterValues(
                 base_parameters=full_model.default_parameter_values,
