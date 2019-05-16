@@ -134,6 +134,7 @@ from .models import lithium_ion
 # Submodel classes
 #
 from .models.submodels import (
+    current_collector,
     electrode,
     electrolyte_current,
     electrolyte_diffusion,

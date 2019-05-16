@@ -5,13 +5,21 @@ Name [units],Value,Reference,Notes
 Reference temperature [K],298.15,25C,
 ,,,
 # Macroscale geometry,,,
+Negative current collector width [m],2.5E-05,Scott Moura FastDFN,
 Negative electrode width [m],0.0001,Scott Moura FastDFN,
 Separator width [m],2.5E-05,Scott Moura FastDFN,
 Positive electrode width [m],0.0001,Scott Moura FastDFN,
+Positive current collector width [m],2.5E-05,Scott Moura FastDFN,
 Electrode height [m],0.137,KOKAM SLPB78205130H,Not needed for 1D
 Electrode depth [m],0.207,KOKAM SLPB78205130H,Not needed for 1D
 Negative current collector thickness [m],2.5E-05,Scott Moura FastDFN,
 Positive current collector thickness [m],2.5E-05,Scott Moura FastDFN,
+Negative tab width [m],0.04,,Need to actual value for KOKAM cell
+Negative tab centre y-coordinate [m],0.6,,Need to actual value for KOKAM cell
+Negative tab centre z-coordinate [m],0.137,,Need to actual value for KOKAM cell
+Positive tab width [m],0.04,,Need to actual value for KOKAM cell
+Positive tab centre y-coordinate [m],0.147,,Need to actual value for KOKAM cell
+Positive tab centre z-coordinate [m],0.137,,Need to actual value for KOKAM cell
 ,,,
 # Electrical,,,
 Number of electrodes connected in parallel to make a cell,1,-,
@@ -30,6 +38,10 @@ Maximum concentration in negative electrode [mol.m-3],24983.2619938437,Scott Mou
 Maximum concentration in positive electrode [mol.m-3],51217.9257309275,Scott Moura FastDFN,
 Negative electrode diffusion coefficient [m2.s-1],3.9E-14,Scott Moura FastDFN,
 Positive electrode diffusion coefficient [m2.s-1],1E-13,Scott Moura FastDFN,
+,,,
+# Current collector properties ,,,
+Negative current collector conductivity [S.m-1],5.96E+07,LIONSIMBA,carbon
+Positive current collector conductivity [S.m-1],3.55E+07,LIONSIMBA,aluminium
 ,,,
 # Microstructure,,,
 Negative electrode porosity,0.3,Scott Moura FastDFN,
