@@ -41,8 +41,11 @@ class TestDaeSolver(unittest.TestCase):
             # algebraic equation has no root
             return y ** 2 + 1
 
-        solver = pybamm.DaeSolver()
+        solver = pybamm.DaeSolver(root_method="hybr")
         y0 = np.array([2])
+        with self.assertRaises(pybamm.SolverError):
+            solver.calculate_consistent_initial_conditions(rhs, algebraic, y0)
+        solver = pybamm.DaeSolver()
         with self.assertRaises(pybamm.SolverError):
             solver.calculate_consistent_initial_conditions(rhs, algebraic, y0)
 

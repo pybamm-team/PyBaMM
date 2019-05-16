@@ -20,6 +20,13 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
         output_file = "results/sulzer_thesis/parameters.txt"
         pybamm.print_parameters(parameters, parameter_values, output_file)
+        # test print_parameters with dict and without C-rate
+        del parameter_values["Cell capacity [A.h]"]
+        parameters = {
+            "C_e": pybamm.standard_parameters_lead_acid.C_e,
+            "sigma_n": pybamm.standard_parameters_lead_acid.sigma_n,
+        }
+        pybamm.print_parameters(parameters, parameter_values)
 
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
