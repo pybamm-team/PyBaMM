@@ -4,6 +4,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pybamm
+from output_directory import OUTPUT_DIR
+from matplotlib import rc
+
+rc("font", **{"family": "sans-serif", "sans-serif": ["Helvetica"]})
+## for Palatino and other serif fonts use:
+# rc('font',**{'family':'serif','serif':['Palatino']})
+rc("text", usetex=True)
 
 
 def asymptotics_comparison(models, Crates):
@@ -57,16 +64,20 @@ def plot_voltages(all_variables, t_eval):
                 variables["Terminal voltage [V]"](t_eval),
                 label=model.name,
             )
-    plt.legend(loc="upper right")
-    plt.show()
+        plt.xlabel("Time [h]")
+        plt.ylabel("Voltage [V]")
+        plt.legend(loc="upper right")
+        file_name = "discharge_voltage_comparison_{}C.eps".format(Crate)
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 if __name__ == "__main__":
+    pybamm.set_logging_level("INFO")
     models = [
         pybamm.lead_acid.LOQS(),
         pybamm.lead_acid.Composite(),
-        # pybamm.lead_acid.NewmanTiedemann(),
+        pybamm.lead_acid.NewmanTiedemann(),
     ]
-    Crates = [1]
+    Crates = [0.1, 0.2, 0.5, 1, 2, 5]
     all_variables, t_eval = asymptotics_comparison(models, Crates)
     plot_voltages(all_variables, t_eval)

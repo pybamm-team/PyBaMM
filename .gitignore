@@ -29,6 +29,7 @@ input/*
 
 # simulation outputs
 out/
+output_directory.py
 
 # ideas
 ideas/
