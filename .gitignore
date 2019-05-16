@@ -29,7 +29,8 @@ input/*
 
 # simulation outputs
 out/
-output_directory.py
+config.py
+matplotlibrc
 
 # ideas
 ideas/

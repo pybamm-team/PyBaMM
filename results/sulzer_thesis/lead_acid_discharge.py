@@ -4,13 +4,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pybamm
-from output_directory import OUTPUT_DIR
-from matplotlib import rc
-
-rc("font", **{"family": "sans-serif", "sans-serif": ["Helvetica"]})
-## for Palatino and other serif fonts use:
-# rc('font',**{'family':'serif','serif':['Palatino']})
-rc("text", usetex=True)
+from config import OUTPUT_DIR
 
 
 def asymptotics_comparison(models, Crates):
@@ -56,19 +50,42 @@ def asymptotics_comparison(models, Crates):
 
 def plot_voltages(all_variables, t_eval):
     # Plot
-    for Crate, models_variables in all_variables.items():
-        plt.figure()
+    plt.subplots(figsize=(6, 4))
+    n = int(len(all_variables) // np.sqrt(len(all_variables)))
+    m = np.ceil(len(all_variables) / n)
+    for k, Crate in enumerate(all_variables.keys()):
+        models_variables = all_variables[Crate]
+        t_max = max(
+            np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
+        )
+        ax = plt.subplot(n, m, k + 1)
+        plt.axis([0, t_max, 10.5, 13])
+        plt.xlabel("Time [h]")
+        plt.title("\\textbf{{({})}} {}C".format(chr(97 + k), Crate))
+
+        # Hide the right and top spines
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+
+        # Only show ticks on the left and bottom spines
+        ax.yaxis.set_ticks_position("left")
+        ax.xaxis.set_ticks_position("bottom")
         for model, variables in models_variables.items():
+            if k == 0:
+                label = model.name
+            else:
+                label = None
+            if k % m == 0:
+                plt.ylabel("Voltage [V]")
+
             plt.plot(
                 variables["Time [h]"](t_eval),
-                variables["Terminal voltage [V]"](t_eval),
-                label=model.name,
+                variables["Terminal voltage [V]"](t_eval) * 6,
+                label=label,
             )
-        plt.xlabel("Time [h]")
-        plt.ylabel("Voltage [V]")
-        plt.legend(loc="upper right")
-        file_name = "discharge_voltage_comparison_{}C.eps".format(Crate)
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+        # plt.legend(loc="upper right")
+    file_name = "discharge_voltage_comparison.eps".format(Crate)
+    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 if __name__ == "__main__":
