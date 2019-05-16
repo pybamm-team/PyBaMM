@@ -44,7 +44,7 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         "Submodels"
 
         # Exchange-current density
-        c_e_n, _, c_e_p = c_e.orphans
+        c_e_n, c_e_s, c_e_p = c_e.orphans
         int_curr_model = pybamm.interface.LeadAcidReaction(param)
         j0_n = int_curr_model.get_exchange_current_densities(c_e_n)
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p)
@@ -114,7 +114,22 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
             delta_phi_n, delta_phi_p, i_e_n, i_e_p, c_e, eps
         )
         self.variables.update(eleclyte_variables)
-
+        self.boundary_conditions.update(
+            {
+                c_e_n: {
+                    "left": (pybamm.Scalar(0), "Neumann"),
+                    "right": (pybamm.BoundaryFlux(c_e_n, "right"), "Neumann"),
+                },
+                c_e_s: {
+                    "left": (pybamm.BoundaryFlux(c_e_s, "left"), "Neumann"),
+                    "right": (pybamm.BoundaryFlux(c_e_s, "right"), "Neumann"),
+                },
+                c_e_p: {
+                    "left": (pybamm.BoundaryFlux(c_e_p, "left"), "Neumann"),
+                    "right": (pybamm.Scalar(0), "Neumann"),
+                },
+            }
+        )
         # Voltage
         phi_e = self.variables["Electrolyte potential"]
         phi_e_n, _, phi_e_p = phi_e.orphans
