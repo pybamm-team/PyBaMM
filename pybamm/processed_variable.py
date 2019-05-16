@@ -95,7 +95,11 @@ class ProcessedVariable(object):
 
         # No discretisation provided, or variable has no domain (function of t only)
         self._interpolation_function = interp.interp1d(
-            self.t_sol, entries, kind=self.interp_kind, fill_value=np.nan
+            self.t_sol,
+            entries,
+            kind=self.interp_kind,
+            fill_value=np.nan,
+            bounds_error=False,
         )
 
         self.entries = entries
