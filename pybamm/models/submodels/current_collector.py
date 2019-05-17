@@ -24,8 +24,9 @@ class Ohm(pybamm.SubModel):
     *Extends:* :class:`pybamm.SubModel`
     """
 
-    def __init__(self, set_of_parameters):
+    def __init__(self, set_of_parameters, parameter_values):
         super().__init__(set_of_parameters)
+        self.parameter_values = parameter_values
 
     def create_mesh(self, Ny=32, Nz=32, degree=1):
         """
@@ -42,13 +43,16 @@ class Ohm(pybamm.SubModel):
             Degree of polynomial used in FEM.
         """
         param = self.set_of_parameters
+        param_vals = self.parameter_values
         self.Ny = Ny
         self.Nz = Nz
         self.degree = degree
 
         # create mesh and function space
+        l_y = param_vals.process_symbol(param.l_y).evaluate(0, 0)
+        l_z = param_vals.process_symbol(param.l_z).evaluate(0, 0)
         self.mesh = fenics.RectangleMesh(
-            fenics.Point(0, 0), fenics.Point(param.Ly, 1), self.Ny, self.Nz
+            fenics.Point(0, 0), fenics.Point(l_y, l_z), self.Ny, self.Nz
         )
         self.element = fenics.FunctionSpace(self.mesh, "Lagrange", self.degree)
 
@@ -57,9 +61,9 @@ class Ohm(pybamm.SubModel):
 
         # create SubDomain classes for the tabs
         negativetab = Tab()
-        negativetab.set_parameters(param, "negative")
+        negativetab.set_parameters(param, param_vals, "negative")
         positivetab = Tab()
-        positivetab.set_parameters(param, "positive")
+        positivetab.set_parameters(param, param_vals, "positive")
 
         # initialize mesh function for boundary domains
         boundary_markers = fenics.MeshFunction(
@@ -75,14 +79,26 @@ class Ohm(pybamm.SubModel):
         )
 
         # boundary values
-        self.dVdn_negativetab = fenics.Constant(
+        dVdn_neg = param_vals.process_symbol(
             -param.I_typ
-            / (param.sigma_cn * param.aspect_ratio ** 2 * param.l_tab_n * param.l_cn)
-        )
-        self.dVdn_positivetab = fenics.Constant(
+            / (
+                param.sigma_cn
+                * (param.L_x / param.L_z) ** 2
+                * param.l_tab_n
+                * param.l_cn
+            )
+        ).evaluate(0, 0)
+        self.dVdn_negativetab = fenics.Constant(dVdn_neg)
+        dVdn_pos = param_vals.process_symbol(
             -param.I_typ
-            / (param.sigma_cp * param.aspect_ratio ** 2 * param.l_tab_p * param.l_cp)
-        )
+            / (
+                param.sigma_cp
+                * (param.L_x / param.L_z) ** 2
+                * param.l_tab_p
+                * param.l_cp
+            )
+        ).evaluate(0, 0)
+        self.dVdn_positivetab = fenics.Constant(dVdn_pos)
 
     def assemble(self):
         " Assemble mass and stiffness matrices, and boundary load vector."
@@ -105,10 +121,10 @@ class Ohm(pybamm.SubModel):
         self.load_tab_n = fenics.assemble(neg_tab_form).get_local()[:]
         self.load_tab_p = fenics.assemble(pos_tab_form).get_local()[:]
 
-        # set functions for V, I and rhs
+        # set functions for V, I and load
         self.voltage = fenics.Function(self.element)
         self.current = fenics.Function(self.element)
-        self.rhs = fenics.Function(self.element)
+        self.load = fenics.Function(self.element)
 
         # number of degrees of freedom
         self.N_dofs = np.size(self.voltage.vector()[:])
@@ -130,19 +146,22 @@ class Ohm(pybamm.SubModel):
 
         # Right hand side (uses the value of the current computed using the
         # previous iterate of V)
-        self.rhs.vector()[:] = (
+        alpha = self.parameter_values.process_symbol(
+            self.set_of_parameters.alpha
+        ).evaluate(0, 0)
+        self.load.vector()[:] = (
             self.load_tab_n
             + self.load_tab_p
-            + np.dot(self.mass.array(), self.alpha * self.current.vector()[:])
+            + np.dot(self.mass.array(), alpha * self.current.vector()[:])
         )
 
         # Solve K*V = b(I)
-        # fenics.solve(self.stiffness, self.voltage.vector(), self.rhs.vector())
+        # fenics.solve(self.stiffness, self.voltage.vector(), self.load.vector())
 
         # Solve K*V_new + M*V_new = b(I) + M*V_prev
-        self.rhs.vector()[:] += np.dot(self.mass.array(), voltage_prev.vector()[:])
+        self.load.vector()[:] += np.dot(self.mass.array(), voltage_prev.vector()[:])
         fenics.solve(
-            self.stiffness + self.mass, self.voltage.vector(), self.rhs.vector()
+            self.stiffness + self.mass, self.voltage.vector(), self.load.vector()
         )
 
         # Update difference in solution
@@ -160,16 +179,22 @@ class Ohm(pybamm.SubModel):
 
 
 class Tab(fenics.SubDomain):
-    def set_parameters(self, param, domain):
+    def set_parameters(self, param, param_vals, domain):
         # Set paramaters so they can be accessed from the fenics inside method
-        self.l_y = param.l_y
-        self.l_z = param.l_z
+        self.l_y = param_vals.process_symbol(param.l_y).evaluate(0, 0)
+        self.l_z = param_vals.process_symbol(param.l_z).evaluate(0, 0)
         if domain == "negative":
-            self.tab_location = [param.centre_y_tab_n, param.centre_z_tab_n]
-            self.tab_width = param.l_tab_n
+            self.tab_location = [
+                param_vals.process_symbol(param.centre_y_tab_n).evaluate(0, 0),
+                param_vals.process_symbol(param.centre_z_tab_n).evaluate(0, 0),
+            ]
+            self.tab_width = param_vals.process_symbol(param.l_tab_n).evaluate(0, 0)
         elif domain == "positive":
-            self.tab_location = [param.centre_y_tab_p, param.centre_z_tab_p]
-            self.tab_width = param.l_tab_p
+            self.tab_location = [
+                param_vals.process_symbol(param.centre_y_tab_p).evaluate(0, 0),
+                param_vals.process_symbol(param.centre_z_tab_p).evaluate(0, 0),
+            ]
+            self.tab_width = param_vals.process_symbol(param.l_tab_p).evaluate(0, 0)
         else:
             raise pybamm.ModelError("tab domain must be one of negative or positive")
 

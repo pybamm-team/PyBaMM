@@ -36,11 +36,11 @@ A_cc = pybamm.geometric_parameters.A_cc
 
 # Tab geometry
 L_tab_n = pybamm.geometric_parameters.L_tab_n
-centre_y_tab_n = pybamm.geometric_parameters.centre_y_tab_n
-centre_z_tab_n = pybamm.geometric_parameters.centre_z_tab_n
+Centre_y_tab_n = pybamm.geometric_parameters.Centre_y_tab_n
+Centre_z_tab_n = pybamm.geometric_parameters.Centre_z_tab_n
 L_tab_p = pybamm.geometric_parameters.L_tab_p
-centre_y_tab_p = pybamm.geometric_parameters.centre_y_tab_p
-centre_z_tab_p = pybamm.geometric_parameters.centre_z_tab_p
+Centre_y_tab_p = pybamm.geometric_parameters.Centre_y_tab_p
+Centre_z_tab_p = pybamm.geometric_parameters.Centre_z_tab_p
 A_tab_n = pybamm.geometric_parameters.A_tab_n
 A_tab_p = pybamm.geometric_parameters.A_tab_p
 
@@ -199,7 +199,7 @@ centre_y_tab_n = pybamm.geometric_parameters.centre_y_tab_n
 centre_z_tab_n = pybamm.geometric_parameters.centre_z_tab_n
 l_tab_p = pybamm.geometric_parameters.l_tab_p
 centre_y_tab_p = pybamm.geometric_parameters.centre_y_tab_p
-centre_z_tab_p = pybamm.geometric_parameters.centre_y_tab_p
+centre_z_tab_p = pybamm.geometric_parameters.centre_z_tab_p
 
 # Microscale geometry
 epsilon_n = pybamm.Parameter("Negative electrode porosity")
@@ -218,6 +218,12 @@ sigma_cn = sigma_cn_dimensional * potential_scale / i_typ / L_x
 sigma_n = sigma_n_dimensional * potential_scale / i_typ / L_x
 sigma_p = sigma_p_dimensional * potential_scale / i_typ / L_x
 sigma_cp = sigma_cp_dimensional * potential_scale / i_typ / L_x
+
+# should rename this to avoid confusion with Butler-Volmer
+
+alpha = 1 / (sigma_cn * (L_x / L_z) ** 2 * L_cn) + 1 / (
+    sigma_cp * (L_x / L_z) ** 2 * L_cp
+)
 
 # Electrolyte Properties
 t_plus = pybamm.Parameter("Cation transference number")
