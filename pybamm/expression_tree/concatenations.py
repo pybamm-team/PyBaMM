@@ -180,13 +180,14 @@ class DomainConcatenation(Concatenation):
     def mesh(self):
         return self._mesh
 
-    @property
-    def size(self):
-        return self._size
-
-    @property
-    def shape(self):
-        return (self.size,)
+    #
+    # @property
+    # def size(self):
+    #     return self._size
+    #
+    # @property
+    # def shape(self):
+    #     return (self.size, 1)
 
     def create_slices(self, node):
         slices = {}
@@ -203,7 +204,7 @@ class DomainConcatenation(Concatenation):
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation._concatenation_evaluate()`. """
         # preallocate vector
-        vector = np.empty(self._size)
+        vector = np.empty((self._size, 1))
 
         # loop through domains of children writing subvectors to final vector
         for child_vector, slices in zip(children_eval, self._children_slices):

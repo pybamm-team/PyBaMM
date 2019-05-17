@@ -326,34 +326,22 @@ class Multiplication(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
-        # broadcasting is done correctly, see #253. This might be inefficient, so will
-        # need to revisit
-
-        def is_numpy_1d_vector(v):
-            return isinstance(v, np.ndarray) and len(v.shape) == 1
-
-        def is_numpy_2d_col_vector(v):
-            return isinstance(v, np.ndarray) and len(v.shape) == 2 and v.shape[1] == 1
-
-        if is_numpy_1d_vector(left):
-            left = left.reshape(-1, 1)
-
-        if is_numpy_1d_vector(right):
-            right = right.reshape(-1, 1)
+        #
+        # def is_numpy_1d_vector(v):
+        #     return isinstance(v, np.ndarray) and len(v.shape) == 1
+        #
+        # if is_numpy_1d_vector(left) or is_numpy_1d_vector(right):
+        #     import ipdb
+        #
+        #     ipdb.set_trace()
 
         if issparse(left):
-            result = left.multiply(right)
+            return left.multiply(right)
         elif issparse(right):
             # Hadamard product is commutative, so we can switch right and left
-            result = right.multiply(left)
+            return right.multiply(left)
         else:
-            result = left * right
-
-        if is_numpy_2d_col_vector(result):
-            result = result.reshape(-1)
-
-        return result
+            return left * right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
