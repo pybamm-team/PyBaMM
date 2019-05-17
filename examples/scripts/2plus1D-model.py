@@ -17,13 +17,17 @@ cc_model.assemble()
 models = [None] * cc_model.N_dofs
 for i in range(len(models)):
     models[i] = pybamm.lithium_ion.SPM()
-    
-# TO DO: get consisntent initial conditions
+
+# get initial voltage by assuming uniform through-cell current density
+# (may need to then iterate on this at t=0)
+current = param.I_typ / param.l_y / param.l_z
+cc_model.update_current(current)
+cc_model.solve()
 
 # manual timestepping, splitting between current collector and through-cell problems
 t = 0.0  # initial time
 t_final = (3600) / param.tau_d_star  # final time
-dt = 15 / param.tau_d_star  # Coarse step size
+dt = 15 / param.tau_d_star  # coarse step size - need to invetsigate what size this should be
 tol = 1E-3
 
 while t < t_final:

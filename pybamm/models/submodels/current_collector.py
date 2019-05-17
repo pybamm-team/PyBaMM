@@ -136,7 +136,7 @@ class Ohm(pybamm.SubModel):
             voltage_prev.vector()[:] - self.voltage.vector()[:]
         )
 
-    def update_current_values(self, current):
+    def update_current(self, current):
         "Update the entries of the through-cell current density."
         self.current.vector()[:] = current
 
