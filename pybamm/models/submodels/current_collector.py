@@ -2,11 +2,14 @@
 # Equation classes for the current collector
 #
 import pybamm
-import numpy as np
 
-# if this ends up in pybamm we may want dolfin to be optional, so check if
-# it's avaialble here, and give an error if not
-import dolfin as df
+import numpy as np
+import importlib
+
+fenics_spec = importlib.util.find_spec("fenics")
+if fenics_spec is not None:
+    fenics = importlib.util.module_from_spec(fenics_spec)
+    fenics_spec.loader.exec_module(fenics)
 
 
 class Ohm(pybamm.SubModel):
@@ -44,13 +47,13 @@ class Ohm(pybamm.SubModel):
         self.degree = degree
 
         # create mesh and function space
-        self.mesh = df.RectangleMesh(
-            df.Point(0, 0), df.Point(param.Ly, 1), self.Ny, self.Nz
+        self.mesh = fenics.RectangleMesh(
+            fenics.Point(0, 0), fenics.Point(param.Ly, 1), self.Ny, self.Nz
         )
-        self.element = df.FunctionSpace(self.mesh, "Lagrange", self.degree)
+        self.element = fenics.FunctionSpace(self.mesh, "Lagrange", self.degree)
 
-        self.TrialFunction = df.TrialFunction(self.element)
-        self.TestFunction = df.TestFunction(self.element)
+        self.TrialFunction = fenics.TrialFunction(self.element)
+        self.TestFunction = fenics.TestFunction(self.element)
 
         # create SubDomain classes for the tabs
         negativetab = Tab()
@@ -59,7 +62,7 @@ class Ohm(pybamm.SubModel):
         positivetab.set_parameters(param, "positive")
 
         # initialize mesh function for boundary domains
-        boundary_markers = df.MeshFunction(
+        boundary_markers = fenics.MeshFunction(
             "size_t", self.mesh, self.mesh.topology().dim() - 1
         )
         boundary_markers.set_all(0)
@@ -67,45 +70,50 @@ class Ohm(pybamm.SubModel):
         positivetab.mark(boundary_markers, 2)
 
         # create measure of parts of the boundary
-        self.ds = df.Measure("ds", domain=self.mesh, subdomain_data=boundary_markers)
+        self.ds = fenics.Measure(
+            "ds", domain=self.mesh, subdomain_data=boundary_markers
+        )
 
         # boundary values
-        self.dVdn_negativetab = df.Constant(
+        self.dVdn_negativetab = fenics.Constant(
             -param.I_typ
             / (param.sigma_cn * param.aspect_ratio ** 2 * param.l_tab_n * param.l_cn)
         )
-        self.dVdn_positivetab = df.Constant(
+        self.dVdn_positivetab = fenics.Constant(
             -param.I_typ
             / (param.sigma_cp * param.aspect_ratio ** 2 * param.l_tab_p * param.l_cp)
         )
 
     def assemble(self):
         " Assemble mass and stiffness matrices, and boundary load vector."
-        # Create mass matrix
-        M_form = self.TrialFunction * self.TestFunction * df.dx
-        self.mass = df.assemble(M_form).array()
+        # create mass matrix
+        M_form = self.TrialFunction * self.TestFunction * fenics.dx
+        self.mass = fenics.assemble(M_form)
 
-        # Create stifnness matrix
+        # create stifnness matrix
         K_form = (
-            df.inner(df.grad(self.TrialFunction), df.grad(self.TestFunction)) * df.dx
+            fenics.inner(
+                fenics.grad(self.TrialFunction), fenics.grad(self.TestFunction)
+            )
+            * fenics.dx
         )
-        self.stiffness = df.assemble(K_form)
+        self.stiffness = fenics.assemble(K_form)
 
-        # Create load vectors for tabs
+        # create load vectors for tabs
         neg_tab_form = self.dVdn_negativetab * self.TestFunction * self.ds(1)
         pos_tab_form = self.dVdn_positivetab * self.TestFunction * self.ds(2)
-        self.load_tab_n = df.assemble(neg_tab_form).get_local()[:]
-        self.load_tab_p = df.assemble(pos_tab_form).get_local()[:]
+        self.load_tab_n = fenics.assemble(neg_tab_form).get_local()[:]
+        self.load_tab_p = fenics.assemble(pos_tab_form).get_local()[:]
 
-        # Set functions for V, I and rhs
-        self.voltage = df.Function(self.element)
-        self.current = df.Function(self.element)
-        self.rhs = df.Function(self.element)
+        # set functions for V, I and rhs
+        self.voltage = fenics.Function(self.element)
+        self.current = fenics.Function(self.element)
+        self.rhs = fenics.Function(self.element)
 
-        # Number of degrees of freedom
+        # number of degrees of freedom
         self.N_dofs = np.size(self.voltage.vector()[:])
 
-        # Placeholder for voltage difference
+        # placeholder for voltage difference
         self.voltage_difference = 1
 
     def solve(self):
@@ -113,7 +121,7 @@ class Ohm(pybamm.SubModel):
         # TO DISCUSS: at the moment we have pure Neumann BCs so need to adjust the solve
         # We are solving the problem iteratively i.e. solve K*V = b(I) then find
         # I, loop until converged, then step forward in time.
-        # One way could be to solve K*V_new + V_new = b(I) + V_old (i.e. use part
+        # One way could be to solve K*V_new + M*V_new = b(I) + M*V_old (i.e. use part
         # of the old iterate). As long as you can write an OK initial guess then
         # this seems to work.
 
@@ -125,11 +133,17 @@ class Ohm(pybamm.SubModel):
         self.rhs.vector()[:] = (
             self.load_tab_n
             + self.load_tab_p
-            + np.dot(self.mass, self.alpha * self.current.vector()[:])
+            + np.dot(self.mass.array(), self.alpha * self.current.vector()[:])
         )
 
-        # Solve
-        df.solve(self.stiffness, self.voltage.vector(), self.rhs.vector())
+        # Solve K*V = b(I)
+        # fenics.solve(self.stiffness, self.voltage.vector(), self.rhs.vector())
+
+        # Solve K*V_new + M*V_new = b(I) + M*V_prev
+        self.rhs.vector()[:] += np.dot(self.mass.array(), voltage_prev.vector()[:])
+        fenics.solve(
+            self.stiffness + self.mass, self.voltage.vector(), self.rhs.vector()
+        )
 
         # Update difference in solution
         self.voltage_difference = np.linalg.norm(
@@ -145,9 +159,9 @@ class Ohm(pybamm.SubModel):
         return self.voltage.vector()[:]
 
 
-class Tab(df.SubDomain):
+class Tab(fenics.SubDomain):
     def set_parameters(self, param, domain):
-        # Set paramaters so they can be accessed from the dolfin inside method
+        # Set paramaters so they can be accessed from the fenics inside method
         self.l_y = param.l_y
         self.l_z = param.l_z
         if domain == "negative":
@@ -160,36 +174,36 @@ class Tab(df.SubDomain):
             raise pybamm.ModelError("tab domain must be one of negative or positive")
 
     def inside(self, x, on_boundary):
-        if df.near(self.tab_location[1], self.l_z):
+        if fenics.near(self.tab_location[1], self.l_z):
             # tab on top
-            return df.near(x[1], self.l_z) and df.between(
+            return fenics.near(x[1], self.l_z) and fenics.between(
                 x[0],
                 (
                     self.tab_location[0] - self.tab_width / 2,
                     self.tab_location[0] + self.tab_width / 2,
                 ),
             )
-        elif df.near(self.tab_location[1], 0.0):
+        elif fenics.near(self.tab_location[1], 0.0):
             # tab on bottom
-            return df.near(x[1], 0.0) and df.between(
+            return fenics.near(x[1], 0.0) and fenics.between(
                 x[0],
                 (
                     self.tab_location[0] - self.tab_width / 2,
                     self.tab_location[0] + self.tab_width / 2,
                 ),
             )
-        elif df.near(self.tab_location[0], 0.0):
+        elif fenics.near(self.tab_location[0], 0.0):
             # tab on left
-            return df.near(x[0], 0.0) and df.between(
+            return fenics.near(x[0], 0.0) and fenics.between(
                 x[1],
                 (
                     self.tab_location[1] - self.tab_width / 2,
                     self.tab_location[1] + self.tab_width / 2,
                 ),
             )
-        elif df.near(self.tab_location[0], self.l_y):
+        elif fenics.near(self.tab_location[0], self.l_y):
             # tab on right
-            return df.near(x[0], self.l_y) and df.between(
+            return fenics.near(x[0], self.l_y) and fenics.between(
                 x[1],
                 (
                     self.tab_location[1] - self.tab_width / 2,

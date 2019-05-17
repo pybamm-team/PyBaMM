@@ -57,3 +57,6 @@ pyvenv.cfg
 
 # sundials
 sundials
+
+# dolfin
+dolfin/*

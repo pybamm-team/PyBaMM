@@ -63,10 +63,14 @@ c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 # Electrode properties
 c_n_max = pybamm.Parameter("Maximum concentration in negative electrode [mol.m-3]")
 c_p_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
-sigma_cn_dimensional = pybamm.Parameter("Negative current collector conductivity [S.m-1]")
+sigma_cn_dimensional = pybamm.Parameter(
+    "Negative current collector conductivity [S.m-1]"
+)
 sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
 sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
-sigma_cp_dimensional = pybamm.Parameter("Positive current collector conductivity [S.m-1]")
+sigma_cp_dimensional = pybamm.Parameter(
+    "Positive current collector conductivity [S.m-1]"
+)
 
 # Microscale geometry
 a_n_dim = pybamm.geometric_parameters.a_n_dim
