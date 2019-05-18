@@ -4,7 +4,7 @@
 import pybamm
 
 import numpy as np
-from scipy.sparse import vstack
+from scipy.sparse import vstack, issparse
 import copy
 
 
@@ -52,12 +52,16 @@ class Concatenation(pybamm.Symbol):
                 children_eval = [None] * len(children)
                 for idx, child in enumerate(children):
                     children_eval[idx], known_evals = child.evaluate(t, y, known_evals)
+                    if issparse(children_eval[idx]):
+                        children_eval[idx] = children_eval[idx].toarray()
                 known_evals[self.id] = self._concatenation_evaluate(children_eval)
             return known_evals[self.id], known_evals
         else:
             children_eval = [None] * len(children)
             for idx, child in enumerate(children):
                 children_eval[idx] = child.evaluate(t, y)
+                if issparse(children_eval[idx]):
+                    children_eval[idx] = children_eval[idx].toarray()
             return self._concatenation_evaluate(children_eval)
 
     def _concatenation_simplify(self, children):
@@ -98,7 +102,7 @@ class NumpyConcatenation(Concatenation):
         if len(children_eval) == 0:
             return np.array([])
         else:
-            return np.concatenate([child for child in children_eval])
+            return np.concatenate(children_eval)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -208,6 +212,8 @@ class DomainConcatenation(Concatenation):
 
         # loop through domains of children writing subvectors to final vector
         for child_vector, slices in zip(children_eval, self._children_slices):
+            if issparse(child_vector):
+                child_vector = child_vector.toarray()
             for child_dom, child_slice in slices.items():
                 vector[self._slices[child_dom]] = child_vector[child_slice]
 

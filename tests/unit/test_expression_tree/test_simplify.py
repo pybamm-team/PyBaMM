@@ -1,12 +1,12 @@
 #
 # Test for the Symbol class
 #
-import pybamm
-from tests import get_discretisation_for_testing
-
-import unittest
-import numpy as np
 import math
+import numpy as np
+import pybamm
+import unittest
+from scipy.sparse import issparse
+from tests import get_discretisation_for_testing
 
 
 def test_const_function():
@@ -248,7 +248,10 @@ class TestSimplify(unittest.TestCase):
         # for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
         for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
             self.assertIsInstance(expr.simplify(), pybamm.Vector)
-            np.testing.assert_array_equal(expr.simplify().entries, np.zeros(10))
+            eval = expr.simplify().entries
+            if issparse(eval):
+                eval = eval.toarray()
+            np.testing.assert_array_equal(eval, np.zeros((10, 1)))
 
     def test_function_simplify(self):
         a = pybamm.Parameter("a")
@@ -340,7 +343,7 @@ class TestSimplify(unittest.TestCase):
 
         for expr in [(m1 @ v1).simplify()]:
             self.assertIsInstance(expr, pybamm.Vector)
-            np.testing.assert_array_equal(expr.entries, np.array([2, 2]))
+            np.testing.assert_array_equal(expr.entries, np.array([[2], [2]]))
 
         # dont expant mult within mat-mult (issue #253)
         m1 = pybamm.Matrix(np.ones((300, 299)))
@@ -454,7 +457,10 @@ class TestSimplify(unittest.TestCase):
         np.testing.assert_array_equal(
             conc_simp.evaluate(),
             np.concatenate(
-                [np.full(mesh[a_dom[0]][0].npts, 2), np.full(mesh[b_dom[0]][0].npts, 1)]
+                [
+                    np.full((mesh[a_dom[0]][0].npts, 1), 2),
+                    np.full((mesh[b_dom[0]][0].npts, 1), 1),
+                ]
             ),
         )
 
