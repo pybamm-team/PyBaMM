@@ -528,67 +528,79 @@ def simplify_multiplication_division(myclass, left, right):
     return result
 
 
-def simplify(symbol):
-    """
-    This function recurses down the tree, applying any simplifications defined in
-    classes derived from pybamm.Symbol. E.g. any expression multiplied by a
-    pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0)
+class Simplification(object):
+    def __init__(self, simplified_symbols=None):
+        self._simplified_symbols = simplified_symbols or {}
 
-    Parameters
-    ----------
-    symbol : :class:`pybamm.Symbol`
-        The symbol to simplify
+    def simplify(self, symbol):
+        pybamm.logger.debug("Simplify {!s}".format(symbol))
+        try:
+            return self._simplified_symbols[symbol.id]
+        except KeyError:
+            simplified_symbol = self._simplify(symbol)
+            self._simplified_symbols[symbol.id] = simplified_symbol
+            return simplified_symbol
 
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-        Simplified symbol
-    """
-    pybamm.logger.debug("Simplify {!s}".format(symbol))
+    def _simplify(self, symbol):
+        """
+        This function recurses down the tree, applying any simplifications defined in
+        classes derived from pybamm.Symbol. E.g. any expression multiplied by a
+        pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0)
 
-    if isinstance(symbol, pybamm.BinaryOperator):
-        left, right = symbol.children
-        # process children
-        new_left = simplify(left)
-        new_right = simplify(right)
-        # make new symbol, ensure domain remains the same
-        # _binary_simplify defined in derived classes for specific rules
-        new_symbol = symbol._binary_simplify(new_left, new_right)
-        return simplify_if_constant(new_symbol)
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol to simplify
 
-    elif isinstance(symbol, pybamm.UnaryOperator):
-        new_child = simplify(symbol.child)
-        new_symbol = symbol._unary_simplify(new_child)
-        return simplify_if_constant(new_symbol)
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            Simplified symbol
+        """
 
-    elif isinstance(symbol, pybamm.Concatenation):
-        new_children = [child.simplify() for child in symbol.cached_children]
-        new_symbol = symbol._concatenation_simplify(new_children)
+        if isinstance(symbol, pybamm.BinaryOperator):
+            left, right = symbol.children
+            # process children
+            new_left = self.simplify(left)
+            new_right = self.simplify(right)
+            # make new symbol, ensure domain remains the same
+            # _binary_simplify defined in derived classes for specific rules
+            new_symbol = symbol._binary_simplify(new_left, new_right)
+            return simplify_if_constant(new_symbol)
 
-        return simplify_if_constant(new_symbol)
+        elif isinstance(symbol, pybamm.UnaryOperator):
+            new_child = self.simplify(symbol.child)
+            new_symbol = symbol._unary_simplify(new_child)
+            return simplify_if_constant(new_symbol)
 
-    # Other cases: return new variable to avoid tree internal corruption
-    elif isinstance(symbol, (pybamm.Parameter, pybamm.Variable)):
-        return symbol.__class__(symbol.name, symbol.domain)
+        elif isinstance(symbol, pybamm.Concatenation):
+            new_children = [self.simplify(child) for child in symbol.cached_children]
+            new_symbol = symbol._concatenation_simplify(new_children)
 
-    elif isinstance(symbol, pybamm.StateVector):
-        return pybamm.StateVector(symbol.y_slice, symbol.name)
+            return simplify_if_constant(new_symbol)
 
-    elif isinstance(symbol, pybamm.Scalar):
-        return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
+        # Other cases: return new variable to avoid tree internal corruption
+        elif isinstance(symbol, (pybamm.Parameter, pybamm.Variable)):
+            return symbol.__class__(symbol.name, symbol.domain)
 
-    elif isinstance(symbol, pybamm.Array):
-        return symbol.__class__(
-            symbol.entries, symbol.name, symbol.domain, symbol.entries_string
-        )
+        elif isinstance(symbol, pybamm.StateVector):
+            return pybamm.StateVector(symbol.y_slice, symbol.name)
 
-    elif isinstance(symbol, pybamm.SpatialVariable):
-        return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
+        elif isinstance(symbol, pybamm.Scalar):
+            return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
 
-    elif isinstance(symbol, pybamm.Time):
-        return pybamm.Time()
+        elif isinstance(symbol, pybamm.Array):
+            return symbol.__class__(
+                symbol.entries, symbol.name, symbol.domain, symbol.entries_string
+            )
 
-    else:
-        raise NotImplementedError(
-            "Cannot simplify symbol of type '{}'".format(type(symbol))
-        )
+        elif isinstance(symbol, pybamm.SpatialVariable):
+            return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
+
+        elif isinstance(symbol, pybamm.Time):
+            return pybamm.Time()
+
+        else:
+            raise NotImplementedError(
+                "Cannot simplify symbol of type '{}'".format(type(symbol))
+            )

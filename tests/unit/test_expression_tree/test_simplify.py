@@ -295,6 +295,9 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 0.5)
+        import ipdb
+
+        ipdb.set_trace()
         self.assertIsInstance(expr.children[1], pybamm.MatrixMultiplication)
 
         # mat-mul on numerator and denominator
