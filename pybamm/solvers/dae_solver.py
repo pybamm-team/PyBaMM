@@ -59,9 +59,11 @@ class DaeSolver(pybamm.BaseSolver):
         concatenated_algebraic = model.concatenated_algebraic
         events = model.events
         if model.use_simplify:
-            concatenated_rhs = concatenated_rhs.simplify()
-            concatenated_algebraic = concatenated_algebraic.simplify()
-            events = [event.simplify() for event in events]
+            # set up simplification object, for re-use of dict
+            simp = pybamm.Simplification()
+            concatenated_rhs = simp.simplify(concatenated_rhs)
+            concatenated_algebraic = simp.simplify(concatenated_algebraic)
+            events = [simp.simplify(event) for event in events]
 
         def residuals(t, y, ydot):
             pybamm.logger.debug(
@@ -97,8 +99,8 @@ class DaeSolver(pybamm.BaseSolver):
             jac_rhs = concatenated_rhs.jac(y)
             jac_algebraic = concatenated_algebraic.jac(y)
             if model.use_simplify:
-                jac_rhs = jac_rhs.simplify()
-                jac_algebraic = jac_algebraic.simplify()
+                jac_rhs = simp.simplify(jac_rhs)
+                jac_algebraic = simp.simplify(jac_algebraic)
 
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
 
