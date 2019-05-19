@@ -248,10 +248,7 @@ class TestSimplify(unittest.TestCase):
         # for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
         for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
             self.assertIsInstance(expr.simplify(), pybamm.Vector)
-            eval = expr.simplify().entries
-            if issparse(eval):
-                eval = eval.toarray()
-            np.testing.assert_array_equal(eval, np.zeros((10, 1)))
+            np.testing.assert_array_equal(expr.simplify().entries, np.zeros((10, 1)))
 
     def test_function_simplify(self):
         a = pybamm.Parameter("a")

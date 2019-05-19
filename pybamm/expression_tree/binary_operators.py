@@ -326,14 +326,6 @@ class Multiplication(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        #
-        # def is_numpy_1d_vector(v):
-        #     return isinstance(v, np.ndarray) and len(v.shape) == 1
-        #
-        # if is_numpy_1d_vector(left) or is_numpy_1d_vector(right):
-        #     import ipdb
-        #
-        #     ipdb.set_trace()
 
         if issparse(left):
             return left.multiply(right)
@@ -361,7 +353,7 @@ class Multiplication(BinaryOperator):
         # if one of the children is a zero matrix, we have to be careful about shapes
         if is_matrix_zero(left) or is_matrix_zero(right):
             shape = (left * right).shape
-            if len(shape) == 1:
+            if len(shape) == 1 or shape[1] == 1:
                 return pybamm.Vector(np.zeros(shape))
             else:
                 return pybamm.Matrix(csr_matrix(shape))
@@ -453,14 +445,6 @@ class Division(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        # def is_numpy_1d_vector(v):
-        #     return isinstance(v, np.ndarray) and len(v.shape) == 1
-        #
-        # if is_numpy_1d_vector(left):
-        #     left = left.reshape(-1, 1)
-        #
-        # if is_numpy_1d_vector(right):
-        #     right = right.reshape(-1, 1)
 
         if issparse(left):
             return left.multiply(1 / right)
