@@ -29,7 +29,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             # create mesh and discretisation
             mesh = get_mesh_for_testing(n)
             disc = pybamm.Discretisation(mesh, spatial_methods)
-            disc._bcs = boundary_conditions
+            disc.bcs = boundary_conditions
             disc.set_variable_slices([var])
 
             # Define exact solutions

@@ -34,12 +34,23 @@ class Discretisation(object):
             self._spatial_methods = {
                 dom: method(mesh) for dom, method in spatial_methods.items()
             }
-        self._bcs = {}
+        self.bcs = {}
         self._y_slices = {}
+        self._discretised_symbols = {}
 
     @property
     def mesh(self):
         return self._mesh
+
+    @property
+    def bcs(self):
+        return self._bcs
+
+    @bcs.setter
+    def bcs(self, value):
+        self._bcs = value
+        # reset discretised_symbols
+        self._discretised_symbols = {}
 
     def process_model(self, model, inplace=True):
         """Discretise a model.
@@ -72,7 +83,7 @@ class Discretisation(object):
         self.set_variable_slices(variables)
 
         # set boundary conditions (only need key ids for boundary_conditions)
-        self._bcs = self.process_boundary_conditions(model)
+        self.bcs = self.process_boundary_conditions(model)
 
         # set up inplace vs not inplace
         if inplace:
@@ -148,6 +159,9 @@ class Discretisation(object):
         assert isinstance(self._y_slices, dict), ValueError(
             """y_slices should be dict, not {}""".format(type(self._y_slices))
         )
+
+        # reset discretised_symbols
+        self._discretised_symbols = {}
 
     def process_initial_conditions(self, model):
         """Discretise model initial_conditions.
@@ -287,7 +301,7 @@ class Discretisation(object):
             else:
                 mass_list.append(
                     self._spatial_methods[var.domain[0]]
-                    .mass_matrix(var, self._bcs)
+                    .mass_matrix(var, self.bcs)
                     .entries
                 )
 
@@ -340,6 +354,15 @@ class Discretisation(object):
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
+        pybamm.logger.debug("Discretise {!s}".format(symbol))
+        try:
+            return self._discretised_symbols[symbol.id]
+        except KeyError:
+            discretised_symbol = self._process_symbol(symbol)
+            self._discretised_symbols[symbol.id] = discretised_symbol
+            return discretised_symbol
+
+    def _process_symbol(self, symbol):
         """Discretise operators in model equations.
 
         Parameters
@@ -353,7 +376,6 @@ class Discretisation(object):
             Discretised symbol
 
         """
-        pybamm.logger.debug("Discretise {!s}".format(symbol))
 
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
@@ -371,14 +393,14 @@ class Discretisation(object):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
             return self._spatial_methods[child.domain[0]].gradient(
-                child, discretised_child, self._bcs
+                child, discretised_child, self.bcs
             )
 
         elif isinstance(symbol, pybamm.Divergence):
             child = symbol.children[0]
             discretised_child = self.process_symbol(child)
             return self._spatial_methods[child.domain[0]].divergence(
-                child, discretised_child, self._bcs
+                child, discretised_child, self.bcs
             )
 
         elif isinstance(symbol, pybamm.IndefiniteIntegral):

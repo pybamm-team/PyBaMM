@@ -274,7 +274,7 @@ class TestDiscretise(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         y = combined_submesh[0].nodes ** 2
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         disc.set_variable_slices(list(rhs.keys()))
         # rhs - grad and div are identity operators here
