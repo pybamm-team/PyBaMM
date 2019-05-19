@@ -448,9 +448,6 @@ class Division(BinaryOperator):
 
         if issparse(left):
             return left.multiply(1 / right)
-        elif issparse(right):
-            # Hadamard product is commutative, so we can switch right and left
-            return (1 / right).multiply(left)
         else:
             return left / right
 
