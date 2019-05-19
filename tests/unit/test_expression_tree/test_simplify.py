@@ -5,7 +5,6 @@ import math
 import numpy as np
 import pybamm
 import unittest
-from scipy.sparse import issparse
 from tests import get_discretisation_for_testing
 
 

@@ -4,7 +4,7 @@
 import pybamm
 
 import numpy as np
-from scipy.sparse import vstack, issparse
+from scipy.sparse import vstack
 import copy
 
 
