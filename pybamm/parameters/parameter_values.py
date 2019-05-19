@@ -38,6 +38,8 @@ class ParameterValues(dict):
         # doing parameter studies
         self.update(optional_parameters)
 
+        self._processed_symbols = {}
+
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
 
@@ -151,6 +153,15 @@ class ParameterValues(dict):
                         ] = self.process_symbol(sym).evaluate()
 
     def process_symbol(self, symbol):
+        pybamm.logger.debug("Set parameters for {!s}".format(symbol))
+        try:
+            return self._processed_symbols[symbol.id]
+        except KeyError:
+            processed_symbol = self._process_symbol(symbol)
+            self._processed_symbols[symbol.id] = processed_symbol
+            return processed_symbol
+
+    def _process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
 
         Parameters
@@ -164,7 +175,6 @@ class ParameterValues(dict):
             Symbol with Parameter instances replaced by Value
 
         """
-        pybamm.logger.debug("Set parameters for {!s}".format(symbol))
 
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]

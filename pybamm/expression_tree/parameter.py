@@ -45,9 +45,17 @@ class FunctionParameter(pybamm.UnaryOperator):
     """
 
     def __init__(self, name, child, diff_variable=None):
-        super().__init__(name, child)
         # assign diff variable
         self.diff_variable = diff_variable
+        super().__init__(name, child)
+
+    def set_id(self):
+        """See :meth:`pybamm.Symbol.set_id` """
+        self._id = hash(
+            (self.__class__, self.name, self.diff_variable)
+            + tuple([child.id for child in self.children])
+            + tuple(self.domain)
+        )
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
