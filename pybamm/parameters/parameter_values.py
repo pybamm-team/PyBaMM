@@ -59,6 +59,12 @@ class ParameterValues(dict):
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
+    def update(self, values):
+        for k, v in values.items():
+            self[k] = v
+        # reset processed symbols
+        self._processed_symbols = {}
+
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.
         Currently inplace, could be changed to return a new model.
