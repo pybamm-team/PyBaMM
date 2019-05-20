@@ -1,6 +1,6 @@
 # Results: Valentin Sulzer's Thesis
 
-This file contains the scripts used to generate results for the thesis of @tinosulzer
+This folder contains the scripts used to generate results for Valentin Sulzers thesis
 
 ## Chapter 3 - Simplified models for slow discharge
 
