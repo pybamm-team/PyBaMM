@@ -533,19 +533,11 @@ class Simplification(object):
         self._simplified_symbols = simplified_symbols or {}
 
     def simplify(self, symbol):
-        pybamm.logger.debug("Simplify {!s}".format(symbol))
-        try:
-            return self._simplified_symbols[symbol.id]
-        except KeyError:
-            simplified_symbol = self._simplify(symbol)
-            self._simplified_symbols[symbol.id] = simplified_symbol
-            return simplified_symbol
-
-    def _simplify(self, symbol):
         """
         This function recurses down the tree, applying any simplifications defined in
         classes derived from pybamm.Symbol. E.g. any expression multiplied by a
-        pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0)
+        pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0).
+        If a symbol has already been simplified, the stored value is returned.
 
         Parameters
         ----------
@@ -557,7 +549,16 @@ class Simplification(object):
         :class:`pybamm.Symbol`
             Simplified symbol
         """
+        pybamm.logger.debug("Simplify {!s}".format(symbol))
+        try:
+            return self._simplified_symbols[symbol.id]
+        except KeyError:
+            simplified_symbol = self._simplify(symbol)
+            self._simplified_symbols[symbol.id] = simplified_symbol
+            return simplified_symbol
 
+    def _simplify(self, symbol):
+        """ See :meth:`Simplification.simplify()`. """
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
             # process children

@@ -354,16 +354,8 @@ class Discretisation(object):
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
-        pybamm.logger.debug("Discretise {!s}".format(symbol))
-        try:
-            return self._discretised_symbols[symbol.id]
-        except KeyError:
-            discretised_symbol = self._process_symbol(symbol)
-            self._discretised_symbols[symbol.id] = discretised_symbol
-            return discretised_symbol
-
-    def _process_symbol(self, symbol):
         """Discretise operators in model equations.
+        If a symbol has already been discretised, the stored value is returned.
 
         Parameters
         ----------
@@ -376,7 +368,16 @@ class Discretisation(object):
             Discretised symbol
 
         """
+        pybamm.logger.debug("Discretise {!s}".format(symbol))
+        try:
+            return self._discretised_symbols[symbol.id]
+        except KeyError:
+            discretised_symbol = self._process_symbol(symbol)
+            self._discretised_symbols[symbol.id] = discretised_symbol
+            return discretised_symbol
 
+    def _process_symbol(self, symbol):
+        """ See :meth:`Discretisation.process_symbol()`. """
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
             left, right = symbol.children
