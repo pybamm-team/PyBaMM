@@ -164,7 +164,6 @@ class DaeSolver(pybamm.BaseSolver):
             raise pybamm.SolverError(
                 "Could not find consistent initial conditions: {}".format(sol.message)
             )
-        1
 
     def integrate(
         self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None
