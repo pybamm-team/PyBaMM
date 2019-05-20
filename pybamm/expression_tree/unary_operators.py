@@ -28,8 +28,8 @@ class UnaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, child):
+        self.child = child
         super().__init__(name, children=[child], domain=child.domain)
-        self.child = self.children[0]
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -128,8 +128,8 @@ class Function(UnaryOperator):
 
     def __init__(self, func, child):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__("function ({})".format(func.__name__), child)
         self.func = func
+        super().__init__("function ({})".format(func.__name__), child)
         # hack to work out whether function takes any params
         # (signature doesn't work for numpy)
         if isinstance(func, np.ufunc):
@@ -193,8 +193,14 @@ class Index(UnaryOperator):
     def __init__(self, child, index, name=None):
         if name is None:
             name = child.name + "[" + str(index) + "]"
-        super().__init__(name, child)
         self.index = index
+        super().__init__(name, child)
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.index, self.child.id) + tuple(self.domain)
+        )
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
@@ -310,14 +316,21 @@ class Integral(SpatialOperator):
         name = "integral d{}".format(integration_variable.name)
         if isinstance(integration_variable, pybamm.SpatialVariable):
             name += " {}".format(integration_variable.domain)
-        super().__init__(name, child)
         self._integration_variable = integration_variable
+        super().__init__(name, child)
         # integrating removes the domain
         self.domain = []
 
     @property
     def integration_variable(self):
         return self._integration_variable
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.integration_variable.id, self.child.id)
+            + tuple(self.domain)
+        )
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
@@ -372,11 +385,17 @@ class BoundaryOperator(SpatialOperator):
     """
 
     def __init__(self, name, child, side):
-        super().__init__(name, child)
         self.side = side
         # Domain of Boundary must be ([]) so that expressions can be formed
         # of boundary values of variables in different domains
+        super().__init__(name, child)
         self.domain = []
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.side, self.child.id) + tuple(self.domain)
+        )
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
