@@ -459,7 +459,7 @@ class CurrentTests(BaseOutputTest):
         """Test that average of the interfacial current density is equal to the true
         value."""
         np.testing.assert_array_almost_equal(
-            self.j_n_av(self.t), self.i_cell / self.l_n
+            self.j_n_av(self.t), self.i_cell / self.l_n, decimal=5
         )
         np.testing.assert_array_almost_equal(
             self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=5
