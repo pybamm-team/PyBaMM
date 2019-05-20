@@ -1,0 +1,10 @@
+- name: python
+  production:
+    exclude:
+      - /docs
+      - /examples
+      - /input
+      - /scripts
+  test:
+    include:
+      - /tests
