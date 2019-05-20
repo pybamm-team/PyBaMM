@@ -77,7 +77,7 @@ def simplify_addition_subtraction(myclass, left, right):
         1 - (2 + 3)       -> [1, 2, 3]    and [None, Subtraction, Subtraction]
         (1 + 2) - (2 + 3) -> [1, 2, 2, 3] and [None, Addition, Subtraction, Subtraction]
         """
-        for child in [left_child, right_child]:
+        for side, child in [("left", left_child), ("right", right_child)]:
             if isinstance(child, (pybamm.Addition, pybamm.Subtraction)):
                 left, right = child.orphans
                 flatten(child.__class__, left, right, in_subtraction)
@@ -91,7 +91,7 @@ def simplify_addition_subtraction(myclass, left, right):
                 else:
                     numerator_types.append(pybamm.Addition)
 
-            if child == left_child:
+            if side == "left":
                 if in_subtraction is None:
                     in_subtraction = this_class == pybamm.Subtraction
                 elif this_class == pybamm.Subtraction:
@@ -270,9 +270,9 @@ def simplify_multiplication_division(myclass, left, right):
         (1 @ 2) / 3 ->  [1, 2]       [3]       [None, MatrixMultiplication]
         1 / (c / 2) ->  [1, 2]       [c]       [None, Multiplication]
         """
-        for child in [left_child, right_child]:
+        for side, child in [("left", left_child), ("right", right_child)]:
 
-            if child == left_child:
+            if side == "left":
                 other_child = right_child
             else:
                 other_child = left_child
@@ -285,7 +285,7 @@ def simplify_multiplication_division(myclass, left, right):
                 or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
                 left, right = child.orphans
-                if child == left_child and this_class == pybamm.Multiplication:
+                if side == "left" and this_class == pybamm.Multiplication:
                     # change (m @ v1) * v2 -> v2 * m @ v so can simplify correctly
                     # (#341)
                     numerator.append(other_child)
@@ -294,7 +294,7 @@ def simplify_multiplication_division(myclass, left, right):
                         this_class, child.__class__, left, right, in_numerator, False
                     )
                     break
-                if child == left_child:
+                if side == "left":
                     flatten(
                         previous_class, child.__class__, left, right, in_numerator, True
                     )
@@ -308,7 +308,7 @@ def simplify_multiplication_division(myclass, left, right):
                 and not in_matrix_multiplication
             ):
                 left, right = child.orphans
-                if child == left_child:
+                if side == "left":
                     flatten(
                         previous_class,
                         child.__class__,
@@ -325,18 +325,18 @@ def simplify_multiplication_division(myclass, left, right):
             else:
                 if in_numerator:
                     numerator.append(child)
-                    if child == left_child:
+                    if side == "left":
                         numerator_types.append(previous_class)
                     else:
                         numerator_types.append(this_class)
                 else:
                     denominator.append(child)
-                    if child == left_child:
+                    if side == "left":
                         denominator_types.append(previous_class)
                     else:
                         denominator_types.append(this_class)
 
-            if child == left_child and this_class == pybamm.Division:
+            if side == "left" and this_class == pybamm.Division:
                 in_numerator = not in_numerator
 
     flatten(None, myclass, left, right, True, myclass == pybamm.MatrixMultiplication)
