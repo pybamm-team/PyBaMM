@@ -403,11 +403,18 @@ def simplify_multiplication_division(myclass, left, right):
                 and new_nodes[-1].evaluate_ignoring_errors() is not None
                 and child.evaluate_ignoring_errors() is not None
             ):
-                if typ == pybamm.MatrixMultiplication:
+                if typ == pybamm.MatrixMultiplication and not isinstance(
+                    child, pybamm.Scalar
+                ):
                     new_nodes[-1] = new_nodes[-1] @ child
                 else:
                     new_nodes[-1] *= child
-                new_nodes[-1] = pybamm.simplify_if_constant(new_nodes[-1])
+                try:
+                    new_nodes[-1] = pybamm.simplify_if_constant(new_nodes[-1])
+                except ValueError:
+                    import ipdb
+
+                    ipdb.set_trace()
             else:
                 new_nodes.append(child)
                 new_types.append(typ)

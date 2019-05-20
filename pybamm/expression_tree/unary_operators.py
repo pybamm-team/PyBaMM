@@ -580,12 +580,12 @@ def boundary_value(symbol, side):
         the new integrated expression tree
     """
     # If symbol doesn't have a domain, its boundary value is itself
-    if symbol.domain == []:
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
+    # if symbol.domain == []:
+    #     new_symbol = symbol.new_copy()
+    #     new_symbol.parent = None
+    #     return new_symbol
     # If symbol is a Broadcast, its boundary value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
+    if isinstance(symbol, pybamm.Broadcast):
         return symbol.orphans[0]
     # Otherwise, calculate boundary value
     else:

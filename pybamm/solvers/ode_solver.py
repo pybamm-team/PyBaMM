@@ -36,6 +36,12 @@ class OdeSolver(pybamm.BaseSolver):
         if model.use_simplify:
             # create simplified rhs and event expressions
             concatenated_rhs = concatenated_rhs.simplify()
+            # x = events[3].left.left.right.left.left.right.left
+            # x = x.right.left.left.left.left.left.left.child.left
+            # import ipdb
+            #
+            # ipdb.set_trace()
+            # x.simplify()
             events = [event.simplify() for event in events]
 
         def dydt(t, y):
