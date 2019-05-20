@@ -331,6 +331,20 @@ class TestBaseModel(unittest.TestCase):
             self.assertIsNotNone(item)
 
 
+class TestStandardBatteryBaseModel(unittest.TestCase):
+
+    def test_default_solver(self):
+        model = pybamm.StandardBatteryBaseModel()
+        self.assertTrue(isinstance(model.default_solver,
+                                   (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)))
+
+        # check that default_solver gives you a new solver, not an internal object
+        solver = model.default_solver
+        solver = pybamm.BaseModel()
+        self.assertTrue(isinstance(model.default_solver,
+                                   (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)))
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
