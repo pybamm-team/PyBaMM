@@ -130,8 +130,15 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         # ODE model, don't use Jacobian
         self.use_jacobian = False
 
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
         # Different solver depending on whether we solve ODEs or DAEs
-        if use_capacitance:
-            self.default_solver = pybamm.ScikitsOdeSolver()
+        if self._use_capacitance:
+            default_solver = pybamm.ScikitsOdeSolver()
         else:
-            self.default_solver = pybamm.ScikitsDaeSolver()
+            default_solver = pybamm.ScikitsDaeSolver()
+
+        return default_solver
