@@ -4,6 +4,8 @@
 import pybamm
 from collections import defaultdict
 
+# Set list of attributes to ignore, for when we are evaluating parameters from a class
+# of parameters
 ignore = [
     "__name__",
     "__doc__",
@@ -24,7 +26,8 @@ ignore = [
 
 def print_parameters(parameters, parameter_values, output_file=None):
     """
-    Evaluate and print parameters to an output file.
+    Return dictionary of evaluated parameters, and optionally print these evaluated
+    parameters to an output file.
     For dimensionless parameters that depend on the C-rate, the value is given as a
     function of the C-rate (either x * Crate or x / Crate depending on the dependence)
 
@@ -36,12 +39,18 @@ def print_parameters(parameters, parameter_values, output_file=None):
         The class of parameter values
     output_file : string, optional
         The file to print parameters to. If None, the parameters are not printed, and
-        this function simply acts as a test that all the parameters can be evaluated
+        this function simply acts as a test that all the parameters can be evaluated,
+        and returns the dictionary of evaluated parameters.
 
     Returns
     -------
     evaluated_parameters : defaultdict
         The evaluated parameters, for further processing if needed
+
+    Notes
+    -----
+    A C-rate of 1 C is the current required to fully discharge the battery in 1 hour,
+    2 C is current to discharge to the battery in 0.5 hours, etc
     """
     # If 'parameters' is a class, extract the dict
     if not isinstance(parameters, dict):
