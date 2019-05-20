@@ -273,7 +273,7 @@ class TestDiscretise(unittest.TestCase):
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
-        y = combined_submesh[0].nodes ** 2
+        y = combined_submesh[0].nodes[:, np.newaxis] ** 2
         disc.bcs = boundary_conditions
 
         disc.set_variable_slices(list(rhs.keys()))
@@ -283,7 +283,8 @@ class TestDiscretise(unittest.TestCase):
         # initial conditions
         y0 = disc.process_dict(initial_conditions)
         np.testing.assert_array_equal(
-            y0[c].evaluate(0, None), 3 * np.ones_like(combined_submesh[0].nodes)
+            y0[c].evaluate(0, None),
+            3 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis]),
         )
         # vars
         processed_vars = disc.process_dict(variables)
@@ -299,7 +300,7 @@ class TestDiscretise(unittest.TestCase):
         boundary_conditions = {}
         y = np.concatenate(
             [combined_submesh[0].nodes ** 2, mesh["negative electrode"][0].nodes ** 4]
-        )
+        )[:, np.newaxis]
 
         variables = list(rhs.keys())
         disc.set_variable_slices(variables)
@@ -314,11 +315,12 @@ class TestDiscretise(unittest.TestCase):
         # initial conditions
         y0 = disc.process_dict(initial_conditions)
         np.testing.assert_array_equal(
-            y0[c].evaluate(0, None), 3 * np.ones_like(combined_submesh[0].nodes)
+            y0[c].evaluate(0, None),
+            3 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis]),
         )
         np.testing.assert_array_equal(
             y0[T].evaluate(0, None),
-            5 * np.ones_like(mesh["negative electrode"][0].nodes),
+            5 * np.ones_like(mesh["negative electrode"][0].nodes[:, np.newaxis]),
         )
 
     def test_process_variables_dict(self):
@@ -351,7 +353,9 @@ class TestDiscretise(unittest.TestCase):
         disc.process_model(model)
 
         y0 = model.concatenated_initial_conditions
-        np.testing.assert_array_equal(y0, 3 * np.ones_like(combined_submesh[0].nodes))
+        np.testing.assert_array_equal(
+            y0, 3 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
+        )
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
 
         # grad and div are identity operators here
@@ -394,14 +398,18 @@ class TestDiscretise(unittest.TestCase):
 
         disc.process_model(model)
         y0 = model.concatenated_initial_conditions
-        y0_expect = np.array([])
+        y0_expect = np.empty((0, 1))
         for var_id, _ in sorted(disc._y_slices.items(), key=lambda kv: kv[1]):
             if var_id == c.id:
-                vect = 2 * np.ones_like(combined_submesh[0].nodes)
+                vect = 2 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
             elif var_id == T.id:
-                vect = 5 * np.ones_like(mesh["negative electrode"][0].nodes)
+                vect = 5 * np.ones_like(
+                    mesh["negative electrode"][0].nodes[:, np.newaxis]
+                )
             else:
-                vect = 8 * np.ones_like(mesh["negative electrode"][0].nodes)
+                vect = 8 * np.ones_like(
+                    mesh["negative electrode"][0].nodes[:, np.newaxis]
+                )
 
             y0_expect = np.concatenate([y0_expect, vect])
 
@@ -411,10 +419,10 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
 
         S0 = model.initial_conditions[S].evaluate() * np.ones_like(
-            mesh[S.domain[0]][0].nodes
+            mesh[S.domain[0]][0].nodes[:, np.newaxis]
         )
         T0 = model.initial_conditions[T].evaluate() * np.ones_like(
-            mesh[T.domain[0]][0].nodes
+            mesh[T.domain[0]][0].nodes[:, np.newaxis]
         )
         np.testing.assert_array_equal(S0 * T0, model.variables["ST"].evaluate(None, y0))
 
@@ -470,7 +478,7 @@ class TestDiscretise(unittest.TestCase):
                     3 * np.ones_like(combined_submesh[0].nodes),
                     6 * np.ones_like(combined_submesh[0].nodes),
                 ]
-            ),
+            )[:, np.newaxis],
         )
 
         # grad and div are identity operators here
@@ -480,7 +488,7 @@ class TestDiscretise(unittest.TestCase):
 
         np.testing.assert_array_equal(
             model.concatenated_algebraic.evaluate(None, y0),
-            np.zeros_like(combined_submesh[0].nodes),
+            np.zeros_like(combined_submesh[0].nodes[:, np.newaxis]),
         )
 
         # mass matrix is identity upper left, zeros elsewhere
@@ -550,7 +558,9 @@ class TestDiscretise(unittest.TestCase):
 
         disc.process_model(model)
         y0 = model.concatenated_initial_conditions
-        np.testing.assert_array_equal(y0, 3 * np.ones_like(combined_submesh[0].nodes))
+        np.testing.assert_array_equal(
+            y0, 3 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
+        )
 
         # grad and div are identity operators here
         np.testing.assert_array_equal(y0, model.concatenated_rhs.evaluate(None, y0))
@@ -575,7 +585,9 @@ class TestDiscretise(unittest.TestCase):
 
         discretised_model = disc.process_model(model, inplace=False)
         y0 = discretised_model.concatenated_initial_conditions
-        np.testing.assert_array_equal(y0, 3 * np.ones_like(submesh[0].nodes))
+        np.testing.assert_array_equal(
+            y0, 3 * np.ones_like(submesh[0].nodes[:, np.newaxis])
+        )
 
         # grad and div are identity operators here
         np.testing.assert_array_equal(
@@ -598,7 +610,7 @@ class TestDiscretise(unittest.TestCase):
         # scalar
         broad = disc._spatial_methods[whole_cell[0]].broadcast(a, whole_cell)
         np.testing.assert_array_equal(
-            broad.evaluate(), 7 * np.ones_like(combined_submesh[0].nodes)
+            broad.evaluate(), 7 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
         )
         self.assertEqual(broad.domain, whole_cell)
 
@@ -645,7 +657,7 @@ class TestDiscretise(unittest.TestCase):
                 5 * np.ones_like(mesh["negative electrode"][0].nodes),
                 4 * np.ones_like(mesh["positive electrode"][0].nodes),
             ]
-        )
+        )[:, np.newaxis]
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
 
     def test_discretise_spatial_variable(self):
@@ -657,7 +669,7 @@ class TestDiscretise(unittest.TestCase):
         x1_disc = disc.process_symbol(x1)
         self.assertIsInstance(x1_disc, pybamm.Vector)
         np.testing.assert_array_equal(
-            x1_disc.evaluate(), disc.mesh["negative electrode"][0].nodes
+            x1_disc.evaluate(), disc.mesh["negative electrode"][0].nodes[:, np.newaxis]
         )
 
         x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
@@ -665,14 +677,17 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(x2_disc, pybamm.Vector)
         np.testing.assert_array_equal(
             x2_disc.evaluate(),
-            disc.mesh.combine_submeshes("negative electrode", "separator")[0].nodes,
+            disc.mesh.combine_submeshes("negative electrode", "separator")[0].nodes[
+                :, np.newaxis
+            ],
         )
 
         r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
         r_disc = disc.process_symbol(r)
         self.assertIsInstance(r_disc.children[1], pybamm.Vector)
         np.testing.assert_array_equal(
-            r_disc.evaluate(), 3 * disc.mesh["negative particle"][0].nodes
+            r_disc.evaluate(),
+            3 * disc.mesh["negative particle"][0].nodes[:, np.newaxis],
         )
 
 

@@ -110,7 +110,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             entries[:, idx] = self.base_variable.evaluate(
                 self.t_sol[idx], self.y_sol[:, idx]
-            )
+            )[:, 0]
 
         # Process the discretisation to get x values
         nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes

@@ -218,7 +218,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         for submesh in submesh_list:
             vector = np.append(vector, submesh.d_edges * np.ones_like(submesh.nodes))
 
-        return pybamm.Vector(vector)
+        return pybamm.Matrix(vector[np.newaxis, :])
 
     def indefinite_integral(self, domain, symbol, discretised_symbol):
         """Implementation of the indefinite integral operator. The
