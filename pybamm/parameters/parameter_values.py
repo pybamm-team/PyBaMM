@@ -230,7 +230,7 @@ class ParameterValues(dict):
         else:
             # Backup option: return new copy of the object
             try:
-                return pybamm.make_new_copy(symbol)
+                return symbol.new_copy()
             except NotImplementedError:
                 raise NotImplementedError(
                     "Cannot process parameters for symbol of type '{}'".format(

@@ -113,7 +113,6 @@ from .expression_tree.simplify import (
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
-from .expression_tree.copy import make_new_copy
 
 #
 # Model classes

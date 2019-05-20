@@ -113,7 +113,7 @@ class Symbol(anytree.NodeMixin):
         Returning new copies of the children, with parents removed to avoid corrupting
         the expression tree internal data
         """
-        return tuple([pybamm.make_new_copy(child) for child in self.children])
+        return tuple([child.new_copy() for child in self.children])
 
     def render(self):
         """print out a visual representation of the tree (this node and its
@@ -470,6 +470,18 @@ class Symbol(anytree.NodeMixin):
     def simplify(self):
         """ Simplify the expression tree. See :meth:`pybamm.simplify()`. """
         return pybamm.simplify(self)
+
+    def new_copy(self):
+        """
+        Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
+        copy.deepcopy(), which is slow.
+        """
+        raise NotImplementedError(
+            """method self.new_copy() not implemented
+               for symbol {!s} of type {}""".format(
+                self, type(self)
+            )
+        )
 
     @property
     def shape(self):

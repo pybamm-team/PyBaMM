@@ -8,7 +8,7 @@ from tests import get_mesh_for_testing
 
 
 class TestSimplify(unittest.TestCase):
-    def test_symbol_make_new_copy(self):
+    def test_symbol_new_copy(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
         v_n = pybamm.Variable("v", "negative electrode")
@@ -40,7 +40,7 @@ class TestSimplify(unittest.TestCase):
             pybamm.SpatialVariable("x", ["negative electrode"]),
             pybamm.t,
         ]:
-            self.assertEqual(symbol.id, pybamm.make_new_copy(symbol).id)
+            self.assertEqual(symbol.id, symbol.new_copy().id)
 
 
 if __name__ == "__main__":

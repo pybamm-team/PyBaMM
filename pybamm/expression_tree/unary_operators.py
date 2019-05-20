@@ -33,6 +33,11 @@ class UnaryOperator(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}({!s})".format(self.name, self.child)
 
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        new_child = self.child.simplify()
+        return self._unary_new_copy(new_child)
+
     def _unary_new_copy(self, child):
         """Make a new copy of the unary operator, with child `child`"""
 
@@ -524,7 +529,7 @@ def average(symbol):
     """
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
-        new_symbol = pybamm.make_new_copy(symbol)
+        new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its average value is its child
@@ -576,7 +581,7 @@ def boundary_value(symbol, side):
     """
     # If symbol doesn't have a domain, its boundary value is itself
     if symbol.domain == []:
-        new_symbol = pybamm.make_new_copy(symbol)
+        new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its boundary value is its child

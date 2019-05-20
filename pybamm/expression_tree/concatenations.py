@@ -60,8 +60,13 @@ class Concatenation(pybamm.Symbol):
                 children_eval[idx] = child.evaluate(t, y)
             return self._concatenation_evaluate(children_eval)
 
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        new_children = [child.new_copy() for child in self.children]
+        return self._concatenation_new_copy(new_children)
+
     def _concatenation_new_copy(self, children):
-        """ See :meth:`pybamm.make_new_copy()`. """
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
         new_symbol = self.__class__(*children)
         return new_symbol
 
@@ -226,7 +231,7 @@ class DomainConcatenation(Concatenation):
             return SparseStack(*[child.jac(variable) for child in children])
 
     def _concatenation_new_copy(self, children):
-        """ See :meth:`pybamm.make_new_copy()`. """
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
         new_symbol = self.__class__(children, self.mesh, self)
         return new_symbol
 

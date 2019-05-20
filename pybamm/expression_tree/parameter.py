@@ -22,6 +22,10 @@ class Parameter(pybamm.Symbol):
     def __init__(self, name, domain=[]):
         super().__init__(name, domain=domain)
 
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return Parameter(self.name, self.domain)
+
 
 class FunctionParameter(pybamm.UnaryOperator):
     """A node in the expression tree representing a function parameter
