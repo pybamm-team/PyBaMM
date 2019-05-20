@@ -326,34 +326,14 @@ class Multiplication(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
-        # broadcasting is done correctly, see #253. This might be inefficient, so will
-        # need to revisit
-
-        def is_numpy_1d_vector(v):
-            return isinstance(v, np.ndarray) and len(v.shape) == 1
-
-        def is_numpy_2d_col_vector(v):
-            return isinstance(v, np.ndarray) and len(v.shape) == 2 and v.shape[1] == 1
-
-        if is_numpy_1d_vector(left):
-            left = left.reshape(-1, 1)
-
-        if is_numpy_1d_vector(right):
-            right = right.reshape(-1, 1)
 
         if issparse(left):
-            result = left.multiply(right)
+            return left.multiply(right)
         elif issparse(right):
             # Hadamard product is commutative, so we can switch right and left
-            result = right.multiply(left)
+            return right.multiply(left)
         else:
-            result = left * right
-
-        if is_numpy_2d_col_vector(result):
-            result = result.reshape(-1)
-
-        return result
+            return left * right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -373,7 +353,7 @@ class Multiplication(BinaryOperator):
         # if one of the children is a zero matrix, we have to be careful about shapes
         if is_matrix_zero(left) or is_matrix_zero(right):
             shape = (left * right).shape
-            if len(shape) == 1:
+            if len(shape) == 1 or shape[1] == 1:
                 return pybamm.Vector(np.zeros(shape))
             else:
                 return pybamm.Matrix(csr_matrix(shape))
@@ -465,34 +445,11 @@ class Division(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        # TODO: this is a bit of a hack to reshape 1d vectors to 2d, so that
-        # broadcasting is done correctly, see #253. This might be inefficient, so will
-        # need to revisit
-
-        def is_numpy_1d_vector(v):
-            return isinstance(v, np.ndarray) and len(v.shape) == 1
-
-        def is_numpy_2d_col_vector(v):
-            return isinstance(v, np.ndarray) and len(v.shape) == 2 and v.shape[1] == 1
-
-        if is_numpy_1d_vector(left):
-            left = left.reshape(-1, 1)
-
-        if is_numpy_1d_vector(right):
-            right = right.reshape(-1, 1)
 
         if issparse(left):
-            result = left.multiply(1 / right)
-        elif issparse(right):
-            # Hadamard product is commutative, so we can switch right and left
-            result = (1 / right).multiply(left)
+            return left.multiply(1 / right)
         else:
-            result = left / right
-
-        if is_numpy_2d_col_vector(result):
-            result = result.reshape(-1)
-
-        return result
+            return left / right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """

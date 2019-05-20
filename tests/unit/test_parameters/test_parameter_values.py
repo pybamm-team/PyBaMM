@@ -116,7 +116,7 @@ class TestParameterValues(unittest.TestCase):
         e = pybamm.Vector(np.ones(4))
         processed_e = parameter_values.process_symbol(e)
         self.assertIsInstance(processed_e, pybamm.Vector)
-        np.testing.assert_array_equal(processed_e.evaluate(), np.ones(4))
+        np.testing.assert_array_equal(processed_e.evaluate(), np.ones((4, 1)))
 
         f = pybamm.Matrix(np.ones((5, 6)))
         processed_f = parameter_values.process_symbol(f)
@@ -127,7 +127,9 @@ class TestParameterValues(unittest.TestCase):
         g = pybamm.StateVector(slice(0, 10))
         processed_g = parameter_values.process_symbol(g)
         self.assertIsInstance(processed_g, pybamm.StateVector)
-        np.testing.assert_array_equal(processed_g.evaluate(y=np.ones(10)), np.ones(10))
+        np.testing.assert_array_equal(
+            processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
+        )
 
         # not implemented
         sym = pybamm.Symbol("sym")

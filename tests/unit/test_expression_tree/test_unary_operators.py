@@ -59,7 +59,7 @@ class TestUnaryOperators(unittest.TestCase):
         np.testing.assert_array_equal(cosb.evaluate(), np.cos(c.evaluate()))
 
         var = pybamm.StateVector(slice(0, 100))
-        y = np.linspace(0, 1, 100)
+        y = np.linspace(0, 1, 100)[:, np.newaxis]
         logvar = pybamm.Function(np.log1p, var)
         np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
 
