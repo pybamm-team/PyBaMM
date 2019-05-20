@@ -28,7 +28,7 @@ class Ohm(pybamm.SubModel):
         super().__init__(set_of_parameters)
         self.parameter_values = parameter_values
 
-    def create_mesh(self, Ny=32, Nz=32, degree=1):
+    def create_mesh(self, Ny=32, Nz=32, ny=3, nz=3, degree=1, ):
         """
         Sets up the mesh, function space etc. for the voltage problem in the
         current collectors.
@@ -41,11 +41,17 @@ class Ohm(pybamm.SubModel):
             Number of mesh points in the z direction.
         degree: int
             Degree of polynomial used in FEM.
+        ny: int
+            Number of mesh points at which 1D model will be evaluated in the y direction.
+        nz: int
+            Number of mesh points at which 1D model will be evaluated in the z direction.
         """
         param = self.set_of_parameters
         param_vals = self.parameter_values
         self.Ny = Ny
         self.Nz = Nz
+        self.ny = ny
+        self.nz = nz
         self.degree = degree
 
         # create mesh and function space
@@ -54,10 +60,14 @@ class Ohm(pybamm.SubModel):
         self.mesh = fenics.RectangleMesh(
             fenics.Point(0, 0), fenics.Point(l_y, l_z), self.Ny, self.Nz
         )
-        self.element = fenics.FunctionSpace(self.mesh, "Lagrange", self.degree)
+        self.mesh_coarse = fenics.RectangleMesh(
+            fenics.Point(0, 0), fenics.Point(l_y, l_z), self.ny, self.nz
+        )
+        self.FunctionSpace = fenics.FunctionSpace(self.mesh, "Lagrange", self.degree)
+        self.FunctionSpace_coarse = fenics.FunctionSpace(self.mesh_coarse, "Lagrange", self.degree)
 
-        self.TrialFunction = fenics.TrialFunction(self.element)
-        self.TestFunction = fenics.TestFunction(self.element)
+        self.TrialFunction = fenics.TrialFunction(self.FunctionSpace)
+        self.TestFunction = fenics.TestFunction(self.FunctionSpace)
 
         # create SubDomain classes for the tabs
         negativetab = Tab()
@@ -122,12 +132,15 @@ class Ohm(pybamm.SubModel):
         self.load_tab_p = fenics.assemble(pos_tab_form).get_local()[:]
 
         # set functions for V, I and load
-        self.voltage = fenics.Function(self.element)
-        self.current = fenics.Function(self.element)
-        self.load = fenics.Function(self.element)
+        self.voltage = fenics.Function(self.FunctionSpace)
+        self.current = fenics.Function(self.FunctionSpace)
+        self.voltage_coarse = fenics.Function(self.FunctionSpace_coarse)
+        self.current_coarse = fenics.Function(self.FunctionSpace_coarse)
+        self.load = fenics.Function(self.FunctionSpace)
 
         # number of degrees of freedom
         self.N_dofs = np.size(self.voltage.vector()[:])
+        self.n_dofs = np.size(self.voltage_coarse.vector()[:])
 
         # placeholder for voltage difference
         self.voltage_difference = 1
@@ -169,13 +182,27 @@ class Ohm(pybamm.SubModel):
             voltage_prev.vector()[:] - self.voltage.vector()[:]
         )
 
-    def update_current(self, current):
+    def update_current(self, current, coarse=True):
         "Update the entries of the through-cell current density."
-        self.current.vector()[:] = current
+        if coarse:
+            self.current_coarse.vector()[:] = current
+            self.current = fenics.project(self.current_coarse, self.FunctionSpace)
+        else:
+            self.current.vector()[:] = current
 
-    def get_voltage(self):
-        " Returns the voltage as an array"
-        return self.voltage.vector()[:]
+    def get_voltage(self, coarse=False):
+        "Returns the voltage as an array"
+        if coarse:
+            return self.voltage_coarse.vector()[:]
+        else:
+            return self.voltage.vector()[:]
+
+    def get_current(self, coarse=False):
+        "Returns the through-cell current density as an array"
+        if coarse:
+            return self.current_coarse.vector()[:]
+        else:
+            return self.current.vector()[:]
 
 
 class Tab(fenics.SubDomain):
