@@ -15,6 +15,19 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         F = pybamm.standard_parameters_lead_acid.F
         self.assertAlmostEqual(F.evaluate(), 96485, places=0)
 
+    def test_all_defined(self):
+        parameters = pybamm.standard_parameters_lead_acid
+        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        output_file = "results/sulzer_thesis/parameters.txt"
+        pybamm.print_parameters(parameters, parameter_values, output_file)
+        # test print_parameters with dict and without C-rate
+        del parameter_values["Cell capacity [A.h]"]
+        parameters = {
+            "C_e": pybamm.standard_parameters_lead_acid.C_e,
+            "sigma_n": pybamm.standard_parameters_lead_acid.sigma_n,
+        }
+        pybamm.print_parameters(parameters, parameter_values)
+
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
         parameters = {
