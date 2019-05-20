@@ -27,7 +27,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_discretisation_for_testing()
         disc.set_variable_slices([var])
-        x_sol = disc.process_symbol(x).entries
+        x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
         eqn_sol = disc.process_symbol(eqn)
         t_sol = np.linspace(0, 1)
@@ -54,8 +54,8 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_p2d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        x_sol = disc.process_symbol(x).entries
-        r_sol = disc.process_symbol(r).entries
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        r_sol = disc.process_symbol(r).entries[:, 0]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
@@ -94,7 +94,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_discretisation_for_testing()
         disc.set_variable_slices([var])
-        x_sol = disc.process_symbol(x).entries
+        x_sol = disc.process_symbol(x).entries[:, 0]
         var_sol = disc.process_symbol(var)
         eqn_sol = disc.process_symbol(eqn)
         t_sol = np.linspace(0, 1)
@@ -132,8 +132,8 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_p2d_discretisation_for_testing()
         disc.set_variable_slices([var])
-        x_sol = disc.process_symbol(x).entries
-        r_sol = disc.process_symbol(r).entries
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        r_sol = disc.process_symbol(r).entries[:, 0]
         var_sol = disc.process_symbol(var)
         t_sol = np.linspace(0, 1)
         y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
@@ -184,7 +184,7 @@ class TestProcessedVariable(unittest.TestCase):
         # set up testing
         t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
         x = pybamm.SpatialVariable("x", domain=whole_cell)
-        x_sol = modeltest.disc.process_symbol(x).entries
+        x_sol = modeltest.disc.process_symbol(x).entries[:, 0]
         processed_vars = pybamm.post_process_variables(
             model.variables, t_sol, y_sol, modeltest.disc.mesh
         )

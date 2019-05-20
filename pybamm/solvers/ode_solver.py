@@ -40,7 +40,9 @@ class OdeSolver(pybamm.BaseSolver):
 
         def dydt(t, y):
             pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
-            return concatenated_rhs.evaluate(t, y, known_evals={})[0]
+            y = y[:, np.newaxis]
+            dy = concatenated_rhs.evaluate(t, y, known_evals={})[0]
+            return dy[:, 0]
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
@@ -51,7 +53,7 @@ class OdeSolver(pybamm.BaseSolver):
 
         events = [event_fun(event) for event in events]
 
-        y0 = model.concatenated_initial_conditions
+        y0 = model.concatenated_initial_conditions[:, 0]
 
         if model.use_jacobian:
             # Create Jacobian from simplified rhs

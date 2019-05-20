@@ -220,6 +220,19 @@ class TestBinaryOperators(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "dimension mismatch"):
             (pybammS2 @ pybammS2).evaluate()
 
+    def test_sparse_divide(self):
+        row = np.array([0, 3, 1, 0])
+        col = np.array([0, 3, 1, 2])
+        data = np.array([4, 5, 7, 9])
+        S1 = coo_matrix((data, (row, col)), shape=(4, 5))
+        pybammS1 = pybamm.Matrix(S1)
+        v1 = np.ones((4, 1))
+        pybammv1 = pybamm.Vector(v1)
+
+        np.testing.assert_array_equal(
+            (pybammS1 / pybammv1).evaluate().toarray(), S1.toarray() / v1
+        )
+
 
 class TestIsZero(unittest.TestCase):
     def test_is_scalar_zero(self):

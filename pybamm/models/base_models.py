@@ -574,6 +574,9 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
                 "Electrolyte conductivity": os.path.join(
                     input_path, "electrolyte_conductivity_Gu1997.py"
                 ),
+                "Electrolyte viscosity": os.path.join(
+                    input_path, "electrolyte_viscosity_Chapman1968.py"
+                ),
                 "Darken thermodynamic factor": os.path.join(
                     input_path, "darken_thermodynamic_factor_Chapman1968.py"
                 ),
