@@ -1,3 +1,5 @@
+component_depth: 2
+languages:
 - name: python
   production:
     exclude:
