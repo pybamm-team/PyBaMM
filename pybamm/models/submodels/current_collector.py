@@ -133,8 +133,10 @@ class Ohm(pybamm.SubModel):
 
         # set functions for V, I and load
         self.voltage = fenics.Function(self.FunctionSpace)
-        self.current = fenics.Function(self.FunctionSpace)
+        self.voltage_prev = fenics.Function(self.FunctionSpace)
         self.voltage_coarse = fenics.Function(self.FunctionSpace_coarse)
+
+        self.current = fenics.Function(self.FunctionSpace)
         self.current_coarse = fenics.Function(self.FunctionSpace_coarse)
         self.load = fenics.Function(self.FunctionSpace)
 
@@ -154,32 +156,28 @@ class Ohm(pybamm.SubModel):
         # of the old iterate). As long as you can write an OK initial guess then
         # this seems to work.
 
-        # Store old values for error computation
-        voltage_prev = self.voltage
+        # store old values for error computation
+        self.voltage_prev.vector()[:] = self.voltage.vector()[:]
 
-        # Right hand side (uses the value of the current computed using the
-        # previous iterate of V)
+        # adjusted right hand side := b(I) + M*V_prev
+        # (uses the value of the current computed using the previous iterate of V)
         alpha = self.parameter_values.process_symbol(
             self.set_of_parameters.alpha
         ).evaluate(0, 0)
         self.load.vector()[:] = (
             self.load_tab_n
             + self.load_tab_p
-            + np.dot(self.mass.array(), alpha * self.current.vector()[:])
+            + np.dot(self.mass.array(), alpha * self.current.vector()[:] + self.voltage_prev.vector()[:])
         )
 
-        # Solve K*V = b(I)
-        # fenics.solve(self.stiffness, self.voltage.vector(), self.load.vector())
-
-        # Solve K*V_new + M*V_new = b(I) + M*V_prev
-        self.load.vector()[:] += np.dot(self.mass.array(), voltage_prev.vector()[:])
+        # solve K*V_new + M*V_new = b(I) + M*V_prev
         fenics.solve(
             self.stiffness + self.mass, self.voltage.vector(), self.load.vector()
         )
 
         # Update difference in solution
         self.voltage_difference = np.linalg.norm(
-            voltage_prev.vector()[:] - self.voltage.vector()[:]
+            self.voltage_prev.vector()[:] - self.voltage.vector()[:]
         )
 
     def update_current(self, current, coarse=True):

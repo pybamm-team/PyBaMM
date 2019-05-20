@@ -221,8 +221,8 @@ sigma_cp = sigma_cp_dimensional * potential_scale / i_typ / L_x
 
 # should rename this to avoid confusion with Butler-Volmer
 
-alpha = 1 / (sigma_cn * (L_x / L_z) ** 2 * L_cn) + 1 / (
-    sigma_cp * (L_x / L_z) ** 2 * L_cp
+alpha = 1 / (sigma_cn * (L_x / L_z) ** 2 * l_cn) + 1 / (
+    sigma_cp * (L_x / L_z) ** 2 * l_cp
 )
 
 # Electrolyte Properties
