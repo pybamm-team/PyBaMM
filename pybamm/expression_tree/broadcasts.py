@@ -1,10 +1,8 @@
 #
 # Unary operator classes and methods
 #
-import pybamm
-
 import numbers
-import numpy as np
+import pybamm
 
 
 class Broadcast(pybamm.SpatialOperator):
