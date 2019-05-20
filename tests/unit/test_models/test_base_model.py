@@ -343,6 +343,7 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
         solver = pybamm.BaseModel()
         self.assertTrue(isinstance(model.default_solver,
                                    (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)))
+        self.assertTrue(isinstance(solver, pybamm.BaseModel))
 
 
 if __name__ == "__main__":
