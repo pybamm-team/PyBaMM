@@ -295,7 +295,7 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(scal.shape, ())
 
         state = pybamm.StateVector(slice(10, 25))
-        self.assertEqual(state.shape, (15,))
+        self.assertEqual(state.shape, (15, 1))
 
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):

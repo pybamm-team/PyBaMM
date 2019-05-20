@@ -1,8 +1,8 @@
 #
 # NumpyArray class
 #
+import numpy as np
 import pybamm
-
 from scipy.sparse import issparse
 
 
@@ -24,6 +24,8 @@ class Array(pybamm.Symbol):
     """
 
     def __init__(self, entries, name=None, domain=[], entries_string=None):
+        if entries.ndim == 1:
+            entries = entries[:, np.newaxis]
         if name is None:
             name = "Array of shape {!s}".format(entries.shape)
         self._entries = entries

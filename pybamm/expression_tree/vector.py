@@ -25,13 +25,20 @@ class Vector(pybamm.Array):
     """
 
     def __init__(self, entries, name=None, domain=[], entries_string=None):
-        # make sure that entries are a vector
-        if entries.ndim != 1:
+        # make sure that entries are a vector (can be a column vector)
+        if entries.ndim == 1:
+            entries = entries[:, np.newaxis]
+        if entries.shape[1] != 1:
             raise ValueError(
-                """Entries must have 1 dimension, not {}""".format(entries.ndim)
+                """
+                Entries must have 1 dimension or be column vector, not have shape {}
+                """.format(
+                    entries.shape
+                )
             )
         if name is None:
-            name = "Vector of length {!s}".format(entries.shape[0])
+            name = "Column vector of length {!s}".format(entries.shape[0])
+
         super().__init__(entries, name, domain, entries_string)
 
     def jac(self, variable):
@@ -83,7 +90,10 @@ class StateVector(pybamm.Symbol):
                 "y is too short, so value with slice is smaller than expected"
             )
         else:
-            return y[self._y_slice]
+            out = y[self._y_slice]
+            if out.ndim == 1:
+                out = out[:, np.newaxis]
+            return out
 
     def jac(self, variable):
         """

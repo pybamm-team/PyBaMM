@@ -484,6 +484,13 @@ class Symbol(anytree.NodeMixin):
         )
 
     @property
+    def size(self):
+        """
+        Size of an object, found by evaluating it with appropriate t and y
+        """
+        return np.prod(self.shape)
+
+    @property
     def shape(self):
         """
         Shape of an object, found by evaluating it with appropriate t and y
