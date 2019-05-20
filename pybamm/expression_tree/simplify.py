@@ -285,13 +285,17 @@ def simplify_multiplication_division(myclass, left, right):
                 or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
                 left, right = child.orphans
-                if child == left_child and this_class == pybamm.Multiplication:
+                if (
+                    child == left_child
+                    and this_class == pybamm.Multiplication
+                    and isinstance(other_child, pybamm.Vector)
+                ):
                     # change (m @ v1) * v2 -> v2 * m @ v so can simplify correctly
                     # (#341)
                     numerator.append(other_child)
                     numerator_types.append(previous_class)
                     flatten(
-                        this_class, child.__class__, left, right, in_numerator, False
+                        this_class, child.__class__, left, right, in_numerator, True
                     )
                     break
                 if child == left_child:
@@ -403,18 +407,11 @@ def simplify_multiplication_division(myclass, left, right):
                 and new_nodes[-1].evaluate_ignoring_errors() is not None
                 and child.evaluate_ignoring_errors() is not None
             ):
-                if typ == pybamm.MatrixMultiplication and not isinstance(
-                    child, pybamm.Scalar
-                ):
+                if typ == pybamm.MatrixMultiplication:
                     new_nodes[-1] = new_nodes[-1] @ child
                 else:
                     new_nodes[-1] *= child
-                try:
-                    new_nodes[-1] = pybamm.simplify_if_constant(new_nodes[-1])
-                except ValueError:
-                    import ipdb
-
-                    ipdb.set_trace()
+                new_nodes[-1] = pybamm.simplify_if_constant(new_nodes[-1])
             else:
                 new_nodes.append(child)
                 new_types.append(typ)

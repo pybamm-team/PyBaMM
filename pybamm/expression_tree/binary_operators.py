@@ -129,12 +129,7 @@ class BinaryOperator(pybamm.Symbol):
                 return value, known_evals
         else:
             left = self.left.evaluate(t, y)
-            try:
-                right = self.right.evaluate(t, y)
-            except ValueError:
-                import ipdb
-
-                ipdb.set_trace()
+            right = self.right.evaluate(t, y)
             return self._binary_evaluate(left, right)
 
 

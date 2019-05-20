@@ -399,7 +399,6 @@ class BoundaryOperator(SpatialOperator):
 
     def _unary_simplify(self, simplified_child):
         """ See :meth:`UnaryOperator._unary_simplify()`. """
-
         return self.__class__(simplified_child, self.side)
 
     def _unary_new_copy(self, child):
@@ -580,10 +579,10 @@ def boundary_value(symbol, side):
         the new integrated expression tree
     """
     # If symbol doesn't have a domain, its boundary value is itself
-    # if symbol.domain == []:
-    #     new_symbol = symbol.new_copy()
-    #     new_symbol.parent = None
-    #     return new_symbol
+    if symbol.domain == []:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
     # If symbol is a Broadcast, its boundary value is its child
     if isinstance(symbol, pybamm.Broadcast):
         return symbol.orphans[0]
