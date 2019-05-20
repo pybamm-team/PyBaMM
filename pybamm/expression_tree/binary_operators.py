@@ -110,8 +110,10 @@ class BinaryOperator(pybamm.Symbol):
         # process children
         new_left = self.left.new_copy()
         new_right = self.right.new_copy()
-        # make new symbol
-        return self.__class__(new_left, new_right)
+        # make new symbol, ensure domain remains the same
+        out = self.__class__(new_left, new_right)
+        out.domain = self.domain
+        return out
 
     def evaluate(self, t=None, y=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """

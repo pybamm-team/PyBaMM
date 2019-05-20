@@ -124,4 +124,4 @@ class StateVector(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return StateVector(self.y_slice, self.name, self.domain)
+        return StateVector(self.y_slice, self.name, domain=[])

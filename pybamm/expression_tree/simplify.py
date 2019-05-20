@@ -554,11 +554,13 @@ def simplify(symbol):
         # make new symbol, ensure domain remains the same
         # _binary_simplify defined in derived classes for specific rules
         new_symbol = symbol._binary_simplify(new_left, new_right)
+        new_symbol.domain = symbol.domain
         return simplify_if_constant(new_symbol)
 
     elif isinstance(symbol, pybamm.UnaryOperator):
         new_child = simplify(symbol.child)
         new_symbol = symbol._unary_simplify(new_child)
+        new_symbol.domain = symbol.domain
         return simplify_if_constant(new_symbol)
 
     elif isinstance(symbol, pybamm.Concatenation):
