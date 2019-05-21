@@ -26,8 +26,7 @@ build/
 # inputs except parameters and comsol data needed for scripts and notebooks
 input/*
 !input/parameters
-input/data/*
-!input/data/comsol/
+!input/comsol_results
 
 # simulation outputs
 out/
