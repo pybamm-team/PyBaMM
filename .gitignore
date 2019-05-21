@@ -23,9 +23,11 @@ docs/_build/
 docs/build/
 build/
 
-# inputs except parameters
+# inputs except parameters and comsol data needed for scripts and notebooks
 input/*
 !input/parameters
+input/data/*
+!input/data/comsol/
 
 # simulation outputs
 out/
