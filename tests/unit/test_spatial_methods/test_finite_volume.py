@@ -874,7 +874,9 @@ class TestFiniteVolume(unittest.TestCase):
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_equal(phi_exact, phi_approx)
+        import ipdb
 
+        ipdb.set_trace()
         # linear case
         phi_exact = combined_submesh[0].nodes[:, np.newaxis]
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)

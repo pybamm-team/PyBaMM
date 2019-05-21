@@ -240,6 +240,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         out.domain = domain
 
+        import ipdb
+
+        ipdb.set_trace()
+
         return out
 
     def indefinite_integral_matrix(self, domain):

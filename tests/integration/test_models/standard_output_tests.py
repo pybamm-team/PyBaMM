@@ -91,6 +91,9 @@ class BaseOutputTest(object):
                 mesh=self.disc.mesh,
             )
         except ValueError:
+            x = self.model.variables[
+                var
+            ].right.left.left.right.left.left.right.right.left
             import ipdb
 
             ipdb.set_trace()
