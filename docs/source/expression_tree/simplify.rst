@@ -1,7 +1,8 @@
 Simplify
 ========
 
-.. autofunction:: pybamm.simplify
+.. autoclass:: pybamm.Simplification
+  :members:
 
 .. autofunction:: pybamm.simplify_if_constant
 
