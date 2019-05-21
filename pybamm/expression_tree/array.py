@@ -76,6 +76,10 @@ class Array(pybamm.Symbol):
             (self.__class__, self.name, self.entries_string) + tuple(self.domain)
         )
 
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return self.__class__(self.entries, self.name, self.domain, self.entries_string)
+
     def _base_evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._entries

@@ -34,6 +34,10 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return Time()
+
     def _base_evaluate(self, t, y=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if t is None:
@@ -75,6 +79,10 @@ class SpatialVariable(IndependentVariable):
             raise pybamm.DomainError(
                 "domain cannot be particle if name is '{}'".format(name)
             )
+
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return SpatialVariable(self.name, self.domain, self.coord_sys)
 
 
 # the independent variable time

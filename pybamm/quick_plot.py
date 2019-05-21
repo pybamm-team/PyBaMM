@@ -1,3 +1,6 @@
+#
+# Class for quick plotting of variables from models
+#
 import numpy as np
 import pybamm
 

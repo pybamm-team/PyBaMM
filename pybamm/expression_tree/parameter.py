@@ -22,6 +22,10 @@ class Parameter(pybamm.Symbol):
     def __init__(self, name, domain=[]):
         super().__init__(name, domain=domain)
 
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return Parameter(self.name, self.domain)
+
 
 class FunctionParameter(pybamm.UnaryOperator):
     """A node in the expression tree representing a function parameter
@@ -63,7 +67,6 @@ class FunctionParameter(pybamm.UnaryOperator):
         # when the parameters are set
         return FunctionParameter(self.name, self.orphans[0], diff_variable=variable)
 
-    def _unary_simplify(self, child):
-        """ See :meth:`UnaryOperator._unary_simplify()`. """
-        child = self.child.simplify()
-        return pybamm.FunctionParameter(self.name, child, self.diff_variable)
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return FunctionParameter(self.name, child, diff_variable=self.diff_variable)

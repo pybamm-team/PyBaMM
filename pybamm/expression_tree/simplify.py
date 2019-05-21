@@ -285,13 +285,17 @@ def simplify_multiplication_division(myclass, left, right):
                 or isinstance(other_child, (pybamm.Scalar, pybamm.Vector))
             ):
                 left, right = child.orphans
-                if side == "left" and this_class == pybamm.Multiplication:
+                if (
+                    side == "left"
+                    and this_class == pybamm.Multiplication
+                    and isinstance(other_child, pybamm.Vector)
+                ):
                     # change (m @ v1) * v2 -> v2 * m @ v so can simplify correctly
                     # (#341)
                     numerator.append(other_child)
                     numerator_types.append(previous_class)
                     flatten(
-                        this_class, child.__class__, left, right, in_numerator, False
+                        this_class, child.__class__, left, right, in_numerator, True
                     )
                     break
                 if side == "left":
@@ -542,12 +546,12 @@ class Simplification(object):
         Parameters
         ----------
         symbol : :class:`pybamm.Symbol`
-            The symbol to simplify
+        The symbol to simplify
 
         Returns
         -------
         :class:`pybamm.Symbol`
-            Simplified symbol
+        Simplified symbol
         """
         pybamm.logger.debug("Simplify {!s}".format(symbol))
         try:
@@ -559,6 +563,7 @@ class Simplification(object):
 
     def _simplify(self, symbol):
         """ See :meth:`Simplification.simplify()`. """
+
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
             # process children
@@ -567,41 +572,26 @@ class Simplification(object):
             # make new symbol, ensure domain remains the same
             # _binary_simplify defined in derived classes for specific rules
             new_symbol = symbol._binary_simplify(new_left, new_right)
+            new_symbol.domain = symbol.domain
             return simplify_if_constant(new_symbol)
 
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.simplify(symbol.child)
             new_symbol = symbol._unary_simplify(new_child)
+            new_symbol.domain = symbol.domain
             return simplify_if_constant(new_symbol)
 
         elif isinstance(symbol, pybamm.Concatenation):
-            new_children = [self.simplify(child) for child in symbol.cached_children]
+            new_children = [self.simplify(child) for child in symbol.children]
             new_symbol = symbol._concatenation_simplify(new_children)
 
             return simplify_if_constant(new_symbol)
 
-        # Other cases: return new variable to avoid tree internal corruption
-        elif isinstance(symbol, (pybamm.Parameter, pybamm.Variable)):
-            return symbol.__class__(symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.StateVector):
-            return pybamm.StateVector(symbol.y_slice, symbol.name)
-
-        elif isinstance(symbol, pybamm.Scalar):
-            return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Array):
-            return symbol.__class__(
-                symbol.entries, symbol.name, symbol.domain, symbol.entries_string
-            )
-
-        elif isinstance(symbol, pybamm.SpatialVariable):
-            return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
-
-        elif isinstance(symbol, pybamm.Time):
-            return pybamm.Time()
-
         else:
-            raise NotImplementedError(
-                "Cannot simplify symbol of type '{}'".format(type(symbol))
-            )
+            # Backup option: return new copy of the object
+            try:
+                return symbol.new_copy()
+            except NotImplementedError:
+                raise NotImplementedError(
+                    "Cannot simplify symbol of type '{}'".format(type(symbol))
+                )

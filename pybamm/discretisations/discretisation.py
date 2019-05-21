@@ -378,6 +378,10 @@ class Discretisation(object):
 
     def _process_symbol(self, symbol):
         """ See :meth:`Discretisation.process_symbol()`. """
+
+        if symbol.domain != []:
+            spatial_method = self._spatial_methods[symbol.domain[0]]
+
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
             left, right = symbol.children
@@ -386,71 +390,48 @@ class Discretisation(object):
             if symbol.domain == []:
                 return symbol.__class__(disc_left, disc_right)
             else:
-                return self._spatial_methods[symbol.domain[0]].process_binary_operators(
+                return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )
-
-        elif isinstance(symbol, pybamm.Gradient):
-            child = symbol.children[0]
-            discretised_child = self.process_symbol(child)
-            return self._spatial_methods[child.domain[0]].gradient(
-                child, discretised_child, self.bcs
-            )
-
-        elif isinstance(symbol, pybamm.Divergence):
-            child = symbol.children[0]
-            discretised_child = self.process_symbol(child)
-            return self._spatial_methods[child.domain[0]].divergence(
-                child, discretised_child, self.bcs
-            )
-
-        elif isinstance(symbol, pybamm.IndefiniteIntegral):
-            child = symbol.children[0]
-            discretised_child = self.process_symbol(child)
-            return self._spatial_methods[child.domain[0]].indefinite_integral(
-                child.domain, child, discretised_child
-            )
-
-        elif isinstance(symbol, pybamm.Integral):
-            child = symbol.children[0]
-            discretised_child = self.process_symbol(child)
-            return self._spatial_methods[child.domain[0]].integral(
-                child.domain, child, discretised_child
-            )
-
-        elif isinstance(symbol, pybamm.Broadcast):
-            # Process child first
-            new_child = self.process_symbol(symbol.children[0])
-            # Broadcast new_child to the domain specified by symbol.domain
-            # Different discretisations may broadcast differently
-            if symbol.domain == []:
-                symbol = new_child * pybamm.Vector(np.array([1]))
-            else:
-                symbol = self._spatial_methods[symbol.domain[0]].broadcast(
-                    new_child, symbol.domain
-                )
-            return symbol
-
-        elif isinstance(symbol, pybamm.BoundaryOperator):
-            child = symbol.children[0]
-            discretised_child = self.process_symbol(child)
-            return self._spatial_methods[child.domain[0]].boundary_value_or_flux(
-                symbol, discretised_child
-            )
-
-        elif isinstance(symbol, pybamm.Function):
-            new_child = self.process_symbol(symbol.children[0])
-            return pybamm.Function(symbol.func, new_child)
-
         elif isinstance(symbol, pybamm.UnaryOperator):
-            new_child = self.process_symbol(symbol.children[0])
-            return symbol.__class__(new_child)
+            child = symbol.child
+            disc_child = self.process_symbol(child)
+            if child.domain != []:
+                child_spatial_method = self._spatial_methods[child.domain[0]]
+            if isinstance(symbol, pybamm.Gradient):
+                return child_spatial_method.gradient(child, disc_child, self.bcs)
+
+            elif isinstance(symbol, pybamm.Divergence):
+                return child_spatial_method.divergence(child, disc_child, self.bcs)
+
+            elif isinstance(symbol, pybamm.IndefiniteIntegral):
+                return child_spatial_method.indefinite_integral(
+                    child.domain, child, disc_child
+                )
+
+            elif isinstance(symbol, pybamm.Integral):
+                return child_spatial_method.integral(child.domain, child, disc_child)
+
+            elif isinstance(symbol, pybamm.Broadcast):
+                # Broadcast new_child to the domain specified by symbol.domain
+                # Different discretisations may broadcast differently
+                if symbol.domain == []:
+                    symbol = disc_child * pybamm.Vector(np.array([1]))
+                else:
+                    symbol = spatial_method.broadcast(disc_child, symbol.domain)
+                return symbol
+
+            elif isinstance(symbol, pybamm.BoundaryOperator):
+                return child_spatial_method.boundary_value_or_flux(symbol, disc_child)
+
+            else:
+                return symbol._unary_new_copy(disc_child)
 
         elif isinstance(symbol, pybamm.Variable):
             return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.SpatialVariable):
-            return self._spatial_methods[symbol.domain[0]].spatial_variable(symbol)
+            return spatial_method.spatial_variable(symbol)
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
@@ -458,22 +439,14 @@ class Discretisation(object):
 
             return new_symbol
 
-        elif isinstance(symbol, pybamm.Scalar):
-            return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Array):
-            return symbol.__class__(symbol.entries, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.StateVector):
-            return symbol.__class__(symbol.y_slice, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Time):
-            return pybamm.Time()
-
         else:
-            raise NotImplementedError(
-                "Cannot discretise symbol of type '{}'".format(type(symbol))
-            )
+            # Backup option: return new copy of the object
+            try:
+                return symbol.new_copy()
+            except NotImplementedError:
+                raise NotImplementedError(
+                    "Cannot discretise symbol of type '{}'".format(type(symbol))
+                )
 
     def concatenate(self, *symbols):
         return pybamm.NumpyConcatenation(*symbols)

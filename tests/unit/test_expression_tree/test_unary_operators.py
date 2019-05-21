@@ -170,14 +170,14 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a.child.id, a.id)
 
     def test_boundary_value(self):
-        a = pybamm.Symbol("a")
+        a = pybamm.Scalar(1)
         boundary_a = pybamm.boundary_value(a, "right")
         self.assertEqual(boundary_a.id, a.id)
 
         boundary_broad_a = pybamm.boundary_value(
             pybamm.Broadcast(a, ["negative electrode"]), "left"
         )
-        self.assertEqual(boundary_broad_a.id, a.id)
+        self.assertEqual(boundary_broad_a.evaluate(), np.array([1]))
 
         a = pybamm.Symbol("a", domain=["separator"])
         boundary_a = pybamm.boundary_value(a, "right")
@@ -186,12 +186,13 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a.domain, [])
 
     def test_average(self):
-        a = pybamm.Symbol("a")
+        a = pybamm.Scalar(1)
         average_a = pybamm.average(a)
         self.assertEqual(average_a.id, a.id)
 
         average_broad_a = pybamm.average(pybamm.Broadcast(a, ["negative electrode"]))
-        self.assertEqual(average_broad_a.id, a.id)
+        self.assertEqual(average_broad_a.evaluate(), np.array([1]))
+
         average_conc_broad = pybamm.average(
             pybamm.Concatenation(
                 pybamm.Broadcast(1, ["negative electrode"]),
