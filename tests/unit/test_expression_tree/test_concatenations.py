@@ -42,7 +42,7 @@ class TestConcatenations(unittest.TestCase):
 
     def test_numpy_concatenation_vectors(self):
         # with entries
-        y = np.linspace(0, 1, 15)
+        y = np.linspace(0, 1, 15)[:, np.newaxis]
         a = pybamm.Vector(y[:5])
         b = pybamm.Vector(y[5:9])
         c = pybamm.Vector(y[9:])
@@ -53,32 +53,32 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.StateVector(slice(10, 15))
         c = pybamm.StateVector(slice(15, 23))
         conc = pybamm.NumpyConcatenation(a, b, c)
-        y = np.linspace(0, 1, 23)
+        y = np.linspace(0, 1, 23)[:, np.newaxis]
         np.testing.assert_array_equal(conc.evaluate(None, y), y)
 
     def test_numpy_concatenation_vector_scalar(self):
         # with entries
-        y = np.linspace(0, 1, 10)
+        y = np.linspace(0, 1, 10)[:, np.newaxis]
         a = pybamm.Vector(y)
         b = pybamm.Scalar(16)
         c = pybamm.Scalar(3)
         conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(
-            conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
+            conc.evaluate(y=y), np.concatenate([y, np.array([[16]]), np.array([[3]])])
         )
 
         # with y_slice
         a = pybamm.StateVector(slice(0, 10))
         conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(
-            conc.evaluate(None, y), np.concatenate([y, np.array([16]), np.array([3])])
+            conc.evaluate(y=y), np.concatenate([y, np.array([[16]]), np.array([[3]])])
         )
 
         # with time
         b = pybamm.t
         conc = pybamm.NumpyConcatenation(a, b, c)
         np.testing.assert_array_equal(
-            conc.evaluate(16, y), np.concatenate([y, np.array([16]), np.array([3])])
+            conc.evaluate(16, y), np.concatenate([y, np.array([[16]]), np.array([[3]])])
         )
 
     def test_numpy_domain_concatenation(self):
@@ -97,11 +97,13 @@ class TestConcatenations(unittest.TestCase):
             conc.evaluate(),
             np.concatenate(
                 [np.full(mesh[a_dom[0]][0].npts, 2), np.full(mesh[b_dom[0]][0].npts, 1)]
-            ),
+            )[:, np.newaxis],
         )
         # test size and shape
         self.assertEqual(conc.size, mesh[a_dom[0]][0].npts + mesh[b_dom[0]][0].npts)
-        self.assertEqual(conc.shape, (mesh[a_dom[0]][0].npts + mesh[b_dom[0]][0].npts,))
+        self.assertEqual(
+            conc.shape, (mesh[a_dom[0]][0].npts + mesh[b_dom[0]][0].npts, 1)
+        )
 
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
@@ -110,7 +112,7 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Vector(
             np.concatenate(
                 [np.full(mesh[b_dom[0]][0].npts, 1), np.full(mesh[b_dom[1]][0].npts, 3)]
-            ),
+            )[:, np.newaxis],
             domain=b_dom,
         )
 
@@ -123,7 +125,7 @@ class TestConcatenations(unittest.TestCase):
                     np.full(mesh[a_dom[0]][0].npts, 2),
                     np.full(mesh[b_dom[1]][0].npts, 3),
                 ]
-            ),
+            )[:, np.newaxis],
         )
         # test size and shape
         self.assertEqual(
@@ -132,7 +134,12 @@ class TestConcatenations(unittest.TestCase):
         )
         self.assertEqual(
             conc.shape,
-            (mesh[b_dom[0]][0].npts + mesh[a_dom[0]][0].npts + mesh[b_dom[1]][0].npts,),
+            (
+                mesh[b_dom[0]][0].npts
+                + mesh[a_dom[0]][0].npts
+                + mesh[b_dom[1]][0].npts,
+                1,
+            ),
         )
 
     def test_domain_concatenation_domains(self):
@@ -196,7 +203,7 @@ class TestConcatenations(unittest.TestCase):
                     2 * np.ones(mesh["separator"][0].npts),
                     3 * np.ones(mesh["positive electrode"][0].npts),
                 ]
-            ),
+            )[:, np.newaxis],
         )
 
         # Piecewise constant functions of time
@@ -221,7 +228,7 @@ class TestConcatenations(unittest.TestCase):
                     4 * np.ones(mesh["separator"][0].npts),
                     6 * np.ones(mesh["positive electrode"][0].npts),
                 ]
-            ),
+            )[:, np.newaxis],
         )
 
         # Piecewise constant state vectors
@@ -247,7 +254,7 @@ class TestConcatenations(unittest.TestCase):
                     2 * np.ones(mesh["separator"][0].npts),
                     3 * np.ones(mesh["positive electrode"][0].npts),
                 ]
-            ),
+            )[:, np.newaxis],
         )
 
         # Mixed
@@ -269,7 +276,7 @@ class TestConcatenations(unittest.TestCase):
                     4 * np.ones(mesh["separator"][0].npts),
                     3 * np.ones(mesh["positive electrode"][0].npts),
                 ]
-            ),
+            )[:, np.newaxis],
         )
 
     def test_domain_error(self):

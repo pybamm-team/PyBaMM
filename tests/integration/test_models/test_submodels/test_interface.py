@@ -148,16 +148,16 @@ class TestButlerVolmer(unittest.TestCase):
         )
         y = np.concatenate([submesh ** 2, submesh ** 3])
         self.assertEqual(
-            j_n.evaluate(None, y).shape, mesh["negative electrode"][0].nodes.shape
+            j_n.evaluate(None, y).shape, (mesh["negative electrode"][0].npts, 1)
         )
         self.assertEqual(
-            j_p.evaluate(None, y).shape, mesh["positive electrode"][0].nodes.shape
+            j_p.evaluate(None, y).shape, (mesh["positive electrode"][0].npts, 1)
         )
 
         # test concatenated butlver-volmer
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
-        self.assertEqual(j.evaluate(None, y).shape, whole_cell_mesh[0].nodes.shape)
+        self.assertEqual(j.evaluate(None, y).shape, (whole_cell_mesh[0].npts, 1))
 
     def test_failure(self):
         model = pybamm.interface.InterfacialCurrent(None)
@@ -252,10 +252,10 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         y = submesh[0].nodes ** 2
         # should evaluate to vectors with the right shape
         self.assertEqual(
-            j0_n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
+            j0_n.evaluate(y=y).shape, (mesh["negative electrode"][0].npts, 1)
         )
         self.assertEqual(
-            j0_p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
+            j0_p.evaluate(y=y).shape, (mesh["positive electrode"][0].npts, 1)
         )
 
     def test_discretisation_lithium_ion(self):
@@ -285,10 +285,10 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         )
         # should evaluate to vectors with the right shape
         self.assertEqual(
-            j0_n.evaluate(y=y).shape, mesh["negative electrode"][0].nodes.shape
+            j0_n.evaluate(y=y).shape, (mesh["negative electrode"][0].npts, 1)
         )
         self.assertEqual(
-            j0_p.evaluate(y=y).shape, mesh["positive electrode"][0].nodes.shape
+            j0_p.evaluate(y=y).shape, (mesh["positive electrode"][0].npts, 1)
         )
 
     def test_failure(self):

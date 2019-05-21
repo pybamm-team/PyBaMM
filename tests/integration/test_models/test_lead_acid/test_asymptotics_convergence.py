@@ -37,6 +37,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
         full_disc.process_model(full_model)
 
         def get_max_error(current):
+            pybamm.logger.info("current = {}".format(current))
             # Update current (and hence C_e) in the parameters
             param = pybamm.ParameterValues(
                 base_parameters=full_model.default_parameter_values,

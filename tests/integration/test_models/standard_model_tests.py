@@ -79,7 +79,7 @@ class StandardModelTest(object):
     def test_outputs(self):
         # run the standard output tests
         std_out_test = tests.StandardOutputTests(
-            self.model, self.disc, self.solver, self.parameter_values
+            self.model, self.parameter_values, self.disc, self.solver
         )
         std_out_test.test_all()
 
@@ -145,19 +145,18 @@ class OptimisationsTest(object):
         self.model = model
 
     def evaluate_model(self, simplify=False, use_known_evals=False):
-        result = np.array([])
+        result = np.empty((0, 1))
         for eqn in [self.model.concatenated_rhs, self.model.concatenated_algebraic]:
-            if eqn is not None:
-                if simplify:
-                    eqn = eqn.simplify()
+            if simplify:
+                eqn = eqn.simplify()
 
-                y = self.model.concatenated_initial_conditions
-                if use_known_evals:
-                    eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
-                else:
-                    eqn_eval = eqn.evaluate(0, y)
+            y = self.model.concatenated_initial_conditions
+            if use_known_evals:
+                eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
             else:
-                eqn_eval = np.array([])
+                eqn_eval = eqn.evaluate(0, y)
+            if eqn_eval.shape == (0,):
+                eqn_eval = eqn_eval[:, np.newaxis]
 
             result = np.concatenate([result, eqn_eval])
 

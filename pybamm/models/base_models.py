@@ -40,6 +40,9 @@ class BaseModel(object):
     """
 
     def __init__(self):
+        # Default name
+        self.name = "Unnamed Model"
+
         # Initialise empty model
         self._rhs = {}
         self._algebraic = {}
@@ -52,8 +55,12 @@ class BaseModel(object):
         self._mass_matrix = None
         self._jacobian = None
 
-        # Default behaviour is to use the jacobian
+        # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
+        self.use_simplify = True
+
+        # Default behaviour: no capacitance in the model
+        self._use_capacitance = False
 
     def _set_dict(self, dict, name):
         """
@@ -182,6 +189,10 @@ class BaseModel(object):
     @jacobian.setter
     def jacobian(self, jacobian):
         self._jacobian = jacobian
+
+    @property
+    def use_capacitance(self):
+        return self._use_capacitance
 
     def __getitem__(self, key):
         return self.rhs[key]
@@ -326,9 +337,7 @@ class BaseModel(object):
             warnings.warn(
                 "the standard output variable(s) '{}' have not been supplied. "
                 "These may be required for testing or comparison with other "
-                "models.".format(
-                    missing_vars
-                ),
+                "models.".format(missing_vars),
                 pybamm.ModelWarning,
                 stacklevel=2,
             )
@@ -564,6 +573,9 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
                 ),
                 "Electrolyte conductivity": os.path.join(
                     input_path, "electrolyte_conductivity_Gu1997.py"
+                ),
+                "Electrolyte viscosity": os.path.join(
+                    input_path, "electrolyte_viscosity_Chapman1968.py"
                 ),
                 "Darken thermodynamic factor": os.path.join(
                     input_path, "darken_thermodynamic_factor_Chapman1968.py"

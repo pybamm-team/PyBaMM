@@ -1,10 +1,8 @@
 #
 # Unary operator classes and methods
 #
-import pybamm
-
 import numbers
-import numpy as np
+import pybamm
 
 
 class Broadcast(pybamm.SpatialOperator):
@@ -26,11 +24,9 @@ class Broadcast(pybamm.SpatialOperator):
     """
 
     def __init__(self, child, domain, name=None):
-        # Convert child to vector if it is a number or scalar
+        # Convert child to scalar if it is a number
         if isinstance(child, numbers.Number):
-            child = pybamm.Vector(np.array([child]))
-        if isinstance(child, pybamm.Scalar):
-            child = pybamm.Vector(np.array([child.value]))
+            child = pybamm.Scalar(child)
 
         # Check domain
         if child.domain not in [[], domain]:

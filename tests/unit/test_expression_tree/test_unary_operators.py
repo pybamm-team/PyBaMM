@@ -59,7 +59,7 @@ class TestUnaryOperators(unittest.TestCase):
         np.testing.assert_array_equal(cosb.evaluate(), np.cos(c.evaluate()))
 
         var = pybamm.StateVector(slice(0, 100))
-        y = np.linspace(0, 1, 100)
+        y = np.linspace(0, 1, 100)[:, np.newaxis]
         logvar = pybamm.Function(np.log1p, var)
         np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
 
@@ -187,8 +187,21 @@ class TestUnaryOperators(unittest.TestCase):
 
         average_broad_a = pybamm.average(pybamm.Broadcast(a, ["negative electrode"]))
         self.assertEqual(average_broad_a.id, a.id)
+        average_conc_broad = pybamm.average(
+            pybamm.Concatenation(
+                pybamm.Broadcast(1, ["negative electrode"]),
+                pybamm.Broadcast(2, ["separator"]),
+                pybamm.Broadcast(3, ["positive electrode"]),
+            )
+        )
+        self.assertIsInstance(average_conc_broad, pybamm.Division)
 
-        for domain in [["negative electrode"], ["separator"], ["positive electrode"]]:
+        for domain in [
+            ["negative electrode"],
+            ["separator"],
+            ["positive electrode"],
+            ["negative electrode", "separator", "positive electrode"],
+        ]:
             a = pybamm.Symbol("a", domain=domain)
             x = pybamm.SpatialVariable("x", domain)
             av_a = pybamm.average(a)

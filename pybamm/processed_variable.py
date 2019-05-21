@@ -95,7 +95,11 @@ class ProcessedVariable(object):
 
         # No discretisation provided, or variable has no domain (function of t only)
         self._interpolation_function = interp.interp1d(
-            self.t_sol, entries, kind=self.interp_kind, fill_value=np.nan
+            self.t_sol,
+            entries,
+            kind=self.interp_kind,
+            fill_value=np.nan,
+            bounds_error=False,
         )
 
         self.entries = entries
@@ -110,7 +114,7 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             entries[:, idx] = self.base_variable.evaluate(
                 self.t_sol[idx], self.y_sol[:, idx]
-            )
+            )[:, 0]
 
         # Process the discretisation to get x values
         nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes

@@ -19,7 +19,7 @@ def simplify_if_constant(symbol):
             if isinstance(result, numbers.Number):
                 return pybamm.Scalar(result, domain=symbol.domain)
             elif isinstance(result, np.ndarray) or issparse(result):
-                if result.ndim == 1:
+                if result.ndim == 1 or result.shape[1] == 1:
                     return pybamm.Vector(result, domain=symbol.domain)
                 else:
                     return pybamm.Matrix(result, domain=symbol.domain)
@@ -142,8 +142,9 @@ def simplify_addition_subtraction(myclass, left, right):
     # simplify identical terms
     i = 0
     while i < len(numerator) - 1:
-        if isinstance(numerator[i], pybamm.Multiplication) and \
-                isinstance(numerator[i].children[0], pybamm.Scalar):
+        if isinstance(numerator[i], pybamm.Multiplication) and isinstance(
+            numerator[i].children[0], pybamm.Scalar
+        ):
             term_i = numerator[i].orphans[1]
             term_i_count = numerator[i].children[0].evaluate()
         else:
@@ -151,8 +152,9 @@ def simplify_addition_subtraction(myclass, left, right):
             term_i_count = 1
 
         # loop through rest of numerator counting up and deleting identical terms
-        for j, (term_j, typ_j) in \
-                enumerate(zip(numerator[i + 1:], numerator_types[i + 1:])):
+        for j, (term_j, typ_j) in enumerate(
+            zip(numerator[i + 1 :], numerator_types[i + 1 :])
+        ):
             if term_i.id == term_j.id:
                 if typ_j == pybamm.Addition:
                     term_i_count += 1
@@ -542,6 +544,8 @@ def simplify(symbol):
     :class:`pybamm.Symbol`
         Simplified symbol
     """
+    pybamm.logger.debug("Simplify {!s}".format(symbol))
+
     if isinstance(symbol, pybamm.BinaryOperator):
         left, right = symbol.children
         # process children

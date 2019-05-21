@@ -52,25 +52,35 @@ class DaeSolver(pybamm.BaseSolver):
             The times at which to compute the solution
 
         """
+        pybamm.logger.info("Start solving {}".format(model.name))
 
         # create simplified rhs algebraic and event expressions
-        concatenated_rhs = model.concatenated_rhs.simplify()
-        concatenated_algebraic = model.concatenated_algebraic.simplify()
-        events = [event.simplify() for event in model.events]
+        concatenated_rhs = model.concatenated_rhs
+        concatenated_algebraic = model.concatenated_algebraic
+        events = model.events
+        if model.use_simplify:
+            concatenated_rhs = concatenated_rhs.simplify()
+            concatenated_algebraic = concatenated_algebraic.simplify()
+            events = [event.simplify() for event in events]
 
         def residuals(t, y, ydot):
+            pybamm.logger.debug(
+                "Evaluating residuals for {} at t={}".format(model.name, t)
+            )
+            y = y[:, np.newaxis]
             rhs_eval, known_evals = concatenated_rhs.evaluate(t, y, known_evals={})
             # reuse known_evals
-            concat_evals = concatenated_algebraic.evaluate(
-                t, y, known_evals=known_evals
-            )[0]
-            return np.concatenate((rhs_eval - ydot[: rhs_eval.shape[0]], concat_evals))
+            alg_eval = concatenated_algebraic.evaluate(t, y, known_evals=known_evals)[0]
+            # turn into 1D arrays
+            rhs_eval = rhs_eval[:, 0]
+            alg_eval = alg_eval[:, 0]
+            return np.concatenate((rhs_eval - ydot[: rhs_eval.shape[0]], alg_eval))
 
         def rhs(t, y):
-            return concatenated_rhs.evaluate(t, y, known_evals={})[0]
+            return concatenated_rhs.evaluate(t, y, known_evals={})[0][:, 0]
 
         def algebraic(t, y):
-            return concatenated_algebraic.evaluate(t, y, known_evals={})[0]
+            return concatenated_algebraic.evaluate(t, y, known_evals={})[0][:, 0]
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
@@ -82,14 +92,18 @@ class DaeSolver(pybamm.BaseSolver):
         events = [event_fun(event) for event in events]
 
         y0 = self.calculate_consistent_initial_conditions(
-            rhs, algebraic, model.concatenated_initial_conditions
+            rhs, algebraic, model.concatenated_initial_conditions[:, 0]
         )
 
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))
-            jac_rhs = concatenated_rhs.jac(y).simplify()
-            jac_algebraic = concatenated_algebraic.jac(y).simplify()
+            jac_rhs = concatenated_rhs.jac(y)
+            jac_algebraic = concatenated_algebraic.jac(y)
+            if model.use_simplify:
+                jac_rhs = jac_rhs.simplify()
+                jac_algebraic = jac_algebraic.simplify()
+
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
 
             def jacobian(t, y):
@@ -106,6 +120,8 @@ class DaeSolver(pybamm.BaseSolver):
             mass_matrix=model.mass_matrix.entries,
             jacobian=jacobian,
         )
+
+        pybamm.logger.info("Finish solving {}".format(model.name))
 
     def calculate_consistent_initial_conditions(self, rhs, algebraic, y0_guess):
         """
@@ -130,6 +146,8 @@ class DaeSolver(pybamm.BaseSolver):
             Initial conditions that are consistent with the algebraic equations (roots
             of the algebraic equations)
         """
+        pybamm.logger.info("Start calculating consistent initial conditions")
+
         # Split y0_guess into differential and algebraic
         len_rhs = rhs(0, y0_guess).shape[0]
         y0_diff, y0_alg_guess = np.split(y0_guess, [len_rhs])
@@ -137,7 +155,13 @@ class DaeSolver(pybamm.BaseSolver):
         def root_fun(y0_alg):
             "Evaluates algebraic using y0_diff (fixed) and y0_alg (changed by algo)"
             y0 = np.concatenate([y0_diff, y0_alg])
-            return algebraic(0, y0)
+            out = algebraic(0, y0)
+            pybamm.logger.debug(
+                "Evaluating algebraic equations at t=0, L2-norm is {}".format(
+                    np.linalg.norm(out)
+                )
+            )
+            return out
 
         # Find the values of y0_alg that are roots of the algebraic equations
         sol = optimize.root(
@@ -147,10 +171,16 @@ class DaeSolver(pybamm.BaseSolver):
         y0_consistent = np.concatenate([y0_diff, sol.x])
 
         if sol.success and np.all(sol.fun < self.root_tol):
+            pybamm.logger.info("Finish calculating consistent initial conditions")
             return y0_consistent
-        else:
+        elif not sol.success:
             raise pybamm.SolverError(
                 "Could not find consistent initial conditions: {}".format(sol.message)
+            )
+        else:
+            raise pybamm.SolverError(
+                "Could not find consistent initial conditions: "
+                + "solver terminated successfully, but solution above tolerance"
             )
 
     def integrate(

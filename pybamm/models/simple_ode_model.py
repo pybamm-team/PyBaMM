@@ -15,6 +15,8 @@ class SimpleODEModel(pybamm.StandardBatteryBaseModel):
 
     def __init__(self):
         super().__init__()
+        self.name = "Simple ODE Model"
+
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Create variables: domain is explicitly empty since these variables are only
         # functions of time

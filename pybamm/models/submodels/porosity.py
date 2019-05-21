@@ -76,3 +76,10 @@ class Standard(pybamm.SubModel):
                     Domain + " porosity change": pybamm.Broadcast(deps_dt, domain),
                 }
             )
+
+        deps_dt = pybamm.Concatenation(
+            self.variables["Negative electrode porosity change"],
+            self.variables["Separator porosity change"],
+            self.variables["Positive electrode porosity change"],
+        )
+        self.variables.update({"Porosity change": deps_dt})
