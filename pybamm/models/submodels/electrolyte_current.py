@@ -484,9 +484,9 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         # import parameters and spatial variables
         param = self.set_of_parameters
         i_cell = param.current_with_time
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_s = pybamm.standard_spatial_vars.x_s
-        x_p = pybamm.standard_spatial_vars.x_p
+        # x_n = pybamm.standard_spatial_vars.x_n
+        # x_s = pybamm.standard_spatial_vars.x_s
+        # x_p = pybamm.standard_spatial_vars.x_p
 
         # Combine currents
         i_e_s = pybamm.Broadcast(i_cell, ["separator"])
@@ -510,7 +510,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         # ):
         #     chi_e = param.chi(c_e)
         #     kappa_eff = param.kappa_e(c_e) * (eps ** param.b)
-        #     d_phi_e__d_x = chi_e / c_e * pybamm.grad(c_e) - param.C_e * i_e / kappa_eff
+        #     d_phi_e__d_x= chi_e / c_e * pybamm.grad(c_e) - param.C_e * i_e / kappa_eff
         #     phi_e_children[i] = pybamm.IndefiniteIntegral(d_phi_e__d_x, x)
         #
         # # Adjust for boundary conditions and continuity
