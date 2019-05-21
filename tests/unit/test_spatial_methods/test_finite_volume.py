@@ -125,7 +125,7 @@ class TestFiniteVolume(unittest.TestCase):
         ]:
             # Check that the equation can be evaluated in each case
             # Dirichlet
-            disc._bcs = {
+            disc.bcs = {
                 var.id: {
                     "left": (pybamm.Scalar(0), "Dirichlet"),
                     "right": (pybamm.Scalar(1), "Dirichlet"),
@@ -134,7 +134,7 @@ class TestFiniteVolume(unittest.TestCase):
             eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, y_test)
             # Neumann
-            disc._bcs = {
+            disc.bcs = {
                 var.id: {
                     "left": (pybamm.Scalar(0), "Neumann"),
                     "right": (pybamm.Scalar(1), "Neumann"),
@@ -143,7 +143,7 @@ class TestFiniteVolume(unittest.TestCase):
             eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, y_test)
             # One of each
-            disc._bcs = {
+            disc.bcs = {
                 var.id: {
                     "left": (pybamm.Scalar(0), "Dirichlet"),
                     "right": (pybamm.Scalar(1), "Neumann"),
@@ -151,7 +151,7 @@ class TestFiniteVolume(unittest.TestCase):
             }
             eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, y_test)
-            disc._bcs = {
+            disc.bcs = {
                 var.id: {
                     "left": (pybamm.Scalar(0), "Neumann"),
                     "right": (pybamm.Scalar(1), "Dirichlet"),
@@ -350,7 +350,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
@@ -372,7 +372,7 @@ class TestFiniteVolume(unittest.TestCase):
             }
         }
 
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
@@ -408,7 +408,7 @@ class TestFiniteVolume(unittest.TestCase):
             }
         }
 
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
@@ -425,7 +425,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         y_linear = combined_submesh[0].nodes
         grad_eqn_disc = disc.process_symbol(grad_eqn)
@@ -445,7 +445,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(6), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
@@ -479,7 +479,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
@@ -505,7 +505,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(6), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         div_eqn_disc = disc.process_symbol(div_eqn)
         div_eval = div_eqn_disc.evaluate(None, const)
@@ -544,7 +544,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Neumann"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         # Linear y should have laplacian zero
@@ -586,7 +586,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         div_eqn_disc = disc.process_symbol(div_eqn)
 
@@ -607,7 +607,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         div_eqn_disc = disc.process_symbol(div_eqn)
 
@@ -659,7 +659,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         linear_y = combined_submesh[0].nodes
@@ -709,7 +709,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         const = 6 * np.ones(sec_pts * prim_pts)
@@ -735,7 +735,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         disc.set_variable_slices([var])
 
@@ -758,7 +758,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(combined_submesh[0].edges[-1]), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
@@ -1103,7 +1103,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # grad
         eqn = pybamm.grad(var)
-        disc._bcs = {
+        disc.bcs = {
             var.id: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(2), "Dirichlet"),
@@ -1130,7 +1130,7 @@ class TestFiniteVolume(unittest.TestCase):
         # div(grad)
         flux = pybamm.grad(var)
         eqn = pybamm.div(flux)
-        disc._bcs = {
+        disc.bcs = {
             var.id: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),
@@ -1143,7 +1143,7 @@ class TestFiniteVolume(unittest.TestCase):
         # div(grad) with averaging
         flux = var * pybamm.grad(var)
         eqn = pybamm.div(flux)
-        disc._bcs = {
+        disc.bcs = {
             var.id: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),

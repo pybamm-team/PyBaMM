@@ -290,7 +290,7 @@ class TestSimplify(unittest.TestCase):
                 expr.children[0].entries, np.array([[3, 0], [0, 3]])
             )
 
-        expr = (v @ v / 2).simplify()
+        expr = ((v @ v) / 2).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 0.5)
