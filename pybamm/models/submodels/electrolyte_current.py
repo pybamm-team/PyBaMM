@@ -369,71 +369,57 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             if eps is None:
                 eps = param.epsilon_n
             j = reactions["main"]["neg"]["aj"]
-
-            i_e = (
-                param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
-            ) * ((param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi))
-            if self.use_capacitance:
-                self.rhs = {delta_phi: 1 / param.C_dl_n * (pybamm.div(i_e) - j)}
-            else:
-                self.algebraic = {delta_phi: pybamm.div(i_e) - j}
-            c_e_flux_right = pybamm.BoundaryFlux(c_e, "right")
-            rbc = (
-                i_cell
-                / pybamm.BoundaryValue(
-                    param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e,
-                    "right",
-                )
-            ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "right") * c_e_flux_right
-            self.boundary_conditions = {
-                delta_phi: {"left": (0, "Neumann"), "right": (rbc, "Neumann")},
-                c_e: {"left": (0, "Neumann"), "right": (c_e_flux_right, "Neumann")},
-            }
-            self.initial_conditions = {delta_phi: param.U_n(param.c_n_init)}
-            self.variables = {
-                "Negative electrode potential difference": delta_phi,
-                "Negative electrolyte current density": i_e,
-            }
+            self.initial_conditions.update({delta_phi: param.U_n(param.c_n_init)})
+            no_flux_bc_side = "left"
+            flux_bc_side = "right"
+            Domain = "Negative"
         elif delta_phi.domain == ["positive electrode"]:
             if eps is None:
                 eps = param.epsilon_p
             j = reactions["main"]["pos"]["aj"]
-
-            i_e = (
-                param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
-            ) * ((param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi))
-            if self.use_capacitance:
-                self.rhs = {delta_phi: 1 / param.C_dl_p * (pybamm.div(i_e) - j)}
-            else:
-                self.algebraic = {delta_phi: pybamm.div(i_e) - j}
-            c_e_flux_left = pybamm.BoundaryFlux(c_e, "left")
-            lbc = (
-                i_cell
-                / pybamm.BoundaryValue(
-                    param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e,
-                    "left",
-                )
-            ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux_left
-            self.boundary_conditions = {
-                delta_phi: {"left": (lbc, "Neumann"), "right": (0, "Neumann")},
-                c_e: {"left": (c_e_flux_left, "Neumann"), "right": (0, "Neumann")},
-            }
-            self.initial_conditions = {delta_phi: param.U_p(param.c_p_init)}
-            self.variables = {
-                "Positive electrode potential difference": delta_phi,
-                "Positive electrolyte current density": i_e,
-            }
+            self.initial_conditions.update({delta_phi: param.U_p(param.c_n_init)})
+            no_flux_bc_side = "right"
+            flux_bc_side = "left"
+            Domain = "Positive"
         else:
             raise pybamm.DomainError(
                 "domain '{}' not recognised".format(delta_phi.domain)
             )
 
+        conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
+        i_e = conductivity * (
+            (param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi)
+        )
+        if self.use_capacitance:
+            self.rhs.update({delta_phi: 1 / param.C_dl_n * (pybamm.div(i_e) - j)})
+        else:
+            self.algebraic.update({delta_phi: pybamm.div(i_e) - j})
+        c_e_flux = pybamm.BoundaryFlux(c_e, flux_bc_side)
+        flux_bc = (
+            i_cell / pybamm.BoundaryValue(conductivity, flux_bc_side)
+        ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, flux_bc_side) * c_e_flux
+        self.boundary_conditions.update(
+            {
+                delta_phi: {
+                    no_flux_bc_side: (pybamm.Scalar(0), "Neumann"),
+                    flux_bc_side: (flux_bc, "Neumann"),
+                },
+                c_e: {
+                    no_flux_bc_side: (pybamm.Scalar(0), "Neumann"),
+                    flux_bc_side: (c_e_flux, "Neumann"),
+                },
+            }
+        )
+        self.variables.update(
+            {
+                Domain + " electrode potential difference": delta_phi,
+                Domain + " electrolyte current density": i_e,
+            }
+        )
+
     def set_leading_order_system(self, delta_phi, reactions, domain):
         param = self.set_of_parameters
         i_cell = param.current_with_time
-
-        # ode model only
-        self.algebraic = {}
 
         if domain == ["negative electrode"]:
             x_n = pybamm.standard_spatial_vars.x_n
@@ -441,32 +427,40 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             j = reactions["main"]["neg"]["aj"]
 
             if self.use_capacitance:
-                self.rhs = {delta_phi: 1 / param.C_dl_n * (i_cell / param.l_n - j)}
+                self.rhs.update(
+                    {delta_phi: 1 / param.C_dl_n * (i_cell / param.l_n - j)}
+                )
             else:
-                self.algebraic = {delta_phi: i_cell / param.l_n - j}
-            self.initial_conditions = {delta_phi: param.U_n(param.c_n_init)}
-            self.variables = {
-                "Negative electrode potential difference": delta_phi,
-                "Negative electrolyte current density": i_e,
-            }
+                self.algebraic.update({delta_phi: i_cell / param.l_n - j})
+            self.initial_conditions.update({delta_phi: param.U_n(param.c_n_init)})
+            self.variables.update(
+                {
+                    "Negative electrode potential difference": delta_phi,
+                    "Negative electrolyte current density": i_e,
+                }
+            )
         elif domain == ["positive electrode"]:
             x_p = pybamm.standard_spatial_vars.x_p
             i_e = i_cell * (1 - x_p) / param.l_p
             j = reactions["main"]["pos"]["aj"]
 
             if self.use_capacitance:
-                self.rhs = {delta_phi: 1 / param.C_dl_p * (-i_cell / param.l_p - j)}
+                self.rhs.update(
+                    {delta_phi: 1 / param.C_dl_p * (-i_cell / param.l_p - j)}
+                )
             else:
-                self.algebraic = {delta_phi: -i_cell / param.l_p - j}
-            self.initial_conditions = {delta_phi: param.U_p(param.c_p_init)}
-            self.variables = {
-                "Positive electrode potential difference": delta_phi,
-                "Positive electrolyte current density": i_e,
-            }
+                self.algebraic.update({delta_phi: -i_cell / param.l_p - j})
+            self.initial_conditions.update({delta_phi: param.U_p(param.c_p_init)})
+            self.variables.update(
+                {
+                    "Positive electrode potential difference": delta_phi,
+                    "Positive electrolyte current density": i_e,
+                }
+            )
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
-    def get_post_processed(self, delta_phi_n, delta_phi_p, i_e_n, i_e_p, c_e, eps=None):
+    def set_post_processed(self, c_e, eps=None):
         """
         Calculate dimensionless and dimensional variables for the capacitance submodel
 
@@ -484,12 +478,17 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         # import parameters and spatial variables
         param = self.set_of_parameters
         i_cell = param.current_with_time
-        # x_n = pybamm.standard_spatial_vars.x_n
+        x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
-        # x_p = pybamm.standard_spatial_vars.x_p
+        x_p = pybamm.standard_spatial_vars.x_p
 
-        # Combine currents
+        # Unpack potential differences
+        delta_phi_n = self.variables["Negative electrode potential difference"]
+        delta_phi_p = self.variables["Positive electrode potential difference"]
+        # Unpack and combine currents
+        i_e_n = self.variables["Negative electrolyte current density"]
         i_e_s = pybamm.Broadcast(i_cell, ["separator"])
+        i_e_p = self.variables["Positive electrolyte current density"]
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
@@ -501,9 +500,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         phi_e_n = -delta_phi_n
         chi_e_s = param.chi(c_e_s)
         kappa_s_eff = param.kappa_e(c_e_s) * (eps_s ** param.b)
-        phi_e_s = pybamm.boundary_value(
-            -delta_phi_n, "right"
-        ) + pybamm.IndefiniteIntegral(
+        phi_e_s = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
             chi_e_s / c_e_s * pybamm.grad(c_e_s) - param.C_e * i_cell / kappa_s_eff, x_s
         )
         phi_e_p = (
@@ -519,4 +516,27 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         phi_e_p_av = pybamm.average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
 
-        return self.get_variables(phi_e, i_e, eta_e_av)
+        # Update variables
+        self.variables.update(self.get_variables(phi_e, i_e, eta_e_av))
+
+        # Update boundary conditions (for indefinite integral)
+        self.boundary_conditions.update(
+            {
+                c_e_s: {
+                    "left": (pybamm.BoundaryFlux(c_e_s, "left"), "Neumann"),
+                    "right": (pybamm.BoundaryFlux(c_e_s, "right"), "Neumann"),
+                }
+            }
+        )
+
+        # Voltage
+        phi_e = self.variables["Electrolyte potential"]
+        phi_e_n, _, phi_e_p = phi_e.orphans
+        phi_s_n = delta_phi_n + phi_e_n
+        phi_s_p = delta_phi_p + phi_e_p
+        i_cell = param.current_with_time
+        i_s_n = i_cell - i_e_n
+        i_s_p = i_cell - i_e_p
+        electrode_current_model = pybamm.electrode.Ohm(param)
+        vol_vars = electrode_current_model.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p)
+        self.variables.update(vol_vars)
