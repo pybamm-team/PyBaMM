@@ -864,8 +864,16 @@ class TestFiniteVolume(unittest.TestCase):
         x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
         int_grad_phi = pybamm.IndefiniteIntegral(i, x)
         disc.set_variable_slices([phi])  # i is not a fundamental variable
-
+        # Set boundary conditions (required for shape but don't matter)
+        disc._bcs = {
+            phi.id: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
         int_grad_phi_disc = disc.process_symbol(int_grad_phi)
+        left_boundary_value = pybamm.BoundaryValue(int_grad_phi, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
 
@@ -874,20 +882,18 @@ class TestFiniteVolume(unittest.TestCase):
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_equal(phi_exact, phi_approx)
-        import ipdb
-
-        ipdb.set_trace()
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
         # linear case
         phi_exact = combined_submesh[0].nodes[:, np.newaxis]
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # sine case
         phi_exact = np.sin(combined_submesh[0].nodes[:, np.newaxis])
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # --------------------------------------------------------------------
         # region which doesn't start at zero
@@ -896,30 +902,39 @@ class TestFiniteVolume(unittest.TestCase):
         x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
         int_grad_phi = pybamm.IndefiniteIntegral(i, x)
         disc.set_variable_slices([phi])  # i is not a fundamental variable
-
+        disc._bcs = {
+            phi.id: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
         int_grad_phi_disc = disc.process_symbol(int_grad_phi)
+        left_boundary_value = pybamm.BoundaryValue(int_grad_phi, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
         combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
 
         # constant case
         phi_exact = np.ones((combined_submesh[0].npts, 1))
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        self.assertEqual(phi_approx[0], 0)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # linear case
-        phi_exact = combined_submesh[0].nodes[:, np.newaxis]
+        phi_exact = (
+            combined_submesh[0].nodes[:, np.newaxis] - combined_submesh[0].edges[0]
+        )
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        self.assertEqual(phi_approx[0], 0)
-        phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # sine case
-        phi_exact = np.sin(combined_submesh[0].nodes[:, np.newaxis])
+        phi_exact = np.sin(
+            combined_submesh[0].nodes[:, np.newaxis] - combined_submesh[0].edges[0]
+        )
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        self.assertEqual(phi_approx[0], 0)
-        phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # --------------------------------------------------------------------
         # micrsoscale case
@@ -928,30 +943,36 @@ class TestFiniteVolume(unittest.TestCase):
         r_n = pybamm.SpatialVariable("r_n", ["negative particle"])
         c_integral = pybamm.IndefiniteIntegral(N, r_n)
         disc.set_variable_slices([c])  # N is not a fundamental variable
+        disc._bcs = {
+            c.id: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
 
         c_integral_disc = disc.process_symbol(c_integral)
+        left_boundary_value = pybamm.BoundaryValue(c_integral, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
         combined_submesh = mesh["negative particle"]
 
         # constant case
         c_exact = np.ones((combined_submesh[0].npts, 1))
         c_approx = c_integral_disc.evaluate(None, c_exact)
-        self.assertEqual(c_approx[0], 0)
         c_approx += 1  # add constant of integration
         np.testing.assert_array_equal(c_exact, c_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
 
         # linear case
         c_exact = combined_submesh[0].nodes[:, np.newaxis]
         c_approx = c_integral_disc.evaluate(None, c_exact)
-        self.assertEqual(c_approx[0], 0)
-        c_approx += c_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(c_exact, c_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
 
         # sine case
         c_exact = np.sin(combined_submesh[0].nodes[:, np.newaxis])
         c_approx = c_integral_disc.evaluate(None, c_exact)
-        self.assertEqual(c_approx[0], 0)
-        c_approx += c_exact[0]  # add constant of integration
-        np.testing.assert_array_almost_equal(c_exact, c_approx)
+        np.testing.assert_array_almost_equal(c_exact, c_approx, decimal=3)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
 
         # ------------
         # check raises error for variales not on mesh edges

@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from scipy.sparse import diags, eye, kron, csr_matrix, vstack
+from scipy.sparse import diags, eye, kron, csr_matrix, vstack, hstack, lil_matrix
 import autograd.numpy as np
 from autograd.builtins import isinstance
 
@@ -240,10 +240,6 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         out.domain = domain
 
-        import ipdb
-
-        ipdb.set_trace()
-
         return out
 
     def indefinite_integral_matrix(self, domain):
@@ -251,8 +247,26 @@ class FiniteVolume(pybamm.SpatialMethod):
         Matrix for finite-volume implementation of the indefinite integral
 
         .. math::
-            F = \\int\\!f(u)\\,du
+            F(x) = \\int_0^x\\!f(u)\\,du
 
+        The indefinite integral must satisfy the following conditions:
+
+        - :math:`F(0) = 0`
+        - :math:`f(x) = \\frac{dF}{dx}`
+
+        or, in discrete form,
+
+        - `BoundaryValue(F, "left") = 0`, i.e. :math:`3*F_0 - F_1 = 0`
+        - :math:`f_{i+1/2} = (F_{i+1} - F_i) / dx_{i+1/2}`
+
+        Hence we must have
+
+        - :math:`F_0 = du_{1/2} * f_{1/2} / 2`
+        - :math:`F_{i+1} = F_i + du * f_{i+1/2}`
+
+        Note that :math:`f_{-1/2}` and :math:`f_{n+1/2}` are included in the discrete
+        integrand vector `f`, so we add a column of zeros at each end of the
+        indefinite integral matrix to ignore these.
 
         Parameters
         ----------
@@ -271,11 +285,16 @@ class FiniteVolume(pybamm.SpatialMethod):
         n = submesh.npts
         sec_pts = len(submesh_list)
 
-        # note we have added a row of zeros at top for F(0) = 0
         du_n = submesh.d_nodes
         du_entries = [du_n] * (n - 1)
         offset = -np.arange(1, n, 1)
-        sub_matrix = diags(du_entries, offset, shape=(n, n - 1))
+        main_integral_matrix = diags(du_entries, offset, shape=(n, n - 1))
+        bc_offset_matrix = lil_matrix((n, n - 1))
+        bc_offset_matrix[:, 0] = du_n[0] / 2
+        sub_matrix = main_integral_matrix + bc_offset_matrix
+        # add a column of zeros at each end
+        zero_col = csr_matrix((n, 1))
+        sub_matrix = hstack([zero_col, sub_matrix, zero_col])
         matrix = kron(eye(sec_pts), sub_matrix)
 
         return pybamm.Matrix(matrix)

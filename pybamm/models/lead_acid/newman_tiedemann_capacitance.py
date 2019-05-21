@@ -114,22 +114,14 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
             delta_phi_n, delta_phi_p, i_e_n, i_e_p, c_e, eps
         )
         self.variables.update(eleclyte_variables)
-        # self.boundary_conditions.update(
-        #     {
-        #         c_e_n: {
-        #             "left": (pybamm.Scalar(0), "Neumann"),
-        #             "right": (pybamm.BoundaryFlux(c_e_n, "right"), "Neumann"),
-        #         },
-        #         c_e_s: {
-        #             "left": (pybamm.BoundaryFlux(c_e_s, "left"), "Neumann"),
-        #             "right": (pybamm.BoundaryFlux(c_e_s, "right"), "Neumann"),
-        #         },
-        #         c_e_p: {
-        #             "left": (pybamm.BoundaryFlux(c_e_p, "left"), "Neumann"),
-        #             "right": (pybamm.Scalar(0), "Neumann"),
-        #         },
-        #     }
-        # )
+        self.boundary_conditions.update(
+            {
+                c_e_s: {
+                    "left": (pybamm.BoundaryFlux(c_e_s, "left"), "Neumann"),
+                    "right": (pybamm.BoundaryFlux(c_e_s, "right"), "Neumann"),
+                }
+            }
+        )
         # Voltage
         phi_e = self.variables["Electrolyte potential"]
         phi_e_n, _, phi_e_p = phi_e.orphans
