@@ -1,24 +1,32 @@
 import pybamm
+import numpy as np
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
-import numpy as np
+
+# change working directory the root of pybamm
+os.chdir(pybamm.__path__[0] + "/..")
 
 "-----------------------------------------------------------------------------"
 "Pick C_rate and load comsol data"
 
 # C_rate
 C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
-C_rate = "2"  # choose the key from the above dictionary of available results
+C_rate = "1"  # choose the key from the above dictionary of available results
 
 # time-voltage
-comsol = pd.read_csv("comsol/data/{}C/Voltage.csv".format(C_rate), sep=",", header=None)
+comsol = pd.read_csv(
+    "input/data/comsol/{}C/Voltage.csv".format(C_rate), sep=",", header=None
+)
 comsol_time = comsol[0].values
 comsol_time_npts = len(comsol_time)
 comsol_voltage = comsol[1].values
 
 # negative electrode potential
-comsol = pd.read_csv("comsol/data/{}C/phi_n.csv".format(C_rate), sep=",", header=None)
+comsol = pd.read_csv(
+    "input/data/comsol/{}C/phi_n.csv".format(C_rate), sep=",", header=None
+)
 comsol_x_n_npts = int(len(comsol[0].values) / comsol_time_npts)
 comsol_x_n = comsol[0].values[0:comsol_x_n_npts]
 comsol_phi_n_vals = np.reshape(
@@ -27,14 +35,16 @@ comsol_phi_n_vals = np.reshape(
 
 # negative particle surface concentration
 comsol = pd.read_csv(
-    "comsol/data/{}C/c_n_surf.csv".format(C_rate), sep=",", header=None
+    "input/data/comsol/{}C/c_n_surf.csv".format(C_rate), sep=",", header=None
 )
 comsol_c_n_surf_vals = np.reshape(
     comsol[1].values, (comsol_x_n_npts, comsol_time_npts), order="F"
 )
 
 # positive electrode potential
-comsol = pd.read_csv("comsol/data/{}C/phi_p.csv".format(C_rate), sep=",", header=None)
+comsol = pd.read_csv(
+    "input/data/comsol/{}C/phi_p.csv".format(C_rate), sep=",", header=None
+)
 comsol_x_p_npts = int(len(comsol[0].values) / comsol_time_npts)
 comsol_x_p = comsol[0].values[0:comsol_x_p_npts]
 comsol_phi_p_vals = np.reshape(
@@ -43,14 +53,16 @@ comsol_phi_p_vals = np.reshape(
 
 # positive particle surface concentration
 comsol = pd.read_csv(
-    "comsol/data/{}C/c_p_surf.csv".format(C_rate), sep=",", header=None
+    "input/data/comsol/{}C/c_p_surf.csv".format(C_rate), sep=",", header=None
 )
 comsol_c_p_surf_vals = np.reshape(
     comsol[1].values, (comsol_x_p_npts, comsol_time_npts), order="F"
 )
 
 # electrolyte concentration
-comsol = pd.read_csv("comsol/data/{}C/c_e.csv".format(C_rate), sep=",", header=None)
+comsol = pd.read_csv(
+    "input/data/comsol/{}C/c_e.csv".format(C_rate), sep=",", header=None
+)
 comsol_x_npts = int(len(comsol[0].values) / comsol_time_npts)
 comsol_x = comsol[0].values[0:comsol_x_npts]
 comsol_c_e_vals = np.reshape(
@@ -58,7 +70,9 @@ comsol_c_e_vals = np.reshape(
 )
 
 # electrolyte potential
-comsol = pd.read_csv("comsol/data/{}C/phi_e.csv".format(C_rate), sep=",", header=None)
+comsol = pd.read_csv(
+    "input/data/comsol/{}C/phi_e.csv".format(C_rate), sep=",", header=None
+)
 comsol_phi_e_vals = np.reshape(
     comsol[1].values, (comsol_x_npts, comsol_time_npts), order="F"
 )
@@ -117,51 +131,20 @@ x_s = np.linspace(l_n, l_n + l_s, 20)
 x_p = np.linspace(l_n + l_s, 1, 40)
 x = np.linspace(0, 1, 100)
 
-# voltage
-voltage = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], solver.t, solver.y, mesh=mesh
-)
-voltage_sol = voltage(solver.t)
+# output variables
+output_variables = {
+    "c_n_surf": model.variables["Negative particle surface concentration [mol.m-3]"],
+    "c_e": model.variables["Electrolyte concentration [mol.m-3]"],
+    "c_p_surf": model.variables["Positive particle surface concentration [mol.m-3]"],
+    "phi_n": model.variables["Negative electrode potential [V]"],
+    "phi_e": model.variables["Electrolyte potential [V]"],
+    "phi_p": model.variables["Positive electrode potential [V]"],
+    "voltage": model.variables["Terminal voltage [V]"],
+}
 
-# negative electrode potential
-phi_n = pybamm.ProcessedVariable(
-    model.variables["Negative electrode potential [V]"], solver.t, solver.y, mesh=mesh
+processed_variables = pybamm.post_process_variables(
+    output_variables, solver.t, solver.y, mesh=mesh
 )
-
-# negative particle surface concentration
-c_n_surf = pybamm.ProcessedVariable(
-    model.variables["Negative particle surface concentration [mol.m-3]"],
-    solver.t,
-    solver.y,
-    mesh=mesh,
-)
-
-# positive electrode potential
-phi_p = pybamm.ProcessedVariable(
-    model.variables["Positive electrode potential [V]"], solver.t, solver.y, mesh=mesh
-)
-
-# positive particle surface concentration
-c_p_surf = pybamm.ProcessedVariable(
-    model.variables["Positive particle surface concentration [mol.m-3]"],
-    solver.t,
-    solver.y,
-    mesh=mesh,
-)
-
-# electrolyte potential
-phi_e = pybamm.ProcessedVariable(
-    model.variables["Electrolyte potential [V]"], solver.t, solver.y, mesh=mesh
-)
-
-# electrolyte concentration
-c_e = pybamm.ProcessedVariable(
-    model.variables["Electrolyte concentration [mol.m-3]"],
-    solver.t,
-    solver.y,
-    mesh=mesh,
-)
-
 
 "-----------------------------------------------------------------------------"
 "Make plots"
@@ -175,7 +158,7 @@ plt.subplots_adjust(left=-0.1)
 c_n_surf_min = 0.9 * np.min(comsol_c_n_surf_vals)
 c_n_surf_max = 1.1 * np.max(comsol_c_n_surf_vals)
 plt.subplot(241)
-c_n_surf_plot, = plt.plot(x_n, c_n_surf(time[0], x_n), "b-")
+c_n_surf_plot, = plt.plot(x_n, processed_variables["c_n_surf"](time[0], x_n), "b-")
 comsol_c_n_surf_plot, = plt.plot(
     comsol_x_n / comsol_x[-1], comsol_c_n_surf_vals[:, 0], "r:"
 )
@@ -187,7 +170,7 @@ plt.ylabel(r"Surface $c_n$ (mol/m$^3$)")
 c_e_min = 0.9 * np.min(comsol_c_e_vals)
 c_e_max = 1.1 * np.max(comsol_c_e_vals)
 plt.subplot(242)
-c_e_plot, = plt.plot(x, c_e(time[0], x), "b-")
+c_e_plot, = plt.plot(x, processed_variables["c_e"](time[0], x), "b-")
 comsol_c_e_plot, = plt.plot(comsol_x / comsol_x[-1], comsol_c_e_vals[:, 0], "r:")
 plt.axis([0, 1, c_e_min, c_e_max])
 plt.xlabel(r"$x$")
@@ -197,7 +180,7 @@ plt.ylabel(r"$c_e$ (mol/m$^3$)")
 c_p_surf_min = 0.9 * np.min(comsol_c_p_surf_vals)
 c_p_surf_max = 1.1 * np.max(comsol_c_p_surf_vals)
 plt.subplot(243)
-c_p_surf_plot, = plt.plot(x_p, c_n_surf(time[0], x_p), "b-")
+c_p_surf_plot, = plt.plot(x_p, processed_variables["c_n_surf"](time[0], x_p), "b-")
 comsol_c_p_surf_plot, = plt.plot(
     comsol_x_p / comsol_x[-1], comsol_c_p_surf_vals[:, 0], "r:"
 )
@@ -223,7 +206,7 @@ plt.ylabel("Applied current (A)")
 phi_n_min = 1.1 * np.min(comsol_phi_n_vals)
 phi_n_max = 0.9 * np.max(comsol_phi_n_vals)
 plt.subplot(245)
-phi_n_plot, = plt.plot(x_n, phi_n(time[0], x_n), "b-")
+phi_n_plot, = plt.plot(x_n, processed_variables["phi_n"](time[0], x_n), "b-")
 comsol_phi_n_plot, = plt.plot(comsol_x_n / comsol_x[-1], comsol_phi_n_vals[:, 0], "r:")
 plt.axis([0, l_n, phi_n_min, phi_n_max])
 plt.xlabel(r"$x$")
@@ -233,7 +216,7 @@ plt.ylabel(r"$\phi_n$ (V)")
 phi_e_min = 1.1 * np.min(comsol_phi_e_vals)
 phi_e_max = 0.9 * np.max(comsol_phi_e_vals)
 plt.subplot(246)
-phi_e_plot, = plt.plot(x, phi_e(time[0], x), "b-")
+phi_e_plot, = plt.plot(x, processed_variables["phi_e"](time[0], x), "b-")
 comsol_phi_e_plot, = plt.plot(comsol_x / comsol_x[-1], comsol_phi_e_vals[:, 0], "r:")
 plt.axis([0, 1, phi_e_min, phi_e_max])
 plt.xlabel(r"$x$")
@@ -243,7 +226,7 @@ plt.ylabel(r"$\phi_e$ (V)")
 phi_p_min = 0.9 * np.min(comsol_phi_p_vals)
 phi_p_max = 1.1 * np.max(comsol_phi_p_vals)
 plt.subplot(247)
-phi_p_plot, = plt.plot(x_p, phi_p(time[0], x_p), "b-")
+phi_p_plot, = plt.plot(x_p, processed_variables["phi_p"](time[0], x_p), "b-")
 comsol_phi_p_plot, = plt.plot(comsol_x_p / comsol_x[-1], comsol_phi_p_vals[:, 0], "r:")
 plt.axis([l_n + l_s, 1, phi_p_min, phi_p_max])
 plt.xlabel(r"$x$")
@@ -256,7 +239,12 @@ plt.subplot(248)
 discharge_capacity_tracer, = plt.plot(
     [comsol_discharge_capacity[0], comsol_discharge_capacity[0]], [v_min, v_max], "k--"
 )
-plt.plot(discharge_capacity_sol, voltage_sol, "b-", label="PyBaMM")
+plt.plot(
+    discharge_capacity_sol,
+    processed_variables["voltage"](solver.t),
+    "b-",
+    label="PyBaMM",
+)
 plt.plot(comsol_discharge_capacity, comsol_voltage, "r:", label="Comsol")
 plt.axis(
     [comsol_discharge_capacity[0], comsol_discharge_capacity[-1] * 1.1, v_min, v_max]
@@ -277,22 +265,22 @@ def update_plot(t):
     time_tracer.set_xdata(comsol_time[ind])
     discharge_capacity_tracer.set_xdata(comsol_discharge_capacity[ind])
     # update negative particle surface concentration
-    c_n_surf_plot.set_ydata(c_n_surf(time[ind], x_n))
+    c_n_surf_plot.set_ydata(processed_variables["c_n_surf"](time[ind], x_n))
     comsol_c_n_surf_plot.set_ydata(comsol_c_n_surf_vals[:, ind])
     # update electrolyte concentration
-    c_e_plot.set_ydata(c_e(time[ind], x))
+    c_e_plot.set_ydata(processed_variables["c_e"](time[ind], x))
     comsol_c_e_plot.set_ydata(comsol_c_e_vals[:, ind])
     # update negative particle surface concentration
-    c_p_surf_plot.set_ydata(c_p_surf(time[ind], x_p))
+    c_p_surf_plot.set_ydata(processed_variables["c_p_surf"](time[ind], x_p))
     comsol_c_p_surf_plot.set_ydata(comsol_c_p_surf_vals[:, ind])
     # update negative electrode potential
-    phi_n_plot.set_ydata(phi_n(time[ind], x_n))
+    phi_n_plot.set_ydata(processed_variables["phi_n"](time[ind], x_n))
     comsol_phi_n_plot.set_ydata(comsol_phi_n_vals[:, ind])
     # update electrolyte potential
-    phi_e_plot.set_ydata(phi_e(time[ind], x))
+    phi_e_plot.set_ydata(processed_variables["phi_e"](time[ind], x))
     comsol_phi_e_plot.set_ydata(comsol_phi_e_vals[:, ind])
     # update positive electrode potential
-    phi_p_plot.set_ydata(phi_p(time[ind], x_p))
+    phi_p_plot.set_ydata(processed_variables["phi_p"](time[ind], x_p))
     comsol_phi_p_plot.set_ydata(comsol_phi_p_vals[:, ind])
     fig.canvas.draw_idle()
 

@@ -1,7 +1,11 @@
 import pybamm
+import numpy as np
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
+
+# change working directory the root of pybamm
+os.chdir(pybamm.__path__[0] + "/..")
 
 # dictionary of available comsol results
 C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
@@ -36,9 +40,9 @@ plt.ylim([3.2, 3.9])
 plt.xlabel(r"Discharge Capacity (Ah)")
 plt.ylabel("Voltage (V)")
 plt.title(r"Comsol $\cdots$ PyBaMM $-$")
-error_plot = plt.subplot(212)
+voltage_difference_plot = plt.subplot(212)
 plt.xlim([0, 26])
-plt.yscale('log')
+plt.yscale("log")
 plt.grid(True)
 plt.xlabel(r"Discharge Capacity (Ah)")
 plt.ylabel(r"$\vert V - V_{comsol} \vert$")
@@ -47,7 +51,7 @@ for key, C_rate in C_rates.items():
 
     # load the comsol voltage data
     comsol = pd.read_csv(
-        "comsol/data/{}C/Voltage.csv".format(key), sep=",", header=None
+        "input/data/comsol/{}C/Voltage.csv".format(key), sep=",", header=None
     )
     comsol_time = comsol[0].values
     comsol_voltage = comsol[1].values
@@ -79,13 +83,15 @@ for key, C_rate in C_rates.items():
     )
     voltage_sol = voltage(solver.t)
 
-    # calculate the error
+    # calculate the difference between the two solution methods
     end_index = min(len(solver.t), len(comsol_time))
-    error = np.abs(voltage_sol[0:end_index] - comsol_voltage[0:end_index])
+    voltage_difference = np.abs(voltage_sol[0:end_index] - comsol_voltage[0:end_index])
 
-    # plot discharge curves and absolute error
+    # plot discharge curves and absolute voltage_difference
     color = next(ax._get_lines.prop_cycler)["color"]
-    discharge_curve.plot(comsol_discharge_capacity, comsol_voltage, color=color, linestyle=":")
+    discharge_curve.plot(
+        comsol_discharge_capacity, comsol_voltage, color=color, linestyle=":"
+    )
     discharge_curve.plot(
         discharge_capacity_sol,
         voltage_sol,
@@ -93,9 +99,12 @@ for key, C_rate in C_rates.items():
         linestyle="-",
         label="{} C".format(C_rate),
     )
-    error_plot.plot(discharge_capacity_sol[0:end_index], error, color=color)
+    voltage_difference_plot.plot(
+        discharge_capacity_sol[0:end_index], voltage_difference, color=color
+    )
 
 discharge_curve.legend(loc="best")
-plt.subplots_adjust(top=0.92, bottom=0.08, left=0.10, right=0.95, hspace=0.25, wspace=0.35)
-plt.savefig("comsol/DischargeCurve.eps", format="eps", dpi=1000)
+plt.subplots_adjust(
+    top=0.92, bottom=0.08, left=0.10, right=0.95, hspace=0.25, wspace=0.35
+)
 plt.show()
