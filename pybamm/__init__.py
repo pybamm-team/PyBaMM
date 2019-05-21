@@ -113,6 +113,9 @@ from .expression_tree.simplify import (
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
+from .expression_tree.evaluate import (
+    to_python,
+)
 
 #
 # Model classes
