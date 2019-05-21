@@ -131,3 +131,7 @@ class StateVector(pybamm.Symbol):
                 shape=(np.size(self_y_indices), np.size(variable_y_indices)),
             )
         return pybamm.Matrix(jac)
+
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return StateVector(self.y_slice, self.name, domain=[])
