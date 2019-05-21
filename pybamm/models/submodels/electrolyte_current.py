@@ -506,7 +506,11 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         ) + pybamm.IndefiniteIntegral(
             chi_e_s / c_e_s * pybamm.grad(c_e_s) - param.C_e * i_cell / kappa_s_eff, x_s
         )
-        phi_e_p = pybamm.boundary_value(phi_e_s, "right") - delta_phi_p
+        phi_e_p = (
+            pybamm.boundary_value(phi_e_s, "right")
+            + pybamm.boundary_value(delta_phi_p, "left")
+            - delta_phi_p
+        )
         # Concatenate
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 

@@ -11,7 +11,6 @@ import numpy as np
 
 class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
     def test_basic_processing(self):
-        pybamm.set_logging_level("DEBUG")
         model = pybamm.lead_acid.NewmanTiedemannCapacitance()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

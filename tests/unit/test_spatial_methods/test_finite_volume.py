@@ -901,18 +901,21 @@ class TestFiniteVolume(unittest.TestCase):
         # constant case
         phi_exact = np.ones((combined_submesh[0].npts, 1))
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        self.assertEqual(phi_approx[0], 0)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_equal(phi_exact, phi_approx)
 
         # linear case
         phi_exact = combined_submesh[0].nodes[:, np.newaxis]
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        self.assertEqual(phi_approx[0], 0)
         phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
 
         # sine case
         phi_exact = np.sin(combined_submesh[0].nodes[:, np.newaxis])
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
+        self.assertEqual(phi_approx[0], 0)
         phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
 
@@ -930,18 +933,21 @@ class TestFiniteVolume(unittest.TestCase):
         # constant case
         c_exact = np.ones((combined_submesh[0].npts, 1))
         c_approx = c_integral_disc.evaluate(None, c_exact)
+        self.assertEqual(c_approx[0], 0)
         c_approx += 1  # add constant of integration
         np.testing.assert_array_equal(c_exact, c_approx)
 
         # linear case
         c_exact = combined_submesh[0].nodes[:, np.newaxis]
         c_approx = c_integral_disc.evaluate(None, c_exact)
+        self.assertEqual(c_approx[0], 0)
         c_approx += c_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(c_exact, c_approx)
 
         # sine case
         c_exact = np.sin(combined_submesh[0].nodes[:, np.newaxis])
         c_approx = c_integral_disc.evaluate(None, c_exact)
+        self.assertEqual(c_approx[0], 0)
         c_approx += c_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(c_exact, c_approx)
 

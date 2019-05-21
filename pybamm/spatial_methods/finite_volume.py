@@ -226,7 +226,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         See :meth:`pybamm.BaseDiscretisation.indefinite_integral`
         """
 
-        if not symbol.has_gradient_and_not_divergence():
+        if not symbol.evaluates_on_edges():
             raise pybamm.ModelError(
                 "Symbol to be integrated must be valid on the mesh edges"
             )
@@ -487,17 +487,17 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         """
         # Post-processing to make sure discretised dimensions match
-        left_has_grad_not_div = left.has_gradient_and_not_divergence()
-        right_has_grad_not_div = right.has_gradient_and_not_divergence()
-        # If neither child has gradients, or both children have gradients
+        left_evaluates_on_edges = left.evaluates_on_edges()
+        right_evaluates_on_edges = right.evaluates_on_edges()
+        # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging
-        if left_has_grad_not_div == right_has_grad_not_div:
+        if left_evaluates_on_edges == right_evaluates_on_edges:
             pass
-        # If only left child has gradient, compute diffusivity for right child
-        elif left_has_grad_not_div and not right_has_grad_not_div:
+        # If only left child evaluates on edges, compute diffusivity for right child
+        elif left_evaluates_on_edges and not right_evaluates_on_edges:
             disc_right = self.compute_diffusivity(disc_right)
-        # If only right child has gradient, compute diffusivity for left child
-        elif right_has_grad_not_div and not left_has_grad_not_div:
+        # If only right child evaluates on edges, compute diffusivity for left child
+        elif right_evaluates_on_edges and not left_evaluates_on_edges:
             disc_left = self.compute_diffusivity(disc_left)
         # Return new binary operator with appropriate class
         return bin_op.__class__(disc_left, disc_right)

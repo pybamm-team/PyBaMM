@@ -460,9 +460,16 @@ class Symbol(anytree.NodeMixin):
         """Returns True if equation has spatial derivatives (grad or div)."""
         return self.has_gradient() or self.has_divergence()
 
-    def has_gradient_and_not_divergence(self):
-        """Returns True if equation has a Gradient term and not Divergence term."""
-        return self.has_gradient() and not self.has_divergence()
+    def evaluates_on_edges(self):
+        """
+        Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
+        operator, but not a divergence operator, and is not an IndefiniteIntegral.
+        """
+        return (
+            self.has_gradient()
+            and not self.has_divergence()
+            and not isinstance(self, pybamm.IndefiniteIntegral)
+        )
 
     def has_gradient(self):
         """Returns True if equation has a Gradient term."""
