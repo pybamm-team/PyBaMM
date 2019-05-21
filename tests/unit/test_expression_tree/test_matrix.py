@@ -26,7 +26,7 @@ class TestMatrix(unittest.TestCase):
         np.testing.assert_array_equal((self.mat + self.mat).evaluate(), 2 * self.A)
         np.testing.assert_array_equal((self.mat - self.mat).evaluate(), 0 * self.A)
         np.testing.assert_array_equal(
-            (self.mat @ self.vect).evaluate(), np.array([5, 2, 3])
+            (self.mat @ self.vect).evaluate(), np.array([[5], [2], [3]])
         )
 
     def test_matrix_modification(self):
@@ -40,7 +40,7 @@ class TestMatrix(unittest.TestCase):
 class TestArray(unittest.TestCase):
     def test_name(self):
         arr = pybamm.Array(np.array([1, 2, 3]))
-        self.assertEqual(arr.name, "Array of shape (3,)")
+        self.assertEqual(arr.name, "Array of shape (3, 1)")
 
 
 if __name__ == "__main__":

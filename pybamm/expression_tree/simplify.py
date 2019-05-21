@@ -19,7 +19,7 @@ def simplify_if_constant(symbol):
             if isinstance(result, numbers.Number):
                 return pybamm.Scalar(result, domain=symbol.domain)
             elif isinstance(result, np.ndarray) or issparse(result):
-                if result.ndim == 1:
+                if result.ndim == 1 or result.shape[1] == 1:
                     return pybamm.Vector(result, domain=symbol.domain)
                 else:
                     return pybamm.Matrix(result, domain=symbol.domain)

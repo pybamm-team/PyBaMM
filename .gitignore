@@ -29,6 +29,8 @@ input/*
 
 # simulation outputs
 out/
+config.py
+matplotlibrc
 
 # ideas
 ideas/
