@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# change working directory the root of pybamm
+# change working directory to the root of pybamm
 os.chdir(pybamm.__path__[0] + "/..")
 
 # dictionary of available comsol results
@@ -51,7 +51,7 @@ for key, C_rate in C_rates.items():
 
     # load the comsol voltage data
     comsol = pd.read_csv(
-        "input/data/comsol/{}C/Voltage.csv".format(key), sep=",", header=None
+        "input/comsol_results/{}C/Voltage.csv".format(key), sep=",", header=None
     )
     comsol_time = comsol[0].values
     comsol_voltage = comsol[1].values
