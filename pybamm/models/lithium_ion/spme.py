@@ -101,6 +101,10 @@ class SPMe(pybamm.LithiumIonBaseModel):
         )
         self.variables.update(electrode_vars)
 
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
+        self.events.append(voltage - param.voltage_low_cut)
+
         "-----------------------------------------------------------------------------"
         "Defaults and Solver Conditions"
         # default geometry
