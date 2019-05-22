@@ -45,11 +45,30 @@ def find_symbols(symbol, known_symbols=OrderedDict()):
         child_var = id_to_python_variable(symbol.child.id)
         symbol_str = symbol.name + child_var
 
-    elif isinstance(symbol, pybamm.NumpyConcatenation):
+    elif isinstance(symbol, pybamm.Concatenation):
         for child in symbol.children:
             find_symbols(child, known_symbols)
         children_vars = [id_to_python_variable(child.id) for child in symbol.children]
-        symbol_str = 'np.concatenate([{}])'.format(",".join(children_var))
+
+        if isinstance(symbol, pybamm.NumpyConcatenation):
+            symbol_str = 'np.concatenate(({}))'.format(",".join(children_vars))
+
+        elif isinstance(symbol, pybamm.SparseStack):
+            symbol_str = "scipy.sparse.vstack(({}))".format(",".join(children_vars))
+
+        elif isinstance(symbol, pybamm.DomainConcatenation):
+            slice_starts = []
+            child_vectors = []
+            for child_var, slices in zip(children_vars, symbol._children_slices):
+                for child_dom, child_slice in slices.items():
+                    slice_starts.append(symbol._slices[child_dom].start)
+                    child_vectors.append("{}[{}:{}]".format(
+                        child_var, child_slice.start, child_slice.stop
+                    ))
+            child_vectors = [v for _,v in sorted(zip(slice_starts,child_vectors))]
+            symbol_str = "np.concatenate(({}))".format(",".join(child_vectors))
+        else:
+            raise NotImplementedError
 
     elif isinstance(symbol, pybamm.StateVector):
         symbol_str = symbol.name
@@ -77,8 +96,10 @@ def find_symbols(symbol, known_symbols=OrderedDict()):
                 "])"
             ])
 
-            symbol_str = 'scipy.sparse.csr_matrix(({}, {}, {}))'\
-                .format(data_str, indices_str, indptr_str)
+            M = symbol.shape[0]
+            N = symbol.shape[1]
+            symbol_str = 'scipy.sparse.csr_matrix(({}, {}, {}),shape=({},{}))'\
+                .format(data_str, indices_str, indptr_str, M, N)
         else:
             rows = [
                 "[{}]".format(",".join([str(e) for e in row]))
@@ -131,10 +152,12 @@ def to_python(symbol):
 
 class EvaluatorPython:
     def __init__(self, symbol):
-        funct_str = pybamm.to_python(symbol)
+        self._function_str = pybamm.to_python(symbol)
         self._result_var = id_to_python_variable(symbol.id)
-        self._compiled_function = compile(funct_str, self._result_var, 'exec')
+        self._compiled_function = compile(self._function_str, self._result_var, 'exec')
+        self._compiled_return = compile(
+            self._result_var, 'return'+self._result_var, 'eval')
 
     def evaluate(self, t=None, y=None):
         exec(self._compiled_function)
-        return eval(self._result_var)
+        return eval(self._compiled_return)

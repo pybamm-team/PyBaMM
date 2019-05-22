@@ -3,6 +3,7 @@
 #
 import pybamm
 
+from tests import get_mesh_for_testing, get_discretisation_for_testing
 import unittest
 import numpy as np
 import scipy.sparse
@@ -87,8 +88,104 @@ class TestEvaluate(unittest.TestCase):
         pybamm.find_symbols(A, known_symbols)
         self.assertEqual(list(known_symbols.keys())[0], A.id)
         self.assertEqual(list(known_symbols.values())[0],
-                         'scipy.sparse.csr_matrix((np.array([2,4]), np.array([1,1]), np.array([0,1,2])))'
+                         'scipy.sparse.csr_matrix((np.array([2,4]), np.array([1,1]), np.array([0,1,2])),shape=(2,2))'
                          )
+
+        # test numpy concatentate
+        known_symbols = OrderedDict()
+        expr = pybamm.NumpyConcatenation(a, b)
+        pybamm.find_symbols(expr, known_symbols)
+        self.assertEqual(list(known_symbols.keys())[0], a.id)
+        self.assertEqual(list(known_symbols.keys())[1], b.id)
+        self.assertEqual(list(known_symbols.keys())[2], expr.id)
+        self.assertEqual(list(known_symbols.values())[2],
+                         "np.concatenate(({},{}))".format(var_a, var_b)
+                         )
+
+        # test domain concatentate
+        known_symbols = OrderedDict()
+        expr = pybamm.NumpyConcatenation(a, b)
+        pybamm.find_symbols(expr, known_symbols)
+        self.assertEqual(list(known_symbols.keys())[0], a.id)
+        self.assertEqual(list(known_symbols.keys())[1], b.id)
+        self.assertEqual(list(known_symbols.keys())[2], expr.id)
+        self.assertEqual(list(known_symbols.values())[2],
+                         "np.concatenate(({},{}))".format(var_a, var_b)
+                         )
+
+        # test sparse stack
+        known_symbols = OrderedDict()
+        expr = pybamm.SparseStack(a, b)
+        pybamm.find_symbols(expr, known_symbols)
+        self.assertEqual(list(known_symbols.keys())[0], a.id)
+        self.assertEqual(list(known_symbols.keys())[1], b.id)
+        self.assertEqual(list(known_symbols.keys())[2], expr.id)
+        self.assertEqual(list(known_symbols.values())[2],
+                         "scipy.sparse.vstack(({},{}))".format(var_a, var_b)
+                         )
+
+    def test_domain_concatenation(self):
+        disc = get_discretisation_for_testing()
+        mesh = disc.mesh
+
+        a_dom = ["negative electrode"]
+        b_dom = ["positive electrode"]
+        a = pybamm.Vector(2*np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
+
+        # concatenate them the "wrong" way round to check they get reordered correctly
+        expr = pybamm.DomainConcatenation([b, a], mesh)
+
+        known_symbols = OrderedDict()
+        pybamm.find_symbols(expr, known_symbols)
+        self.assertEqual(list(known_symbols.keys())[0], b.id)
+        self.assertEqual(list(known_symbols.keys())[1], a.id)
+        self.assertEqual(list(known_symbols.keys())[2], expr.id)
+
+        var_a = pybamm.id_to_python_variable(a.id)
+        var_b = pybamm.id_to_python_variable(b.id)
+        a_pts = mesh[a_dom[0]][0].npts
+        b_pts = mesh[b_dom[0]][0].npts
+        self.assertEqual(list(known_symbols.values())[2],
+                         "np.concatenate(({}[0:{}],{}[0:{}]))".format(
+                             var_a, a_pts, var_b, b_pts)
+                         )
+
+        evaluator = pybamm.EvaluatorPython(expr)
+        result = evaluator.evaluate()
+        np.testing.assert_allclose(result, expr.evaluate())
+
+        # check the reordering in case a child vector has to be split up
+        a_dom = ["separator"]
+        b_dom = ["negative electrode", "positive electrode"]
+        a = pybamm.Vector(2*np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
+        b = pybamm.Vector(
+            np.concatenate(
+                [np.full(mesh[b_dom[0]][0].npts, 1), np.full(mesh[b_dom[1]][0].npts, 3)]
+            )[:, np.newaxis],
+            domain=b_dom,
+        )
+        var_a = pybamm.id_to_python_variable(a.id)
+        var_b = pybamm.id_to_python_variable(b.id)
+        expr = pybamm.DomainConcatenation([a, b], mesh)
+        known_symbols = OrderedDict()
+        pybamm.find_symbols(expr, known_symbols)
+
+        b0_pts = mesh[b_dom[0]][0].npts
+        a0_pts = mesh[a_dom[0]][0].npts
+        b1_pts = mesh[b_dom[1]][0].npts
+
+        b0_str = "{}[0:{}]".format(var_b, b0_pts)
+        a0_str = "{}[0:{}]".format(var_a, a0_pts)
+        b1_str = "{}[{}:{}]".format(var_b, b0_pts, b0_pts+b1_pts)
+
+        self.assertEqual(list(known_symbols.values())[2],
+                         "np.concatenate(({},{},{}))".format(b0_str, a0_str, b1_str)
+                         )
+
+        evaluator = pybamm.EvaluatorPython(expr)
+        result = evaluator.evaluate()
+        np.testing.assert_allclose(result, expr.evaluate())
 
     def test_to_python(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -149,6 +246,24 @@ class TestEvaluate(unittest.TestCase):
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test numpy concatenation
+        a = pybamm.Vector(np.array([[1], [2]]))
+        b = pybamm.Vector(np.array([[3]]))
+        expr = pybamm.NumpyConcatenation(a, b)
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test sparse stack
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
+        expr = pybamm.SparseStack(A, B)
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y).toarray()
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
 
 if __name__ == "__main__":
