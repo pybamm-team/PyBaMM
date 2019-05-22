@@ -1,5 +1,5 @@
 #
-# Script to solve "2+1D" battery models using fenics and pybamm DFN model
+# Script to solve "2+1D" battery models using fenics and pybamm SPM model
 #
 import pybamm
 
@@ -12,10 +12,10 @@ import matplotlib.pyplot as plt
 # (should set up current collector submodel so that it can
 # be processed, but lazy workaround for now)
 set_of_parameters = pybamm.standard_parameters_lithium_ion  # parameter defintions
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPM_Potentiostatic()
 param = model.default_parameter_values  # parameter values (from csv)
 OCV_init = param.process_symbol(set_of_parameters.U_p(set_of_parameters.c_p_init) - set_of_parameters.U_n(set_of_parameters.c_n_init)).evaluate(0, 0)
-param.update({"Local potential difference": OCV_init})  # add parameter for local V
+param.update({"Applied voltage": OCV_init})  # add parameter for local V
 
 "-----------------------------------------------------------------------------"
 "Set up current collector model"
@@ -23,7 +23,7 @@ param.update({"Local potential difference": OCV_init})  # add parameter for loca
 cc_model = pybamm.current_collector.Ohm(set_of_parameters, param)
 
 # create current collector mesh
-cc_model.create_mesh(Ny=32, Nz=32, ny=3, nz=3, degree=1)
+cc_model.create_mesh(Ny=32, Nz=32, ny=2, nz=2, degree=1)
 
 # assemble finite element matrices for the current collector model
 cc_model.assemble()
@@ -34,14 +34,9 @@ cc_model.assemble()
 models = [None] * cc_model.n_dofs  # create models list of correct size
 
 for i in range(len(models)):
-    models[i] = pybamm.lithium_ion.DFN()
+    models[i] = pybamm.lithium_ion.SPM_Potentiostatic()
 
 for model in models:
-    # change to potentiostatic with paramater for local potential difference
-    V_local = pybamm.Parameter("Local potential difference")
-    model.boundary_conditions[model.variables["Positive electrode potential"]][
-        "right"
-    ] = (V_local, "Dirichlet")
     # process model
     param.process_model(model)
     geometry = model.default_geometry
@@ -67,8 +62,7 @@ solver = model.default_solver
 # get initial voltage by assuming uniform OCV, then solve with uniform
 # through-cell current density
 # TO DO: should then get consistent ICs for given 1D model and iterate
-V_init = param.process_symbol(set_of_parameters.U_p(set_of_parameters.c_p_init) - set_of_parameters.U_n(set_of_parameters.c_n_init)).evaluate(0, 0)
-cc_model.voltage.vector()[:] = V_init * np.ones(cc_model.N_dofs)
+cc_model.voltage.vector()[:] = OCV_init * np.ones(cc_model.N_dofs)
 
 current = param.process_symbol(
     set_of_parameters.I_typ / set_of_parameters.l_y / set_of_parameters.l_z
@@ -111,7 +105,7 @@ while t < t_final:
         # compute new through-cell current
         for i in range(len(models)):
             # update local potential difference in boundary condition
-            param["Local potential difference"] = V[i]
+            param["Applied voltage"] = V[i]
             param.update_model(models[i], disc)
 
             # solve
@@ -119,13 +113,13 @@ while t < t_final:
             solver.solve(models[i], t_eval)
             print("solved model {} of {}".format(i + 1, len(models)))
             # get current
-            i_e = pybamm.ProcessedVariable(
-                model.variables["Electrolyte current density"],
+            local_current = pybamm.ProcessedVariable(
+                model.variables["Cell current density"],
                 solver.t,
                 solver.y,
                 mesh=mesh,
             )
-            current[i] = i_e(t, 0.5)
+            current[i] = local_current(t)
 
         print(cc_model.voltage_difference)
         print(cc_model.get_voltage())
@@ -133,10 +127,10 @@ while t < t_final:
         # pass updated current to current collector model
         cc_model.update_current(current)
 
-# plot
-V_plot = dolfin.plot(cc_model.voltage)
-plt.colorbar(V_plot)
-plt.xlabel(r"$y$", fontsize=22)
-plt.ylabel(r"$z$", fontsize=22)
-plt.title(r"$\mathcal{V}$", fontsize=24)
-plt.show()
+        # plot
+        V_plot = dolfin.plot(cc_model.voltage)
+        plt.colorbar(V_plot)
+        plt.xlabel(r"$y$", fontsize=22)
+        plt.ylabel(r"$z$", fontsize=22)
+        plt.title(r"$\mathcal{V}$", fontsize=24)
+        plt.show()

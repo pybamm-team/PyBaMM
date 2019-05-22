@@ -28,7 +28,6 @@ class InterfacialCurrent(pybamm.SubModel):
         ----------
         domain : iter of str
             The domain(s) in which to compute the interfacial current.
-
         Returns
         -------
         :class:`pybamm.Symbol`
