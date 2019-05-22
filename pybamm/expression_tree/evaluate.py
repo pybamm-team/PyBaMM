@@ -5,6 +5,7 @@ import pybamm
 
 import autograd.numpy as np
 from collections import OrderedDict
+import scipy.sparse
 import copy
 
 
@@ -53,9 +54,45 @@ def find_symbols(symbol, known_symbols=OrderedDict()):
     elif isinstance(symbol, pybamm.StateVector):
         symbol_str = symbol.name
 
+    elif isinstance(symbol, pybamm.Scalar):
+        symbol_str = str(symbol.value)
+
+    elif isinstance(symbol, pybamm.Array):
+        if scipy.sparse.issparse(symbol.entries):
+            if not isinstance(symbol.entries, scipy.sparse.csr_matrix):
+                raise NotImplementedError
+            data_str = "".join([
+                "np.array([",
+                ",".join([str(e) for e in symbol.entries.data]),
+                "])"
+            ])
+            indices_str = "".join([
+                "np.array([",
+                ",".join([str(e) for e in symbol.entries.indices]),
+                "])"
+            ])
+            indptr_str = "".join([
+                "np.array([",
+                ",".join([str(e) for e in symbol.entries.indptr]),
+                "])"
+            ])
+
+            symbol_str = 'scipy.sparse.csr_matrix(({}, {}, {}))'\
+                .format(data_str, indices_str, indptr_str)
+        else:
+            rows = [
+                "[{}]".format(",".join([str(e) for e in row]))
+                for row in symbol.entries
+            ]
+            matrix = "[{}]".format(",".join(rows))
+            symbol_str = "np.array({})".format(matrix)
+
+    elif isinstance(symbol, pybamm.Time):
+        symbol_str = 't'
+
     else:
         raise NotImplementedError(
-            "Cannot find_symbols for a symbol of type '{}'".format(type(symbol))
+            "Not implemented for a symbol of type '{}'".format(type(symbol))
         )
 
     known_symbols[symbol.id] = symbol_str
@@ -97,7 +134,6 @@ class EvaluatorPython:
         funct_str = pybamm.to_python(symbol)
         self._result_var = id_to_python_variable(symbol.id)
         self._compiled_function = compile(funct_str, self._result_var, 'exec')
-        print('compiled function is',funct_str)
 
     def evaluate(self, t=None, y=None):
         exec(self._compiled_function)
