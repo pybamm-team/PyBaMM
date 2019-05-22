@@ -26,6 +26,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
 
     def __init__(self, use_capacitance=True):
         super().__init__()
+        self.name = "LOQS model with capacitance"
         self._use_capacitance = use_capacitance
 
         "-----------------------------------------------------------------------------"

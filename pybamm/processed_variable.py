@@ -84,6 +84,9 @@ class ProcessedVariable(object):
             else:
                 self.initialise_3D()
 
+        # Remove base_variable attribute to allow pickling
+        del self.base_variable
+
     def initialise_1D(self):
         # initialise empty array of the correct size
         entries = np.empty(len(self.t_sol))

@@ -89,12 +89,22 @@ def plot_voltages(all_variables, t_eval):
 
 
 if __name__ == "__main__":
-    pybamm.set_logging_level("INFO")
-    models = [
-        pybamm.lead_acid.LOQS(),
-        pybamm.lead_acid.Composite(),
-        pybamm.lead_acid.NewmanTiedemann(),
-    ]
-    Crates = [0.1, 0.2, 0.5, 1, 2, 5]
-    all_variables, t_eval = asymptotics_comparison(models, Crates)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
+    args = parser.parse_args()
+    if args.compute:
+        pybamm.set_logging_level("INFO")
+        models = [
+            pybamm.lead_acid.LOQS(),
+            pybamm.lead_acid.Composite(),
+            pybamm.lead_acid.NewmanTiedemann(),
+        ]
+        Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+        all_variables, t_eval = asymptotics_comparison(models, Crates)
+        with open("discharge_asymptotics_data.pickle", "wb") as f:
+            data = (all_variables, t_eval)
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+
+    with open("discharge_asymptotics_data.pickle", "rb") as f:
+        (all_variables, t_eval) = pickle.load(f)
     plot_voltages(all_variables, t_eval)
