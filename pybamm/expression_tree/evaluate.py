@@ -14,7 +14,7 @@ def id_to_python_variable(symbol_id):
     return var_format.format(symbol_id).replace("-", "m")
 
 
-def find_symbols(symbol, known_symbols=OrderedDict()):
+def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=OrderedDict()):
     """
     This function converts an expression tree to a python function that acts like the
     tree's :func:`pybamm.Symbol.evaluate` function
@@ -34,20 +34,20 @@ def find_symbols(symbol, known_symbols=OrderedDict()):
     if isinstance(symbol, pybamm.BinaryOperator):
         left, right = symbol.children
         # process children
-        find_symbols(left, known_symbols)
-        find_symbols(right, known_symbols)
+        find_symbols(left, constant_symbols, variable_symbols)
+        find_symbols(right, constant_symbols, variable_symbols)
         left_var = id_to_python_variable(left.id)
         right_var = id_to_python_variable(right.id)
         symbol_str = left_var + ' ' + symbol.name + ' ' + right_var
 
     elif isinstance(symbol, pybamm.UnaryOperator):
-        find_symbols(symbol.child, known_symbols)
+        find_symbols(symbol.child, constant_symbols, variable_symbols)
         child_var = id_to_python_variable(symbol.child.id)
         symbol_str = symbol.name + child_var
 
     elif isinstance(symbol, pybamm.Concatenation):
         for child in symbol.children:
-            find_symbols(child, known_symbols)
+            find_symbols(child, constant_symbols, variable_symbols)
         children_vars = [id_to_python_variable(child.id) for child in symbol.children]
 
         if isinstance(symbol, pybamm.NumpyConcatenation):
@@ -65,7 +65,7 @@ def find_symbols(symbol, known_symbols=OrderedDict()):
                     child_vectors.append("{}[{}:{}]".format(
                         child_var, child_slice.start, child_slice.stop
                     ))
-            child_vectors = [v for _,v in sorted(zip(slice_starts,child_vectors))]
+            child_vectors = [v for _, v in sorted(zip(slice_starts, child_vectors))]
             symbol_str = "np.concatenate(({}))".format(",".join(child_vectors))
         else:
             raise NotImplementedError
@@ -141,7 +141,10 @@ def find_symbols(symbol, known_symbols=OrderedDict()):
             "Not implemented for a symbol of type '{}'".format(type(symbol))
         )
 
-    known_symbols[symbol.id] = symbol_str
+    if symbol.is_constant():
+        constant_symbols[symbol.id] = symbol_str
+    else:
+        variable_symbols[symbol.id] = symbol_str
 
 
 def to_python(symbol):
@@ -160,29 +163,41 @@ def to_python(symbol):
 
     """
 
-    known_symbols = OrderedDict()
-    find_symbols(symbol, known_symbols)
+    constant_symbols = OrderedDict()
+    variable_symbols = OrderedDict()
+    find_symbols(symbol, constant_symbols, variable_symbols)
 
     line_format = "{} = {}"
 
-    lines = [
+    constant_lines = [
         line_format.format(id_to_python_variable(symbol_id), symbol_line)
-        for symbol_id, symbol_line in known_symbols.items()
+        for symbol_id, symbol_line in constant_symbols.items()
+    ] + [
+        "self._{0} = {0}".format(id_to_python_variable(symbol_id))
+        for symbol_id, _ in constant_symbols.items()
     ]
 
-    func_str = "\n".join(lines)
+    variable_lines = [
+        "{0} = self._{0}".format(id_to_python_variable(symbol_id))
+        for symbol_id, _ in constant_symbols.items()
+    ] + [
+        line_format.format(id_to_python_variable(symbol_id), symbol_line)
+        for symbol_id, symbol_line in variable_symbols.items()
+    ]
 
-    return func_str
+    return "\n".join(constant_lines), "\n".join(variable_lines)
 
 
 class EvaluatorPython:
     def __init__(self, symbol):
-        self._function_str = pybamm.to_python(symbol)
+        self._constant_function, self._variable_function = pybamm.to_python(symbol)
         self._result_var = id_to_python_variable(symbol.id)
-        self._compiled_function = compile(self._function_str, self._result_var, 'exec')
-        self._compiled_return = compile(
+        self._variable_compiled = compile(
+            self._variable_function, self._result_var, 'exec')
+        self._return_compiled = compile(
             self._result_var, 'return'+self._result_var, 'eval')
+        exec(self._constant_function)
 
     def evaluate(self, t=None, y=None):
-        exec(self._compiled_function)
-        return eval(self._compiled_return)
+        exec(self._variable_compiled)
+        return eval(self._return_compiled)
