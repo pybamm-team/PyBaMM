@@ -78,35 +78,60 @@ def find_symbols(symbol, known_symbols=OrderedDict()):
 
     elif isinstance(symbol, pybamm.Array):
         if scipy.sparse.issparse(symbol.entries):
-            if not isinstance(symbol.entries, scipy.sparse.csr_matrix):
-                raise NotImplementedError
-            data_str = "".join([
-                "np.array([",
-                ",".join([str(e) for e in symbol.entries.data]),
-                "])"
-            ])
-            indices_str = "".join([
-                "np.array([",
-                ",".join([str(e) for e in symbol.entries.indices]),
-                "])"
-            ])
-            indptr_str = "".join([
-                "np.array([",
-                ",".join([str(e) for e in symbol.entries.indptr]),
-                "])"
-            ])
+            if isinstance(symbol.entries, scipy.sparse.csr_matrix):
+                data_str = "".join([
+                    "np.array([",
+                    ",".join([str(e) for e in symbol.entries.data]),
+                    "])"
+                ])
+                indices_str = "".join([
+                    "np.array([",
+                    ",".join([str(e) for e in symbol.entries.indices]),
+                    "])"
+                ])
+                indptr_str = "".join([
+                    "np.array([",
+                    ",".join([str(e) for e in symbol.entries.indptr]),
+                    "])"
+                ])
 
-            M = symbol.shape[0]
-            N = symbol.shape[1]
-            symbol_str = 'scipy.sparse.csr_matrix(({}, {}, {}),shape=({},{}))'\
-                .format(data_str, indices_str, indptr_str, M, N)
+                M = symbol.shape[0]
+                N = symbol.shape[1]
+                symbol_str = 'scipy.sparse.csr_matrix(({}, {}, {}),shape=({},{}))'\
+                    .format(data_str, indices_str, indptr_str, M, N)
+            elif isinstance(symbol.entries, scipy.sparse.coo_matrix):
+                data_str = "".join([
+                    "np.array([",
+                    ",".join([str(e) for e in symbol.entries.data]),
+                    "])"
+                ])
+                row_str = "".join([
+                    "np.array([",
+                    ",".join([str(e) for e in symbol.entries.row]),
+                    "])"
+                ])
+                col_str = "".join([
+                    "np.array([",
+                    ",".join([str(e) for e in symbol.entries.col]),
+                    "])"
+                ])
+
+                M = symbol.shape[0]
+                N = symbol.shape[1]
+                symbol_str = 'scipy.sparse.coo_matrix(({}, ({}, {})),shape=({},{}))'\
+                    .format(data_str, row_str, col_str, M, N)
+            else:
+                raise NotImplementedError
         else:
             rows = [
                 "[{}]".format(",".join([str(e) for e in row]))
                 for row in symbol.entries
             ]
             matrix = "[{}]".format(",".join(rows))
-            symbol_str = "np.array({})".format(matrix)
+            if symbol.entries.size == 0:
+                symbol_str = "np.array([[]]).reshape((0,1))"
+            else:
+                symbol_str = "np.array({})".format(matrix)
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = 't'
