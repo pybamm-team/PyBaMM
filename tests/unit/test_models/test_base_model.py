@@ -1,4 +1,4 @@
-self.assertIsInstance  #
+#
 # Tests for the base model class
 #
 import pybamm
