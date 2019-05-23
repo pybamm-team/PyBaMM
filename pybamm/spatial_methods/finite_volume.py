@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from scipy.sparse import diags, eye, kron, csr_matrix, vstack
+from scipy.sparse import diags, eye, kron, csr_matrix, vstack, coo_matrix
 import autograd.numpy as np
 from autograd.builtins import isinstance
 
@@ -278,7 +278,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def add_ghost_nodes(self, symbol, discretised_symbol, bcs):
         """
-        Add boundary conditions via ghost nodes.
+        Matrix for adding ghost nodes to a symbol.
 
         For Dirichlet bcs, for a boundary condition "y = a at the left-hand boundary",
         we concatenate a ghost node to the start of the vector y with value "2*a - y1"
@@ -295,19 +295,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         where y1 is the value of the first node and h is the mesh size.
         Similarly for the right-hand boundary condition.
 
-        Currently, boundary conditions can only be applied on state
-        variables (e.g. concentration, temperature) or concatenations, and not on
-        arbitrary expressions.
-        To access the value of the first node (y1), we create a "first_node" object
-        which is a StateVector whose y_slice is the start of the y_slice of
-        discretised_symbol.
-        Similarly, the last node is a StateVector whose y_slice is the end of the
-        y_slice of discretised_symbol
-
         Parameters
         ----------
-        discretised_symbol : :class:`pybamm.StateVector` (size n)
-            The discretised variable (a state vector) to which to add ghost nodes
+        domain : list of strings
+            The domain of the symbol for which to add ghost nodes
         bcs : dict of tuples (:class:`pybamm.Scalar`, str)
             Dictionary (with keys "left" and "right") of boundary conditions. Each
             boundary condition consists of a value and a flag indicating its type
@@ -315,8 +306,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Concatenation` (size n+1 or n+2)
-            Concatenation of the variable (a state vector) and ghost nodes
+        :class:`pybamm.Matrix` (size (n+2, n))
+            Matrix to create ghost nodes
 
         """
         if isinstance(discretised_symbol, pybamm.StateVector):
@@ -340,7 +331,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         if isinstance(submesh_list[0].npts, list):
             NotImplementedError("Can only take in 1D primary directions")
 
-        size = [len(submesh_list), submesh_list[0].npts]
+        n = submesh_list[0].npts
+        sec_pts = len(submesh_list)
+        size = [sec_pts, n]
         y = np.reshape(y, size)
         y_left = y[:, 0]
         y_right = y[:, -1]
@@ -350,18 +343,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
 
-        for i in range(len(submesh_list)):
+        for i in range(sec_pts):
             y_slice_start = y_left[i]
             y_slice_stop = y_right[i]
 
-            # left ghost cell
-            first_node = pybamm.StateVector(slice(y_slice_start, y_slice_start + 1))
-
-            # middle symbol
             sub_disc_symbol = pybamm.StateVector(slice(y_slice_start, y_slice_stop + 1))
-
-            # right ghost cell
-            last_node = pybamm.StateVector(slice(y_slice_stop, y_slice_stop + 1))
 
             if lbc_value.evaluates_to_number():
                 lbc_i = lbc_value
@@ -373,10 +359,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                 rbc_i = pybamm.Index(rbc_value, i)
 
             if lbc_type == "Dirichlet":
-                left_ghost_cell = 2 * lbc_i - first_node
+                left_ghost_constant = 2 * lbc_i
             elif lbc_type == "Neumann":
                 dx = 2 * (submesh_list[0].nodes[0] - submesh_list[0].edges[0])
-                left_ghost_cell = first_node - dx * lbc_i
+                left_ghost_constant = -dx * lbc_i
             else:
                 raise ValueError(
                     "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -384,10 +370,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                     )
                 )
             if rbc_type == "Dirichlet":
-                right_ghost_cell = 2 * rbc_i - last_node
+                right_ghost_constant = 2 * rbc_i
             elif rbc_type == "Neumann":
                 dx = 2 * (submesh_list[0].edges[-1] - submesh_list[0].nodes[-1])
-                right_ghost_cell = last_node + dx * rbc_i
+                right_ghost_constant = dx * rbc_i
             else:
                 raise ValueError(
                     "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -396,7 +382,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
             # concatenate
             concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
-                left_ghost_cell, sub_disc_symbol, right_ghost_cell
+                left_ghost_constant, sub_disc_symbol, right_ghost_constant
             )
             new_discretised_symbol = pybamm.NumpyConcatenation(
                 new_discretised_symbol, concatenated_sub_disc_symbol
@@ -405,7 +391,25 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Keep same domain
         new_discretised_symbol.domain = discretised_symbol.domain
 
-        return new_discretised_symbol
+        # Make matrix to calculate ghost nodes
+        if lbc_type == "Dirichlet":
+            left_factor = -1
+        else:
+            left_factor = 1
+        if rbc_type == "Dirichlet":
+            right_factor = -1
+        else:
+            right_factor = 1
+        # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
+        # (row[i], col[i]) for each index of data.
+        ghost_cell_matrix = coo_matrix(
+            ([left_factor, right_factor], ([0, n + 1], [1, n])), shape=(n + 2, n + 2)
+        )
+        sub_matrix = eye(n + 2) + ghost_cell_matrix
+
+        matrix = kron(eye(sec_pts), sub_matrix)
+
+        return pybamm.Matrix(matrix) @ new_discretised_symbol
 
     def boundary_value_or_flux(self, symbol, discretised_child):
         """
