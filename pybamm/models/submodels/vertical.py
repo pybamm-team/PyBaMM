@@ -31,12 +31,18 @@ class Vertical(pybamm.SubModel):
         # Simple model: read off vertical current (no extra equation)
         delta_phi_n_right = pybamm.boundary_value(delta_phi_n, "right")
         delta_phi_p_left = pybamm.boundary_value(delta_phi_p, "left")
-        delta_phi_difference = delta_phi_n_right - delta_phi_p_left
+        delta_phi_difference = pybamm.Variable(
+            "delta_phi_difference", domain="current collector"
+        )
         I_s_perp = vert_cond * pybamm.grad(delta_phi_difference)
         i_sep = pybamm.div(I_s_perp)
 
         # Set boundary conditions at top ("right") and bottom ("left")
         i_cell = param.current_with_time
+        self.algebraic = {
+            delta_phi_difference: delta_phi_difference
+            - (delta_phi_n_right - delta_phi_p_left)
+        }
         self.boundary_conditions = {
             delta_phi_difference: {
                 "left": (pybamm.Scalar(0), "Neumann"),

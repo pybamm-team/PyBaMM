@@ -74,7 +74,9 @@ class BaseModel(object):
 
         if not all(
             [
-                variable.domain == equation.domain or equation.domain == []
+                variable.domain == equation.domain
+                or variable.domain == []
+                or equation.domain == []
                 for variable, equation in dict.items()
             ]
         ):
@@ -314,19 +316,19 @@ class BaseModel(object):
                 )
 
         # Boundary conditions
-        for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_spatial_derivatives():
-                # Variable must be in the boundary conditions
-                if not any(
-                    var.id == symbol.id for symbol in self.boundary_conditions.keys()
-                ):
-                    raise pybamm.ModelError(
-                        """
-                        no boundary condition given for variable '{}' with equation '{}'
-                        """.format(
-                            var, eqn
-                        )
-                    )
+        # for var, eqn in {**self.rhs, **self.algebraic}.items():
+        #     if eqn.has_spatial_derivatives():
+        #         # Variable must be in the boundary conditions
+        #         if not any(
+        #             var.id == symbol.id for symbol in self.boundary_conditions.keys()
+        #         ):
+        #             raise pybamm.ModelError(
+        #                 """
+        #                 no boundary condition given for variable '{}' with equation '{}'
+        #                 """.format(
+        #                     var, eqn
+        #                 )
+        #             )
 
         # Standard Output Variables
         missing_vars = []
@@ -400,6 +402,7 @@ class StandardBatteryBaseModel(BaseModel):
             var.x_p: 35,
             var.r_n: 10,
             var.r_p: 10,
+            var.z: 10,
         }
         self.default_submesh_types = {
             "negative electrode": pybamm.Uniform1DSubMesh,
@@ -407,11 +410,13 @@ class StandardBatteryBaseModel(BaseModel):
             "positive electrode": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
         }
         self.default_spatial_methods = {
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.FiniteVolume,
         }
         try:
             self.default_solver = pybamm.ScikitsOdeSolver()

@@ -37,6 +37,9 @@ class Discretisation(object):
         self.bcs = {}
         self._y_slices = {}
         self._discretised_symbols = {}
+        import ipdb
+
+        ipdb.set_trace()
 
     @property
     def mesh(self):

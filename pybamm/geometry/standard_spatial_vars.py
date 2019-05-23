@@ -14,10 +14,8 @@ x_p = pybamm.SpatialVariable(
 )
 x = pybamm.SpatialVariable("x", domain=whole_cell, coord_sys="cartesian")
 
-y = pybamm.SpatialVariable(
-    "y", domain="current collector across", coord_sys="cartesian"
-)
-z = pybamm.SpatialVariable("z", domain="current collector up", coord_sys="cartesian")
+y = pybamm.SpatialVariable("y", domain="current collector", coord_sys="cartesian")
+z = pybamm.SpatialVariable("z", domain="current collector", coord_sys="cartesian")
 
 r_n = pybamm.SpatialVariable(
     "r_n", domain=["negative particle"], coord_sys="spherical polar"

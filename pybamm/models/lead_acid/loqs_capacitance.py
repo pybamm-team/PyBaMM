@@ -46,6 +46,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         "Boundary conditions"
         bc_variables = {"delta_phi_n": delta_phi_n, "delta_phi_p": delta_phi_p}
         self.set_boundary_conditions(bc_variables)
+        i_curr_coll = self.variables["Current collector current"]
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -88,11 +89,15 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(
             param, use_capacitance
         )
-        eleclyte_current_model_n.set_leading_order_system(delta_phi_n, reactions, neg)
+        eleclyte_current_model_n.set_leading_order_system(
+            delta_phi_n, reactions, neg, i_curr_coll
+        )
         eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(
             param, use_capacitance
         )
-        eleclyte_current_model_p.set_leading_order_system(delta_phi_p, reactions, pos)
+        eleclyte_current_model_p.set_leading_order_system(
+            delta_phi_p, reactions, pos, i_curr_coll
+        )
         self.update(
             porosity_model,
             eleclyte_conc_model,
@@ -119,17 +124,17 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         )
         self.variables.update(electrolyte_vars)
 
-        # Electrode
-        electrode_model = pybamm.electrode.Ohm(param)
-        phi_e = self.variables["Electrolyte potential"]
-        electrode_vars = electrode_model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e
-        )
-        self.variables.update(electrode_vars)
-
-        # Add cut-off voltage, using potential differences for quicker evaluation
-        voltage = delta_phi_p - delta_phi_n
-        self.events.append(voltage - param.voltage_low_cut)
+        # # Electrode
+        # electrode_model = pybamm.electrode.Ohm(param)
+        # phi_e = self.variables["Electrolyte potential"]
+        # electrode_vars = electrode_model.get_explicit_leading_order(
+        #     ocp_p, eta_r_p, phi_e, i_curr_coll
+        # )
+        # self.variables.update(electrode_vars)
+        #
+        # # Add cut-off voltage, using potential differences for quicker evaluation
+        # voltage = delta_phi_p - delta_phi_n
+        # self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"
         "Extra settings"
@@ -145,7 +150,10 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         if self.bc_options["dimensionality"] == 1:
             self.default_geometry = pybamm.Geometry("1D macro")
         elif self.bc_options["dimensionality"] == 2:
+            self.default_solver = pybamm.ScikitsDaeSolver()
             self.default_geometry = pybamm.Geometry("1+1D macro")
+
+        self.variables = {}
 
     def set_boundary_conditions(self, bc_variables=None):
         """Get boundary conditions"""

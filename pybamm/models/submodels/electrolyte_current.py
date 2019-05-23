@@ -428,40 +428,41 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
                 "domain '{}' not recognised".format(delta_phi.domain)
             )
 
-    def set_leading_order_system(self, delta_phi, reactions, domain):
+    def set_leading_order_system(self, delta_phi, reactions, domain, i_curr_coll):
         param = self.set_of_parameters
-        i_cell = param.current_with_time
 
         # ode model only
         self.algebraic = {}
 
         if domain == ["negative electrode"]:
             x_n = pybamm.standard_spatial_vars.x_n
-            i_e = i_cell * x_n / param.l_n
+            # i_e = i_curr_coll * x_n / param.l_n
             j = reactions["main"]["neg"]["aj"]
 
             if self.use_capacitance:
-                self.rhs = {delta_phi: 1 / param.C_dl_n * (i_cell / param.l_n - j)}
+                self.rhs = {delta_phi: 1 / param.C_dl_n * (i_curr_coll / param.l_n - j)}
             else:
-                self.algebraic = {delta_phi: i_cell / param.l_n - j}
+                self.algebraic = {delta_phi: i_curr_coll / param.l_n - j}
             self.initial_conditions = {delta_phi: param.U_n(param.c_n_init)}
             self.variables = {
                 "Negative electrode potential difference": delta_phi,
-                "Negative electrolyte current density": i_e,
+                # "Negative electrolyte current density": i_e,
             }
         elif domain == ["positive electrode"]:
             x_p = pybamm.standard_spatial_vars.x_p
-            i_e = i_cell * (1 - x_p) / param.l_p
+            # i_e = i_curr_coll * (1 - x_p) / param.l_p
             j = reactions["main"]["pos"]["aj"]
 
             if self.use_capacitance:
-                self.rhs = {delta_phi: 1 / param.C_dl_p * (-i_cell / param.l_p - j)}
+                self.rhs = {
+                    delta_phi: 1 / param.C_dl_p * (-i_curr_coll / param.l_p - j)
+                }
             else:
-                self.algebraic = {delta_phi: -i_cell / param.l_p - j}
+                self.algebraic = {delta_phi: -i_curr_coll / param.l_p - j}
             self.initial_conditions = {delta_phi: param.U_p(param.c_p_init)}
             self.variables = {
                 "Positive electrode potential difference": delta_phi,
-                "Positive electrolyte current density": i_e,
+                # "Positive electrolyte current density": i_e,
             }
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))

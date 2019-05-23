@@ -81,7 +81,7 @@ class Ohm(pybamm.SubModel):
         # Set default solver to DAE
         self.default_solver = pybamm.ScikitsDaeSolver()
 
-    def get_explicit_leading_order(self, ocp_p, eta_r_p, phi_e):
+    def get_explicit_leading_order(self, ocp_p, eta_r_p, phi_e, i_curr_coll):
         """
         Provides the leading order explicit solution to solid phase current
         conservation with ohm's law.
@@ -94,6 +94,9 @@ class Ohm(pybamm.SubModel):
             Reaction overpotential in the positive electrode
         phi_e : :class:`pybamm.Concatenation`
             Eletrolyte potential
+        i_curr_coll : : class:`pybamm.Symbol`
+            Current density in the current collector. Can evaluate to a Scalar (for 1D
+            models), or a vector (for 1+1D or 2+1D models)
 
         Returns
         -------
@@ -107,9 +110,6 @@ class Ohm(pybamm.SubModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        # define current
-        i_cell = param.current_with_time
-
         # Take boundary values
         phi_e_right = pybamm.boundary_value(phi_e, "right")
         ocp_p_right = pybamm.boundary_value(ocp_p, "right")
@@ -121,8 +121,8 @@ class Ohm(pybamm.SubModel):
         phi_s_p = pybamm.Broadcast(v, ["positive electrode"])
 
         # electrode current
-        i_s_n = i_cell - i_cell * x_n / l_n
-        i_s_p = i_cell - i_cell * (1 - x_p) / l_p
+        i_s_n = i_curr_coll - i_curr_coll * x_n / l_n
+        i_s_p = i_curr_coll - i_curr_coll * (1 - x_p) / l_p
 
         delta_phi_s_av = pybamm.Scalar(0)
 
