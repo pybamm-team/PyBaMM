@@ -1,17 +1,16 @@
 #
-# Tests for the lithium-ion DFN model
+# Tests for the electrode submodels
 #
 import pybamm
+from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import unittest
 
 
-class TestDFN(unittest.TestCase):
-    def test_well_posed(self):
-        model = pybamm.lithium_ion.DFN()
-        model.check_well_posedness()
-
+@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+class TestOhm(unittest.TestCase):
     def test_default_solver(self):
-        model = pybamm.lithium_ion.DFN()
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.electrode.Ohm(param)
         self.assertTrue(isinstance(model.default_solver, pybamm.ScikitsDaeSolver))
 
 
