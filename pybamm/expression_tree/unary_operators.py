@@ -224,6 +224,9 @@ class Index(UnaryOperator):
         else:
             raise TypeError("index must be integer or slice")
 
+        if self.slice.stop > child.size:
+            raise ValueError("slice size exceeds child size")
+
         super().__init__(name, child)
 
     def jac(self, variable):
