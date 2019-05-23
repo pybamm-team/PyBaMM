@@ -11,8 +11,8 @@ class TestSPM(unittest.TestCase):
         model.check_well_posedness()
 
     def test_default_geometry(self):
-        model = pybamm.lithium_ion.DFN()
-        self.assertTrue(isinstance(model.default_geometry, pybamm.Geometry))
+        model = pybamm.lithium_ion.SPM()
+        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("negative particle" in model.default_geometry)
 
 

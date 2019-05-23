@@ -12,12 +12,12 @@ class TestDFN(unittest.TestCase):
 
     def test_default_geometry(self):
         model = pybamm.lithium_ion.DFN()
-        self.assertTrue(isinstance(model.default_geometry, pybamm.Geometry))
+        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("secondary" in model.default_geometry["negative particle"])
 
     def test_default_solver(self):
         model = pybamm.lithium_ion.DFN()
-        self.assertTrue(isinstance(model.default_solver, pybamm.ScikitsDaeSolver))
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
 if __name__ == "__main__":

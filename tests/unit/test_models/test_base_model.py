@@ -1,4 +1,4 @@
-#
+self.assertIsInstance  #
 # Tests for the base model class
 #
 import pybamm
@@ -332,18 +332,19 @@ class TestBaseModel(unittest.TestCase):
 
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
-
     def test_default_solver(self):
         model = pybamm.StandardBatteryBaseModel()
-        self.assertTrue(isinstance(model.default_solver,
-                                   (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)))
+        self.assertIsInstance(
+            model.default_solver, (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)
+        )
 
         # check that default_solver gives you a new solver, not an internal object
         solver = model.default_solver
         solver = pybamm.BaseModel()
-        self.assertTrue(isinstance(model.default_solver,
-                                   (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)))
-        self.assertTrue(isinstance(solver, pybamm.BaseModel))
+        self.assertIsInstance(
+            model.default_solver, (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)
+        )
+        self.assertIsInstance(solver, pybamm.BaseModel)
 
 
 if __name__ == "__main__":

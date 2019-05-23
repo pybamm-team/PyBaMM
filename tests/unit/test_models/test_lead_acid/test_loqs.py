@@ -12,7 +12,12 @@ class TestLeadAcidLOQS(unittest.TestCase):
 
     def test_default_geometry(self):
         model = pybamm.lead_acid.LOQS()
-        self.assertTrue(isinstance(model.default_geometry, pybamm.Geometry))
+        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
+        self.assertTrue("negative particle" not in model.default_geometry)
+
+    def test_default_spatial_methods(self):
+        model = pybamm.lead_acid.LOQS()
+        self.assertIsInstance(model.default_spatial_methods, dict)
         self.assertTrue("negative particle" not in model.default_geometry)
 
 

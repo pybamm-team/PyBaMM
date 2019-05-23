@@ -12,7 +12,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
 
     def test_default_solver(self):
         model = pybamm.lead_acid.NewmanTiedemann()
-        self.assertTrue(isinstance(model.default_solver, pybamm.ScikitsDaeSolver))
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
 if __name__ == "__main__":
