@@ -3,11 +3,10 @@
 #
 import pybamm
 
-from tests import get_mesh_for_testing, get_discretisation_for_testing
+from tests import get_discretisation_for_testing
 import unittest
 import numpy as np
 import scipy.sparse
-import os
 from collections import OrderedDict
 
 
@@ -167,8 +166,8 @@ class TestEvaluate(unittest.TestCase):
         a_pts = mesh[a_dom[0]][0].npts
         b_pts = mesh[b_dom[0]][0].npts
         a = pybamm.StateVector(slice(0, a_pts), domain=a_dom)
-        b = pybamm.StateVector(slice(a_pts, a_pts+b_pts), domain=b_dom)
-        y = np.empty((a_pts+b_pts, 1))
+        b = pybamm.StateVector(slice(a_pts, a_pts + b_pts), domain=b_dom)
+        y = np.empty((a_pts + b_pts, 1))
         for i in range(len(y)):
             y[i] = i
 
@@ -202,11 +201,11 @@ class TestEvaluate(unittest.TestCase):
         b1_pts = mesh[b_dom[1]][0].npts
 
         a = pybamm.StateVector(slice(0, a0_pts), domain=a_dom)
-        b = pybamm.StateVector(slice(a0_pts, a0_pts+b0_pts+b1_pts),
+        b = pybamm.StateVector(slice(a0_pts, a0_pts + b0_pts + b1_pts),
                                domain=b_dom,
                                )
 
-        y = np.empty((a0_pts+b0_pts+b1_pts, 1))
+        y = np.empty((a0_pts + b0_pts + b1_pts, 1))
         for i in range(len(y)):
             y[i] = i
 
@@ -219,7 +218,7 @@ class TestEvaluate(unittest.TestCase):
 
         b0_str = "{}[0:{}]".format(var_b, b0_pts)
         a0_str = "{}[0:{}]".format(var_a, a0_pts)
-        b1_str = "{}[{}:{}]".format(var_b, b0_pts, b0_pts+b1_pts)
+        b1_str = "{}[{}:{}]".format(var_b, b0_pts, b0_pts + b1_pts)
 
         self.assertEqual(len(constant_symbols), 0)
         self.assertEqual(list(variable_symbols.values())[2],
@@ -272,7 +271,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(result, 6)
 
         # test a larger expression
-        expr = a * b + b + a**2 / b + 2*a + b/2 + 4
+        expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
         evaluator = pybamm.EvaluatorPython(expr)
         for y in y_tests:
             result = evaluator.evaluate(t=None, y=y)

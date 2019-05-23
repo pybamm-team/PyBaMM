@@ -3,10 +3,7 @@
 #
 import pybamm
 
-import autograd.numpy as np
 from collections import OrderedDict
-import scipy.sparse
-import copy
 
 
 def id_to_python_variable(symbol_id, constant=False):
@@ -17,7 +14,7 @@ def id_to_python_variable(symbol_id, constant=False):
     return var_format.format(symbol_id).replace("-", "m")
 
 
-def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=OrderedDict()):
+def find_symbols(symbol, constant_symbols, variable_symbols):
     """
     This function converts an expression tree to a python function that acts like the
     tree's :func:`pybamm.Symbol.evaluate` function
@@ -42,7 +39,7 @@ def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=Ordere
     for child in symbol.children:
         find_symbols(child, constant_symbols, variable_symbols)
     children_vars = [id_to_python_variable(child.id, child.is_constant())
-                         for child in symbol.children]
+                     for child in symbol.children]
 
     if isinstance(symbol, pybamm.BinaryOperator):
         left, right = symbol.children
@@ -54,7 +51,7 @@ def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=Ordere
             funct_var = id_to_python_variable(symbol.id, True)
             symbol_str = "{}({})".format(funct_var, children_vars[0])
         elif isinstance(symbol, pybamm.Index):
-            symbol_str = "{}[{}]".format(children_vars[0],symbol.index)
+            symbol_str = "{}[{}]".format(children_vars[0], symbol.index)
         else:
             symbol_str = symbol.name + children_vars[0]
 
@@ -130,12 +127,13 @@ class EvaluatorPython:
     def __init__(self, symbol):
         constants, self._variable_function = pybamm.to_python(symbol)
         for symbol_id, value in constants.items():
-            setattr(self, id_to_python_variable(symbol_id, True).replace("self.",""), value)
+            setattr(self, id_to_python_variable(
+                symbol_id, True).replace("self.", ""), value)
         self._result_var = id_to_python_variable(symbol.id, symbol.is_constant())
         self._variable_compiled = compile(
             self._variable_function, self._result_var, 'exec')
         self._return_compiled = compile(
-            self._result_var, 'return'+self._result_var, 'eval')
+            self._result_var, 'return' + self._result_var, 'eval')
 
     def evaluate(self, t=None, y=None):
         exec(self._variable_compiled)
