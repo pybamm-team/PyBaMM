@@ -362,6 +362,22 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             self.default_solver = pybamm.ScikitsDaeSolver()
 
     def set_full_system(self, delta_phi, c_e, reactions, eps=None):
+        """
+        PDE system for current in the electrolyte, derived from the Stefan-Maxwell
+        equations. If self.use_capacitance is True, this adds equations to `rhs`.
+        Otherwise, this adds equations to `algebraic`
+
+        Parameters
+        ----------
+        delta_phi : :class:`pybamm.Variable`
+            The potential difference variable
+        c_e : :class:`pybamm.Concatenation`
+            The eletrolyte concentration variable
+        reactions : dict
+            Dictionary of reaction variables
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
+        """
         param = self.set_of_parameters
         i_cell = param.current_with_time
 
@@ -420,6 +436,20 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         )
 
     def set_leading_order_system(self, delta_phi, reactions, domain):
+        """
+        ODE system for leading-order current in the electrolyte, derived from the
+        Stefan-Maxwell equations. If self.use_capacitance is True, this adds equations
+        to `rhs`. Otherwise, this adds equations to `algebraic`
+
+        Parameters
+        ----------
+        delta_phi : :class:`pybamm.Variable`
+            The potential difference variable
+        reactions : dict
+            Dictionary of reaction variables
+        domain : list of str
+            Domain in which to set the system
+        """
         param = self.set_of_parameters
         i_cell = param.current_with_time
 
@@ -459,14 +489,10 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
         Parameters
         ----------
-        variables : dict
-            Dictionary of {string: :class:`pybamm.Symbol`}, which can be read to find
-            already-calculated variables
-
-        Returns
-        -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        c_e : :class:`pybamm.Concatenation`
+            The eletrolyte concentration variable
+        epsilon : :class:`pybamm.Symbol`, optional
+            Porosity. Default is None, in which case param.epsilon is used.
         """
         # import parameters and spatial variables
         param = self.set_of_parameters
