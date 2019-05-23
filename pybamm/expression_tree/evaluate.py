@@ -61,7 +61,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
     elif isinstance(symbol, pybamm.Concatenation):
 
         if isinstance(symbol, pybamm.NumpyConcatenation):
-            symbol_str = 'np.concatenate(({}))'.format(",".join(children_vars))
+            if len(children_vars) > 1:
+                symbol_str = 'np.concatenate(({}))'.format(",".join(children_vars))
+            else:
+                symbol_str = '{}'.format(",".join(children_vars))
 
         elif isinstance(symbol, pybamm.SparseStack):
             symbol_str = "scipy.sparse.vstack(({}))".format(",".join(children_vars))
@@ -76,7 +79,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                         child_var, child_slice.start, child_slice.stop
                     ))
             child_vectors = [v for _, v in sorted(zip(slice_starts, child_vectors))]
-            symbol_str = "np.concatenate(({}))".format(",".join(child_vectors))
+            if len(children_vars) > 1:
+                symbol_str = "np.concatenate(({}))".format(",".join(child_vectors))
+            else:
+                symbol_str = '{}'.format(",".join(children_vars))
         else:
             raise NotImplementedError
 
