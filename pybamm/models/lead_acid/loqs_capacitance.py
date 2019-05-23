@@ -124,17 +124,17 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         )
         self.variables.update(electrolyte_vars)
 
-        # # Electrode
-        # electrode_model = pybamm.electrode.Ohm(param)
-        # phi_e = self.variables["Electrolyte potential"]
-        # electrode_vars = electrode_model.get_explicit_leading_order(
-        #     ocp_p, eta_r_p, phi_e, i_curr_coll
-        # )
-        # self.variables.update(electrode_vars)
-        #
-        # # Add cut-off voltage, using potential differences for quicker evaluation
-        # voltage = delta_phi_p - delta_phi_n
-        # self.events.append(voltage - param.voltage_low_cut)
+        # Electrode
+        electrode_model = pybamm.electrode.Ohm(param)
+        phi_e = self.variables["Electrolyte potential"]
+        electrode_vars = electrode_model.get_explicit_leading_order(
+            ocp_p, eta_r_p, phi_e, i_curr_coll
+        )
+        self.variables.update(electrode_vars)
+
+        # Add cut-off voltage, using potential differences for quicker evaluation
+        voltage = delta_phi_p - delta_phi_n
+        self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"
         "Extra settings"
@@ -146,7 +146,6 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         if self.bc_options["dimensionality"] == 1:
             self.default_geometry = pybamm.Geometry("1D macro")
         elif self.bc_options["dimensionality"] == 2:
-            self.default_solver = pybamm.ScikitsDaeSolver()
             self.default_geometry = pybamm.Geometry("1+1D macro")
 
     @property
@@ -155,10 +154,10 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self._use_capacitance:
-            return pybamm.ScikitsOdeSolver()
-        else:
+        if self._use_capacitance is False or self.bc_options["dimensionality"] == 2:
             return pybamm.ScikitsDaeSolver()
+        else:
+            return pybamm.ScikitsOdeSolver()
 
     def set_boundary_conditions(self, bc_variables=None):
         """Get boundary conditions"""

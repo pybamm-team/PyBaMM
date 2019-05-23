@@ -448,7 +448,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
         if domain == ["negative electrode"]:
             x_n = pybamm.standard_spatial_vars.x_n
-            # i_e = i_curr_coll * x_n / param.l_n
+            i_e = pybamm.outer(i_curr_coll, x_n / param.l_n)
             j = reactions["main"]["neg"]["aj"]
 
             if self.use_capacitance:
@@ -458,11 +458,11 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             self.initial_conditions = {delta_phi: param.U_n(param.c_n_init)}
             self.variables = {
                 "Negative electrode potential difference": delta_phi,
-                # "Negative electrolyte current density": i_e,
+                "Negative electrolyte current density": i_e,
             }
         elif domain == ["positive electrode"]:
             x_p = pybamm.standard_spatial_vars.x_p
-            # i_e = i_curr_coll * (1 - x_p) / param.l_p
+            i_e = pybamm.outer(i_curr_coll, (1 - x_p) / param.l_p)
             j = reactions["main"]["pos"]["aj"]
 
             if self.use_capacitance:
@@ -474,7 +474,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             self.initial_conditions = {delta_phi: param.U_p(param.c_p_init)}
             self.variables = {
                 "Positive electrode potential difference": delta_phi,
-                # "Positive electrolyte current density": i_e,
+                "Positive electrolyte current density": i_e,
             }
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))

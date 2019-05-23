@@ -60,6 +60,8 @@ from .expression_tree.binary_operators import (
     Multiplication,
     MatrixMultiplication,
     Division,
+    Outer,
+    outer,
 )
 from .expression_tree.concatenations import (
     Concatenation,

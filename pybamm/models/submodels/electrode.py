@@ -125,8 +125,8 @@ class Ohm(pybamm.SubModel):
         phi_s_p = pybamm.Broadcast(v, ["positive electrode"])
 
         # electrode current
-        i_s_n = i_curr_coll - i_curr_coll * x_n / l_n
-        i_s_p = i_curr_coll - i_curr_coll * (1 - x_p) / l_p
+        i_s_n = pybamm.outer(i_curr_coll, 1 - x_n / l_n)
+        i_s_p = pybamm.outer(i_curr_coll, 1 - (1 - x_p) / l_p)
 
         delta_phi_s_av = pybamm.Scalar(0)
 
