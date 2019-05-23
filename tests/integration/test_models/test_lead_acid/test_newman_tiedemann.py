@@ -27,9 +27,11 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         simplified = optimtest.evaluate_model(simplify=True)
         using_known_evals = optimtest.evaluate_model(use_known_evals=True)
         simp_and_known = optimtest.evaluate_model(simplify=True, use_known_evals=True)
+        simp_and_python = optimtest.evaluate_model(simplify=True, to_python=True)
         np.testing.assert_array_almost_equal(original, simplified)
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
+        np.testing.assert_array_almost_equal(original, simp_and_python)
 
 
 if __name__ == "__main__":

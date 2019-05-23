@@ -3,6 +3,9 @@
 #
 import pybamm
 
+# need numpy imported for code generated in EvaluatorPython
+import numpy as np  # noqa: F401
+
 from collections import OrderedDict
 
 
