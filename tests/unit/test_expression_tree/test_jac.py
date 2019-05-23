@@ -134,6 +134,12 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
+    def test_index(self):
+        vec = pybamm.StateVector(slice(0, 5))
+        ind = pybamm.Index(vec, 3)
+        jac = ind.jac(vec).evaluate(y=np.linspace(0, 2, 5)).toarray()
+        np.testing.assert_array_equal(jac, np.array([[0, 0, 0, 1, 0]]))
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
