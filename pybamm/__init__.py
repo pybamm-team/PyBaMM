@@ -142,6 +142,7 @@ from .models.submodels import (
     particle,
     porosity,
     potential,
+    vertical,
 )
 
 #

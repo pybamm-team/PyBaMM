@@ -534,6 +534,10 @@ class StandardBatteryBaseModel(BaseModel):
             }
         )
 
+    @property
+    def default_bc_options(self):
+        return {"dimensionality": 1}
+
 
 class SubModel(StandardBatteryBaseModel):
     def __init__(self, set_of_parameters):

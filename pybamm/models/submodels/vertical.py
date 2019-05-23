@@ -36,7 +36,7 @@ class Vertical(pybamm.SubModel):
         i_sep = pybamm.div(I_s_perp)
 
         # Set boundary conditions at top ("right") and bottom ("left")
-        i_cell = pybamm.current_with_time
+        i_cell = param.current_with_time
         self.boundary_conditions = {
             delta_phi_difference: {
                 "left": (pybamm.Scalar(0), "Neumann"),

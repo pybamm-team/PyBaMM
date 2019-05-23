@@ -24,13 +24,16 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
     **Extends**: :class:`pybamm.LeadAcidBaseModel`
     """
 
-    def __init__(self, use_capacitance=True):
+    def __init__(self, use_capacitance=True, bc_options=None):
         super().__init__()
         self._use_capacitance = use_capacitance
+        if bc_options is None:
+            bc_options = self.default_bc_options
 
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
+        self.param = param
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -39,6 +42,11 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         delta_phi_n = pybamm.Variable("Negative electrode potential difference")
         delta_phi_p = pybamm.Variable("Positive electrode potential difference")
         epsilon = pybamm.standard_variables.eps_piecewise_constant
+
+        "-----------------------------------------------------------------------------"
+        "Boundary conditions"
+        bc_variables = {"delta_phi_n": delta_phi_n, "delta_phi_p": delta_phi_p}
+        self.set_boundary_conditions(bc_options, bc_variables)
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -135,3 +143,19 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
             self.default_solver = pybamm.ScikitsOdeSolver()
         else:
             self.default_solver = pybamm.ScikitsDaeSolver()
+
+    def set_boundary_conditions(self, bc_options, bc_variables=None):
+        """Get boundary conditions"""
+        # TODO: edit to allow constant-current and constant-power control
+        dimensionality = bc_options["dimensionality"]
+        if dimensionality == 1:
+            current_bc = self.param.current_with_time
+            self.variables.update({"Current collector current": current_bc})
+        elif dimensionality == 2:
+            delta_phi_n = bc_variables["delta_phi_n"]
+            delta_phi_p = bc_variables["delta_phi_p"]
+            current_collector_model = pybamm.vertical.Vertical(self.param)
+            current_collector_model.set_leading_order_vertical_current(
+                delta_phi_n, delta_phi_p
+            )
+            self.update(current_collector_model)

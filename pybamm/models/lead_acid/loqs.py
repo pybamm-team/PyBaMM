@@ -16,11 +16,9 @@ class LOQS(pybamm.LeadAcidBaseModel):
     **Extends:** :class:`pybamm.LeadAcidBaseModel`
     """
 
-    def __init__(self, bc_options=None):
+    def __init__(self):
         super().__init__()
         self.name = "LOQS model"
-        if bc_options is None:
-            bc_options = self.default_bc_options
 
         "-----------------------------------------------------------------------------"
         "Parameters"
@@ -31,10 +29,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         c_e = pybamm.Variable("Electrolyte concentration")
         eps = pybamm.standard_variables.eps_piecewise_constant
-
-        "-----------------------------------------------------------------------------"
-        "Boundary conditions"
-        self.set_boundary_conditions(bc_options)
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -110,19 +104,3 @@ class LOQS(pybamm.LeadAcidBaseModel):
             "negative particle": pybamm.SpatialMethod,
             "positive particle": pybamm.SpatialMethod,
         }
-
-    def set_boundary_conditions(self, bc_options, bc_variables=None):
-        """Get boundary conditions"""
-        # TODO: edit to allow constant-current and constant-power control
-        dimensionality = bc_options["dimensionality"]
-        if dimensionality == 1:
-            current_bc = self.param.current_with_time
-            self.variables.update({"Current collector current": current_bc})
-        elif dimensionality == 2:
-            delta_phi_n = bc_variables["delta_phi_n"]
-            delta_phi_p = bc_variables["delta_phi_p"]
-            current_collector_model = pybamm.vertical_model.Vertical(self.param)
-            current_bc = current_collector_model.get_leading_order_vertical_current(
-                self, delta_phi_n, delta_phi_p
-            )
-            self.update(current_collector_model)
