@@ -5,7 +5,7 @@ import autograd
 import numpy as np
 import pybamm
 from inspect import signature
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, issparse
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -202,23 +202,51 @@ class Function(UnaryOperator):
 class Index(UnaryOperator):
     """A node in the expression tree, which stores the index that should be
     extracted from its child after the child has been evaluated.
+
+    Parameters
+    ----------
+    index
     """
 
     def __init__(self, child, index, name=None):
-        if name is None:
-            name = child.name + "[" + str(index) + "]"
         self.index = index
+        if isinstance(index, int):
+            self.slice = slice(index, index + 1)
+            if name is None:
+                name = "Index[" + str(index) + "]"
+        elif isinstance(index, slice):
+            self.slice = index
+            if name is None:
+                if index.start is None:
+                    name = "Index[:{:d}]".format(index.stop)
+                else:
+                    name = "Index[{:d}:{:d}]".format(index.start, index.stop)
+        else:
+            raise TypeError("index must be integer or slice")
+
         super().__init__(name, child)
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        child_jac = self.child.jac(variable)
+        return Index(child_jac, self.index)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
         self._id = hash(
-            (self.__class__, self.name, self.index, self.child.id) + tuple(self.domain)
+            (
+                self.__class__,
+                self.name,
+                self.slice.start,
+                self.slice.stop,
+                self.child.id,
+            )
+            + tuple(self.domain)
         )
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
-        return child[self.index]
+        return child[self.slice]
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """

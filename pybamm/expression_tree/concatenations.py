@@ -220,7 +220,14 @@ class DomainConcatenation(Concatenation):
         if len(children) == 0:
             return pybamm.Scalar(0)
         else:
-            return SparseStack(*[child.jac(variable) for child in children])
+            out = SparseStack(*[child.jac(variable) for child in children])
+            try:
+                out.shape
+            except pybamm.ShapeError:
+                import ipdb
+
+                ipdb.set_trace()
+            return out
 
     def _concatenation_new_copy(self, children):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
