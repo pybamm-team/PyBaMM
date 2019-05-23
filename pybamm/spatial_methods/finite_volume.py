@@ -284,7 +284,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def add_ghost_nodes(self, symbol, discretised_symbol, bcs):
         """
-        Matrix for adding ghost nodes to a symbol.
+        Add ghost nodes to a symbol.
 
         For Dirichlet bcs, for a boundary condition "y = a at the left-hand boundary",
         we concatenate a ghost node to the start of the vector y with value "2*a - y1"
@@ -312,8 +312,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Matrix` (size (n+2, n))
-            Matrix to create ghost nodes
+        :class:`pybamm.Symbol` (shape (n+2, n))
+            `Matrix @ discretised_symbol + bcs_vector`. When evaluated, this gives the
+            discretised_symbol, with appropriate ghost nodes concatenated at each end.
 
         """
         # get relevant grid points
@@ -321,6 +322,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         if isinstance(submesh_list[0].npts, list):
             NotImplementedError("Can only take in 1D primary directions")
 
+        # Prepare sizes and empty bcs_vector
         n = submesh_list[0].npts
         sec_pts = len(submesh_list)
 
@@ -384,6 +386,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         right_ghost_vector = coo_matrix(([right_factor], ([0], [n - 1])), shape=(1, n))
         sub_matrix = vstack([left_ghost_vector, eye(n), right_ghost_vector])
 
+        # repeat matrix for secondary dimensions
         matrix = kron(eye(sec_pts), sub_matrix)
 
         return pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector

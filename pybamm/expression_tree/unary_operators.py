@@ -205,7 +205,12 @@ class Index(UnaryOperator):
 
     Parameters
     ----------
-    index
+    child : :class:`pybamm.Symbol`
+        The symbol of which to take the index
+    index : int or slice
+        The index (if int) or indices (if slice) to extract from the symbol
+    name : str, optional
+        The name of the symbol
     """
 
     def __init__(self, child, index, name=None):
