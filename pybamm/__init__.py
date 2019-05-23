@@ -161,9 +161,10 @@ from .parameters.print_parameters import print_parameters, print_evaluated_param
 from .geometry.geometry import (
     Geometry,
     Geometry1DMacro,
+    Geometry3DMacro,
+    Geometry1p1DMacro,
     Geometry1DMicro,
     Geometry1p1DMicro,
-    Geometry3DMacro,
 )
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS

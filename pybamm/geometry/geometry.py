@@ -28,6 +28,8 @@ class Geometry(dict):
                 geometry = Geometry1DMacro()
             elif geometry == "3D macro":
                 geometry = Geometry3DMacro()
+            elif geometry == "1+1D macro":
+                geometry = Geometry1p1DMacro()
             elif geometry == "1D micro":
                 geometry = Geometry1DMicro()
             elif geometry == "1+1D micro":
@@ -55,6 +57,45 @@ class Geometry1DMacro(Geometry):
             "primary": {var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)}}
         }
 
+        # update with custom geometry if non empty
+        self.update(custom_geometry)
+
+
+class Geometry3DMacro(Geometry1DMacro):
+    """A geometry class to store the details features of the cell geometry
+
+     **Extends**: :class:`dict`
+
+     Parameters
+     ----------
+
+     custom_geometry : dict containing any extra user defined geometry
+     """
+
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+
+        var = pybamm.standard_spatial_vars
+
+        y_lim = {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_y}
+
+        z_lim = {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z}
+
+        for domain in self.keys():
+            self[domain]["primary"][var.y] = y_lim
+            self[domain]["primary"][var.z] = z_lim
+        self.update(custom_geometry)
+
+
+class Geometry1p1DMacro(Geometry1DMacro):
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+
+        var = pybamm.standard_spatial_vars
+        for geom in self.values():
+            geom["secondary"] = {
+                var.z: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z}
+            }
         # update with custom geometry if non empty
         self.update(custom_geometry)
 
@@ -92,31 +133,4 @@ class Geometry1p1DMicro(Geometry):
             "secondary": {var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)}},
         }
         # update with custom geometry if non empty
-        self.update(custom_geometry)
-
-
-class Geometry3DMacro(Geometry1DMacro):
-    """A geometry class to store the details features of the cell geometry
-
-     **Extends**: :class:`dict`
-
-     Parameters
-     ----------
-
-     custom_geometry : dict containing any extra user defined geometry
-     """
-
-    def __init__(self, custom_geometry={}):
-        super().__init__()
-
-        var = pybamm.standard_spatial_vars
-
-        y_lim = {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_y}
-
-        z_lim = {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z}
-
-        MACRO_DOMAINS = ["negative electrode", "separator", "positive electrode"]
-        for domain in MACRO_DOMAINS:
-            self[domain]["primary"][var.y] = y_lim
-            self[domain]["primary"][var.z] = z_lim
         self.update(custom_geometry)

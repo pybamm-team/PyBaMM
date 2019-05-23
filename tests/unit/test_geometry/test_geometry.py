@@ -81,6 +81,21 @@ class TestGeometry3DMacro(unittest.TestCase):
                 )
 
 
+class TestGeometry1p1DMacro(unittest.TestCase):
+    def test_geometry_keys(self):
+        geometry = pybamm.Geometry1p1DMacro()
+        for prim_sec_vars in geometry.values():
+            self.assertIn("primary", prim_sec_vars.keys())
+            self.assertIn("secondary", prim_sec_vars.keys())
+            var = pybamm.standard_spatial_vars
+            self.assertEqual(list(prim_sec_vars["secondary"].keys())[0].id, var.z.id)
+            for spatial_vars in prim_sec_vars.values():
+                all(
+                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
+                    for spatial_var in spatial_vars.keys()
+                )
+
+
 class TestGeometry(unittest.TestCase):
     def test_combine_geometries(self):
         geometry1Dmacro = pybamm.Geometry1DMacro()
@@ -88,13 +103,15 @@ class TestGeometry(unittest.TestCase):
         geometry = pybamm.Geometry(geometry1Dmacro, geometry1Dmicro)
         self.assertEqual(
             set(geometry.keys()),
-            set([
-                "negative electrode",
-                "separator",
-                "positive electrode",
-                "negative particle",
-                "positive particle",
-            ]),
+            set(
+                [
+                    "negative electrode",
+                    "separator",
+                    "positive electrode",
+                    "negative particle",
+                    "positive particle",
+                ]
+            ),
         )
 
         # update with custom geometry
@@ -118,13 +135,15 @@ class TestGeometry(unittest.TestCase):
         geometry = pybamm.Geometry(geometry3Dmacro, geometry1Dmicro)
         self.assertEqual(
             set(geometry.keys()),
-            set([
-                "negative electrode",
-                "separator",
-                "positive electrode",
-                "negative particle",
-                "positive particle",
-            ]),
+            set(
+                [
+                    "negative electrode",
+                    "separator",
+                    "positive electrode",
+                    "negative particle",
+                    "positive particle",
+                ]
+            ),
         )
 
         with self.assertRaises(ValueError):
@@ -135,24 +154,28 @@ class TestGeometry(unittest.TestCase):
         geometry = pybamm.Geometry("1D macro", "1D micro")
         self.assertEqual(
             set(geometry.keys()),
-            set([
-                "negative electrode",
-                "separator",
-                "positive electrode",
-                "negative particle",
-                "positive particle",
-            ]),
+            set(
+                [
+                    "negative electrode",
+                    "separator",
+                    "positive electrode",
+                    "negative particle",
+                    "positive particle",
+                ]
+            ),
         )
         geometry = pybamm.Geometry("3D macro", "1D micro")
         self.assertEqual(
             set(geometry.keys()),
-            set([
-                "negative electrode",
-                "separator",
-                "positive electrode",
-                "negative particle",
-                "positive particle",
-            ]),
+            set(
+                [
+                    "negative electrode",
+                    "separator",
+                    "positive electrode",
+                    "negative particle",
+                    "positive particle",
+                ]
+            ),
         )
 
 

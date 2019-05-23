@@ -142,6 +142,10 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
             self.default_solver = pybamm.ScikitsOdeSolver()
         else:
             self.default_solver = pybamm.ScikitsDaeSolver()
+        if self.bc_options["dimensionality"] == 1:
+            self.default_geometry = pybamm.Geometry("1D macro")
+        elif self.bc_options["dimensionality"] == 2:
+            self.default_geometry = pybamm.Geometry("1+1D macro")
 
     def set_boundary_conditions(self, bc_variables=None):
         """Get boundary conditions"""
@@ -158,10 +162,3 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
                 delta_phi_n, delta_phi_p
             )
             self.update(current_collector_model)
-
-    @property
-    def default_geometry(self):
-        if self.bc_options["dimensionality"] == 1:
-            return pybamm.Geometry("1D macro")
-        elif self.bc_options["dimensionality"] == 2:
-            return pybamm.Geometry("1+1D macro")
