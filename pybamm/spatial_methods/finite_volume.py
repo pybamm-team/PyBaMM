@@ -74,7 +74,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # note in 1D spherical grad and normal grad are the same
         gradient_matrix = self.gradient_matrix(domain)
 
-        return gradient_matrix @ discretised_symbol
+        out = gradient_matrix @ discretised_symbol
+        self.test_shape(out)
+        return out
 
     def gradient_matrix(self, domain):
         """
@@ -137,6 +139,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             out = divergence_matrix @ discretised_symbol
 
+        self.test_shape(out)
         return out
 
     def divergence_matrix(self, domain):
@@ -188,6 +191,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             out = integration_vector @ discretised_symbol
         out.domain = []
+
+        self.test_shape(out)
         return out
 
     def definite_integral_vector(self, domain):
@@ -240,6 +245,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         out.domain = domain
 
+        self.test_shape(out)
         return out
 
     def indefinite_integral_matrix(self, domain):
@@ -436,6 +442,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             boundary_value.domain = []
 
+        self.test_shape(boundary_value)
         return boundary_value
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
@@ -475,7 +482,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif right_has_grad_not_div and not left_has_grad_not_div:
             disc_left = self.compute_diffusivity(disc_left)
         # Return new binary operator with appropriate class
-        return bin_op.__class__(disc_left, disc_right)
+        out = bin_op.__class__(disc_left, disc_right)
+        self.test_shape(out)
+        return out
 
     def compute_diffusivity(self, discretised_symbol):
         """
@@ -528,6 +537,9 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # If discretised_symbol evaluates to number there is no need to average
         if discretised_symbol.evaluates_to_number():
-            return discretised_symbol
+            out = discretised_symbol
         else:
-            return arithmetic_mean(discretised_symbol)
+            out = arithmetic_mean(discretised_symbol)
+
+        self.test_shape(out)
+        return out
