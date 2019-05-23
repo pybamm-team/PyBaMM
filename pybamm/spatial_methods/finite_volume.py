@@ -310,45 +310,20 @@ class FiniteVolume(pybamm.SpatialMethod):
             Matrix to create ghost nodes
 
         """
-        if isinstance(discretised_symbol, pybamm.StateVector):
-            y_slice_start = discretised_symbol.y_slice.start
-            y_slice_stop = discretised_symbol.y_slice.stop
-        elif isinstance(discretised_symbol, pybamm.Concatenation):
-            y_slice_start = discretised_symbol.children[0].y_slice.start
-            y_slice_stop = discretised_symbol.children[-1].y_slice.stop
-        else:
-            raise TypeError(
-                """
-                discretised_symbol must be a StateVector or Concatenation, not '{}'
-                """.format(
-                    type(discretised_symbol)
-                )
-            )
-        y = np.arange(y_slice_start, y_slice_stop)
-
-        # reshape y_slices into more helpful form
+        # get relevant grid points
         submesh_list = self.mesh.combine_submeshes(*symbol.domain)
         if isinstance(submesh_list[0].npts, list):
             NotImplementedError("Can only take in 1D primary directions")
 
         n = submesh_list[0].npts
         sec_pts = len(submesh_list)
-        size = [sec_pts, n]
-        y = np.reshape(y, size)
-        y_left = y[:, 0]
-        y_right = y[:, -1]
 
-        new_discretised_symbol = pybamm.Vector(np.array([]))  # starts empty
+        bcs_vector = pybamm.Vector(np.array([]))  # starts empty
 
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
 
         for i in range(sec_pts):
-            y_slice_start = y_left[i]
-            y_slice_stop = y_right[i]
-
-            sub_disc_symbol = pybamm.StateVector(slice(y_slice_start, y_slice_stop + 1))
-
             if lbc_value.evaluates_to_number():
                 lbc_i = lbc_value
             else:
@@ -381,15 +356,12 @@ class FiniteVolume(pybamm.SpatialMethod):
                     )
                 )
             # concatenate
-            concatenated_sub_disc_symbol = pybamm.NumpyConcatenation(
-                left_ghost_constant, sub_disc_symbol, right_ghost_constant
+            bcs_vector = pybamm.NumpyConcatenation(
+                bcs_vector,
+                left_ghost_constant,
+                pybamm.Vector(np.zeros(n)),
+                right_ghost_constant,
             )
-            new_discretised_symbol = pybamm.NumpyConcatenation(
-                new_discretised_symbol, concatenated_sub_disc_symbol
-            )
-
-        # Keep same domain
-        new_discretised_symbol.domain = discretised_symbol.domain
 
         # Make matrix to calculate ghost nodes
         if lbc_type == "Dirichlet":
@@ -402,14 +374,13 @@ class FiniteVolume(pybamm.SpatialMethod):
             right_factor = 1
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
         # (row[i], col[i]) for each index of data.
-        ghost_cell_matrix = coo_matrix(
-            ([left_factor, right_factor], ([0, n + 1], [1, n])), shape=(n + 2, n + 2)
-        )
-        sub_matrix = eye(n + 2) + ghost_cell_matrix
+        left_ghost_vector = coo_matrix(([left_factor], ([0], [0])), shape=(1, n))
+        right_ghost_vector = coo_matrix(([right_factor], ([0], [n - 1])), shape=(1, n))
+        sub_matrix = vstack([left_ghost_vector, eye(n), right_ghost_vector])
 
         matrix = kron(eye(sec_pts), sub_matrix)
 
-        return pybamm.Matrix(matrix) @ new_discretised_symbol
+        return pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
     def boundary_value_or_flux(self, symbol, discretised_child):
         """
