@@ -105,6 +105,7 @@ from .expression_tree.exceptions import (
     DomainError,
     ModelError,
     SolverError,
+    ShapeError,
     ModelWarning,
 )
 from .expression_tree.simplify import (

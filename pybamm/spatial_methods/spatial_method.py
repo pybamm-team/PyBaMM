@@ -257,3 +257,29 @@ class SpatialMethod:
 
         """
         return bin_op.__class__(disc_left, disc_right)
+
+    def test_shape(self, symbol):
+        """
+        Check that the discretised symbol has a pybamm `shape`, i.e. can be evaluated
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol to be tested
+
+        Raises
+        ------
+        pybamm.ShapeError
+            If the shape of the object cannot be found
+        """
+        try:
+            symbol.shape
+        except ValueError as e:
+            raise pybamm.ShapeError(
+                """
+                Cannot evaluate the discretised symbol to find its shape
+                (original error: {})
+                """.format(
+                    e
+                )
+            )
