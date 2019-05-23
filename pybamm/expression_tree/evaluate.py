@@ -10,7 +10,7 @@ import copy
 
 
 def id_to_python_variable(symbol_id):
-    var_format = "var_{:05d}"
+    var_format = "self.var_{:05d}"
     return var_format.format(symbol_id).replace("-", "m")
 
 
@@ -43,7 +43,11 @@ def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=Ordere
     elif isinstance(symbol, pybamm.UnaryOperator):
         find_symbols(symbol.child, constant_symbols, variable_symbols)
         child_var = id_to_python_variable(symbol.child.id)
-        symbol_str = symbol.name + child_var
+        if isinstance(symbol, pybamm.Function):
+            constant_symbols[symbol.id] = symbol.func
+            symbol_str = "self.{}({})".format(symbol.func.__name__,child_var)
+        else:
+            symbol_str = symbol.name + child_var
 
     elif isinstance(symbol, pybamm.Concatenation):
         for child in symbol.children:
@@ -74,9 +78,10 @@ def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=Ordere
         symbol_str = symbol.name
 
     elif isinstance(symbol, pybamm.Scalar):
-        symbol_str = str(symbol.value)
+        value = symbol.value
 
     elif isinstance(symbol, pybamm.Array):
+        value = symbol.entries
         if scipy.sparse.issparse(symbol.entries):
             if isinstance(symbol.entries, scipy.sparse.csr_matrix):
                 data_str = "".join([
@@ -172,15 +177,9 @@ def to_python(symbol):
     constant_lines = [
         line_format.format(id_to_python_variable(symbol_id), symbol_line)
         for symbol_id, symbol_line in constant_symbols.items()
-    ] + [
-        "self._{0} = {0}".format(id_to_python_variable(symbol_id))
-        for symbol_id, _ in constant_symbols.items()
     ]
 
     variable_lines = [
-        "{0} = self._{0}".format(id_to_python_variable(symbol_id))
-        for symbol_id, _ in constant_symbols.items()
-    ] + [
         line_format.format(id_to_python_variable(symbol_id), symbol_line)
         for symbol_id, symbol_line in variable_symbols.items()
     ]
