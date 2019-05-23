@@ -10,6 +10,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         model = pybamm.lead_acid.LOQS()
         model.check_well_posedness()
 
+    def test_default_geometry(self):
+        model = pybamm.lead_acid.LOQS()
+        self.assertTrue(isinstance(model.default_geometry, pybamm.Geometry))
+        self.assertTrue("negative particle" not in model.default_geometry)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
