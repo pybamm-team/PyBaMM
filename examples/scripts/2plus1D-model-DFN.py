@@ -23,7 +23,7 @@ param.update({"Local potential difference": OCV_init})  # add parameter for loca
 cc_model = pybamm.current_collector.Ohm(set_of_parameters, param)
 
 # create current collector mesh
-cc_model.create_mesh(Ny=32, Nz=32, ny=3, nz=3, degree=1)
+cc_model.create_mesh(Ny=32, Nz=32, ny=2, nz=2, degree=1)
 
 # assemble finite element matrices for the current collector model
 cc_model.assemble()
@@ -75,7 +75,7 @@ current = param.process_symbol(
 ).evaluate(0, 0) * np.ones(cc_model.n_dofs)
 cc_model.update_current(current)
 
-cc_model.solve()
+cc_model.solve(t)
 
 # cc_model.get_initial_condition()
 
@@ -105,7 +105,7 @@ while t < t_final:
             raise pybamm.SolverError("maximum number of iterations exceeded")
 
         # update voltage
-        cc_model.solve()
+        cc_model.solve(t)
         V = cc_model.get_voltage(coarse=True)
 
         # compute new through-cell current

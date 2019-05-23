@@ -1,6 +1,7 @@
 #
 # Equation classes for the current collector
 #
+# NOTE: still some code left over from iterative implementation
 import pybamm
 
 import numpy as np
@@ -14,7 +15,7 @@ if dolfin_spec is not None:
 
 class Ohm(pybamm.SubModel):
     """
-    Ohm's law + conservation of current for the current in the current collector.
+    Ohm's law + conservation of current for the current in the current collectors.
 
     Parameters
     ----------
@@ -27,6 +28,57 @@ class Ohm(pybamm.SubModel):
     def __init__(self, set_of_parameters, parameter_values):
         super().__init__(set_of_parameters)
         self.parameter_values = parameter_values
+
+    def set_algebraic_system(self, v_local, i_local):
+        """
+        PDE system for current in the current collectors, using Ohm's law
+
+        Parameters
+        ----------
+        v_local : :class:`pybamm.Variable`
+            Local cell voltage
+        i_local : :class:`pybamm.Variable`
+            Local through-cell current density
+
+        """
+        param = self.set_of_parameters
+
+        # algebraic model only
+        self.rhs = {}
+
+        # create finite element mesh
+        self.create_mesh()
+
+        # assemble finite element matrices using fenics
+        # TO DO: We may want to have fewer 1D models than mesh points. The method
+        # creates a coarse and fine mesh, but we currently don't use the coarse one.
+        # could have i_local_fine and i_local_coarse and relate with some kind of interpolation
+        # NOTE: to get vertex map to degrees of freedom use dolfin.vertex_to_dof_map(self.FunctionSpace)
+        # (may be needed for indexing in pybamm to get BCs). to see coordinates use
+        # self.mesh.coordinates()
+        self.assemble()
+        # maybe assemble should just return these, though maybe it is useful for them
+        # to be an attribute of the current collector model for plotting/calculating other things after the solve
+        mass = pybamm.Matrix(self.mass.array())
+        stiffness = pybamm.Matrix(self.stiffness.array())
+        trial_integral = pybamm.Matrix(self.trial_integral.array())
+
+        # algebraic equations
+        applied_current = param.current_with_time
+        # rhs ( -grad^2(v_local) = alpha*i_local + boundary conditions)
+        rhs = param.alpha * mass @  i_local + applied_current * (self.load_tab_n + self.load_tab_p)
+        self.algebraic = {
+            v_local: stiffness @ v_local + rhs,
+            i_local: trial_integral @ i_local - applied_current,
+        }
+        self.initial_conditions = {
+            v_local: param.U_p(param.c_p_init) - param.U_n(param.c_n_init),
+            i_local: applied_current / param.l_y / param.l_z
+        }
+        self.variables = {
+            "Local cell voltage": v_local,
+            "Local through-cell current density": i_local,
+        }
 
     def create_mesh(self, Ny=32, Nz=32, ny=3, nz=3, degree=1):
         """
@@ -52,6 +104,7 @@ class Ohm(pybamm.SubModel):
         self.Nz = Nz
         self.ny = ny
         self.nz = nz
+        # TO DO: check method for higher degree elements
         self.degree = degree
 
         # create mesh and function space
@@ -92,7 +145,7 @@ class Ohm(pybamm.SubModel):
 
         # boundary values
         dVdn_neg = param_vals.process_symbol(
-            -param.I_typ
+            -1
             / (
                 param.sigma_cn
                 * (param.L_x / param.L_z) ** 2
@@ -102,7 +155,7 @@ class Ohm(pybamm.SubModel):
         ).evaluate(0, 0)
         self.dVdn_negativetab = dolfin.Constant(dVdn_neg)
         dVdn_pos = param_vals.process_symbol(
-            -param.I_typ
+            -1
             / (
                 param.sigma_cp
                 * (param.L_x / param.L_z) ** 2
@@ -127,6 +180,11 @@ class Ohm(pybamm.SubModel):
         )
         self.stiffness = dolfin.assemble(K_form)
 
+        # create quadrature matrix (for evaluating conservation of current constraint)
+        # TO DO: think at the moment this submodel only works for degree 1 elements
+        # (nodes and dof coincide). check for other elements
+        self.trial_integral = dolfin.assemble(self.TrialFunction * dolfin.dx)
+
         # create load vectors for tabs
         neg_tab_form = self.dVdn_negativetab * self.TestFunction * self.ds(1)
         pos_tab_form = self.dVdn_positivetab * self.TestFunction * self.ds(2)
@@ -149,56 +207,7 @@ class Ohm(pybamm.SubModel):
         # placeholder for voltage difference
         self.voltage_difference = 1
 
-    def get_initial_condition(self):
-        """ Gets an initial guess for the voltage by solving the linearised,
-        leading-order SPM relation for t = 0."""
-
-        # evaluate constants
-        OCV = self.parameter_values.process_symbol(
-            self.set_of_parameters.U_p(self.set_of_parameters.c_p_init)
-            - self.set_of_parameters.U_n(self.set_of_parameters.c_n_init)
-        ).evaluate(0, 0)
-        OCV = dolfin.Constant(OCV)
-
-        j_0_n = self.parameter_values.process_symbol(
-            (1 / self.set_of_parameters.C_r_n)
-            * (
-                self.set_of_parameters.c_n_init ** (1 / 2)
-                * (1 - self.set_of_parameters.c_n_init) ** (1 / 2)
-            )
-        ).evaluate(0, 0)
-        j_0_p = self.parameter_values.process_symbol(
-            (self.set_of_parameters.gamma_p / self.set_of_parameters.C_r_p)
-            * (
-                self.set_of_parameters.c_p_init ** (1 / 2)
-                * (1 - self.set_of_parameters.c_p_init) ** (1 / 2)
-            )
-        ).evaluate(0, 0)
-        alpha = self.parameter_values.process_symbol(
-            self.set_of_parameters.alpha
-        ).evaluate(0, 0)
-        l_n = self.parameter_values.process_symbol(self.set_of_parameters.l_n).evaluate(0, 0)
-        l_p = self.parameter_values.process_symbol(self.set_of_parameters.l_p).evaluate(0, 0)
-
-        coefficient = dolfin.Constant((alpha / 2) * (1 / (j_0_n * l_n) + 1 / (j_0_p * l_p)))
-
-        # create form for leading-order SPM relation
-        F = (
-            (
-                dolfin.inner(dolfin.grad(self.voltage), dolfin.grad(self.TestFunction))
-                + coefficient
-                * (self.voltage - OCV)
-                * self.TestFunction
-            )
-            * dolfin.dx
-            - self.dVdn_negativetab * self.TestFunction * self.ds(1)
-            - self.dVdn_positivetab * self.TestFunction * self.ds(2)
-        )
-
-        # solve
-        dolfin.solve(F == 0, self.voltage)
-
-    def solve(self):
+    def solve(self, t):
         "Solve the linear system K*V = b(I)"
         # TO DISCUSS: at the moment we have pure Neumann BCs so need to adjust the solve
         # We are solving the problem iteratively i.e. solve K*V = b(I) then find
@@ -215,9 +224,11 @@ class Ohm(pybamm.SubModel):
         alpha = self.parameter_values.process_symbol(
             self.set_of_parameters.alpha
         ).evaluate(0, 0)
+        applied_current = self.parameter_values.process_symbol(
+            self.set_of_parameters.current_with_time
+        ).evaluate(t, 0)
         self.load.vector()[:] = (
-            self.load_tab_n
-            + self.load_tab_p
+            applied_current * (self.load_tab_n + self.load_tab_p)
             + np.dot(
                 self.mass.array(),
                 alpha * self.current.vector()[:] + self.voltage_prev.vector()[:],
