@@ -27,8 +27,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
     def __init__(self, use_capacitance=True, bc_options=None):
         super().__init__()
         self._use_capacitance = use_capacitance
-        if bc_options is None:
-            bc_options = self.default_bc_options
+        self.bc_options = bc_options or self.default_bc_options
 
         "-----------------------------------------------------------------------------"
         "Parameters"
@@ -46,7 +45,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Boundary conditions"
         bc_variables = {"delta_phi_n": delta_phi_n, "delta_phi_p": delta_phi_p}
-        self.set_boundary_conditions(bc_options, bc_variables)
+        self.set_boundary_conditions(bc_variables)
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -144,10 +143,10 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         else:
             self.default_solver = pybamm.ScikitsDaeSolver()
 
-    def set_boundary_conditions(self, bc_options, bc_variables=None):
+    def set_boundary_conditions(self, bc_variables=None):
         """Get boundary conditions"""
         # TODO: edit to allow constant-current and constant-power control
-        dimensionality = bc_options["dimensionality"]
+        dimensionality = self.bc_options["dimensionality"]
         if dimensionality == 1:
             current_bc = self.param.current_with_time
             self.variables.update({"Current collector current": current_bc})
@@ -159,3 +158,10 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
                 delta_phi_n, delta_phi_p
             )
             self.update(current_collector_model)
+
+    @property
+    def default_geometry(self):
+        if self.bc_options["dimensionality"] == 1:
+            return pybamm.Geometry("1D macro")
+        elif self.bc_options["dimensionality"] == 2:
+            return pybamm.Geometry("1+1D macro")
