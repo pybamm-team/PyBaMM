@@ -10,6 +10,9 @@ import scipy.sparse
 import os
 from collections import OrderedDict
 
+def test_function(arg):
+    return arg + arg
+
 
 class TestEvaluate(unittest.TestCase):
     def test_find_symbols(self):
@@ -81,6 +84,21 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.values())[3],
                          '{} * {}'.format(var_a, var_child))
 
+        # test function
+        constant_symbols = OrderedDict()
+        variable_symbols = OrderedDict()
+        expr = pybamm.Function(test_function, a)
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        self.assertEqual(list(constant_symbols.keys())[0], expr.id)
+        self.assertEqual(list(constant_symbols.values())[0], test_function)
+        self.assertEqual(list(variable_symbols.keys())[0], a.id)
+        self.assertEqual(list(variable_symbols.keys())[1], expr.id)
+        self.assertEqual(list(variable_symbols.values())[0], 'y[0:1]')
+        var_funct = pybamm.id_to_python_variable(expr.id, True)
+        self.assertEqual(list(variable_symbols.values())[1], '{}({})'.format(var_funct,
+            var_a))
+
+
         # test matrix
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
@@ -88,7 +106,8 @@ class TestEvaluate(unittest.TestCase):
         pybamm.find_symbols(A, constant_symbols, variable_symbols)
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(list(constant_symbols.keys())[0], A.id)
-        self.assertEqual(list(constant_symbols.values())[0], 'np.array([[1,2],[3,4]])')
+        np.testing.assert_allclose(list(constant_symbols.values())[0],
+                np.array([[1,2],[3,4]]))
 
         # test sparse matrix
         constant_symbols = OrderedDict()
@@ -97,9 +116,7 @@ class TestEvaluate(unittest.TestCase):
         pybamm.find_symbols(A, constant_symbols, variable_symbols)
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(list(constant_symbols.keys())[0], A.id)
-        self.assertEqual(list(constant_symbols.values())[0],
-                         'scipy.sparse.csr_matrix((np.array([2,4]), np.array([1,1]), np.array([0,1,2])),shape=(2,2))'
-                         )
+        np.testing.assert_allclose(list(constant_symbols.values())[0].toarray(),A.entries.toarray())
 
         # test numpy concatentate
         constant_symbols = OrderedDict()
@@ -146,43 +163,53 @@ class TestEvaluate(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a = pybamm.Vector(2*np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
-        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
+        a_pts = mesh[a_dom[0]][0].npts
+        b_pts = mesh[b_dom[0]][0].npts
+        a = pybamm.StateVector(slice(0,a_pts), domain=a_dom)
+        b = pybamm.StateVector(slice(a_pts,a_pts+b_pts), domain=b_dom)
+        y = np.empty((a_pts+b_pts,1))
+        for i in range(len(y)):
+            y[i] = i
 
         # concatenate them the "wrong" way round to check they get reordered correctly
         expr = pybamm.DomainConcatenation([b, a], mesh)
 
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
-        pybamm.find_symbols(expr, constant_symbols)
-        self.assertEqual(list(constant_symbols.keys())[0], b.id)
-        self.assertEqual(list(constant_symbols.keys())[1], a.id)
-        self.assertEqual(list(constant_symbols.keys())[2], expr.id)
+        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+        self.assertEqual(list(variable_symbols.keys())[0], b.id)
+        self.assertEqual(list(variable_symbols.keys())[1], a.id)
+        self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
-        a_pts = mesh[a_dom[0]][0].npts
-        b_pts = mesh[b_dom[0]][0].npts
-        self.assertEqual(len(variable_symbols), 0)
-        self.assertEqual(list(constant_symbols.values())[2],
+        self.assertEqual(len(constant_symbols), 0)
+        self.assertEqual(list(variable_symbols.values())[2],
                          "np.concatenate(({}[0:{}],{}[0:{}]))".format(
                              var_a, a_pts, var_b, b_pts)
                          )
 
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate()
-        np.testing.assert_allclose(result, expr.evaluate())
+        result = evaluator.evaluate(y=y)
+        np.testing.assert_allclose(result, expr.evaluate(y=y))
 
         # check the reordering in case a child vector has to be split up
         a_dom = ["separator"]
         b_dom = ["negative electrode", "positive electrode"]
-        a = pybamm.Vector(2*np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
-        b = pybamm.Vector(
-            np.concatenate(
-                [np.full(mesh[b_dom[0]][0].npts, 1), np.full(mesh[b_dom[1]][0].npts, 3)]
-            )[:, np.newaxis],
+        b0_pts = mesh[b_dom[0]][0].npts
+        a0_pts = mesh[a_dom[0]][0].npts
+        b1_pts = mesh[b_dom[1]][0].npts
+
+        a = pybamm.StateVector(slice(0,a0_pts), domain=a_dom)
+        b = pybamm.StateVector(slice(a0_pts, a0_pts+b0_pts+b1_pts),
             domain=b_dom,
         )
+
+        y = np.empty((a0_pts+b0_pts+b1_pts,1))
+        for i in range(len(y)):
+            y[i] = i
+
+
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
         expr = pybamm.DomainConcatenation([a, b], mesh)
@@ -190,22 +217,19 @@ class TestEvaluate(unittest.TestCase):
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
 
-        b0_pts = mesh[b_dom[0]][0].npts
-        a0_pts = mesh[a_dom[0]][0].npts
-        b1_pts = mesh[b_dom[1]][0].npts
 
         b0_str = "{}[0:{}]".format(var_b, b0_pts)
         a0_str = "{}[0:{}]".format(var_a, a0_pts)
         b1_str = "{}[{}:{}]".format(var_b, b0_pts, b0_pts+b1_pts)
 
-        self.assertEqual(len(variable_symbols), 0)
-        self.assertEqual(list(constant_symbols.values())[2],
+        self.assertEqual(len(constant_symbols), 0)
+        self.assertEqual(list(variable_symbols.values())[2],
                          "np.concatenate(({},{},{}))".format(b0_str, a0_str, b1_str)
                          )
 
         evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate()
-        np.testing.assert_allclose(result, expr.evaluate())
+        result = evaluator.evaluate(y=y)
+        np.testing.assert_allclose(result, expr.evaluate(y=y))
 
     def test_to_python(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -235,6 +259,12 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(result, 6)
         result = evaluator.evaluate(t=None, y=np.array([[1], [3]]))
         self.assertEqual(result, 3)
+
+        # test function(a*b)
+        expr = pybamm.Function(test_function, a * b)
+        evaluator = pybamm.EvaluatorPython(expr)
+        result = evaluator.evaluate(t=None, y=np.array([[2], [3]]))
+        self.assertEqual(result, 12)
 
         # test a constant expression
         expr = pybamm.Scalar(2) * pybamm.Scalar(3)

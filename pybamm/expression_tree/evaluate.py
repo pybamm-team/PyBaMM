@@ -9,8 +9,11 @@ import scipy.sparse
 import copy
 
 
-def id_to_python_variable(symbol_id):
-    var_format = "self.var_{:05d}"
+def id_to_python_variable(symbol_id, constant=False):
+    if constant:
+        var_format = "self.const_{:05d}"
+    else:
+        var_format = "self.var_{:05d}"
     return var_format.format(symbol_id).replace("-", "m")
 
 
@@ -31,28 +34,29 @@ def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=Ordere
     """
     pybamm.logger.debug("Convert to python: {!s}".format(symbol))
 
+    if symbol.is_constant():
+        constant_symbols[symbol.id] = symbol.evaluate()
+        return
+
+    # process children
+    for child in symbol.children:
+        find_symbols(child, constant_symbols, variable_symbols)
+    children_vars = [id_to_python_variable(child.id, child.is_constant())
+                         for child in symbol.children]
+
     if isinstance(symbol, pybamm.BinaryOperator):
         left, right = symbol.children
-        # process children
-        find_symbols(left, constant_symbols, variable_symbols)
-        find_symbols(right, constant_symbols, variable_symbols)
-        left_var = id_to_python_variable(left.id)
-        right_var = id_to_python_variable(right.id)
-        symbol_str = left_var + ' ' + symbol.name + ' ' + right_var
+        symbol_str = children_vars[0] + ' ' + symbol.name + ' ' + children_vars[1]
 
     elif isinstance(symbol, pybamm.UnaryOperator):
-        find_symbols(symbol.child, constant_symbols, variable_symbols)
-        child_var = id_to_python_variable(symbol.child.id)
         if isinstance(symbol, pybamm.Function):
             constant_symbols[symbol.id] = symbol.func
-            symbol_str = "self.{}({})".format(symbol.func.__name__,child_var)
+            funct_var = id_to_python_variable(symbol.id, True)
+            symbol_str = "{}({})".format(funct_var, children_vars[0])
         else:
-            symbol_str = symbol.name + child_var
+            symbol_str = symbol.name + children_vars[0]
 
     elif isinstance(symbol, pybamm.Concatenation):
-        for child in symbol.children:
-            find_symbols(child, constant_symbols, variable_symbols)
-        children_vars = [id_to_python_variable(child.id) for child in symbol.children]
 
         if isinstance(symbol, pybamm.NumpyConcatenation):
             symbol_str = 'np.concatenate(({}))'.format(",".join(children_vars))
@@ -77,67 +81,6 @@ def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=Ordere
     elif isinstance(symbol, pybamm.StateVector):
         symbol_str = symbol.name
 
-    elif isinstance(symbol, pybamm.Scalar):
-        value = symbol.value
-
-    elif isinstance(symbol, pybamm.Array):
-        value = symbol.entries
-        if scipy.sparse.issparse(symbol.entries):
-            if isinstance(symbol.entries, scipy.sparse.csr_matrix):
-                data_str = "".join([
-                    "np.array([",
-                    ",".join([str(e) for e in symbol.entries.data]),
-                    "])"
-                ])
-                indices_str = "".join([
-                    "np.array([",
-                    ",".join([str(e) for e in symbol.entries.indices]),
-                    "])"
-                ])
-                indptr_str = "".join([
-                    "np.array([",
-                    ",".join([str(e) for e in symbol.entries.indptr]),
-                    "])"
-                ])
-
-                M = symbol.shape[0]
-                N = symbol.shape[1]
-                symbol_str = 'scipy.sparse.csr_matrix(({}, {}, {}),shape=({},{}))'\
-                    .format(data_str, indices_str, indptr_str, M, N)
-            elif isinstance(symbol.entries, scipy.sparse.coo_matrix):
-                data_str = "".join([
-                    "np.array([",
-                    ",".join([str(e) for e in symbol.entries.data]),
-                    "])"
-                ])
-                row_str = "".join([
-                    "np.array([",
-                    ",".join([str(e) for e in symbol.entries.row]),
-                    "])"
-                ])
-                col_str = "".join([
-                    "np.array([",
-                    ",".join([str(e) for e in symbol.entries.col]),
-                    "])"
-                ])
-
-                M = symbol.shape[0]
-                N = symbol.shape[1]
-                symbol_str = 'scipy.sparse.coo_matrix(({}, ({}, {})),shape=({},{}))'\
-                    .format(data_str, row_str, col_str, M, N)
-            else:
-                raise NotImplementedError
-        else:
-            rows = [
-                "[{}]".format(",".join([str(e) for e in row]))
-                for row in symbol.entries
-            ]
-            matrix = "[{}]".format(",".join(rows))
-            if symbol.entries.size == 0:
-                symbol_str = "np.array([[]]).reshape((0,1))"
-            else:
-                symbol_str = "np.array({})".format(matrix)
-
     elif isinstance(symbol, pybamm.Time):
         symbol_str = 't'
 
@@ -146,10 +89,7 @@ def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=Ordere
             "Not implemented for a symbol of type '{}'".format(type(symbol))
         )
 
-    if symbol.is_constant():
-        constant_symbols[symbol.id] = symbol_str
-    else:
-        variable_symbols[symbol.id] = symbol_str
+    variable_symbols[symbol.id] = symbol_str
 
 
 def to_python(symbol):
@@ -168,34 +108,32 @@ def to_python(symbol):
 
     """
 
-    constant_symbols = OrderedDict()
+    constant_values = OrderedDict()
     variable_symbols = OrderedDict()
-    find_symbols(symbol, constant_symbols, variable_symbols)
+    find_symbols(symbol, constant_values, variable_symbols)
 
     line_format = "{} = {}"
-
-    constant_lines = [
-        line_format.format(id_to_python_variable(symbol_id), symbol_line)
-        for symbol_id, symbol_line in constant_symbols.items()
-    ]
-
     variable_lines = [
-        line_format.format(id_to_python_variable(symbol_id), symbol_line)
+        line_format.format(
+            id_to_python_variable(symbol_id, False),
+            symbol_line
+        )
         for symbol_id, symbol_line in variable_symbols.items()
     ]
 
-    return "\n".join(constant_lines), "\n".join(variable_lines)
+    return constant_values, "\n".join(variable_lines)
 
 
 class EvaluatorPython:
     def __init__(self, symbol):
-        self._constant_function, self._variable_function = pybamm.to_python(symbol)
-        self._result_var = id_to_python_variable(symbol.id)
+        constants, self._variable_function = pybamm.to_python(symbol)
+        for symbol_id, value in constants.items():
+            setattr(self, id_to_python_variable(symbol_id, True).replace("self.",""), value)
+        self._result_var = id_to_python_variable(symbol.id, symbol.is_constant())
         self._variable_compiled = compile(
             self._variable_function, self._result_var, 'exec')
         self._return_compiled = compile(
             self._result_var, 'return'+self._result_var, 'eval')
-        exec(self._constant_function)
 
     def evaluate(self, t=None, y=None):
         exec(self._variable_compiled)
