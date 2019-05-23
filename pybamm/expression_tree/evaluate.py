@@ -53,6 +53,8 @@ def find_symbols(symbol, constant_symbols=OrderedDict(), variable_symbols=Ordere
             constant_symbols[symbol.id] = symbol.func
             funct_var = id_to_python_variable(symbol.id, True)
             symbol_str = "{}({})".format(funct_var, children_vars[0])
+        elif isinstance(symbol, pybamm.Index):
+            symbol_str = "{}[{}]".format(children_vars[0],symbol.index)
         else:
             symbol_str = symbol.name + children_vars[0]
 

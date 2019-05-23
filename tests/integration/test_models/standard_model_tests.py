@@ -155,7 +155,6 @@ class OptimisationsTest(object):
                 eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
             elif to_python:
                 evaluator = pybamm.EvaluatorPython(eqn)
-                from IPython import embed; embed(); import ipdb; ipdb.set_trace()
                 eqn_eval = evaluator.evaluate(0, y)
             else:
                 eqn_eval = eqn.evaluate(0, y)

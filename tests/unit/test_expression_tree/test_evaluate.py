@@ -10,6 +10,7 @@ import scipy.sparse
 import os
 from collections import OrderedDict
 
+
 def test_function(arg):
     return arg + arg
 
@@ -96,8 +97,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.values())[0], 'y[0:1]')
         var_funct = pybamm.id_to_python_variable(expr.id, True)
         self.assertEqual(list(variable_symbols.values())[1], '{}({})'.format(var_funct,
-            var_a))
-
+                                                                             var_a))
 
         # test matrix
         constant_symbols = OrderedDict()
@@ -107,7 +107,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(list(constant_symbols.keys())[0], A.id)
         np.testing.assert_allclose(list(constant_symbols.values())[0],
-                np.array([[1,2],[3,4]]))
+                                   np.array([[1, 2], [3, 4]]))
 
         # test sparse matrix
         constant_symbols = OrderedDict()
@@ -116,7 +116,8 @@ class TestEvaluate(unittest.TestCase):
         pybamm.find_symbols(A, constant_symbols, variable_symbols)
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(list(constant_symbols.keys())[0], A.id)
-        np.testing.assert_allclose(list(constant_symbols.values())[0].toarray(),A.entries.toarray())
+        np.testing.assert_allclose(list(constant_symbols.values())[
+                                   0].toarray(), A.entries.toarray())
 
         # test numpy concatentate
         constant_symbols = OrderedDict()
@@ -165,9 +166,9 @@ class TestEvaluate(unittest.TestCase):
         b_dom = ["positive electrode"]
         a_pts = mesh[a_dom[0]][0].npts
         b_pts = mesh[b_dom[0]][0].npts
-        a = pybamm.StateVector(slice(0,a_pts), domain=a_dom)
-        b = pybamm.StateVector(slice(a_pts,a_pts+b_pts), domain=b_dom)
-        y = np.empty((a_pts+b_pts,1))
+        a = pybamm.StateVector(slice(0, a_pts), domain=a_dom)
+        b = pybamm.StateVector(slice(a_pts, a_pts+b_pts), domain=b_dom)
+        y = np.empty((a_pts+b_pts, 1))
         for i in range(len(y)):
             y[i] = i
 
@@ -200,15 +201,14 @@ class TestEvaluate(unittest.TestCase):
         a0_pts = mesh[a_dom[0]][0].npts
         b1_pts = mesh[b_dom[1]][0].npts
 
-        a = pybamm.StateVector(slice(0,a0_pts), domain=a_dom)
+        a = pybamm.StateVector(slice(0, a0_pts), domain=a_dom)
         b = pybamm.StateVector(slice(a0_pts, a0_pts+b0_pts+b1_pts),
-            domain=b_dom,
-        )
+                               domain=b_dom,
+                               )
 
-        y = np.empty((a0_pts+b0_pts+b1_pts,1))
+        y = np.empty((a0_pts+b0_pts+b1_pts, 1))
         for i in range(len(y)):
             y[i] = i
-
 
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
@@ -216,7 +216,6 @@ class TestEvaluate(unittest.TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-
 
         b0_str = "{}[0:{}]".format(var_b, b0_pts)
         a0_str = "{}[0:{}]".format(var_a, a0_pts)
@@ -293,6 +292,13 @@ class TestEvaluate(unittest.TestCase):
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test something with an index
+        expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
+        evaluator = pybamm.EvaluatorPython(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            self.assertEqual(result, expr.evaluate(t=t, y=y))
 
         # test something with a sparse matrix multiplication
         A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
