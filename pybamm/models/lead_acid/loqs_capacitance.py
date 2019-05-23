@@ -138,22 +138,27 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Extra settings"
+        self.variables = {}
 
         # ODE model, don't use Jacobian
         self.use_jacobian = False
 
-        # Different solver depending on whether we solve ODEs or DAEs
-        if use_capacitance:
-            self.default_solver = pybamm.ScikitsOdeSolver()
-        else:
-            self.default_solver = pybamm.ScikitsDaeSolver()
         if self.bc_options["dimensionality"] == 1:
             self.default_geometry = pybamm.Geometry("1D macro")
         elif self.bc_options["dimensionality"] == 2:
             self.default_solver = pybamm.ScikitsDaeSolver()
             self.default_geometry = pybamm.Geometry("1+1D macro")
 
-        self.variables = {}
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        # Different solver depending on whether we solve ODEs or DAEs
+        if self._use_capacitance:
+            return pybamm.ScikitsOdeSolver()
+        else:
+            return pybamm.ScikitsDaeSolver()
 
     def set_boundary_conditions(self, bc_variables=None):
         """Get boundary conditions"""

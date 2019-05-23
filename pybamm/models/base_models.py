@@ -418,10 +418,6 @@ class StandardBatteryBaseModel(BaseModel):
             "positive particle": pybamm.FiniteVolume,
             "current collector": pybamm.FiniteVolume,
         }
-        try:
-            self.default_solver = pybamm.ScikitsOdeSolver()
-        except ImportError:
-            self.default_solver = pybamm.ScipySolver()
 
         # Standard output variables
         # Interfacial current
@@ -538,6 +534,18 @@ class StandardBatteryBaseModel(BaseModel):
                 "x_p [m]": var.x_p * L_x,
             }
         )
+
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        try:
+            default_solver = pybamm.ScikitsOdeSolver()
+        except ImportError:
+            default_solver = pybamm.ScipySolver()
+
+        return default_solver
 
     @property
     def default_bc_options(self):

@@ -113,5 +113,12 @@ class DFN(pybamm.LithiumIonBaseModel):
         "Defaults and Solver Conditions"
         # default geometry
         self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
+
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+
         # Default solver to DAE
-        self.default_solver = pybamm.ScikitsDaeSolver()
+        return pybamm.ScikitsDaeSolver()
