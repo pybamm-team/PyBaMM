@@ -87,7 +87,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
             raise NotImplementedError
 
     elif isinstance(symbol, pybamm.StateVector):
-        symbol_str = symbol.name
+        symbol_str = symbol.name + '.reshape(-1,1)'
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = 't'
@@ -144,6 +144,6 @@ class EvaluatorPython:
         self._return_compiled = compile(
             self._result_var, 'return' + self._result_var, 'eval')
 
-    def evaluate(self, t=None, y=None):
+    def evaluate(self, t=None, y=None, known_evals={}):
         exec(self._variable_compiled)
-        return eval(self._return_compiled)
+        return eval(self._return_compiled), known_evals

@@ -38,6 +38,30 @@ class OdeSolver(pybamm.BaseSolver):
             concatenated_rhs = concatenated_rhs.simplify()
             events = [event.simplify() for event in events]
 
+        y0 = model.concatenated_initial_conditions[:, 0]
+
+        if model.use_jacobian:
+            # Create Jacobian from simplified rhs
+            y = pybamm.StateVector(slice(0, np.size(y0)))
+            jac_rhs = concatenated_rhs.jac(y)
+
+            if model.use_simplify:
+                jac_rhs = jac_rhs.simplify()
+
+            if model.use_to_python:
+                jac_rhs = pybamm.EvaluatorPython(jac_rhs)
+
+            def jacobian(t, y):
+                return jac_rhs.evaluate(t, y, known_evals={})[0]
+
+        else:
+            jacobian = None
+
+        if model.use_to_python:
+            concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
+            #TODO: events arn't working yet
+            #events = [pybamm.EvaluatorPython(event) for event in events]
+
         def dydt(t, y):
             pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
             y = y[:, np.newaxis]
@@ -52,21 +76,6 @@ class OdeSolver(pybamm.BaseSolver):
             return eval_event
 
         events = [event_fun(event) for event in events]
-
-        y0 = model.concatenated_initial_conditions[:, 0]
-
-        if model.use_jacobian:
-            # Create Jacobian from simplified rhs
-            y = pybamm.StateVector(slice(0, np.size(y0)))
-            jac_rhs = concatenated_rhs.jac(y)
-            if model.use_simplify:
-                jac_rhs = jac_rhs.simplify()
-
-            def jacobian(t, y):
-                return jac_rhs.evaluate(t, y, known_evals={})[0]
-
-        else:
-            jacobian = None
 
         self.t, self.y = self.integrate(
             dydt,

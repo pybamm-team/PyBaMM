@@ -58,6 +58,7 @@ class BaseModel(object):
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
         self.use_simplify = True
+        self.use_to_python = True
 
         # Default behaviour: no capacitance in the model
         self._use_capacitance = False
