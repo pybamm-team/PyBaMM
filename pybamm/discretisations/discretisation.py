@@ -343,19 +343,13 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
 
-            if eqn.evaluates_to_number():
-                if not isinstance(eqn_key, str):
-                    if eqn_key.domain == []:
-                        eqn = pybamm.Broadcast(eqn, eqn_key.domain)
-                    else:
-                        eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(
-                            eqn, eqn_key.domain
-                        )
-
-            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            if eqn.evaluates_to_number() and not isinstance(eqn_key, str):
+                eqn = pybamm.Broadcast(eqn, eqn_key.domain)
 
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
+            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
