@@ -109,7 +109,7 @@ from .expression_tree.exceptions import (
     ModelWarning,
 )
 from .expression_tree.simplify import (
-    simplify,
+    Simplification,
     simplify_if_constant,
     simplify_addition_subtraction,
     simplify_multiplication_division,

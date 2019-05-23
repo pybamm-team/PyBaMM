@@ -108,6 +108,11 @@ class TestUnaryOperators(unittest.TestCase):
         with self.assertRaises(ValueError):
             pybamm.Integral(a, y)
 
+    def test_index(self):
+        vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
+        ind = pybamm.Index(vec, 3)
+        self.assertEqual(ind.evaluate(), 4)
+
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         y = np.array([5])

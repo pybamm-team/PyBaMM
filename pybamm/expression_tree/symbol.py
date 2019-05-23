@@ -467,9 +467,9 @@ class Symbol(anytree.NodeMixin):
         """Returns True if equation has a Divergence term."""
         return any(isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order())
 
-    def simplify(self):
-        """ Simplify the expression tree. See :meth:`pybamm.simplify()`. """
-        return pybamm.simplify(self)
+    def simplify(self, simplified_symbols=None):
+        """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
+        return pybamm.Simplification(simplified_symbols).simplify(self)
 
     def new_copy(self):
         """
