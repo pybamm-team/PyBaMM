@@ -10,6 +10,11 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe()
         model.check_well_posedness()
 
+    def test_default_geometry(self):
+        model = pybamm.lithium_ion.DFN()
+        self.assertTrue(isinstance(model.default_geometry, pybamm.Geometry))
+        self.assertTrue("negative particle" in model.default_geometry)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
