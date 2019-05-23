@@ -5,7 +5,7 @@ import autograd
 import numpy as np
 import pybamm
 from inspect import signature
-from scipy.sparse import csr_matrix, issparse
+from scipy.sparse import csr_matrix
 
 
 class UnaryOperator(pybamm.Symbol):
