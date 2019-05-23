@@ -75,12 +75,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         gradient_matrix = self.gradient_matrix(domain)
 
         out = gradient_matrix @ discretised_symbol
-        try:
-            self.test_shape(out)
-        except pybamm.ValueError:
-            import ipdb
-
-            ipdb.set_trace()
+        self.test_shape(out)
         return out
 
     def gradient_matrix(self, domain):
