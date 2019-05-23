@@ -20,7 +20,7 @@ class Vertical(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_leading_order_vertical_current(self, delta_phi_n, delta_phi_p):
+    def set_leading_order_vertical_current(self, delta_phi_n, delta_phi_p):
         param = self.set_of_parameters
 
         # Define conductivity
@@ -36,12 +36,11 @@ class Vertical(pybamm.SubModel):
         i_sep = pybamm.div(I_s_perp)
 
         # Set boundary conditions at top ("right") and bottom ("left")
-        i_cell = param.current_with_time
-        extra_bcs = {
+        i_cell = pybamm.current_with_time
+        self.boundary_conditions = {
             delta_phi_difference: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (i_cell / vert_cond, "Neumann"),
             }
         }
-
-        return i_sep, extra_bcs
+        self.variables = {"Current collector current": i_sep}
