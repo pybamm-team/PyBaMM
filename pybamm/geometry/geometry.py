@@ -92,10 +92,18 @@ class Geometry1p1DMacro(Geometry1DMacro):
         super().__init__()
 
         var = pybamm.standard_spatial_vars
+        # Add secondary domains to x-domains
         for geom in self.values():
             geom["secondary"] = {
                 var.z: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z}
             }
+        # Add primary current collector domain
+        self["current collector"] = {
+            "primary": {
+                var.z: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z}
+            }
+        }
+
         # update with custom geometry if non empty
         self.update(custom_geometry)
 

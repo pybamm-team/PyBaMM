@@ -37,9 +37,6 @@ class Discretisation(object):
         self.bcs = {}
         self._y_slices = {}
         self._discretised_symbols = {}
-        import ipdb
-
-        ipdb.set_trace()
 
     @property
     def mesh(self):
@@ -153,8 +150,13 @@ class Discretisation(object):
             # Otherwise, add up the size of all the domains in variable.domain
             else:
                 for dom in variable.domain:
-                    for submesh in self._spatial_methods[dom].mesh[dom]:
-                        end += submesh.npts_for_broadcast
+                    try:
+                        for submesh in self._spatial_methods[dom].mesh[dom]:
+                            end += submesh.npts_for_broadcast
+                    except KeyError:
+                        import ipdb
+
+                        ipdb.set_trace()
             y_slices[variable.id] = slice(start, end)
             start = end
         self._y_slices = y_slices

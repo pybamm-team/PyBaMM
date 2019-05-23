@@ -44,6 +44,13 @@ class Vertical(pybamm.SubModel):
             - (delta_phi_n_right - delta_phi_p_left)
         }
 
+        # Set initial conditions
+        delta_phi_n_right_init = param.U_n(param.c_e_init)
+        delta_phi_p_left_init = param.U_p(param.c_e_init)
+        self.initial_conditions = {
+            delta_phi_difference: (delta_phi_n_right_init - delta_phi_p_left_init)
+        }
+
         # Set boundary conditions at top ("right") and bottom ("left")
         i_cell = param.current_with_time
         self.boundary_conditions = {
