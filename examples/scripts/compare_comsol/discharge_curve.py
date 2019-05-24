@@ -1,7 +1,7 @@
 import pybamm
 import numpy as np
 import os
-import pandas as pd
+import pickle
 import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
@@ -49,12 +49,12 @@ plt.ylabel(r"$\vert V - V_{comsol} \vert$")
 
 for key, C_rate in C_rates.items():
 
-    # load the comsol voltage data
-    comsol = pd.read_csv(
-        "input/comsol_results/{}C/Voltage.csv".format(key), sep=",", header=None
+    # load the comsol results
+    comsol_variables = pickle.load(
+        open("input/comsol_results/comsol_{}C.pickle".format(key), "rb")
     )
-    comsol_time = comsol[0].values
-    comsol_voltage = comsol[1].values
+    comsol_time = comsol_variables["time"]
+    comsol_voltage = comsol_variables["voltage"]
 
     # update current density
     param["Typical current [A]"] = 24 * C_rate
