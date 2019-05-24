@@ -109,3 +109,7 @@ class Composite(pybamm.LeadAcidBaseModel):
             phi_s_n, phi_e, ocp_p, eta_r_p, eps_0
         )
         self.variables.update(electrode_vars)
+
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
+        self.events.append(voltage - param.voltage_low_cut)

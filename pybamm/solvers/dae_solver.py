@@ -59,9 +59,11 @@ class DaeSolver(pybamm.BaseSolver):
         concatenated_algebraic = model.concatenated_algebraic
         events = model.events
         if model.use_simplify:
-            concatenated_rhs = concatenated_rhs.simplify()
-            concatenated_algebraic = concatenated_algebraic.simplify()
-            events = [event.simplify() for event in events]
+            # set up simplification object, for re-use of dict
+            simp = pybamm.Simplification()
+            concatenated_rhs = simp.simplify(concatenated_rhs)
+            concatenated_algebraic = simp.simplify(concatenated_algebraic)
+            events = [simp.simplify(event) for event in events]
 
         def residuals(t, y, ydot):
             pybamm.logger.debug(
@@ -101,8 +103,8 @@ class DaeSolver(pybamm.BaseSolver):
             jac_rhs = concatenated_rhs.jac(y)
             jac_algebraic = concatenated_algebraic.jac(y)
             if model.use_simplify:
-                jac_rhs = jac_rhs.simplify()
-                jac_algebraic = jac_algebraic.simplify()
+                jac_rhs = simp.simplify(jac_rhs)
+                jac_algebraic = simp.simplify(jac_algebraic)
 
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
 
@@ -146,6 +148,8 @@ class DaeSolver(pybamm.BaseSolver):
             Initial conditions that are consistent with the algebraic equations (roots
             of the algebraic equations)
         """
+        pybamm.logger.info("Start calculating consistent initial conditions")
+
         # Split y0_guess into differential and algebraic
         len_rhs = rhs(0, y0_guess).shape[0]
         y0_diff, y0_alg_guess = np.split(y0_guess, [len_rhs])
@@ -153,7 +157,13 @@ class DaeSolver(pybamm.BaseSolver):
         def root_fun(y0_alg):
             "Evaluates algebraic using y0_diff (fixed) and y0_alg (changed by algo)"
             y0 = np.concatenate([y0_diff, y0_alg])
-            return algebraic(0, y0)
+            out = algebraic(0, y0)
+            pybamm.logger.debug(
+                "Evaluating algebraic equations at t=0, L2-norm is {}".format(
+                    np.linalg.norm(out)
+                )
+            )
+            return out
 
         # Find the values of y0_alg that are roots of the algebraic equations
         sol = optimize.root(
@@ -163,10 +173,16 @@ class DaeSolver(pybamm.BaseSolver):
         y0_consistent = np.concatenate([y0_diff, sol.x])
 
         if sol.success and np.all(sol.fun < self.root_tol):
+            pybamm.logger.info("Finish calculating consistent initial conditions")
             return y0_consistent
-        else:
+        elif not sol.success:
             raise pybamm.SolverError(
                 "Could not find consistent initial conditions: {}".format(sol.message)
+            )
+        else:
+            raise pybamm.SolverError(
+                "Could not find consistent initial conditions: "
+                + "solver terminated successfully, but solution above tolerance"
             )
 
     def integrate(

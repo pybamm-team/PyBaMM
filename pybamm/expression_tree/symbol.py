@@ -110,15 +110,10 @@ class Symbol(anytree.NodeMixin):
     @property
     def orphans(self):
         """
-        Returning deepcopies of the children, with parents removed to avoid corrupting
+        Returning new copies of the children, with parents removed to avoid corrupting
         the expression tree internal data
         """
-        orp = []
-        for child in self.children:
-            new_child = copy.deepcopy(child)
-            new_child.parent = None
-            orp.append(new_child)
-        return tuple(orp)
+        return tuple([child.new_copy() for child in self.children])
 
     def render(self):
         """print out a visual representation of the tree (this node and its
@@ -472,9 +467,21 @@ class Symbol(anytree.NodeMixin):
         """Returns True if equation has a Divergence term."""
         return any(isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order())
 
-    def simplify(self):
-        """ Simplify the expression tree. See :meth:`pybamm.simplify()`. """
-        return pybamm.simplify(self)
+    def simplify(self, simplified_symbols=None):
+        """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
+        return pybamm.Simplification(simplified_symbols).simplify(self)
+
+    def new_copy(self):
+        """
+        Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
+        copy.deepcopy(), which is slow.
+        """
+        raise NotImplementedError(
+            """method self.new_copy() not implemented
+               for symbol {!s} of type {}""".format(
+                self, type(self)
+            )
+        )
 
     @property
     def size(self):

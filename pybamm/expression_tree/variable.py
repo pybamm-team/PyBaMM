@@ -24,3 +24,7 @@ class Variable(pybamm.Symbol):
 
     def __init__(self, name, domain=[]):
         super().__init__(name, domain=domain)
+
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return Variable(self.name, self.domain)

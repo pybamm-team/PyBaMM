@@ -332,8 +332,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         self.variables = self.get_variables(phi_e, i_e, eta_e_av)
 
-        # Set default solver to DAE
-        self.default_solver = pybamm.ScikitsDaeSolver()
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        return pybamm.ScikitsDaeSolver()
 
 
 class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
@@ -355,11 +359,19 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     def __init__(self, set_of_parameters, use_capacitance=True):
         super().__init__(set_of_parameters)
         self._use_capacitance = use_capacitance
+
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
         # Different solver depending on whether we solve ODEs or DAEs
-        if use_capacitance:
-            self.default_solver = pybamm.ScikitsOdeSolver()
+        if self._use_capacitance:
+            default_solver = pybamm.ScikitsOdeSolver()
         else:
-            self.default_solver = pybamm.ScikitsDaeSolver()
+            default_solver = pybamm.ScikitsDaeSolver()
+
+        return default_solver
 
     def set_full_system(self, delta_phi, c_e, reactions, eps=None):
         param = self.set_of_parameters
@@ -484,9 +496,9 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         # import parameters and spatial variables
         param = self.set_of_parameters
         i_cell = param.current_with_time
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_s = pybamm.standard_spatial_vars.x_s
-        x_p = pybamm.standard_spatial_vars.x_p
+        # x_n = pybamm.standard_spatial_vars.x_n
+        # x_s = pybamm.standard_spatial_vars.x_s
+        # x_p = pybamm.standard_spatial_vars.x_p
 
         # Combine currents
         i_e_s = pybamm.Broadcast(i_cell, ["separator"])
@@ -498,32 +510,34 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         eps_n, eps_s, eps_p = eps.orphans
 
         # Compute potentials
-        phi_e_children = [None] * 3
-        for i, (c_e, eps, i_e, x) in enumerate(
-            [
-                (c_e_n, eps_n, i_e_n, x_n),
-                (c_e_s, eps_s, i_e_s, x_s),
-                (c_e_p, eps_p, i_e_p, x_p),
-            ]
-        ):
-            chi_e = param.chi(c_e)
-            kappa_eff = param.kappa_e(c_e) * (eps ** param.b)
-            d_phi_e__d_x = chi_e / c_e * pybamm.grad(c_e) - param.C_e * i_e / kappa_eff
-            phi_e_children[i] = pybamm.IndefiniteIntegral(d_phi_e__d_x, x)
-
-        # Adjust for boundary conditions and continuity
-        phi_e_n, phi_e_s, phi_e_p = phi_e_children
-        phi_e_n = phi_e_n + pybamm.boundary_value(-delta_phi_n - phi_e_n, "left")
-        phi_e_s = (
-            phi_e_s
-            - pybamm.boundary_value(phi_e_s, "left")
-            + pybamm.boundary_value(phi_e_n, "right")
-        )
-        phi_e_p = (
-            phi_e_p
-            - pybamm.boundary_value(phi_e_p, "left")
-            + pybamm.boundary_value(phi_e_s, "right")
-        )
+        phi_e_n = pybamm.Broadcast(0, "negative electrode")
+        phi_e_s = pybamm.Broadcast(0, "separator")
+        phi_e_p = pybamm.Broadcast(0, "positive electrode")
+        # for i, (c_e, eps, i_e, x) in enumerate(
+        #     [
+        #         (c_e_n, eps_n, i_e_n, x_n),
+        #         (c_e_s, eps_s, i_e_s, x_s),
+        #         (c_e_p, eps_p, i_e_p, x_p),
+        #     ]
+        # ):
+        #     chi_e = param.chi(c_e)
+        #     kappa_eff = param.kappa_e(c_e) * (eps ** param.b)
+        #     d_phi_e__d_x= chi_e / c_e * pybamm.grad(c_e) - param.C_e * i_e / kappa_eff
+        #     phi_e_children[i] = pybamm.IndefiniteIntegral(d_phi_e__d_x, x)
+        #
+        # # Adjust for boundary conditions and continuity
+        # phi_e_n, phi_e_s, phi_e_p = phi_e_children
+        # phi_e_n = phi_e_n + pybamm.boundary_value(-delta_phi_n - phi_e_n, "left")
+        # phi_e_s = (
+        #     phi_e_s
+        #     - pybamm.boundary_value(phi_e_s, "left")
+        #     + pybamm.boundary_value(phi_e_n, "right")
+        # )
+        # phi_e_p = (
+        #     phi_e_p
+        #     - pybamm.boundary_value(phi_e_p, "left")
+        #     + pybamm.boundary_value(phi_e_s, "right")
+        # )
 
         # Concatenate
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)

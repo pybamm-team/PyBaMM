@@ -105,10 +105,11 @@ from .expression_tree.exceptions import (
     DomainError,
     ModelError,
     SolverError,
+    ShapeError,
     ModelWarning,
 )
 from .expression_tree.simplify import (
-    simplify,
+    Simplification,
     simplify_if_constant,
     simplify_addition_subtraction,
     simplify_multiplication_division,
@@ -151,6 +152,7 @@ from .parameters import standard_current_functions
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
+from .parameters.print_parameters import print_parameters, print_evaluated_parameters
 
 #
 # Geometry

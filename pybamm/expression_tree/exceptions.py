@@ -23,6 +23,14 @@ class SolverError(Exception):
     pass
 
 
+class ShapeError(Exception):
+    """
+    Shape error: cannot evaluate an object to find its shape
+    """
+
+    pass
+
+
 class ModelWarning(UserWarning):
     """
     Model warning: the model does not contain all of the standard output variables
