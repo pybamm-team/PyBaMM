@@ -133,11 +133,15 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         )
         self.events.append(voltage - param.voltage_low_cut)
 
-        "-----------------------------------------------------------------------------"
-        "Extra settings"
-
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
         # Different solver depending on whether we solve ODEs or DAEs
-        if use_capacitance:
-            self.default_solver = pybamm.ScikitsOdeSolver()
+        if self._use_capacitance:
+            default_solver = pybamm.ScikitsOdeSolver()
         else:
-            self.default_solver = pybamm.ScikitsDaeSolver()
+            default_solver = pybamm.ScikitsDaeSolver()
+
+        return default_solver
