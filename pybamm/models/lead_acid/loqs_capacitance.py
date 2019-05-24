@@ -41,6 +41,10 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         delta_phi_n = pybamm.Variable("Negative electrode potential difference")
         delta_phi_p = pybamm.Variable("Positive electrode potential difference")
         epsilon = pybamm.standard_variables.eps_piecewise_constant
+        if self.bc_options["dimensionality"] == 2:
+            c_e.domain = ["current collector"]
+            delta_phi_n.domain = ["current collector"]
+            delta_phi_p.domain = ["current collector"]
 
         "-----------------------------------------------------------------------------"
         "Boundary conditions"
@@ -143,10 +147,12 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         # ODE model, don't use Jacobian
         self.use_jacobian = False
 
+    @property
+    def default_geometry(self):
         if self.bc_options["dimensionality"] == 1:
-            self.default_geometry = pybamm.Geometry("1D macro")
+            return pybamm.Geometry("1D macro")
         elif self.bc_options["dimensionality"] == 2:
-            self.default_geometry = pybamm.Geometry("1+1D macro")
+            return pybamm.Geometry("1+1D macro")
 
     @property
     def default_solver(self):
