@@ -956,6 +956,7 @@ class TestFiniteVolume(unittest.TestCase):
         grad_and_div = pybamm.div(pybamm.grad(phi))
         int_grad_phi = pybamm.IndefiniteIntegral(grad_and_div, x)
         disc.set_variable_slices([phi])
+        # Add boundary conditions so that the integrand has the right shape
         disc._bcs = {
             phi.id: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
