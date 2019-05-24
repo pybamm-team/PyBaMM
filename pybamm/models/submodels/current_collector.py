@@ -1,7 +1,6 @@
 #
 # Equation classes for the current collector
 #
-# NOTE: still some code left over from iterative implementation
 import pybamm
 
 import numpy as np
@@ -13,7 +12,7 @@ if dolfin_spec is not None:
     dolfin_spec.loader.exec_module(dolfin)
 
 
-class Ohm(pybamm.SubModel):
+class OhmTwoDimensional(pybamm.SubModel):
     """
     Ohm's law + conservation of current for the current in the current collectors.
 
@@ -42,11 +41,18 @@ class Ohm(pybamm.SubModel):
 
         """
         param = self.set_of_parameters
-
-        # algebraic model only
-        self.rhs = {}
+        v_local = pybamm.Variable("Local cell voltage", domain="current collector")
+        i_local = pybamm.Variable(
+            "Local through-cell current density", domain="current collector"
+        )
 
         # create finite element mesh
+        # Question: to create the mesh we need evaluated parameters. I wasn't sure
+        # how to just pass param here (instead of using parameter values), and only
+        # have the mesh being created during discretisation? Maybe I should make
+        # a new spatial method, and define pybamm.fenics_laplacian or something,
+        # which then calls this during discretisation, by which point the params
+        # have been procseed?
         self.create_mesh()
 
         # assemble finite element matrices using fenics
@@ -66,14 +72,16 @@ class Ohm(pybamm.SubModel):
         # algebraic equations
         applied_current = param.current_with_time
         # rhs ( -grad^2(v_local) = alpha*i_local + boundary conditions)
-        rhs = param.alpha * mass @  i_local + applied_current * (self.load_tab_n + self.load_tab_p)
+        rhs = param.alpha * mass @ i_local + applied_current * (
+            self.load_tab_n + self.load_tab_p
+        )
         self.algebraic = {
             v_local: stiffness @ v_local + rhs,
             i_local: trial_integral @ i_local - applied_current,
         }
         self.initial_conditions = {
             v_local: param.U_p(param.c_p_init) - param.U_n(param.c_n_init),
-            i_local: applied_current / param.l_y / param.l_z
+            i_local: applied_current / param.l_y / param.l_z,
         }
         self.variables = {
             "Local cell voltage": v_local,
@@ -105,6 +113,148 @@ class Ohm(pybamm.SubModel):
         self.ny = ny
         self.nz = nz
         # TO DO: check method for higher degree elements
+        self.degree = degree
+
+        # create mesh and function space
+        l_y = param_vals.process_symbol(param.l_y).evaluate(0, 0)
+        l_z = param_vals.process_symbol(param.l_z).evaluate(0, 0)
+        self.mesh = dolfin.RectangleMesh(
+            dolfin.Point(0, 0), dolfin.Point(l_y, l_z), self.Ny, self.Nz
+        )
+        self.mesh_coarse = dolfin.RectangleMesh(
+            dolfin.Point(0, 0), dolfin.Point(l_y, l_z), self.ny, self.nz
+        )
+        self.FunctionSpace = dolfin.FunctionSpace(self.mesh, "Lagrange", self.degree)
+        self.FunctionSpace_coarse = dolfin.FunctionSpace(
+            self.mesh_coarse, "Lagrange", self.degree
+        )
+
+        self.TrialFunction = dolfin.TrialFunction(self.FunctionSpace)
+        self.TestFunction = dolfin.TestFunction(self.FunctionSpace)
+
+        # create SubDomain classes for the tabs
+        negativetab = Tab()
+        negativetab.set_parameters(param, param_vals, "negative")
+        positivetab = Tab()
+        positivetab.set_parameters(param, param_vals, "positive")
+
+        # initialize mesh function for boundary domains
+        boundary_markers = dolfin.MeshFunction(
+            "size_t", self.mesh, self.mesh.topology().dim() - 1
+        )
+        boundary_markers.set_all(0)
+        negativetab.mark(boundary_markers, 1)
+        positivetab.mark(boundary_markers, 2)
+
+        # create measure of parts of the boundary
+        self.ds = dolfin.Measure(
+            "ds", domain=self.mesh, subdomain_data=boundary_markers
+        )
+
+        # boundary values (assumes a current of 1, and is then multiplied by i_cell
+        # in the algebraic equation for i_local)
+        dVdn_neg = param_vals.process_symbol(
+            -1
+            / (
+                param.sigma_cn
+                * (param.L_x / param.L_z) ** 2
+                * param.l_tab_n
+                * param.l_cn
+            )
+        ).evaluate(0, 0)
+        self.dVdn_negativetab = dolfin.Constant(dVdn_neg)
+        dVdn_pos = param_vals.process_symbol(
+            -1
+            / (
+                param.sigma_cp
+                * (param.L_x / param.L_z) ** 2
+                * param.l_tab_p
+                * param.l_cp
+            )
+        ).evaluate(0, 0)
+        self.dVdn_positivetab = dolfin.Constant(dVdn_pos)
+
+    def assemble(self):
+        " Assemble mass and stiffness matrices, and boundary load vector."
+        # create mass matrix
+        M_form = self.TrialFunction * self.TestFunction * dolfin.dx
+        self.mass = dolfin.assemble(M_form)
+
+        # create stifnness matrix
+        K_form = (
+            dolfin.inner(
+                dolfin.grad(self.TrialFunction), dolfin.grad(self.TestFunction)
+            )
+            * dolfin.dx
+        )
+        self.stiffness = dolfin.assemble(K_form)
+
+        # create quadrature matrix (for evaluating conservation of current constraint)
+        # TO DO: think at the moment this submodel only works for degree 1 elements
+        # (nodes and dof coincide). check for other elements
+        self.trial_integral = dolfin.assemble(self.TrialFunction * dolfin.dx)
+
+        # create load vectors for tabs
+        neg_tab_form = self.dVdn_negativetab * self.TestFunction * self.ds(1)
+        pos_tab_form = self.dVdn_positivetab * self.TestFunction * self.ds(2)
+        self.load_tab_n = dolfin.assemble(neg_tab_form).get_local()[:]
+        self.load_tab_p = dolfin.assemble(pos_tab_form).get_local()[:]
+
+        # set functions for V, I and load
+        self.voltage = dolfin.Function(self.FunctionSpace)
+        self.voltage_prev = dolfin.Function(self.FunctionSpace)
+        self.voltage_coarse = dolfin.Function(self.FunctionSpace_coarse)
+
+        self.current = dolfin.Function(self.FunctionSpace)
+        self.current_coarse = dolfin.Function(self.FunctionSpace_coarse)
+        self.load = dolfin.Function(self.FunctionSpace)
+
+        # number of degrees of freedom
+        self.N_dofs = np.size(self.voltage.vector()[:])
+        self.n_dofs = np.size(self.voltage_coarse.vector()[:])
+
+
+class IterativeOhmTwoDimensional(pybamm.SubModel):
+    """
+    Ohm's law + conservation of current for the current in the current collectors.
+    NOTE:  don't think we will actually solve this way, so can probably be removed.
+
+    Parameters
+    ----------
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
+
+    *Extends:* :class:`pybamm.SubModel`
+    """
+
+    def __init__(self, set_of_parameters, parameter_values):
+        super().__init__(set_of_parameters)
+        self.parameter_values = parameter_values
+
+    def create_mesh(self, Ny=32, Nz=32, ny=3, nz=3, degree=1):
+        """
+        Sets up the mesh, function space etc. for the voltage problem in the
+        current collectors.
+
+        Parameters
+        ----------
+        Ny: int
+            Number of mesh points in the y direction.
+        Nz: int
+            Number of mesh points in the z direction.
+        degree: int
+            Degree of polynomial used in FEM.
+        ny: int
+            Number of mesh points at which 1D model will be evaluated in the y direction.
+        nz: int
+            Number of mesh points at which 1D model will be evaluated in the z direction.
+        """
+        param = self.set_of_parameters
+        param_vals = self.parameter_values
+        self.Ny = Ny
+        self.Nz = Nz
+        self.ny = ny
+        self.nz = nz
         self.degree = degree
 
         # create mesh and function space
@@ -180,11 +330,6 @@ class Ohm(pybamm.SubModel):
         )
         self.stiffness = dolfin.assemble(K_form)
 
-        # create quadrature matrix (for evaluating conservation of current constraint)
-        # TO DO: think at the moment this submodel only works for degree 1 elements
-        # (nodes and dof coincide). check for other elements
-        self.trial_integral = dolfin.assemble(self.TrialFunction * dolfin.dx)
-
         # create load vectors for tabs
         neg_tab_form = self.dVdn_negativetab * self.TestFunction * self.ds(1)
         pos_tab_form = self.dVdn_positivetab * self.TestFunction * self.ds(2)
@@ -212,9 +357,6 @@ class Ohm(pybamm.SubModel):
         # TO DISCUSS: at the moment we have pure Neumann BCs so need to adjust the solve
         # We are solving the problem iteratively i.e. solve K*V = b(I) then find
         # I, loop until converged, then step forward in time.
-        # One way could be to solve K*V_new + M*V_new = b(I) + M*V_old (i.e. use part
-        # of the old iterate). As long as you can write an OK initial guess then
-        # this seems to work.
 
         # store old values for error computation
         self.voltage_prev.vector()[:] = self.voltage.vector()[:]
@@ -227,12 +369,11 @@ class Ohm(pybamm.SubModel):
         applied_current = self.parameter_values.process_symbol(
             self.set_of_parameters.current_with_time
         ).evaluate(t, 0)
-        self.load.vector()[:] = (
-            applied_current * (self.load_tab_n + self.load_tab_p)
-            + np.dot(
-                self.mass.array(),
-                alpha * self.current.vector()[:] + self.voltage_prev.vector()[:],
-            )
+        self.load.vector()[:] = applied_current * (
+            self.load_tab_n + self.load_tab_p
+        ) + np.dot(
+            self.mass.array(),
+            alpha * self.current.vector()[:] + self.voltage_prev.vector()[:],
         )
 
         # solve K*V_new + M*V_new = b(I) + M*V_prev
@@ -256,7 +397,9 @@ class Ohm(pybamm.SubModel):
     def get_voltage(self, coarse=False):
         "Returns the voltage as an array"
         if coarse:
-            self.voltage_coarse = dolfin.project(self.voltage, self.FunctionSpace_coarse)
+            self.voltage_coarse = dolfin.project(
+                self.voltage, self.FunctionSpace_coarse
+            )
             return self.voltage_coarse.vector()[:]
         else:
             return self.voltage.vector()[:]
