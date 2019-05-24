@@ -213,8 +213,8 @@ class TestMacInnesCapacitance(unittest.TestCase):
 
         # Variables
         c_e = pybamm.Scalar(1)
-        delta_phi_n = pybamm.Variable("negative electrode potential difference")
-        delta_phi_p = pybamm.Variable("positive electrode potential difference")
+        delta_phi_n = pybamm.Variable("negative electrode surface potential difference")
+        delta_phi_p = pybamm.Variable("positive electrode surface potential difference")
         c_s_n_surf = pybamm.Scalar(0.8)
         c_s_p_surf = pybamm.Scalar(0.8)
 

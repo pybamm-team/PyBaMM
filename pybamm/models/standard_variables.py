@@ -21,10 +21,10 @@ phi_s_p = pybamm.Variable("Positive electrode potential", ["positive electrode"]
 
 # Potential difference
 delta_phi_n = pybamm.Variable(
-    "Negative electrode potential difference", ["negative electrode"]
+    "Negative electrode surface potential difference", ["negative electrode"]
 )
 delta_phi_p = pybamm.Variable(
-    "Positive electrode potential difference", ["positive electrode"]
+    "Positive electrode surface potential difference", ["positive electrode"]
 )
 
 # Particle concentration
