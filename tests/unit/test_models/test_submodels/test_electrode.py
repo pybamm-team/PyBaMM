@@ -11,7 +11,7 @@ class TestOhm(unittest.TestCase):
     def test_default_solver(self):
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.electrode.Ohm(param)
-        self.assertTrue(isinstance(model.default_solver, pybamm.ScikitsDaeSolver))
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
 if __name__ == "__main__":

@@ -131,8 +131,8 @@ class OptimisationsTest(object):
             parameter_values = model.default_parameter_values
         # Process model and geometry
         parameter_values.process_model(model)
-        parameter_values.process_geometry(model.default_geometry)
         geometry = model.default_geometry
+        parameter_values.process_geometry(geometry)
         # Set discretisation
         if disc is None:
             mesh = pybamm.Mesh(

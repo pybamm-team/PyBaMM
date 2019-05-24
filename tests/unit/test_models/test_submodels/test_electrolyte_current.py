@@ -11,7 +11,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
     def test_default_solver(self):
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        self.assertTrue(isinstance(model.default_solver, pybamm.ScikitsDaeSolver))
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
 @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
@@ -19,11 +19,9 @@ class TestMacInnesCapacitance(unittest.TestCase):
     def test_default_solver(self):
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.electrolyte_current.MacInnesCapacitance(param, True)
-        self.assertTrue(isinstance(
-            model.default_solver, pybamm.ScikitsOdeSolver))
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
         model = pybamm.electrolyte_current.MacInnesCapacitance(param, False)
-        self.assertTrue(isinstance(
-            model.default_solver, pybamm.ScikitsDaeSolver))
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
 if __name__ == "__main__":

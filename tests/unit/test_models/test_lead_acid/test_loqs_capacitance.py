@@ -21,9 +21,9 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
 
     def test_default_solver(self):
         model = pybamm.lead_acid.LOQSCapacitance(use_capacitance=True)
-        self.assertTrue(isinstance(model.default_solver, pybamm.ScikitsOdeSolver))
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
         model = pybamm.lead_acid.LOQSCapacitance(use_capacitance=False)
-        self.assertTrue(isinstance(model.default_solver, pybamm.ScikitsDaeSolver))
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
 if __name__ == "__main__":
