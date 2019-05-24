@@ -453,19 +453,24 @@ class Symbol(anytree.NodeMixin):
 
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""
-        return self.has_gradient() or self.has_divergence()
+        return self.has_symbol_of_class(pybamm.Gradient) or self.has_symbol_of_class(
+            pybamm.Divergence
+        )
 
-    def has_gradient_and_not_divergence(self):
-        """Returns True if equation has a Gradient term and not Divergence term."""
-        return self.has_gradient() and not self.has_divergence()
+    def evaluates_on_edges(self):
+        """
+        Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
+        operator, but not a divergence operator, and is not an IndefiniteIntegral.
+        """
+        return (
+            self.has_symbol_of_class(pybamm.Gradient)
+            and not self.has_symbol_of_class(pybamm.Divergence)
+            and not self.has_symbol_of_class(pybamm.IndefiniteIntegral)
+        )
 
-    def has_gradient(self):
-        """Returns True if equation has a Gradient term."""
-        return any(isinstance(symbol, pybamm.Gradient) for symbol in self.pre_order())
-
-    def has_divergence(self):
-        """Returns True if equation has a Divergence term."""
-        return any(isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order())
+    def has_symbol_of_class(self, symbol_class):
+        """Returns True if equation has a term of the class `symbol_class`."""
+        return any(isinstance(symbol, symbol_class) for symbol in self.pre_order())
 
     def simplify(self, simplified_symbols=None):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """

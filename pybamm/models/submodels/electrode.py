@@ -267,9 +267,7 @@ class Ohm(pybamm.SubModel):
         i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
         # Voltage variable
-        v = pybamm.boundary_value(phi_s_p, "right") - pybamm.boundary_value(
-            phi_s_n, "left"
-        )
+        v = pybamm.boundary_value(phi_s_p, "right")
 
         # Dimensional
         phi_s_n_dim = param.potential_scale * phi_s_n

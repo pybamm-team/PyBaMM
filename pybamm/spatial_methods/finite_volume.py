@@ -3,7 +3,16 @@
 #
 import pybamm
 
-from scipy.sparse import diags, eye, kron, csr_matrix, vstack, coo_matrix
+from scipy.sparse import (
+    diags,
+    eye,
+    kron,
+    csr_matrix,
+    vstack,
+    hstack,
+    lil_matrix,
+    coo_matrix,
+)
 import autograd.numpy as np
 from autograd.builtins import isinstance
 
@@ -108,7 +117,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         second_dim_len = len(submesh_list)
 
         # generate full matrix from the submatrix
-        matrix = kron(eye(second_dim_len), sub_matrix)
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
@@ -171,7 +184,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         # repeat matrix for each node in secondary dimensions
         second_dim_len = len(submesh_list)
         # generate full matrix from the submatrix
-        matrix = kron(eye(second_dim_len), sub_matrix)
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
         return pybamm.Matrix(matrix)
 
     def integral(self, domain, symbol, discretised_symbol):
@@ -231,7 +248,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         See :meth:`pybamm.BaseDiscretisation.indefinite_integral`
         """
 
-        if not symbol.has_gradient_and_not_divergence():
+        if not symbol.evaluates_on_edges():
             raise pybamm.ModelError(
                 "Symbol to be integrated must be valid on the mesh edges"
             )
@@ -253,8 +270,26 @@ class FiniteVolume(pybamm.SpatialMethod):
         Matrix for finite-volume implementation of the indefinite integral
 
         .. math::
-            F = \\int\\!f(u)\\,du
+            F(x) = \\int_0^x\\!f(u)\\,du
 
+        The indefinite integral must satisfy the following conditions:
+
+        - :math:`F(0) = 0`
+        - :math:`f(x) = \\frac{dF}{dx}`
+
+        or, in discrete form,
+
+        - `BoundaryValue(F, "left") = 0`, i.e. :math:`3*F_0 - F_1 = 0`
+        - :math:`f_{i+1/2} = (F_{i+1} - F_i) / dx_{i+1/2}`
+
+        Hence we must have
+
+        - :math:`F_0 = du_{1/2} * f_{1/2} / 2`
+        - :math:`F_{i+1} = F_i + du * f_{i+1/2}`
+
+        Note that :math:`f_{-1/2}` and :math:`f_{n+1/2}` are included in the discrete
+        integrand vector `f`, so we add a column of zeros at each end of the
+        indefinite integral matrix to ignore these.
 
         Parameters
         ----------
@@ -273,12 +308,21 @@ class FiniteVolume(pybamm.SpatialMethod):
         n = submesh.npts
         sec_pts = len(submesh_list)
 
-        # note we have added a row of zeros at top for F(0) = 0
         du_n = submesh.d_nodes
         du_entries = [du_n] * (n - 1)
         offset = -np.arange(1, n, 1)
-        sub_matrix = diags(du_entries, offset, shape=(n, n - 1))
-        matrix = kron(eye(sec_pts), sub_matrix)
+        main_integral_matrix = diags(du_entries, offset, shape=(n, n - 1))
+        bc_offset_matrix = lil_matrix((n, n - 1))
+        bc_offset_matrix[:, 0] = du_n[0] / 2
+        sub_matrix = main_integral_matrix + bc_offset_matrix
+        # add a column of zeros at each end
+        zero_col = csr_matrix((n, 1))
+        sub_matrix = hstack([zero_col, sub_matrix, zero_col])
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
@@ -372,14 +416,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
 
         # Make matrix to calculate ghost nodes
-        if lbc_type == "Dirichlet":
-            left_factor = -1
-        else:
-            left_factor = 1
-        if rbc_type == "Dirichlet":
-            right_factor = -1
-        else:
-            right_factor = 1
+        bc_factors = {"Dirichlet": -1, "Neumann": 1}
+        left_factor = bc_factors[lbc_type]
+        right_factor = bc_factors[rbc_type]
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
         # (row[i], col[i]) for each index of data.
         left_ghost_vector = coo_matrix(([left_factor], ([0], [0])), shape=(1, n))
@@ -387,7 +426,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = vstack([left_ghost_vector, eye(n), right_ghost_vector])
 
         # repeat matrix for secondary dimensions
-        matrix = kron(eye(sec_pts), sub_matrix)
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
         return pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
@@ -432,6 +475,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
         # Generate full matrix from the submatrix
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
         matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
         # Return boundary value with domain removed
@@ -472,17 +519,17 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         """
         # Post-processing to make sure discretised dimensions match
-        left_has_grad_not_div = left.has_gradient_and_not_divergence()
-        right_has_grad_not_div = right.has_gradient_and_not_divergence()
-        # If neither child has gradients, or both children have gradients
+        left_evaluates_on_edges = left.evaluates_on_edges()
+        right_evaluates_on_edges = right.evaluates_on_edges()
+        # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging
-        if left_has_grad_not_div == right_has_grad_not_div:
+        if left_evaluates_on_edges == right_evaluates_on_edges:
             pass
-        # If only left child has gradient, compute diffusivity for right child
-        elif left_has_grad_not_div and not right_has_grad_not_div:
+        # If only left child evaluates on edges, compute diffusivity for right child
+        elif left_evaluates_on_edges and not right_evaluates_on_edges:
             disc_right = self.compute_diffusivity(disc_right)
-        # If only right child has gradient, compute diffusivity for left child
-        elif right_has_grad_not_div and not left_has_grad_not_div:
+        # If only right child evaluates on edges, compute diffusivity for left child
+        elif right_evaluates_on_edges and not left_evaluates_on_edges:
             disc_left = self.compute_diffusivity(disc_left)
         # Return new binary operator with appropriate class
         out = bin_op.__class__(disc_left, disc_right)
@@ -539,7 +586,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim_len = len(submesh_list)
 
             # Generate full matrix from the submatrix
-            matrix = kron(eye(second_dim_len), sub_matrix)
+            # Convert to csr_matrix so that we can take the index (row-slicing), which
+            # is not supported by the default kron format
+            # Note that this makes column-slicing inefficient, but this should not be an
+            # issue
+            matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
 
             return pybamm.Matrix(matrix) @ array
 

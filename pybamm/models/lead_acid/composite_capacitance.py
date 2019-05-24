@@ -38,8 +38,12 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
 
         c_e = pybamm.standard_variables.c_e
         eps = pybamm.standard_variables.eps
-        delta_phi_n_av = pybamm.Variable("Average neg electrode potential difference")
-        delta_phi_p_av = pybamm.Variable("Average pos electrode potential difference")
+        delta_phi_n_av = pybamm.Variable(
+            "Average neg electrode surface potential difference"
+        )
+        delta_phi_p_av = pybamm.Variable(
+            "Average pos electrode surface potential difference"
+        )
 
         "-----------------------------------------------------------------------------"
         "Submodels"

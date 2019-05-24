@@ -2,7 +2,6 @@
 # Lead-acid LOQS model, with capacitance
 #
 import pybamm
-import numpy as np
 
 
 class LOQSCapacitance(pybamm.LeadAcidBaseModel):
@@ -44,8 +43,12 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
             domain = ["current collector"]
 
         c_e = pybamm.Variable("Electrolyte concentration", domain)
-        delta_phi_n = pybamm.Variable("Negative electrode potential difference", domain)
-        delta_phi_p = pybamm.Variable("Positive electrode potential difference", domain)
+        delta_phi_n = pybamm.Variable(
+            "Negative electrode surface potential difference", domain
+        )
+        delta_phi_p = pybamm.Variable(
+            "Positive electrode surface potential difference", domain
+        )
 
         # Piecewise constant epsilon
         eps_n_pc = pybamm.Variable("Negative electrode porosity", domain)
@@ -102,24 +105,16 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         eleclyte_conc_model.set_leading_order_system(c_e, reactions, epsilon=epsilon)
 
         # Electrolyte current
-        eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(
+        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
             param, use_capacitance
         )
-        eleclyte_current_model_n.set_leading_order_system(
+        eleclyte_current_model.set_leading_order_system(
             delta_phi_n, reactions, neg, i_curr_coll
         )
-        eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(
-            param, use_capacitance
-        )
-        eleclyte_current_model_p.set_leading_order_system(
+        eleclyte_current_model.set_leading_order_system(
             delta_phi_p, reactions, pos, i_curr_coll
         )
-        self.update(
-            porosity_model,
-            eleclyte_conc_model,
-            eleclyte_current_model_n,
-            eleclyte_current_model_p,
-        )
+        self.update(porosity_model, eleclyte_conc_model, eleclyte_current_model)
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
@@ -135,7 +130,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte: post-process
-        electrolyte_vars = eleclyte_current_model_p.get_explicit_leading_order(
+        electrolyte_vars = eleclyte_current_model.get_explicit_leading_order(
             ocp_n, eta_r_n
         )
         self.variables.update(electrolyte_vars)
