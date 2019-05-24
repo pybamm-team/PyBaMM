@@ -2,6 +2,7 @@
 # Lead-acid LOQS model, with capacitance
 #
 import pybamm
+import numpy as np
 
 
 class LOQSCapacitance(pybamm.LeadAcidBaseModel):
@@ -37,14 +38,25 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Model Variables"
 
-        c_e = pybamm.Variable("Electrolyte concentration")
-        delta_phi_n = pybamm.Variable("Negative electrode potential difference")
-        delta_phi_p = pybamm.Variable("Positive electrode potential difference")
-        epsilon = pybamm.standard_variables.eps_piecewise_constant
-        if self.bc_options["dimensionality"] == 2:
-            c_e.domain = ["current collector"]
-            delta_phi_n.domain = ["current collector"]
-            delta_phi_p.domain = ["current collector"]
+        if self.bc_options["dimensionality"] == 1:
+            domain = []
+        elif self.bc_options["dimensionality"] == 2:
+            domain = ["current collector"]
+
+        c_e = pybamm.Variable("Electrolyte concentration", domain)
+        delta_phi_n = pybamm.Variable("Negative electrode potential difference", domain)
+        delta_phi_p = pybamm.Variable("Positive electrode potential difference", domain)
+
+        # Piecewise constant epsilon
+        eps_n_pc = pybamm.Variable("Negative electrode porosity", domain)
+        eps_s_pc = pybamm.Variable("Separator porosity", domain)
+        eps_p_pc = pybamm.Variable("Positive electrode porosity", domain)
+
+        epsilon = pybamm.Concatenation(
+            pybamm.Broadcast(eps_n_pc, ["negative electrode"]),
+            pybamm.Broadcast(eps_s_pc, ["separator"]),
+            pybamm.Broadcast(eps_p_pc, ["positive electrode"]),
+        )
 
         "-----------------------------------------------------------------------------"
         "Boundary conditions"
@@ -137,7 +149,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         self.variables.update(electrode_vars)
 
         # Add cut-off voltage, using potential differences for quicker evaluation
-        voltage = delta_phi_p - delta_phi_n
+        voltage = pybamm.boundary_value(delta_phi_p - delta_phi_n, "right")
         self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"
@@ -160,7 +172,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self._use_capacitance is False or self.bc_options["dimensionality"] == 2:
+        if self._use_capacitance is False:
             return pybamm.ScikitsDaeSolver()
         else:
             return pybamm.ScikitsOdeSolver()
