@@ -9,13 +9,6 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-
-V_local = pybamm.Parameter("Local potential difference")
-param.update({"Local potential difference": 3.0})  # add parameter value for local V
-model.boundary_conditions[model.variables["Positive electrode potential"]][
-    "right"
-] = (V_local, "Dirichlet")
-
 param.process_model(model)
 param.process_geometry(geometry)
 

@@ -78,6 +78,8 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
+    Laplacian,
+    Source,
     BoundaryOperator,
     BoundaryValue,
     BoundaryFlux,
@@ -159,9 +161,13 @@ from .parameters import standard_parameters_lithium_ion, standard_parameters_lea
 from .geometry.geometry import (
     Geometry,
     Geometry1DMacro,
+    Geometry3DMacro,
+    Geometry1p1DMacro
+    Geometry2p1DMacro
     Geometry1DMicro,
     Geometry1p1DMicro,
-    Geometry3DMacro,
+    Geometry2p1DMicro,
+    Geometry3p1DMicro,
 )
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS
@@ -174,12 +180,14 @@ from .geometry.standard_spatial_vars import KNOWN_COORD_SYS
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+from .meshes.fenics_submeshes import FenicsMesh2D
 
 #
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.finite_element_fenics import FiniteElementFenics
 
 #
 # Solver classes

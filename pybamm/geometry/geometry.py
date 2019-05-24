@@ -28,10 +28,18 @@ class Geometry(dict):
                 geometry = Geometry1DMacro()
             elif geometry == "3D macro":
                 geometry = Geometry3DMacro()
+            elif geometry == "1+1D macro":
+                geometry = Geometry1p1DMacro()
+            elif geometry == "2+1D macro":
+                geometry = Geometry2p1DMacro()
             elif geometry == "1D micro":
                 geometry = Geometry1DMicro()
             elif geometry == "1+1D micro":
                 geometry = Geometry1p1DMicro()
+            elif geometry == "2+1D micro":
+                geometry = Geometry2p1DMicro()
+            elif geometry == "3+1D micro":
+                geometry = Geometry3p1DMicro()
             # avoid combining geometries that clash
             if any([k in self.keys() for k in geometry.keys()]):
                 raise ValueError("trying to overwrite existing geometry")
@@ -115,14 +123,26 @@ class Geometry2p1DMacro(Geometry1DMacro):
         # Add secondary domains to x-domains
         for geom in self.values():
             geom["secondary"] = {
-                var.y: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_y},
-                var.z: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z},
+                var.y: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_y,
+                },
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
             }
         # Add primary current collector domain
         self["current collector"] = {
             "primary": {
-                var.y: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_y},
-                var.z: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z},
+                var.y: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_y,
+                },
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
             }
         }
 
@@ -161,6 +181,78 @@ class Geometry1p1DMicro(Geometry):
         self["positive particle"] = {
             "primary": {var.r_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
             "secondary": {var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)}},
+        }
+        # update with custom geometry if non empty
+        self.update(custom_geometry)
+
+
+class Geometry2p1DMicro(Geometry):
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+
+        var = pybamm.standard_spatial_vars
+        l_n = pybamm.geometric_parameters.l_n
+        l_s = pybamm.geometric_parameters.l_s
+
+        self["negative particle"] = {
+            "primary": {var.r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
+            "secondary": {
+                var.x_n: {"min": pybamm.Scalar(0), "max": l_n},
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
+            },
+        }
+        self["positive particle"] = {
+            "primary": {var.r_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
+            "secondary": {
+                var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
+            },
+        }
+        # update with custom geometry if non empty
+        self.update(custom_geometry)
+
+
+class Geometry3p1DMicro(Geometry):
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+
+        var = pybamm.standard_spatial_vars
+        l_n = pybamm.geometric_parameters.l_n
+        l_s = pybamm.geometric_parameters.l_s
+
+        self["negative particle"] = {
+            "primary": {var.r_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
+            "secondary": {
+                var.x_n: {"min": pybamm.Scalar(0), "max": l_n},
+                var.y: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_y,
+                },
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
+            },
+        }
+        self["positive particle"] = {
+            "primary": {var.r_p: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}},
+            "secondary": {
+                var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
+                var.y: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_y,
+                },
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
+            },
         }
         # update with custom geometry if non empty
         self.update(custom_geometry)

@@ -273,6 +273,27 @@ class Divergence(SpatialOperator):
         super().__init__("div", child)
 
 
+class Laplacian(SpatialOperator):
+    """A node in the expression tree representing a laplacian operator
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("laplacian", child)
+
+
+class Source(SpatialOperator):
+    """A node in the expression tree representing a source term in the finite
+       element formulation
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("laplacian", child)
+
+
 class Integral(SpatialOperator):
     """A node in the expression tree representing an integral operator
 
