@@ -391,7 +391,6 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             Porosity. Default is None, in which case param.epsilon is used.
         """
         param = self.set_of_parameters
-        i_cell = param.current_with_time
 
         if delta_phi.domain == ["negative electrode"]:
             if eps is None:
@@ -399,7 +398,6 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             j = reactions["main"]["neg"]["aj"]
             C_dl = param.C_dl_n
             self.initial_conditions.update({delta_phi: param.U_n(param.c_n_init)})
-            no_flux_bc_side = "left"
             flux_bc_side = "right"
             Domain = "Negative"
         elif delta_phi.domain == ["positive electrode"]:
@@ -408,7 +406,6 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             j = reactions["main"]["pos"]["aj"]
             C_dl = param.C_dl_p
             self.initial_conditions.update({delta_phi: param.U_p(param.c_n_init)})
-            no_flux_bc_side = "right"
             flux_bc_side = "left"
             Domain = "Positive"
         else:
@@ -424,28 +421,40 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             self.rhs.update({delta_phi: 1 / C_dl * (pybamm.div(i_e) - j)})
         else:
             self.algebraic.update({delta_phi: pybamm.div(i_e) - j})
-        c_e_flux = pybamm.BoundaryFlux(c_e, flux_bc_side)
+
+        # Set boundary conditons and variables
+        self.set_boundary_conditions(c_e, delta_phi, conductivity, flux_bc_side)
+        self.variables.update(self.get_variables_capacitance(delta_phi, i_e, Domain))
+
+    def set_boundary_conditions(self, c_e, delta_phi, conductivity, side):
+        """ Set boundary conditions for the system. """
+        param = self.set_of_parameters
+        i_cell = param.current_with_time
+        other_side = {"left": "right", "right": "left"}[side]
+
+        c_e_flux = pybamm.BoundaryFlux(c_e, side)
         flux_bc = (
-            i_cell / pybamm.BoundaryValue(conductivity, flux_bc_side)
-        ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, flux_bc_side) * c_e_flux
+            i_cell / pybamm.BoundaryValue(conductivity, side)
+        ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, side) * c_e_flux
         self.boundary_conditions.update(
             {
                 delta_phi: {
-                    no_flux_bc_side: (pybamm.Scalar(0), "Neumann"),
-                    flux_bc_side: (flux_bc, "Neumann"),
+                    side: (flux_bc, "Neumann"),
+                    other_side: (pybamm.Scalar(0), "Neumann"),
                 },
                 c_e: {
-                    no_flux_bc_side: (pybamm.Scalar(0), "Neumann"),
-                    flux_bc_side: (c_e_flux, "Neumann"),
+                    side: (c_e_flux, "Neumann"),
+                    other_side: (pybamm.Scalar(0), "Neumann"),
                 },
             }
         )
-        self.variables.update(
-            {
-                Domain + " electrode potential difference": delta_phi,
-                Domain + " electrolyte current density": i_e,
-            }
-        )
+
+    def get_variables_capacitance(self, delta_phi, i_e, Domain):
+        """ Get variables for the capacitance models in dictionary form. """
+        return {
+            Domain + " electrode surface potential difference": delta_phi,
+            Domain + " electrolyte current density": i_e,
+        }
 
     def set_leading_order_system(self, delta_phi, reactions, domain):
         """
@@ -488,12 +497,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             self.rhs.update({delta_phi: 1 / C_dl * (j_average - j)})
         else:
             self.algebraic.update({delta_phi: j_average - j})
-        self.variables.update(
-            {
-                Domain + " electrode potential difference": delta_phi,
-                Domain + " electrolyte current density": i_e,
-            }
-        )
+        self.variables.update(self.get_variables_capacitance(delta_phi, i_e, Domain))
 
     def set_post_processed(self, c_e, eps=None):
         """
@@ -514,8 +518,8 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack potential differences
-        delta_phi_n = self.variables["Negative electrode potential difference"]
-        delta_phi_p = self.variables["Positive electrode potential difference"]
+        delta_phi_n = self.variables["Negative electrode surface potential difference"]
+        delta_phi_p = self.variables["Positive electrode surface potential difference"]
         # Unpack and combine currents
         i_e_n = self.variables["Negative electrolyte current density"]
         i_e_s = pybamm.Broadcast(i_cell, ["separator"])

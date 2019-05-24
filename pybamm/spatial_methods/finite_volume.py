@@ -117,7 +117,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         second_dim_len = len(submesh_list)
 
         # generate full matrix from the submatrix
-        matrix = kron(eye(second_dim_len), sub_matrix)
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
@@ -180,7 +184,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         # repeat matrix for each node in secondary dimensions
         second_dim_len = len(submesh_list)
         # generate full matrix from the submatrix
-        matrix = kron(eye(second_dim_len), sub_matrix)
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
         return pybamm.Matrix(matrix)
 
     def integral(self, domain, symbol, discretised_symbol):
@@ -310,7 +318,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         # add a column of zeros at each end
         zero_col = csr_matrix((n, 1))
         sub_matrix = hstack([zero_col, sub_matrix, zero_col])
-        matrix = kron(eye(sec_pts), sub_matrix)
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
         return pybamm.Matrix(matrix)
 
@@ -404,14 +416,9 @@ class FiniteVolume(pybamm.SpatialMethod):
             )
 
         # Make matrix to calculate ghost nodes
-        if lbc_type == "Dirichlet":
-            left_factor = -1
-        else:
-            left_factor = 1
-        if rbc_type == "Dirichlet":
-            right_factor = -1
-        else:
-            right_factor = 1
+        bc_factors = {"Dirichlet": -1, "Neumann": 1}
+        left_factor = bc_factors[lbc_type]
+        right_factor = bc_factors[rbc_type]
         # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
         # (row[i], col[i]) for each index of data.
         left_ghost_vector = coo_matrix(([left_factor], ([0], [0])), shape=(1, n))
@@ -419,7 +426,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = vstack([left_ghost_vector, eye(n), right_ghost_vector])
 
         # repeat matrix for secondary dimensions
-        matrix = kron(eye(sec_pts), sub_matrix)
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
         return pybamm.Matrix(matrix) @ discretised_symbol + bcs_vector
 
@@ -570,7 +581,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim_len = len(submesh_list)
 
             # Generate full matrix from the submatrix
-            matrix = kron(eye(second_dim_len), sub_matrix)
+            # Convert to csr_matrix so that we can take the index (row-slicing), which is
+            # not supported by the default kron format
+            # Note that this makes column-slicing inefficient, but this should not be an
+            # issue
+            matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
 
             return pybamm.Matrix(matrix) @ array
 
