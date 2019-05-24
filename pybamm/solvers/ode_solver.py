@@ -30,16 +30,9 @@ class OdeSolver(pybamm.BaseSolver):
 
         """
         pybamm.logger.info("Start solving {}".format(model.name))
+        concatenated_rhs, y0, events, jac_rhs = self.set_up(model)
 
-        concatenated_rhs = model.concatenated_rhs
-        events = model.events
-        if model.use_simplify:
-            # set up simplification object, for re-use of dict
-            simp = pybamm.Simplification()
-            # create simplified rhs and event expressions
-            concatenated_rhs = simp.simplify(concatenated_rhs)
-            events = [simp.simplify(event) for event in events]
-
+        # Create function to evaluate rhs
         def dydt(t, y):
             pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
             y = y[:, np.newaxis]
@@ -55,14 +48,8 @@ class OdeSolver(pybamm.BaseSolver):
 
         events = [event_fun(event) for event in events]
 
-        y0 = model.concatenated_initial_conditions[:, 0]
-
-        if model.use_jacobian:
-            # Create Jacobian from simplified rhs
-            y = pybamm.StateVector(slice(0, np.size(y0)))
-            jac_rhs = concatenated_rhs.jac(y)
-            if model.use_simplify:
-                jac_rhs = simp.simplify(jac_rhs)
+        # Create function to evaluate jacobian
+        if jac_rhs is not None:
 
             def jacobian(t, y):
                 return jac_rhs.evaluate(t, y, known_evals={})[0]
@@ -80,6 +67,61 @@ class OdeSolver(pybamm.BaseSolver):
         )
 
         pybamm.logger.info("Finish solving {}".format(model.name))
+
+    def set_up(self, model):
+        """Unpack model, perform checks, simplify and calculate jacobian.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
+
+        Returns
+        -------
+        concatenated_rhs : :class:`pybamm.Concatenation`
+            Right-hand side of differential equations
+        y0 : :class:`numpy.array`
+            Vector of initial conditions
+        events : list of :class:`pybamm.Symbol`
+            List of events at which the model should terminate
+        jac_rhs : :class:`pybamm.SparseStack`
+            Jacobian matrix for the differential equations
+
+        Raises
+        ------
+        :class:`pybamm.SolverError`
+            If the model contains any algebraic equations (in which case a DAE solver
+            should be used instead)
+
+        """
+        if len(model.algebraic) > 0:
+            raise pybamm.SolverError(
+                """Cannot use ODE solver to solve model with DAEs"""
+            )
+
+        concatenated_rhs = model.concatenated_rhs
+        events = model.events
+        if model.use_simplify:
+            # set up simplification object, for re-use of dict
+            simp = pybamm.Simplification()
+            # create simplified rhs and event expressions
+            concatenated_rhs = simp.simplify(concatenated_rhs)
+            events = [simp.simplify(event) for event in events]
+
+        y0 = model.concatenated_initial_conditions[:, 0]
+
+        if model.use_jacobian:
+            # Create Jacobian from simplified rhs
+            y = pybamm.StateVector(slice(0, np.size(y0)))
+            jac_rhs = concatenated_rhs.jac(y)
+            if model.use_simplify:
+                jac_rhs = simp.simplify(jac_rhs)
+
+        else:
+            jac_rhs = None
+
+        return concatenated_rhs, y0, events, jac_rhs
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
