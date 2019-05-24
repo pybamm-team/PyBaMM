@@ -269,22 +269,6 @@ class SparseStack(Concatenation):
         children = list(children)
         super().__init__(*children, name="sparse stack", check_domain=False)
 
-    def evaluate(self, t=None, y=None, known_evals=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
-        children = self.cached_children
-        if known_evals is not None:
-            if self.id not in known_evals:
-                children_eval = [None] * len(children)
-                for idx, child in enumerate(children):
-                    children_eval[idx], known_evals = child.evaluate(t, y, known_evals)
-                known_evals[self.id] = self._concatenation_evaluate(children_eval)
-            return known_evals[self.id], known_evals
-        else:
-            children_eval = [None] * len(children)
-            for idx, child in enumerate(children):
-                children_eval[idx] = child.evaluate(t, y)
-            return self._concatenation_evaluate(children_eval)
-
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation.evaluate()`. """
         return vstack(children_eval)
