@@ -164,11 +164,8 @@ class DaeSolver(pybamm.BaseSolver):
 
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
 
-            def jacobian(t, y):
-                return jac.evaluate(t, y, known_evals={})[0]
-
         else:
-            jacobian = None
+            jac = None
 
         return concatenated_rhs, concatenated_algebraic, y0, events, jac
 
