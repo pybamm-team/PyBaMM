@@ -581,8 +581,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             second_dim_len = len(submesh_list)
 
             # Generate full matrix from the submatrix
-            # Convert to csr_matrix so that we can take the index (row-slicing), which is
-            # not supported by the default kron format
+            # Convert to csr_matrix so that we can take the index (row-slicing), which
+            # is not supported by the default kron format
             # Note that this makes column-slicing inefficient, but this should not be an
             # issue
             matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
