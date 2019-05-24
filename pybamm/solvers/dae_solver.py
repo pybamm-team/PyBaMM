@@ -19,8 +19,8 @@ class DaeSolver(pybamm.BaseSolver):
         The tolerance for the initial-condition solver (default is 1e-8).
     """
 
-    def __init__(self, tol=1e-8, root_method="lm", root_tol=1e-6):
-        super().__init__(tol)
+    def __init__(self, method=None, tol=1e-8, root_method="lm", root_tol=1e-6):
+        super().__init__(method, tol)
         self.root_method = root_method
         self.root_tol = root_tol
 

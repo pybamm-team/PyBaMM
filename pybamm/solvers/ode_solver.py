@@ -14,8 +14,8 @@ class OdeSolver(pybamm.BaseSolver):
         The tolerance for the solver (default is 1e-8).
     """
 
-    def __init__(self, tol=1e-8):
-        super().__init__(tol)
+    def __init__(self, method=None, tol=1e-8):
+        super().__init__(method, tol)
 
     def solve(self, model, t_eval):
         """Calculate the solution of the model at specified times.
