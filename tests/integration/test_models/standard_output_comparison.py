@@ -104,7 +104,7 @@ class BaseOutputComparison(object):
 
         # Calculate tolerance based on the value of var0
         maxvar0 = np.max(abs(var0(self.t, x)))
-        if maxvar0 == 0:
+        if maxvar0 < 1e-14:
             decimal = -int(np.log10(tol))
         else:
             decimal = -int(np.log10(tol * maxvar0))

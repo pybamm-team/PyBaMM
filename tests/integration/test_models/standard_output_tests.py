@@ -82,6 +82,7 @@ class BaseOutputTest(object):
 
     def get_var(self, var):
         "Helper function to reduce repeated code."
+        pybamm.logger.debug("Processing {} for {}".format(var, self.model.name))
         return pybamm.ProcessedVariable(
             self.model.variables[var], self.solver.t, self.solver.y, mesh=self.disc.mesh
         )
