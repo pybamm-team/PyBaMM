@@ -195,10 +195,6 @@ class TestFiniteVolume(unittest.TestCase):
         )
 
         # test errors
-        with self.assertRaisesRegex(
-            TypeError, "discretised_symbol must be a StateVector or Concatenation"
-        ):
-            pybamm.FiniteVolume(mesh).add_ghost_nodes(var, pybamm.Scalar(1), None)
         bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
         with self.assertRaisesRegex(ValueError, "boundary condition must be"):
             pybamm.FiniteVolume(mesh).add_ghost_nodes(var, discretised_symbol, bcs)
@@ -493,24 +489,25 @@ class TestFiniteVolume(unittest.TestCase):
 
         np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts + 1]))
 
-        # div: test on linear r^2
-        # div (grad r^2) = 6
-        const = 6 * np.ones(sec_pts * prim_pts)
-
+        # div
+        # div (grad r^2) = 6, N_left = N_right = 0
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
+        bc_var = disc.process_symbol(
+            pybamm.SpatialVariable("x_n", domain="negative electrode")
+        )
         boundary_conditions = {
-            var.id: {
-                "left": (pybamm.Scalar(6), "Dirichlet"),
-                "right": (pybamm.Scalar(6), "Dirichlet"),
-            }
+            var.id: {"left": (bc_var, "Neumann"), "right": (bc_var, "Neumann")}
         }
         disc.bcs = boundary_conditions
-
         div_eqn_disc = disc.process_symbol(div_eqn)
+
+        const = 6 * np.ones(sec_pts * prim_pts)
         div_eval = div_eqn_disc.evaluate(None, const)
         div_eval = np.reshape(div_eval, [sec_pts, prim_pts])
-        np.testing.assert_array_almost_equal(div_eval, np.zeros([sec_pts, prim_pts]))
+        np.testing.assert_array_almost_equal(
+            div_eval[:, :-1], np.zeros([sec_pts, prim_pts - 1])
+        )
 
     def test_grad_div_shapes_Neumann_bcs(self):
         """Test grad and div with Neumann boundary conditions (applied by div on N)"""
@@ -959,6 +956,7 @@ class TestFiniteVolume(unittest.TestCase):
         grad_and_div = pybamm.div(pybamm.grad(phi))
         int_grad_phi = pybamm.IndefiniteIntegral(grad_and_div, x)
         disc.set_variable_slices([phi])
+        # Add boundary conditions so that the integrand has the right shape
         disc._bcs = {
             phi.id: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),

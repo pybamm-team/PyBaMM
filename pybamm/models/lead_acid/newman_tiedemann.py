@@ -115,7 +115,10 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
 
-        "-----------------------------------------------------------------------------"
-        "Defaults and Solver Conditions"
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
         # Default solver to DAE
-        self.default_solver = pybamm.ScikitsDaeSolver()
+        return pybamm.ScikitsDaeSolver()
