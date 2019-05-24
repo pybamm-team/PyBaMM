@@ -9,7 +9,7 @@ import numpy as np
 
 
 def abs_non_zero(x):
-    if x == 0:
+    if x == 0:  # pragma: no cover
         return 1
     else:
         return abs(x)
