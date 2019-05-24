@@ -457,6 +457,7 @@ class TestScikitsSolvers(unittest.TestCase):
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
+        model.use_jacobian = False
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
