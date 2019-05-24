@@ -83,6 +83,18 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_grad.children[0], pybamm.Scalar)
         self.assertEqual(processed_grad.children[0].value, 1)
 
+        # process boundary operator
+        aa = pybamm.Parameter("a", domain=["negative electrode"])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+        boundary_op = pybamm.BoundaryOperator("Left boundary", aa * x, "left")
+        processed_boundary_op = parameter_values.process_symbol(boundary_op)
+        self.assertIsInstance(processed_boundary_op, pybamm.BoundaryOperator)
+        processed_a = processed_boundary_op.children[0].children[0]
+        processed_x = processed_boundary_op.children[0].children[1]
+        self.assertIsInstance(processed_a, pybamm.Scalar)
+        self.assertEqual(processed_a.value, 1)
+        self.assertEqual(processed_x.id, x.id)
+
         # process broadcast
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         broad = pybamm.Broadcast(a, whole_cell)
