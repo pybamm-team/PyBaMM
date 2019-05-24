@@ -506,7 +506,12 @@ class Discretisation(object):
 
     def check_model(self, model):
         """ Perform some basic checks to make sure the discretised model makes sense."""
-        # Check initial conditions are a numpy array
+        self.check_initial_conditions(model)
+        self.check_initial_conditions_rhs(model)
+        self.check_variables(model)
+
+    def check_initial_conditions(self, model):
+        """Check initial conditions are a numpy array"""
         # Individual
         for var, eqn in model.initial_conditions.items():
             assert type(eqn.evaluate(0, None)) is np.ndarray, pybamm.ModelError(
@@ -529,7 +534,8 @@ class Discretisation(object):
             )
         )
 
-        # Check initial conditions and rhs have the same shape
+    def check_initial_conditions_rhs(self, model):
+        """Check initial conditions and rhs have the same shape"""
         y0 = model.concatenated_initial_conditions
         # Individual
         for var in model.rhs.keys():
@@ -563,9 +569,13 @@ class Discretisation(object):
             )
         )
 
-        # Check variables in variable list against rhs
-        # Be lenient with size check if the variable in model.variables is broadcasted
-        # If broadcasted, variable is a multiplication with a vector of ones
+    def check_variables(self, model):
+        """
+        Check variables in variable list against rhs
+        Be lenient with size check if the variable in model.variables is broadcasted
+        (if broadcasted, variable is a multiplication with a vector of ones)
+        """
+        y0 = model.concatenated_initial_conditions
         for rhs_var in model.rhs.keys():
             if rhs_var.name in model.variables.keys():
                 var = model.variables[rhs_var.name]
