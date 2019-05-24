@@ -127,6 +127,10 @@ def to_python(symbol):
 
     line_format = "{} = {}"
     variable_lines = [
+        "print('{}'); ".format(line_format.format(
+            id_to_python_variable(symbol_id, False),
+            symbol_line
+        )) +
         line_format.format(
             id_to_python_variable(symbol_id, False),
             symbol_line
