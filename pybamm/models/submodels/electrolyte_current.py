@@ -332,8 +332,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         self.variables = self.get_variables(phi_e, i_e, eta_e_av)
 
-        # Set default solver to DAE
-        self.default_solver = pybamm.ScikitsDaeSolver()
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        return pybamm.ScikitsDaeSolver()
 
 
 class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
@@ -355,11 +359,19 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     def __init__(self, set_of_parameters, use_capacitance=True):
         super().__init__(set_of_parameters)
         self._use_capacitance = use_capacitance
+
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
         # Different solver depending on whether we solve ODEs or DAEs
-        if use_capacitance:
-            self.default_solver = pybamm.ScikitsOdeSolver()
+        if self._use_capacitance:
+            default_solver = pybamm.ScikitsOdeSolver()
         else:
-            self.default_solver = pybamm.ScikitsDaeSolver()
+            default_solver = pybamm.ScikitsDaeSolver()
+
+        return default_solver
 
     def set_full_system(self, delta_phi, c_e, reactions, eps=None):
         """

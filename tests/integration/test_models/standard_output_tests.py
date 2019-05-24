@@ -51,10 +51,10 @@ class StandardOutputTests(object):
 class BaseOutputTest(object):
     def __init__(self, model, param, disc, solver, operating_condition):
         self.model = model
+        self.param = param
         self.disc = disc
         self.solver = solver
         self.operating_condition = operating_condition
-
         self.t = solver.t
 
         self.x_n = disc.mesh["negative electrode"][0].nodes
@@ -477,8 +477,7 @@ class CurrentTests(BaseOutputTest):
         t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
 
         current_param = pybamm.electrical_parameters.current_with_time
-        parameter_values = self.model.default_parameter_values
-        i_cell = parameter_values.process_symbol(current_param).evaluate(t=t)
+        i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=4)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[-1]), 0, decimal=4)
         np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[-1]), i_cell, decimal=4)

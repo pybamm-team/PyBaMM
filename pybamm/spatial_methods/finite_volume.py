@@ -464,6 +464,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
         # Generate full matrix from the submatrix
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
         matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
         # Return boundary value with domain removed
