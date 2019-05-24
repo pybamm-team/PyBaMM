@@ -7,6 +7,8 @@ import unittest
 import numpy as np
 import tests
 
+import sys
+
 
 class TestUpdateParameters(unittest.TestCase):
     def test_update_parameters_eqn(self):
@@ -39,6 +41,7 @@ class TestUpdateParameters(unittest.TestCase):
         model1 = pybamm.ReactionDiffusionModel()
         modeltest1 = tests.StandardModelTest(model1)
         t_eval = np.linspace(0, 0.9)
+
         modeltest1.test_all(t_eval=t_eval)
         Y1 = modeltest1.solver.y
 

@@ -5,6 +5,7 @@ import pybamm
 
 # need numpy imported for code generated in EvaluatorPython
 import numpy as np  # noqa: F401
+import scipy.sparse
 
 from collections import OrderedDict
 
@@ -45,8 +46,12 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                      for child in symbol.children]
 
     if isinstance(symbol, pybamm.BinaryOperator):
-        left, right = symbol.children
-        symbol_str = children_vars[0] + ' ' + symbol.name + ' ' + children_vars[1]
+        if isinstance(symbol, pybamm.Multiplication):
+            symbol_str = "{0}.multiply({1}) if scipy.sparse.issparse({0}) else " \
+                         "{1}.multiply({0}) if scipy.sparse.issparse({1}) else " \
+                         "{0} * {1}".format(children_vars[0], children_vars[1])
+        else:
+            symbol_str = children_vars[0] + ' ' + symbol.name + ' ' + children_vars[1]
 
     elif isinstance(symbol, pybamm.UnaryOperator):
         if isinstance(symbol, pybamm.Function):
@@ -144,6 +149,9 @@ class EvaluatorPython:
         self._return_compiled = compile(
             self._result_var, 'return' + self._result_var, 'eval')
 
-    def evaluate(self, t=None, y=None, known_evals={}):
+    def evaluate(self, t=None, y=None, known_evals=None):
         exec(self._variable_compiled)
-        return eval(self._return_compiled), known_evals
+        if known_evals is not None:
+            return eval(self._return_compiled), known_evals
+        else:
+            return eval(self._return_compiled)
