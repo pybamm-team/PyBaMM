@@ -70,7 +70,9 @@ class SpatialMethod:
             for i in range(len(self.mesh[dom])):
                 vector_size += self.mesh[dom][i].npts_for_broadcast
 
-        return symbol * pybamm.Vector(np.ones(vector_size), domain=domain)
+        out = symbol * pybamm.Vector(np.ones(vector_size), domain=domain)
+        self.test_shape(out)
+        return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """
