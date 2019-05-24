@@ -551,6 +551,27 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
         np.testing.assert_allclose(solver.y[-1], 2 * np.exp(0.1 * solver.t))
 
+    def test_wrong_solver(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: var}
+        model.algebraic = {var: var - 1}
+
+        # test errors
+        solver = pybamm.ScikitsOdeSolver()
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Cannot use ODE solver to solve model with DAEs"
+        ):
+            solver.solve(model, None)
+
+        model.algebraic = {}
+        solver = pybamm.ScikitsDaeSolver()
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Cannot use DAE solver to solve model with only ODEs"
+        ):
+            solver.solve(model, None)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
