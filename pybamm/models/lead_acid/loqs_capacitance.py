@@ -149,7 +149,6 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Extra settings"
-        self.variables = {}
 
         # ODE model, don't use Jacobian
         self.use_jacobian = False

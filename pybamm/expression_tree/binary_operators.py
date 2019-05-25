@@ -71,11 +71,20 @@ class BinaryOperator(pybamm.Symbol):
                 type(left), type(right)
             )
         )
+        # Turn numbers into scalars
         if isinstance(left, numbers.Number):
             left = pybamm.Scalar(left)
         if isinstance(right, numbers.Number):
             right = pybamm.Scalar(right)
-        domain = self.get_children_domains(left.domain, right.domain)
+
+        # Check and process domains, except for Outer symbol which takes the outer
+        # product of two smbols in different domains, and gives it the domain of the
+        # right child.
+        if isinstance(self, pybamm.Outer):
+            domain = right.domain
+        else:
+            domain = self.get_children_domains(left.domain, right.domain)
+
         super().__init__(name, children=[left, right], domain=domain)
         self.left = self.children[0]
         self.right = self.children[1]
@@ -484,22 +493,43 @@ class Division(BinaryOperator):
 
 
 class Outer(BinaryOperator):
-    """A node in the expression tree representing an outer product
+    """A node in the expression tree representing an outer product.
+    This takes a 1D vector in the current collector domain of size (n,1) and a 1D
+    variable of size (m,1), takes their outer product, and reshapes this into a vector
+    of size (nm,1).
+    Note: this class might be a bit dangerous, so at the moment it is very restrictive
+    in what symbols can be passed to it
 
     **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        # Can only take outer product of a current collector symbol
+        if left.domain != ["current collector"]:
+            raise pybamm.DomainError(
+                "left child domain must be 'current collector', not'{}".format(
+                    left.domain
+                )
+            )
+        # cannot have Variable, StateVector or Matrix in the right symbol, as these
+        # can already be 2D objects (so we can't take an outer product with them)
+        if right.has_symbol_of_class(
+            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix)
+        ):
+            raise TypeError(
+                "right child must only contain SpatialVariable and scalars" ""
+            )
+
         super().__init__("outer product", left, right)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
-        # to do
+        raise NotImplementedError("diff not implemented for symbol of type 'Outer'")
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        # to do
+        raise NotImplementedError("jac not implemented for symbol of type 'Outer'")
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
@@ -521,6 +551,4 @@ def outer(left, right):
     try:
         return left * right
     except pybamm.DomainError:
-        left = left.new_copy()
-        left.domain = right.domain
         return pybamm.Outer(left, right)

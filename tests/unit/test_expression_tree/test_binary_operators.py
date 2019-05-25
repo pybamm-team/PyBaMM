@@ -58,6 +58,25 @@ class TestBinaryOperators(unittest.TestCase):
         pow2 = pybamm.Power(a, b)
         self.assertEqual(pow2.evaluate(), 16)
 
+    def test_outer(self):
+        # Outer class
+        v = pybamm.Vector(np.ones(5), domain="current collector")
+        w = pybamm.Vector(2 * np.ones(3), domain="test")
+        outer = pybamm.Outer(v, w)
+        np.testing.assert_array_equal(outer.evaluate(), 2 * np.ones((15, 1)))
+        self.assertEqual(outer.domain, w.domain)
+
+        # outer function
+        outer_fun = pybamm.outer(v, w)
+        outer_class = pybamm.Outer(v, w)
+        self.assertEqual(outer_fun.id, outer_class.id)
+
+        # if there is no domain clash, normal multiplication is retured
+        u = pybamm.Vector(np.linspace(0, 1, 5))
+        outer = pybamm.outer(u, v)
+        self.assertIsInstance(outer, pybamm.Multiplication)
+        np.testing.assert_array_equal(outer.evaluate(), u.evaluate())
+
     def test_known_eval(self):
         # Scalars
         a = pybamm.Scalar(4)

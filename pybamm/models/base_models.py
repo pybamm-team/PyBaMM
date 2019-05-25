@@ -331,7 +331,7 @@ class BaseModel(object):
 
         # Boundary conditions
         # for var, eqn in {**self.rhs, **self.algebraic}.items():
-        #     if eqn.has_spatial_derivatives():
+        #     if eqn.has_symbol_of_class((pybamm.Gradient, pybamm.Divergence)):
         #         # Variable must be in the boundary conditions
         #         if not any(
         #             var.id == symbol.id for symbol in self.boundary_conditions.keys()

@@ -5,7 +5,11 @@ import pybamm
 
 import numpy as np
 import unittest
-from tests import get_mesh_for_testing, get_discretisation_for_testing
+from tests import (
+    get_mesh_for_testing,
+    get_discretisation_for_testing,
+    get_1p1d_discretisation_for_testing,
+)
 from scipy.sparse import block_diag
 
 
@@ -620,12 +624,32 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
 
         # process Broadcast variable
-        disc._y_slices = {var.id: slice(53)}
+        disc._y_slices = {var.id: slice(1)}
         broad1 = pybamm.Broadcast(var, ["negative electrode"])
         broad1_disc = disc.process_symbol(broad1)
         self.assertIsInstance(broad1_disc, pybamm.Multiplication)
         self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
         self.assertIsInstance(broad1_disc.children[1], pybamm.Vector)
+
+    def test_outer(self):
+        var = pybamm.Variable("var", ["current collector"])
+        x = pybamm.SpatialVariable("x_s", ["separator"])
+
+        # create discretisation
+        disc = get_1p1d_discretisation_for_testing()
+        mesh = disc.mesh
+
+        # process Outer variable
+        disc.set_variable_slices([var])
+        outer = pybamm.outer(var, x)
+        outer_disc = disc.process_symbol(outer)
+        self.assertIsInstance(outer_disc, pybamm.Outer)
+        self.assertIsInstance(outer_disc.children[0], pybamm.StateVector)
+        self.assertIsInstance(outer_disc.children[1], pybamm.Vector)
+        self.assertEqual(
+            outer_disc.shape,
+            (mesh["separator"][0].npts * mesh["current collector"][0].npts, 1),
+        )
 
     def test_concatenation(self):
         a = pybamm.Symbol("a")

@@ -451,12 +451,6 @@ class Symbol(anytree.NodeMixin):
         else:
             return False
 
-    def has_spatial_derivatives(self):
-        """Returns True if equation has spatial derivatives (grad or div)."""
-        return self.has_symbol_of_class(pybamm.Gradient) or self.has_symbol_of_class(
-            pybamm.Divergence
-        )
-
     def evaluates_on_edges(self):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
@@ -469,7 +463,7 @@ class Symbol(anytree.NodeMixin):
         )
 
     def has_symbol_of_class(self, symbol_class):
-        """Returns True if equation has a term of the class `symbol_class`."""
+        """Returns True if equation has a term of the class(es) `symbol_class`."""
         return any(isinstance(symbol, symbol_class) for symbol in self.pre_order())
 
     def simplify(self, simplified_symbols=None):
