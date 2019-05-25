@@ -5,7 +5,7 @@ import pybamm
 
 # need numpy imported for code generated in EvaluatorPython
 import numpy as np  # noqa: F401
-import scipy.sparse
+import scipy.sparse  # noqa: F401
 from collections import OrderedDict
 
 
@@ -194,6 +194,7 @@ class EvaluatorPython:
 
 
     """
+
     def __init__(self, symbol):
         constants, self._variable_function = pybamm.to_python(symbol)
 
@@ -221,7 +222,7 @@ class EvaluatorPython:
         """
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
-            y = y.reshape(-1,1)
+            y = y.reshape(-1, 1)
 
         # execute code
         exec(self._variable_compiled)

@@ -86,8 +86,6 @@ class DaeSolver(pybamm.BaseSolver):
             jacobian = None
 
         if model.use_to_python:
-            original_concatenated_rhs = concatenated_rhs
-            original_concatenated_algebraic = concatenated_algebraic
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
             concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
             # TODO: events don't work yet

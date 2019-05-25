@@ -7,8 +7,6 @@ import unittest
 import numpy as np
 import tests
 
-import sys
-
 
 class TestUpdateParameters(unittest.TestCase):
     def test_update_parameters_eqn(self):
