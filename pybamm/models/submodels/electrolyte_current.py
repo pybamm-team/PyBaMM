@@ -22,7 +22,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_explicit_leading_order(self, ocp_n, eta_r_n, i_curr_coll):
+    def get_explicit_leading_order(self, ocp_n, eta_r_n, i_current_collector):
         """
         Provides explicit leading order solution to the electrolyte current conservation
         equation where the constitutive equation is taken to be of Stefan-Maxwell form.
@@ -54,9 +54,9 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # electrolyte current
-        i_e_n = pybamm.outer(i_curr_coll, x_n / l_n)
-        i_e_s = pybamm.Broadcast(i_curr_coll, ["separator"])
-        i_e_p = pybamm.outer(i_curr_coll, (1 - x_p) / l_p)
+        i_e_n = pybamm.outer(i_current_collector, x_n / l_n)
+        i_e_s = pybamm.Broadcast(i_current_collector, ["separator"])
+        i_e_p = pybamm.outer(i_current_collector, (1 - x_p) / l_p)
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte ohmic losses
@@ -450,7 +450,9 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             }
         )
 
-    def set_leading_order_system(self, delta_phi, reactions, domain, i_curr_coll):
+    def set_leading_order_system(
+        self, delta_phi, reactions, domain, i_current_collector
+    ):
         """
         ODE system for leading-order current in the electrolyte, derived from the
         Stefan-Maxwell equations. If self.use_capacitance is True, this adds equations
@@ -468,15 +470,13 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         param = self.set_of_parameters
 
         if domain == ["negative electrode"]:
-            x_n = pybamm.standard_spatial_vars.x_n
-            j_average = i_curr_coll / param.l_n
+            j_average = i_current_collector / param.l_n
             j = reactions["main"]["neg"]["aj"]
             self.initial_conditions.update({delta_phi: param.U_n(param.c_n_init)})
             C_dl = param.C_dl_n
             Domain = "Negative"
         elif domain == ["positive electrode"]:
-            x_p = pybamm.standard_spatial_vars.x_p
-            j_average = -i_curr_coll / param.l_p
+            j_average = -i_current_collector / param.l_p
             j = reactions["main"]["pos"]["aj"]
             self.initial_conditions.update({delta_phi: param.U_p(param.c_p_init)})
             C_dl = param.C_dl_p

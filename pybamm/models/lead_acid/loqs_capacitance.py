@@ -65,7 +65,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         "Boundary conditions"
         bc_variables = {"delta_phi_n": delta_phi_n, "delta_phi_p": delta_phi_p}
         self.set_boundary_conditions(bc_variables)
-        i_curr_coll = self.variables["Current collector current"]
+        i_current_collector = self.variables["Current collector current"]
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -109,10 +109,10 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
             param, use_capacitance
         )
         eleclyte_current_model.set_leading_order_system(
-            delta_phi_n, reactions, neg, i_curr_coll
+            delta_phi_n, reactions, neg, i_current_collector
         )
         eleclyte_current_model.set_leading_order_system(
-            delta_phi_p, reactions, pos, i_curr_coll
+            delta_phi_p, reactions, pos, i_current_collector
         )
         self.update(porosity_model, eleclyte_conc_model, eleclyte_current_model)
 
@@ -131,7 +131,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
 
         # Electrolyte: post-process
         electrolyte_vars = eleclyte_current_model.get_explicit_leading_order(
-            ocp_n, eta_r_n, i_curr_coll
+            ocp_n, eta_r_n, i_current_collector
         )
         self.variables.update(electrolyte_vars)
 
@@ -139,7 +139,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         electrode_model = pybamm.electrode.Ohm(param)
         phi_e = self.variables["Electrolyte potential"]
         electrode_vars = electrode_model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e, i_curr_coll
+            ocp_p, eta_r_p, phi_e, i_current_collector
         )
         self.variables.update(electrode_vars)
 

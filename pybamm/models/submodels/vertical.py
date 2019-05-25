@@ -34,7 +34,7 @@ class Vertical(pybamm.SubModel):
 
         # Simple model: read off vertical current (no extra equation)
         I_s_perp = self.vertical_conductivity * pybamm.grad(delta_phi_difference)
-        i_curr_coll = pybamm.div(I_s_perp)
+        i_current_collector = pybamm.div(I_s_perp)
 
         # Set boundary conditions at top ("right") and bottom ("left")
         i_cell = param.current_with_time
@@ -44,4 +44,4 @@ class Vertical(pybamm.SubModel):
                 "right": (i_cell / self.vertical_conductivity, "Neumann"),
             }
         }
-        self.variables = {"Current collector current": i_curr_coll}
+        self.variables = {"Current collector current": i_current_collector}
