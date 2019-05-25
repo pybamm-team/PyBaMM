@@ -196,6 +196,14 @@ class BaseModel(object):
     def use_capacitance(self):
         return self._use_capacitance
 
+    @property
+    def bc_options(self):
+        return self._bc_options
+
+    @property
+    def set_of_parameters(self):
+        return self._set_of_parameters
+
     def __getitem__(self, key):
         return self.rhs[key]
 
@@ -588,7 +596,7 @@ class StandardBatteryBaseModel(BaseModel):
 class SubModel(StandardBatteryBaseModel):
     def __init__(self, set_of_parameters):
         super().__init__()
-        self.set_of_parameters = set_of_parameters
+        self._set_of_parameters = set_of_parameters
         # Initialise empty variables (to avoid overwriting with 'None')
         self.variables = {}
 

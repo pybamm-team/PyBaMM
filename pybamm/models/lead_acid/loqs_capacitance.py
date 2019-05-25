@@ -27,12 +27,12 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
     def __init__(self, use_capacitance=True, bc_options=None):
         super().__init__()
         self._use_capacitance = use_capacitance
-        self.bc_options = bc_options or self.default_bc_options
+        self._bc_options = bc_options or self.default_bc_options
 
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
-        self.param = param
+        self._set_of_parameters = param
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -174,14 +174,15 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
     def set_boundary_conditions(self, bc_variables=None):
         """Get boundary conditions"""
         # TODO: edit to allow constant-current and constant-power control
+        param = self.set_of_parameters
         dimensionality = self.bc_options["dimensionality"]
         if dimensionality == 1:
-            current_bc = self.param.current_with_time
+            current_bc = param.current_with_time
             self.variables.update({"Current collector current": current_bc})
         elif dimensionality == 2:
             delta_phi_n = bc_variables["delta_phi_n"]
             delta_phi_p = bc_variables["delta_phi_p"]
-            current_collector_model = pybamm.vertical.Vertical(self.param)
+            current_collector_model = pybamm.vertical.Vertical(param)
             current_collector_model.set_leading_order_vertical_current(
                 delta_phi_n, delta_phi_p
             )
