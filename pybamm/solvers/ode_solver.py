@@ -59,8 +59,7 @@ class OdeSolver(pybamm.BaseSolver):
 
         if model.use_to_python:
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
-            #TODO: events arn't working yet
-            #events = [pybamm.EvaluatorPython(event) for event in events]
+            events = [pybamm.EvaluatorPython(event) for event in events]
 
         def dydt(t, y):
             pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))

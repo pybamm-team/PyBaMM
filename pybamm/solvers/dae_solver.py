@@ -88,8 +88,7 @@ class DaeSolver(pybamm.BaseSolver):
         if model.use_to_python:
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
             concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
-            # TODO: events don't work yet
-            #events = [pybamm.EvaluatorPython(event) for event in events]
+            events = [pybamm.EvaluatorPython(event) for event in events]
 
         def residuals(t, y, ydot):
             pybamm.logger.debug(
