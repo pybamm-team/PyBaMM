@@ -193,14 +193,6 @@ class BaseModel(object):
         self._jacobian = jacobian
 
     @property
-    def use_capacitance(self):
-        return self._use_capacitance
-
-    @property
-    def bc_options(self):
-        return self._bc_options
-
-    @property
     def set_of_parameters(self):
         return self._set_of_parameters
 
@@ -380,8 +372,9 @@ class StandardBatteryBaseModel(BaseModel):
     **Extends:** :class:`StandardBatteryBaseModel`
     """
 
-    def __init__(self):
+    def __init__(self, options=None):
         super().__init__()
+        self._extra_options = options
         self.set_standard_output_variables()
 
     @property
@@ -472,8 +465,17 @@ class StandardBatteryBaseModel(BaseModel):
         return default_solver
 
     @property
-    def default_bc_options(self):
-        return {"dimensionality": 1}
+    def capacitance_equations(self):
+        return self._capacitance_equations
+
+    @property
+    def options(self):
+        default_options = {"capacitance": False, "bc_options": {"dimensionality": 1}}
+        if self._extra_options is None:
+            return default_options
+        else:
+            # any extra options overwrite the default options
+            return {**default_options, **self._extra_options}
 
     def set_standard_output_variables(self):
         # Standard output variables
@@ -610,8 +612,8 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
 
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, options=None):
+        super().__init__(options)
 
     @property
     def default_parameter_values(self):

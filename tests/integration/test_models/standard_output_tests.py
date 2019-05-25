@@ -488,5 +488,5 @@ class CurrentTests(BaseOutputTest):
         self.test_current_density_boundaries()
         # Skip average current test if capacitance is used, since average interfacial
         # current density will be affected slightly by capacitance effects
-        if not self.model.use_capacitance:
+        if self.model.options["capacitance"] != "differential":
             self.test_interfacial_current_average()
