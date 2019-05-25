@@ -489,7 +489,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 boundary_value.domain = ["negative electrode"]
             elif discretised_child.domain == ["positive particle"]:
                 boundary_value.domain = ["positive electrode"]
-            if (
+            elif (
                 "negative electrode" or "separator" or "positive electrode"
             ) in discretised_child.domain:
                 boundary_value.domain = ["current collector"]

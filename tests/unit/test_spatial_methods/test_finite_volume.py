@@ -2,7 +2,11 @@
 # Test for the operator class
 #
 import pybamm
-from tests import get_mesh_for_testing, get_p2d_mesh_for_testing
+from tests import (
+    get_mesh_for_testing,
+    get_p2d_mesh_for_testing,
+    get_1p1d_mesh_for_testing,
+)
 
 import numpy as np
 from scipy.sparse import kron, eye
@@ -91,6 +95,47 @@ class TestFiniteVolume(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             surf_eqn_disc.evaluate(None, linear_y), y_surf
         )
+
+    def test_extrapolate_2d_models(self):
+        # create discretisation
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Microscale
+        var = pybamm.Variable("var", domain="negative particle")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
+        # evaluate
+        y_macro = mesh["negative electrode"][0].nodes
+        y_micro = mesh["negative particle"][0].nodes
+        y = np.outer(y_macro, y_micro).reshape(-1, 1)
+        # extrapolate to r=1 --> should evaluate to y_macro
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(y=y)[:, 0], y_macro
+        )
+
+        var = pybamm.Variable("var", domain="positive particle")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["positive electrode"])
+
+        # 2d macroscale
+        mesh = get_1p1d_mesh_for_testing()
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="negative electrode")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["current collector"])
 
     def test_discretise_diffusivity_times_spatial_operator(self):
         # Set up
