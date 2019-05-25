@@ -131,7 +131,7 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
 
         # Electrolyte: post-process
         electrolyte_vars = eleclyte_current_model.get_explicit_leading_order(
-            ocp_n, eta_r_n
+            ocp_n, eta_r_n, i_curr_coll
         )
         self.variables.update(electrolyte_vars)
 

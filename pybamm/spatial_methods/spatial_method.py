@@ -65,12 +65,17 @@ class SpatialMethod:
         broadcasted_symbol: class: `pybamm.Symbol`
             The discretised symbol of the correct size for the spatial method
         """
-        vector_size = 0
-        for dom in domain:
-            for i in range(len(self.mesh[dom])):
-                vector_size += self.mesh[dom][i].npts_for_broadcast
+        vector_size_1D = sum(self.mesh[dom][0].npts_for_broadcast for dom in domain)
+        vector_size_2D = sum(
+            subdom.npts_for_broadcast for dom in domain for subdom in self.mesh[dom]
+        )
 
-        out = symbol * pybamm.Vector(np.ones(vector_size), domain=domain)
+        if symbol.domain == ["current collector"]:
+            out = pybamm.Outer(
+                symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
+            )
+        else:
+            out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
         self.test_shape(out)
         return out
 

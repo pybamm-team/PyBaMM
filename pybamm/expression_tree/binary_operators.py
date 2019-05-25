@@ -523,6 +523,10 @@ class Outer(BinaryOperator):
 
         super().__init__("outer product", left, right)
 
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "outer({!s}, {!s})".format(self.left, self.right)
+
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         raise NotImplementedError("diff not implemented for symbol of type 'Outer'")

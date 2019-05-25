@@ -343,7 +343,13 @@ class Discretisation(object):
 
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
-            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            pybamm.logger.debug("**Discretise {!s}".format(eqn_key))
+            try:
+                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            except pybamm.DomainError:
+                import ipdb
+
+                ipdb.set_trace()
 
         return new_var_eqn_dict
 
@@ -362,7 +368,6 @@ class Discretisation(object):
             Discretised symbol
 
         """
-        pybamm.logger.debug("Discretise {!s}".format(symbol))
         try:
             return self._discretised_symbols[symbol.id]
         except KeyError:
@@ -566,7 +571,8 @@ class Discretisation(object):
     def check_variables(self, model):
         """
         Check variables in variable list against rhs
-        Be lenient with size check if the variable in model.variables is broadcasted
+        Be lenient with size check if the variable in model.variables is broadcasted, or
+        a concatenation, or an outer product
         (if broadcasted, variable is a multiplication with a vector of ones)
         """
         y0 = model.concatenated_initial_conditions
@@ -576,7 +582,7 @@ class Discretisation(object):
                 if not (
                     model.rhs[rhs_var].evaluate(0, y0).shape
                     == var.evaluate(0, y0).shape
-                    or isinstance(var, pybamm.Concatenation)
+                    or isinstance(var, (pybamm.Concatenation, pybamm.Outer))
                     or (
                         isinstance(var, pybamm.Multiplication)
                         and isinstance(var.right, pybamm.Vector)
