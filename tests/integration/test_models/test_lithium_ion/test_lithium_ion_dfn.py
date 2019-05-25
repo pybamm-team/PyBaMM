@@ -16,11 +16,18 @@ class TestDFN(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all()
+        import pdb, traceback, sys, pdb
+        try:
+            modeltest.test_all()
+        except:
+            extype, value, tb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(tb)
 
     def test_optimisations(self):
         model = pybamm.lithium_ion.DFN()
         optimtest = tests.OptimisationsTest(model)
+
 
         original = optimtest.evaluate_model()
         simplified = optimtest.evaluate_model(simplify=True)
