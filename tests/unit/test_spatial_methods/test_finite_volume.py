@@ -771,7 +771,7 @@ class TestFiniteVolume(unittest.TestCase):
 
     def test_definite_integral(self):
         # create discretisation
-        mesh = get_mesh_for_testing(200)
+        mesh = get_mesh_for_testing(xpts=200, rpts=200)
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,

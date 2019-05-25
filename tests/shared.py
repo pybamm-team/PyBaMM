@@ -83,9 +83,9 @@ def get_1p1d_mesh_for_testing(xpts=None, zpts=15):
     return get_mesh_for_testing(xpts=xpts, zpts=zpts, geometry=geometry)
 
 
-def get_discretisation_for_testing(xpts=None, mesh=None):
+def get_discretisation_for_testing(xpts=None, rpts=10, mesh=None):
     if mesh is None:
-        mesh = get_mesh_for_testing(xpts)
+        mesh = get_mesh_for_testing(xpts=xpts, rpts=rpts)
     spatial_methods = {
         "macroscale": SpatialMethodForTesting,
         "negative particle": SpatialMethodForTesting,
