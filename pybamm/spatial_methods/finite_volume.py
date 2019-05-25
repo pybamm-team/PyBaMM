@@ -489,6 +489,10 @@ class FiniteVolume(pybamm.SpatialMethod):
                 boundary_value.domain = ["negative electrode"]
             elif discretised_child.domain == ["positive particle"]:
                 boundary_value.domain = ["positive electrode"]
+            if (
+                "negative electrode" or "separator" or "positive electrode"
+            ) in discretised_child.domain:
+                boundary_value.domain = ["current collector"]
         else:
             boundary_value.domain = []
 
@@ -533,12 +537,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             disc_left = self.compute_diffusivity(disc_left)
         # Return new binary operator with appropriate class
         out = bin_op.__class__(disc_left, disc_right)
-        try:
-            self.test_shape(out)
-        except pybamm.ShapeError:
-            import ipdb
-
-            ipdb.set_trace()
+        self.test_shape(out)
         return out
 
     def compute_diffusivity(self, discretised_symbol):
