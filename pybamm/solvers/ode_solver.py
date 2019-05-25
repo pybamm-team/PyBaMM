@@ -49,6 +49,7 @@ class OdeSolver(pybamm.BaseSolver):
                 jac_rhs = jac_rhs.simplify()
 
             if model.use_to_python:
+                pybamm.logger.debug("Converting jacobian to python")
                 jac_rhs = pybamm.EvaluatorPython(jac_rhs)
 
             def jacobian(t, y):
@@ -58,7 +59,9 @@ class OdeSolver(pybamm.BaseSolver):
             jacobian = None
 
         if model.use_to_python:
+            pybamm.logger.debug("Converting RHS to python")
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
+            pybamm.logger.debug("Converting events to python")
             events = [pybamm.EvaluatorPython(event) for event in events]
 
         def dydt(t, y):

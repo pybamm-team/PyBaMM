@@ -86,8 +86,11 @@ class DaeSolver(pybamm.BaseSolver):
             jacobian = None
 
         if model.use_to_python:
+            pybamm.logger.debug("Converting RHS to python")
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
+            pybamm.logger.debug("Converting algebraic to python")
             concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
+            pybamm.logger.debug("Converting events to python")
             events = [pybamm.EvaluatorPython(event) for event in events]
 
         def residuals(t, y, ydot):

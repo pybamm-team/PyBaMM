@@ -44,8 +44,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         The output dictionary of variable (with y or t) symbol ids to lines of code
 
     """
-    pybamm.logger.debug("Convert to python: {!s}".format(symbol))
-
     if symbol.is_constant():
         constant_symbols[symbol.id] = symbol.evaluate()
         return
