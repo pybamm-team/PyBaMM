@@ -67,15 +67,30 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(outer.domain, w.domain)
 
         # outer function
-        outer_fun = pybamm.outer(v, w)
-        outer_class = pybamm.Outer(v, w)
-        self.assertEqual(outer_fun.id, outer_class.id)
-
         # if there is no domain clash, normal multiplication is retured
         u = pybamm.Vector(np.linspace(0, 1, 5))
         outer = pybamm.outer(u, v)
         self.assertIsInstance(outer, pybamm.Multiplication)
         np.testing.assert_array_equal(outer.evaluate(), u.evaluate())
+        # otherwise, Outer class is returned
+        outer_fun = pybamm.outer(v, w)
+        outer_class = pybamm.Outer(v, w)
+        self.assertEqual(outer_fun.id, outer_class.id)
+
+        # failures
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "left child domain must be 'current collector'"
+        ):
+            pybamm.Outer(w, v)
+        y = pybamm.StateVector(slice(10))
+        with self.assertRaisesRegex(
+            TypeError, "right child must only contain SpatialVariable and scalars"
+        ):
+            pybamm.Outer(v, y)
+        with self.assertRaises(NotImplementedError):
+            outer_fun.diff(None)
+        with self.assertRaises(NotImplementedError):
+            outer_fun.jac(None)
 
     def test_known_eval(self):
         # Scalars

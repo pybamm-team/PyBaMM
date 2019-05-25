@@ -631,6 +631,23 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(broad1_disc.children[0], pybamm.StateVector)
         self.assertIsInstance(broad1_disc.children[1], pybamm.Vector)
 
+    def test_broadcast_2D(self):
+        # broadcast in 2D --> Outer symbol
+        var = pybamm.Variable("var", ["current collector"])
+        disc = get_1p1d_discretisation_for_testing()
+        mesh = disc.mesh
+        broad = pybamm.Broadcast(var, "separator")
+
+        disc.set_variable_slices([var])
+        broad_disc = disc.process_symbol(broad)
+        self.assertIsInstance(broad_disc, pybamm.Outer)
+        self.assertIsInstance(broad_disc.children[0], pybamm.StateVector)
+        self.assertIsInstance(broad_disc.children[1], pybamm.Vector)
+        self.assertEqual(
+            broad_disc.shape,
+            (mesh["separator"][0].npts * mesh["current collector"][0].npts, 1),
+        )
+
     def test_outer(self):
         var = pybamm.Variable("var", ["current collector"])
         x = pybamm.SpatialVariable("x_s", ["separator"])

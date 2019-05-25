@@ -19,6 +19,13 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
         model = pybamm.lead_acid.LOQSCapacitance(bc_options=bc_options)
         model.check_well_posedness()
 
+    def test_default_geometry(self):
+        model = pybamm.lead_acid.LOQSCapacitance()
+        self.assertNotIn("current collector", model.default_geometry)
+        bc_options = {"dimensionality": 2}
+        model = pybamm.lead_acid.LOQSCapacitance(bc_options=bc_options)
+        self.assertIn("current collector", model.default_geometry)
+
     def test_default_solver(self):
         model = pybamm.lead_acid.LOQSCapacitance(use_capacitance=True)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)

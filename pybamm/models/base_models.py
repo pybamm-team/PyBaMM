@@ -330,19 +330,19 @@ class BaseModel(object):
                 )
 
         # Boundary conditions
-        # for var, eqn in {**self.rhs, **self.algebraic}.items():
-        #     if eqn.has_symbol_of_class((pybamm.Gradient, pybamm.Divergence)):
-        #         # Variable must be in the boundary conditions
-        #         if not any(
-        #             var.id == symbol.id for symbol in self.boundary_conditions.keys()
-        #         ):
-        #             raise pybamm.ModelError(
-        #                 """
-        #                 no boundary condition given for variable '{}' with equation '{}'
-        #                 """.format(
-        #                     var, eqn
-        #                 )
-        #             )
+        for var, eqn in {**self.rhs, **self.algebraic}.items():
+            if eqn.has_symbol_of_class((pybamm.Gradient, pybamm.Divergence)):
+                # Variable must be in the boundary conditions
+                if not any(
+                    var.id == symbol.id for symbol in self.boundary_conditions.keys()
+                ):
+                    raise pybamm.ModelError(
+                        """
+                        no boundary condition given for variable '{}' with equation '{}'
+                        """.format(
+                            var, eqn
+                        )
+                    )
 
     def check_variables(self):
         """ Chec that the right variables are provided. """
