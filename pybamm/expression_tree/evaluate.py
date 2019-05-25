@@ -100,7 +100,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                 symbol_str = '{}'.format(",".join(children_vars))
 
         elif isinstance(symbol, pybamm.SparseStack):
-            symbol_str = "scipy.sparse.vstack(({}))".format(",".join(children_vars))
+            if len(children_vars) > 1:
+                symbol_str = "scipy.sparse.vstack(({}))".format(",".join(children_vars))
+            else:
+                symbol_str = '{}'.format(",".join(children_vars))
 
         # DomainConcatenation specifies a particular ordering for the concatenation,
         # which we must follow
@@ -138,17 +141,21 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
 
 def to_python(symbol):
     """
-    This function converts an expression tree to a python function that acts like the
-    tree's :func:`pybamm.Symbol.evaluate` function
+    This function converts an expression tree into a dict of constant input values, and
+    valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
 
     Parameters
     ----------
     symbol : :class:`pybamm.Symbol`
-        The symbol to convert to a python function
+        The symbol to convert to python code
 
     Returns
     -------
-    str: string representing a python function with signature func(t=None, y=None)
+    collections.OrderedDict:
+        dict mapping node id to a constant value. Represents all the constant nodes in
+        the expression tree
+    str:
+        valid python code that will evaluate all the variable nodes in the tree.
 
     """
 
@@ -175,18 +182,43 @@ def to_python(symbol):
 
 
 class EvaluatorPython:
+    """
+    Converts a pybamm expression tree into pure python code that will calculate the
+    result of calling `evaluate(t, y)` on the given expression tree.
+
+    Parameters
+    ----------
+
+    symbol : :class:`pybamm.Symbol`
+        The symbol to convert to python code
+
+
+    """
     def __init__(self, symbol):
         constants, self._variable_function = pybamm.to_python(symbol)
+
+        # store all the constant symbols in the tree as internal variables of this
+        # object
         for symbol_id, value in constants.items():
             setattr(self, id_to_python_variable(
                 symbol_id, True).replace("self.", ""), value)
+
+        # calculate the final variable that will output the result of calling `evaluate`
+        # on `symbol`
         self._result_var = id_to_python_variable(symbol.id, symbol.is_constant())
+
+        # compile the generated python code
         self._variable_compiled = compile(
             self._variable_function, self._result_var, 'exec')
+
+        # compile the line that will return the output of `evaluate`
         self._return_compiled = compile(
             self._result_var, 'return' + self._result_var, 'eval')
 
     def evaluate(self, t=None, y=None, known_evals=None):
+        """
+        Acts as a drop-in replacement for :funct:`pybamm.Symbol.evaluate`
+        """
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
             y = y.reshape(-1,1)
