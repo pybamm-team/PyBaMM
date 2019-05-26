@@ -111,7 +111,7 @@ class TestMesh(unittest.TestCase):
             }
         )
 
-        geometry = pybamm.Geometry1DMacro()
+        geometry = pybamm.Geometry("1D macro", "1D micro")
         param.process_geometry(geometry)
 
         # provide mesh properties
@@ -142,7 +142,27 @@ class TestMesh(unittest.TestCase):
             0,
         )
         with self.assertRaises(pybamm.DomainError):
-            submesh = mesh.combine_submeshes("negative electrode", "positive electrode")
+            mesh.combine_submeshes("negative electrode", "positive electrode")
+
+        geometry = {
+            "negative electrode": {
+                "primary": {
+                    var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(0.5)}
+                }
+            },
+            "negative particle": {
+                "primary": {
+                    var.r_n: {"min": pybamm.Scalar(0.5), "max": pybamm.Scalar(1)}
+                }
+            },
+        }
+        param.process_geometry(geometry)
+
+        # create mesh
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        with self.assertRaisesRegex(pybamm.DomainError, "trying"):
+            mesh.combine_submeshes("negative electrode", "negative particle")
 
     def test_ghost_cells(self):
         param = pybamm.ParameterValues(

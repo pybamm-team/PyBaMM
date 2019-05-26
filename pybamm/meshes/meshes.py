@@ -95,6 +95,13 @@ class Mesh(dict):
                 ):
                     raise pybamm.DomainError("submesh edges are not aligned")
 
+            coord_sys = self[submeshnames[i]][0].coord_sys
+            coord_sys_r = self[submeshnames[i + 1]][0].coord_sys
+            if coord_sys != coord_sys_r:
+                raise pybamm.DomainError(
+                    "trying to combine two meshes in different coordinate systems"
+                )
+
         submeshes = [None] * len(self[submeshnames[0]])
         for i in range(len(self[submeshnames[0]])):
             combined_submesh_edges = np.concatenate(
@@ -102,11 +109,6 @@ class Mesh(dict):
                 + [self[submeshname][i].edges[1:] for submeshname in submeshnames[1:]]
             )
             coord_sys = self[submeshnames[0]][i].coord_sys
-            coord_sys_r = self[submeshnames[0]][i].coord_sys
-            if coord_sys != coord_sys_r:
-                raise pybamm.DomainError(
-                    "trying to combine two meshes in different coordinate systems"
-                )
             submeshes[i] = pybamm.SubMesh1D(combined_submesh_edges, coord_sys)
         return submeshes
 
