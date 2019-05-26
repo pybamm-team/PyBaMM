@@ -1,6 +1,8 @@
 #
 # fenics meshes for use in PyBaMM
 #
+import pybamm
+
 import numpy as np
 import importlib
 
@@ -16,40 +18,67 @@ class FenicsMesh2D:
 
         Parameters
         ----------
-        domain : dict
-            A dictionary that contains the limits of the spatial variables
+        npts : dict
+            A dictionary that contains the limits of each
+            spatial variable
         npts : dict
             A dictionary that contains the number of points to be used on each
             spatial variable
+        tabs : dict
+            A dictionary that contains information about the size and location of
+            the tabs
         """
 
-    def __init__(self, lims, npts, degree=1, coord_sys):
+    def __init__(self, lims, npts, tabs, degree=1):
+
+        # get limits
+        # NOTE: This is currently only implemented for use in the specifc
+        # case of the 2D current collector problem. Could be made more general.
         y_lims = lims["y"]
         z_lims = lims["z"]
-        self.Ny = npts[]
-        self.Nz = npts[]
+
+        # get spatial variables
+        # TO DO: check does dict get reodered?
+        spatial_vars = list(lims.keys())
+        self.Ny = npts[spatial_vars[0].id]
+        self.Nz = npts[spatial_vars[1].id]
+
         self.degree = degree
-        self.coord_sys = coord_sys
+
+        # check coordinate system agrees
+        if spatial_vars[0].coord_sys == spatial_vars[1].coord_sys:
+            self.coord_sys = spatial_vars[0].coord_sys
+        else:
+            raise pybamm.DomainError(
+                "spatial variables should have the same domain, but have domians {} and {}".format(
+                    spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
+                )
+            )
 
         # create mesh and function space
-        self.mesh = dolfin.RectangleMesh(
-            dolfin.Point(y_lims[0], z_lims[0]), dolfin.Point(y_lims[1], z_lims[1]), self.Ny, self.Nz
+        self.fem_mesh = dolfin.RectangleMesh(
+            dolfin.Point(y_lims[0], z_lims[0]),
+            dolfin.Point(y_lims[1], z_lims[1]),
+            self.Ny,
+            self.Nz,
         )
-        self.FunctionSpace = dolfin.FunctionSpace(self.mesh, "Lagrange", self.degree)
+        self.FunctionSpace = dolfin.FunctionSpace(
+            self.fem_mesh, "Lagrange", self.degree
+        )
 
         self.TrialFunction = dolfin.TrialFunction(self.FunctionSpace)
         self.TestFunction = dolfin.TestFunction(self.FunctionSpace)
+        self.N_dofs = np.size(self.TrialFunction.vector()[:])
 
         # create SubDomain classes for the tabs
-        # TO DO: fix passing of params to Tab class
         negativetab = Tab()
-        negativetab.set_parameters(param, param_vals, "negative")
+        negativetab.set_parameters(y_lims, z_lims, tabs["negative"])
         positivetab = Tab()
-        positivetab.set_parameters(param, param_vals, "positive")
+        positivetab.set_parameters(y_lims, z_lims, tabs["positive"])
 
         # initialize mesh function for boundary domains
         boundary_markers = dolfin.MeshFunction(
-            "size_t", self.mesh, self.mesh.topology().dim() - 1
+            "size_t", self.fem_mesh, self.fem_mesh.topology().dim() - 1
         )
         boundary_markers.set_all(0)
         negativetab.mark(boundary_markers, 1)
@@ -57,29 +86,23 @@ class FenicsMesh2D:
 
         # create measure of parts of the boundary
         self.ds = dolfin.Measure(
-            "ds", domain=self.mesh, subdomain_data=boundary_markers
+            "ds", domain=self.fem_mesh, subdomain_data=boundary_markers
         )
+
+        # create measure for domain
+        self.dx = dolfin.dx
 
 
 class Tab(dolfin.SubDomain):
-    def set_parameters(self, param, param_vals, domain):
-        # Set paramaters so they can be accessed from the dolfin inside method
-        self.l_y = param_vals.process_symbol(param.l_y).evaluate(0, 0)
-        self.l_z = param_vals.process_symbol(param.l_z).evaluate(0, 0)
-        if domain == "negative":
-            self.tab_location = [
-                param_vals.process_symbol(param.centre_y_tab_n).evaluate(0, 0),
-                param_vals.process_symbol(param.centre_z_tab_n).evaluate(0, 0),
-            ]
-            self.tab_width = param_vals.process_symbol(param.l_tab_n).evaluate(0, 0)
-        elif domain == "positive":
-            self.tab_location = [
-                param_vals.process_symbol(param.centre_y_tab_p).evaluate(0, 0),
-                param_vals.process_symbol(param.centre_z_tab_p).evaluate(0, 0),
-            ]
-            self.tab_width = param_vals.process_symbol(param.l_tab_p).evaluate(0, 0)
-        else:
-            raise pybamm.ModelError("tab domain must be one of negative or positive")
+    """
+    A class to generate the subdomains for the tabs.
+    """
+
+    def __init__(self, y_lims, z_lims, tab):
+        self.l_y = y_lims[1]
+        self.l_z = z_lims[1]
+        self.tab_location = [tab["y_centre"], tab["z_centre"]]
+        self.tab_width = tab["width"]
 
     def inside(self, x, on_boundary):
         if dolfin.near(self.tab_location[1], self.l_z):

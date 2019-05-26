@@ -163,7 +163,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
             dolfin.inner(
                 dolfin.grad(mesh.TrialFunction), dolfin.grad(mesh.TestFunction)
             )
-            * dolfin.dx
+            * mesh.dx
         )
 
         # assemble the stifnness matrix
@@ -203,7 +203,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
             The finite volume integral vector for the domain
         """
         mesh = self.mesh
-        vector = dolfin.assemble(mesh.TrialFunction * dolfin.dx)
+        vector = dolfin.assemble(mesh.TrialFunction * mesh.dx)
         return pybamm.Vector(vector)
 
     def indefinite_integral(self, domain, symbol, discretised_symbol):
@@ -244,7 +244,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         mesh = self.mesh
 
         # create form for mass
-        mass_form = mesh.TrialFunction * mesh.TestFunction * dolfin.dx
+        mass_form = mesh.TrialFunction * mesh.TestFunction * mesh.dx
 
         # assemble mass matrix
         mass = csr_matrix(dolfin.assemble(mass_form).array())

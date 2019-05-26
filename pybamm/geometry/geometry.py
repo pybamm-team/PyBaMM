@@ -108,7 +108,17 @@ class Geometry1p1DMacro(Geometry1DMacro):
         self["current collector"] = {
             "primary": {
                 var.z: {"min": pybamm.Scalar(0), "max": pybamm.geometric_parameters.l_z}
-            }
+            },
+            "tabs": {
+                "negative": {
+                    "z_centre": pybamm.geometric_parameters.centre_z_tab_n,
+                    "width": pybamm.geometric_parameters.l_tab_n,
+                },
+                "positive": {
+                    "z_centre": pybamm.geometric_parameters.centre_z_tab_p,
+                    "width": pybamm.geometric_parameters.l_tab_p,
+                },
+            },
         }
 
         # update with custom geometry if non empty
@@ -143,7 +153,19 @@ class Geometry2p1DMacro(Geometry1DMacro):
                     "min": pybamm.Scalar(0),
                     "max": pybamm.geometric_parameters.l_z,
                 },
-            }
+            },
+            "tabs": {
+                "negative": {
+                    "y_centre": pybamm.geometric_parameters.centre_y_tab_n,
+                    "z_centre": pybamm.geometric_parameters.centre_z_tab_n,
+                    "width": pybamm.geometric_parameters.l_tab_n,
+                },
+                "positive": {
+                    "y_centre": pybamm.geometric_parameters.centre_y_tab_p,
+                    "z_centre": pybamm.geometric_parameters.centre_z_tab_p,
+                    "width": pybamm.geometric_parameters.l_tab_p,
+                },
+            },
         }
 
         # update with custom geometry if non empty

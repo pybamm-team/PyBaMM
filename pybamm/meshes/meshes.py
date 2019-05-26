@@ -56,6 +56,15 @@ class Mesh(dict):
                 self.domain_order.append(domain)
 
         for domain in geometry:
+            if domain == "current collector":
+                # need to pass tab information if primary domian is current collector
+                self[domain] = [
+                    submesh_types[domain](
+                        geometry[domain]["primary"],
+                        submesh_pts[domain],
+                        geometry[domain]["tabs"],
+                    )
+                ]
             if "secondary" in geometry[domain].keys():
                 for var in geometry[domain]["secondary"].keys():
                     repeats = submesh_pts[domain][var.id]  # note (specific to FV)
