@@ -154,6 +154,8 @@ class TestJacobian(unittest.TestCase):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
 
+        self.assertEqual(a.jac(a).evaluate(), 1)
+
         add = a + b
         self.assertEqual(add.jac(add).evaluate(), 1)
 
@@ -176,6 +178,8 @@ class TestJacobian(unittest.TestCase):
 
         y = pybamm.Variable("y")
 
+        self.assertEqual(a.jac(y).evaluate(), 0)
+
         add = a + b
         self.assertEqual(add.jac(y).evaluate(), 0)
 
@@ -190,6 +194,12 @@ class TestJacobian(unittest.TestCase):
 
         power = a ** b
         self.assertEqual(power.jac(y).evaluate(), 0)
+
+    def test_jac_of_symbol(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+
+        self.assertEqual(a.jac(b).evaluate(), 0)
 
 
 if __name__ == "__main__":
