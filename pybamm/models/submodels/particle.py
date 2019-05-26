@@ -62,7 +62,7 @@ class Standard(pybamm.SubModel):
             }
             self.variables = self.get_variables(c, N, broadcast)
         else:
-            raise pybamm.ModelError("Domain not valid for the particle equations")
+            raise pybamm.ModelError("Invalid particle domain")
 
         c_surf = self.variables[domain.capitalize() + " surface concentration"]
         tol = 0.01
