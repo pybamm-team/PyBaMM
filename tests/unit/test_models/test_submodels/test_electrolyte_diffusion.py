@@ -8,7 +8,7 @@ import unittest
 class TestElectrolyteDiffusion(unittest.TestCase):
     def test_use_epsilon_param(self):
         parameters = pybamm.standard_parameters_lithium_ion
-        model = pybamm.models.submodels.electrolyte_diffusion.StefanMaxwell(parameters)
+        model = pybamm.electrolyte_diffusion.StefanMaxwell(parameters)
         c_e = pybamm.Variable("c")
         model.set_leading_order_system(c_e, {})
 
