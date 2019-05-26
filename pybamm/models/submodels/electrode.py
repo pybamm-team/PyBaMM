@@ -45,16 +45,10 @@ class Ohm(pybamm.SubModel):
             if eps is None:
                 eps = param.epsilon_n
             # liion sigma_n may already account for porosity
-            i_s_n = -param.sigma_n * (1 - eps) ** param.b * pybamm.grad(phi_s)
-            self.algebraic = {phi_s: pybamm.div(i_s_n) + j}
-            self.boundary_conditions = {
-                phi_s: {"left": (0, "Dirichlet"), "right": (0, "Neumann")}
-            }
-            self.initial_conditions = {phi_s: 0}
-            self.variables = {
-                "Negative electrode potential": phi_s,
-                "Negative electrode current density": i_s_n,
-            }
+            conductivity = param.sigma_n * (1 - eps) ** param.b
+            lbc = (pybamm.Scalar(0), "Dirichlet")
+            rbc = (pybamm.Scalar(0), "Neumann")
+            self.initial_conditions[phi_s] = pybamm.Scalar(0)
         elif phi_s.domain == ["positive electrode"]:
             j = reactions["main"]["pos"]["aj"]
             # if porosity is not provided, use the input parameter
@@ -62,21 +56,24 @@ class Ohm(pybamm.SubModel):
                 eps = param.epsilon_p
             # liion sigma_p may already account for porosity
             conductivity = param.sigma_p * (1 - eps) ** param.b
-            i_s_p = -conductivity * pybamm.grad(phi_s)
-            self.algebraic = {phi_s: pybamm.div(i_s_p) + j}
-            rbc = icell / pybamm.boundary_value(-conductivity, "right")
-            self.boundary_conditions = {
-                phi_s: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
-            }
-            self.initial_conditions = {
-                phi_s: param.U_p(param.c_p_init) - param.U_n(param.c_n_init)
-            }
-            self.variables = {
-                "Positive electrode potential": phi_s,
-                "Positive electrode current density": i_s_p,
-            }
+            lbc = (pybamm.Scalar(0), "Neumann")
+            rbc = (icell / pybamm.boundary_value(-conductivity, "right"), "Neumann")
+            self.initial_conditions[phi_s] = param.U_p(param.c_p_init) - param.U_n(
+                param.c_n_init
+            )
+
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(phi_s.domain))
+
+        i_s = -conductivity * pybamm.grad(phi_s)
+        self.algebraic[phi_s] = pybamm.div(i_s) + j
+        self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
+        self.variables.update(
+            {
+                phi_s.domain[0].capitalize() + " potential": phi_s,
+                phi_s.domain[0].capitalize() + " current density": i_s,
+            }
+        )
 
     @property
     def default_solver(self):

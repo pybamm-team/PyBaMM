@@ -29,6 +29,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         "Model Variables"
 
         c_e, eps, delta_phi_n, delta_phi_p, potentials = self.get_model_variables()
+        eps_n, _, eps_p = eps.orphans
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -73,24 +74,13 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             )
             eleclyte_current_model.set_algebraic_system(phi_e, c_e, reactions, eps)
 
-            # Electrode models
-            eps_n, _, eps_p = eps.orphans
-            negative_electrode_current_model = pybamm.electrode.Ohm(param)
-            negative_electrode_current_model.set_algebraic_system(
-                phi_s_n, reactions, eps_n
-            )
-            positive_electrode_current_model = pybamm.electrode.Ohm(param)
-            positive_electrode_current_model.set_algebraic_system(
-                phi_s_p, reactions, eps_p
-            )
-            self.update(
-                eleclyte_current_model,
-                negative_electrode_current_model,
-                positive_electrode_current_model,
-            )
+            # Electrode model
+            electrode_current_model = pybamm.electrode.Ohm(param)
+            electrode_current_model.set_algebraic_system(phi_s_n, reactions, eps_n)
+            electrode_current_model.set_algebraic_system(phi_s_p, reactions, eps_p)
+            self.update(eleclyte_current_model, electrode_current_model)
         else:
             # Electrolyte current
-            eps_n, _, eps_p = eps.orphans
             eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
                 param, capacitance_options
             )
@@ -120,7 +110,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             phi_s_p = self.variables["Positive electrode potential"]
             i_s_n = self.variables["Negative electrode current density"]
             i_s_p = self.variables["Positive electrode current density"]
-            volt_vars = positive_electrode_current_model.get_variables(
+            volt_vars = electrode_current_model.get_variables(
                 phi_s_n, phi_s_p, i_s_n, i_s_p
             )
             self.variables.update(volt_vars)
