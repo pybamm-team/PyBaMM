@@ -111,11 +111,11 @@ class TestCompareOutputs(unittest.TestCase):
                 pybamm.lead_acid.CompositeCapacitance(),
                 pybamm.lead_acid.CompositeCapacitance(use_capacitance=False),
             ),
-            # (
-            #     pybamm.lead_acid.NewmanTiedemann(),
-            #     pybamm.lead_acid.NewmanTiedemannCapacitance(),
-            #     pybamm.lead_acid.NewmanTiedemannCapacitance(use_capacitance=False),
-            # )
+            (
+                pybamm.lead_acid.NewmanTiedemann(),
+                pybamm.lead_acid.NewmanTiedemannCapacitance(),
+                pybamm.lead_acid.NewmanTiedemannCapacitance(use_capacitance=False),
+            ),
         ]
 
         for models in model_combos:
