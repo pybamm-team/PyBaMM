@@ -104,6 +104,7 @@ class TestJacobian(unittest.TestCase):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
         v = pybamm.StateVector(slice(2, 4))
+        const = pybamm.Scalar(1)
 
         y0 = np.array([1.0, 2.0, 3.0, 4.0])
 
@@ -144,6 +145,12 @@ class TestJacobian(unittest.TestCase):
                 ],
             ]
         )
+        dfunc_dy = func.jac(y).evaluate(y=y0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        # when child evaluates to number
+        func = pybamm.Function(auto_np.sin, const)
+        jacobian = np.array([[0, 0, 0, 0]])
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
@@ -204,6 +211,12 @@ class TestJacobian(unittest.TestCase):
         b = pybamm.Symbol("b")
 
         self.assertEqual(a.jac(b).evaluate(), 0)
+
+    def test_spatial_operator(self):
+        a = pybamm.Variable("a")
+        b = pybamm.SpatialOperator("Operator", a)
+        with self.assertRaises(NotImplementedError):
+            b.jac(None)
 
 
 if __name__ == "__main__":
