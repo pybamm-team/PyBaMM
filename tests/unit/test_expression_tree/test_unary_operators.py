@@ -132,7 +132,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # absolute value (not implemented)
         absa = abs(a)
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(pybamm.UndefinedOperation):
             absa.diff(a)
 
         # function: use autograd

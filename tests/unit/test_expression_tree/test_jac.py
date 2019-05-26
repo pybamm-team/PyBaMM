@@ -96,6 +96,10 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
+        func = pybamm.AbsoluteValue(v)
+        with self.assertRaises(pybamm.UndefinedOperation):
+            func.jac(y)
+
     def test_functions(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
