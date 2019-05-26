@@ -79,11 +79,6 @@ class TestHomogeneousReaction(unittest.TestCase):
             (l_p * j_simp).evaluate(0, None)[npts_n + npts_s :], -1
         )
 
-    def test_failure(self):
-        model = pybamm.interface.InterfacialCurrent(None)
-        with self.assertRaises(pybamm.DomainError):
-            model.get_homogeneous_interfacial_current("not a domain")
-
 
 class TestButlerVolmer(unittest.TestCase):
     def setUp(self):
