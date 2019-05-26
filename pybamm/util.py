@@ -72,7 +72,7 @@ class Timer(object):
         return timeit.default_timer() - self._start
 
 
-def profile(code, sort="cumulative", num=30):
+def profile(code, sort="cumulative", num=30):  # pragma: no cover
     """Common-use for cProfile"""
     cProfile.run(code)
     stats = pstats.Stats()
