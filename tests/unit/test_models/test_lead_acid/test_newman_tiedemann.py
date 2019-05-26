@@ -16,12 +16,12 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
 
 
 class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
-    def test_well_posed(self):
+    def test_well_posed_differential(self):
         options = {"capacitance": "differential"}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
 
-    def test_well_posed_no_capacitance(self):
+    def test_well_posed_algebraic(self):
         options = {"capacitance": "algebraic"}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
