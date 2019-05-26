@@ -34,8 +34,9 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.update(0.01)
 
         # Test with different output variables
-        quick_plot = pybamm.QuickPlot(model, mesh, solver,
-                                      ["b broadcasted", "c broadcasted"])
+        quick_plot = pybamm.QuickPlot(
+            model, mesh, solver, ["b broadcasted", "c broadcasted"]
+        )
         self.assertEqual(len(quick_plot.axis), 2)
         quick_plot.plot(0)
 
@@ -53,6 +54,32 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.dynamic_plot(testing=True)
 
         quick_plot.update(0.01)
+
+    def test_load_output_variables(self):
+        model = pybamm.lithium_ion.SPM()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        solver = model.default_solver
+        t_eval = np.linspace(0, 2, 100)
+        solver.solve(model, t_eval)
+        quick_plot = pybamm.QuickPlot(model, mesh, solver)
+
+        output_variables = [
+            "Negative particle surface concentration",
+            "Electrolyte concentration",
+            "Positive particle surface concentration",
+            "Current [A]",
+            "Negative electrode potential [V]",
+            "Electrolyte potential [V]",
+            "Positive electrode potential [V]",
+            "Terminal voltage [V]",
+        ]
+        self.assertTrue(list(quick_plot.variables.keys()), output_variables)
 
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "'models' must be"):
