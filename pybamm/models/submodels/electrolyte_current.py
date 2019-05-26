@@ -451,8 +451,8 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     ):
         """
         ODE system for leading-order current in the electrolyte, derived from the
-        Stefan-Maxwell equations. If self.capacitance_equations is True, this adds equations
-        to `rhs`. Otherwise, this adds equations to `algebraic`
+        Stefan-Maxwell equations. If self.capacitance_equations is True, this adds
+        equations to `rhs`. Otherwise, this adds equations to `algebraic`
 
         Parameters
         ----------

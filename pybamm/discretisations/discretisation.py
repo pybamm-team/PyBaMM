@@ -344,8 +344,14 @@ class Discretisation(object):
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
             pybamm.logger.debug("**Discretise {!s}".format(eqn_key))
+            # try:
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
-
+            # except pybamm.ShapeError:
+            #     x = eqn.right.right
+            #     import ipdb
+            #
+            #     ipdb.set_trace()
+            #     self.process_symbol(x)
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
@@ -390,6 +396,12 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)
+            try:
+                pybamm.SpatialMethod(self.mesh).test_shape(disc_child)
+            except pybamm.ShapeError:
+                import ipdb
+
+                ipdb.set_trace()
             if child.domain != []:
                 child_spatial_method = self._spatial_methods[child.domain[0]]
             if isinstance(symbol, pybamm.Gradient):
