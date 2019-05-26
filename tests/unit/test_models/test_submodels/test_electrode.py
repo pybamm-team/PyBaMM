@@ -13,6 +13,14 @@ class TestOhm(unittest.TestCase):
         model = pybamm.electrode.Ohm(param)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
+    def test_exceptions(self):
+        param = pybamm.standard_parameters_lithium_ion
+        model = pybamm.electrode.Ohm(param)
+
+        with self.assertRaises(pybamm.DomainError):
+            phi_s = pybamm.Variable("phi_s", "not a domain")
+            model.set_algebraic_system(phi_s, {})
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
