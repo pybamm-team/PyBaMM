@@ -15,6 +15,26 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
+class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
+    def test_well_posed(self):
+        options = {"capacitance": "differential"}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model.check_well_posedness()
+
+    def test_well_posed_no_capacitance(self):
+        options = {"capacitance": "algebraic"}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model.check_well_posedness()
+
+    def test_default_solver(self):
+        options = {"capacitance": "differential"}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
+        options = {"capacitance": "algebraic"}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

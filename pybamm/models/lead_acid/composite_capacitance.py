@@ -49,7 +49,8 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Submodels"
         # Leading order model
-        leading_order_model = pybamm.lead_acid.LOQS()
+        options = {"capacitance": "differential"}
+        leading_order_model = pybamm.lead_acid.LOQS(options)
 
         # Interfacial current density
         neg = ["negative electrode"]
