@@ -32,6 +32,8 @@ class Mesh(dict):
         submesh_pts = {}
         for domain in geometry:
             submesh_pts[domain] = {}
+            if len(list(geometry[domain]["primary"].keys())) > 1:
+                raise pybamm.GeometryError
             for prim_sec in list(geometry[domain].keys()):
                 for var in list(geometry[domain][prim_sec].keys()):
                     if var.id not in var_id_pts.keys():

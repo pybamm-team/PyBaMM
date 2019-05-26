@@ -126,8 +126,6 @@ class TestUnaryOperators(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "slice size exceeds child size"):
             pybamm.Index(vec, 5)
 
-        # new copy function
-
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         y = np.array([5])

@@ -1013,10 +1013,6 @@ class TestFiniteVolume(unittest.TestCase):
             x1_disc.evaluate(), disc.mesh["negative electrode"][0].nodes[:, np.newaxis]
         )
 
-        z = pybamm.SpatialVariable("z", ["negative electrode"])
-        with self.assertRaises(NotImplementedError):
-            disc.process_symbol(z)
-
         x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
         x2_disc = disc.process_symbol(x2)
         self.assertIsInstance(x2_disc, pybamm.Vector)

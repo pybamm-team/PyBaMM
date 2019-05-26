@@ -252,6 +252,18 @@ class TestMesh(unittest.TestCase):
             for submesh in submeshlist:
                 self.assertTrue(submesh.coord_sys in pybamm.KNOWN_COORD_SYS)
 
+    def test_unimplemented_meshes(self):
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.y: 10}
+        geometry = {
+            "negative electrode": {
+                "primary": {var.x_n: {"min": 0, "max": 1}, var.y: {"min": 0, "max": 1}}
+            }
+        }
+        submesh_types = {"negative electrode": pybamm.Uniform1DSubMesh}
+        with self.assertRaises(pybamm.GeometryError):
+            pybamm.Mesh(geometry, submesh_types, var_pts)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

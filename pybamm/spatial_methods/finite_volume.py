@@ -55,11 +55,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         # for finite volume we use the cell centres
-        if symbol.name in ["x_n", "x_s", "x_p", "r_n", "r_p", "x", "r"]:
-            symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
-        else:
-            raise NotImplementedError("3D meshes not yet implemented")
+        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+        return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -363,8 +360,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # get relevant grid points
         submesh_list = self.mesh.combine_submeshes(*symbol.domain)
-        if isinstance(submesh_list[0].npts, list):
-            NotImplementedError("Can only take in 1D primary directions")
 
         # Prepare sizes and empty bcs_vector
         n = submesh_list[0].npts
@@ -444,8 +439,6 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Find the number of submeshes
         submesh_list = self.mesh.combine_submeshes(*discretised_child.domain)
-        if isinstance(submesh_list[0].npts, list):
-            NotImplementedError("Can only take in 1D primary directions")
 
         prim_pts = submesh_list[0].npts
         sec_pts = len(submesh_list)

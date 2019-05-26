@@ -9,6 +9,14 @@ class DomainError(Exception):
     pass
 
 
+class GeometryError(Exception):
+    """
+        Geometry error: Raised if the an unimplemented geometry is used.
+     """
+
+    pass
+
+
 class ModelError(Exception):
     """Model error: the model is not well-posed (can be before or after processing)"""
 
