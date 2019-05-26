@@ -32,7 +32,7 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = 7 * u - 9 * v
+        func = 7 * u - v * 9
         jacobian = np.array([[7, 0, -9, 0], [0, 7, 0, -9]])
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
@@ -42,6 +42,10 @@ class TestJacobian(unittest.TestCase):
         jacobian = np.array([[2, 0, 0, 0], [0, 2, 0, 0]])
         dfunc_dy = func.jac(y).simplify().evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = u @ A
+        with self.assertRaises(NotImplementedError):
+            func.jac(y)
 
     def test_nonlinear(self):
         y = pybamm.StateVector(slice(0, 4))
@@ -61,6 +65,11 @@ class TestJacobian(unittest.TestCase):
         )
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = v ** v
+        jacobian = [[0, 0, 27 * (1 + np.log(3)), 0], [0, 0, 0, 256 * (1 + np.log(4))]]
+        dfunc_dy = func.jac(y).evaluate(y=y0)
+        np.testing.assert_array_almost_equal(jacobian, dfunc_dy.toarray())
 
         func = u * v
         jacobian = np.array([[3, 0, 1, 0], [0, 4, 0, 2]])
@@ -141,7 +150,7 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jac, np.array([[0, 0, 0, 1, 0]]))
 
     def test_jac_of_self(self):
-        "Jacobian of variable with respect to itself is one."
+        "Jacobian of variable with respect to itself should be one."
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
 
@@ -159,6 +168,28 @@ class TestJacobian(unittest.TestCase):
 
         power = a ** b
         self.assertEqual(power.jac(power).evaluate(), 1)
+
+    def test_jac_of_number(self):
+        "Jacobian of a number should be zero"
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+
+        y = pybamm.Variable("y")
+
+        add = a + b
+        self.assertEqual(add.jac(y).evaluate(), 0)
+
+        subtract = a - b
+        self.assertEqual(subtract.jac(y).evaluate(), 0)
+
+        multiply = a * b
+        self.assertEqual(multiply.jac(y).evaluate(), 0)
+
+        divide = a / b
+        self.assertEqual(divide.jac(y).evaluate(), 0)
+
+        power = a ** b
+        self.assertEqual(power.jac(y).evaluate(), 0)
 
 
 if __name__ == "__main__":
