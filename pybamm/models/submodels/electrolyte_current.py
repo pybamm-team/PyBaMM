@@ -22,7 +22,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_explicit_leading_order(self, ocp_n, eta_r_n):
+    def get_explicit_leading_order(self, ocp_n, eta_r_n, i_current_collector):
         """
         Provides explicit leading order solution to the electrolyte current conservation
         equation where the constitutive equation is taken to be of Stefan-Maxwell form.
@@ -33,6 +33,9 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             Open-circuit potential in the negative electrode
         eta_r_n : :class:`pybamm.Symbol`
             Reaction overpotential in the negative electrode
+        i_current_collector : : class:`pybamm.Symbol`
+            Current density in the current collector. Can evaluate to a Scalar (for 1D
+            models), or a vector (for 1+1D or 2+1D models)
 
         Returns
         -------
@@ -46,9 +49,6 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        # define current
-        i_cell = param.current_with_time
-
         # electrolye potential
         phi_e_const = -ocp_n - eta_r_n
         phi_e_n = pybamm.Broadcast(phi_e_const, ["negative electrode"])
@@ -57,9 +57,9 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # electrolyte current
-        i_e_n = i_cell * x_n / l_n
-        i_e_s = pybamm.Broadcast(i_cell, ["separator"])
-        i_e_p = i_cell * (1 - x_p) / l_p
+        i_e_n = pybamm.outer(i_current_collector, x_n / l_n)
+        i_e_s = pybamm.Broadcast(i_current_collector, ["separator"])
+        i_e_p = pybamm.outer(i_current_collector, (1 - x_p) / l_p)
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte ohmic losses

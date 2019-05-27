@@ -129,13 +129,13 @@ class InterfacialCurrent(pybamm.SubModel):
         i_typ = self.set_of_parameters.i_typ
 
         # Broadcast if necessary
-        if j_n.domain == []:
+        if j_n.domain == [[], ["current collector"]]:
             j_n = pybamm.Broadcast(j_n, ["negative electrode"])
-        if j_p.domain == []:
+        if j_p.domain == [[], ["current collector"]]:
             j_p = pybamm.Broadcast(j_p, ["positive electrode"])
-        if j0_n.domain == []:
+        if j0_n.domain == [[], ["current collector"]]:
             j0_n = pybamm.Broadcast(j0_n, ["negative electrode"])
-        if j0_p.domain == []:
+        if j0_p.domain == [[], ["current collector"]]:
             j0_p = pybamm.Broadcast(j0_p, ["positive electrode"])
 
         # Concatenations
