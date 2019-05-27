@@ -133,7 +133,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.variables.update(electrode_vars)
 
         # Cut-off voltage
+        # Hack to extract voltage at the tabs in 2D
         voltage = self.variables["Terminal voltage"]
+        voltage.domain = curr_coll_domain
+        voltage = pybamm.boundary_value(voltage, "right")
         self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"
@@ -201,7 +204,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
     def default_spatial_methods(self):
         # ODEs only in the macroscale, so use base spatial method
         return {
-            "macroscale": pybamm.SpatialMethod,
+            "macroscale": pybamm.FiniteVolume,
             "current collector": pybamm.FiniteVolume,
         }
 

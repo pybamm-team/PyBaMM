@@ -185,9 +185,11 @@ class SpatialMethod:
         :class:`pybamm.Variable`
             The variable representing the surface value.
         """
-        n = sum(self.mesh[dom][0].npts for dom in discretised_child.domain)
+        if len(self.mesh[dom]) > 1:
+            raise NotImplementedError("Cannot process 2D symbol in base spatial method")
         if isinstance(symbol, pybamm.BoundaryFlux):
             raise TypeError("Cannot process BoundaryFlux in base spatial method")
+        n = sum(self.mesh[dom][0].npts for dom in discretised_child.domain)
         if symbol.side == "left":
             # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
             # (row[i], col[i]) for each index of data. Here we just want a single point

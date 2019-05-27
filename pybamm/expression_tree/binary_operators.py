@@ -542,8 +542,7 @@ class Outer(BinaryOperator):
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
-
-        return pybamm.simplify_if_constant(self)
+        return pybamm.Outer(left, right)
 
 
 def outer(left, right):
