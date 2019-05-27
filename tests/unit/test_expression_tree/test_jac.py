@@ -47,6 +47,11 @@ class TestJacobian(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             func.jac(y)
 
+        # when differentiating by independent part of the state vector
+        jacobian = np.array([[0, 0], [0, 0]])
+        du_dv = u.jac(v).evaluate().toarray()
+        np.testing.assert_array_equal(du_dv, jacobian)
+
     def test_nonlinear(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
