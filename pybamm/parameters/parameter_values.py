@@ -272,9 +272,13 @@ class ParameterValues(dict):
             if isinstance(x, pybamm.Scalar):
                 # update any Scalar nodes if their name is in the parameter dict
                 try:
+                    import ipdb
+
+                    ipdb.set_trace()
                     x.value = self[x.name]
                     # update id
                     x.set_id()
+                    assert x.evaluate() == self[x.name]
                 except KeyError:
                     # KeyError -> name not in parameter dict, don't update
                     continue

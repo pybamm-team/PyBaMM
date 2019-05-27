@@ -389,7 +389,7 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)
-            pybamm.SpatialMethod(self.mesh).test_shape(disc_child)
+            pybamm.SpatialMethod.test_shape(disc_child)
             if child.domain != []:
                 child_spatial_method = self._spatial_methods[child.domain[0]]
             if isinstance(symbol, pybamm.Gradient):

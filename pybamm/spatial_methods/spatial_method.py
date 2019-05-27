@@ -267,7 +267,8 @@ class SpatialMethod:
         """
         return bin_op.__class__(disc_left, disc_right)
 
-    def test_shape(self, symbol):
+    @staticmethod
+    def test_shape(symbol):
         """
         Check that the discretised symbol has a pybamm `shape`, i.e. can be evaluated
 
