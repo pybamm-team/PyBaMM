@@ -73,13 +73,20 @@ class StateVector(pybamm.Symbol):
                 name = "y[:{:d}]".format(y_slice.stop)
             else:
                 name = "y[{:d}:{:d}]".format(y_slice.start, y_slice.stop)
-        super().__init__(name=name, domain=domain)
         self._y_slice = y_slice
+        super().__init__(name=name, domain=domain)
 
     @property
     def y_slice(self):
         """Slice of an external y to read"""
         return self._y_slice
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.y_slice.start, self.y_slice.stop)
+            + tuple(self.domain)
+        )
 
     def _base_evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
@@ -131,3 +138,7 @@ class StateVector(pybamm.Symbol):
                 shape=(np.size(self_y_indices), np.size(variable_y_indices)),
             )
         return pybamm.Matrix(jac)
+
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return StateVector(self.y_slice, self.name, domain=[])

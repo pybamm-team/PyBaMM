@@ -32,6 +32,7 @@ input/*
 out/
 config.py
 matplotlibrc
+*.pickle
 
 # ideas
 ideas/

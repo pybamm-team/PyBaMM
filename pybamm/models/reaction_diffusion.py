@@ -61,9 +61,6 @@ class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
 
-        "-----------------------------------------------------------------------------"
-        "Defaults and Solver Conditions"
-        # default geometry
-        self.default_parameter_values = (
-            pybamm.LeadAcidBaseModel().default_parameter_values
-        )
+    @property
+    def default_parameter_values(self):
+        return pybamm.LeadAcidBaseModel().default_parameter_values

@@ -10,6 +10,10 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         model = pybamm.lead_acid.NewmanTiedemann()
         model.check_well_posedness()
 
+    def test_default_solver(self):
+        model = pybamm.lead_acid.NewmanTiedemann()
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

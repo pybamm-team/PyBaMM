@@ -110,15 +110,10 @@ class Symbol(anytree.NodeMixin):
     @property
     def orphans(self):
         """
-        Returning deepcopies of the children, with parents removed to avoid corrupting
+        Returning new copies of the children, with parents removed to avoid corrupting
         the expression tree internal data
         """
-        orp = []
-        for child in self.children:
-            new_child = copy.deepcopy(child)
-            new_child.parent = None
-            orp.append(new_child)
-        return tuple(orp)
+        return tuple([child.new_copy() for child in self.children])
 
     def render(self):
         """print out a visual representation of the tree (this node and its
@@ -458,23 +453,40 @@ class Symbol(anytree.NodeMixin):
 
     def has_spatial_derivatives(self):
         """Returns True if equation has spatial derivatives (grad or div)."""
-        return self.has_gradient() or self.has_divergence()
+        return self.has_symbol_of_class(pybamm.Gradient) or self.has_symbol_of_class(
+            pybamm.Divergence
+        )
 
-    def has_gradient_and_not_divergence(self):
-        """Returns True if equation has a Gradient term and not Divergence term."""
-        return self.has_gradient() and not self.has_divergence()
+    def evaluates_on_edges(self):
+        """
+        Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
+        operator, but not a divergence operator, and is not an IndefiniteIntegral.
+        """
+        return (
+            self.has_symbol_of_class(pybamm.Gradient)
+            and not self.has_symbol_of_class(pybamm.Divergence)
+            and not self.has_symbol_of_class(pybamm.IndefiniteIntegral)
+        )
 
-    def has_gradient(self):
-        """Returns True if equation has a Gradient term."""
-        return any(isinstance(symbol, pybamm.Gradient) for symbol in self.pre_order())
+    def has_symbol_of_class(self, symbol_class):
+        """Returns True if equation has a term of the class `symbol_class`."""
+        return any(isinstance(symbol, symbol_class) for symbol in self.pre_order())
 
-    def has_divergence(self):
-        """Returns True if equation has a Divergence term."""
-        return any(isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order())
+    def simplify(self, simplified_symbols=None):
+        """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
+        return pybamm.Simplification(simplified_symbols).simplify(self)
 
-    def simplify(self):
-        """ Simplify the expression tree. See :meth:`pybamm.simplify()`. """
-        return pybamm.simplify(self)
+    def new_copy(self):
+        """
+        Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
+        copy.deepcopy(), which is slow.
+        """
+        raise NotImplementedError(
+            """method self.new_copy() not implemented
+               for symbol {!s} of type {}""".format(
+                self, type(self)
+            )
+        )
 
     @property
     def size(self):

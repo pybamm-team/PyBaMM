@@ -1,13 +1,11 @@
 #
 # Unary operator classes and methods
 #
-import pybamm
-
 import autograd
-import copy
 import numpy as np
-from scipy.sparse import csr_matrix
+import pybamm
 from inspect import signature
+from scipy.sparse import csr_matrix
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -28,17 +26,30 @@ class UnaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, child):
+        self.child = child
         super().__init__(name, children=[child], domain=child.domain)
-        self.child = self.children[0]
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}({!s})".format(self.name, self.child)
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        new_child = self.child.simplify()
+        return self._unary_new_copy(new_child)
+
+    def _unary_new_copy(self, child):
+        """Make a new copy of the unary operator, with child `child`"""
 
         return self.__class__(child)
+
+    def _unary_simplify(self, simplified_child):
+        """
+        Simplify a unary operator. Default behaviour is to make a new copy, with
+        simplified child.
+        """
+
+        return self._unary_new_copy(simplified_child)
 
     def _unary_evaluate(self, child):
         """Perform unary operation on a child. """
@@ -128,8 +139,8 @@ class Function(UnaryOperator):
 
     def __init__(self, func, child):
         """ See :meth:`pybamm.UnaryOperator.__init__()`. """
-        super().__init__("function ({})".format(func.__name__), child)
         self.func = func
+        super().__init__("function ({})".format(func.__name__), child)
         # hack to work out whether function takes any params
         # (signature doesn't work for numpy)
         if isinstance(func, np.ufunc):
@@ -175,33 +186,78 @@ class Function(UnaryOperator):
         else:
             return self.func(child)
 
-    def _unary_simplify(self, child):
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return pybamm.Function(self.func, child)
+
+    def _unary_simplify(self, simplified_child):
         """ See :meth:`UnaryOperator._unary_simplify()`. """
         if self.takes_no_params:
             # If self.func() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.func())
         else:
-            child = self.child.simplify()
-            return pybamm.Function(self.func, child)
+            return pybamm.Function(self.func, simplified_child)
 
 
 class Index(UnaryOperator):
     """A node in the expression tree, which stores the index that should be
     extracted from its child after the child has been evaluated.
+
+    Parameters
+    ----------
+    child : :class:`pybamm.Symbol`
+        The symbol of which to take the index
+    index : int or slice
+        The index (if int) or indices (if slice) to extract from the symbol
+    name : str, optional
+        The name of the symbol
     """
 
     def __init__(self, child, index, name=None):
-        if name is None:
-            name = child.name + "[" + str(index) + "]"
-        super().__init__(name, child)
         self.index = index
+        if isinstance(index, int):
+            self.slice = slice(index, index + 1)
+            if name is None:
+                name = "Index[" + str(index) + "]"
+        elif isinstance(index, slice):
+            self.slice = index
+            if name is None:
+                if index.start is None:
+                    name = "Index[:{:d}]".format(index.stop)
+                else:
+                    name = "Index[{:d}:{:d}]".format(index.start, index.stop)
+        else:
+            raise TypeError("index must be integer or slice")
+
+        if self.slice.stop > child.size:
+            raise ValueError("slice size exceeds child size")
+
+        super().__init__(name, child)
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        child_jac = self.child.jac(variable)
+        return Index(child_jac, self.index)
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (
+                self.__class__,
+                self.name,
+                self.slice.start,
+                self.slice.stop,
+                self.child.id,
+            )
+            + tuple(self.domain)
+        )
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
-        return child[self.index]
+        return child[self.slice]
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
         return self.__class__(child, self.index)
 
@@ -310,8 +366,8 @@ class Integral(SpatialOperator):
         name = "integral d{}".format(integration_variable.name)
         if isinstance(integration_variable, pybamm.SpatialVariable):
             name += " {}".format(integration_variable.domain)
-        super().__init__(name, child)
         self._integration_variable = integration_variable
+        super().__init__(name, child)
         # integrating removes the domain
         self.domain = []
 
@@ -319,8 +375,20 @@ class Integral(SpatialOperator):
     def integration_variable(self):
         return self._integration_variable
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.integration_variable.id, self.child.id)
+            + tuple(self.domain)
+        )
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+
+        return self.__class__(simplified_child, self.integration_variable)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
         return self.__class__(child, self.integration_variable)
 
@@ -372,14 +440,24 @@ class BoundaryOperator(SpatialOperator):
     """
 
     def __init__(self, name, child, side):
-        super().__init__(name, child)
         self.side = side
         # Domain of Boundary must be ([]) so that expressions can be formed
         # of boundary values of variables in different domains
+        super().__init__(name, child)
         self.domain = []
 
-    def _unary_simplify(self, child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.side, self.child.id) + tuple(self.domain)
+        )
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+        return self.__class__(simplified_child, self.side)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return self.__class__(child, self.side)
 
 
@@ -505,7 +583,7 @@ def average(symbol):
     """
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
-        new_symbol = copy.deepcopy(symbol)
+        new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its average value is its child
@@ -557,11 +635,11 @@ def boundary_value(symbol, side):
     """
     # If symbol doesn't have a domain, its boundary value is itself
     if symbol.domain == []:
-        new_symbol = copy.deepcopy(symbol)
+        new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its boundary value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
+    if isinstance(symbol, pybamm.Broadcast):
         return symbol.orphans[0]
     # Otherwise, calculate boundary value
     else:
