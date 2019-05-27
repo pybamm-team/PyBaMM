@@ -189,9 +189,9 @@ class TestMacInnesCapacitance(unittest.TestCase):
         j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, ["positive electrode"])
         reactions = {"main": {"neg": {"aj": j_n}, "pos": {"aj": j_p}}}
 
-        for use_cap in [True, False]:
+        for cap_options in ["differential", "algebraic"]:
             # Negative electrode
-            model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
+            model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
             model_n.set_full_system(delta_phi_n, c_e_n, reactions)
             # Update model for tests
             model_n.rhs.update({c_e_n: pybamm.Scalar(0)})
@@ -201,7 +201,7 @@ class TestMacInnesCapacitance(unittest.TestCase):
             modeltest_n.test_all()
 
             # Positive electrode
-            model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
+            model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
             model_p.set_full_system(delta_phi_p, c_e_p, reactions)
             # Update model for tests
             model_p.rhs.update({c_e_p: pybamm.Scalar(0)})
@@ -241,9 +241,9 @@ class TestMacInnesCapacitance(unittest.TestCase):
         j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, ["positive electrode"])
         reactions = {"main": {"neg": {"aj": j_n}, "pos": {"aj": j_p}}}
 
-        for use_cap in [True, False]:
+        for cap_options in ["differential", "algebraic"]:
             # Negative electrode
-            model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
+            model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
             model_n.set_leading_order_system(
                 delta_phi_n, reactions, neg, i_current_collector
             )
@@ -252,7 +252,7 @@ class TestMacInnesCapacitance(unittest.TestCase):
             modeltest_n.test_all()
 
             # Positive electrode
-            model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
+            model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
             model_p.set_leading_order_system(
                 delta_phi_p, reactions, pos, i_current_collector
             )

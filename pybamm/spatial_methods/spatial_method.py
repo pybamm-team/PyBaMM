@@ -185,7 +185,7 @@ class SpatialMethod:
         :class:`pybamm.Variable`
             The variable representing the surface value.
         """
-        if len(self.mesh[dom]) > 1:
+        if any(len(self.mesh[dom]) > 1 for dom in discretised_child.domain):
             raise NotImplementedError("Cannot process 2D symbol in base spatial method")
         if isinstance(symbol, pybamm.BoundaryFlux):
             raise TypeError("Cannot process BoundaryFlux in base spatial method")

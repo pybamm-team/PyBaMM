@@ -59,9 +59,6 @@ class BaseModel(object):
         self.use_jacobian = True
         self.use_simplify = True
 
-        # Default behaviour: no capacitance in the model
-        self._use_capacitance = False
-
     def _set_dict(self, dict, name):
         """
         Convert any scalar equations in dict to 'pybamm.Scalar'
@@ -463,10 +460,6 @@ class StandardBatteryBaseModel(BaseModel):
             default_solver = pybamm.ScipySolver()
 
         return default_solver
-
-    @property
-    def capacitance_equations(self):
-        return self._capacitance_equations
 
     @property
     def options(self):

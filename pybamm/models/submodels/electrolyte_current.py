@@ -348,14 +348,18 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     ----------
     set_of_parameters : parameter class
         The parameters to use for this submodel
-    capacitance_equations : bool
-        Whether to use capacitance in the model or not. If True (default), solve
-        ODEs for delta_phi. If False, solve algebraic equations for delta_phi
+    capacitance_options : str
+        The type of equation to set for capacitance. Can be "differential" (default) or
+        "algebraic"
     """
 
-    def __init__(self, set_of_parameters, capacitance_equations="differential"):
+    def __init__(self, set_of_parameters, capacitance_options="differential"):
         super().__init__(set_of_parameters)
-        self._capacitance_equations = capacitance_equations
+        self._capacitance_options = capacitance_options
+
+    @property
+    def capacitance_options(self):
+        return self._capacitance_options
 
     @property
     def default_solver(self):
@@ -363,7 +367,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self._capacitance_equations:
+        if self._capacitance_options == "differential":
             default_solver = pybamm.ScikitsOdeSolver()
         else:
             default_solver = pybamm.ScikitsDaeSolver()
@@ -373,8 +377,8 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     def set_full_system(self, delta_phi, c_e, reactions, eps=None):
         """
         PDE system for current in the electrolyte, derived from the Stefan-Maxwell
-        equations. If self.capacitance_equations is True, this adds equations to `rhs`.
-        Otherwise, this adds equations to `algebraic`
+        equations. If capacitance_options is `differential`, this adds equations to
+        `rhs`. Otherwise, this adds equations to `algebraic`
 
         Parameters
         ----------
@@ -401,7 +405,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             if eps is None:
                 eps = param.epsilon_p
             j = reactions["main"]["pos"]["aj"]
-            self.initial_conditions[delta_phi] = param.U_p(param.c_n_init)
+            self.initial_conditions[delta_phi] = param.U_p(param.c_p_init)
             C_dl = param.C_dl_p
             flux_bc_side = "left"
             Domain = "Positive"
@@ -413,9 +417,9 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         i_e = conductivity * (
             (param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi)
         )
-        if self.capacitance_equations == "differential":
+        if self.capacitance_options == "differential":
             self.rhs[delta_phi] = 1 / C_dl * (pybamm.div(i_e) - j)
-        elif self.capacitance_equations == "algebraic":
+        elif self.capacitance_options == "algebraic":
             self.algebraic[delta_phi] = pybamm.div(i_e) - j
 
         # Set boundary conditons and variables
@@ -441,7 +445,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             side: (flux_bc, "Neumann"),
             other_side: (pybamm.Scalar(0), "Neumann"),
         }
-        self.boundary_conditions[delta_phi] = {
+        self.boundary_conditions[c_e] = {
             side: (c_e_flux, "Neumann"),
             other_side: (pybamm.Scalar(0), "Neumann"),
         }
@@ -451,8 +455,8 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     ):
         """
         ODE system for leading-order current in the electrolyte, derived from the
-        Stefan-Maxwell equations. If self.capacitance_equations is True, this adds
-        equations to `rhs`. Otherwise, this adds equations to `algebraic`
+        Stefan-Maxwell equations. If capacitance_options is `differential`, this adds
+        equations to `rhs`. Otherwise, this adds equations to `algebraic`.
 
         Parameters
         ----------
@@ -480,9 +484,9 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
-        if self.capacitance_equations == "differential":
+        if self.capacitance_options == "differential":
             self.rhs[delta_phi] = 1 / C_dl * (j_average - j)
-        elif self.capacitance_equations == "algebraic":
+        elif self.capacitance_options == "algebraic":
             self.algebraic[delta_phi] = j_average - j
         self.variables[Domain + " electrode surface potential difference"] = delta_phi
 
