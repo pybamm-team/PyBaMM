@@ -10,8 +10,9 @@ class SPM(pybamm.LithiumIonBaseModel):
     """
 
     def __init__(self):
-        super().__init__()
+        super().__init__(bc_options=None)
         self.name = "Single Particle Model"
+        self._bc_options = bc_options or self.default_bc_options
 
         "-----------------------------------------------------------------------------"
         "Parameters"
@@ -19,12 +20,34 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
-
         c_s_n = pybamm.standard_variables.c_s_n
         c_s_p = pybamm.standard_variables.c_s_p
 
+       "-----------------------------------------------------------------------------"
+        "Boundary conditions"
+        # TO DO: edit below for SPM
+        bc_variables = {"delta_phi_n": delta_phi_n, "delta_phi_p": delta_phi_p}
+        self.set_boundary_conditions(bc_variables)
+        i_current_collector = self.variables["Current collector current"]
+
+        #if self.bc_options["dimensionality"] == 1:
+        #    i_local = param.current_with_time
+        #elif self.bc_options["dimensionality"] == 2 or 3:
+        #    v_local = pybamm.Variable("Local cell voltage", domain="current collector")
+        #    i_local = pybamm.Variable(
+        #        "Local through-cell current density", domain="current collector"
+        #    )
+
+
         "-----------------------------------------------------------------------------"
         "Submodels"
+
+        # Current collector model
+        if self.bc_options["dimensionality"] == 3:
+            raise NotImplementedError
+        if self.bc_options["dimensionality"] == 3:
+            current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
+            set_algebraic_system(self, v_local, i_local)
 
         # Interfacial current density
         int_curr_model = pybamm.interface.LithiumIonReaction(param)
@@ -70,7 +93,9 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        elyte_vars = eleclyte_current_model.get_explicit_leading_order(ocp_n, eta_r_n)
+        elyte_vars = eleclyte_current_model.get_explicit_leading_order(
+            ocp_n, eta_r_n, i_local
+        )
         self.variables.update(elyte_vars)
 
         # Electrode
@@ -88,3 +113,30 @@ class SPM(pybamm.LithiumIonBaseModel):
     @property
     def default_geometry(self):
         return pybamm.Geometry("1D macro", "1D micro")
+
+    @property
+    def default_geometry(self):
+        if self.bc_options["dimensionality"] == 1:
+            return pybamm.Geometry("1D macro", "1D micro")
+        elif self.bc_options["dimensionality"] == 2:
+            return pybamm.Geometry("1+1D macro", "1D micro")
+        elif self.bc_options["dimensionality"] == 3:
+            return pybamm.Geometry("2+1D macro", "1D micro")
+
+   def set_boundary_conditions(self, bc_variables=None):
+       # TO DO: edit below for SPM
+        """Get boundary conditions"""
+        # TODO: edit to allow constant-current and constant-power control
+        param = self.set_of_parameters
+        dimensionality = self.bc_options["dimensionality"]
+        if dimensionality == 1:
+            current_bc = param.current_with_time
+            self.variables.update({"Current collector current": current_bc})
+        elif dimensionality == 2:
+            delta_phi_n = bc_variables["delta_phi_n"]
+            delta_phi_p = bc_variables["delta_phi_p"]
+            current_collector_model = pybamm.vertical.Vertical(param)
+            current_collector_model.set_leading_order_vertical_current(
+                delta_phi_n, delta_phi_p
+            )
+            self.update(current_collector_model)

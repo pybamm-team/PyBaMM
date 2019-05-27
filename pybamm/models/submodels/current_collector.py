@@ -40,10 +40,6 @@ class OhmTwoDimensional(pybamm.SubModel):
 
         """
         param = self.set_of_parameters
-        v_local = pybamm.Variable("Local cell voltage", domain="current collector")
-        i_local = pybamm.Variable(
-            "Local through-cell current density", domain="current collector"
-        )
 
         # algebraic equations
         applied_current = param.current_with_time

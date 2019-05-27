@@ -18,7 +18,7 @@ class FenicsMesh2D:
 
         Parameters
         ----------
-        npts : dict
+        lims : dict
             A dictionary that contains the limits of each
             spatial variable
         npts : dict
@@ -71,10 +71,8 @@ class FenicsMesh2D:
         self.N_dofs = np.size(self.TrialFunction.vector()[:])
 
         # create SubDomain classes for the tabs
-        negativetab = Tab()
-        negativetab.set_parameters(y_lims, z_lims, tabs["negative"])
-        positivetab = Tab()
-        positivetab.set_parameters(y_lims, z_lims, tabs["positive"])
+        negativetab = Tab(y_lims, z_lims, tabs["negative"])
+        positivetab = Tab(y_lims, z_lims, tabs["positive"])
 
         # initialize mesh function for boundary domains
         boundary_markers = dolfin.MeshFunction(
@@ -103,6 +101,8 @@ class Tab(dolfin.SubDomain):
         self.l_z = z_lims[1]
         self.tab_location = [tab["y_centre"], tab["z_centre"]]
         self.tab_width = tab["width"]
+
+        super().__init__()
 
     def inside(self, x, on_boundary):
         if dolfin.near(self.tab_location[1], self.l_z):
