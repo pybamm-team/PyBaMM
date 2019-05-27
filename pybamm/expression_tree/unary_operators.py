@@ -26,8 +26,8 @@ class UnaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, child):
-        self.child = child
         super().__init__(name, children=[child], domain=child.domain)
+        self.child = self.children[0]
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -247,7 +247,7 @@ class Index(UnaryOperator):
                 self.name,
                 self.slice.start,
                 self.slice.stop,
-                self.child.id,
+                self.children[0].id,
             )
             + tuple(self.domain)
         )
@@ -378,7 +378,12 @@ class Integral(SpatialOperator):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
         self._id = hash(
-            (self.__class__, self.name, self.integration_variable.id, self.child.id)
+            (
+                self.__class__,
+                self.name,
+                self.integration_variable.id,
+                self.children[0].id,
+            )
             + tuple(self.domain)
         )
 
@@ -449,7 +454,8 @@ class BoundaryOperator(SpatialOperator):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
         self._id = hash(
-            (self.__class__, self.name, self.side, self.child.id) + tuple(self.domain)
+            (self.__class__, self.name, self.side, self.children[0].id)
+            + tuple(self.domain)
         )
 
     def _unary_simplify(self, simplified_child):
