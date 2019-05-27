@@ -7,6 +7,7 @@ from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 
 import unittest
 import numpy as np
+import warnings
 
 
 class TestLeadAcidComposite(unittest.TestCase):
@@ -41,6 +42,7 @@ class TestLeadAcidCompositeCapacitance(unittest.TestCase):
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
 
+        warnings.simplefilter("error")
         modeltest.test_all()
 
     def test_optimisations(self):
