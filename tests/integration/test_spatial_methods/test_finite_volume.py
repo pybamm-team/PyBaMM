@@ -29,7 +29,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             # create mesh and discretisation
             mesh = get_mesh_for_testing(n)
             disc = pybamm.Discretisation(mesh, spatial_methods)
-            disc._bcs = boundary_conditions
+            disc.bcs = boundary_conditions
             disc.set_variable_slices([var])
 
             # Define exact solutions
@@ -45,7 +45,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             grad_approx = grad_eqn_disc.evaluate(y=y)
 
             # Return difference between approx and exact
-            return grad_approx - grad_exact
+            return grad_approx[:, 0] - grad_exact
 
         # Get errors
         ns = 100 * 2 ** np.arange(6)
@@ -85,7 +85,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             div_approx = div_eqn_disc.evaluate()
 
             # Return difference between approx and exact
-            return div_approx - div_exact
+            return div_approx[:, 0] - div_exact
 
         # Get errors
         ns = 10 * 2 ** np.arange(6)
@@ -122,7 +122,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             div_approx = div_eqn_disc.evaluate()
 
             # Return difference between approx and exact
-            return div_approx - div_exact
+            return div_approx[:, 0] - div_exact
 
         # Get errors
         ns = 10 * 2 ** np.arange(6)
@@ -157,7 +157,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             div_approx = div_eqn_disc.evaluate()
 
             # Return difference between approx and exact
-            return div_approx - div_exact
+            return div_approx[:, 0] - div_exact
 
         # Get errors
         ns = 10 * 2 ** np.arange(6)
@@ -194,7 +194,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             div_eqn_disc = disc.process_symbol(div_eqn)
             div_approx = div_eqn_disc.evaluate()
 
-            return div_approx - div_exact
+            return div_approx[:, 0] - div_exact
 
         # Get errors
         ns = 10 * 2 ** np.arange(6)
@@ -219,20 +219,20 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             x = pybamm.Vector(mesh["negative electrode"][0].nodes)
 
             N = pybamm.Matrix(
-                np.kron(x.entries, r_edge ** 2 * np.sin(r_edge)),
+                np.kron(x.entries[:, 0], r_edge ** 2 * np.sin(r_edge)),
                 domain=["negative particle"],
             )
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
             div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
-            div_exact = np.kron(x.entries, div_exact)
+            div_exact = np.kron(x.entries[:, 0], div_exact)
 
             # Discretise and evaluate
             div_eqn_disc = disc.process_symbol(div_eqn)
             div_approx = div_eqn_disc.evaluate()
 
-            return div_approx - div_exact
+            return div_approx[:, 0] - div_exact
 
         # Get errors
         ns = 10 * 2 ** np.arange(6)

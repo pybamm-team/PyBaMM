@@ -1,12 +1,11 @@
 #
 # Test for the Symbol class
 #
-import pybamm
-from tests import get_discretisation_for_testing
-
-import unittest
-import numpy as np
 import math
+import numpy as np
+import pybamm
+import unittest
+from tests import get_discretisation_for_testing
 
 
 def test_const_function():
@@ -248,7 +247,7 @@ class TestSimplify(unittest.TestCase):
         # for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
         for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
             self.assertIsInstance(expr.simplify(), pybamm.Vector)
-            np.testing.assert_array_equal(expr.simplify().entries, np.zeros(10))
+            np.testing.assert_array_equal(expr.simplify().entries, np.zeros((10, 1)))
 
     def test_function_simplify(self):
         a = pybamm.Parameter("a")
@@ -291,7 +290,7 @@ class TestSimplify(unittest.TestCase):
                 expr.children[0].entries, np.array([[3, 0], [0, 3]])
             )
 
-        expr = (v @ v / 2).simplify()
+        expr = ((v @ v) / 2).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 0.5)
@@ -340,7 +339,7 @@ class TestSimplify(unittest.TestCase):
 
         for expr in [(m1 @ v1).simplify()]:
             self.assertIsInstance(expr, pybamm.Vector)
-            np.testing.assert_array_equal(expr.entries, np.array([2, 2]))
+            np.testing.assert_array_equal(expr.entries, np.array([[2], [2]]))
 
         # dont expant mult within mat-mult (issue #253)
         m1 = pybamm.Matrix(np.ones((300, 299)))
@@ -436,6 +435,15 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr, pybamm.Scalar)
         self.assertEqual(expr.evaluate(), 0)
 
+        # zero matrix
+        m1 = pybamm.Matrix(np.zeros((300, 300)))
+        for expr in [m1 * v1, v1 * m1]:
+            expr_simp = expr.simplify()
+            self.assertIsInstance(expr_simp, pybamm.Matrix)
+            np.testing.assert_array_equal(
+                expr_simp.evaluate(y=np.ones(300)).toarray(), m1.evaluate()
+            )
+
     def test_domain_concatenation_simplify(self):
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -454,7 +462,10 @@ class TestSimplify(unittest.TestCase):
         np.testing.assert_array_equal(
             conc_simp.evaluate(),
             np.concatenate(
-                [np.full(mesh[a_dom[0]][0].npts, 2), np.full(mesh[b_dom[0]][0].npts, 1)]
+                [
+                    np.full((mesh[a_dom[0]][0].npts, 1), 2),
+                    np.full((mesh[b_dom[0]][0].npts, 1), 1),
+                ]
             ),
         )
 

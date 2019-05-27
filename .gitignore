@@ -29,6 +29,9 @@ input/*
 
 # simulation outputs
 out/
+config.py
+matplotlibrc
+*.pickle
 
 # ideas
 ideas/

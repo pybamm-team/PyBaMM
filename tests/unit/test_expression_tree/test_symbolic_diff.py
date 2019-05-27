@@ -1,10 +1,10 @@
 #
 # Tests for the symbolic differentiation methods
 #
-import pybamm
-
 import autograd.numpy as np
+import pybamm
 import unittest
+from numpy import testing
 
 
 class TestSymbolicDifferentiation(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         self.assertEqual(func.diff(b).evaluate(y=y), -2 / 9)
         #
         func = a * b ** a
-        self.assertAlmostEqual(
+        testing.assert_array_almost_equal(
             func.diff(a).evaluate(y=y)[0], 3 ** 5 * (5 * np.log(3) + 1)
         )
         self.assertEqual(func.diff(b).evaluate(y=y), 5 ** 2 * 3 ** 4)

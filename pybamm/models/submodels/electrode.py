@@ -78,8 +78,12 @@ class Ohm(pybamm.SubModel):
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(phi_s.domain))
 
-        # Set default solver to DAE
-        self.default_solver = pybamm.ScikitsDaeSolver()
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        return pybamm.ScikitsDaeSolver()
 
     def get_explicit_leading_order(self, ocp_p, eta_r_p, phi_e):
         """
@@ -263,9 +267,7 @@ class Ohm(pybamm.SubModel):
         i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
         # Voltage variable
-        v = pybamm.boundary_value(phi_s_p, "right") - pybamm.boundary_value(
-            phi_s_n, "left"
-        )
+        v = pybamm.boundary_value(phi_s_p, "right")
 
         # Dimensional
         phi_s_n_dim = param.potential_scale * phi_s_n

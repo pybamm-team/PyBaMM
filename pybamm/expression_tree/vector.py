@@ -25,13 +25,20 @@ class Vector(pybamm.Array):
     """
 
     def __init__(self, entries, name=None, domain=[], entries_string=None):
-        # make sure that entries are a vector
-        if entries.ndim != 1:
+        # make sure that entries are a vector (can be a column vector)
+        if entries.ndim == 1:
+            entries = entries[:, np.newaxis]
+        if entries.shape[1] != 1:
             raise ValueError(
-                """Entries must have 1 dimension, not {}""".format(entries.ndim)
+                """
+                Entries must have 1 dimension or be column vector, not have shape {}
+                """.format(
+                    entries.shape
+                )
             )
         if name is None:
-            name = "Vector of length {!s}".format(entries.shape[0])
+            name = "Column vector of length {!s}".format(entries.shape[0])
+
         super().__init__(entries, name, domain, entries_string)
 
     def jac(self, variable):
@@ -66,13 +73,20 @@ class StateVector(pybamm.Symbol):
                 name = "y[:{:d}]".format(y_slice.stop)
             else:
                 name = "y[{:d}:{:d}]".format(y_slice.start, y_slice.stop)
-        super().__init__(name=name, domain=domain)
         self._y_slice = y_slice
+        super().__init__(name=name, domain=domain)
 
     @property
     def y_slice(self):
         """Slice of an external y to read"""
         return self._y_slice
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.y_slice.start, self.y_slice.stop)
+            + tuple(self.domain)
+        )
 
     def _base_evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
@@ -83,7 +97,10 @@ class StateVector(pybamm.Symbol):
                 "y is too short, so value with slice is smaller than expected"
             )
         else:
-            return y[self._y_slice]
+            out = y[self._y_slice]
+            if out.ndim == 1:
+                out = out[:, np.newaxis]
+            return out
 
     def jac(self, variable):
         """
@@ -121,3 +138,7 @@ class StateVector(pybamm.Symbol):
                 shape=(np.size(self_y_indices), np.size(variable_y_indices)),
             )
         return pybamm.Matrix(jac)
+
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return StateVector(self.y_slice, self.name, domain=[])

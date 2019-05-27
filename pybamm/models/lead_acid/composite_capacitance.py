@@ -38,8 +38,12 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
 
         c_e = pybamm.standard_variables.c_e
         eps = pybamm.standard_variables.eps
-        delta_phi_n_av = pybamm.Variable("Average neg electrode potential difference")
-        delta_phi_p_av = pybamm.Variable("Average pos electrode potential difference")
+        delta_phi_n_av = pybamm.Variable(
+            "Average neg electrode surface potential difference"
+        )
+        delta_phi_p_av = pybamm.Variable(
+            "Average pos electrode surface potential difference"
+        )
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -162,8 +166,15 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
         # Don't use jacobian for now (simplifications failing)
         self.use_jacobian = False
 
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
         # Different solver depending on whether we solve ODEs or DAEs
-        if use_capacitance:
-            self.default_solver = pybamm.ScikitsOdeSolver()
+        if self._use_capacitance:
+            default_solver = pybamm.ScikitsOdeSolver()
         else:
-            self.default_solver = pybamm.ScikitsDaeSolver()
+            default_solver = pybamm.ScikitsDaeSolver()
+
+        return default_solver

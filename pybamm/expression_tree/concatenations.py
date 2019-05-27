@@ -60,6 +60,16 @@ class Concatenation(pybamm.Symbol):
                 children_eval[idx] = child.evaluate(t, y)
             return self._concatenation_evaluate(children_eval)
 
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        new_children = [child.new_copy() for child in self.children]
+        return self._concatenation_new_copy(new_children)
+
+    def _concatenation_new_copy(self, children):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        new_symbol = self.__class__(*children)
+        return new_symbol
+
     def _concatenation_simplify(self, children):
         """ See :meth:`pybamm.Symbol.simplify()`. """
         new_symbol = self.__class__(*children)
@@ -98,7 +108,7 @@ class NumpyConcatenation(Concatenation):
         if len(children_eval) == 0:
             return np.array([])
         else:
-            return np.concatenate([child for child in children_eval])
+            return np.concatenate(children_eval)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -180,14 +190,6 @@ class DomainConcatenation(Concatenation):
     def mesh(self):
         return self._mesh
 
-    @property
-    def size(self):
-        return self._size
-
-    @property
-    def shape(self):
-        return (self.size,)
-
     def create_slices(self, node):
         slices = {}
         start = 0
@@ -203,7 +205,7 @@ class DomainConcatenation(Concatenation):
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation._concatenation_evaluate()`. """
         # preallocate vector
-        vector = np.empty(self._size)
+        vector = np.empty((self._size, 1))
 
         # loop through domains of children writing subvectors to final vector
         for child_vector, slices in zip(children_eval, self._children_slices):
@@ -219,6 +221,11 @@ class DomainConcatenation(Concatenation):
             return pybamm.Scalar(0)
         else:
             return SparseStack(*[child.jac(variable) for child in children])
+
+    def _concatenation_new_copy(self, children):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        new_symbol = self.__class__(children, self.mesh, self)
+        return new_symbol
 
     def _concatenation_simplify(self, children):
         """ See :meth:`pybamm.Symbol.simplify()`. """
