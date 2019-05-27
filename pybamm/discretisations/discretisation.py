@@ -579,16 +579,20 @@ class Discretisation(object):
         for rhs_var in model.rhs.keys():
             if rhs_var.name in model.variables.keys():
                 var = model.variables[rhs_var.name]
-                if not (
-                    model.rhs[rhs_var].evaluate(0, y0).shape
-                    == var.evaluate(0, y0).shape
-                    or isinstance(var, pybamm.Concatenation)
-                    or (
-                        isinstance(var, pybamm.Multiplication)
-                        and isinstance(var.right, pybamm.Vector)
-                        and np.all(var.right.entries == 1)
-                    )
-                ):
+
+                different_shapes = not np.array_equal(
+                    model.rhs[rhs_var].evaluate(0, y0).shape, var.evaluate(0, y0).shape
+                )
+
+                not_concatenation = not isinstance(var, pybamm.Concatenation)
+
+                not_mult_by_one_vec = not (
+                    isinstance(var, pybamm.Multiplication)
+                    and isinstance(var.right, pybamm.Vector)
+                    and np.all(var.right.entries == 1)
+                )
+
+                if different_shapes and not_concatenation and not_mult_by_one_vec:
                     raise pybamm.ModelError(
                         """
                     variable and its eqn must have the same shape after discretisation
