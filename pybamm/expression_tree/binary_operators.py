@@ -409,6 +409,7 @@ class MatrixMultiplication(BinaryOperator):
         # operators of the form D @ u
         left, right = self.orphans
         if isinstance(left, pybamm.Array):
+            left = pybamm.Matrix(csr_matrix(left.evaluate()))
             return left @ right.jac(variable)
         else:
             raise NotImplementedError
