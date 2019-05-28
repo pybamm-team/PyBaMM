@@ -564,9 +564,9 @@ class StandardBatteryBaseModel(BaseModel):
         # Potential
         self.variables.update(
             {
-                "Negative electrode potential [V]": None,
-                "Positive electrode potential [V]": None,
-                "Electrolyte potential [V]": None,
+                "Negative electrode potential": None,
+                "Positive electrode potential": None,
+                "Electrolyte potential": None,
             }
         )
 

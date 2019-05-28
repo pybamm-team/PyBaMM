@@ -18,6 +18,47 @@ class Ohm(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
+    def unpack(self, variables, domain=None):
+        """
+        Unpack a dictionary of variables.
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of variables to unpack
+        domain : list of str
+            Domain in which to unpack the variables
+        """
+        i_boundary_cc = variables["Current collector current density"]
+        phi_s_n = variables["Negative electrode potential"]
+        phi_s_p = variables["Positive electrode potential"]
+        try:
+            eps = variables["Porosity"]
+        except KeyError:
+            eps = param.epsilon
+        eps_n, eps_s, eps_p = eps.orphans
+
+        if domain == ["negative electrode"]:
+            return i_boundary_cc, phi_s_n, eps_n
+        elif domain == ["positive electrode"]:
+            return i_boundary_cc, phi_s_p, eps_p
+        else:
+            return i_boundary_cc, (phi_s_n, phi_s_p), eps
+
+    def unpack_post(self, variables):
+        """ Unpack variables for post-processing """
+        i_boundary_cc = variables["Current collector current density"]
+        ocp_p = variables["Positive electrode open circuit potential"]
+        eta_r_p = variables["Positive reaction overpotential"]
+        phi_e = variables["Electrolyte potential"]
+
+        ocp_p_av = pybamm.average(ocp_p)
+        eta_r_p_av = pybamm.average(eta_r_p)
+        phi_e_p = phi_e.orphans[2]
+        phi_e_p_av = pybamm.average(phi_e_p)
+
+        return i_boundary_cc, ocp_p_av, eta_r_p_av, phi_e_p_av
+
     def set_algebraic_system(self, variables, reactions, domain):
         """
         PDE system for current in the electrodes, using Ohm's law
@@ -33,31 +74,20 @@ class Ohm(pybamm.SubModel):
 
         """
         # unpack variables
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc, phi_s, eps = self.unpack(variables, domain)
+
         param = self.set_of_parameters
 
         # different bounday conditions in each electrode
         if domain == ["negative electrode"]:
-            phi_s = variables["Negative electrode potential"]
             j = reactions["main"]["neg"]["aj"]
-            # if porosity is not provided, use the input parameter
-            try:
-                eps = variables["Porosity"].orphans[0]
-            except KeyError:
-                eps = param.epsilon_n
             # liion sigma_n may already account for porosity
             conductivity = param.sigma_n * (1 - eps) ** param.b
             lbc = (pybamm.Scalar(0), "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
             self.initial_conditions[phi_s] = pybamm.Scalar(0)
         elif domain == ["positive electrode"]:
-            phi_s = variables["Positive electrode potential"]
             j = reactions["main"]["pos"]["aj"]
-            # if porosity is not provided, use the input parameter
-            try:
-                eps = variables["Porosity"].orphans[2]
-            except KeyError:
-                eps = param.epsilon_p
             # liion sigma_p may already account for porosity
             conductivity = param.sigma_p * (1 - eps) ** param.b
             lbc = (pybamm.Scalar(0), "Neumann")
@@ -75,12 +105,7 @@ class Ohm(pybamm.SubModel):
         i_s = -conductivity * pybamm.grad(phi_s)
         self.algebraic[phi_s] = pybamm.div(i_s) + j
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
-        self.variables.update(
-            {
-                domain[0].capitalize() + " potential": phi_s,
-                domain[0].capitalize() + " current density": i_s,
-            }
-        )
+        self.variables[domain[0].capitalize() + " current density"] = i_s
 
     @property
     def default_solver(self):
@@ -105,10 +130,7 @@ class Ohm(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         # unpack variables
-        ocp_p = variables["Positive electrode open circuit potential"]
-        eta_r_p = variables["Positive reaction overpotential"]
-        phi_e = variables["Electrolyte potential"]
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc, ocp_p_av, eta_r_p_av, phi_e_p_av = self.unpack_post(variables)
 
         # import parameters and spatial variables
         param = self.set_of_parameters
@@ -117,14 +139,9 @@ class Ohm(pybamm.SubModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        # Take boundary values
-        phi_e_right = pybamm.boundary_value(phi_e, "right")
-        ocp_p_right = pybamm.boundary_value(ocp_p, "right")
-        eta_r_p_right = pybamm.boundary_value(eta_r_p, "right")
-
         # electode potential
         phi_s_n = pybamm.Broadcast(0, ["negative electrode"])
-        v = ocp_p_right + eta_r_p_right + phi_e_right
+        v = ocp_p_av + eta_r_p_av + phi_e_p_av
         phi_s_p = pybamm.Broadcast(v, ["positive electrode"])
 
         # electrode current
@@ -156,11 +173,7 @@ class Ohm(pybamm.SubModel):
         x_n = pybamm.standard_spatial_vars.x_n
 
         # Unpack variables
-        i_boundary_cc = variables["Current collector current density"]
-        try:
-            eps_n = variables["Porosity"].orphans[0]
-        except KeyError:
-            eps_n = param.epsilon_n
+        i_boundary_cc, _, eps_n = self.unpack(variables, ["negative electrode"])
 
         # electrode potential
         sigma_n_eff = param.sigma_n * (1 - eps_n)
@@ -192,22 +205,9 @@ class Ohm(pybamm.SubModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack variables
-        phi_s_n = variables["Negative electrode potential"]
-        phi_e = variables["Electrolyte potential"]
-        ocp_p = variables["Positive electrode open circuit potential"]
-        eta_r_p = variables["Positive reaction overpotential"]
-        i_boundary_cc = variables["Current collector current density"]
-        try:
-            epsilon = variables["Porosity"]
-        except KeyError:
-            epsilon = param.epsilon
+        i_boundary_cc, (phi_s_n, _), epsilon = self.unpack(variables)
+        i_boundary_cc, ocp_p_av, eta_r_p_av, phi_e_p_av = self.unpack_post(variables)
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-        _, _, phi_e_p = phi_e.orphans
-
-        # obtain averages
-        ocp_p_av = pybamm.average(ocp_p)
-        eta_r_p_av = pybamm.average(eta_r_p)
-        phi_e_p_av = pybamm.average(phi_e_p)
 
         # electrode potential
         sigma_n_eff = param.sigma_n * (1 - eps_n)

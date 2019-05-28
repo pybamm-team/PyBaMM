@@ -172,6 +172,8 @@ class Composite(pybamm.LeadAcidBaseModel):
             "Negative electrode surface potential difference": delta_phi_n_av,
             "Positive electrode surface potential difference": delta_phi_p_av,
             "Current collector current density": i_boundary_cc,
+            "Electrolyte concentration": c_e,
+            "Porosity": self.variables["Porosity"],
         }
         reactions_av = {"main": {"neg": {"aj": j_n_av}, "pos": {"aj": j_p_av}}}
 
