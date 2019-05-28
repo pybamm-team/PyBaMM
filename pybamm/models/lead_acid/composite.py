@@ -26,12 +26,14 @@ class Composite(pybamm.LeadAcidBaseModel):
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
         i_boundary_cc = param.current_with_time
+        self.variables["Current collector current density"] = i_boundary_cc
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
 
         c_e = pybamm.standard_variables.c_e
         eps = pybamm.standard_variables.eps
+        self.variables["Electrolyte concentration"] = c_e
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -72,43 +74,9 @@ class Composite(pybamm.LeadAcidBaseModel):
             }
         }
         electrolyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        electrolyte_conc_model.set_differential_system(c_e, reactions, epsilon=eps_0)
+        electrolyte_conc_model.set_differential_system(self.variables, reactions)
 
         self.update(leading_order_model, electrolyte_conc_model)
-
-        if self.options["capacitance"] is not False:
-            delta_phi_n_av = pybamm.Variable(
-                "Average neg electrode surface potential difference"
-            )
-            delta_phi_p_av = pybamm.Variable(
-                "Average pos electrode surface potential difference"
-            )
-
-            # Average composite interfacial current density
-            c_e_n, _, c_e_p = c_e.orphans
-            c_e_n_av = pybamm.average(c_e_n)
-            c_e_p_av = pybamm.average(c_e_p)
-            ocp_n_av = param.U_n(c_e_n_av)
-            ocp_p_av = param.U_p(c_e_p_av)
-            eta_r_n_av = delta_phi_n_av - ocp_n_av
-            eta_r_p_av = delta_phi_p_av - ocp_p_av
-            j0_n_av = int_curr_model.get_exchange_current_densities(c_e_n_av, neg)
-            j0_p_av = int_curr_model.get_exchange_current_densities(c_e_p_av, pos)
-            j_n_av = int_curr_model.get_butler_volmer(j0_n_av, eta_r_n_av, neg)
-            j_p_av = int_curr_model.get_butler_volmer(j0_p_av, eta_r_p_av, pos)
-
-            # Electrolyte current
-            reactions_av = {"main": {"neg": {"aj": j_n_av}, "pos": {"aj": j_p_av}}}
-            eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
-                param, self.options["capacitance"]
-            )
-            eleclyte_current_model.set_leading_order_system(
-                delta_phi_n_av, reactions_av, neg, i_boundary_cc
-            )
-            eleclyte_current_model.set_leading_order_system(
-                delta_phi_p_av, reactions_av, pos, i_boundary_cc
-            )
-            self.update(eleclyte_current_model)
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
@@ -134,24 +102,61 @@ class Composite(pybamm.LeadAcidBaseModel):
         )
 
         # Negative electrode potential
-        phi_s_n = electrode_model.get_neg_pot_explicit_combined(eps_0)
+        phi_s_n = electrode_model.get_neg_pot_explicit_combined(self.variables)
+        self.variables["Negative electrode potential"] = phi_s_n
 
         # Electrolyte potential
         electrolyte_vars = electrolyte_current_model.get_explicit_combined(
-            ocp_n, eta_r_n, c_e, phi_s_n, eps_0, c_e_0
+            self.variables
         )
         self.variables.update(electrolyte_vars)
-        phi_e = electrolyte_vars["Electrolyte potential"]
 
         # Electrode
-        electrode_vars = electrode_model.get_explicit_combined(
-            phi_s_n, phi_e, ocp_p, eta_r_p, eps_0
-        )
+        electrode_vars = electrode_model.get_explicit_combined(self.variables)
         self.variables.update(electrode_vars)
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
+
+    def set_electrolyte_current_model(self):
+        if self.options["capacitance"] is False:
+            return
+        delta_phi_n_av = pybamm.Variable(
+            "Average neg electrode surface potential difference"
+        )
+        delta_phi_p_av = pybamm.Variable(
+            "Average pos electrode surface potential difference"
+        )
+
+        # Average composite interfacial current density
+        c_e = self.variables["Electrolyte concentration"]
+        c_e_n, _, c_e_p = c_e.orphans
+        c_e_n_av = pybamm.average(c_e_n)
+        c_e_p_av = pybamm.average(c_e_p)
+        ocp_n_av = param.U_n(c_e_n_av)
+        ocp_p_av = param.U_p(c_e_p_av)
+        eta_r_n_av = delta_phi_n_av - ocp_n_av
+        eta_r_p_av = delta_phi_p_av - ocp_p_av
+        j0_n_av = int_curr_model.get_exchange_current_densities(c_e_n_av, neg)
+        j0_p_av = int_curr_model.get_exchange_current_densities(c_e_p_av, pos)
+        j_n_av = int_curr_model.get_butler_volmer(j0_n_av, eta_r_n_av, neg)
+        j_p_av = int_curr_model.get_butler_volmer(j0_p_av, eta_r_p_av, pos)
+
+        # Make dictionaries to pass to submodel
+        variables_av = {
+            "Negative electrode surface potential difference": delta_phi_n_av,
+            "Positive electrode surface potential difference": delta_phi_p_av,
+        }
+        reactions_av = {"main": {"neg": {"aj": j_n_av}, "pos": {"aj": j_p_av}}}
+
+        # Call submodel
+        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
+            param, self.options["capacitance"]
+        )
+        eleclyte_current_model.set_leading_order_system(variables_av, reactions_av, neg)
+        eleclyte_current_model.set_leading_order_system(variables_av, reactions_av, pos)
+        self.update(eleclyte_current_model)
 
     @property
     def default_solver(self):

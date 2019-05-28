@@ -35,7 +35,7 @@ class UnaryOperator(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_child = self.child.simplify()
+        new_child = self.child.new_copy()
         return self._unary_new_copy(new_child)
 
     def _unary_new_copy(self, child):

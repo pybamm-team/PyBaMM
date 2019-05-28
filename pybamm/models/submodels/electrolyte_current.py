@@ -1,9 +1,8 @@
 #
 # Equation classes for the electrolyte current
 #
-import pybamm
-
 import numpy as np
+import pybamm
 
 
 class ElectrolyteCurrentBaseModel(pybamm.SubModel):
@@ -100,7 +99,8 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         c_e = variables["Electrolyte concentration"]
         phi_s_n = variables["Negative electrode potential"]
         epsilon = variables["Porosity"]
-        c_e_0 = variables["Average electrolye concentration"]
+        c_e_0 = variables["Average electrolyte concentration"]
+        i_boundary_cc = variables["Current collector current density"]
 
         # import parameters and spatial variables
         param = self.set_of_parameters
@@ -429,7 +429,18 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         self.variables[Domain + " electrolyte current density"] = i_e
 
     def set_boundary_conditions(self, variables, conductivity, domain):
-        """ Set boundary conditions for the system. """
+        """
+        Set boundary conditions for the full model.
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of symbols to use in the model
+        conductivity : :class:`pybamm.Symbol`
+            Effective electrolyte conductivity
+        domain : list of str
+            Domain in which to set the system
+        """
         param = self.set_of_parameters
         i_boundary_cc = variables["Current collector current density"]
         if domain == ["negative electrode"]:
@@ -495,7 +506,6 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             self.rhs[delta_phi] = 1 / C_dl * (j_average - j)
         elif self.capacitance_options == "algebraic":
             self.algebraic[delta_phi] = j_average - j
-        self.variables[Domain + " electrode surface potential difference"] = delta_phi
 
     def set_post_processed(self):
         """

@@ -135,33 +135,32 @@ class Ohm(pybamm.SubModel):
 
         return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
-    def get_neg_pot_explicit_combined(self, i_boundary_cc, epsilon=None):
+    def get_neg_pot_explicit_combined(self, variables):
         """
         Provides an explicit combined leading and first order solution to solid phase
         current conservation with ohm's law in the negative electrode.
 
         Parameters
         ----------
-        i_boundary_cc : :class:`pybamm.Symbol`
-            Current density in the current collector (for boundary condition). Can
-            evaluate to a Scalar (for 1D models), or a vector (for 1+1D or 2+1D models)
-        epsilon : :class:`pybamm.Symbol`, optional
-            Porosity. Default is None, in which case param.epsilon is used.
+        variables : dict
+            Dictionary of symbols to use in the model
 
         Returns
         -------
         phi_s_n :class `pybamm.Symbol`
             The negative electrode potential
         """
+        # Unpack variables
+        i_boundary_cc = variables["Current collector current density"]
+        try:
+            eps_n = variables["Porosity"].orphans[0]
+        except KeyError:
+            eps_n = param.epsilon_n
+
         # import parameters and spatial variables
         param = self.set_of_parameters
         l_n = param.l_n
         x_n = pybamm.standard_spatial_vars.x_n
-
-        # if porosity is not provided, use the input parameter
-        if epsilon is None:
-            epsilon = param.epsilon
-        eps_n, _, _ = [e.orphans[0] for e in epsilon.orphans]
 
         # electrode potential
         sigma_n_eff = param.sigma_n * (1 - eps_n)
@@ -169,9 +168,7 @@ class Ohm(pybamm.SubModel):
 
         return phi_s_n
 
-    def get_explicit_combined(
-        self, phi_s_n, phi_e, ocp_p, eta_r_p, i_boundary_cc, epsilon=None
-    ):
+    def get_explicit_combined(self, variables):
         """
         Provides an explicit combined leading and first order solution to solid phase
         current conservation with ohm's law. Note that the returned current density is
@@ -198,18 +195,25 @@ class Ohm(pybamm.SubModel):
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
+        # Unpack variables
+        phi_s_n = variables["Negative electrode potential"]
+        phi_e = variables["Electrolyte potential"]
+        ocp_p = variables["Positive electrode open circuit potential"]
+        eta_r_p = variables["Positive reaction overpotential"]
+        i_boundary_cc = variables["Current collector current density"]
+        try:
+            epsilon = variables["Porosity"]
+        except KeyError:
+            epsilon = param.epsilon
+        eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
+        _, _, phi_e_p = phi_e.orphans
+
         # import parameters and spatial variables
         param = self.set_of_parameters
         l_n = param.l_n
         l_p = param.l_p
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
-
-        # if porosity is not provided, use the input parameter
-        if epsilon is None:
-            epsilon = param.epsilon
-        eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-        _, _, phi_e_p = phi_e.orphans
 
         # obtain averages
         ocp_p_av = pybamm.average(ocp_p)
