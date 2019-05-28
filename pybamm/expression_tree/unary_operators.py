@@ -582,7 +582,7 @@ def average(symbol):
         the new averaged symbol
     """
     # If symbol doesn't have a domain, its average value is itself
-    if symbol.domain == []:
+    if symbol.domain in [[], ["current collector"]]:
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
@@ -614,6 +614,8 @@ def average(symbol):
         elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             x = pybamm.standard_spatial_vars.x
             l = pybamm.Scalar(1)
+        else:
+            raise pybamm.DomainError("domain '{}' not recognised".format(symbol.domain))
 
         return Integral(symbol, x) / l
 

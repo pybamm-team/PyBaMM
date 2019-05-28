@@ -18,3 +18,8 @@ Binary Operators
 
 .. autoclass:: pybamm.Division
   :members:
+
+.. autoclass:: pybamm.Outer
+  :members:
+
+.. autofunction:: pybamm.outer

@@ -42,9 +42,10 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         modeltest.test_all()
 
     def test_explicit(self):
-        param = pybamm.standard_parameters_lithium_ion
-
         # Set up
+        param = pybamm.standard_parameters_lithium_ion
+        i_boundary_cc = param.current_with_time
+
         c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
         c_e_s = pybamm.Broadcast(1, domain=["separator"])
         c_e_p = pybamm.Broadcast(1, domain=["positive electrode"])
@@ -60,7 +61,9 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
 
         # Model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        leading_order_vars = model.get_explicit_leading_order(ocp_n, eta_r_n)
+        leading_order_vars = model.get_explicit_leading_order(
+            ocp_n, eta_r_n, i_boundary_cc
+        )
         combined_vars = model.get_explicit_combined(ocp_n, eta_r_n, c_e, phi_s_n)
 
         # Get disc
@@ -210,6 +213,7 @@ class TestMacInnesCapacitance(unittest.TestCase):
     def test_basic_processing_leading_order(self):
         # Parameters
         param = pybamm.standard_parameters_lithium_ion
+        i_boundary_cc = param.current_with_time
 
         # Variables
         c_e = pybamm.Scalar(1)
@@ -240,14 +244,18 @@ class TestMacInnesCapacitance(unittest.TestCase):
         for use_cap in [True, False]:
             # Negative electrode
             model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
-            model_n.set_leading_order_system(delta_phi_n, reactions, neg)
+            model_n.set_leading_order_system(
+                delta_phi_n, reactions, neg, i_boundary_cc
+            )
             # Test
             modeltest_n = tests.StandardModelTest(model_n)
             modeltest_n.test_all()
 
             # Positive electrode
             model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
-            model_p.set_leading_order_system(delta_phi_p, reactions, pos)
+            model_p.set_leading_order_system(
+                delta_phi_p, reactions, pos, i_boundary_cc
+            )
             # Test
             modeltest_p = tests.StandardModelTest(model_p)
             modeltest_p.test_all()

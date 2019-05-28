@@ -32,6 +32,7 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
+        i_boundary_cc = param.current_with_time
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -89,25 +90,21 @@ class CompositeCapacitance(pybamm.LeadAcidBaseModel):
 
         # Electrolyte current
         reactions_av = {"main": {"neg": {"aj": j_n_av}, "pos": {"aj": j_p_av}}}
-        eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(
+        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
             param, use_capacitance
         )
-        eleclyte_current_model_n.set_leading_order_system(
-            delta_phi_n_av, reactions_av, neg
+        eleclyte_current_model.set_leading_order_system(
+            delta_phi_n_av, reactions_av, neg, i_boundary_cc
         )
-        eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(
-            param, use_capacitance
-        )
-        eleclyte_current_model_p.set_leading_order_system(
-            delta_phi_p_av, reactions_av, pos
+        eleclyte_current_model.set_leading_order_system(
+            delta_phi_p_av, reactions_av, pos, i_boundary_cc
         )
 
         self.update(
             leading_order_model,
             porosity_model,
             eleclyte_conc_model,
-            eleclyte_current_model_n,
-            eleclyte_current_model_p,
+            eleclyte_current_model,
         )
 
         "-----------------------------------------------------------------------------"

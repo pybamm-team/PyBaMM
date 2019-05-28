@@ -338,19 +338,14 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
 
-            if eqn.evaluates_to_number():
-                if not isinstance(eqn_key, str):
-                    if eqn_key.domain == []:
-                        eqn = pybamm.Broadcast(eqn, eqn_key.domain)
-                    else:
-                        eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(
-                            eqn, eqn_key.domain
-                        )
-
-            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            if eqn.evaluates_to_number() and not isinstance(eqn_key, str):
+                eqn = pybamm.Broadcast(eqn, eqn_key.domain)
 
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
+            pybamm.logger.debug("**Discretise {!s}".format(eqn_key))
+            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
@@ -368,7 +363,6 @@ class Discretisation(object):
             Discretised symbol
 
         """
-        pybamm.logger.debug("Discretise {!s}".format(symbol))
         try:
             return self._discretised_symbols[symbol.id]
         except KeyError:
@@ -572,7 +566,8 @@ class Discretisation(object):
     def check_variables(self, model):
         """
         Check variables in variable list against rhs
-        Be lenient with size check if the variable in model.variables is broadcasted
+        Be lenient with size check if the variable in model.variables is broadcasted, or
+        a concatenation, or an outer product
         (if broadcasted, variable is a multiplication with a vector of ones)
         """
         y0 = model.concatenated_initial_conditions
@@ -582,7 +577,7 @@ class Discretisation(object):
                 if not (
                     model.rhs[rhs_var].evaluate(0, y0).shape
                     == var.evaluate(0, y0).shape
-                    or isinstance(var, pybamm.Concatenation)
+                    or isinstance(var, (pybamm.Concatenation, pybamm.Outer))
                     or (
                         isinstance(var, pybamm.Multiplication)
                         and isinstance(var.right, pybamm.Vector)

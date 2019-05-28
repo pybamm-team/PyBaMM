@@ -74,7 +74,9 @@ class BaseModel(object):
 
         if not all(
             [
-                variable.domain == equation.domain or equation.domain == []
+                variable.domain == equation.domain
+                or variable.domain == []
+                or equation.domain == []
                 for variable, equation in dict.items()
             ]
         ):
@@ -193,6 +195,14 @@ class BaseModel(object):
     @property
     def use_capacitance(self):
         return self._use_capacitance
+
+    @property
+    def bc_options(self):
+        return self._bc_options
+
+    @property
+    def set_of_parameters(self):
+        return self._set_of_parameters
 
     def __getitem__(self, key):
         return self.rhs[key]
@@ -329,10 +339,12 @@ class BaseModel(object):
 
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_spatial_derivatives():
+            if eqn.has_symbol_of_class((pybamm.Gradient, pybamm.Divergence)):
                 # Variable must be in the boundary conditions
                 if not any(
-                    var.id == symbol.id for symbol in self.boundary_conditions.keys()
+                    var.id == x.id
+                    for symbol in self.boundary_conditions.keys()
+                    for x in symbol.pre_order()
                 ):
                     raise pybamm.ModelError(
                         """
@@ -418,7 +430,14 @@ class StandardBatteryBaseModel(BaseModel):
     @property
     def default_var_pts(self):
         var = pybamm.standard_spatial_vars
-        return {var.x_n: 40, var.x_s: 25, var.x_p: 35, var.r_n: 10, var.r_p: 10}
+        return {
+            var.x_n: 40,
+            var.x_s: 25,
+            var.x_p: 35,
+            var.r_n: 10,
+            var.r_p: 10,
+            var.z: 10,
+        }
 
     @property
     def default_submesh_types(self):
@@ -428,6 +447,7 @@ class StandardBatteryBaseModel(BaseModel):
             "positive electrode": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
         }
 
     @property
@@ -436,6 +456,7 @@ class StandardBatteryBaseModel(BaseModel):
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.FiniteVolume,
         }
 
     @property
@@ -449,6 +470,10 @@ class StandardBatteryBaseModel(BaseModel):
             default_solver = pybamm.ScipySolver()
 
         return default_solver
+
+    @property
+    def default_bc_options(self):
+        return {"dimensionality": 1}
 
     def set_standard_output_variables(self):
         # Standard output variables
@@ -571,7 +596,7 @@ class StandardBatteryBaseModel(BaseModel):
 class SubModel(StandardBatteryBaseModel):
     def __init__(self, set_of_parameters):
         super().__init__()
-        self.set_of_parameters = set_of_parameters
+        self._set_of_parameters = set_of_parameters
         # Initialise empty variables (to avoid overwriting with 'None')
         self.variables = {}
 

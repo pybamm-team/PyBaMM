@@ -34,6 +34,7 @@ A_cc = pybamm.geometric_parameters.A_cc
 W = L_y
 H = L_z
 A_cs = A_cc
+delta = L_x / H
 
 # Electrical
 I_typ = pybamm.electrical_parameters.I_typ
