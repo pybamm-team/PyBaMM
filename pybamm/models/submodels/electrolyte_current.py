@@ -276,22 +276,26 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_system(self, phi_e, c_e, reactions, epsilon=None):
+    def set_algebraic_system(self, variables, reactions):
         """
         PDE system for current in the electrolyte, derived from the Stefan-Maxwell
         equations.
 
         Parameters
         ----------
-        phi_e : :class:`pybamm.Concatenation`
-            The eletrolyte potential variable
-        c_e : :class:`pybamm.Concatenation`
-            The eletrolyte concentration variable
+        variables : dict
+            Dictionary of symbols to use in the model
         reactions : dict
             Dictionary of reaction variables
-        epsilon : :class:`pybamm.Symbol`, optional
-            Porosity. Default is None, in which case param.epsilon is used.
         """
+        # Unpack variables
+        phi_e = variables["Electrolyte potential"]
+        c_e = variables["Electrolyte concentration"]
+        try:
+            epsilon = variables["Porosity"]
+        except KeyError:
+            epsilon = param.epsilon
+
         # Load parameters and spatial variables
         param = self.set_of_parameters
 
@@ -299,10 +303,6 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         j_n = reactions["main"]["neg"]["aj"]
         j_p = reactions["main"]["pos"]["aj"]
         j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
-
-        # if porosity is not provided, use the input parameter
-        if epsilon is None:
-            epsilon = param.epsilon
 
         # functions
         i_e = (
@@ -372,7 +372,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
         return default_solver
 
-    def set_full_system(self, delta_phi, c_e, reactions, eps=None):
+    def set_full_system(self, variables, reactions, domain):
         """
         PDE system for current in the electrolyte, derived from the Stefan-Maxwell
         equations. If capacitance_options is `differential`, this adds equations to
@@ -380,27 +380,32 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
         Parameters
         ----------
-        delta_phi : :class:`pybamm.Variable`
-            The potential difference variable
-        c_e : :class:`pybamm.Concatenation`
-            The eletrolyte concentration variable
+        variables : dict
+            Dictionary of symbols to use in the model
         reactions : dict
             Dictionary of reaction variables
-        epsilon : :class:`pybamm.Symbol`, optional
-            Porosity. Default is None, in which case param.epsilon is used.
+        domain : list of str
+            Domain in which to set the system
         """
         param = self.set_of_parameters
 
-        if delta_phi.domain == ["negative electrode"]:
-            if eps is None:
+        if domain == ["negative electrode"]:
+            delta_phi = variables["Negative electrode surface potential difference"]
+            c_e = variables["Electrolyte concentration"].orphans[0]
+            try:
+                eps = variables["Porosity"].orphans[0]
+            except KeyError:
                 eps = param.epsilon_n
             j = reactions["main"]["neg"]["aj"]
             self.initial_conditions[delta_phi] = param.U_n(param.c_n_init)
             C_dl = param.C_dl_n
-            flux_bc_side = "right"
             Domain = "Negative"
-        elif delta_phi.domain == ["positive electrode"]:
-            if eps is None:
+        elif domain == ["positive electrode"]:
+            delta_phi = variables["Positive electrode surface potential difference"]
+            c_e = variables["Electrolyte concentration"].orphans[2]
+            try:
+                eps = variables["Porosity"].orphans[2]
+            except KeyError:
                 eps = param.epsilon_p
             j = reactions["main"]["pos"]["aj"]
             self.initial_conditions[delta_phi] = param.U_p(param.c_p_init)
@@ -408,9 +413,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             flux_bc_side = "left"
             Domain = "Positive"
         else:
-            raise pybamm.DomainError(
-                "domain '{}' not recognised".format(delta_phi.domain)
-            )
+            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
         conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
         i_e = conductivity * (
             (param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi)
@@ -421,29 +424,35 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             self.algebraic[delta_phi] = pybamm.div(i_e) - j
 
         # Set boundary conditons and variables
-        self.set_boundary_conditions(c_e, delta_phi, conductivity, flux_bc_side)
-        self.variables.update(
-            {
-                Domain + " electrode surface potential difference": delta_phi,
-                Domain + " electrolyte current density": i_e,
-            }
-        )
+        self.set_boundary_conditions(variables, conductivity, domain)
+        self.variables.update(variables)
+        self.variables[Domain + " electrolyte current density"] = i_e
 
-    def set_boundary_conditions(self, c_e, delta_phi, conductivity, side):
+    def set_boundary_conditions(self, variables, conductivity, domain):
         """ Set boundary conditions for the system. """
         param = self.set_of_parameters
-        other_side = {"left": "right", "right": "left"}[side]
+        i_boundary_cc = variables["Current collector current density"]
+        if domain == ["negative electrode"]:
+            delta_phi = variables["Negative electrode surface potential difference"]
+            c_e = variables["Electrolyte concentration"].orphans[0]
+            flux_bc_side = "right"
+        elif domain == ["positive electrode"]:
+            delta_phi = variables["Positive electrode surface potential difference"]
+            c_e = variables["Electrolyte concentration"].orphans[2]
+            flux_bc_side = "left"
 
-        c_e_flux = pybamm.BoundaryFlux(c_e, side)
+        other_side = {"left": "right", "right": "left"}[flux_bc_side]
+
+        c_e_flux = pybamm.BoundaryFlux(c_e, flux_bc_side)
         flux_bc = (
-            i_boundary_cc / pybamm.BoundaryValue(conductivity, side)
-        ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, side) * c_e_flux
+            i_boundary_cc / pybamm.BoundaryValue(conductivity, flux_bc_side)
+        ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, flux_bc_side) * c_e_flux
         self.boundary_conditions[delta_phi] = {
-            side: (flux_bc, "Neumann"),
+            flux_bc_side: (flux_bc, "Neumann"),
             other_side: (pybamm.Scalar(0), "Neumann"),
         }
         self.boundary_conditions[c_e] = {
-            side: (c_e_flux, "Neumann"),
+            flux_bc_side: (c_e_flux, "Neumann"),
             other_side: (pybamm.Scalar(0), "Neumann"),
         }
 
@@ -488,7 +497,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             self.algebraic[delta_phi] = j_average - j
         self.variables[Domain + " electrode surface potential difference"] = delta_phi
 
-    def set_post_processed(self, variables):
+    def set_post_processed(self):
         """
         Calculate dimensionless and dimensional variables for the capacitance submodel
 
@@ -503,21 +512,25 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
-        # Unpack potential differences
-        delta_phi_n = variables["Negative electrode surface potential difference"]
-        delta_phi_p = variables["Positive electrode surface potential difference"]
+        # Unpack variables
+        delta_phi_n = self.variables["Negative electrode surface potential difference"]
+        delta_phi_p = self.variables["Positive electrode surface potential difference"]
+        i_boundary_cc = self.variables["Current collector current density"]
+        c_e = self.variables["Electrolyte concentration"]
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        try:
+            eps = self.variables["Porosity"]
+        except KeyError:
+            eps = param.epsilon
+        eps_n, eps_s, eps_p = eps.orphans
+
         # Unpack and combine currents
-        i_e_n = variables["Negative electrolyte current density"]
+        i_e_n = self.variables["Negative electrolyte current density"]
         i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
-        i_e_p = variables["Positive electrolyte current density"]
+        i_e_p = self.variables["Positive electrolyte current density"]
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
         i_s_n = i_boundary_cc - i_e_n
         i_s_p = i_boundary_cc - i_e_p
-
-        c_e_n, c_e_s, c_e_p = c_e.orphans
-        if eps is None:
-            eps = param.epsilon
-        eps_n, eps_s, eps_p = eps.orphans
 
         # Negative electrode potential
         solid_conductivity_n = param.sigma_n * (1 - eps_n) ** param.b

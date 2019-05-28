@@ -18,7 +18,7 @@ class Ohm(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_system(self, variables, reactions):
+    def set_algebraic_system(self, variables, reactions, domain):
         """
         PDE system for current in the electrodes, using Ohm's law
 
@@ -28,33 +28,35 @@ class Ohm(pybamm.SubModel):
             Dictionary of symbols to use in the model
         reactions : dict
             Dictionary of reaction variables
+        domain : list of str
+            Domain in which to set the system
 
         """
         # unpack variables
-        phi_s = variables["Electrode potential"]
         i_boundary_cc = variables["Current collector current density"]
-        eps = variables["Porosity"]
-
         param = self.set_of_parameters
 
-        # algebraic model only
-        self.rhs = {}
-
         # different bounday conditions in each electrode
-        if phi_s.domain == ["negative electrode"]:
+        if domain == ["negative electrode"]:
+            phi_s = variables["Negative electrode potential"]
             j = reactions["main"]["neg"]["aj"]
             # if porosity is not provided, use the input parameter
-            if eps is None:
+            try:
+                eps = variables["Porosity"].orphans[0]
+            except KeyError:
                 eps = param.epsilon_n
             # liion sigma_n may already account for porosity
             conductivity = param.sigma_n * (1 - eps) ** param.b
             lbc = (pybamm.Scalar(0), "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
             self.initial_conditions[phi_s] = pybamm.Scalar(0)
-        elif phi_s.domain == ["positive electrode"]:
+        elif domain == ["positive electrode"]:
+            phi_s = variables["Positive electrode potential"]
             j = reactions["main"]["pos"]["aj"]
             # if porosity is not provided, use the input parameter
-            if eps is None:
+            try:
+                eps = variables["Porosity"].orphans[2]
+            except KeyError:
                 eps = param.epsilon_p
             # liion sigma_p may already account for porosity
             conductivity = param.sigma_p * (1 - eps) ** param.b
@@ -68,15 +70,15 @@ class Ohm(pybamm.SubModel):
             )
 
         else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(phi_s.domain))
+            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
         i_s = -conductivity * pybamm.grad(phi_s)
         self.algebraic[phi_s] = pybamm.div(i_s) + j
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
         self.variables.update(
             {
-                phi_s.domain[0].capitalize() + " potential": phi_s,
-                phi_s.domain[0].capitalize() + " current density": i_s,
+                domain[0].capitalize() + " potential": phi_s,
+                domain[0].capitalize() + " current density": i_s,
             }
         )
 

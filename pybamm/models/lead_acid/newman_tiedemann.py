@@ -31,7 +31,13 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
 
         c_e, eps, delta_phi_n, delta_phi_p, potentials = self.get_model_variables()
         eps_n, _, eps_p = eps.orphans
-
+        self.variables.update(
+            {
+                "Electrolyte concentration": c_e,
+                "Negative electrode surface potential difference": delta_phi_n,
+                "Positive electrode surface potential difference": delta_phi_p,
+            }
+        )
         "-----------------------------------------------------------------------------"
         "Boundary conditions"
 
@@ -59,6 +65,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         # Porosity
         porosity_model = pybamm.porosity.Standard(param)
         porosity_model.set_differential_system(eps, j_n, j_p)
+        self.update(porosity_model)
 
         # Electrolyte concentration
         reactions = {
@@ -70,36 +77,37 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         }
         # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        electrolyte_diffusion_model.set_differential_system(c_e, reactions, eps)
+        electrolyte_diffusion_model.set_differential_system(self.variables, reactions)
 
-        self.update(porosity_model, electrolyte_diffusion_model)
+        self.update(electrolyte_diffusion_model)
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
 
         if self.options["capacitance"] is False:
             phi_e, phi_s_n, phi_s_p = potentials
+            self.variables["Electrolyte potential"] = phi_e
+            self.variables["Negative electrode potential"] = phi_s_n
+            self.variables["Positive electrode potential"] = phi_s_p
             eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
                 param
             )
-            eleclyte_current_model.set_algebraic_system(phi_e, c_e, reactions, eps)
+            eleclyte_current_model.set_algebraic_system(self.variables, reactions)
 
             # Electrode model
             electrode_current_model = pybamm.electrode.Ohm(param)
-            electrode_current_model.set_algebraic_system(
-                phi_s_n, reactions, i_boundary_cc, eps_n
-            )
-            electrode_current_model.set_algebraic_system(
-                phi_s_p, reactions, i_boundary_cc, eps_p
-            )
+            electrode_current_model.set_algebraic_system(self.variables, reactions, neg)
+            electrode_current_model.set_algebraic_system(self.variables, reactions, pos)
             self.update(eleclyte_current_model, electrode_current_model)
         else:
             # Electrolyte current
             eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
                 param, capacitance_options
             )
-            eleclyte_current_model.set_full_system(delta_phi_n, c_e_n, reactions, eps_n)
-            eleclyte_current_model.set_full_system(delta_phi_p, c_e_p, reactions, eps_p)
+            eleclyte_current_model.set_full_system(self.variables, reactions, neg)
+            eleclyte_current_model.set_full_system(self.variables, reactions, pos)
 
             # Post-process electrolyte model
-            eleclyte_current_model.set_post_processed(c_e, eps)
+            eleclyte_current_model.set_post_processed()
             self.update(eleclyte_current_model)
 
         "-----------------------------------------------------------------------------"

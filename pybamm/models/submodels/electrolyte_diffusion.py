@@ -32,12 +32,15 @@ class StefanMaxwell(pybamm.SubModel):
         reactions : dict
             Dictionary of reaction variables
         """
+        # unpack variables
+        c_e = variables["Electrolyte concentration"]
         param = self.set_of_parameters
 
         # if porosity is not provided, use the input parameter
-        if epsilon is not None:
+        try:
+            epsilon = variables["Porosity"]
             deps_dt = reactions["main"]["porosity change"]
-        else:
+        except KeyError:
             epsilon = param.epsilon
             deps_dt = pybamm.Scalar(0)
 
