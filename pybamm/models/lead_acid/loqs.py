@@ -25,6 +25,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         param = pybamm.standard_parameters_lead_acid
         self._set_of_parameters = param
         capacitance_options = self.options["capacitance"]
+        i_boundary_cc = param.current_with_time
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
