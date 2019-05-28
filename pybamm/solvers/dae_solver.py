@@ -125,11 +125,6 @@ class DaeSolver(pybamm.BaseSolver):
             If the model contains any algebraic equations (in which case a DAE solver
             should be used instead)
         """
-        if len(model.algebraic) == 0:
-            raise pybamm.SolverError(
-                """Cannot use DAE solver to solve model with only ODEs"""
-            )
-
         # create simplified rhs algebraic and event expressions
         concatenated_rhs = model.concatenated_rhs
         concatenated_algebraic = model.concatenated_algebraic
@@ -148,9 +143,13 @@ class DaeSolver(pybamm.BaseSolver):
         def algebraic(t, y):
             return concatenated_algebraic.evaluate(t, y, known_evals={})[0][:, 0]
 
-        y0 = self.calculate_consistent_initial_conditions(
-            rhs, algebraic, model.concatenated_initial_conditions[:, 0]
-        )
+        if len(model.algebraic) > 0:
+            y0 = self.calculate_consistent_initial_conditions(
+                rhs, algebraic, model.concatenated_initial_conditions[:, 0]
+            )
+        else:
+            # can use DAE solver to solve ODE model
+            y0 = model.concatenated_initial_conditions[:, 0]
 
         # Calculate jacobian
         if model.use_jacobian:
