@@ -23,7 +23,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
-        i_current_collector = param.current_with_time
+        i_boundary_cc = param.current_with_time
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -81,7 +81,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
         elyte_vars = eleclyte_current_model.get_explicit_leading_order(
-            ocp_n, eta_r_n, i_current_collector
+            ocp_n, eta_r_n, i_boundary_cc
         )
         self.variables.update(elyte_vars)
 
@@ -89,7 +89,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         electrode_model = pybamm.electrode.Ohm(param)
         phi_e = self.variables["Electrolyte potential"]
         electrode_vars = electrode_model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e, i_current_collector
+            ocp_p, eta_r_p, phi_e, i_boundary_cc
         )
         self.variables.update(electrode_vars)
 
