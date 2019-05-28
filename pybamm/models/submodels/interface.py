@@ -20,12 +20,14 @@ class InterfacialCurrent(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_homogeneous_interfacial_current(self, domain):
+    def get_homogeneous_interfacial_current(self, i_current_collector, domain):
         """
         Homogeneous reaction at the electrode-electrolyte interface
 
         Parameters
         ----------
+        i_current_collector : :class:`pybamm.Symbol`
+            The current in the current collectors (can be 0D, 1D or 2D)
         domain : iter of str
             The domain(s) in which to compute the interfacial current.
 
@@ -34,12 +36,10 @@ class InterfacialCurrent(pybamm.SubModel):
         :class:`pybamm.Symbol`
             Homogeneous interfacial current density
         """
-        icell = pybamm.electrical_parameters.current_with_time
-
         if domain == ["negative electrode"]:
-            return icell / pybamm.geometric_parameters.l_n
+            return i_current_collector / pybamm.geometric_parameters.l_n
         elif domain == ["positive electrode"]:
-            return -icell / pybamm.geometric_parameters.l_p
+            return -i_current_collector / pybamm.geometric_parameters.l_p
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 

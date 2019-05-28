@@ -28,8 +28,58 @@ class Vertical(pybamm.SubModel):
             scaled_cond_n + scaled_cond_p
         )
 
-    def set_leading_order_vertical_current(self, delta_phi_n, delta_phi_p):
+    def set_algebraic_vertical_current(self, bc_variables):
+        """ Set the system that gives the current in the current collectors.
+
+        Parameters
+        ----------
+        bc_variables : dict of :class:`pybamm.Symbol`
+            Dictionary of variables in the current collector
+        """
         param = self.set_of_parameters
+        i_cell = param.current_with_time
+
+        # Set up variables
+        c_e = bc_variables["c_e"]
+        delta_phi_n = bc_variables["delta_phi_n"]
+        delta_phi_p = bc_variables["delta_phi_p"]
+        i_curr_coll = pybamm.Variable(
+            "Current collector current", domain="current collector"
+        )
+        electrolyte_terms = delta_phi_n - delta_phi_p
+
+        # Algebraic equation for the current in the current collector
+        I_s_perp = self.vertical_conductivity * pybamm.grad(
+            i_curr_coll - electrolyte_terms
+        )
+        self.algebraic[i_curr_coll] = pybamm.div(I_s_perp) - i_curr_coll
+        self.initial_conditions[i_curr_coll] = i_cell
+
+        # Set boundary conditions at top ("right") and bottom ("left")
+        self.boundary_conditions[i_curr_coll] = {
+            "left": (pybamm.Scalar(0), "Neumann"),
+            "right": (i_cell / self.vertical_conductivity, "Neumann"),
+        }
+        # Trivial boundary conditions for the electrolyte terms
+        self.boundary_conditions[electrolyte_terms] = {
+            "left": (pybamm.BoundaryFlux(electrolyte_terms, "left"), "Neumann"),
+            "right": (pybamm.BoundaryFlux(electrolyte_terms, "right"), "Neumann"),
+        }
+
+        self.variables = {"Current collector current": i_curr_coll}
+
+    def set_leading_order_vertical_current(self, bc_variables):
+        """ Set the system that gives the leading-order current in the current
+        collectors.
+
+        Parameters
+        ----------
+        bc_variables : dict of :class:`pybamm.Symbol`
+            Dictionary of variables in the current collector
+        """
+        param = self.set_of_parameters
+        delta_phi_n = bc_variables["delta_phi_n"]
+        delta_phi_p = bc_variables["delta_phi_p"]
         delta_phi_difference = delta_phi_n - delta_phi_p
 
         # Simple model: read off vertical current (no extra equation)

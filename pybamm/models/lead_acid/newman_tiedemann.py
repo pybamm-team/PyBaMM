@@ -23,6 +23,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
+        self._set_of_parameters = param
         capacitance_options = self.options["capacitance"]
 
         "-----------------------------------------------------------------------------"
@@ -30,6 +31,12 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
 
         c_e, eps, delta_phi_n, delta_phi_p, potentials = self.get_model_variables()
         eps_n, _, eps_p = eps.orphans
+
+        "-----------------------------------------------------------------------------"
+        "Boundary conditions"
+
+        self.set_boundary_conditions(None)
+        i_current_collector = self.variables["Current collector current"]
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -76,8 +83,12 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
 
             # Electrode model
             electrode_current_model = pybamm.electrode.Ohm(param)
-            electrode_current_model.set_algebraic_system(phi_s_n, reactions, eps_n)
-            electrode_current_model.set_algebraic_system(phi_s_p, reactions, eps_p)
+            electrode_current_model.set_algebraic_system(
+                phi_s_n, reactions, i_current_collector, eps_n
+            )
+            electrode_current_model.set_algebraic_system(
+                phi_s_p, reactions, i_current_collector, eps_p
+            )
             self.update(eleclyte_current_model, electrode_current_model)
         else:
             # Electrolyte current
@@ -138,6 +149,18 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             potentials = None
 
         return c_e, eps, delta_phi_n, delta_phi_p, potentials
+
+    def set_boundary_conditions(self, bc_variables):
+        """Set boundary conditions, dependent on elf.options"""
+        param = self.set_of_parameters
+        dimensionality = self.options["bc_options"]["dimensionality"]
+        if dimensionality == 1:
+            current_bc = param.current_with_time
+            self.variables["Current collector current"] = current_bc
+        elif dimensionality == 2:
+            current_collector_model = pybamm.vertical.Vertical(param)
+            current_collector_model.set_algebraic_vertical_current(bc_variables)
+            self.update(current_collector_model)
 
     @property
     def default_solver(self):

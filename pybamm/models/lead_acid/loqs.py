@@ -55,7 +55,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
             bc_variables = {"delta_phi_n": delta_phi_n, "delta_phi_p": delta_phi_p}
             self.set_boundary_conditions(bc_variables)
-            i_current_collector = self.variables["Current collector current"]
+            i_curr_coll = self.variables["Current collector current"]
 
             # Reaction overpotential
             eta_r_n = delta_phi_n - ocp_n
@@ -73,19 +73,19 @@ class LOQS(pybamm.LeadAcidBaseModel):
                 param, capacitance_options
             )
             eleclyte_current_model.set_leading_order_system(
-                delta_phi_n, self.reactions, neg, i_current_collector
+                delta_phi_n, self.reactions, neg, i_curr_coll
             )
             eleclyte_current_model.set_leading_order_system(
-                delta_phi_p, self.reactions, pos, i_current_collector
+                delta_phi_p, self.reactions, pos, i_curr_coll
             )
             self.update(eleclyte_current_model)
 
         else:
-            i_current_collector = param.current_with_time
+            i_curr_coll = param.current_with_time
 
             # Interfacial current density
-            j_n = int_curr_model.get_homogeneous_interfacial_current(neg)
-            j_p = int_curr_model.get_homogeneous_interfacial_current(pos)
+            j_n = int_curr_model.get_homogeneous_interfacial_current(i_curr_coll, neg)
+            j_p = int_curr_model.get_homogeneous_interfacial_current(i_curr_coll, pos)
 
             # Porosity
             self.set_porosity_model(epsilon, j_n, j_p)
@@ -120,7 +120,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         # Electrolyte current
         elyte_vars = eleclyte_current_model.get_explicit_leading_order(
-            ocp_n, eta_r_n, i_current_collector
+            ocp_n, eta_r_n, i_curr_coll
         )
         self.variables.update(elyte_vars)
 
@@ -128,7 +128,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         electrode_model = pybamm.electrode.Ohm(param)
         phi_e = self.variables["Electrolyte potential"]
         electrode_vars = electrode_model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e, i_current_collector
+            ocp_p, eta_r_p, phi_e, i_curr_coll
         )
         self.variables.update(electrode_vars)
 
@@ -166,20 +166,16 @@ class LOQS(pybamm.LeadAcidBaseModel):
         return c_e, epsilon, curr_coll_domain
 
     def set_boundary_conditions(self, bc_variables=None):
-        """Get boundary conditions"""
+        """Set boundary conditions, dependent on elf.options"""
         # TODO: edit to allow constant-current and constant-power control
         param = self.set_of_parameters
         dimensionality = self.options["bc_options"]["dimensionality"]
         if dimensionality == 1:
             current_bc = param.current_with_time
-            self.variables.update({"Current collector current": current_bc})
+            self.variables["Current collector current"] = current_bc
         elif dimensionality == 2:
-            delta_phi_n = bc_variables["delta_phi_n"]
-            delta_phi_p = bc_variables["delta_phi_p"]
             current_collector_model = pybamm.vertical.Vertical(param)
-            current_collector_model.set_leading_order_vertical_current(
-                delta_phi_n, delta_phi_p
-            )
+            current_collector_model.set_leading_order_vertical_current(bc_variables)
             self.update(current_collector_model)
 
     def set_porosity_model(self, epsilon, j_n, j_p):

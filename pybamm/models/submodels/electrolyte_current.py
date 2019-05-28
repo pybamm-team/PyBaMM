@@ -75,7 +75,14 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         return variables
 
     def get_explicit_combined(
-        self, ocp_n, eta_r_n, c_e, phi_s_n, epsilon=None, c_e_0=None
+        self,
+        ocp_n,
+        eta_r_n,
+        c_e,
+        phi_s_n,
+        i_current_collector,
+        epsilon=None,
+        c_e_0=None,
     ):
         """
         Provides and explicit combined leading and first order solution to the
@@ -107,7 +114,6 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         param = self.set_of_parameters
         l_n = param.l_n
         l_p = param.l_p
-        i_cell = param.current_with_time
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
@@ -133,9 +139,9 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         phi_s_n_av = pybamm.average(phi_s_n)
 
         # electrolyte current (leading-order approximation)
-        i_e_n = i_cell * x_n / l_n
-        i_e_s = pybamm.Broadcast(i_cell, ["separator"])
-        i_e_p = i_cell * (1 - x_p) / l_p
+        i_e_n = i_current_collector * x_n / l_n
+        i_e_s = pybamm.Broadcast(i_current_collector, ["separator"])
+        i_e_p = i_current_collector * (1 - x_p) / l_p
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte potential (combined leading and first order)
@@ -146,7 +152,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             - 2
             * (1 - param.t_plus)
             * pybamm.average(pybamm.Function(np.log, c_e_n / c_e_0))
-            - i_cell
+            - i_current_collector
             * param.C_e
             * l_n
             / param.gamma_e
@@ -156,20 +162,20 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         phi_e_n = (
             phi_e_const
             + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n / c_e_0)
-            - (i_cell * param.C_e / param.gamma_e)
+            - (i_current_collector * param.C_e / param.gamma_e)
             * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
         )
 
         phi_e_s = (
             phi_e_const
             + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s / c_e_0)
-            - (i_cell * param.C_e / param.gamma_e) * (x_s / kappa_s)
+            - (i_current_collector * param.C_e / param.gamma_e) * (x_s / kappa_s)
         )
 
         phi_e_p = (
             phi_e_const
             + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p / c_e_0)
-            - (i_cell * param.C_e / param.gamma_e)
+            - (i_current_collector * param.C_e / param.gamma_e)
             * (
                 (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
                 + (1 - l_p) / kappa_s
@@ -180,7 +186,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
 
         "Ohmic losses and overpotentials"
         # average electrolyte ohmic losses
-        delta_phi_e_av = -(param.C_e * i_cell / param.gamma_e) * (
+        delta_phi_e_av = -(param.C_e * i_current_collector / param.gamma_e) * (
             param.l_n / (3 * kappa_n)
             + param.l_s / (kappa_s)
             + param.l_p / (3 * kappa_p)
@@ -434,12 +440,11 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
     def set_boundary_conditions(self, c_e, delta_phi, conductivity, side):
         """ Set boundary conditions for the system. """
         param = self.set_of_parameters
-        i_cell = param.current_with_time
         other_side = {"left": "right", "right": "left"}[side]
 
         c_e_flux = pybamm.BoundaryFlux(c_e, side)
         flux_bc = (
-            i_cell / pybamm.BoundaryValue(conductivity, side)
+            i_current_collector / pybamm.BoundaryValue(conductivity, side)
         ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, side) * c_e_flux
         self.boundary_conditions[delta_phi] = {
             side: (flux_bc, "Neumann"),
@@ -503,7 +508,6 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         """
         # import parameters and spatial variables
         param = self.set_of_parameters
-        i_cell = param.current_with_time
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
@@ -513,11 +517,11 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         delta_phi_p = self.variables["Positive electrode surface potential difference"]
         # Unpack and combine currents
         i_e_n = self.variables["Negative electrolyte current density"]
-        i_e_s = pybamm.Broadcast(i_cell, ["separator"])
+        i_e_s = pybamm.Broadcast(i_current_collector, ["separator"])
         i_e_p = self.variables["Positive electrolyte current density"]
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
-        i_s_n = i_cell - i_e_n
-        i_s_p = i_cell - i_e_p
+        i_s_n = i_current_collector - i_e_n
+        i_s_p = i_current_collector - i_e_p
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
         if eps is None:
@@ -532,7 +536,9 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         chi_e_s = param.chi(c_e_s)
         kappa_s_eff = param.kappa_e(c_e_s) * (eps_s ** param.b)
         phi_e_s = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
-            chi_e_s / c_e_s * pybamm.grad(c_e_s) - param.C_e * i_cell / kappa_s_eff, x_s
+            chi_e_s / c_e_s * pybamm.grad(c_e_s)
+            - param.C_e * i_current_collector / kappa_s_eff,
+            x_s,
         )
         # Positive electrode potential
         solid_conductivity_p = param.sigma_p * (1 - eps_p) ** param.b

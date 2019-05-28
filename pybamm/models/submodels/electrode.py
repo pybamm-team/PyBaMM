@@ -18,7 +18,7 @@ class Ohm(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_system(self, phi_s, reactions, eps=None):
+    def set_algebraic_system(self, phi_s, reactions, i_curr_coll, eps=None):
         """
         PDE system for current in the electrodes, using Ohm's law
 
@@ -28,12 +28,14 @@ class Ohm(pybamm.SubModel):
             Eletrode potential
         reactions : dict
             Dictionary of reaction variables
+        i_curr_coll : :class:`pybamm.Symbol`
+            Current density in the current collector (for boundary condition). Can
+            evaluate to a Scalar (for 1D models), or a vector (for 1+1D or 2+1D models)
         eps : :class:`pybamm.Symbol`, optional
             Porosity. Default is None, in which case param.epsilon is used.
 
         """
         param = self.set_of_parameters
-        icell = param.current_with_time
 
         # algebraic model only
         self.rhs = {}
@@ -57,7 +59,10 @@ class Ohm(pybamm.SubModel):
             # liion sigma_p may already account for porosity
             conductivity = param.sigma_p * (1 - eps) ** param.b
             lbc = (pybamm.Scalar(0), "Neumann")
-            rbc = (icell / pybamm.boundary_value(-conductivity, "right"), "Neumann")
+            rbc = (
+                i_curr_coll / pybamm.boundary_value(-conductivity, "right"),
+                "Neumann",
+            )
             self.initial_conditions[phi_s] = param.U_p(param.c_p_init) - param.U_n(
                 param.c_n_init
             )
@@ -129,13 +134,16 @@ class Ohm(pybamm.SubModel):
 
         return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
-    def get_neg_pot_explicit_combined(self, epsilon=None):
+    def get_neg_pot_explicit_combined(self, i_current_collector, epsilon=None):
         """
         Provides an explicit combined leading and first order solution to solid phase
         current conservation with ohm's law in the negative electrode.
 
         Parameters
         ----------
+        i_current_collector : :class:`pybamm.Symbol`
+            Current density in the current collector (for boundary condition). Can
+            evaluate to a Scalar (for 1D models), or a vector (for 1+1D or 2+1D models)
         epsilon : :class:`pybamm.Symbol`, optional
             Porosity. Default is None, in which case param.epsilon is used.
 
@@ -147,7 +155,6 @@ class Ohm(pybamm.SubModel):
         # import parameters and spatial variables
         param = self.set_of_parameters
         l_n = param.l_n
-        i_cell = param.current_with_time
         x_n = pybamm.standard_spatial_vars.x_n
 
         # if porosity is not provided, use the input parameter
@@ -157,11 +164,13 @@ class Ohm(pybamm.SubModel):
 
         # electrode potential
         sigma_n_eff = param.sigma_n * (1 - eps_n)
-        phi_s_n = i_cell * x_n * (x_n - 2 * l_n) / (2 * sigma_n_eff * l_n)
+        phi_s_n = i_current_collector * x_n * (x_n - 2 * l_n) / (2 * sigma_n_eff * l_n)
 
         return phi_s_n
 
-    def get_explicit_combined(self, phi_s_n, phi_e, ocp_p, eta_r_p, epsilon=None):
+    def get_explicit_combined(
+        self, phi_s_n, phi_e, ocp_p, eta_r_p, i_current_collector, epsilon=None
+    ):
         """
         Provides an explicit combined leading and first order solution to solid phase
         current conservation with ohm's law. Note that the returned current density is
@@ -177,6 +186,9 @@ class Ohm(pybamm.SubModel):
             Open-circuit potential in the positive electrode
         eta_r_p : :class:`pybamm.Symbol`
             Reaction overpotential in the positive electrode
+        i_current_collector : :class:`pybamm.Symbol`
+            Current density in the current collector. Can evaluate to a Scalar (for
+            1D models), or a vector (for 1+1D or 2+1D models)
         epsilon : :class:`pybamm.Symbol`, optional
             Porosity. Default is None, in which case param.epsilon is used.
 
@@ -189,7 +201,6 @@ class Ohm(pybamm.SubModel):
         param = self.set_of_parameters
         l_n = param.l_n
         l_p = param.l_p
-        i_cell = param.current_with_time
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
@@ -212,16 +223,21 @@ class Ohm(pybamm.SubModel):
             ocp_p_av
             + eta_r_p_av
             + phi_e_p_av
-            - (i_cell / 6 / l_p / sigma_p_eff) * (2 * l_p ** 2 - 6 * l_p + 3)
+            - (i_current_collector / 6 / l_p / sigma_p_eff)
+            * (2 * l_p ** 2 - 6 * l_p + 3)
         )
 
-        phi_s_p = const - i_cell * x_p / (2 * l_p * sigma_p_eff) * (x_p + 2 * (l_p - 1))
+        phi_s_p = const - i_current_collector * x_p / (2 * l_p * sigma_p_eff) * (
+            x_p + 2 * (l_p - 1)
+        )
 
         # electrode current
-        i_s_n = i_cell - i_cell * x_n / l_n
-        i_s_p = i_cell - i_cell * (1 - x_p) / l_p
+        i_s_n = i_current_collector - i_current_collector * x_n / l_n
+        i_s_p = i_current_collector - i_current_collector * (1 - x_p) / l_p
 
-        delta_phi_s_av = -i_cell / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
+        delta_phi_s_av = (
+            -i_current_collector / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
+        )
 
         return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
