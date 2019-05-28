@@ -532,10 +532,6 @@ class Discretisation(object):
         y0 = model.concatenated_initial_conditions
         # Individual
         for var in model.rhs.keys():
-            if model.rhs[var].shape != model.initial_conditions[var].shape:
-                import ipdb
-
-                ipdb.set_trace()
             assert (
                 model.rhs[var].shape == model.initial_conditions[var].shape
             ), pybamm.ModelError(

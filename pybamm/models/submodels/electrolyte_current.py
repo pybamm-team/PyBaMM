@@ -35,8 +35,8 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         i_boundary_cc = variables["Current collector current density"]
         delta_phi_n = variables.get("Negative electrode surface potential difference")
         delta_phi_p = variables.get("Positive electrode surface potential difference")
-        c_e = variables["Electrolyte concentration"]
-        if isinstance(c_e, pybamm.Variable):
+        c_e = variables.get("Electrolyte concentration")
+        if c_e is None or isinstance(c_e, pybamm.Variable):
             c_e_n, c_e_s, c_e_p = c_e, c_e, c_e
         else:
             c_e_n, c_e_s, c_e_p = c_e.orphans

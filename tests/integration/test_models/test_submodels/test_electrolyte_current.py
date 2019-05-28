@@ -223,16 +223,12 @@ class TestMacInnesCapacitance(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
 
         # Variables
-        c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
-        c_e_s = pybamm.Broadcast(1, domain=["separator"])
-        c_e_p = pybamm.Broadcast(1, domain=["positive electrode"])
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
-        delta_phi_n = pybamm.Variable("negative electrode surface potential difference")
-        delta_phi_p = pybamm.Variable("positive electrode surface potential difference")
+        delta_phi_n = pybamm.Variable("Negative electrode surface potential difference")
+        delta_phi_p = pybamm.Variable("Positive electrode surface potential difference")
+        c_e = pybamm.Scalar(1)
         c_s_n_surf = pybamm.Scalar(0.8)
         c_s_p_surf = pybamm.Scalar(0.8)
         variables = {
-            "Electrolyte concentration": c_e,
             "Negative electrode surface potential difference": delta_phi_n,
             "Positive electrode surface potential difference": delta_phi_p,
             "Current collector current density": param.current_with_time,
