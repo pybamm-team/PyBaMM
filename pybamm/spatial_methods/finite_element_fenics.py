@@ -5,7 +5,6 @@ import pybamm
 
 from scipy.sparse import csr_matrix
 import autograd.numpy as np
-from autograd.builtins import isinstance
 
 import importlib
 
@@ -155,8 +154,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The (sparse) finite element stiffness matrix for the domain
         """
-        # TO DO: finish fenics mesh class
-        mesh = self.mesh
+        mesh = self.mesh[domain][0]
 
         # make form for the stiffness
         stiffness_form = (
@@ -175,14 +173,16 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.BaseDiscretisation.integral`
         """
+        domain = symbol.domain[0]
+
         # Calculate integration vector
-        integration_vector = self.definite_integral_vector()
+        integration_vector = self.definite_integral_vector(domain)
 
         out = integration_vector @ discretised_symbol
         out.domain = []
         return out
 
-    def definite_integral_vector(self):
+    def definite_integral_vector(self, domain):
         """
         Vector for finite-element implementation of the definite integral over
         the entire domain
@@ -202,8 +202,9 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         :class:`pybamm.Vector`
             The finite volume integral vector for the domain
         """
-        mesh = self.mesh
-        vector = dolfin.assemble(mesh.TrialFunction * mesh.dx)
+        # get primary mesh
+        mesh = self.mesh[domain][0]
+        vector = dolfin.assemble(mesh.TrialFunction * mesh.dx).get_local()[:]
         return pybamm.Vector(vector)
 
     def indefinite_integral(self, domain, symbol, discretised_symbol):
@@ -286,28 +287,3 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         mass_matrix = self.mass_matrix(symbol, boundary_conditions)
 
         return mass_matrix @ discretised_symbol
-
-    def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
-        """Discretise binary operators in model equations.  Performs appropriate
-        averaging of diffusivities if one of the children is a gradient operator, so
-        that discretised sizes match up.
-
-        Parameters
-        ----------
-        bin_op : :class:`pybamm.BinaryOperator`
-            Binary operator to discretise
-        left : :class:`pybamm.Symbol`
-            The left child of `bin_op`
-        right : :class:`pybamm.Symbol`
-            The right child of `bin_op`
-        disc_left : :class:`pybamm.Symbol`
-            The discretised left child of `bin_op`
-        disc_right : :class:`pybamm.Symbol`
-            The discretised right child of `bin_op`
-        Returns
-        -------
-        :class:`pybamm.BinaryOperator`
-            Discretised binary operator
-
-        """
-        raise NotImplementedError

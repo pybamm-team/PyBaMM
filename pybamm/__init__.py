@@ -60,6 +60,8 @@ from .expression_tree.binary_operators import (
     Multiplication,
     MatrixMultiplication,
     Division,
+    Outer,
+    outer,
 )
 from .expression_tree.concatenations import (
     Concatenation,
@@ -87,9 +89,11 @@ from .expression_tree.unary_operators import (
     IndefiniteIntegral,
     grad,
     div,
+    laplacian,
     surf,
     average,
     boundary_value,
+    source,
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast
@@ -164,8 +168,8 @@ from .geometry.geometry import (
     Geometry,
     Geometry1DMacro,
     Geometry3DMacro,
-    Geometry1p1DMacro
-    Geometry2p1DMacro
+    Geometry1p1DMacro,
+    Geometry2p1DMacro,
     Geometry1DMicro,
     Geometry1p1DMicro,
     Geometry2p1DMicro,

@@ -9,45 +9,30 @@ class SPM(pybamm.LithiumIonBaseModel):
     **Extends:** :class:`pybamm.LithiumIonBaseModel`
     """
 
-    def __init__(self):
-        super().__init__(bc_options=None)
+    def __init__(self, bc_options=None):
+        super().__init__()
         self.name = "Single Particle Model"
         self._bc_options = bc_options or self.default_bc_options
 
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lithium_ion
+        self._set_of_parameters = param
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
         c_s_n = pybamm.standard_variables.c_s_n
         c_s_p = pybamm.standard_variables.c_s_p
 
-       "-----------------------------------------------------------------------------"
+        "-----------------------------------------------------------------------------"
         "Boundary conditions"
-        # TO DO: edit below for SPM
-        bc_variables = {"delta_phi_n": delta_phi_n, "delta_phi_p": delta_phi_p}
+        v_local = pybamm.Variable("Local cell voltage", domain="current collector")
+        i_local = pybamm.Variable("Local through-cell current density", domain="current collector")
+        bc_variables = {"i_local": i_local, "v_local": v_local}
         self.set_boundary_conditions(bc_variables)
-        i_current_collector = self.variables["Current collector current"]
-
-        #if self.bc_options["dimensionality"] == 1:
-        #    i_local = param.current_with_time
-        #elif self.bc_options["dimensionality"] == 2 or 3:
-        #    v_local = pybamm.Variable("Local cell voltage", domain="current collector")
-        #    i_local = pybamm.Variable(
-        #        "Local through-cell current density", domain="current collector"
-        #    )
-
 
         "-----------------------------------------------------------------------------"
         "Submodels"
-
-        # Current collector model
-        if self.bc_options["dimensionality"] == 3:
-            raise NotImplementedError
-        if self.bc_options["dimensionality"] == 3:
-            current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
-            set_algebraic_system(self, v_local, i_local)
 
         # Interfacial current density
         int_curr_model = pybamm.interface.LithiumIonReaction(param)
@@ -102,17 +87,13 @@ class SPM(pybamm.LithiumIonBaseModel):
         electrode_model = pybamm.electrode.Ohm(param)
         phi_e = self.variables["Electrolyte potential"]
         electrode_vars = electrode_model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e
+            ocp_p, eta_r_p, phi_e, i_local
         )
         self.variables.update(electrode_vars)
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
-
-    @property
-    def default_geometry(self):
-        return pybamm.Geometry("1D macro", "1D micro")
 
     @property
     def default_geometry(self):
@@ -123,8 +104,45 @@ class SPM(pybamm.LithiumIonBaseModel):
         elif self.bc_options["dimensionality"] == 3:
             return pybamm.Geometry("2+1D macro", "1D micro")
 
-   def set_boundary_conditions(self, bc_variables=None):
-       # TO DO: edit below for SPM
+    @property
+    def default_submesh_types(self):
+        if self.bc_options["dimensionality"]in [1, 2]:
+            return {
+                "negative electrode": pybamm.Uniform1DSubMesh,
+                "separator": pybamm.Uniform1DSubMesh,
+                "positive electrode": pybamm.Uniform1DSubMesh,
+                "negative particle": pybamm.Uniform1DSubMesh,
+                "positive particle": pybamm.Uniform1DSubMesh,
+                "current collector": pybamm.Uniform1DSubMesh,
+            }
+        elif self.bc_options["dimensionality"] == 3:
+            return {
+                "negative electrode": pybamm.Uniform1DSubMesh,
+                "separator": pybamm.Uniform1DSubMesh,
+                "positive electrode": pybamm.Uniform1DSubMesh,
+                "negative particle": pybamm.Uniform1DSubMesh,
+                "positive particle": pybamm.Uniform1DSubMesh,
+                "current collector": pybamm.FenicsMesh2D,
+            }
+
+    @property
+    def default_spatial_methods(self):
+        if self.bc_options["dimensionality"] in [1, 2]:
+            return {
+                "macroscale": pybamm.FiniteVolume,
+                "negative particle": pybamm.FiniteVolume,
+                "positive particle": pybamm.FiniteVolume,
+                "current collector": pybamm.FiniteVolume,
+            }
+        elif self.bc_options["dimensionality"] == 3:
+            return {
+                "macroscale": pybamm.FiniteVolume,
+                "negative particle": pybamm.FiniteVolume,
+                "positive particle": pybamm.FiniteVolume,
+                "current collector": pybamm.FiniteElementFenics,
+            }
+
+    def set_boundary_conditions(self, bc_variables=None):
         """Get boundary conditions"""
         # TODO: edit to allow constant-current and constant-power control
         param = self.set_of_parameters
@@ -133,10 +151,10 @@ class SPM(pybamm.LithiumIonBaseModel):
             current_bc = param.current_with_time
             self.variables.update({"Current collector current": current_bc})
         elif dimensionality == 2:
-            delta_phi_n = bc_variables["delta_phi_n"]
-            delta_phi_p = bc_variables["delta_phi_p"]
-            current_collector_model = pybamm.vertical.Vertical(param)
-            current_collector_model.set_leading_order_vertical_current(
-                delta_phi_n, delta_phi_p
-            )
+            raise NotImplementedError
+        elif dimensionality == 3:
+            i_local = bc_variables["i_local"]
+            v_local = bc_variables["v_local"]
+            current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
+            current_collector_model.set_algebraic_system(v_local, i_local)
             self.update(current_collector_model)

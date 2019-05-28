@@ -544,13 +544,13 @@ class Outer(BinaryOperator):
 
         return pybamm.simplify_if_constant(self)
 
-    def outer(left, right):
-        """
-        Return outer product of two symbols. If the symbols have the same domain, the outer
-        product is just a multiplication. If they have different domains, make a copy of the
-        left child with same domain as right child, and then take outer product.
-        """
-        try:
-            return left * right
-        except pybamm.DomainError:
-            return pybamm.Outer(left, right)
+def outer(left, right):
+    """
+    Return outer product of two symbols. If the symbols have the same domain, the outer
+    product is just a multiplication. If they have different domains, make a copy of the
+    left child with same domain as right child, and then take outer product.
+    """
+    try:
+        return left * right
+    except pybamm.DomainError:
+        return pybamm.Outer(left, right)

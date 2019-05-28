@@ -33,15 +33,17 @@ class Mesh(dict):
         for domain in geometry:
             submesh_pts[domain] = {}
             for prim_sec in list(geometry[domain].keys()):
-                for var in list(geometry[domain][prim_sec].keys()):
-                    if var.id not in var_id_pts.keys():
-                        if var.domain[0] in geometry.keys():
-                            raise KeyError(
-                                "Points not given for a variable in domain {}".format(
-                                    domain
+                # skip over tabs key
+                if prim_sec != "tabs":
+                    for var in list(geometry[domain][prim_sec].keys()):
+                        if var.id not in var_id_pts.keys():
+                            if var.domain[0] in geometry.keys():
+                                raise KeyError(
+                                    "Points not given for a variable in domain {}".format(
+                                        domain
+                                    )
                                 )
-                            )
-                    submesh_pts[domain][var.id] = var_id_pts[var.id]
+                        submesh_pts[domain][var.id] = var_id_pts[var.id]
         self.submesh_pts = submesh_pts
 
         # Input domain order manually
@@ -130,10 +132,12 @@ class Mesh(dict):
         This will be useful for calculating the gradient with Dirichlet BCs.
         """
         # Get all submeshes relating to space (i.e. exclude time)
+        # NOTE: we exclude fenics submeshes as boundary conditions are accounted
+        # for during weak formulation
         submeshes = [
             (domain, submesh_list)
             for domain, submesh_list in self.items()
-            if domain != "time"
+            if domain != "time" and not isinstance(submesh_list[0], pybamm.FenicsMesh2D)
         ]
         for domain, submesh_list in submeshes:
 

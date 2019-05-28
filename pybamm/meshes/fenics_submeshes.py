@@ -31,19 +31,19 @@ class FenicsMesh2D:
 
     def __init__(self, lims, npts, tabs, degree=1):
 
-        # get limits
-        # NOTE: This is currently only implemented for use in the specifc
-        # case of the 2D current collector problem. Could be made more general.
-        y_lims = lims["y"]
-        z_lims = lims["z"]
-
         # get spatial variables
-        # TO DO: check does dict get reodered?
         spatial_vars = list(lims.keys())
-        self.Ny = npts[spatial_vars[0].id]
-        self.Nz = npts[spatial_vars[1].id]
 
-        self.degree = degree
+        # set limits and number of points
+        for var in spatial_vars:
+            if var.name == "y":
+                y_lims = lims[var]
+                Ny = npts[var.id]
+            elif var.name == "z":
+                z_lims = lims[var]
+                Nz = npts[var.id]
+            else:
+                raise pybamm.DomainError("spatial variable must be y or z not {}".format(var.name))
 
         # check coordinate system agrees
         if spatial_vars[0].coord_sys == spatial_vars[1].coord_sys:
@@ -55,20 +55,13 @@ class FenicsMesh2D:
                 )
             )
 
-        # create mesh and function space
+        # create mesh
         self.fem_mesh = dolfin.RectangleMesh(
-            dolfin.Point(y_lims[0], z_lims[0]),
-            dolfin.Point(y_lims[1], z_lims[1]),
-            self.Ny,
-            self.Nz,
+            dolfin.Point(y_lims["min"], z_lims["min"]),
+            dolfin.Point(y_lims["max"], z_lims["max"]),
+            Ny,
+            Nz,
         )
-        self.FunctionSpace = dolfin.FunctionSpace(
-            self.fem_mesh, "Lagrange", self.degree
-        )
-
-        self.TrialFunction = dolfin.TrialFunction(self.FunctionSpace)
-        self.TestFunction = dolfin.TestFunction(self.FunctionSpace)
-        self.N_dofs = np.size(self.TrialFunction.vector()[:])
 
         # create SubDomain classes for the tabs
         negativetab = Tab(y_lims, z_lims, tabs["negative"])
@@ -90,6 +83,19 @@ class FenicsMesh2D:
         # create measure for domain
         self.dx = dolfin.dx
 
+        # create function space (should probably be done as part of discretisation
+        # so that user can select element and degree as part of spatial method)
+        self.degree = degree
+        self.FunctionSpace = dolfin.FunctionSpace(
+            self.fem_mesh, "Lagrange", self.degree
+        )
+
+        self.TrialFunction = dolfin.TrialFunction(self.FunctionSpace)
+        self.TestFunction = dolfin.TestFunction(self.FunctionSpace)
+        self.Function = dolfin.Function(self.FunctionSpace)
+        # only for degree 1
+        self.npts = np.size(self.Function.vector()[:])
+
 
 class Tab(dolfin.SubDomain):
     """
@@ -97,8 +103,8 @@ class Tab(dolfin.SubDomain):
     """
 
     def __init__(self, y_lims, z_lims, tab):
-        self.l_y = y_lims[1]
-        self.l_z = z_lims[1]
+        self.l_y = y_lims["max"]
+        self.l_z = z_lims["max"]
         self.tab_location = [tab["y_centre"], tab["z_centre"]]
         self.tab_width = tab["width"]
 

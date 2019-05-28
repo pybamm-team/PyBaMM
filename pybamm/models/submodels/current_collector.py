@@ -23,9 +23,8 @@ class OhmTwoDimensional(pybamm.SubModel):
     *Extends:* :class:`pybamm.SubModel`
     """
 
-    def __init__(self, set_of_parameters, parameter_values):
+    def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
-        self.parameter_values = parameter_values
 
     def set_algebraic_system(self, v_local, i_local):
         """
@@ -40,12 +39,14 @@ class OhmTwoDimensional(pybamm.SubModel):
 
         """
         param = self.set_of_parameters
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
 
         # algebraic equations
         applied_current = param.current_with_time
         self.algebraic = {
             v_local: pybamm.laplacian(v_local) + param.alpha * pybamm.source(i_local),
-            i_local: pybamm.integral(i_local) - applied_current,
+            i_local: pybamm.Integral(i_local, [y, z]) - applied_current,
         }
         self.initial_conditions = {
             v_local: param.U_p(param.c_p_init) - param.U_n(param.c_n_init),

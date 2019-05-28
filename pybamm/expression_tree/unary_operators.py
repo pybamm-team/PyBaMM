@@ -330,7 +330,8 @@ class Divergence(SpatialOperator):
 
 
 class Laplacian(SpatialOperator):
-    """A node in the expression tree representing a laplacian operator
+    """A node in the expression tree representing a laplacian operator. This is
+    currently only implemeted in the weak form for finite element formulations.
 
     **Extends:** :class:`SpatialOperator`
     """
@@ -340,14 +341,14 @@ class Laplacian(SpatialOperator):
 
 
 class Source(SpatialOperator):
-    """A node in the expression tree representing a source term in the finite
-       element formulation
+    """A node in the expression tree representing a source term in the (weak)
+    finite element formulation
 
     **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
-        super().__init__("laplacian", child)
+        super().__init__("source", child)
 
 
 class Integral(SpatialOperator):
@@ -371,22 +372,25 @@ class Integral(SpatialOperator):
     """
 
     def __init__(self, child, integration_variable):
-        if isinstance(integration_variable, pybamm.SpatialVariable):
-            # Check that child and integration_variable domains agree
-            if child.domain != integration_variable.domain:
-                raise pybamm.DomainError(
-                    """child and integration_variable must have the same domain"""
+        name = "integral"
+        for var in integration_variable:
+            if isinstance(var, pybamm.SpatialVariable):
+                # Check that child and integration_variable domains agree
+                if child.domain != var.domain:
+                    raise pybamm.DomainError(
+                        """child and integration_variable must have the same domain"""
+                    )
+            elif not isinstance(var, pybamm.IndependentVariable):
+                raise ValueError(
+                    """integration_variable must be of type pybamm.IndependentVariable,
+                       not {}""".format(
+                        type(var)
+                    )
                 )
-        elif not isinstance(integration_variable, pybamm.IndependentVariable):
-            raise ValueError(
-                """integration_variable must be of type pybamm.IndependentVariable,
-                   not {}""".format(
-                    type(integration_variable)
-                )
-            )
-        name = "integral d{}".format(integration_variable.name)
-        if isinstance(integration_variable, pybamm.SpatialVariable):
-            name += " {}".format(integration_variable.domain)
+            name += " d{}".format(var.name)
+            if isinstance(var, pybamm.SpatialVariable):
+                name += " {}".format(var.domain)
+
         self._integration_variable = integration_variable
         super().__init__(name, child)
         # integrating removes the domain
@@ -399,7 +403,9 @@ class Integral(SpatialOperator):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
         self._id = hash(
-            (self.__class__, self.name, self.integration_variable.id, self.child.id)
+            (self.__class__, self.name)
+            + tuple([integration_variable.id for integration_variable in self.integration_variable])
+            + (self.child.id,)
             + tuple(self.domain)
         )
 
@@ -559,10 +565,28 @@ def div(expression):
     return Divergence(expression)
 
 
+def laplacian(expression):
+    """convenience function for creating a :class:`Laplacian`
+
+    Parameters
+    ----------
+
+    expression : :class:`Symbol`
+        the laplacian will be performed on this sub-expression
+
+    Returns
+    -------
+
+    :class:`Laplacian`
+        the laplacian of ``expression``
+    """
+
+    return Laplacian(expression)
+
+
 #
 # Method to call SurfaceValue
 #
-
 
 def surf(variable, set_domain=False):
     """convenience function for creating a right :class:`BoundaryValue`, usually in the
@@ -667,3 +691,27 @@ def boundary_value(symbol, side):
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)
+
+
+#
+# Method to call Source
+#
+
+def source(expression):
+    """convenience function for creating a :class:`Source`
+
+    Parameters
+    ----------
+
+    expression : :class:`Symbol`
+        this sub-expression will be converted into weak form by multiplication
+        with the mass matrix
+
+    Returns
+    -------
+
+    :class:`Source`
+        the weak form of the source ``expression``
+    """
+
+    return Source(expression)
