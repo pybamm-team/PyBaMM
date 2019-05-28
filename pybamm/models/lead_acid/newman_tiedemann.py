@@ -169,10 +169,6 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         if dimensionality == 1:
             current_bc = param.current_with_time
             self.variables["Current collector current density"] = current_bc
-        elif dimensionality == 2:
-            current_collector_model = pybamm.vertical.Vertical(param)
-            current_collector_model.set_algebraic_vertical_current(bc_variables)
-            self.update(current_collector_model)
 
     @property
     def default_solver(self):

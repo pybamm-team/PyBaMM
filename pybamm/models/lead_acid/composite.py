@@ -123,10 +123,6 @@ class Composite(pybamm.LeadAcidBaseModel):
         if dimensionality == 1:
             current_bc = param.current_with_time
             self.variables["Current collector current density"] = current_bc
-        elif dimensionality == 2:
-            current_collector_model = pybamm.vertical.Vertical(param)
-            current_collector_model.set_composite_vertical_current(bc_variables)
-            self.update(current_collector_model)
 
     def set_electrolyte_current_model(self, int_curr_model):
         if self.options["capacitance"] is False:
