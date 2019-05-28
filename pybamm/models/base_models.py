@@ -463,7 +463,11 @@ class StandardBatteryBaseModel(BaseModel):
 
     @property
     def options(self):
-        default_options = {"capacitance": False, "bc_options": {"dimensionality": 1}}
+        default_options = {
+            "bc_options": {"dimensionality": 1},
+            "capacitance": False,
+            "convection": False,
+        }
         if self._extra_options is None:
             options = default_options
         else:

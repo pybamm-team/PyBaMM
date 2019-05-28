@@ -124,6 +124,12 @@ class LOQS(pybamm.LeadAcidBaseModel):
         electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
         self.variables.update(electrode_vars)
 
+        # Convection
+        if self.options["convection"] == True:
+            velocity_model = pybamm.velocity.Velocity(param)
+            velocity_vars = velocity_model.get_explicit_leading_order(self.reactions)
+            self.variables.update(velocity_vars)
+
         # Cut-off voltage
         # Hack to extract voltage at the tabs in 2D
         voltage = self.variables["Terminal voltage"]

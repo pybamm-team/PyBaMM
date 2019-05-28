@@ -10,6 +10,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         model = pybamm.lead_acid.LOQS()
         model.check_well_posedness()
 
+    def test_well_posed_with_convection(self):
+        options = {"convection": True}
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
+
     def test_default_geometry(self):
         model = pybamm.lead_acid.LOQS()
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
