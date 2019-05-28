@@ -30,12 +30,10 @@ class Ohm(pybamm.SubModel):
             Domain in which to unpack the variables
         """
         i_boundary_cc = variables["Current collector current density"]
-        phi_s_n = variables["Negative electrode potential"]
-        phi_s_p = variables["Positive electrode potential"]
-        try:
-            eps = variables["Porosity"]
-        except KeyError:
-            eps = self.set_of_parameters.epsilon
+        phi_s_n = variables.get("Negative electrode potential")
+        phi_s_p = variables.get("Positive electrode potential")
+        eps = variables.get("Porosity")
+        eps = eps or self.set_of_parameters.epsilon
         eps_n, eps_s, eps_p = eps.orphans
 
         if domain == ["negative electrode"]:
@@ -106,13 +104,6 @@ class Ohm(pybamm.SubModel):
         self.algebraic[phi_s] = pybamm.div(i_s) + j
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
         self.variables[domain[0].capitalize() + " current density"] = i_s
-
-    @property
-    def default_solver(self):
-        """
-        Create and return the default solver for this model
-        """
-        return pybamm.ScikitsDaeSolver()
 
     def get_explicit_leading_order(self, variables):
         """
@@ -303,3 +294,10 @@ class Ohm(pybamm.SubModel):
             "Average solid phase ohmic losses [V]": delta_phi_s_av_dim,
             "Terminal voltage [V]": v_dim,
         }
+
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        return pybamm.ScikitsDaeSolver()

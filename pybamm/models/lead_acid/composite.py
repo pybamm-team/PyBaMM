@@ -22,6 +22,10 @@ class Composite(pybamm.LeadAcidBaseModel):
         super().__init__(options)
         self.name = "Composite model"
 
+        # Leading order model and variables
+        leading_order_model = pybamm.lead_acid.LOQS(options)
+        self.update(leading_order_model)
+
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
@@ -31,7 +35,6 @@ class Composite(pybamm.LeadAcidBaseModel):
         "Model Variables"
 
         c_e = pybamm.standard_variables.c_e
-        eps = pybamm.standard_variables.eps
         self.variables["Electrolyte concentration"] = c_e
 
         "-----------------------------------------------------------------------------"
@@ -41,16 +44,8 @@ class Composite(pybamm.LeadAcidBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Submodels"
-        # Leading order model and variables
-        leading_order_model = pybamm.lead_acid.LOQS(options)
-        c_e_0 = leading_order_model.variables["Average electrolyte concentration"]
-        eps_0 = leading_order_model.variables["Porosity"]
-        j_n_0 = leading_order_model.variables[
-            "Negative electrode interfacial current density"
-        ]
-        j_p_0 = leading_order_model.variables[
-            "Positive electrode interfacial current density"
-        ]
+        j_n_0 = self.variables["Negative electrode interfacial current density"]
+        j_p_0 = self.variables["Positive electrode interfacial current density"]
 
         # Exchange-current density
         int_curr_model = pybamm.interface.LeadAcidReaction(param)
@@ -64,23 +59,18 @@ class Composite(pybamm.LeadAcidBaseModel):
         ocp_n = param.U_n(c_e_n)
         ocp_p = param.U_p(c_e_p)
 
-        # Porosity
-        porosity_model = pybamm.porosity.Standard(param)
-        porosity_model.set_differential_system(eps, j_n_0, j_p_0)
-        self.update(porosity_model)
-
         # Electrolyte concentration
         reactions = {
             "main": {
                 "neg": {"s_plus": param.s_n, "aj": j_n_0},
                 "pos": {"s_plus": param.s_p, "aj": j_p_0},
-                "porosity change": porosity_model.variables["Porosity change"],
+                "porosity change": leading_order_model.variables["Porosity change"],
             }
         }
         electrolyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         electrolyte_conc_model.set_differential_system(self.variables, reactions)
 
-        self.update(leading_order_model, electrolyte_conc_model)
+        self.update(electrolyte_conc_model)
 
         # Electrolyte current model
         self.set_electrolyte_current_model(int_curr_model)

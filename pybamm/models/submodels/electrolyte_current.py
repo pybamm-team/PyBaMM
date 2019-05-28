@@ -33,17 +33,15 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             Domain in which to unpack the variables
         """
         i_boundary_cc = variables["Current collector current density"]
-        delta_phi_n = variables["Negative electrode surface potential difference"]
-        delta_phi_p = variables["Positive electrode surface potential difference"]
+        delta_phi_n = variables.get("Negative electrode surface potential difference")
+        delta_phi_p = variables.get("Positive electrode surface potential difference")
         c_e = variables["Electrolyte concentration"]
         if isinstance(c_e, pybamm.Variable):
             c_e_n, c_e_s, c_e_p = c_e, c_e, c_e
         else:
             c_e_n, c_e_s, c_e_p = c_e.orphans
-        try:
-            eps = variables["Porosity"]
-        except KeyError:
-            eps = self.set_of_parameters.epsilon
+        eps = variables.get("Porosity")
+        eps = eps or self.set_of_parameters.epsilon
         eps_n, eps_s, eps_p = eps.orphans
 
         if domain == ["negative electrode"]:
@@ -130,7 +128,10 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         ocp_n = variables["Negative electrode open circuit potential"]
         eta_r_n = variables["Negative reaction overpotential"]
         phi_s_n = variables["Negative electrode potential"]
-        c_e_0 = variables["Average electrolyte concentration"]
+        try:
+            c_e_0 = variables["Average electrolyte concentration"]
+        except KeyError:
+            c_e_0 = pybamm.Scalar(1)
 
         # import parameters and spatial variables
         param = self.set_of_parameters
