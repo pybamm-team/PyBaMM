@@ -532,6 +532,13 @@ class TestDiscretise(unittest.TestCase):
         )
         np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
 
+        # test known_evals
+        expr = pybamm.SparseStack(jac_rhs, jac_algebraic)
+        jacobian, known_evals = expr.evaluate(0, y0, known_evals={})
+        np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
+        jacobian = expr.evaluate(0, y0, known_evals=known_evals)[0]
+        np.testing.assert_array_equal(jacobian_actual, jacobian.toarray())
+
     def test_process_model_concatenation(self):
         # concatenation of variables as the key
         cn = pybamm.Variable("c", domain=["negative electrode"])
