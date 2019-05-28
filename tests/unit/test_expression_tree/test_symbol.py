@@ -247,13 +247,14 @@ class TestSymbol(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
 
         c_e = pybamm.standard_variables.c_e
+        variables = {"Electrolyte concentration": c_e}
         onen = pybamm.Broadcast(1, ["negative electrode"])
         onep = pybamm.Broadcast(1, ["positive electrode"])
         reactions = {
             "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
         }
         model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model.set_differential_system(c_e, reactions)
+        model.set_differential_system(variables, reactions)
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test.png")
         self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
