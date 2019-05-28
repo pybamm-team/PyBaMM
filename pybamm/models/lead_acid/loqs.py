@@ -30,6 +30,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         "Model Variables"
 
         c_e, epsilon, curr_coll_domain = self.get_model_variables()
+        self.variables["Electrolyte concentration"] = c_e
 
         "-----------------------------------------------------------------------------"
         "Model for current"
@@ -53,9 +54,14 @@ class LOQS(pybamm.LeadAcidBaseModel):
                 "Positive electrode surface potential difference", curr_coll_domain
             )
 
-            bc_variables = {"delta_phi_n": delta_phi_n, "delta_phi_p": delta_phi_p}
-            self.set_boundary_conditions(bc_variables)
-            i_curr_coll = self.variables["Current collector current"]
+            self.variables.update(
+                {
+                    "Negative electrode surface potential difference": delta_phi_n,
+                    "Positive electrode surface potential difference": delta_phi_p,
+                }
+            )
+            self.set_boundary_conditions(self.variables)
+            i_boundary_cc = self.variables["Current collector current density"]
 
             # Reaction overpotential
             eta_r_n = delta_phi_n - ocp_n
@@ -73,19 +79,20 @@ class LOQS(pybamm.LeadAcidBaseModel):
                 param, capacitance_options
             )
             eleclyte_current_model.set_leading_order_system(
-                delta_phi_n, self.reactions, neg, i_curr_coll
+                self.variables, self.reactions, neg
             )
             eleclyte_current_model.set_leading_order_system(
-                delta_phi_p, self.reactions, pos, i_curr_coll
+                self.variables, self.reactions, pos
             )
             self.update(eleclyte_current_model)
 
         else:
-            i_curr_coll = param.current_with_time
+            i_boundary_cc = param.current_with_time
+            self.variables["Current collector current density"] = i_boundary_cc
 
             # Interfacial current density
-            j_n = int_curr_model.get_homogeneous_interfacial_current(i_curr_coll, neg)
-            j_p = int_curr_model.get_homogeneous_interfacial_current(i_curr_coll, pos)
+            j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
+            j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
 
             # Porosity
             self.set_porosity_model(epsilon, j_n, j_p)
@@ -99,9 +106,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
             )
 
         eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        eleclyte_conc_model.set_leading_order_system(
-            c_e, self.reactions, epsilon=epsilon
-        )
+        eleclyte_conc_model.set_leading_order_system(self.variables, self.reactions)
 
         self.update(eleclyte_conc_model)
 
@@ -119,17 +124,12 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte current
-        elyte_vars = eleclyte_current_model.get_explicit_leading_order(
-            ocp_n, eta_r_n, i_curr_coll
-        )
+        elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
         self.variables.update(elyte_vars)
 
         # Electrode
         electrode_model = pybamm.electrode.Ohm(param)
-        phi_e = self.variables["Electrolyte potential"]
-        electrode_vars = electrode_model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e, i_curr_coll
-        )
+        electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
         self.variables.update(electrode_vars)
 
         # Cut-off voltage
@@ -172,7 +172,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         dimensionality = self.options["bc_options"]["dimensionality"]
         if dimensionality == 1:
             current_bc = param.current_with_time
-            self.variables["Current collector current"] = current_bc
+            self.variables["Current collector current density"] = current_bc
         elif dimensionality == 2:
             current_collector_model = pybamm.vertical.Vertical(param)
             current_collector_model.set_leading_order_vertical_current(bc_variables)

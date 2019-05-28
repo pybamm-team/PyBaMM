@@ -25,7 +25,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
-        i_current_collector = param.current_with_time
+        i_boundary_cc = param.current_with_time
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -103,10 +103,10 @@ class Composite(pybamm.LeadAcidBaseModel):
                 param, self.options["capacitance"]
             )
             eleclyte_current_model.set_leading_order_system(
-                delta_phi_n_av, reactions_av, neg, i_current_collector
+                delta_phi_n_av, reactions_av, neg, i_boundary_cc
             )
             eleclyte_current_model.set_leading_order_system(
-                delta_phi_p_av, reactions_av, pos, i_current_collector
+                delta_phi_p_av, reactions_av, pos, i_boundary_cc
             )
             self.update(eleclyte_current_model)
 

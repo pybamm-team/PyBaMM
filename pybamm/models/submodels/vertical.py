@@ -40,23 +40,23 @@ class Vertical(pybamm.SubModel):
         i_cell = param.current_with_time
 
         # Set up variables
-        c_e = bc_variables["c_e"]
-        delta_phi_n = bc_variables["delta_phi_n"]
-        delta_phi_p = bc_variables["delta_phi_p"]
-        i_curr_coll = pybamm.Variable(
-            "Current collector current", domain="current collector"
+        c_e = bc_variables["Electrolyte concentration"]
+        delta_phi_n = bc_variables["Negative electrode surface potential difference"]
+        delta_phi_p = bc_variables["Positive electrode surface potential difference"]
+        i_boundary_cc = pybamm.Variable(
+            "Current collector current density", domain="current collector"
         )
         electrolyte_terms = delta_phi_n - delta_phi_p
 
         # Algebraic equation for the current in the current collector
         I_s_perp = self.vertical_conductivity * pybamm.grad(
-            i_curr_coll - electrolyte_terms
+            i_boundary_cc - electrolyte_terms
         )
-        self.algebraic[i_curr_coll] = pybamm.div(I_s_perp) - i_curr_coll
-        self.initial_conditions[i_curr_coll] = i_cell
+        self.algebraic[i_boundary_cc] = pybamm.div(I_s_perp) - i_boundary_cc
+        self.initial_conditions[i_boundary_cc] = i_cell
 
         # Set boundary conditions at top ("right") and bottom ("left")
-        self.boundary_conditions[i_curr_coll] = {
+        self.boundary_conditions[i_boundary_cc] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (i_cell / self.vertical_conductivity, "Neumann"),
         }
@@ -66,7 +66,7 @@ class Vertical(pybamm.SubModel):
             "right": (pybamm.BoundaryFlux(electrolyte_terms, "right"), "Neumann"),
         }
 
-        self.variables = {"Current collector current": i_curr_coll}
+        self.variables = {"Current collector current density": i_boundary_cc}
 
     def set_leading_order_vertical_current(self, bc_variables):
         """ Set the system that gives the leading-order current in the current
@@ -78,13 +78,13 @@ class Vertical(pybamm.SubModel):
             Dictionary of variables in the current collector
         """
         param = self.set_of_parameters
-        delta_phi_n = bc_variables["delta_phi_n"]
-        delta_phi_p = bc_variables["delta_phi_p"]
+        delta_phi_n = bc_variables["Negative electrode surface potential difference"]
+        delta_phi_p = bc_variables["Positive electrode surface potential difference"]
         delta_phi_difference = delta_phi_n - delta_phi_p
 
         # Simple model: read off vertical current (no extra equation)
         I_s_perp = self.vertical_conductivity * pybamm.grad(delta_phi_difference)
-        i_current_collector = pybamm.div(I_s_perp)
+        i_boundary_cc = pybamm.div(I_s_perp)
 
         # Set boundary conditions at top ("right") and bottom ("left")
         i_cell = param.current_with_time
@@ -94,4 +94,4 @@ class Vertical(pybamm.SubModel):
                 "right": (i_cell / self.vertical_conductivity, "Neumann"),
             }
         }
-        self.variables = {"Current collector current": i_current_collector}
+        self.variables = {"Current collector current density": i_boundary_cc}

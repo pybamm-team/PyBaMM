@@ -21,18 +21,16 @@ class StefanMaxwell(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_differential_system(self, c_e, reactions, epsilon=None):
+    def set_differential_system(self, variables, reactions):
         """
         PDE system for Stefan-Maxwell diffusion in the electrolyte
 
         Parameters
         ----------
-        c_e : :class:`pybamm.Concatenation`
-            Eletrolyte concentration
+        variables : dict
+            Dictionary of symbols to use in the model
         reactions : dict
             Dictionary of reaction variables
-        epsilon : :class:`pybamm.Symbol`, optional
-            Porosity. Default is None, in which case param.epsilon is used.
         """
         param = self.set_of_parameters
 
@@ -66,26 +64,25 @@ class StefanMaxwell(pybamm.SubModel):
         # (open-circuit potential poorly defined)
         self.events = [pybamm.Function(np.min, c_e) - 0.002]
 
-    def set_leading_order_system(self, c_e, reactions, epsilon=None):
+    def set_leading_order_system(self, variables, reactions):
         """
         ODE system for leading-order Stefan-Maxwell diffusion in the electrolyte
         Parameters
         ----------
-        c_e : :class:`pybamm.Variable`
-            Eletrolyte concentration
+        variables : dict
+            Dictionary of symbols to use in the model
         reactions : dict
             Dictionary of reaction variables
-        epsilon : :class:`pybamm.Concatenation`, optional
-            Porosity. Default is None, in which case param.epsilon is used.
         """
         param = self.set_of_parameters
-
-        # if porosity is not provided, use the input parameter
-        if epsilon is not None:
+        c_e = variables["Electrolyte concentration"]
+        try:
+            epsilon = variables["Porosity"]
+            # if porosity is not provided, use the input parameter
             eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
             deps_n_dt = sum(rxn["neg"]["deps_dt"] for rxn in reactions.values())
             deps_p_dt = sum(rxn["pos"]["deps_dt"] for rxn in reactions.values())
-        else:
+        except KeyError:
             eps_n = param.epsilon_n
             eps_s = param.epsilon_s
             eps_p = param.epsilon_p

@@ -44,7 +44,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
     def test_explicit(self):
         # Set up
         param = pybamm.standard_parameters_lithium_ion
-        i_current_collector = param.current_with_time
+        i_boundary_cc = param.current_with_time
 
         c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
         c_e_s = pybamm.Broadcast(1, domain=["separator"])
@@ -62,7 +62,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         # Model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
         leading_order_vars = model.get_explicit_leading_order(
-            ocp_n, eta_r_n, i_current_collector
+            ocp_n, eta_r_n, i_boundary_cc
         )
         combined_vars = model.get_explicit_combined(ocp_n, eta_r_n, c_e, phi_s_n)
 
@@ -213,7 +213,7 @@ class TestMacInnesCapacitance(unittest.TestCase):
     def test_basic_processing_leading_order(self):
         # Parameters
         param = pybamm.standard_parameters_lithium_ion
-        i_current_collector = param.current_with_time
+        i_boundary_cc = param.current_with_time
 
         # Variables
         c_e = pybamm.Scalar(1)
@@ -245,7 +245,7 @@ class TestMacInnesCapacitance(unittest.TestCase):
             # Negative electrode
             model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
             model_n.set_leading_order_system(
-                delta_phi_n, reactions, neg, i_current_collector
+                delta_phi_n, reactions, neg, i_boundary_cc
             )
             # Test
             modeltest_n = tests.StandardModelTest(model_n)
@@ -254,7 +254,7 @@ class TestMacInnesCapacitance(unittest.TestCase):
             # Positive electrode
             model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
             model_p.set_leading_order_system(
-                delta_phi_p, reactions, pos, i_current_collector
+                delta_phi_p, reactions, pos, i_boundary_cc
             )
             # Test
             modeltest_p = tests.StandardModelTest(model_p)

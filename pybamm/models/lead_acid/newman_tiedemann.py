@@ -36,7 +36,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         "Boundary conditions"
 
         self.set_boundary_conditions(None)
-        i_current_collector = self.variables["Current collector current"]
+        i_boundary_cc = self.variables["Current collector current density"]
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -84,10 +84,10 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             # Electrode model
             electrode_current_model = pybamm.electrode.Ohm(param)
             electrode_current_model.set_algebraic_system(
-                phi_s_n, reactions, i_current_collector, eps_n
+                phi_s_n, reactions, i_boundary_cc, eps_n
             )
             electrode_current_model.set_algebraic_system(
-                phi_s_p, reactions, i_current_collector, eps_p
+                phi_s_p, reactions, i_boundary_cc, eps_p
             )
             self.update(eleclyte_current_model, electrode_current_model)
         else:
@@ -156,7 +156,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         dimensionality = self.options["bc_options"]["dimensionality"]
         if dimensionality == 1:
             current_bc = param.current_with_time
-            self.variables["Current collector current"] = current_bc
+            self.variables["Current collector current density"] = current_bc
         elif dimensionality == 2:
             current_collector_model = pybamm.vertical.Vertical(param)
             current_collector_model.set_algebraic_vertical_current(bc_variables)
