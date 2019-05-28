@@ -38,11 +38,11 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
                 "Positive electrode surface potential difference": delta_phi_p,
             }
         )
+
         "-----------------------------------------------------------------------------"
         "Boundary conditions"
 
         self.set_boundary_conditions(None)
-        i_boundary_cc = self.variables["Current collector current density"]
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -159,7 +159,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         return c_e, eps, delta_phi_n, delta_phi_p, potentials
 
     def set_boundary_conditions(self, bc_variables):
-        """Set boundary conditions, dependent on elf.options"""
+        """Set boundary conditions, dependent on self.options"""
         param = self.set_of_parameters
         dimensionality = self.options["bc_options"]["dimensionality"]
         if dimensionality == 1:

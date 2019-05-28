@@ -25,8 +25,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
-        i_boundary_cc = param.current_with_time
-        self.variables["Current collector current density"] = i_boundary_cc
+        self._set_of_parameters = param
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -34,6 +33,11 @@ class Composite(pybamm.LeadAcidBaseModel):
         c_e = pybamm.standard_variables.c_e
         eps = pybamm.standard_variables.eps
         self.variables["Electrolyte concentration"] = c_e
+
+        "-----------------------------------------------------------------------------"
+        "Boundary conditions"
+
+        self.set_boundary_conditions(None)
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -78,6 +82,9 @@ class Composite(pybamm.LeadAcidBaseModel):
 
         self.update(leading_order_model, electrolyte_conc_model)
 
+        # Electrolyte current model
+        self.set_electrolyte_current_model(int_curr_model)
+
         "-----------------------------------------------------------------------------"
         "Post-Processing"
 
@@ -119,9 +126,25 @@ class Composite(pybamm.LeadAcidBaseModel):
         voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
 
-    def set_electrolyte_current_model(self):
+    def set_boundary_conditions(self, bc_variables):
+        """Set boundary conditions, dependent on self.options"""
+        param = self.set_of_parameters
+        dimensionality = self.options["bc_options"]["dimensionality"]
+        if dimensionality == 1:
+            current_bc = param.current_with_time
+            self.variables["Current collector current density"] = current_bc
+        elif dimensionality == 2:
+            current_collector_model = pybamm.vertical.Vertical(param)
+            current_collector_model.set_composite_vertical_current(bc_variables)
+            self.update(current_collector_model)
+
+    def set_electrolyte_current_model(self, int_curr_model):
         if self.options["capacitance"] is False:
             return
+
+        param = self.set_of_parameters
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
         delta_phi_n_av = pybamm.Variable(
             "Average neg electrode surface potential difference"
         )
@@ -144,9 +167,11 @@ class Composite(pybamm.LeadAcidBaseModel):
         j_p_av = int_curr_model.get_butler_volmer(j0_p_av, eta_r_p_av, pos)
 
         # Make dictionaries to pass to submodel
+        i_boundary_cc = self.variables["Current collector current density"]
         variables_av = {
             "Negative electrode surface potential difference": delta_phi_n_av,
             "Positive electrode surface potential difference": delta_phi_p_av,
+            "Current collector current density": i_boundary_cc,
         }
         reactions_av = {"main": {"neg": {"aj": j_n_av}, "pos": {"aj": j_p_av}}}
 

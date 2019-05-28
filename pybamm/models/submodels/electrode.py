@@ -150,17 +150,17 @@ class Ohm(pybamm.SubModel):
         phi_s_n :class `pybamm.Symbol`
             The negative electrode potential
         """
+        # import parameters and spatial variables
+        param = self.set_of_parameters
+        l_n = param.l_n
+        x_n = pybamm.standard_spatial_vars.x_n
+
         # Unpack variables
         i_boundary_cc = variables["Current collector current density"]
         try:
             eps_n = variables["Porosity"].orphans[0]
         except KeyError:
             eps_n = param.epsilon_n
-
-        # import parameters and spatial variables
-        param = self.set_of_parameters
-        l_n = param.l_n
-        x_n = pybamm.standard_spatial_vars.x_n
 
         # electrode potential
         sigma_n_eff = param.sigma_n * (1 - eps_n)
@@ -176,25 +176,21 @@ class Ohm(pybamm.SubModel):
 
         Parameters
         ----------
-        phi_s_n : :class:`pybamm.Symbol`
-            Negative electrode potential
-        phi_e : :class:`pybamm.Concatenation`
-            Eletrolyte potential
-        ocp_p : :class:`pybamm.Symbol`
-            Open-circuit potential in the positive electrode
-        eta_r_p : :class:`pybamm.Symbol`
-            Reaction overpotential in the positive electrode
-        i_boundary_cc : :class:`pybamm.Symbol`
-            Current density in the current collector. Can evaluate to a Scalar (for
-            1D models), or a vector (for 1+1D or 2+1D models)
-        epsilon : :class:`pybamm.Symbol`, optional
-            Porosity. Default is None, in which case param.epsilon is used.
+        variables : dict
+            Dictionary of symbols to use in the model
 
         Returns
         -------
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
+        # import parameters and spatial variables
+        param = self.set_of_parameters
+        l_n = param.l_n
+        l_p = param.l_p
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
+
         # Unpack variables
         phi_s_n = variables["Negative electrode potential"]
         phi_e = variables["Electrolyte potential"]
@@ -207,13 +203,6 @@ class Ohm(pybamm.SubModel):
             epsilon = param.epsilon
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
         _, _, phi_e_p = phi_e.orphans
-
-        # import parameters and spatial variables
-        param = self.set_of_parameters
-        l_n = param.l_n
-        l_p = param.l_p
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
 
         # obtain averages
         ocp_p_av = pybamm.average(ocp_p)

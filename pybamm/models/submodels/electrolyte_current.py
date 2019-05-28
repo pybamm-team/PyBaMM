@@ -288,6 +288,9 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         reactions : dict
             Dictionary of reaction variables
         """
+        # Load parameters
+        param = self.set_of_parameters
+
         # Unpack variables
         phi_e = variables["Electrolyte potential"]
         c_e = variables["Electrolyte concentration"]
@@ -295,9 +298,6 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
             epsilon = variables["Porosity"]
         except KeyError:
             epsilon = param.epsilon
-
-        # Load parameters and spatial variables
-        param = self.set_of_parameters
 
         # Unpack variables
         j_n = reactions["main"]["neg"]["aj"]
@@ -410,7 +410,6 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             j = reactions["main"]["pos"]["aj"]
             self.initial_conditions[delta_phi] = param.U_p(param.c_p_init)
             C_dl = param.C_dl_p
-            flux_bc_side = "left"
             Domain = "Positive"
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
@@ -491,14 +490,12 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             j = reactions["main"]["neg"]["aj"]
             self.initial_conditions[delta_phi] = param.U_n(param.c_n_init)
             C_dl = param.C_dl_n
-            Domain = "Negative"
         elif domain == ["positive electrode"]:
             delta_phi = variables["Positive electrode surface potential difference"]
             j_average = -i_boundary_cc / param.l_p
             j = reactions["main"]["pos"]["aj"]
             self.initial_conditions[delta_phi] = param.U_p(param.c_p_init)
             C_dl = param.C_dl_p
-            Domain = "Positive"
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
