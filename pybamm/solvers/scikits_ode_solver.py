@@ -33,17 +33,8 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(tol)
-        self._method = method
+        super().__init__(method, tol)
         self.linsolver = linsolver
-
-    @property
-    def method(self):
-        return self._method
-
-    @method.setter
-    def method(self, value):
-        self._method = value
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
