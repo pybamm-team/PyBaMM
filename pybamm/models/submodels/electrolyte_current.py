@@ -21,6 +21,38 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
+    def unpack(self, variables, domain=None):
+        """
+        Unpack a dictionary of variables.
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of variables to unpack
+        domain : list of str
+            Domain in which to unpack the variables
+        """
+        i_boundary_cc = variables["Current collector current density"]
+        delta_phi_n = variables["Negative electrode surface potential difference"]
+        delta_phi_p = variables["Positive electrode surface potential difference"]
+        c_e = variables["Electrolyte concentration"]
+        if isinstance(c_e, pybamm.Variable):
+            c_e_n, c_e_s, c_e_p = c_e, c_e, c_e
+        else:
+            c_e_n, c_e_s, c_e_p = c_e.orphans
+        try:
+            eps = variables["Porosity"]
+        except KeyError:
+            eps = self.set_of_parameters.epsilon
+        eps_n, eps_s, eps_p = eps.orphans
+
+        if domain == ["negative electrode"]:
+            return i_boundary_cc, delta_phi_n, c_e_n, eps_n
+        elif domain == ["positive electrode"]:
+            return i_boundary_cc, delta_phi_p, c_e_p, eps_p
+        else:
+            return i_boundary_cc, (delta_phi_n, delta_phi_p), c_e, eps
+
     def get_explicit_leading_order(self, variables):
         """
         Provides explicit leading order solution to the electrolyte current conservation
@@ -94,13 +126,11 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         # unpack variables
+        i_boundary_cc, _, c_e, epsilon = self.unpack(variables)
         ocp_n = variables["Negative electrode open circuit potential"]
         eta_r_n = variables["Negative reaction overpotential"]
-        c_e = variables["Electrolyte concentration"]
         phi_s_n = variables["Negative electrode potential"]
-        epsilon = variables["Porosity"]
         c_e_0 = variables["Average electrolyte concentration"]
-        i_boundary_cc = variables["Current collector current density"]
 
         # import parameters and spatial variables
         param = self.set_of_parameters
@@ -114,8 +144,6 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         c_e_n, c_e_s, c_e_p = c_e.orphans
 
         # if porosity is not provided, use the input parameter
-        if epsilon is None:
-            epsilon = param.epsilon
         if c_e_0 is None:
             c_e_0 = pybamm.Scalar(1)
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
@@ -371,38 +399,6 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             default_solver = pybamm.ScikitsDaeSolver()
 
         return default_solver
-
-    def unpack(self, variables, domain=None):
-        """
-        Unpack a dictionary of variables.
-
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of variables to unpack
-        domain : list of str
-            Domain in which to unpack the variables
-        """
-        i_boundary_cc = variables["Current collector current density"]
-        delta_phi_n = variables["Negative electrode surface potential difference"]
-        delta_phi_p = variables["Positive electrode surface potential difference"]
-        c_e = variables["Electrolyte concentration"]
-        if isinstance(c_e, pybamm.Variable):
-            c_e_n, c_e_s, c_e_p = c_e, c_e, c_e
-        else:
-            c_e_n, c_e_s, c_e_p = c_e.orphans
-        try:
-            eps = variables["Porosity"]
-        except KeyError:
-            eps = param.epsilon
-        eps_n, eps_s, eps_p = eps.orphans
-
-        if domain == ["negative electrode"]:
-            return i_boundary_cc, delta_phi_n, c_e_n, eps_n
-        elif domain == ["positive electrode"]:
-            return i_boundary_cc, delta_phi_p, c_e_p, eps_p
-        else:
-            return i_boundary_cc, (delta_phi_n, delta_phi_p), c_e, eps
 
     def set_full_system(self, variables, reactions, domain):
         """

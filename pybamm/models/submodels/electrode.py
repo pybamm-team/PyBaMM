@@ -35,7 +35,7 @@ class Ohm(pybamm.SubModel):
         try:
             eps = variables["Porosity"]
         except KeyError:
-            eps = param.epsilon
+            eps = self.set_of_parameters.epsilon
         eps_n, eps_s, eps_p = eps.orphans
 
         if domain == ["negative electrode"]:

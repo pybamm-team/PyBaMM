@@ -29,15 +29,11 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         "-----------------------------------------------------------------------------"
         "Model Variables"
 
-        c_e, eps, delta_phi_n, delta_phi_p, potentials = self.get_model_variables()
-        eps_n, _, eps_p = eps.orphans
-        self.variables.update(
-            {
-                "Electrolyte concentration": c_e,
-                "Negative electrode surface potential difference": delta_phi_n,
-                "Positive electrode surface potential difference": delta_phi_p,
-            }
-        )
+        self.set_model_variables()
+        c_e = self.variables["Electrolyte concentration"]
+        eps = self.variables["Porosity"]
+        delta_phi_n = self.variables["Negative electrode surface potential difference"]
+        delta_phi_p = self.variables["Positive electrode surface potential difference"]
 
         "-----------------------------------------------------------------------------"
         "Boundary conditions"
@@ -84,10 +80,6 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         pos = ["positive electrode"]
 
         if self.options["capacitance"] is False:
-            phi_e, phi_s_n, phi_s_p = potentials
-            self.variables["Electrolyte potential"] = phi_e
-            self.variables["Negative electrode potential"] = phi_s_n
-            self.variables["Positive electrode potential"] = phi_s_p
             eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
                 param
             )
@@ -140,7 +132,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         )
         self.events.append(voltage - param.voltage_low_cut)
 
-    def get_model_variables(self):
+    def set_model_variables(self):
         c_e = pybamm.standard_variables.c_e
         eps = pybamm.standard_variables.eps
 
@@ -150,13 +142,25 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             phi_s_n = pybamm.standard_variables.phi_s_n
             delta_phi_n = phi_s_n - phi_e.orphans[0]
             delta_phi_p = phi_s_p - phi_e.orphans[2]
-            potentials = (phi_e, phi_s_n, phi_s_p)
+            self.variables.update(
+                {
+                    "Electrolyte potential": phi_e,
+                    "Negative electrode potential": phi_s_n,
+                    "Positive electrode potential": phi_s_p,
+                }
+            )
         else:
             delta_phi_n = pybamm.standard_variables.delta_phi_n
             delta_phi_p = pybamm.standard_variables.delta_phi_p
-            potentials = None
 
-        return c_e, eps, delta_phi_n, delta_phi_p, potentials
+        self.variables.update(
+            {
+                "Electrolyte concentration": c_e,
+                "Porosity": eps,
+                "Negative electrode surface potential difference": delta_phi_n,
+                "Positive electrode surface potential difference": delta_phi_p,
+            }
+        )
 
     def set_boundary_conditions(self, bc_variables):
         """Set boundary conditions, dependent on self.options"""

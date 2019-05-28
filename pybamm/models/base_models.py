@@ -566,6 +566,8 @@ class StandardBatteryBaseModel(BaseModel):
             {
                 "Negative electrode potential": None,
                 "Positive electrode potential": None,
+                "Negative electrode surface potential difference": None,
+                "Positive electrode surface potential difference": None,
                 "Electrolyte potential": None,
             }
         )
