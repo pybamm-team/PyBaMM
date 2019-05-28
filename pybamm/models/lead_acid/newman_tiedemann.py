@@ -53,10 +53,16 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         ocp_p = param.U_p(c_e_p)
         eta_r_n = delta_phi_n - ocp_n
         eta_r_p = delta_phi_p - ocp_p
+        pot_model = pybamm.potential.Potential(param)
+        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
+        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
+        self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Interfacial current density
         j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n)
         j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p)
+        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
 
         # Porosity
         porosity_model = pybamm.porosity.Standard(param)
@@ -102,18 +108,16 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             eleclyte_current_model.set_post_processed()
             self.update(eleclyte_current_model)
 
+        # Convection model
+        if self.options["convection"] is True:
+            p = pybamm.standard_variables.pressure
+            self.variables["Electrolyte pressure"] = p
+            velocity_model = pybamm.velocity.Velocity(param)
+            velocity_model.set_algebraic_system(self.variables)
+            self.update(velocity_model)
+
         "-----------------------------------------------------------------------------"
         "Post-process"
-
-        # Exchange-current density
-        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
-        self.variables.update(j_vars)
-
-        # Potentials
-        pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Voltage
         if capacitance_options is False:

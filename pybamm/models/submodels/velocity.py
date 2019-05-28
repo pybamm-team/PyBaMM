@@ -18,6 +18,31 @@ class Velocity(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
+    def set_algebraic_system(self, variables):
+        """
+        Algebraic system for pressure and volume-averaged velocity in the electrolyte.
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of symbols to use in the model
+        """
+        # Unpack variables
+        param = self.set_of_parameters
+        p = variables["Electrolyte pressure"]
+        c_e = variables["Electrolyte concentration"]
+
+        # Set up reactions
+        j = variables["Interfacial current density"]
+        v_mass = -pybamm.grad(p)
+        v_box = v_mass
+        dVbox_dz = 0
+        self.algebraic = {p: pybamm.div(v_box) + dVbox_dz - param.beta * j}
+        self.initial_conditions = {p: 0}
+        self.boundary_conditions = {
+            p: {"left": (0, "Dirichlet"), "right": (0, "Neumann")}
+        }
+
     def get_explicit_leading_order(self, reactions):
         """
         Provides explicit velocity for the leading-order models, as a post-processing
@@ -30,10 +55,7 @@ class Velocity(pybamm.SubModel):
         """
         # Set up
         param = self.set_of_parameters
-        l_n = pybamm.geometric_parameters.l_n
-        l_s = pybamm.geometric_parameters.l_s
         x_n = pybamm.standard_spatial_vars.x_n
-        x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
         j_n = reactions["main"]["neg"]["aj"]
@@ -42,11 +64,29 @@ class Velocity(pybamm.SubModel):
         # Volume-averaged velocity
         v_box_n = param.beta_n * pybamm.outer(j_n, x_n)
         v_box_p = param.beta_p * pybamm.outer(j_p, (1 - x_p))
-        v_box_n_right = pybamm.boundary_value(v_box_n, "right")
-        v_box_p_left = pybamm.boundary_value(v_box_p, "left")
-        v_box_s = (v_box_p_left - v_box_n_right) / l_s * (x_s - l_n) + v_box_n_right
 
-        return self.get_variables((v_box_n, v_box_s, v_box_p))
+        return self.get_variables((v_box_n, v_box_p))
+
+    def get_explicit_composite(self, reactions):
+        """
+        Provides explicit velocity for the composite models, as a post-processing step.
+
+        Parameters
+        ----------
+        reactions : dict
+            Dictionary of reaction variables
+        """
+        # Set up
+        param = self.set_of_parameters
+
+        j_n = reactions["main"]["neg"]["aj"]
+        j_p = reactions["main"]["pos"]["aj"]
+
+        # Volume-averaged velocity
+        v_box_n = param.beta_n * pybamm.IndefiniteIntegral(j_n, x_n)
+        v_box_p = -param.beta_p * pybamm.IndefiniteIntegral(j_p, x_p)
+
+        return self.get_variables((v_box_n, v_box_p))
 
     def get_variables(self, v_box_tuple):
         """
@@ -63,8 +103,17 @@ class Velocity(pybamm.SubModel):
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
+        l_n = pybamm.geometric_parameters.l_n
+        l_s = pybamm.geometric_parameters.l_s
+        x_s = pybamm.standard_spatial_vars.x_s
         vel_scale = self.set_of_parameters.velocity_scale
-        v_box_n, v_box_s, v_box_p = v_box_tuple
+        v_box_n, v_box_p = v_box_tuple
+
+        # Velocity in the separator
+        v_box_n_right = pybamm.boundary_value(v_box_n, "right")
+        v_box_p_left = pybamm.boundary_value(v_box_p, "left")
+        v_box_s = (v_box_p_left - v_box_n_right) / l_s * (x_s - l_n) + v_box_n_right
+
         v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
 
         return {
