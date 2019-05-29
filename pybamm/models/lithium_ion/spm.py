@@ -9,16 +9,13 @@ class SPM(pybamm.LithiumIonBaseModel):
     **Extends:** :class:`pybamm.LithiumIonBaseModel`
     """
 
-    def __init__(self, bc_options=None):
+    def __init__(self, options=None):
         super().__init__()
         self.name = "Single Particle Model"
-        self._bc_options = bc_options or self.default_bc_options
 
         "-----------------------------------------------------------------------------"
         "Parameters"
-        param = pybamm.standard_parameters_lithium_ion
-        i_boundary_cc = param.current_with_time
-        self.variables["Current collector current density"] = i_boundary_cc
+        param = self.set_of_parameters
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -27,9 +24,9 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Boundary conditions"
-        v_local = pybamm.Variable("Local cell voltage", domain="current collector")
-        i_local = pybamm.Variable("Local through-cell current density", domain="current collector")
-        bc_variables = {"i_local": i_local, "v_local": v_local}
+        v_boundary_cc = pybamm.Variable("Current collector voltage", domain="current collector")
+        i_boundary_cc = pybamm.Variable("Current collector current density", domain="current collector")
+        bc_variables = {"i_boundary_cc": i_boundary_cc, "v_boundary_cc": v_boundary_cc}
         self.set_boundary_conditions(bc_variables)
 
         "-----------------------------------------------------------------------------"
@@ -93,16 +90,18 @@ class SPM(pybamm.LithiumIonBaseModel):
 
     @property
     def default_geometry(self):
-        if self.bc_options["dimensionality"] == 1:
+        dimensionality = self.options["bc_options"]["dimensionality"]
+        if dimensionality == 0:
             return pybamm.Geometry("1D macro", "1D micro")
-        elif self.bc_options["dimensionality"] == 2:
+        elif dimensionality == 1:
             return pybamm.Geometry("1+1D macro", "1D micro")
-        elif self.bc_options["dimensionality"] == 3:
+        elif dimensionality == 2:
             return pybamm.Geometry("2+1D macro", "1D micro")
 
     @property
     def default_submesh_types(self):
-        if self.bc_options["dimensionality"]in [1, 2]:
+        dimensionality = self.options["bc_options"]["dimensionality"]
+        if dimensionality in [0, 1]:
             return {
                 "negative electrode": pybamm.Uniform1DSubMesh,
                 "separator": pybamm.Uniform1DSubMesh,
@@ -111,7 +110,7 @@ class SPM(pybamm.LithiumIonBaseModel):
                 "positive particle": pybamm.Uniform1DSubMesh,
                 "current collector": pybamm.Uniform1DSubMesh,
             }
-        elif self.bc_options["dimensionality"] == 3:
+        elif dimensionality == 2:
             return {
                 "negative electrode": pybamm.Uniform1DSubMesh,
                 "separator": pybamm.Uniform1DSubMesh,
@@ -123,14 +122,15 @@ class SPM(pybamm.LithiumIonBaseModel):
 
     @property
     def default_spatial_methods(self):
-        if self.bc_options["dimensionality"] in [1, 2]:
+        dimensionality = self.options["bc_options"]["dimensionality"]
+        if dimensionality in [0, 1]:
             return {
                 "macroscale": pybamm.FiniteVolume,
                 "negative particle": pybamm.FiniteVolume,
                 "positive particle": pybamm.FiniteVolume,
                 "current collector": pybamm.FiniteVolume,
             }
-        elif self.bc_options["dimensionality"] == 3:
+        elif dimensionality == 2:
             return {
                 "macroscale": pybamm.FiniteVolume,
                 "negative particle": pybamm.FiniteVolume,
@@ -142,15 +142,18 @@ class SPM(pybamm.LithiumIonBaseModel):
         """Get boundary conditions"""
         # TODO: edit to allow constant-current and constant-power control
         param = self.set_of_parameters
-        dimensionality = self.bc_options["dimensionality"]
-        if dimensionality == 1:
+        dimensionality = self.options["bc_options"]["dimensionality"]
+        if dimensionality == 0:
             current_bc = param.current_with_time
-            self.variables.update({"Current collector current": current_bc})
-        elif dimensionality == 2:
+            self.variables["Current collector current density"] = current_bc
+            # TO DO: fix voltage here
+            voltage = pybamm.Scalar(1)
+            self.variables["Current collector voltage"] = voltage
+        elif dimensionality == 1:
             raise NotImplementedError
-        elif dimensionality == 3:
-            i_local = bc_variables["i_local"]
-            v_local = bc_variables["v_local"]
+        elif dimensionality == 2:
+            i_boundary_cc = bc_variables["i_boundary_cc"]
+            v_boundary_cc = bc_variables["v_boundary_cc"]
             current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
-            current_collector_model.set_algebraic_system(v_local, i_local)
+            current_collector_model.set_algebraic_system(v_boundary_cc, i_boundary_cc)
             self.update(current_collector_model)

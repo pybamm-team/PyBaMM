@@ -2,8 +2,8 @@ import pybamm
 import numpy as np
 
 # load model
-bc_options = {"dimensionality": 3}
-model = pybamm.lithium_ion.SPM(bc_options)
+options = {"bc_options": {"dimensionality": 2}}
+model = pybamm.lithium_ion.SPM()
 
 # create geometry
 geometry = model.default_geometry
