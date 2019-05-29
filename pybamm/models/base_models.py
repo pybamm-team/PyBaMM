@@ -463,7 +463,7 @@ class StandardBatteryBaseModel(BaseModel):
 
     @property
     def options(self):
-        default_options = {"capacitance": False, "bc_options": {"dimensionality": 1}}
+        default_options = {"capacitance": False, "bc_options": {"dimensionality": 0}}
         if self._extra_options is None:
             options = default_options
         else:
@@ -474,7 +474,7 @@ class StandardBatteryBaseModel(BaseModel):
         if (
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
             and options["capacitance"] is False
-            and options["bc_options"]["dimensionality"] == 2
+            and options["bc_options"]["dimensionality"] == 1
         ):
             raise pybamm.ModelError(
                 "must use capacitance formulation to solve {!s} in 2D".format(self)

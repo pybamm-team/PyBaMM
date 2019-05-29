@@ -138,9 +138,9 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
     def set_model_variables(self):
         "Set variables for the model"
-        if self.options["bc_options"]["dimensionality"] == 1:
+        if self.options["bc_options"]["dimensionality"] == 0:
             curr_coll_domain = []
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["bc_options"]["dimensionality"] == 1:
             curr_coll_domain = ["current collector"]
 
         c_e = pybamm.Variable("Electrolyte concentration", curr_coll_domain)
@@ -177,10 +177,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # TODO: edit to allow constant-current and constant-power control
         param = self.set_of_parameters
         dimensionality = self.options["bc_options"]["dimensionality"]
-        if dimensionality == 1:
+        if dimensionality == 0:
             current_bc = param.current_with_time
             self.variables["Current collector current density"] = current_bc
-        elif dimensionality == 2:
+        elif dimensionality == 1:
             current_collector_model = pybamm.vertical.Vertical(param)
             current_collector_model.set_leading_order_vertical_current(bc_variables)
             self.update(current_collector_model)
@@ -215,9 +215,9 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
     @property
     def default_geometry(self):
-        if self.options["bc_options"]["dimensionality"] == 1:
+        if self.options["bc_options"]["dimensionality"] == 0:
             return pybamm.Geometry("1D macro")
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["bc_options"]["dimensionality"] == 1:
             return pybamm.Geometry("1+1D macro")
 
     @property

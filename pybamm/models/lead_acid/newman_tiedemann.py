@@ -61,7 +61,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         """Set boundary conditions, dependent on self.options"""
         param = self.set_of_parameters
         dimensionality = self.options["bc_options"]["dimensionality"]
-        if dimensionality == 1:
+        if dimensionality == 0:
             current_bc = param.current_with_time
             self.variables["Current collector current density"] = current_bc
 
