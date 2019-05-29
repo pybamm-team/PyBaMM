@@ -192,9 +192,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         return pybamm.Matrix(matrix)
 
     def integral(self, domain, symbol, discretised_symbol):
-        """Vector-vector dot product to implement the integral operator.
-        See :meth:`pybamm.BaseDiscretisation.integral`
-        """
+        """Vector-vector dot product to implement the integral operator. """
         # Calculate integration vector
         integration_vector = self.definite_integral_vector(domain)
 
@@ -243,31 +241,32 @@ class FiniteVolume(pybamm.SpatialMethod):
         return pybamm.Matrix(vector[np.newaxis, :])
 
     def indefinite_integral(self, domain, symbol, discretised_symbol):
-        """Implementation of the indefinite integral operator. The
-        input discretised symbol must be defined on the internal mesh edges.
-        See :meth:`pybamm.BaseDiscretisation.indefinite_integral`
-        """
+        """Implementation of the indefinite integral operator. """
 
-        if not symbol.evaluates_on_edges():
-            raise pybamm.ModelError(
-                "Symbol to be integrated must be valid on the mesh edges"
-            )
+        # Different integral matrix depending on whether the integrand evaluates on
+        # edges or nodes
+        if symbol.evaluates_on_edges():
+            integration_matrix = self.indefinite_integral_matrix_edges(domain)
+        else:
+            integration_matrix = self.indefinite_integral_matrix_nodes(domain)
 
         # Calculate integration matrix
-        integration_matrix = self.indefinite_integral_matrix(domain)
 
         # Don't need to check for spherical domains as spherical polars
         # only change the diveregence (symbols here have grad and no div)
         out = integration_matrix @ discretised_symbol
+        # if symbol.evaluate_on == "edges":
+        #     out = self.node_to_edge(out)
 
         out.domain = domain
 
         self.test_shape(out)
         return out
 
-    def indefinite_integral_matrix(self, domain):
+    def indefinite_integral_matrix_edges(self, domain):
         """
-        Matrix for finite-volume implementation of the indefinite integral
+        Matrix for finite-volume implementation of the indefinite integral where the
+        integrand is evaluated on mesh edges
 
         .. math::
             F(x) = \\int_0^x\\!f(u)\\,du
@@ -298,8 +297,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Vector`
-            The finite volume integral vector for the domain
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
         """
 
         # Create appropriate submesh by combining submeshes in domain
@@ -318,6 +317,41 @@ class FiniteVolume(pybamm.SpatialMethod):
         # add a column of zeros at each end
         zero_col = csr_matrix((n, 1))
         sub_matrix = hstack([zero_col, sub_matrix, zero_col])
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+
+        return pybamm.Matrix(matrix)
+
+    def indefinite_integral_matrix_nodes(self, domain):
+        """
+        Matrix for finite-volume implementation of the indefinite integral where the
+        integrand is evaluated on mesh nodes.
+        This is just a straightforward cumulative sum of the integrand
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) of integration
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
+        """
+
+        # Create appropriate submesh by combining submeshes in domain
+        submesh_list = self.mesh.combine_submeshes(*domain)
+        submesh = submesh_list[0]
+        n = submesh.npts
+        sec_pts = len(submesh_list)
+
+        du_n = submesh.d_edges
+        du_entries = [du_n] * (n)
+        offset = -np.arange(1, n + 1, 1)
+        sub_matrix = diags(du_entries, offset, shape=(n + 1, n))
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
@@ -531,16 +565,16 @@ class FiniteVolume(pybamm.SpatialMethod):
             pass
         # If only left child evaluates on edges, compute diffusivity for right child
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
-            disc_right = self.compute_diffusivity(disc_right)
+            disc_right = self.node_to_edge(disc_right)
         # If only right child evaluates on edges, compute diffusivity for left child
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
-            disc_left = self.compute_diffusivity(disc_left)
+            disc_left = self.node_to_edge(disc_left)
         # Return new binary operator with appropriate class
         out = bin_op.__class__(disc_left, disc_right)
         self.test_shape(out)
         return out
 
-    def compute_diffusivity(self, discretised_symbol):
+    def node_to_edge(self, discretised_symbol):
         """
         Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
         For now we just take the arithemtic mean, though it may be better to take the

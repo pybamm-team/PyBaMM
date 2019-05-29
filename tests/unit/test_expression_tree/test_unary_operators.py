@@ -98,6 +98,10 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta.children[0].name, a.name)
         self.assertEqual(inta.integration_variable, x)
         self.assertEqual(inta.domain, ["negative electrode"])
+        self.assertEqual(inta.evaluate_on, "nodes")
+
+        inta = pybamm.IndefiniteIntegral(a, x, evaluate_on="edges")
+        self.assertEqual(inta.evaluate_on, "edges")
 
         # expected errors
         a = pybamm.Symbol("a", domain=["negative electrode"])
