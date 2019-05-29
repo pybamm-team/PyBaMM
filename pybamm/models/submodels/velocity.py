@@ -42,10 +42,10 @@ class Velocity(pybamm.SubModel):
         l_s = pybamm.geometric_parameters.l_s
         v_box_n_right = param.beta_n * i_boundary_cc
         v_box_p_left = param.beta_p * i_boundary_cc
-        v_box_difference = -(v_box_p_left - v_box_n_right) / l_s
+        d_vbox_s__dx = (v_box_p_left - v_box_n_right) / l_s
         dVbox_dz = pybamm.Concatenation(
             pybamm.Broadcast(0, "negative electrode"),
-            pybamm.Broadcast(v_box_difference, "separator"),
+            pybamm.Broadcast(-d_vbox_s__dx, "separator"),
             pybamm.Broadcast(0, "positive electrode"),
         )
 
@@ -55,7 +55,7 @@ class Velocity(pybamm.SubModel):
         self.boundary_conditions = {
             p: {"left": (0, "Dirichlet"), "right": (0, "Neumann")}
         }
-        self.variables = self.get_variables(v_box)
+        self.variables = self.get_variables(v_box, dVbox_dz)
 
     def get_explicit_leading_order(self, reactions):
         """
@@ -79,9 +79,9 @@ class Velocity(pybamm.SubModel):
         v_box_n = param.beta_n * pybamm.outer(j_n, x_n)
         v_box_p = param.beta_p * pybamm.outer(j_p, x_p - 1)
 
-        v_box, V_box_z = self.get_combined_velocities(v_box_n, v_box_p)
+        v_box, dVbox_dz = self.get_combined_velocities(v_box_n, v_box_p)
 
-        return self.get_variables(v_box)
+        return self.get_variables(v_box, dVbox_dz)
 
     def get_explicit_composite(self, reactions):
         """
@@ -103,9 +103,9 @@ class Velocity(pybamm.SubModel):
         v_box_n = param.beta_n * pybamm.IndefiniteIntegral(j_n, x_n)
         v_box_p = param.beta_p * pybamm.IndefiniteIntegral(j_p, x_p)
 
-        v_box, V_box_z = self.get_combined_velocities(v_box_n, v_box_p)
+        v_box, dVbox_dz = self.get_combined_velocities(v_box_n, v_box_p)
 
-        return self.get_variables(v_box)
+        return self.get_variables(v_box, dVbox_dz)
 
     def get_combined_velocities(self, v_box_n, v_box_p):
         """
@@ -122,36 +122,41 @@ class Velocity(pybamm.SubModel):
         -------
         v_box : :class:`pybamm.Symbol`
             The x-component of velocity in the whole cell
-        V_box_z : :class:`pybamm.Symbol`
+        dVbox_dz : :class:`pybamm.Symbol`
             The z-component of velocity in the separator
         """
         l_n = pybamm.geometric_parameters.l_n
         l_s = pybamm.geometric_parameters.l_s
         x_s = pybamm.standard_spatial_vars.x_s
-        z = pybamm.standard_spatial_vars.z
 
         # Difference in negative and positive electrode velocities determines the
         # velocity in the separator
         v_box_n_right = pybamm.boundary_value(v_box_n, "right")
         v_box_p_left = pybamm.boundary_value(v_box_p, "left")
-        v_box_difference = (v_box_p_left - v_box_n_right) / l_s
+        d_vbox_s__dx = (v_box_p_left - v_box_n_right) / l_s
 
         # Simple formula for velocity in the separator
-        V_box_z = v_box_difference * z
-        v_box_s = v_box_difference * (x_s - l_n) + v_box_n_right
+        dVbox_dz = pybamm.Concatenation(
+            pybamm.Broadcast(0, "negative electrode"),
+            pybamm.Broadcast(-d_vbox_s__dx, "separator"),
+            pybamm.Broadcast(0, "positive electrode"),
+        )
+        v_box_s = d_vbox_s__dx * (x_s - l_n) + v_box_n_right
 
         v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
-        return v_box, V_box_z
+        return v_box, dVbox_dz
 
-    def get_variables(self, v_box):
+    def get_variables(self, v_box, dVbox_dz):
         """
         Calculate dimensionless and dimensional variables for the electrolyte current
         submodel
 
         Parameters
         ----------
-        v_box : tuple
-            Tuple of mass-averaged velocities
+        v_box : :class:`pybamm.Symbol`
+            Volume-averaged velocity in the x-direction
+        dVbox_dz : :class:`pybamm.Symbol`
+            Volume-averaged acceleration in the z-direction
 
         Returns
         -------
@@ -159,8 +164,11 @@ class Velocity(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         vel_scale = self.set_of_parameters.velocity_scale
+        L_z = self.set_of_parameters.L_z
 
         return {
             "Volume-averaged velocity": v_box,
             "Volume-averaged velocity [m.s-1]": vel_scale * v_box,
+            "Vertical volume-averaged acceleration": dVbox_dz,
+            "Vertical volume-averaged acceleration [m.s-2]": vel_scale / L_z * dVbox_dz,
         }

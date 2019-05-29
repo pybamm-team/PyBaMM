@@ -157,7 +157,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
     def set_porosity_submodel(self):
-        " Set model for porosity"
         param = self.set_of_parameters
         porosity_model = pybamm.porosity.Standard(param)
         porosity_model.set_leading_order_system(self.variables)

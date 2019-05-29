@@ -501,14 +501,21 @@ class VelocityTests(BaseOutputTest):
 
         self.v_box = self.get_var("Volume-averaged velocity")
         self.i_e = self.get_var("Electrolyte current density")
+        self.dVbox_dz = self.get_var("Vertical volume-averaged acceleration")
 
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""
         np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0)
 
+    def test_vertical_velocity(self):
+        """Test the boundary values of the current densities"""
+        np.testing.assert_array_equal(self.dVbox_dz(self.t, 0), 0)
+        np.testing.assert_array_less(self.dVbox_dz(self.t, 0.5), 0)
+        np.testing.assert_array_equal(self.dVbox_dz(self.t, 1), 0)
+
     def test_velocity_vs_current(self):
         """Test the boundary values of the current densities"""
-        t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
+        t, x_n, x_p = self.t, self.x_n, self.x_p
 
         beta_n = pybamm.standard_parameters_lead_acid.beta_n
         beta_n = self.param.process_symbol(beta_n).evaluate()
@@ -524,4 +531,5 @@ class VelocityTests(BaseOutputTest):
 
     def test_all(self):
         self.test_velocity_boundaries()
+        self.test_vertical_velocity()
         self.test_velocity_vs_current()
