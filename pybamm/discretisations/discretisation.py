@@ -400,6 +400,12 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Divergence):
                 return child_spatial_method.divergence(child, disc_child, self.bcs)
 
+            elif isinstance(symbol, pybamm.Laplacian):
+                return child_spatial_method.laplacian(child, disc_child, self.bcs)
+
+            elif isinstance(symbol, pybamm.Source):
+                return child_spatial_method.source(child, disc_child, self.bcs)
+
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
                 return child_spatial_method.indefinite_integral(
                     child.domain, child, disc_child

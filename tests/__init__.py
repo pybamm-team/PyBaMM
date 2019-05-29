@@ -12,7 +12,9 @@ from .shared import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
     get_1p1d_mesh_for_testing,
+    get_2p1d_mesh_for_testing,
     get_discretisation_for_testing,
     get_p2d_discretisation_for_testing,
     get_1p1d_discretisation_for_testing,
+    get_2p1d_discretisation_for_testing,
 )

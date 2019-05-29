@@ -94,21 +94,19 @@ class FiniteElementFenics(pybamm.SpatialMethod):
             Contains the result of acting the discretised gradient on
             the child discretised_symbol
         """
-        domain = symbol.domain
-
-        # TO DO: finish fenics mesh class
-        mesh = self.mesh
+        domain = symbol.domain[0]
+        mesh = self.mesh[domain][0]
 
         stiffness_matrix = self.stiffness_matrix(domain)
 
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
         lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
         rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
-        boundary_load = pybamm.Vector(np.zeros(mesh.N_dofs))
+        boundary_load = pybamm.Vector(np.zeros(mesh.npts))
 
         if lbc_type == "Neumann":
             # make form for the boundary conditions
-            lbc_form = dolfin.Constant(1) * mesh.TestFunction * self.ds(1)
+            lbc_form = dolfin.Constant(1) * mesh.TestFunction * mesh.ds(1)
             lbc_load = lbc_value * pybamm.Vector(
                 dolfin.assemble(lbc_form).get_local()[:]
             )
@@ -124,7 +122,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
 
         if rbc_type == "Neumann":
             # make form for the boundary conditions
-            rbc_form = dolfin.Constant(1) * mesh.TestFunction * self.ds(2)
+            rbc_form = dolfin.Constant(1) * mesh.TestFunction * mesh.ds(2)
             rbc_load = rbc_value * pybamm.Vector(
                 dolfin.assemble(rbc_form).get_local()[:]
             )
@@ -138,7 +136,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
                 )
             )
 
-        return stiffness_matrix @ discretised_symbol + boundary_load
+        return -stiffness_matrix @ discretised_symbol + boundary_load
 
     def stiffness_matrix(self, domain):
         """
@@ -173,12 +171,11 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.BaseDiscretisation.integral`
         """
-        domain = symbol.domain[0]
 
         # Calculate integration vector
-        integration_vector = self.definite_integral_vector(domain)
+        integration_vector = self.definite_integral_vector(domain[0])
 
-        out = integration_vector @ discretised_symbol
+        out = integration_vector * discretised_symbol
         out.domain = []
         return out
 
@@ -241,8 +238,9 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         :class:`pybamm.Matrix`
             The (sparse) mass matrix for the spatial method.
         """
-        # TO DO: finish fenics mesh class
-        mesh = self.mesh
+        # get primary domain mesh
+        domain = symbol.domain[0]
+        mesh = self.mesh[domain][0]
 
         # create form for mass
         mass_form = mesh.TrialFunction * mesh.TestFunction * mesh.dx
@@ -252,14 +250,14 @@ class FiniteElementFenics(pybamm.SpatialMethod):
 
         # TO DO: implement Dirichlet BCs
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
-        lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
-        rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
+        #lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
+        #rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
 
-        if lbc_type == "Dirichlet":
-            raise NotImplementedError("Dirichlet boundary conditons not implemented")
+        #if lbc_type == "Dirichlet":
+        #    raise NotImplementedError("Dirichlet boundary conditons not implemented")
 
-        if rbc_type == "Dirichlet":
-            raise NotImplementedError("Dirichlet boundary conditons not implemented")
+        #if rbc_type == "Dirichlet":
+        #    raise NotImplementedError("Dirichlet boundary conditons not implemented")
 
         return pybamm.Matrix(mass)
 
@@ -284,6 +282,9 @@ class FiniteElementFenics(pybamm.SpatialMethod):
             Contains the result of acting the mass matrix on
             the child discretised_symbol
         """
+        # TO DO: when implementing dirichlet bcs the mass matrix here will
+        # be different if the eqn key is in the bcs NOT the symbol, so Source
+        # should probbaly be a binary operator which takes the symbol of the eqn key
+        # the symbol of the source
         mass_matrix = self.mass_matrix(symbol, boundary_conditions)
-
         return mass_matrix @ discretised_symbol

@@ -537,6 +537,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             disc_left = self.compute_diffusivity(disc_left)
         # Return new binary operator with appropriate class
         out = bin_op.__class__(disc_left, disc_right)
+        import ipdb; ipdb.set_trace()
         self.test_shape(out)
         return out
 

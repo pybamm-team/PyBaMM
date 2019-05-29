@@ -285,6 +285,7 @@ class SpatialMethod:
         try:
             symbol.shape
         except ValueError as e:
+            import ipdb; ipdb.set_trace()
             raise pybamm.ShapeError(
                 """
                 Cannot evaluate the discretised symbol to find its shape

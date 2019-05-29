@@ -95,7 +95,25 @@ class TestGeometry1p1DMacro(unittest.TestCase):
             for spatial_vars in prim_sec_vars.values():
                 all(
                     self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
-                    for spatial_var in spatial_vars.keys()
+                    for spatial_var in spatial_vars.keys() if spatial_var not in ["negative", "positive"]
+                )
+
+
+class TestGeometry2p1DMacro(unittest.TestCase):
+    def test_geometry_keys(self):
+        geometry = pybamm.Geometry1p1DMacro()
+        for key, prim_sec_vars in geometry.items():
+            self.assertIn("primary", prim_sec_vars.keys())
+            if key != "current collector":
+                self.assertIn("secondary", prim_sec_vars.keys())
+                var = pybamm.standard_spatial_vars
+                self.assertEqual(
+                    list(prim_sec_vars["secondary"].keys())[0].id, var.z.id
+                )
+            for spatial_vars in prim_sec_vars.values():
+                all(
+                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
+                    for spatial_var in spatial_vars.keys() if spatial_var not in ["negative", "positive"]
                 )
 
 

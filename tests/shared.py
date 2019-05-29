@@ -33,13 +33,20 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         return mass_matrix
 
 
-def get_mesh_for_testing(xpts=None, rpts=10, zpts=15, geometry=None):
+def get_mesh_for_testing(xpts=None, rpts=10, ypts=12, zpts=15, geometry=None, cc_submesh=None):
     param = pybamm.ParameterValues(
         base_parameters={
+            "Electrode depth [m]": 0.1,
+            "Electrode height [m]": 0.5,
+            "Negative tab width [m]": 0.01,
+            "Negative tab centre y-coordinate [m]": 0.02,
+            "Negative tab centre z-coordinate [m]": 0.5,
+            "Positive tab width [m]": 0.01,
+            "Positive tab centre y-coordinate [m]": 0.08,
+            "Positive tab centre z-coordinate [m]": 0.5,
             "Negative electrode width [m]": 0.3,
             "Separator width [m]": 0.3,
             "Positive electrode width [m]": 0.3,
-            "Electrode height [m]": 0.5,
         }
     )
 
@@ -55,6 +62,8 @@ def get_mesh_for_testing(xpts=None, rpts=10, zpts=15, geometry=None):
         "positive particle": pybamm.Uniform1DSubMesh,
         "current collector": pybamm.Uniform1DSubMesh,
     }
+    if cc_submesh:
+        submesh_types["current collector"] = cc_submesh
 
     if xpts is None:
         xn_pts, xs_pts, xp_pts = 40, 25, 35
@@ -67,6 +76,7 @@ def get_mesh_for_testing(xpts=None, rpts=10, zpts=15, geometry=None):
         var.x_p: xp_pts,
         var.r_n: rpts,
         var.r_p: rpts,
+        var.y: ypts,
         var.z: zpts,
     }
 
@@ -81,6 +91,11 @@ def get_p2d_mesh_for_testing(xpts=None, rpts=10):
 def get_1p1d_mesh_for_testing(xpts=None, zpts=15):
     geometry = pybamm.Geometry("1+1D macro")
     return get_mesh_for_testing(xpts=xpts, zpts=zpts, geometry=geometry)
+
+
+def get_2p1d_mesh_for_testing(xpts=None, ypts=15, zpts=15, cc_submesh=pybamm.FenicsMesh2D):
+    geometry = pybamm.Geometry("2+1D macro")
+    return get_mesh_for_testing(xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh)
 
 
 def get_discretisation_for_testing(xpts=None, rpts=10, mesh=None):
@@ -102,3 +117,7 @@ def get_p2d_discretisation_for_testing(xpts=None, rpts=10):
 
 def get_1p1d_discretisation_for_testing(xpts=None, zpts=15):
     return get_discretisation_for_testing(mesh=get_1p1d_mesh_for_testing(xpts, zpts))
+
+
+def get_2p1d_discretisation_for_testing(xpts=None, ypts = 15, zpts=15):
+    return get_discretisation_for_testing(mesh=get_2p1d_mesh_for_testing(xpts, ypts, zpts))
