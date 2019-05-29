@@ -648,11 +648,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             # Create 1D matrix using submesh
             n = submesh.npts
 
-            sub_matrix_center = diags([0.5, 0.5], [0, 1], shape=(n - 1, n))
             if shift_key == "node to edge":
                 sub_matrix_left = csr_matrix(
                     ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
                 )
+                sub_matrix_center = diags([0.5, 0.5], [0, 1], shape=(n - 1, n))
                 sub_matrix_right = csr_matrix(
                     ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
                 )
@@ -660,7 +660,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     [sub_matrix_left, sub_matrix_center, sub_matrix_right]
                 )
             elif shift_key == "edge to node":
-                sub_matrix = sub_matrix_center
+                sub_matrix = diags([0.5, 0.5], [0, 1], shape=(n, n + 1))
             else:
                 raise ValueError("shift key '{}' not recognised".format(shift_key))
             # Second dimension length

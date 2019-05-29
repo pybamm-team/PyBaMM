@@ -417,9 +417,7 @@ class IndefiniteIntegral(Integral):
     **Extends:** :class:`Integral`
     """
 
-    def __init__(self, child, integration_variable, evaluate_on="nodes"):
-        # Assign attributes
-        self._evaluate_on = evaluate_on
+    def __init__(self, child, integration_variable):
         super().__init__(child, integration_variable)
         # Overwrite the name
         self.name = "{} integrated w.r.t {}".format(
@@ -429,25 +427,6 @@ class IndefiniteIntegral(Integral):
             self.name += " on {}".format(integration_variable.domain)
         # the integrated variable has the same domain as the child
         self.domain = child.domain
-
-    @property
-    def evaluate_on(self):
-        "Whether to evaluate the indefinite integral on edges or nodes"
-        assert self._evaluate_on in ["nodes", "edges"]
-        return self._evaluate_on
-
-    def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()` """
-        self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.integration_variable.id,
-                self.children[0].id,
-                self.evaluate_on,
-            )
-            + tuple(self.domain)
-        )
 
 
 class BoundaryOperator(SpatialOperator):

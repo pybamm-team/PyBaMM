@@ -471,12 +471,19 @@ class CurrentTests(BaseOutputTest):
     def test_conservation(self):
         """Test sum of electrode and electrolyte current densities give the applied
         current density"""
-        t, x_n, x_p, x = self.t, self.x_n_edge, self.x_p_edge, self.x_edge
+        t, x_n, x_s, x_p = self.t, self.x_n, self.x_s, self.x_p
 
         current_param = pybamm.electrical_parameters.current_with_time
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
+        for x in [x_n, x_s, x_p]:
+            np.testing.assert_array_almost_equal(
+                self.i_s(t, x) + self.i_e(t, x), i_cell, decimal=3
+            )
         np.testing.assert_array_almost_equal(
-            self.i_s(t, x[0]) + self.i_e(t, x[0]), i_cell, decimal=3
+            self.i_s(t, x_n), self.i_s_n(t, x_n), decimal=3
+        )
+        np.testing.assert_array_almost_equal(
+            self.i_s(t, x_p), self.i_s_p(t, x_p), decimal=3
         )
 
     def test_current_density_boundaries(self):
