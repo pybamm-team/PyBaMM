@@ -30,13 +30,24 @@ class Velocity(pybamm.SubModel):
         # Unpack variables
         param = self.set_of_parameters
         p = variables["Electrolyte pressure"]
+        i_boundary_cc = variables["Current collector current density"]
         # c_e = variables["Electrolyte concentration"]
 
         # Set up reactions
         j = variables["Interfacial current density"]
         v_mass = -pybamm.grad(p)
         v_box = v_mass
-        dVbox_dz = 0
+
+        # Explicit expression for dVdz in the separator
+        l_s = pybamm.geometric_parameters.l_s
+        v_box_n_right = param.beta_n * i_boundary_cc
+        v_box_p_left = param.beta_p * i_boundary_cc
+        v_box_difference = -(v_box_p_left - v_box_n_right) / l_s
+        dVbox_dz = pybamm.Concatenation(
+            pybamm.Broadcast(0, "negative electrode"),
+            pybamm.Broadcast(v_box_difference, "separator"),
+            pybamm.Broadcast(0, "positive electrode"),
+        )
 
         # Build model
         self.algebraic = {p: pybamm.div(v_box) + dVbox_dz - param.beta * j}
