@@ -43,9 +43,15 @@ class StefanMaxwell(pybamm.SubModel):
         except KeyError:
             epsilon = param.epsilon
             deps_dt = pybamm.Scalar(0)
+        # Use convection velocity if it exists, otherwise set to zero
+        v_box = variables.get("Volume-averaged velocity", pybamm.Scalar(0))
+        # # Use variable for div_v_box, to avoid having an extra divergence in rhs
+        # div_v_box = variables.get("div(volume-averaged velocity)", pybamm.Scalar(0))
 
         # Flux
-        N_e = -(epsilon ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
+        N_e_diff = -(epsilon ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
+        N_e_conv = c_e * v_box
+        N_e = N_e_diff + N_e_conv
 
         # Model
         j_n = reactions["main"]["neg"]["aj"]

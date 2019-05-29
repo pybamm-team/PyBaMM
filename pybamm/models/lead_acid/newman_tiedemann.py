@@ -69,6 +69,13 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         porosity_model.set_differential_system(eps, j_n, j_p)
         self.update(porosity_model)
 
+        # Velocity
+        if self.options["convection"] is not False:
+            self.variables["Electrolyte pressure"] = pybamm.standard_variables.pressure
+            velocity_model = pybamm.velocity.Velocity(param)
+            velocity_model.set_algebraic_system(self.variables)
+            self.update(velocity_model)
+
         # Electrolyte concentration
         reactions = {
             "main": {
@@ -107,14 +114,6 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             # Post-process electrolyte model
             eleclyte_current_model.set_post_processed()
             self.update(eleclyte_current_model)
-
-        # Convection model
-        if self.options["convection"] is True:
-            p = pybamm.standard_variables.pressure
-            self.variables["Electrolyte pressure"] = p
-            velocity_model = pybamm.velocity.Velocity(param)
-            velocity_model.set_algebraic_system(self.variables)
-            self.update(velocity_model)
 
         "-----------------------------------------------------------------------------"
         "Post-process"

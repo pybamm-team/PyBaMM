@@ -125,7 +125,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.variables.update(electrode_vars)
 
         # Convection
-        if self.options["convection"] == True:
+        if self.options["convection"] is not False:
             velocity_model = pybamm.velocity.Velocity(param)
             velocity_vars = velocity_model.get_explicit_leading_order(self.reactions)
             self.variables.update(velocity_vars)

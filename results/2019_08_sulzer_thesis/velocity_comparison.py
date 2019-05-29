@@ -95,6 +95,6 @@ if __name__ == "__main__":
         pybamm.lead_acid.NewmanTiedemann({"convection": True}),
         pybamm.lead_acid.NewmanTiedemann(),
     ]
-    Crates = [1]  # 0.1, 0.2, 0.5, 1, 2, 5]
+    Crates = [0.1]  # 0.1, 0.2, 0.5, 1, 2, 5]
     all_variables, t_eval = velocity_comparison(models, Crates)
     plot_voltages(all_variables, t_eval)
