@@ -3,7 +3,10 @@
 #
 import pybamm
 
+KNOWN_COORD_SYS = ["cartesian", "spherical polar"]
 KNOWN_SPATIAL_VARS = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
+KNOWN_SPATIAL_VARS_EXTENDED = [v + "_edge" for v in KNOWN_SPATIAL_VARS]
+KNOWN_SPATIAL_VARS.extend(KNOWN_SPATIAL_VARS_EXTENDED)
 
 
 class IndependentVariable(pybamm.Symbol):
@@ -63,6 +66,9 @@ class SpatialVariable(IndependentVariable):
         super().__init__(name, domain=domain)
 
         if name not in KNOWN_SPATIAL_VARS:
+            import ipdb
+
+            ipdb.set_trace()
             raise ValueError(
                 "name must be KNOWN_SPATIAL_VARS  but is '{}'".format(name)
             )

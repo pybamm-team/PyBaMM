@@ -156,7 +156,7 @@ class Velocity(pybamm.SubModel):
         v_box : :class:`pybamm.Symbol`
             Volume-averaged velocity in the x-direction
         dVbox_dz : :class:`pybamm.Symbol`
-            Volume-averaged acceleration in the z-direction
+            Volume-averaged acceleration in the z-direction (z-derivative of velocity)
 
         Returns
         -------

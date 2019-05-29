@@ -170,9 +170,8 @@ from .geometry.geometry import (
     Geometry1p1DMicro,
 )
 
-from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS
+from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
-from .geometry.standard_spatial_vars import KNOWN_COORD_SYS
 
 #
 # Mesh and Discretisation classes

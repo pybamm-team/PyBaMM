@@ -701,36 +701,6 @@ class TestDiscretise(unittest.TestCase):
         )[:, np.newaxis]
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
 
-    def test_discretise_spatial_variable(self):
-        # create discretisation
-        disc = get_discretisation_for_testing()
-
-        # space
-        x1 = pybamm.SpatialVariable("x", ["negative electrode"])
-        x1_disc = disc.process_symbol(x1)
-        self.assertIsInstance(x1_disc, pybamm.Vector)
-        np.testing.assert_array_equal(
-            x1_disc.evaluate(), disc.mesh["negative electrode"][0].nodes[:, np.newaxis]
-        )
-
-        x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
-        x2_disc = disc.process_symbol(x2)
-        self.assertIsInstance(x2_disc, pybamm.Vector)
-        np.testing.assert_array_equal(
-            x2_disc.evaluate(),
-            disc.mesh.combine_submeshes("negative electrode", "separator")[0].nodes[
-                :, np.newaxis
-            ],
-        )
-
-        r = 3 * pybamm.SpatialVariable("r", ["negative particle"])
-        r_disc = disc.process_symbol(r)
-        self.assertIsInstance(r_disc.children[1], pybamm.Vector)
-        np.testing.assert_array_equal(
-            r_disc.evaluate(),
-            3 * disc.mesh["negative particle"][0].nodes[:, np.newaxis],
-        )
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
