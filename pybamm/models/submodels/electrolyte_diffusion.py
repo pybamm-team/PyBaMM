@@ -85,18 +85,10 @@ class StefanMaxwell(pybamm.SubModel):
         """
         param = self.set_of_parameters
         c_e = variables["Electrolyte concentration"]
-        try:
-            epsilon = variables["Porosity"]
-            # if porosity is not provided, use the input parameter
-            eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-            deps_n_dt = sum(rxn["neg"]["deps_dt"] for rxn in reactions.values())
-            deps_p_dt = sum(rxn["pos"]["deps_dt"] for rxn in reactions.values())
-        except KeyError:
-            eps_n = param.epsilon_n
-            eps_s = param.epsilon_s
-            eps_p = param.epsilon_p
-            deps_n_dt = pybamm.Scalar(0)
-            deps_p_dt = pybamm.Scalar(0)
+        epsilon = variables["Porosity"]
+        eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
+        deps_n_dt = sum(rxn["neg"]["deps_dt"] for rxn in reactions.values())
+        deps_p_dt = sum(rxn["pos"]["deps_dt"] for rxn in reactions.values())
 
         # Model
         source_terms = sum(
