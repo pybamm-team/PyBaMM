@@ -18,9 +18,9 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
 class TestMacInnesCapacitance(unittest.TestCase):
     def test_default_solver(self):
         param = pybamm.standard_parameters_lithium_ion
-        model = pybamm.electrolyte_current.MacInnesCapacitance(param, True)
+        model = pybamm.electrolyte_current.MacInnesCapacitance(param, "differential")
         self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
-        model = pybamm.electrolyte_current.MacInnesCapacitance(param, False)
+        model = pybamm.electrolyte_current.MacInnesCapacitance(param, "algebraic")
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 

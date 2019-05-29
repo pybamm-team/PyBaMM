@@ -1,8 +1,5 @@
-Lead Acid LOQS Models
-=====================
+Lead Acid LOQS Model
+====================
 
 .. autoclass:: pybamm.lead_acid.LOQS
-    :members:
-
-.. autoclass:: pybamm.lead_acid.LOQSCapacitance
     :members:

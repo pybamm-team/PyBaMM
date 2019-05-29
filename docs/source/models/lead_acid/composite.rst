@@ -1,8 +1,5 @@
-Lead Acid Composite Models
-==========================
+Lead Acid Composite Model
+=========================
 
 .. autoclass:: pybamm.lead_acid.Composite
-    :members:
-
-.. autoclass:: pybamm.lead_acid.CompositeCapacitance
     :members:

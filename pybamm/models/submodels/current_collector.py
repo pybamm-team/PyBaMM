@@ -26,16 +26,16 @@ class OhmTwoDimensional(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_algebraic_system(self, v_local, i_local):
+    def set_algebraic_system(self, v_boundary_cc, i_boundary_cc):
         """
         PDE system for current in the current collectors, using Ohm's law
 
         Parameters
         ----------
-        v_local : :class:`pybamm.Variable`
-            Local cell voltage
-        i_local : :class:`pybamm.Variable`
-            Local through-cell current density
+        v_boundary_cc : :class:`pybamm.Variable`
+            Voltage at the current collector
+        i_boundary_cc : :class:`pybamm.Variable`
+            Current density at the current collector
 
         """
         param = self.set_of_parameters
@@ -45,12 +45,12 @@ class OhmTwoDimensional(pybamm.SubModel):
         # algebraic equations
         applied_current = param.current_with_time
         self.algebraic = {
-            v_local: pybamm.laplacian(v_local) + param.alpha * pybamm.source(i_local),
-            i_local: pybamm.Integral(i_local, [y, z]) - applied_current,
+            v_boundary_cc: pybamm.laplacian(v_boundary_cc) + param.alpha * pybamm.source(i_boundary_cc),
+            i_boundary_cc: pybamm.Integral(i_boundary_cc, [y, z]) - applied_current,
         }
         self.initial_conditions = {
-            v_local: param.U_p(param.c_p_init) - param.U_n(param.c_n_init),
-            i_local: applied_current / param.l_y / param.l_z,
+            v_boundary_cc: param.U_p(param.c_p_init) - param.U_n(param.c_n_init),
+            i_boundary_cc: applied_current / param.l_y / param.l_z,
         }
         # left for negative tab, right for positive tab
         neg_tab_bc = -applied_current / (
@@ -60,9 +60,9 @@ class OhmTwoDimensional(pybamm.SubModel):
             param.sigma_cp * (param.L_x / param.L_z) ** 2 * param.l_tab_p * param.l_cp
         )
         self.boundary_conditions = {
-            v_local: {"left": (neg_tab_bc, "Neumann"), "right": (pos_tab_bc, "Neumann")}
+            v_boundary_cc: {"left": (neg_tab_bc, "Neumann"), "right": (pos_tab_bc, "Neumann")}
         }
         self.variables = {
-            "Local cell voltage": v_local,
-            "Local through-cell current density": i_local,
+            "Current collector voltage": v_boundary_cc,
+            "Current collector current density": i_boundary_cc,
         }
