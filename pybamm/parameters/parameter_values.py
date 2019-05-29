@@ -141,8 +141,7 @@ class ParameterValues(dict):
 
     def process_geometry(self, geometry):
         """
-        Assign parameter values to a geometry.
-        Currently inplace, could be changed to return a new model.
+        Assign parameter values to a geometry (inplace), *and* evaluate.
 
         Parameters
         ----------
@@ -154,9 +153,8 @@ class ParameterValues(dict):
             for prim_sec, variables in geometry[domain].items():
                 for spatial_variable, spatial_limits in variables.items():
                     for lim, sym in spatial_limits.items():
-                        geometry[domain][prim_sec][spatial_variable][
-                            lim
-                        ] = self.process_symbol(sym).evaluate()
+                        sym_eval = self.process_symbol(sym).evaluate()
+                        geometry[domain][prim_sec][spatial_variable][lim] = sym_eval
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.

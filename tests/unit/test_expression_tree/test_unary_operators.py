@@ -110,8 +110,17 @@ class TestUnaryOperators(unittest.TestCase):
 
     def test_index(self):
         vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
+        # with integer
         ind = pybamm.Index(vec, 3)
         self.assertEqual(ind.evaluate(), 4)
+        # with slice
+        ind = pybamm.Index(vec, slice(1, 3))
+        np.testing.assert_array_equal(ind.evaluate(), np.array([[2], [3]]))
+        # errors
+        with self.assertRaisesRegex(TypeError, "index must be integer or slice"):
+            pybamm.Index(vec, 0.0)
+        with self.assertRaisesRegex(ValueError, "slice size exceeds child size"):
+            pybamm.Index(vec, 5)
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -215,6 +224,10 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertEqual(av_a.children[0].integration_variable.domain, x.domain)
             self.assertEqual(av_a.domain, [])
+
+        a = pybamm.Symbol("a", domain="bad domain")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.average(a)
 
 
 if __name__ == "__main__":

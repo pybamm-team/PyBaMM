@@ -29,13 +29,13 @@ class Broadcast(pybamm.SpatialOperator):
             child = pybamm.Scalar(child)
 
         # Check domain
-        if child.domain not in [[], domain]:
+        if child.domain not in [[], domain, ["current collector"]]:
             raise pybamm.DomainError(
                 """
-                Domain of a broadcasted child must be []
-                or same as 'domain' but is '{}'
+                Domain of a broadcasted child must be [], ['current collector'],
+                or same as 'domain' ('{}'), but is '{}'
                 """.format(
-                    child.domain
+                    domain, child.domain
                 )
             )
         if name is None:

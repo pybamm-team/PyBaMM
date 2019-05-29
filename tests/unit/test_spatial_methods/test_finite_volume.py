@@ -2,7 +2,11 @@
 # Test for the operator class
 #
 import pybamm
-from tests import get_mesh_for_testing, get_p2d_mesh_for_testing
+from tests import (
+    get_mesh_for_testing,
+    get_p2d_mesh_for_testing,
+    get_1p1d_mesh_for_testing,
+)
 
 import numpy as np
 from scipy.sparse import kron, eye
@@ -91,6 +95,47 @@ class TestFiniteVolume(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             surf_eqn_disc.evaluate(None, linear_y), y_surf
         )
+
+    def test_extrapolate_2d_models(self):
+        # create discretisation
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Microscale
+        var = pybamm.Variable("var", domain="negative particle")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
+        # evaluate
+        y_macro = mesh["negative electrode"][0].nodes
+        y_micro = mesh["negative particle"][0].nodes
+        y = np.outer(y_macro, y_micro).reshape(-1, 1)
+        # extrapolate to r=1 --> should evaluate to y_macro
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(y=y)[:, 0], y_macro
+        )
+
+        var = pybamm.Variable("var", domain="positive particle")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["positive electrode"])
+
+        # 2d macroscale
+        mesh = get_1p1d_mesh_for_testing()
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="negative electrode")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["current collector"])
 
     def test_discretise_diffusivity_times_spatial_operator(self):
         # Set up
@@ -195,10 +240,6 @@ class TestFiniteVolume(unittest.TestCase):
         )
 
         # test errors
-        with self.assertRaisesRegex(
-            TypeError, "discretised_symbol must be a StateVector or Concatenation"
-        ):
-            pybamm.FiniteVolume(mesh).add_ghost_nodes(var, pybamm.Scalar(1), None)
         bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
         with self.assertRaisesRegex(ValueError, "boundary condition must be"):
             pybamm.FiniteVolume(mesh).add_ghost_nodes(var, discretised_symbol, bcs)
@@ -493,24 +534,25 @@ class TestFiniteVolume(unittest.TestCase):
 
         np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts + 1]))
 
-        # div: test on linear r^2
-        # div (grad r^2) = 6
-        const = 6 * np.ones(sec_pts * prim_pts)
-
+        # div
+        # div (grad r^2) = 6, N_left = N_right = 0
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
+        bc_var = disc.process_symbol(
+            pybamm.SpatialVariable("x_n", domain="negative electrode")
+        )
         boundary_conditions = {
-            var.id: {
-                "left": (pybamm.Scalar(6), "Dirichlet"),
-                "right": (pybamm.Scalar(6), "Dirichlet"),
-            }
+            var.id: {"left": (bc_var, "Neumann"), "right": (bc_var, "Neumann")}
         }
         disc.bcs = boundary_conditions
-
         div_eqn_disc = disc.process_symbol(div_eqn)
+
+        const = 6 * np.ones(sec_pts * prim_pts)
         div_eval = div_eqn_disc.evaluate(None, const)
         div_eval = np.reshape(div_eval, [sec_pts, prim_pts])
-        np.testing.assert_array_almost_equal(div_eval, np.zeros([sec_pts, prim_pts]))
+        np.testing.assert_array_almost_equal(
+            div_eval[:, :-1], np.zeros([sec_pts, prim_pts - 1])
+        )
 
     def test_grad_div_shapes_Neumann_bcs(self):
         """Test grad and div with Neumann boundary conditions (applied by div on N)"""
@@ -774,7 +816,7 @@ class TestFiniteVolume(unittest.TestCase):
 
     def test_definite_integral(self):
         # create discretisation
-        mesh = get_mesh_for_testing(200)
+        mesh = get_mesh_for_testing(xpts=200, rpts=200)
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
@@ -988,6 +1030,7 @@ class TestFiniteVolume(unittest.TestCase):
         grad_and_div = pybamm.div(pybamm.grad(phi))
         int_grad_phi = pybamm.IndefiniteIntegral(grad_and_div, x)
         disc.set_variable_slices([phi])
+        # Add boundary conditions so that the integrand has the right shape
         disc._bcs = {
             phi.id: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
