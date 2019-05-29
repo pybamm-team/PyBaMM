@@ -267,21 +267,21 @@ class TestSymbol(unittest.TestCase):
         grad_div_eqn = pybamm.div(grad_eqn)
         algebraic_eqn = 2 * var + 3
         self.assertTrue(grad_eqn.has_spatial_derivatives())
-        self.assertTrue(grad_eqn.has_gradient())
-        self.assertFalse(grad_eqn.has_divergence())
+        self.assertTrue(grad_eqn.has_symbol_of_class(pybamm.Gradient))
+        self.assertFalse(grad_eqn.has_symbol_of_class(pybamm.Divergence))
         self.assertTrue(div_eqn.has_spatial_derivatives())
-        self.assertFalse(div_eqn.has_gradient())
-        self.assertTrue(div_eqn.has_divergence())
+        self.assertFalse(div_eqn.has_symbol_of_class(pybamm.Gradient))
+        self.assertTrue(div_eqn.has_symbol_of_class(pybamm.Divergence))
         self.assertTrue(grad_div_eqn.has_spatial_derivatives())
-        self.assertTrue(grad_div_eqn.has_gradient())
-        self.assertTrue(grad_div_eqn.has_divergence())
+        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Gradient))
+        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Divergence))
         self.assertFalse(algebraic_eqn.has_spatial_derivatives())
-        self.assertFalse(algebraic_eqn.has_gradient())
-        self.assertFalse(algebraic_eqn.has_divergence())
+        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Gradient))
+        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Divergence))
 
     def test_orphans(self):
-        a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
         sum = a + b
 
         a_orp, b_orp = sum.orphans

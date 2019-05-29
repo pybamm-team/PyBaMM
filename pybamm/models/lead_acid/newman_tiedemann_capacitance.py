@@ -44,7 +44,7 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         "Submodels"
 
         # Exchange-current density
-        c_e_n, _, c_e_p = c_e.orphans
+        c_e_n, c_e_s, c_e_p = c_e.orphans
         int_curr_model = pybamm.interface.LeadAcidReaction(param)
         j0_n = int_curr_model.get_exchange_current_densities(c_e_n)
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p)
@@ -77,26 +77,22 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
 
         # Electrolyte current
         eps_n, _, eps_p = eps.orphans
-        eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(
+        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
             param, use_capacitance
         )
-        eleclyte_current_model_n.set_full_system(delta_phi_n, c_e_n, reactions, eps_n)
-        eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(
-            param, use_capacitance
-        )
-        eleclyte_current_model_p.set_full_system(delta_phi_p, c_e_p, reactions, eps_p)
+        eleclyte_current_model.set_full_system(delta_phi_n, c_e_n, reactions, eps_n)
+        eleclyte_current_model.set_full_system(delta_phi_p, c_e_p, reactions, eps_p)
+
+        # Post-process electrolyte model
+        eleclyte_current_model.set_post_processed(c_e, eps)
 
         "-----------------------------------------------------------------------------"
         "Combine Submodels"
-        self.update(
-            porosity_model,
-            electrolyte_diffusion_model,
-            eleclyte_current_model_n,
-            eleclyte_current_model_p,
-        )
+        self.update(porosity_model, electrolyte_diffusion_model, eleclyte_current_model)
 
         "-----------------------------------------------------------------------------"
         "Post-process"
+
         # Exchange-current density
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
@@ -107,37 +103,21 @@ class NewmanTiedemannCapacitance(pybamm.LeadAcidBaseModel):
         eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
         self.variables.update({**ocp_vars, **eta_r_vars})
 
-        # Post-process electrolyte model
-        i_e_n = self.variables["Negative electrolyte current density"]
-        i_e_p = self.variables["Positive electrolyte current density"]
-        eleclyte_variables = eleclyte_current_model_p.get_post_processed(
-            delta_phi_n, delta_phi_p, i_e_n, i_e_p, c_e, eps
-        )
-        self.variables.update(eleclyte_variables)
-
-        # Voltage
-        phi_e = self.variables["Electrolyte potential"]
-        phi_e_n, _, phi_e_p = phi_e.orphans
-        phi_s_n = delta_phi_n + phi_e_n
-        phi_s_p = delta_phi_p + phi_e_p
-        i_cell = param.current_with_time
-        i_s_n = i_cell - i_e_n
-        i_s_p = i_cell - i_e_p
-        electrode_current_model = pybamm.electrode.Ohm(param)
-        vol_vars = electrode_current_model.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p)
-        self.variables.update(vol_vars)
-
         # Rough voltage cut-off
         voltage = pybamm.BoundaryValue(delta_phi_p, "right") - pybamm.BoundaryValue(
             delta_phi_n, "left"
         )
         self.events.append(voltage - param.voltage_low_cut)
 
-        "-----------------------------------------------------------------------------"
-        "Extra settings"
-
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
         # Different solver depending on whether we solve ODEs or DAEs
-        if use_capacitance:
-            self.default_solver = pybamm.ScikitsOdeSolver()
+        if self._use_capacitance:
+            default_solver = pybamm.ScikitsOdeSolver()
         else:
-            self.default_solver = pybamm.ScikitsDaeSolver()
+            default_solver = pybamm.ScikitsDaeSolver()
+
+        return default_solver

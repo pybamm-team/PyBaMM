@@ -38,6 +38,8 @@ class ParameterValues(dict):
         # doing parameter studies
         self.update(optional_parameters)
 
+        self._processed_symbols = {}
+
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
 
@@ -56,6 +58,12 @@ class ParameterValues(dict):
         # Drop rows that are all NaN (seems to not work with skip_blank_lines)
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
+
+    def update(self, values):
+        for k, v in values.items():
+            self[k] = v
+        # reset processed symbols
+        self._processed_symbols = {}
 
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.
@@ -152,6 +160,7 @@ class ParameterValues(dict):
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
+        If a symbol has already been processed, the stored value is returned.
 
         Parameters
         ----------
@@ -165,6 +174,15 @@ class ParameterValues(dict):
 
         """
         pybamm.logger.debug("Set parameters for {!s}".format(symbol))
+        try:
+            return self._processed_symbols[symbol.id]
+        except KeyError:
+            processed_symbol = self._process_symbol(symbol)
+            self._processed_symbols[symbol.id] = processed_symbol
+            return processed_symbol
+
+    def _process_symbol(self, symbol):
+        """ See :meth:`ParameterValues.process_symbol()`. """
 
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
@@ -190,17 +208,16 @@ class ParameterValues(dict):
                 return function.diff(new_diff_variable)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
-            left, right = symbol.children
             # process children
-            new_left = self.process_symbol(left)
-            new_right = self.process_symbol(right)
+            new_left = self.process_symbol(symbol.left)
+            new_right = self.process_symbol(symbol.right)
             # make new symbol, ensure domain remains the same
             new_symbol = symbol.__class__(new_left, new_right)
             new_symbol.domain = symbol.domain
             return new_symbol
 
         elif isinstance(symbol, pybamm.UnaryOperator):
-            new_child = self.process_symbol(symbol.children[0])
+            new_child = self.process_symbol(symbol.child)
             if isinstance(symbol, pybamm.Broadcast):
                 new_symbol = pybamm.Broadcast(new_child, symbol.domain)
             elif isinstance(symbol, pybamm.Function):
@@ -228,31 +245,16 @@ class ParameterValues(dict):
                 # Concatenation or NumpyConcatenation
                 return symbol.__class__(*new_children)
 
-        # Other cases: return new variable to avoid tree internal corruption
-        elif isinstance(symbol, pybamm.Variable):
-            return pybamm.Variable(symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Scalar):
-            return pybamm.Scalar(symbol.value, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Array):
-            return symbol.__class__(
-                symbol.entries, symbol.name, symbol.domain, symbol.entries_string
-            )
-
-        elif isinstance(symbol, pybamm.SpatialVariable):
-            return pybamm.SpatialVariable(symbol.name, symbol.domain, symbol.coord_sys)
-
-        elif isinstance(symbol, pybamm.StateVector):
-            return symbol.__class__(symbol.y_slice, symbol.name, symbol.domain)
-
-        elif isinstance(symbol, pybamm.Time):
-            return pybamm.Time()
-
         else:
-            raise NotImplementedError(
-                "Cannot process parameters for symbol of type '{}'".format(type(symbol))
-            )
+            # Backup option: return new copy of the object
+            try:
+                return symbol.new_copy()
+            except NotImplementedError:
+                raise NotImplementedError(
+                    "Cannot process parameters for symbol of type '{}'".format(
+                        type(symbol)
+                    )
+                )
 
     def update_scalars(self, symbol):
         """Update the value of any Scalars in the expression tree.

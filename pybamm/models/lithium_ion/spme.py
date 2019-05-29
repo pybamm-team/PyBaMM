@@ -101,7 +101,10 @@ class SPMe(pybamm.LithiumIonBaseModel):
         )
         self.variables.update(electrode_vars)
 
-        "-----------------------------------------------------------------------------"
-        "Defaults and Solver Conditions"
-        # default geometry
-        self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
+        self.events.append(voltage - param.voltage_low_cut)
+
+    @property
+    def default_geometry(self):
+        return pybamm.Geometry("1D macro", "1D micro")
