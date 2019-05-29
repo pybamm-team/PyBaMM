@@ -21,7 +21,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.name = "LOQS model"
 
         self.set_model_variables()
-        self.set_boundary_conditions()
         self.set_interface_and_electrolyte_submodels()
         self.set_porosity_submodel()
         self.set_diffusion_submodel()
@@ -193,8 +192,9 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # Cut-off voltage
         # Hack to extract voltage at the tabs in 2D
         voltage = self.variables["Terminal voltage"]
-        voltage.domain = self.variables["Electrolyte concentration"].domain
-        voltage = pybamm.boundary_value(voltage, "right")
+        if self.options["bc_options"]["dimensionality"] == 1:
+            voltage.domain = "current collector"
+            voltage = pybamm.boundary_value(voltage, "right")
         self.events.append(voltage - param.voltage_low_cut)
 
     @property
