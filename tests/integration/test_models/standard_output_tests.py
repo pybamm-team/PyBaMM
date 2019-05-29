@@ -47,6 +47,9 @@ class StandardOutputTests(object):
         if self.chemistry == "Lithium-ion":
             self.run_test_class(ParticleConcentrationTests)
 
+        if self.model.options["convection"] is not False:
+            self.run_test_class(VelocityTests)
+
 
 class BaseOutputTest(object):
     def __init__(self, model, param, disc, solver, operating_condition):
@@ -490,3 +493,25 @@ class CurrentTests(BaseOutputTest):
         # current density will be affected slightly by capacitance effects
         if self.model.options["capacitance"] != "differential":
             self.test_interfacial_current_average()
+
+
+class VelocityTests(BaseOutputTest):
+    def __init__(self, model, param, disc, solver, operating_condition):
+        super().__init__(model, param, disc, solver, operating_condition)
+
+        self.v_box = self.get_var("Volume-averaged velocity")
+        self.i_e = self.get_var("Electrolyte current density")
+
+    def test_velocity_boundaries(self):
+        """Test the boundary values of the current densities"""
+        np.testing.assert_array_equal(self.v_box(self.t, 0), 0)
+
+    def test_velocity_vs_current(self):
+        """Test the boundary values of the current densities"""
+        t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
+        np.testing.assert_array_equal(self.v_box(t, x_n), beta_n * self.i_e(t, x_n))
+        np.testing.assert_array_equal(self.v_box(t, x_p), beta_p * self.i_e(t, x_p))
+
+    def test_all(self):
+        self.test_velocity_boundaries()
+        self.test_velocity_vs_current()
