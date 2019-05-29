@@ -20,133 +20,21 @@ class LOQS(pybamm.LeadAcidBaseModel):
         super().__init__(options)
         self.name = "LOQS model"
 
-        "-----------------------------------------------------------------------------"
-        "Parameters"
-        param = self.set_of_parameters
-        i_boundary_cc = param.current_with_time
-
-        "-----------------------------------------------------------------------------"
-        "Model Variables"
-
         self.set_model_variables()
-        c_e = self.variables["Electrolyte concentration"]
+        self.set_interface_and_electrolyte_submodels()
+        self.set_porosity_submodel()
+        self.set_diffusion_submodel()
+        self.set_current_variables()
+        self.set_convection_variables()
 
-        "-----------------------------------------------------------------------------"
-        "Model for current"
-
-        # Exchange-current density
-        neg = ["negative electrode"]
-        pos = ["positive electrode"]
-        int_curr_model = pybamm.interface.LeadAcidReaction(param)
-        j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
-        j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)
-
-        # Open-circuit potential
-        ocp_n = param.U_n(c_e)
-        ocp_p = param.U_p(c_e)
-
-        if self.options["capacitance"] is not False:
-            delta_phi_n = self.variables[
-                "Negative electrode surface potential difference"
-            ]
-            delta_phi_p = self.variables[
-                "Positive electrode surface potential difference"
-            ]
-            self.set_boundary_conditions(self.variables)
-            i_boundary_cc = self.variables["Current collector current density"]
-
-            # Reaction overpotential
-            eta_r_n = delta_phi_n - ocp_n
-            eta_r_p = delta_phi_p - ocp_p
-
-            # Interfacial current density
-            j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
-            j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, pos)
-
-            # Porosity
-            self.set_porosity_model(j_n, j_p)
-
-            # Electrolyte current
-            eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
-                param, self.options["capacitance"]
-            )
-            eleclyte_current_model.set_leading_order_system(
-                self.variables, self.reactions, neg
-            )
-            eleclyte_current_model.set_leading_order_system(
-                self.variables, self.reactions, pos
-            )
-            self.update(eleclyte_current_model)
-
-        else:
-            i_boundary_cc = param.current_with_time
-            self.variables["Current collector current density"] = i_boundary_cc
-
-            # Interfacial current density
-            j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
-            j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
-
-            # Porosity
-            self.set_porosity_model(j_n, j_p)
-
-            # Potentials
-            eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
-            eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
-
-            eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
-                param
-            )
-
-        eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        eleclyte_conc_model.set_leading_order_system(self.variables, self.reactions)
-
-        self.update(eleclyte_conc_model)
-
-        "-----------------------------------------------------------------------------"
-        "Post-Processing"
-
-        # Exchange-current density
-        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
-        self.variables.update(j_vars)
-
-        # Potentials
-        pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
-
-        # Electrolyte current
-        elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
-        self.variables.update(elyte_vars)
-
-        # Electrode
-        electrode_model = pybamm.electrode.Ohm(param)
-        electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
-        self.variables.update(electrode_vars)
-
-        # Convection
-        if self.options["convection"] is not False:
-            velocity_model = pybamm.velocity.Velocity(param)
-            velocity_vars = velocity_model.get_explicit_leading_order(self.reactions)
-            self.variables.update(velocity_vars)
-
-        # Cut-off voltage
-        # Hack to extract voltage at the tabs in 2D
-        voltage = self.variables["Terminal voltage"]
-        voltage.domain = c_e.domain
-        voltage = pybamm.boundary_value(voltage, "right")
-        self.events.append(voltage - param.voltage_low_cut)
-
-        "-----------------------------------------------------------------------------"
-        "Settings"
         # ODEs only (don't use jacobian, use base spatial method)
         self.use_jacobian = False
 
     def set_model_variables(self):
         "Set variables for the model"
-        if self.options["bc_options"]["dimensionality"] == 1:
+        if self.options["bc_options"]["dimensionality"] == 0:
             curr_coll_domain = []
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["bc_options"]["dimensionality"] == 1:
             curr_coll_domain = ["current collector"]
 
         c_e = pybamm.Variable("Electrolyte concentration", curr_coll_domain)
@@ -183,33 +71,138 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # TODO: edit to allow constant-current and constant-power control
         param = self.set_of_parameters
         dimensionality = self.options["bc_options"]["dimensionality"]
-        if dimensionality == 1:
+        if dimensionality == 0:
             current_bc = param.current_with_time
             self.variables["Current collector current density"] = current_bc
-        elif dimensionality == 2:
+        elif dimensionality == 1:
             current_collector_model = pybamm.vertical.Vertical(param)
             current_collector_model.set_leading_order_vertical_current(bc_variables)
             self.update(current_collector_model)
 
-    def set_porosity_model(self, j_n, j_p):
+    def set_interface_and_electrolyte_submodels(self):
+        param = self.set_of_parameters
+        c_e = self.variables["Electrolyte concentration"]
+        # Exchange-current density
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        int_curr_model = pybamm.interface.LeadAcidReaction(param)
+        j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
+        j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)
+
+        # Open-circuit potential
+        ocp_n = param.U_n(c_e)
+        ocp_p = param.U_p(c_e)
+
+        if self.options["capacitance"] is not False:
+            delta_phi_n = self.variables[
+                "Negative electrode surface potential difference"
+            ]
+            delta_phi_p = self.variables[
+                "Positive electrode surface potential difference"
+            ]
+            self.set_boundary_conditions(self.variables)
+
+            # Reaction overpotential
+            eta_r_n = delta_phi_n - ocp_n
+            eta_r_p = delta_phi_p - ocp_p
+
+            # Interfacial current density
+            j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
+            j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, pos)
+            self.reactions = {
+                "main": {
+                    "neg": {"s_plus": param.s_n, "aj": j_n},
+                    "pos": {"s_plus": param.s_p, "aj": j_p},
+                }
+            }
+
+            # Electrolyte current
+            eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
+                param, self.options["capacitance"]
+            )
+            eleclyte_current_model.set_leading_order_system(
+                self.variables, self.reactions, neg
+            )
+            eleclyte_current_model.set_leading_order_system(
+                self.variables, self.reactions, pos
+            )
+            self.update(eleclyte_current_model)
+
+        else:
+            i_boundary_cc = param.current_with_time
+            self.variables["Current collector current density"] = i_boundary_cc
+
+            # Interfacial current density
+            j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
+            j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
+            self.reactions = {
+                "main": {
+                    "neg": {"s_plus": param.s_n, "aj": j_n},
+                    "pos": {"s_plus": param.s_p, "aj": j_p},
+                }
+            }
+
+            # Potentials
+            eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
+            eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
+
+        # Exchange-current density
+        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
+
+        # Potentials
+        pot_model = pybamm.potential.Potential(param)
+        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
+        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
+        self.variables.update({**ocp_vars, **eta_r_vars})
+
+    def set_porosity_submodel(self):
         " Set model for porosity"
-        # Porosity
         param = self.set_of_parameters
         porosity_model = pybamm.porosity.Standard(param)
-        epsilon = self.variables["Porosity"]
-        porosity_model.set_leading_order_system(epsilon, j_n, j_p)
+        porosity_model.set_leading_order_system(self.variables)
         self.update(porosity_model)
 
-        # Electrolyte concentration
-        por_vars = porosity_model.variables
-        deps_n_dt = por_vars["Negative electrode porosity change"].orphans[0]
-        deps_p_dt = por_vars["Positive electrode porosity change"].orphans[0]
-        self.reactions = {
-            "main": {
-                "neg": {"s_plus": param.s_n, "aj": j_n, "deps_dt": deps_n_dt},
-                "pos": {"s_plus": param.s_p, "aj": j_p, "deps_dt": deps_p_dt},
-            }
-        }
+        # Update reactions
+        deps_n_dt = self.variables["Negative electrode porosity change"].orphans[0]
+        deps_p_dt = self.variables["Positive electrode porosity change"].orphans[0]
+        self.reactions["main"]["neg"]["deps_dt"] = deps_n_dt
+        self.reactions["main"]["pos"]["deps_dt"] = deps_p_dt
+
+    def set_diffusion_submodel(self):
+        param = self.set_of_parameters
+        eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        eleclyte_conc_model.set_leading_order_system(self.variables, self.reactions)
+        self.update(eleclyte_conc_model)
+
+    def set_current_variables(self):
+        param = self.set_of_parameters
+
+        elyte_postproc_model = pybamm.electrolyte_current.ElectrolyteCurrentBaseModel(
+            param
+        )
+        # Electrolyte current
+        elyte_vars = elyte_postproc_model.get_explicit_leading_order(self.variables)
+        self.variables.update(elyte_vars)
+
+        # Electrode
+        electrode_model = pybamm.electrode.Ohm(param)
+        electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
+        self.variables.update(electrode_vars)
+
+        # Cut-off voltage
+        # Hack to extract voltage at the tabs in 2D
+        voltage = self.variables["Terminal voltage"]
+        if self.options["bc_options"]["dimensionality"] == 1:
+            voltage.domain = "current collector"
+            voltage = pybamm.boundary_value(voltage, "right")
+        self.events.append(voltage - param.voltage_low_cut)
+
+    def set_convection_variables(self):
+        if self.options["convection"] is not False:
+            velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
+            velocity_vars = velocity_model.get_explicit_leading_order(self.reactions)
+            self.variables.update(velocity_vars)
 
     @property
     def default_spatial_methods(self):
@@ -221,9 +214,9 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
     @property
     def default_geometry(self):
-        if self.options["bc_options"]["dimensionality"] == 1:
+        if self.options["bc_options"]["dimensionality"] == 0:
             return pybamm.Geometry("1D macro")
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["bc_options"]["dimensionality"] == 1:
             return pybamm.Geometry("1+1D macro")
 
     @property

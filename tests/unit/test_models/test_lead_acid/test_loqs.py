@@ -25,7 +25,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         self.assertTrue("negative particle" not in model.default_geometry)
 
     def test_incompatible_options(self):
-        options = {"bc_options": {"dimensionality": 2}}
+        options = {"bc_options": {"dimensionality": 1}}
         with self.assertRaises(pybamm.ModelError):
             pybamm.lead_acid.LOQS(options)
 
@@ -42,7 +42,7 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_1plus1D(self):
-        options = {"capacitance": "differential", "bc_options": {"dimensionality": 2}}
+        options = {"capacitance": "differential", "bc_options": {"dimensionality": 1}}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
@@ -58,7 +58,7 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
         options = {"capacitance": "differential"}
         model = pybamm.lead_acid.LOQS(options)
         self.assertNotIn("current collector", model.default_geometry)
-        options["bc_options"] = {"dimensionality": 2}
+        options["bc_options"] = {"dimensionality": 1}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIn("current collector", model.default_geometry)
 
