@@ -40,7 +40,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(param["Negative electrode width [m]"], 0.5)
 
     def test_process_symbol(self):
-        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2})
+        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
         # process parameter
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
@@ -49,13 +49,13 @@ class TestParameterValues(unittest.TestCase):
 
         # process binary operation
         b = pybamm.Parameter("b")
-        sum = a + b
-        processed_sum = parameter_values.process_symbol(sum)
-        self.assertIsInstance(processed_sum, pybamm.Addition)
-        self.assertIsInstance(processed_sum.children[0], pybamm.Scalar)
-        self.assertIsInstance(processed_sum.children[1], pybamm.Scalar)
-        self.assertEqual(processed_sum.children[0].value, 1)
-        self.assertEqual(processed_sum.children[1].value, 2)
+        add = a + b
+        processed_add = parameter_values.process_symbol(add)
+        self.assertIsInstance(processed_add, pybamm.Addition)
+        self.assertIsInstance(processed_add.children[0], pybamm.Scalar)
+        self.assertIsInstance(processed_add.children[1], pybamm.Scalar)
+        self.assertEqual(processed_add.children[0].value, 1)
+        self.assertEqual(processed_add.children[1].value, 2)
 
         scal = pybamm.Scalar(34)
         mul = a * scal
@@ -130,6 +130,12 @@ class TestParameterValues(unittest.TestCase):
         np.testing.assert_array_equal(
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
+
+        # process outer
+        c = pybamm.Parameter("c", domain="current collector")
+        outer = pybamm.Outer(c, b)
+        processed_outer = parameter_values.process_symbol(outer)
+        self.assertIsInstance(processed_outer, pybamm.Outer)
 
         # not implemented
         sym = pybamm.Symbol("sym")

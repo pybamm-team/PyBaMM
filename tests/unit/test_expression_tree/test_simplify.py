@@ -487,6 +487,13 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(conc_simp.y_slice.stop, len(y))
         np.testing.assert_array_equal(conc_disc.evaluate(y=y), conc_simp.evaluate(y=y))
 
+    def test_simplify_outer(self):
+        v = pybamm.Vector(np.ones(5), domain="current collector")
+        w = pybamm.Vector(2 * np.ones(3), domain="test")
+        outer_simp = pybamm.Outer(v, w).simplify()
+        self.assertIsInstance(outer_simp, pybamm.Vector)
+        np.testing.assert_array_equal(outer_simp.evaluate(), 2 * np.ones((15, 1)))
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

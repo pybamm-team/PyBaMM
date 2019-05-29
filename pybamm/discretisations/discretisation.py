@@ -363,7 +363,6 @@ class Discretisation(object):
             Discretised symbol
 
         """
-        pybamm.logger.debug("Discretise {!s}".format(symbol))
         try:
             return self._discretised_symbols[symbol.id]
         except KeyError:
@@ -567,8 +566,8 @@ class Discretisation(object):
     def check_variables(self, model):
         """
         Check variables in variable list against rhs
-        Be lenient with size check if the variable in model.variables is
-        broadcasted, or a concatenation, or an outer product
+        Be lenient with size check if the variable in model.variables is broadcasted, or
+        a concatenation, or an outer product
         (if broadcasted, variable is a multiplication with a vector of ones)
         """
         y0 = model.concatenated_initial_conditions

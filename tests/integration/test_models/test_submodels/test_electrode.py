@@ -59,6 +59,7 @@ class TestOhm(unittest.TestCase):
 
     def test_explicit(self):
         param = pybamm.standard_parameters_lithium_ion
+        i_boundary_cc = param.current_with_time
 
         # Set up
         phi_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
@@ -71,7 +72,9 @@ class TestOhm(unittest.TestCase):
 
         # Model
         model = pybamm.electrode.Ohm(param)
-        leading_order_vars = model.get_explicit_leading_order(ocp_p, eta_r_p, phi_e)
+        leading_order_vars = model.get_explicit_leading_order(
+            ocp_p, eta_r_p, phi_e, i_boundary_cc
+        )
         phi_s_n = model.get_neg_pot_explicit_combined()
         combined_vars = model.get_explicit_combined(phi_s_n, phi_e, ocp_p, eta_r_p)
 

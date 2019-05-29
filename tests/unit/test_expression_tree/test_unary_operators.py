@@ -225,6 +225,10 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertEqual(av_a.children[0].integration_variable.domain, x.domain)
             self.assertEqual(av_a.domain, [])
 
+        a = pybamm.Symbol("a", domain="bad domain")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.average(a)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

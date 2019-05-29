@@ -13,15 +13,30 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lead_acid.LOQSCapacitance()
         modeltest = tests.StandardModelTest(model)
-
         modeltest.test_all()
 
     @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
     def test_basic_processing_no_capacitance(self):
         model = pybamm.lead_acid.LOQSCapacitance(use_capacitance=False)
         modeltest = tests.StandardModelTest(model)
-
         modeltest.test_all()
+
+    def test_basic_processing_1p1D(self):
+        bc_options = {"dimensionality": 2}
+        # pybamm.set_logging_level("DEBUG")
+        model = pybamm.lead_acid.LOQSCapacitance(bc_options=bc_options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all(skip_output_tests=True)
+
+    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+    def test_basic_processing_1p1D_no_capacitance(self):
+        bc_options = {"dimensionality": 2}
+        # pybamm.set_logging_level("DEBUG")
+        model = pybamm.lead_acid.LOQSCapacitance(
+            use_capacitance=False, bc_options=bc_options
+        )
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
         model = pybamm.lead_acid.LOQSCapacitance()

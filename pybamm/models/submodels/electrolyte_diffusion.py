@@ -117,7 +117,7 @@ class StefanMaxwell(pybamm.SubModel):
 
         # Cut off if concentration goes too small
         # (open-circuit potential poorly defined)
-        self.events = [c_e - 0.002]
+        self.events = [pybamm.Function(np.min, c_e) - 0.002]
 
     def get_variables(self, c_e, N_e):
         """

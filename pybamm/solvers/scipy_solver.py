@@ -20,16 +20,7 @@ class ScipySolver(pybamm.OdeSolver):
     """
 
     def __init__(self, method="BDF", tol=1e-8):
-        super().__init__(tol)
-        self.method = method
-
-    @property
-    def method(self):
-        return self._method
-
-    @method.setter
-    def method(self, value):
-        self._method = value
+        super().__init__(method, tol)
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None

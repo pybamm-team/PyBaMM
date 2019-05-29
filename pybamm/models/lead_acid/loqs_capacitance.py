@@ -24,21 +24,48 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
     **Extends**: :class:`pybamm.LeadAcidBaseModel`
     """
 
-    def __init__(self, use_capacitance=True):
+    def __init__(self, use_capacitance=True, bc_options=None):
         super().__init__()
         self._use_capacitance = use_capacitance
+        self._bc_options = bc_options or self.default_bc_options
 
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lead_acid
+        self._set_of_parameters = param
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
 
-        c_e = pybamm.Variable("Electrolyte concentration")
-        delta_phi_n = pybamm.Variable("Negative electrode surface potential difference")
-        delta_phi_p = pybamm.Variable("Positive electrode surface potential difference")
-        epsilon = pybamm.standard_variables.eps_piecewise_constant
+        if self.bc_options["dimensionality"] == 1:
+            domain = []
+        elif self.bc_options["dimensionality"] == 2:
+            domain = ["current collector"]
+
+        c_e = pybamm.Variable("Electrolyte concentration", domain)
+        delta_phi_n = pybamm.Variable(
+            "Negative electrode surface potential difference", domain
+        )
+        delta_phi_p = pybamm.Variable(
+            "Positive electrode surface potential difference", domain
+        )
+
+        # Piecewise constant epsilon
+        eps_n_pc = pybamm.Variable("Negative electrode porosity", domain)
+        eps_s_pc = pybamm.Variable("Separator porosity", domain)
+        eps_p_pc = pybamm.Variable("Positive electrode porosity", domain)
+
+        epsilon = pybamm.Concatenation(
+            pybamm.Broadcast(eps_n_pc, ["negative electrode"]),
+            pybamm.Broadcast(eps_s_pc, ["separator"]),
+            pybamm.Broadcast(eps_p_pc, ["positive electrode"]),
+        )
+
+        "-----------------------------------------------------------------------------"
+        "Boundary conditions"
+        bc_variables = {"delta_phi_n": delta_phi_n, "delta_phi_p": delta_phi_p}
+        self.set_boundary_conditions(bc_variables)
+        i_boundary_cc = self.variables["Current collector current"]
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -78,20 +105,16 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         eleclyte_conc_model.set_leading_order_system(c_e, reactions, epsilon=epsilon)
 
         # Electrolyte current
-        eleclyte_current_model_n = pybamm.electrolyte_current.MacInnesCapacitance(
+        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
             param, use_capacitance
         )
-        eleclyte_current_model_n.set_leading_order_system(delta_phi_n, reactions, neg)
-        eleclyte_current_model_p = pybamm.electrolyte_current.MacInnesCapacitance(
-            param, use_capacitance
+        eleclyte_current_model.set_leading_order_system(
+            delta_phi_n, reactions, neg, i_boundary_cc
         )
-        eleclyte_current_model_p.set_leading_order_system(delta_phi_p, reactions, pos)
-        self.update(
-            porosity_model,
-            eleclyte_conc_model,
-            eleclyte_current_model_n,
-            eleclyte_current_model_p,
+        eleclyte_current_model.set_leading_order_system(
+            delta_phi_p, reactions, pos, i_boundary_cc
         )
+        self.update(porosity_model, eleclyte_conc_model, eleclyte_current_model)
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"
@@ -107,8 +130,8 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
         # Electrolyte: post-process
-        electrolyte_vars = eleclyte_current_model_p.get_explicit_leading_order(
-            ocp_n, eta_r_n
+        electrolyte_vars = eleclyte_current_model.get_explicit_leading_order(
+            ocp_n, eta_r_n, i_boundary_cc
         )
         self.variables.update(electrolyte_vars)
 
@@ -116,12 +139,12 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         electrode_model = pybamm.electrode.Ohm(param)
         phi_e = self.variables["Electrolyte potential"]
         electrode_vars = electrode_model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e
+            ocp_p, eta_r_p, phi_e, i_boundary_cc
         )
         self.variables.update(electrode_vars)
 
         # Add cut-off voltage, using potential differences for quicker evaluation
-        voltage = delta_phi_p - delta_phi_n
+        voltage = pybamm.boundary_value(delta_phi_p - delta_phi_n, "right")
         self.events.append(voltage - param.voltage_low_cut)
 
         "-----------------------------------------------------------------------------"
@@ -131,14 +154,36 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         self.use_jacobian = False
 
     @property
+    def default_geometry(self):
+        if self.bc_options["dimensionality"] == 1:
+            return pybamm.Geometry("1D macro")
+        elif self.bc_options["dimensionality"] == 2:
+            return pybamm.Geometry("1+1D macro")
+
+    @property
     def default_solver(self):
         """
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self._use_capacitance:
-            default_solver = pybamm.ScikitsOdeSolver()
+        if self._use_capacitance is False:
+            return pybamm.ScikitsDaeSolver()
         else:
-            default_solver = pybamm.ScikitsDaeSolver()
+            return pybamm.ScikitsOdeSolver()
 
-        return default_solver
+    def set_boundary_conditions(self, bc_variables=None):
+        """Get boundary conditions"""
+        # TODO: edit to allow constant-current and constant-power control
+        param = self.set_of_parameters
+        dimensionality = self.bc_options["dimensionality"]
+        if dimensionality == 1:
+            current_bc = param.current_with_time
+            self.variables.update({"Current collector current": current_bc})
+        elif dimensionality == 2:
+            delta_phi_n = bc_variables["delta_phi_n"]
+            delta_phi_p = bc_variables["delta_phi_p"]
+            current_collector_model = pybamm.vertical.Vertical(param)
+            current_collector_model.set_leading_order_vertical_current(
+                delta_phi_n, delta_phi_p
+            )
+            self.update(current_collector_model)

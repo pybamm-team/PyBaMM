@@ -35,9 +35,9 @@ class Potential(pybamm.SubModel):
         param = self.set_of_parameters
 
         # Broadcast if necessary
-        if ocp_n.domain == [[], ["current collector"]]:
+        if ocp_n.domain in [[], ["current collector"]]:
             ocp_n = pybamm.Broadcast(ocp_n, ["negative electrode"])
-        if ocp_p.domain == [[], ["current collector"]]:
+        if ocp_p.domain in [[], ["current collector"]]:
             ocp_p = pybamm.Broadcast(ocp_p, ["positive electrode"])
 
         # Dimensionless
@@ -89,9 +89,9 @@ class Potential(pybamm.SubModel):
         param = self.set_of_parameters
 
         # Broadcast if necessary
-        if eta_r_n.domain == [[], ["current collector"]]:
+        if eta_r_n.domain in [[], ["current collector"]]:
             eta_r_n = pybamm.Broadcast(eta_r_n, ["negative electrode"])
-        if eta_r_p.domain == [[], ["current collector"]]:
+        if eta_r_p.domain in [[], ["current collector"]]:
             eta_r_p = pybamm.Broadcast(eta_r_p, ["positive electrode"])
 
         # Derived and dimensional reaction overpotentials

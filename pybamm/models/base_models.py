@@ -74,7 +74,9 @@ class BaseModel(object):
 
         if not all(
             [
-                variable.domain == equation.domain or equation.domain == []
+                variable.domain == equation.domain
+                or variable.domain == []
+                or equation.domain == []
                 for variable, equation in dict.items()
             ]
         ):
@@ -337,10 +339,12 @@ class BaseModel(object):
 
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_spatial_derivatives():
+            if eqn.has_symbol_of_class((pybamm.Gradient, pybamm.Divergence)):
                 # Variable must be in the boundary conditions
                 if not any(
-                    var.id == symbol.id for symbol in self.boundary_conditions.keys()
+                    var.id == x.id
+                    for symbol in self.boundary_conditions.keys()
+                    for x in symbol.pre_order()
                 ):
                     raise pybamm.ModelError(
                         """

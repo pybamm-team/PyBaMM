@@ -499,7 +499,8 @@ class Outer(BinaryOperator):
     of size (nm,1).
     Note: this class might be a bit dangerous, so at the moment it is very restrictive
     in what symbols can be passed to it
-     **Extends:** :class:`BinaryOperator`
+
+    **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
@@ -543,6 +544,7 @@ class Outer(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
 
         return pybamm.simplify_if_constant(self)
+
 
 def outer(left, right):
     """
