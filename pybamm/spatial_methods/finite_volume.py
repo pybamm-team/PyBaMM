@@ -574,9 +574,45 @@ class FiniteVolume(pybamm.SpatialMethod):
         self.test_shape(out)
         return out
 
+    def concatenation(self, disc_children):
+        """Discrete concatenation, taking `edge_to_node` for children that evaluate on
+        edges.
+        See :meth:`pybamm.SpatialMethod.concatenation`
+        """
+        for idx, child in enumerate(disc_children):
+            n = self.mesh.combine_submeshes(*child.domain)[0].npts
+            child_size = child.size
+            if child_size != n:
+                # Average any children that evaluate on the edges (size n+1) to
+                # evaluate on nodes instead, so that concatenation works properly
+                if child_size == n + 1:
+                    disc_children[idx] = self.edge_to_node(child)
+                else:
+                    raise pybamm.ShapeError(
+                        """
+                        child must have same size n or n+1, where n is the submesh size
+                        """
+                    )
+        return pybamm.DomainConcatenation(disc_children, self.mesh)
+
+    def edge_to_node(self, discretised_symbol):
+        """
+        Compute the diffusivity at cell nodes, based on the diffusivity at cell edges.
+        See :meth:`pybamm.FiniteVolume.shift`
+        """
+        return self.shift(discretised_symbol, "edge to node")
+
     def node_to_edge(self, discretised_symbol):
         """
         Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
+        See :meth:`pybamm.FiniteVolume.shift`
+        """
+        return self.shift(discretised_symbol, "node to edge")
+
+    def shift(self, discretised_symbol, shift_key):
+        """
+        Compute the diffusivity at cell edges/nodes, based on the diffusivity at cell
+        nodes/edges.
         For now we just take the arithemtic mean, though it may be better to take the
         harmonic mean based on [1].
 
@@ -587,18 +623,22 @@ class FiniteVolume(pybamm.SpatialMethod):
         ----------
         discretised_symbol : :class:`pybamm.Symbol`
             Symbol to be averaged. When evaluated, this symbol returns either a scalar
-            or an array of shape (n,), where n is the number of points in the mesh for
-            the symbol's domain (n = self.mesh[symbol.domain].npts)
+            or an array of shape (n,) or (n+1,), where n is the number of points in the
+            mesh for the symbol's domain (n = self.mesh[symbol.domain].npts)
+        shift_key : str
+            Whether to shift from nodes to edges ("node to edge"), or from edges to
+            nodes ("edge to node")
 
         Returns
         -------
-        :class:`pybamm.Function`
+        :class:`pybamm.Symbol`
             Averaged symbol. When evaluated, this returns either a scalar or an array of
-            shape (n+1,) as appropriate.
+            shape (n+1,) (if `shift_key = "node to edge"`) or (n,) (if
+            `shift_key = "edge to node"`)
         """
 
         def arithmetic_mean(array):
-            """Calculate the arithemetic mean of an array using matrix multiplication"""
+            """Calculate the arithmetic mean of an array using matrix multiplication"""
             # Create appropriate submesh by combining submeshes in domain
             submesh_list = self.mesh.combine_submeshes(*array.domain)
 
@@ -608,13 +648,21 @@ class FiniteVolume(pybamm.SpatialMethod):
             # Create 1D matrix using submesh
             n = submesh.npts
 
-            sub_matrix_left = csr_matrix(([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n))
             sub_matrix_center = diags([0.5, 0.5], [0, 1], shape=(n - 1, n))
-            sub_matrix_right = csr_matrix(
-                ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
-            )
-            sub_matrix = vstack([sub_matrix_left, sub_matrix_center, sub_matrix_right])
-
+            if shift_key == "node to edge":
+                sub_matrix_left = csr_matrix(
+                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
+                )
+                sub_matrix_right = csr_matrix(
+                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
+                )
+                sub_matrix = vstack(
+                    [sub_matrix_left, sub_matrix_center, sub_matrix_right]
+                )
+            elif shift_key == "edge to node":
+                sub_matrix = sub_matrix_center
+            else:
+                raise ValueError("shift key '{}' not recognised".format(shift_key))
             # Second dimension length
             second_dim_len = len(submesh_list)
 

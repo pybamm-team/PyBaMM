@@ -267,6 +267,21 @@ class SpatialMethod:
         """
         return bin_op.__class__(disc_left, disc_right)
 
+    def concatenation(self, disc_children):
+        """Discrete concatenation object.
+
+        Parameters
+        ----------
+        disc_children : list
+            List of discretised children
+
+        Returns
+        -------
+        :class:`pybamm.DomainConcatenation`
+            Concatenation of the discretised children
+        """
+        return pybamm.DomainConcatenation(disc_children, self.mesh)
+
     @staticmethod
     def test_shape(symbol):
         """
