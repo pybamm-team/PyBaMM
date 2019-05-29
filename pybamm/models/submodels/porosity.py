@@ -18,22 +18,19 @@ class Standard(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_differential_system(self, epsilon, j_n, j_p):
+    def set_differential_system(self, variables):
         """
         ODE system for the change in porosity due to reactions
 
         Parameters
         ----------
-        epsilon : :class:`pybamm.Symbol`
-            The porosity variable
-        j_n : :class:`pybamm.Symbol`
-            Interfacial current density in the negative electrode
-        j_p : :class:`pybamm.Symbol`
-            Interfacial current density in the positive electrode
+        variables : dict
+            Dictionary of symbols to use in the model
         """
+        epsilon = variables["Porosity"]
+        j = variables["Interfacial current density"]
         param = self.set_of_parameters
 
-        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
         deps_dt = -param.beta_surf * j
         self.rhs = {epsilon: deps_dt}
         self.initial_conditions = {epsilon: param.eps_init}
