@@ -19,6 +19,13 @@ class TestOhm(unittest.TestCase):
         # Variables and reactions
         phi_s_n = pybamm.standard_variables.phi_s_n
         phi_s_p = pybamm.standard_variables.phi_s_p
+        variables = {
+            "Current collector current density": param.current_with_time,
+            "Negative electrode potential": phi_s_n,
+            "Positive electrode potential": phi_s_p,
+        }
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
         onen = pybamm.Broadcast(1, ["negative electrode"])
         onep = pybamm.Broadcast(1, ["positive electrode"])
         reactions = {
@@ -28,13 +35,13 @@ class TestOhm(unittest.TestCase):
         # Set up model and test
         # Negative only
         model_n = pybamm.electrode.Ohm(param)
-        model_n.set_algebraic_system(phi_s_n, reactions)
+        model_n.set_algebraic_system(variables, reactions, neg)
         model_n_test = tests.StandardModelTest(model_n)
         model_n_test.test_all()
 
         # Positive only
         model_p = pybamm.electrode.Ohm(param)
-        model_p.set_algebraic_system(phi_s_p, reactions)
+        model_p.set_algebraic_system(variables, reactions, pos)
         # overwrite boundary conditions for purposes of the test
         model_p.boundary_conditions = {
             phi_s_p: {"left": (0, "Neumann"), "right": (0, "Dirichlet")}
@@ -44,9 +51,9 @@ class TestOhm(unittest.TestCase):
 
         # Both
         model_n = pybamm.electrode.Ohm(param)
-        model_n.set_algebraic_system(phi_s_n, reactions)
+        model_n.set_algebraic_system(variables, reactions, neg)
         model_p = pybamm.electrode.Ohm(param)
-        model_p.set_algebraic_system(phi_s_p, reactions)
+        model_p.set_algebraic_system(variables, reactions, pos)
         model_n.update(model_p)
         model_whole = model_n
         # overwrite boundary conditions for purposes of the test
@@ -59,7 +66,6 @@ class TestOhm(unittest.TestCase):
 
     def test_explicit(self):
         param = pybamm.standard_parameters_lithium_ion
-        i_boundary_cc = param.current_with_time
 
         # Set up
         phi_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
@@ -69,14 +75,19 @@ class TestOhm(unittest.TestCase):
 
         ocp_p = pybamm.Scalar(0)
         eta_r_p = pybamm.Scalar(0)
+        variables = {
+            "Current collector current density": param.current_with_time,
+            "Electrolyte potential": phi_e,
+            "Positive electrode open circuit potential": ocp_p,
+            "Positive reaction overpotential": eta_r_p,
+        }
 
         # Model
         model = pybamm.electrode.Ohm(param)
-        leading_order_vars = model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e, i_boundary_cc
-        )
-        phi_s_n = model.get_neg_pot_explicit_combined()
-        combined_vars = model.get_explicit_combined(phi_s_n, phi_e, ocp_p, eta_r_p)
+        leading_order_vars = model.get_explicit_leading_order(variables)
+        phi_s_n = model.get_neg_pot_explicit_combined(variables)
+        variables["Negative electrode potential"] = phi_s_n
+        combined_vars = model.get_explicit_combined(variables)
 
         # Get disc
         modeltest = tests.StandardModelTest(model)
@@ -153,9 +164,9 @@ class TestOhm(unittest.TestCase):
     def test_failure(self):
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.electrode.Ohm(param)
-        phi_s = pybamm.Symbol("sym", domain="test")
+        variables = {"Current collector current density": None}
         with self.assertRaises(pybamm.DomainError):
-            model.set_algebraic_system(phi_s, None)
+            model.set_algebraic_system(variables, None, "not a domain")
 
 
 if __name__ == "__main__":

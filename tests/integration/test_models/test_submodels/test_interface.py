@@ -11,9 +11,10 @@ import numpy as np
 class TestHomogeneousReaction(unittest.TestCase):
     def test_set_parameters(self):
         param = pybamm.standard_parameters_lithium_ion
+        current = param.current_with_time
         model = pybamm.interface.InterfacialCurrent(param)
-        j_n = model.get_homogeneous_interfacial_current(["negative electrode"])
-        j_p = model.get_homogeneous_interfacial_current(["positive electrode"])
+        j_n = model.get_homogeneous_interfacial_current(current, ["negative electrode"])
+        j_p = model.get_homogeneous_interfacial_current(current, ["positive electrode"])
         parameter_values = model.default_parameter_values
 
         j_n = parameter_values.process_symbol(j_n)
@@ -32,9 +33,10 @@ class TestHomogeneousReaction(unittest.TestCase):
         disc = get_discretisation_for_testing()
 
         param = pybamm.standard_parameters_lithium_ion
+        current = param.current_with_time
         model = pybamm.interface.InterfacialCurrent(param)
-        j_n = model.get_homogeneous_interfacial_current(["negative electrode"])
-        j_p = model.get_homogeneous_interfacial_current(["positive electrode"])
+        j_n = model.get_homogeneous_interfacial_current(current, ["negative electrode"])
+        j_p = model.get_homogeneous_interfacial_current(current, ["positive electrode"])
         parameter_values = model.default_parameter_values
 
         j_n = disc.process_symbol(parameter_values.process_symbol(j_n))
@@ -51,9 +53,10 @@ class TestHomogeneousReaction(unittest.TestCase):
         mesh = disc.mesh
 
         param = pybamm.standard_parameters_lithium_ion
+        current = param.current_with_time
         model = pybamm.interface.InterfacialCurrent(param)
-        j_n = model.get_homogeneous_interfacial_current(["negative electrode"])
-        j_p = model.get_homogeneous_interfacial_current(["positive electrode"])
+        j_n = model.get_homogeneous_interfacial_current(current, ["negative electrode"])
+        j_p = model.get_homogeneous_interfacial_current(current, ["positive electrode"])
         parameter_values = model.default_parameter_values
         j = pybamm.Concatenation(
             pybamm.Broadcast(j_n, ["negative electrode"]),
@@ -82,7 +85,7 @@ class TestHomogeneousReaction(unittest.TestCase):
     def test_failure(self):
         model = pybamm.interface.InterfacialCurrent(None)
         with self.assertRaises(pybamm.DomainError):
-            model.get_homogeneous_interfacial_current("not a domain")
+            model.get_homogeneous_interfacial_current(None, "not a domain")
 
 
 class TestButlerVolmer(unittest.TestCase):

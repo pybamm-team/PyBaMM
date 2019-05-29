@@ -28,8 +28,18 @@ class Vertical(pybamm.SubModel):
             scaled_cond_n + scaled_cond_p
         )
 
-    def set_leading_order_vertical_current(self, delta_phi_n, delta_phi_p):
+    def set_leading_order_vertical_current(self, bc_variables):
+        """ Set the system that gives the leading-order current in the current
+        collectors.
+
+        Parameters
+        ----------
+        bc_variables : dict of :class:`pybamm.Symbol`
+            Dictionary of variables in the current collector
+        """
         param = self.set_of_parameters
+        delta_phi_n = bc_variables["Negative electrode surface potential difference"]
+        delta_phi_p = bc_variables["Positive electrode surface potential difference"]
         delta_phi_difference = delta_phi_n - delta_phi_p
 
         # Simple model: read off vertical current (no extra equation)
@@ -44,4 +54,4 @@ class Vertical(pybamm.SubModel):
                 "right": (i_cell / self.vertical_conductivity, "Neumann"),
             }
         }
-        self.variables = {"Current collector current": i_boundary_cc}
+        self.variables = {"Current collector current density": i_boundary_cc}

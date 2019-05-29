@@ -176,10 +176,10 @@ class LOQSCapacitance(pybamm.LeadAcidBaseModel):
         # TODO: edit to allow constant-current and constant-power control
         param = self.set_of_parameters
         dimensionality = self.bc_options["dimensionality"]
-        if dimensionality == 1:
+        if dimensionality == 0:
             current_bc = param.current_with_time
             self.variables.update({"Current collector current": current_bc})
-        elif dimensionality == 2:
+        elif dimensionality == 1:
             delta_phi_n = bc_variables["delta_phi_n"]
             delta_phi_p = bc_variables["delta_phi_p"]
             current_collector_model = pybamm.vertical.Vertical(param)

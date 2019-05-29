@@ -100,22 +100,11 @@ class TestCompareOutputs(unittest.TestCase):
         full model solution
         """
         # load models
+        options = [{"capacitance": cap} for cap in [False, "differential", "algebraic"]]
         model_combos = [
-            (
-                pybamm.lead_acid.LOQS(),
-                pybamm.lead_acid.LOQSCapacitance(),
-                pybamm.lead_acid.LOQSCapacitance(use_capacitance=False),
-            ),
-            (
-                pybamm.lead_acid.Composite(),
-                pybamm.lead_acid.CompositeCapacitance(),
-                pybamm.lead_acid.CompositeCapacitance(use_capacitance=False),
-            ),
-            (
-                pybamm.lead_acid.NewmanTiedemann(),
-                pybamm.lead_acid.NewmanTiedemannCapacitance(),
-                pybamm.lead_acid.NewmanTiedemannCapacitance(use_capacitance=False),
-            ),
+            ([pybamm.lead_acid.LOQS(opt) for opt in options]),
+            ([pybamm.lead_acid.Composite(opt) for opt in options]),
+            ([pybamm.lead_acid.NewmanTiedemann(opt) for opt in options]),
         ]
 
         for models in model_combos:

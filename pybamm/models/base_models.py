@@ -59,9 +59,6 @@ class BaseModel(object):
         self.use_jacobian = True
         self.use_simplify = True
 
-        # Default behaviour: no capacitance in the model
-        self._use_capacitance = False
-
     def _set_dict(self, dict, name):
         """
         Convert any scalar equations in dict to 'pybamm.Scalar'
@@ -191,14 +188,6 @@ class BaseModel(object):
     @jacobian.setter
     def jacobian(self, jacobian):
         self._jacobian = jacobian
-
-    @property
-    def use_capacitance(self):
-        return self._use_capacitance
-
-    @property
-    def bc_options(self):
-        return self._bc_options
 
     @property
     def set_of_parameters(self):
@@ -380,8 +369,9 @@ class StandardBatteryBaseModel(BaseModel):
     **Extends:** :class:`StandardBatteryBaseModel`
     """
 
-    def __init__(self):
+    def __init__(self, options=None):
         super().__init__()
+        self._extra_options = options
         self.set_standard_output_variables()
 
     @property
@@ -472,8 +462,25 @@ class StandardBatteryBaseModel(BaseModel):
         return default_solver
 
     @property
-    def default_bc_options(self):
-        return {"dimensionality": 1}
+    def options(self):
+        default_options = {"capacitance": False, "bc_options": {"dimensionality": 0}}
+        if self._extra_options is None:
+            options = default_options
+        else:
+            # any extra options overwrite the default options
+            options = {**default_options, **self._extra_options}
+
+        # Some standard checks to make sure options are compatible
+        if (
+            isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
+            and options["capacitance"] is False
+            and options["bc_options"]["dimensionality"] == 1
+        ):
+            raise pybamm.ModelError(
+                "must use capacitance formulation to solve {!s} in 2D".format(self)
+            )
+
+        return options
 
     def set_standard_output_variables(self):
         # Standard output variables
@@ -557,9 +564,9 @@ class StandardBatteryBaseModel(BaseModel):
         # Potential
         self.variables.update(
             {
-                "Negative electrode potential [V]": None,
-                "Positive electrode potential [V]": None,
-                "Electrolyte potential [V]": None,
+                "Negative electrode potential": None,
+                "Positive electrode potential": None,
+                "Electrolyte potential": None,
             }
         )
 
@@ -610,8 +617,9 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
 
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, options=None):
+        super().__init__(options)
+        self._set_of_parameters = pybamm.standard_parameters_lead_acid
 
     @property
     def default_parameter_values(self):

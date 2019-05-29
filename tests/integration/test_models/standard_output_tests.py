@@ -478,9 +478,9 @@ class CurrentTests(BaseOutputTest):
 
         current_param = pybamm.electrical_parameters.current_with_time
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
-        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=4)
+        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=3)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[-1]), 0, decimal=4)
-        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[-1]), i_cell, decimal=4)
+        np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[-1]), i_cell, decimal=3)
         np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[0]), 0, decimal=4)
 
     def test_all(self):
@@ -488,5 +488,5 @@ class CurrentTests(BaseOutputTest):
         self.test_current_density_boundaries()
         # Skip average current test if capacitance is used, since average interfacial
         # current density will be affected slightly by capacitance effects
-        if not self.model.use_capacitance:
+        if self.model.options["capacitance"] != "differential":
             self.test_interfacial_current_average()

@@ -506,9 +506,10 @@ class Symbol(anytree.NodeMixin):
             y = None
         else:
             min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
-            y = np.ones(min_y_size)
-        eval = self.evaluate(t=0, y=y)
-        if isinstance(eval, numbers.Number):
+            # Pick a y that won't cause RuntimeWarnings
+            y = np.linspace(0.1, 0.9, min_y_size)
+        evaluated_self = self.evaluate(t=0, y=y)
+        if isinstance(evaluated_self, numbers.Number):
             return ()
         else:
-            return eval.shape
+            return evaluated_self.shape

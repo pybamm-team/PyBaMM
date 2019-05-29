@@ -21,30 +21,37 @@ class StefanMaxwell(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_differential_system(self, c_e, reactions, epsilon=None):
+    def set_differential_system(self, variables, reactions):
         """
         PDE system for Stefan-Maxwell diffusion in the electrolyte
 
         Parameters
         ----------
-        c_e : :class:`pybamm.Concatenation`
-            Eletrolyte concentration
+        variables : dict
+            Dictionary of symbols to use in the model
         reactions : dict
             Dictionary of reaction variables
-        epsilon : :class:`pybamm.Symbol`, optional
-            Porosity. Default is None, in which case param.epsilon is used.
         """
+        # unpack variables
+        c_e = variables["Electrolyte concentration"]
         param = self.set_of_parameters
 
         # if porosity is not provided, use the input parameter
-        if epsilon is not None:
+        try:
+            epsilon = variables["Porosity"]
             deps_dt = reactions["main"]["porosity change"]
-        else:
+        except KeyError:
             epsilon = param.epsilon
             deps_dt = pybamm.Scalar(0)
+        # Use convection velocity if it exists, otherwise set to zero
+        v_box = variables.get("Volume-averaged velocity", pybamm.Scalar(0))
+        # # Use variable for div_v_box, to avoid having an extra divergence in rhs
+        # div_v_box = variables.get("div(volume-averaged velocity)", pybamm.Scalar(0))
 
         # Flux
-        N_e = -(epsilon ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
+        N_e_diff = -(epsilon ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
+        N_e_conv = c_e * v_box
+        N_e = N_e_diff + N_e_conv
 
         # Model
         j_n = reactions["main"]["neg"]["aj"]
@@ -66,31 +73,22 @@ class StefanMaxwell(pybamm.SubModel):
         # (open-circuit potential poorly defined)
         self.events = [pybamm.Function(np.min, c_e) - 0.002]
 
-    def set_leading_order_system(self, c_e, reactions, epsilon=None):
+    def set_leading_order_system(self, variables, reactions):
         """
         ODE system for leading-order Stefan-Maxwell diffusion in the electrolyte
         Parameters
         ----------
-        c_e : :class:`pybamm.Variable`
-            Eletrolyte concentration
+        variables : dict
+            Dictionary of symbols to use in the model
         reactions : dict
             Dictionary of reaction variables
-        epsilon : :class:`pybamm.Concatenation`, optional
-            Porosity. Default is None, in which case param.epsilon is used.
         """
         param = self.set_of_parameters
-
-        # if porosity is not provided, use the input parameter
-        if epsilon is not None:
-            eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-            deps_n_dt = sum(rxn["neg"]["deps_dt"] for rxn in reactions.values())
-            deps_p_dt = sum(rxn["pos"]["deps_dt"] for rxn in reactions.values())
-        else:
-            eps_n = param.epsilon_n
-            eps_s = param.epsilon_s
-            eps_p = param.epsilon_p
-            deps_n_dt = pybamm.Scalar(0)
-            deps_p_dt = pybamm.Scalar(0)
+        c_e = variables["Electrolyte concentration"]
+        epsilon = variables["Porosity"]
+        eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
+        deps_n_dt = sum(rxn["neg"]["deps_dt"] for rxn in reactions.values())
+        deps_p_dt = sum(rxn["pos"]["deps_dt"] for rxn in reactions.values())
 
         # Model
         source_terms = sum(

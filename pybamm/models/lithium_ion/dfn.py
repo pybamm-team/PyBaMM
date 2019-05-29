@@ -16,16 +16,18 @@ class DFN(pybamm.LithiumIonBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lithium_ion
+        i_boundary_cc = param.current_with_time
+        self.variables["Current collector current density"] = i_boundary_cc
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
 
-        c_s_n = pybamm.standard_variables.c_s_n
-        c_s_p = pybamm.standard_variables.c_s_p
-        c_e = pybamm.standard_variables.c_e
-        phi_e = pybamm.standard_variables.phi_e
-        phi_s_p = pybamm.standard_variables.phi_s_p
-        phi_s_n = pybamm.standard_variables.phi_s_n
+        self.set_model_variables()
+        c_e = self.variables["Electrolyte concentration"]
+        c_s_n = self.variables["Negative particle concentration"]
+        c_s_p = self.variables["Positive particle concentration"]
+        delta_phi_n = self.variables["Negative electrode surface potential difference"]
+        delta_phi_p = self.variables["Positive electrode surface potential difference"]
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -38,11 +40,10 @@ class DFN(pybamm.LithiumIonBaseModel):
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p, c_s_p_surf)
 
         # Potentials
-        phi_e_n, _, phi_e_p = phi_e.orphans
         ocp_n = param.U_n(c_s_n_surf)
         ocp_p = param.U_p(c_s_p_surf)
-        eta_r_n = phi_s_n - phi_e_n - ocp_n
-        eta_r_p = phi_s_p - phi_e_p - ocp_p
+        eta_r_n = delta_phi_n - ocp_n
+        eta_r_p = delta_phi_p - ocp_p
 
         # Interfacial current density
         j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n)
@@ -60,16 +61,17 @@ class DFN(pybamm.LithiumIonBaseModel):
         }
         # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        electrolyte_diffusion_model.set_differential_system(c_e, reactions)
+        electrolyte_diffusion_model.set_differential_system(self.variables, reactions)
 
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        eleclyte_current_model.set_algebraic_system(phi_e, c_e, reactions)
+        eleclyte_current_model.set_algebraic_system(self.variables, reactions)
 
         # Electrode models
-        negative_electrode_current_model = pybamm.electrode.Ohm(param)
-        negative_electrode_current_model.set_algebraic_system(phi_s_n, reactions)
-        positive_electrode_current_model = pybamm.electrode.Ohm(param)
-        positive_electrode_current_model.set_algebraic_system(phi_s_p, reactions)
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        electrode_current_model = pybamm.electrode.Ohm(param)
+        electrode_current_model.set_algebraic_system(self.variables, reactions, neg)
+        electrode_current_model.set_algebraic_system(self.variables, reactions, pos)
 
         "-----------------------------------------------------------------------------"
         "Combine Submodels"
@@ -78,8 +80,7 @@ class DFN(pybamm.LithiumIonBaseModel):
             positive_particle_model,
             electrolyte_diffusion_model,
             eleclyte_current_model,
-            negative_electrode_current_model,
-            positive_electrode_current_model,
+            electrode_current_model,
         )
 
         "-----------------------------------------------------------------------------"
@@ -100,7 +101,7 @@ class DFN(pybamm.LithiumIonBaseModel):
         phi_s_p = self.variables["Positive electrode potential"]
         i_s_n = self.variables["Negative electrode current density"]
         i_s_p = self.variables["Positive electrode current density"]
-        volt_vars = positive_electrode_current_model.get_variables(
+        volt_vars = electrode_current_model.get_variables(
             phi_s_n, phi_s_p, i_s_n, i_s_p
         )
         self.variables.update(volt_vars)
@@ -108,6 +109,28 @@ class DFN(pybamm.LithiumIonBaseModel):
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
+
+    def set_model_variables(self):
+        c_s_n = pybamm.standard_variables.c_s_n
+        c_s_p = pybamm.standard_variables.c_s_p
+        c_e = pybamm.standard_variables.c_e
+        phi_e = pybamm.standard_variables.phi_e
+        phi_s_p = pybamm.standard_variables.phi_s_p
+        phi_s_n = pybamm.standard_variables.phi_s_n
+        delta_phi_n = phi_s_n - phi_e.orphans[0]
+        delta_phi_p = phi_s_p - phi_e.orphans[2]
+        self.variables.update(
+            {
+                "Electrolyte concentration": c_e,
+                "Negative particle concentration": c_s_n,
+                "Positive particle concentration": c_s_p,
+                "Electrolyte potential": phi_e,
+                "Negative electrode potential": phi_s_n,
+                "Positive electrode potential": phi_s_p,
+                "Negative electrode surface potential difference": delta_phi_n,
+                "Positive electrode surface potential difference": delta_phi_p,
+            }
+        )
 
     @property
     def default_geometry(self):
