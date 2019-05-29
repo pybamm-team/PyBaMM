@@ -18,7 +18,9 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
 
     def test_basic_processing_with_convection(self):
         model = pybamm.lead_acid.NewmanTiedemann({"convection": True})
-        modeltest = tests.StandardModelTest(model)
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10}
+        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(t_eval=np.linspace(0, 0.6))
 
     def test_optimisations(self):

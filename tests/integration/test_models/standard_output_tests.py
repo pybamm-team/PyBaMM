@@ -374,8 +374,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         """Test that the internal boundary fluxes are continuous. Test current
         collector fluxes are zero."""
         t, x = self.t, self.x_edge
-        np.testing.assert_array_equal(self.N_e_hat(t, x[0]), 0)
-        np.testing.assert_array_equal(self.N_e_hat(t, x[-1]), 0)
+        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[0]), 0)
+        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[-1]), 0)
 
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,
@@ -504,13 +504,23 @@ class VelocityTests(BaseOutputTest):
 
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""
-        np.testing.assert_array_equal(self.v_box(self.t, 0), 0)
+        np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0)
 
     def test_velocity_vs_current(self):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
-        np.testing.assert_array_equal(self.v_box(t, x_n), beta_n * self.i_e(t, x_n))
-        np.testing.assert_array_equal(self.v_box(t, x_p), beta_p * self.i_e(t, x_p))
+
+        beta_n = pybamm.standard_parameters_lead_acid.beta_n
+        beta_n = self.param.process_symbol(beta_n).evaluate()
+        beta_p = pybamm.standard_parameters_lead_acid.beta_p
+        beta_p = self.param.process_symbol(beta_p).evaluate()
+
+        np.testing.assert_array_almost_equal(
+            self.v_box(t, x_n), beta_n * self.i_e(t, x_n)
+        )
+        np.testing.assert_array_almost_equal(
+            self.v_box(t, x_p), beta_p * self.i_e(t, x_p)
+        )
 
     def test_all(self):
         self.test_velocity_boundaries()
