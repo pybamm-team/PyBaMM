@@ -580,17 +580,23 @@ class FiniteVolume(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.concatenation`
         """
         for idx, child in enumerate(disc_children):
-            n = self.mesh.combine_submeshes(*child.domain)[0].npts
+            n_nodes = sum(
+                len(mesh.nodes) for mesh in self.mesh.combine_submeshes(*child.domain)
+            )
+            n_edges = sum(
+                len(mesh.edges) for mesh in self.mesh.combine_submeshes(*child.domain)
+            )
             child_size = child.size
-            if child_size != n:
-                # Average any children that evaluate on the edges (size n+1) to
+            if child_size != n_nodes:
+                # Average any children that evaluate on the edges (size n_edges) to
                 # evaluate on nodes instead, so that concatenation works properly
-                if child_size == n + 1:
+                if child_size == n_edges:
                     disc_children[idx] = self.edge_to_node(child)
                 else:
                     raise pybamm.ShapeError(
                         """
-                        child must have same size n or n+1, where n is the submesh size
+                        child must have same size n_nodes (number of nodes in the mesh)
+                        or n_edges (number of edges in the mesh)
                         """
                     )
         return pybamm.DomainConcatenation(disc_children, self.mesh)
