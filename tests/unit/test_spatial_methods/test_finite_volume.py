@@ -14,39 +14,47 @@ import unittest
 
 
 class TestFiniteVolume(unittest.TestCase):
-    def test_node_to_edge(self):
+    def test_node_to_edge_to_node(self):
         # create discretisation
         mesh = get_mesh_for_testing()
         fin_vol = pybamm.FiniteVolume(mesh)
         n = mesh["negative electrode"][0].npts
 
+        # node to edge
         c = pybamm.Vector(np.ones(n), domain=["negative electrode"])
         diffusivity_c = fin_vol.node_to_edge(c)
         np.testing.assert_array_equal(diffusivity_c.evaluate(), np.ones((n + 1, 1)))
 
-        d = pybamm.StateVector(slice(0, n), domain=["negative electrode"])
-        y_test = np.ones(n)
-        diffusivity_d = fin_vol.node_to_edge(d)
+        # edge to node
+        d = pybamm.StateVector(slice(0, n + 1), domain=["negative electrode"])
+        y_test = np.ones(n + 1)
+        diffusivity_d = fin_vol.edge_to_node(d)
         np.testing.assert_array_equal(
-            diffusivity_d.evaluate(None, y_test), np.ones((n + 1, 1))
+            diffusivity_d.evaluate(None, y_test), np.ones((n, 1))
         )
 
-    def test_edge_to_node(self):
-        # create discretisation
+        # bad shift key
+        with self.assertRaisesRegex(ValueError, "shift key"):
+            fin_vol.shift(c, "bad shift key")
+
+    def test_concatenation(self):
         mesh = get_mesh_for_testing()
         fin_vol = pybamm.FiniteVolume(mesh)
-        n = mesh["negative electrode"][0].npts + 1
-
-        c = pybamm.Vector(np.ones(n), domain=["negative electrode"])
-        average_c = fin_vol.edge_to_node(c)
-        np.testing.assert_array_equal(average_c.evaluate(), np.ones((n - 1, 1)))
-
-        d = pybamm.StateVector(slice(0, n), domain=["negative electrode"])
-        y_test = np.ones(n)
-        average_d = fin_vol.edge_to_node(d)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        edges = [pybamm.Vector(mesh[dom][0].edges, domain=dom) for dom in whole_cell]
+        # Concatenation of edges should get averaged to nodes first, using edge_to_node
+        v_disc = fin_vol.concatenation(edges)
         np.testing.assert_array_equal(
-            average_d.evaluate(None, y_test), np.ones((n - 1, 1))
+            v_disc.evaluate()[:, 0], mesh.combine_submeshes(*whole_cell)[0].nodes
         )
+
+        # test for bad shape
+        edges = [
+            pybamm.Vector(np.ones(mesh[dom][0].npts + 2), domain=dom)
+            for dom in whole_cell
+        ]
+        with self.assertRaisesRegex(pybamm.ShapeError, "child must have size n_nodes"):
+            fin_vol.concatenation(edges)
 
     def test_extrapolate_left_right(self):
         # create discretisation
