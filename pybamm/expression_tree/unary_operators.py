@@ -404,6 +404,9 @@ class Integral(SpatialOperator):
 
         return self.__class__(child, self.integration_variable)
 
+    def evaluate_for_shape(self):
+        return self.evaluate_for_shape_using_domain()
+
 
 class IndefiniteIntegral(Integral):
     """A node in the expression tree representing an indefinite integral operator
@@ -434,6 +437,9 @@ class IndefiniteIntegral(Integral):
             self.name += " on {}".format(integration_variable.domain)
         # the integrated variable has the same domain as the child
         self.domain = child.domain
+
+    def evaluate_for_shape(self):
+        return self.children[0].evaluate_for_shape()
 
 
 class BoundaryOperator(SpatialOperator):
@@ -489,6 +495,9 @@ class BoundaryValue(BoundaryOperator):
 
     def __init__(self, child, side):
         super().__init__("boundary value", child, side)
+
+    def evaluate_for_shape(self):
+        return self.evaluate_for_shape_using_domain()
 
 
 class BoundaryFlux(BoundaryOperator):

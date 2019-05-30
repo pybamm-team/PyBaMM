@@ -10,12 +10,6 @@ import autograd.numpy as np
 
 from anytree.exporter import DotExporter
 
-DOMAIN_SIZES_FOR_TESTING = {
-    "negative electrode": 17,
-    "separator": 29,
-    "positive electrode": 43,
-}
-
 
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
@@ -48,8 +42,13 @@ class Symbol(anytree.NodeMixin):
         # Set domain (and hence id)
         self.domain = domain
 
-        # Test shape on everything but the symbol node
-        if not isinstance(self, type(self)):
+        # Test shape on everything but nodes that contain the base Symbol class or the
+        # base BinaryOperator class
+        if not any(
+            issubclass(pybamm.Symbol, type(x))
+            or issubclass(pybamm.BinaryOperator, type(x))
+            for x in self.pre_order()
+        ):
             self.test_shape()
 
     @property
@@ -409,6 +408,24 @@ class Symbol(anytree.NodeMixin):
         """
         return self.evaluate()
 
+    def evaluate_for_shape_using_domain(self):
+        domain_sizes_for_testing = {
+            "negative electrode": 17,
+            "separator": 29,
+            "positive electrode": 43,
+            "negative particle": 5,
+            "positive particle": 9,
+            "current collector": 13,
+        }
+        if self.domain == []:
+            return np.nan
+        else:
+            try:
+                size = sum(domain_sizes_for_testing[dom] for dom in self.domain)
+            except KeyError:
+                size = 1
+            return np.nan * np.ones((size, 1))
+
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
 
@@ -554,7 +571,7 @@ class Symbol(anytree.NodeMixin):
         """
         try:
             self.shape
-        except NotImplementedError:
+        except (NotImplementedError, AttributeError):
             self.shape_for_testing
         except ValueError as e:
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))

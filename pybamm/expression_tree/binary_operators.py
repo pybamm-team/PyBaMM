@@ -145,12 +145,7 @@ class BinaryOperator(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape()`. """
         left = self.children[0].evaluate_for_shape()
         right = self.children[1].evaluate_for_shape()
-        try:
-            return self._binary_evaluate(left, right)
-        except ZeroDivisionError:
-            import ipdb
-
-            ipdb.set_trace()
+        return self._binary_evaluate(left, right)
 
 
 class Power(BinaryOperator):
