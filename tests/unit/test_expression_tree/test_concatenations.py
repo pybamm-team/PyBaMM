@@ -22,7 +22,7 @@ class TestConcatenations(unittest.TestCase):
         e = pybamm.Vector(np.array([1]))
         f = pybamm.Vector(np.array([3]))
         conc2 = pybamm.Concatenation(d, e, f)
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(TypeError):
             conc2.evaluate()
 
     def test_concatenation_domains(self):
