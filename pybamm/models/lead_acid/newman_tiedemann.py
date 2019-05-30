@@ -119,11 +119,16 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         ]
 
     def set_convection_submodel(self):
+        velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
         if self.options["convection"] is not False:
             self.variables["Electrolyte pressure"] = pybamm.standard_variables.pressure
-            velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
             velocity_model.set_algebraic_system(self.variables)
             self.update(velocity_model)
+        else:
+            whole_cell = ["negative electrode", "separator", "positive electrode"]
+            v_box = pybamm.Broadcast(0, whole_cell)
+            dVbox_dz = pybamm.Broadcast(0, whole_cell)
+            self.variables.update(velocity_model.get_variables(v_box, dVbox_dz))
 
     def set_diffusion_submodel(self):
         param = self.set_of_parameters
