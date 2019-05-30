@@ -112,7 +112,7 @@ class TestDiscretise(unittest.TestCase):
         # variable
         var = pybamm.Variable("var")
         var_vec = pybamm.Variable("var vec", domain=["negative electrode"])
-        disc._y_slices = {var.id: slice(53), var_vec.id: slice(53, 102)}
+        disc._y_slices = {var.id: slice(53), var_vec.id: slice(53, 93)}
         var_disc = disc.process_symbol(var)
         self.assertIsInstance(var_disc, pybamm.StateVector)
         self.assertEqual(var_disc._y_slice, disc._y_slices[var.id])
@@ -185,7 +185,7 @@ class TestDiscretise(unittest.TestCase):
         # create discretisation
         disc = get_discretisation_for_testing()
 
-        disc._y_slices = {var1.id: slice(53), var2.id: slice(53, 59)}
+        disc._y_slices = {var1.id: slice(53), var2.id: slice(53, 106)}
         exp_disc = disc.process_symbol(expression)
         self.assertIsInstance(exp_disc, pybamm.Division)
         # left side

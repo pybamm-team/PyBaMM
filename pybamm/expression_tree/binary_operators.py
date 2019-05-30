@@ -475,7 +475,10 @@ class Division(BinaryOperator):
         if issparse(left):
             return left.multiply(1 / right)
         else:
-            return left / right
+            if isinstance(right, numbers.Number) and right == 0:
+                return left * np.inf
+            else:
+                return left / right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """

@@ -268,6 +268,9 @@ class Index(UnaryOperator):
 
         return self.__class__(child, self.index)
 
+    def evaluate_for_shape(self):
+        return self.children[0].evaluate_for_shape()[self.slice]
+
 
 class SpatialOperator(UnaryOperator):
     """A node in the expression tree representing a unary spatial operator

@@ -76,7 +76,6 @@ class SpatialMethod:
             )
         else:
             out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
-        out.test_shape()
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -200,7 +199,13 @@ class SpatialMethod:
             # as above, but now we want a single point with value 1 at (0, n-1)
             right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
             bv_vector = pybamm.Matrix(right_vector)
-        out = bv_vector @ discretised_child
+
+        try:
+            out = bv_vector @ discretised_child
+        except pybamm.ShapeError:
+            import ipdb
+
+            ipdb.set_trace()
         # boundary value removes domain
         out.domain = []
         return out

@@ -1,7 +1,6 @@
 #
 # IndependentVariable class
 #
-import numpy as np
 import pybamm
 
 KNOWN_SPATIAL_VARS = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]

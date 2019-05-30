@@ -318,7 +318,6 @@ class TestSymbol(unittest.TestCase):
 
         var = pybamm.Variable("var", domain="negative electrode")
         broadcast = pybamm.Broadcast(0, domain="negative electrode")
-        self.assertEqual(var.shape_for_testing, (17, 1))
         self.assertEqual(var.shape_for_testing, broadcast.shape_for_testing)
         self.assertEqual(
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing
@@ -338,11 +337,6 @@ class TestSymbol(unittest.TestCase):
         y2 = pybamm.StateVector(slice(0, 5))
         with self.assertRaises(pybamm.ShapeError):
             (y1 + y2).test_shape()
-
-        var = pybamm.Variable("var", domain="negative electrode")
-        broadcast = pybamm.Broadcast(0, domain="separator")
-        with self.assertRaises(pybamm.ShapeError):
-            (var + broadcast).test_shape()
 
 
 if __name__ == "__main__":

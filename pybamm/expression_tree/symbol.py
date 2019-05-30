@@ -42,15 +42,6 @@ class Symbol(anytree.NodeMixin):
         # Set domain (and hence id)
         self.domain = domain
 
-        # Test shape on everything but nodes that contain the base Symbol class or the
-        # base BinaryOperator class
-        if not any(
-            issubclass(pybamm.Symbol, type(x))
-            or issubclass(pybamm.BinaryOperator, type(x))
-            for x in self.pre_order()
-        ):
-            self.test_shape()
-
     @property
     def children(self):
         """
@@ -94,6 +85,14 @@ class Symbol(anytree.NodeMixin):
             self._domain = domain
             # Update id since domain has changed
             self.set_id()
+            # Test shape on everything but nodes that contain the base Symbol class or
+            # the base BinaryOperator class
+            if not any(
+                issubclass(pybamm.Symbol, type(x))
+                or issubclass(pybamm.BinaryOperator, type(x))
+                for x in self.pre_order()
+            ):
+                self.test_shape()
 
     @property
     def id(self):
@@ -409,22 +408,11 @@ class Symbol(anytree.NodeMixin):
         return self.evaluate()
 
     def evaluate_for_shape_using_domain(self):
-        domain_sizes_for_testing = {
-            "negative electrode": 17,
-            "separator": 29,
-            "positive electrode": 43,
-            "negative particle": 5,
-            "positive particle": 9,
-            "current collector": 13,
-        }
         if self.domain == []:
-            return np.nan
+            size = 1
         else:
-            try:
-                size = sum(domain_sizes_for_testing[dom] for dom in self.domain)
-            except KeyError:
-                size = 1
-            return np.nan * np.ones((size, 1))
+            size = sum(hash(dom) % 100 for dom in self.domain)
+        return np.nan * np.ones((size, 1))
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
