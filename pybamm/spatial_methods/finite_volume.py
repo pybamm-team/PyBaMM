@@ -600,7 +600,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 else:
                     raise pybamm.ShapeError(
                         """
-                        child must have same size n_nodes (number of nodes in the mesh)
+                        child must have size n_nodes (number of nodes in the mesh)
                         or n_edges (number of edges in the mesh)
                         """
                     )
