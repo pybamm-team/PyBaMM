@@ -32,10 +32,10 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Submodels
         self.set_boundary_conditions(None)
         int_curr_model = pybamm.interface.LeadAcidReaction(self.set_of_parameters)
-        self.set_interface_variables(int_curr_model)
         self.set_diffusion_submodel()
         self.set_electrolyte_current_model(int_curr_model)
         self.set_current_variables()
+        self.set_interface_variables(int_curr_model)
 
     def set_boundary_conditions(self, bc_variables):
         """Set boundary conditions, dependent on self.options"""
@@ -45,28 +45,10 @@ class Composite(pybamm.LeadAcidBaseModel):
             current_bc = param.current_with_time
             self.variables["Current collector current density"] = current_bc
 
-    def set_interface_variables(self, int_curr_model):
+    def set_diffusion_submodel(self):
         param = self.set_of_parameters
         j_n_0 = self.variables["Negative electrode interfacial current density"]
         j_p_0 = self.variables["Positive electrode interfacial current density"]
-        c_e = self.variables["Electrolyte concentration"]
-        c_e_n, _, c_e_p = c_e.orphans
-
-        # Exchange-current density
-        neg = ["negative electrode"]
-        pos = ["positive electrode"]
-        j0_n = int_curr_model.get_exchange_current_densities(c_e_n, neg)
-        j0_p = int_curr_model.get_exchange_current_densities(c_e_p, pos)
-        j_vars = int_curr_model.get_derived_interfacial_currents(
-            j_n_0, j_p_0, j0_n, j0_p
-        )
-        self.variables.update(j_vars)
-
-        # Open-circuit potentials
-        ocp_n = param.U_n(c_e_n)
-        ocp_p = param.U_p(c_e_p)
-
-        # Electrolyte concentration
         self.reactions = {
             "main": {
                 "neg": {"s_plus": param.s_n, "aj": j_n_0},
@@ -75,16 +57,6 @@ class Composite(pybamm.LeadAcidBaseModel):
             }
         }
 
-        # Potentials
-        eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n_0, j0_n, neg)
-        eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p_0, j0_p, pos)
-        pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
-
-    def set_diffusion_submodel(self):
-        param = self.set_of_parameters
         electrolyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         electrolyte_conc_model.set_differential_system(self.variables, self.reactions)
         self.update(electrolyte_conc_model)
@@ -162,6 +134,33 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
+
+    def set_interface_variables(self, int_curr_model):
+        param = self.set_of_parameters
+        c_e = self.variables["Electrolyte concentration"]
+        phi_e = self.variables["Electrolyte potential"]
+        phi_s = self.variables["Electrode potential"]
+        c_e_n, _, c_e_p = c_e.orphans
+        phi_e_n, _, phi_e_p = phi_e.orphans
+        phi_s_n, _, phi_s_p = phi_s.orphans
+
+        # Potentials
+        ocp_n = param.U_n(c_e_n)
+        ocp_p = param.U_p(c_e_p)
+        eta_r_n = phi_s_n - phi_e_n - ocp_n
+        eta_r_p = phi_s_p - phi_e_p - ocp_p
+        pot_model = pybamm.potential.Potential(param)
+        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
+        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
+        self.variables.update({**ocp_vars, **eta_r_vars})
+
+        # Exchange-current density
+        j0_n = int_curr_model.get_exchange_current_densities(c_e_n)
+        j0_p = int_curr_model.get_exchange_current_densities(c_e_p)
+        j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n)
+        j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p)
+        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
 
     @property
     def default_solver(self):
