@@ -511,26 +511,33 @@ class Symbol(anytree.NodeMixin):
     @property
     def shape(self):
         """
-        Shape of an object, found by evaluating it with appropriate t and y. If a symbol
+        Shape of an object, found by evaluating it with appropriate t and y.
+        """
+        # Default behaviour is to try to evaluate the object directly
+        state_vectors_in_node = [
+            x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
+        ]
+        if state_vectors_in_node == []:
+            y = None
+        else:
+            min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
+            # Pick a y that won't cause RuntimeWarnings
+            y = np.linspace(0.1, 0.9, min_y_size)
+        evaluated_self = self.evaluate(0, y)
+        if isinstance(evaluated_self, numbers.Number):
+            return ()
+        else:
+            return evaluated_self.shape
+
+    @property
+    def shape_for_testing(self):
+        """
+        Shape of an object for cases where it cannot be evaluated directly. If a symbol
         cannot be evaluated directly (e.g. it is a `Variable` or `Parameter`), it is
         instead given an arbitrary domain-dependent shape from the dictionary
         `pybamm.DOMAIN_SIZES_FOR_TESTING` (note that this only works for some domains)
         """
-        try:
-            # Default behaviour is to try to evaluate the object directly
-            state_vectors_in_node = [
-                x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
-            ]
-            if state_vectors_in_node == []:
-                y = None
-            else:
-                min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
-                # Pick a y that won't cause RuntimeWarnings
-                y = np.linspace(0.1, 0.9, min_y_size)
-            evaluated_self = self.evaluate(0, y)
-        except NotImplementedError:
-            # If that doesn't work, fall back on `self.evaluate_for_shape`
-            evaluated_self = self.evaluate_for_shape()
+        evaluated_self = self.evaluate_for_shape()
         if isinstance(evaluated_self, numbers.Number):
             return ()
         else:
@@ -547,5 +554,7 @@ class Symbol(anytree.NodeMixin):
         """
         try:
             self.shape
+        except NotImplementedError:
+            self.shape_for_testing
         except ValueError as e:
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
