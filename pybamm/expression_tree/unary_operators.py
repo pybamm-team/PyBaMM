@@ -152,6 +152,8 @@ class Function(UnaryOperator):
         """ See :meth:`pybamm.Symbol.diff()`. """
         if variable.id == self.id:
             return pybamm.Scalar(1)
+        elif self.takes_no_params:
+            return pybamm.Scalar(0)
         else:
             child = self.orphans[0]
             if variable.id in [symbol.id for symbol in child.pre_order()]:
@@ -289,6 +291,9 @@ class SpatialOperator(UnaryOperator):
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # We shouldn't need this
+        import ipdb
+
+        ipdb.set_trace()
         raise NotImplementedError
 
     def jac(self, variable):

@@ -62,51 +62,75 @@ class Composite(pybamm.LeadAcidBaseModel):
         self.update(electrolyte_conc_model)
 
     def set_electrolyte_current_model(self, int_curr_model):
-        if self.options["capacitance"] is False:
-            return
-
         param = self.set_of_parameters
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        delta_phi_n_av = pybamm.Variable(
-            "Average neg electrode surface potential difference"
-        )
-        delta_phi_p_av = pybamm.Variable(
-            "Average pos electrode surface potential difference"
-        )
-
         # Average composite interfacial current density
+        i_bnd_cc = self.variables["Current collector current density"]
         c_e = self.variables["Electrolyte concentration"]
         c_e_n, _, c_e_p = c_e.orphans
         c_e_n_av = pybamm.average(c_e_n)
         c_e_p_av = pybamm.average(c_e_p)
         ocp_n_av = param.U_n(c_e_n_av)
         ocp_p_av = param.U_p(c_e_p_av)
-        eta_r_n_av = delta_phi_n_av - ocp_n_av
-        eta_r_p_av = delta_phi_p_av - ocp_p_av
         j0_n_av = int_curr_model.get_exchange_current_densities(c_e_n_av, neg)
         j0_p_av = int_curr_model.get_exchange_current_densities(c_e_p_av, pos)
-        j_n_av = int_curr_model.get_butler_volmer(j0_n_av, eta_r_n_av, neg)
-        j_p_av = int_curr_model.get_butler_volmer(j0_p_av, eta_r_p_av, pos)
 
-        # Make dictionaries to pass to submodel
-        i_boundary_cc = self.variables["Current collector current density"]
-        variables_av = {
-            "Negative electrode surface potential difference": delta_phi_n_av,
-            "Positive electrode surface potential difference": delta_phi_p_av,
-            "Current collector current density": i_boundary_cc,
-            "Electrolyte concentration": c_e,
-            "Porosity": self.variables["Porosity"],
-        }
-        reactions_av = {"main": {"neg": {"aj": j_n_av}, "pos": {"aj": j_p_av}}}
+        if self.options["capacitance"] is False:
+            eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
+                param
+            )
+            # j_n_av = int_curr_model.get_homogeneous_interfacial_current(i_bnd_cc, neg)
+            # j_p_av = int_curr_model.get_homogeneous_interfacial_current(i_bnd_cc, pos)
+            # eta_r_n_av = int_curr_model.get_inverse_butler_volmer(j_n_av, j0_n_av, neg)
+            # eta_r_p_av = int_curr_model.get_inverse_butler_volmer(j_p_av, j0_p_av, pos)
+            # pot_model = pybamm.potential.Potential(param)
+            # ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n_av, ocp_p_av)
+            # eta_r_vars = pot_model.get_derived_reaction_overpotentials(
+            #     eta_r_n_av, eta_r_p_av
+            # )
+            # self.variables.update({**ocp_vars, **eta_r_vars})
+            # j_vars = int_curr_model.get_derived_interfacial_currents(
+            #     j_n_av, j_p_av, j0_n_av, j0_p_av
+            # )
+            j_vars = eleclyte_current_model.get_first_order_potential_differences(
+                self.variables, int_curr_model
+            )
+            self.variables.update(j_vars)
+        else:
 
-        # Call submodel using average variables and average reactions
-        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
-            param, self.options["capacitance"]
-        )
-        eleclyte_current_model.set_leading_order_system(variables_av, reactions_av, neg)
-        eleclyte_current_model.set_leading_order_system(variables_av, reactions_av, pos)
-        self.update(eleclyte_current_model)
+            delta_phi_n_av = pybamm.Variable(
+                "Average neg electrode surface potential difference"
+            )
+            delta_phi_p_av = pybamm.Variable(
+                "Average pos electrode surface potential difference"
+            )
+
+            eta_r_n_av = delta_phi_n_av - ocp_n_av
+            eta_r_p_av = delta_phi_p_av - ocp_p_av
+            j_n_av = int_curr_model.get_butler_volmer(j0_n_av, eta_r_n_av, neg)
+            j_p_av = int_curr_model.get_butler_volmer(j0_p_av, eta_r_p_av, pos)
+
+            # Make dictionaries to pass to submodel
+            self.variables.update(
+                {
+                    "Negative electrode surface potential difference": delta_phi_n_av,
+                    "Positive electrode surface potential difference": delta_phi_p_av,
+                }
+            )
+            reactions_av = {"main": {"neg": {"aj": j_n_av}, "pos": {"aj": j_p_av}}}
+
+            # Call submodel using average variables and average reactions
+            eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
+                param, self.options["capacitance"]
+            )
+            eleclyte_current_model.set_leading_order_system(
+                self.variables, reactions_av, neg
+            )
+            eleclyte_current_model.set_leading_order_system(
+                self.variables, reactions_av, pos
+            )
+            self.update(eleclyte_current_model)
 
     def set_current_variables(self):
         param = self.set_of_parameters
@@ -133,22 +157,24 @@ class Composite(pybamm.LeadAcidBaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events.append(voltage - param.voltage_low_cut)
+        # self.events.append(voltage - param.voltage_low_cut)
 
     def set_interface_variables(self, int_curr_model):
         param = self.set_of_parameters
         c_e = self.variables["Electrolyte concentration"]
+        c_e_n, _, c_e_p = c_e.orphans
         phi_e = self.variables["Electrolyte potential"]
         phi_s = self.variables["Electrode potential"]
-        c_e_n, _, c_e_p = c_e.orphans
         phi_e_n, _, phi_e_p = phi_e.orphans
         phi_s_n, _, phi_s_p = phi_s.orphans
+        delta_phi_n = phi_s_n - phi_e_n
+        delta_phi_p = phi_s_p - phi_e_p
 
         # Potentials
         ocp_n = param.U_n(c_e_n)
         ocp_p = param.U_p(c_e_p)
-        eta_r_n = phi_s_n - phi_e_n - ocp_n
-        eta_r_p = phi_s_p - phi_e_p - ocp_p
+        eta_r_n = delta_phi_n - ocp_n
+        eta_r_p = delta_phi_p - ocp_p
         pot_model = pybamm.potential.Potential(param)
         ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
         eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)

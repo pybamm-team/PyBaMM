@@ -111,7 +111,10 @@ class StefanMaxwell(pybamm.SubModel):
             pybamm.Broadcast(c_e, ["separator"]),
             pybamm.Broadcast(c_e, ["positive electrode"]),
         )
-        self.variables = self.get_variables(c_e_var, N_e)
+        self.variables = {
+            **self.get_variables(c_e_var, N_e),
+            "Average electrolyte concentration": c_e,
+        }
 
         # Cut off if concentration goes too small
         # (open-circuit potential poorly defined)
@@ -153,7 +156,7 @@ class StefanMaxwell(pybamm.SubModel):
 
         return {
             "Electrolyte concentration": c_e,
-            "Average electrolyte concentration": c_e_av,
+            # "Average electrolyte concentration": c_e_av,
             "Negative electrolyte concentration": c_e_n,
             "Separator electrolyte concentration": c_e_s,
             "Positive electrolyte concentration": c_e_p,

@@ -79,7 +79,9 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # electrolye potential
-        phi_e_const = pybamm.boundary_value(-ocp_n - eta_r_n, "left")
+        ocp_n_left = pybamm.boundary_value(ocp_n, "left")
+        eta_r_n_left = pybamm.boundary_value(eta_r_n, "left")
+        phi_e_const = -ocp_n_left - eta_r_n_left
         phi_e_n = pybamm.Broadcast(phi_e_const, ["negative electrode"])
         phi_e_s = pybamm.Broadcast(phi_e_const, ["separator"])
         phi_e_p = pybamm.Broadcast(phi_e_const, ["positive electrode"])
@@ -355,6 +357,59 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         eta_e_av = phi_e_p_av - phi_e_n_av
 
         self.variables = self.get_variables(phi_e, i_e, eta_e_av)
+
+    def get_first_order_potential_differences(self, variables, int_curr_model):
+        """
+        Provides and explicit combined leading and first order solution to the
+        electrolyte current conservation equation where the constitutive equation is
+        taken to be of Stefan-Maxwell form. Note that the returned current density is
+        only the leading order approximation.
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of symbols to use in the model
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        param = self.set_of_parameters
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        phi_e_0 = variables["Electrolyte potential"].orphans[0].orphans[0]
+        phi_s_p_0 = variables["Electrode potential"].orphans[2].orphans[0]
+        # CHECK WHY AVERAGE DIDN'T WORK
+        c_e_0 = variables["Average electrolyte concentration"]
+        delta_phi_n_0 = -phi_e_0
+        delta_phi_p_0 = phi_s_p_0 - phi_e_0
+        c_e = variables["Electrolyte concentration"]
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        c_e_n_1_bar = (pybamm.average(c_e_n) - c_e_0) / param.C_e
+        c_e_p_1_bar = (pybamm.average(c_e_p) - c_e_0) / param.C_e
+
+        eta_r_n_0 = delta_phi_n_0 - param.U_n(c_e_0)
+        eta_r_p_0 = delta_phi_p_0 - param.U_p(c_e_0)
+        j0_n_0 = int_curr_model.get_exchange_current_densities(c_e_0, neg)
+        j0_p_0 = int_curr_model.get_exchange_current_densities(c_e_0, pos)
+        j_n_0 = int_curr_model.get_butler_volmer(j0_n_0, eta_r_n_0, neg)
+        j_p_0 = int_curr_model.get_butler_volmer(j0_p_0, eta_r_p_0, pos)
+
+        delta_phi_n_1 = j_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
+        delta_phi_p_1 = j_p_0.diff(c_e_0) * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
+
+        delta_phi_n = delta_phi_n_0 + param.C_e * delta_phi_n_1
+        delta_phi_p = delta_phi_p_0 + param.C_e * delta_phi_p_1
+        ocp_n = param.U_n(c_e_n)
+        ocp_p = param.U_p(c_e_p)
+        eta_r_n = delta_phi_n - ocp_n
+        eta_r_p = delta_phi_p - ocp_p
+
+        pot_model = pybamm.potential.Potential(param)
+        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
+        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
+        return {**ocp_vars, **eta_r_vars}
 
     @property
     def default_solver(self):
