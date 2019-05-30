@@ -29,10 +29,10 @@ class Parameter(pybamm.Symbol):
 
     def evaluate_for_shape(self, t=None, y=None):
         """
-        Returns the scalar '1' to represent the shape of a parameter.
+        Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return np.random.rand()
+        return np.nan
 
 
 class FunctionParameter(pybamm.UnaryOperator):

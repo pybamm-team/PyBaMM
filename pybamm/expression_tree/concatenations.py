@@ -77,7 +77,12 @@ class Concatenation(pybamm.Symbol):
         return new_symbol
 
     def evaluate_for_shape(self):
-        return np.concatenate([child.evaluate_for_shape() for child in self.children])
+        if len(self.children) == 0:
+            return np.array([])
+        else:
+            return np.concatenate(
+                [child.evaluate_for_shape() for child in self.children]
+            )
 
 
 class NumpyConcatenation(Concatenation):

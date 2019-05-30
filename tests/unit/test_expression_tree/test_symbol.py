@@ -290,7 +290,11 @@ class TestSymbol(unittest.TestCase):
     def test_shape(self):
         scal = pybamm.Scalar(1)
         self.assertEqual(scal.shape, ())
+        self.assertEqual(scal.size, 1)
 
+        state = pybamm.StateVector(slice(10))
+        self.assertEqual(state.shape, (10, 1))
+        self.assertEqual(state.size, 10)
         state = pybamm.StateVector(slice(10, 25))
         self.assertEqual(state.shape, (15, 1))
 
@@ -299,6 +303,11 @@ class TestSymbol(unittest.TestCase):
 
         func = pybamm.FunctionParameter("func", state)
         self.assertEqual(func.shape, state.shape)
+
+        concat = pybamm.Concatenation()
+        self.assertEqual(concat.shape, (0,))
+        concat = pybamm.Concatenation(state, state)
+        self.assertEqual(concat.shape, (30, 1))
 
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):

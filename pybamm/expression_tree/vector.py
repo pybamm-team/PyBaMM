@@ -144,4 +144,9 @@ class StateVector(pybamm.Symbol):
         return StateVector(self.y_slice, self.name, domain=[])
 
     def evaluate_for_shape(self):
-        return np.random.rand(self.y_slice.stop - self.y_slice.start, 1)
+        """
+        Returns a vector of NaNs to represent the shape of a StateVector.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        start = self.y_slice.start or 0
+        return np.nan * np.ones((self.y_slice.stop - start, 1))

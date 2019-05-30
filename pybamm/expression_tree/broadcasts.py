@@ -56,4 +56,8 @@ class Broadcast(pybamm.SpatialOperator):
         return Broadcast(child, self.domain)
 
     def evaluate_for_shape(self):
-        return np.random.rand(1)
+        """
+        Returns a vector of NaNs to represent the shape of a Broadcast.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return np.nan * np.ones(1)

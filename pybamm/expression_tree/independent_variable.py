@@ -93,7 +93,11 @@ class SpatialVariable(IndependentVariable):
         return SpatialVariable(self.name, self.domain, self.coord_sys)
 
     def evaluate_for_shape(self):
-        return np.random.rand(1)
+        """
+        Returns a vector of NaNs to represent the shape of an IndependentVariable.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return np.nan * np.ones(1)
 
 
 # the independent variable time

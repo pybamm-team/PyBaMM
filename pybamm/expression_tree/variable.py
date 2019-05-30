@@ -31,4 +31,8 @@ class Variable(pybamm.Symbol):
         return Variable(self.name, self.domain)
 
     def evaluate_for_shape(self):
-        return np.random.rand(1)
+        """
+        Returns a vector of NaNs to represent the shape of a Variable.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return np.nan * np.ones(1)
