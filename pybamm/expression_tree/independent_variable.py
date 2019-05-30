@@ -25,6 +25,13 @@ class IndependentVariable(pybamm.Symbol):
     def __init__(self, name, domain=[]):
         super().__init__(name, domain=domain)
 
+    def evaluate_for_shape(self):
+        """
+        Returns a vector of NaNs to represent the shape of an IndependentVariable.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return self.evaluate_for_shape_using_domain()
+
 
 class Time(IndependentVariable):
     """A node in the expression tree representing time
@@ -91,13 +98,6 @@ class SpatialVariable(IndependentVariable):
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return SpatialVariable(self.name, self.domain, self.coord_sys)
-
-    def evaluate_for_shape(self):
-        """
-        Returns a vector of NaNs to represent the shape of an IndependentVariable.
-        See :meth:`pybamm.Symbol.evaluate_for_shape()`
-        """
-        return self.evaluate_for_shape_using_domain()
 
 
 # the independent variable time

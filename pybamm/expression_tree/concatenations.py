@@ -280,3 +280,9 @@ class SparseStack(Concatenation):
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation.evaluate()`. """
         return vstack(children_eval)
+
+    def evaluate_for_shape(self):
+        if len(self.children) == 0:
+            return np.array([])
+        else:
+            return vstack([child.evaluate_for_shape() for child in self.children])

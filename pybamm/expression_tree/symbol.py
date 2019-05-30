@@ -570,8 +570,6 @@ class Symbol(anytree.NodeMixin):
             If the shape of the object cannot be found
         """
         try:
-            self.shape
-        except (NotImplementedError, AttributeError):
             self.shape_for_testing
         except ValueError as e:
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
