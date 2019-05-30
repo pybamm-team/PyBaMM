@@ -35,4 +35,5 @@ class Variable(pybamm.Symbol):
         Returns a vector of NaNs to represent the shape of a Variable.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return np.nan * np.ones(1)
+        size = sum(pybamm.DOMAIN_SIZES_FOR_TESTING[dom] for dom in self.domain)
+        return np.nan * np.ones((size, 1))

@@ -97,7 +97,8 @@ class SpatialVariable(IndependentVariable):
         Returns a vector of NaNs to represent the shape of an IndependentVariable.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return np.nan * np.ones(1)
+        size = sum(pybamm.DOMAIN_SIZES_FOR_TESTING[dom] for dom in self.domain)
+        return np.nan * np.ones((size, 1))
 
 
 # the independent variable time

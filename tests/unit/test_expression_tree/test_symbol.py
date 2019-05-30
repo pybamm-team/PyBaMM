@@ -309,6 +309,14 @@ class TestSymbol(unittest.TestCase):
         concat = pybamm.Concatenation(state, state)
         self.assertEqual(concat.shape, (30, 1))
 
+        var = pybamm.Variable("var", domain="negative electrode")
+        broadcast = pybamm.Broadcast(0, domain="negative electrode")
+        self.assertEqual(var.shape, (17, 1))
+        self.assertEqual(var.shape, broadcast.shape)
+        self.assertEqual((var + broadcast).shape, broadcast.shape)
+        broadcast2 = pybamm.Broadcast(0, domain="separator")
+        self.assertNotEqual(var.shape, broadcast2.shape)
+
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):
             sym.shape

@@ -56,7 +56,7 @@ from .expression_tree.exceptions import (
     ShapeError,
     ModelWarning,
 )
-from .expression_tree.symbol import Symbol
+from .expression_tree.symbol import Symbol, DOMAIN_SIZES_FOR_TESTING
 from .expression_tree.binary_operators import (
     is_scalar_zero,
     is_matrix_zero,
