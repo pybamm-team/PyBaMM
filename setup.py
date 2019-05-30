@@ -14,6 +14,7 @@ setup(
     author="Valentin Sulzer",
     author_email="valentinsulzer@hotmail.com",
     url="https://github.com/pybamm-team/PyBaMM",
+    include_package_data=True,
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
