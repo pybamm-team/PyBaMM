@@ -76,6 +76,9 @@ class Concatenation(pybamm.Symbol):
         new_symbol.domain = []
         return new_symbol
 
+    def evaluate_for_shape(self):
+        return np.concatenate([child.evaluate_for_shape() for child in self.children])
+
 
 class NumpyConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of equations, when we

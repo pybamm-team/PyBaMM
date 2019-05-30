@@ -1,6 +1,7 @@
 #
 # Parameter classes
 #
+import numpy as np
 import pybamm
 
 
@@ -31,7 +32,7 @@ class Parameter(pybamm.Symbol):
         Returns the scalar '1' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return 1
+        return np.random.rand()
 
 
 class FunctionParameter(pybamm.UnaryOperator):

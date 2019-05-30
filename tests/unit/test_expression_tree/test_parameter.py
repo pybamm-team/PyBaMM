@@ -1,6 +1,7 @@
 #
 # Tests for the Parameter class
 #
+import numbers
 import pybamm
 import unittest
 
@@ -15,7 +16,7 @@ class TestParameter(unittest.TestCase):
 
     def test_evaluate_for_shape(self):
         a = pybamm.Parameter("a")
-        self.assertEqual(a.evaluate_for_shape(), 1)
+        self.assertIsInstance(a.evaluate_for_shape(), numbers.Number)
 
 
 class TestFunctionParameter(unittest.TestCase):
@@ -35,7 +36,7 @@ class TestFunctionParameter(unittest.TestCase):
     def test_evaluate_for_shape(self):
         a = pybamm.Parameter("a")
         func = pybamm.FunctionParameter("func", 2 * a)
-        self.assertEqual(func.evaluate_for_shape(), 2)
+        self.assertIsInstance(func.evaluate_for_shape(), numbers.Number)
 
 
 if __name__ == "__main__":

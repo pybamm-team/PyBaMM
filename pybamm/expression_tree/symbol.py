@@ -48,6 +48,10 @@ class Symbol(anytree.NodeMixin):
         # Set domain (and hence id)
         self.domain = domain
 
+        # Test shape on everything but the symbol node
+        if not isinstance(self, type(self)):
+            self.test_shape()
+
     @property
     def children(self):
         """
@@ -396,14 +400,14 @@ class Symbol(anytree.NodeMixin):
         else:
             return self._base_evaluate(t, y)
 
-    def evaluate_for_shape(self, t=None, y=None):
+    def evaluate_for_shape(self):
         """Evaluate expression tree to find its shape. For symbols that cannot be
         evaluated directly (e.g. `Variable` or `Parameter`), a vector of the appropriate
         shape is returned instead, using arbitrary domain sizes from the dictionary
         `DOMAIN_SIZES_FOR_TESTING`
         See :meth:`pybamm.Symbol.evaluate()`
         """
-        return self.evaluate(t, y)
+        return self.evaluate()
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
@@ -512,16 +516,16 @@ class Symbol(anytree.NodeMixin):
         instead given an arbitrary domain-dependent shape from the dictionary
         `pybamm.DOMAIN_SIZES_FOR_TESTING` (note that this only works for some domains)
         """
-        state_vectors_in_node = [
-            x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
-        ]
-        if state_vectors_in_node == []:
-            y = None
-        else:
-            min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
-            # Pick a y that won't cause RuntimeWarnings
-            y = np.linspace(0.1, 0.9, min_y_size)
-        evaluated_self = self.evaluate_for_shape(t=0, y=y)
+        # state_vectors_in_node = []
+        #     x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
+        # ]
+        # if state_vectors_in_node == []:
+        #     y = None
+        # else:
+        #     min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
+        #     # Pick a y that won't cause RuntimeWarnings
+        #     y = np.linspace(0.1, 0.9, min_y_size)
+        evaluated_self = self.evaluate_for_shape()
         if isinstance(evaluated_self, numbers.Number):
             return ()
         else:

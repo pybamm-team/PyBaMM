@@ -142,3 +142,6 @@ class StateVector(pybamm.Symbol):
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return StateVector(self.y_slice, self.name, domain=[])
+
+    def evaluate_for_shape(self):
+        return np.random.rand(self.y_slice.stop - self.y_slice.start, 1)

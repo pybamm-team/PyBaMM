@@ -1,6 +1,7 @@
 #
 # Variable class
 #
+import numpy as np
 import pybamm
 
 
@@ -28,3 +29,6 @@ class Variable(pybamm.Symbol):
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Variable(self.name, self.domain)
+
+    def evaluate_for_shape(self):
+        return np.random.rand(1)

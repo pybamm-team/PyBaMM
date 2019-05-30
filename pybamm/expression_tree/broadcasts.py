@@ -2,6 +2,7 @@
 # Unary operator classes and methods
 #
 import numbers
+import numpy as np
 import pybamm
 
 
@@ -53,3 +54,6 @@ class Broadcast(pybamm.SpatialOperator):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
         return Broadcast(child, self.domain)
+
+    def evaluate_for_shape(self):
+        return np.random.rand(1)

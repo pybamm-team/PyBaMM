@@ -71,7 +71,7 @@ class UnaryOperator(pybamm.Symbol):
         Default behaviour: unary operator has same shape as child
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return self.child.evaluate_for_shape(t, y)
+        return self.children[0].evaluate_for_shape()
 
 
 class Negate(UnaryOperator):

@@ -1,6 +1,7 @@
 #
 # IndependentVariable class
 #
+import numpy as np
 import pybamm
 
 KNOWN_SPATIAL_VARS = ["x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p"]
@@ -44,6 +45,13 @@ class Time(IndependentVariable):
             raise ValueError("t must be provided")
         return t
 
+    def evaluate_for_shape(self):
+        """
+        Return the scalar '0' to represent the shape of the independent variable `Time`.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return 0
+
 
 class SpatialVariable(IndependentVariable):
     """A node in the expression tree representing a spatial variable
@@ -83,6 +91,9 @@ class SpatialVariable(IndependentVariable):
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return SpatialVariable(self.name, self.domain, self.coord_sys)
+
+    def evaluate_for_shape(self):
+        return np.random.rand(1)
 
 
 # the independent variable time
