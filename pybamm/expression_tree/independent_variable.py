@@ -66,9 +66,6 @@ class SpatialVariable(IndependentVariable):
         super().__init__(name, domain=domain)
 
         if name not in KNOWN_SPATIAL_VARS:
-            import ipdb
-
-            ipdb.set_trace()
             raise ValueError(
                 "name must be KNOWN_SPATIAL_VARS  but is '{}'".format(name)
             )
