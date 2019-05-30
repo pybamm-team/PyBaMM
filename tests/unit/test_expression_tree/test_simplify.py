@@ -290,7 +290,7 @@ class TestSimplify(unittest.TestCase):
                 expr.children[0].entries, np.array([[3, 0], [0, 3]])
             )
 
-        expr = (v @ v / 2).simplify()
+        expr = ((v @ v) / 2).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 0.5)
@@ -486,6 +486,13 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(conc_simp.y_slice.start, 0)
         self.assertEqual(conc_simp.y_slice.stop, len(y))
         np.testing.assert_array_equal(conc_disc.evaluate(y=y), conc_simp.evaluate(y=y))
+
+    def test_simplify_outer(self):
+        v = pybamm.Vector(np.ones(5), domain="current collector")
+        w = pybamm.Vector(2 * np.ones(3), domain="test")
+        outer_simp = pybamm.Outer(v, w).simplify()
+        self.assertIsInstance(outer_simp, pybamm.Vector)
+        np.testing.assert_array_equal(outer_simp.evaluate(), 2 * np.ones((15, 1)))
 
 
 if __name__ == "__main__":

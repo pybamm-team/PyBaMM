@@ -16,6 +16,8 @@ class SPMe(pybamm.LithiumIonBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lithium_ion
+        i_boundary_cc = param.current_with_time
+        self.variables["Current collector current density"] = i_boundary_cc
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -23,13 +25,16 @@ class SPMe(pybamm.LithiumIonBaseModel):
         c_s_n = pybamm.standard_variables.c_s_n
         c_s_p = pybamm.standard_variables.c_s_p
         c_e = pybamm.standard_variables.c_e
+        self.variables["Electrolyte concentration"] = c_e
 
         "-----------------------------------------------------------------------------"
         "Submodels"
         # Interfacial current density
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
         int_curr_model = pybamm.interface.LithiumIonReaction(param)
-        j_n = int_curr_model.get_homogeneous_interfacial_current(["negative electrode"])
-        j_p = int_curr_model.get_homogeneous_interfacial_current(["positive electrode"])
+        j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
+        j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
 
         # Particle models
         negative_particle_model = pybamm.particle.Standard(param)
@@ -48,7 +53,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
         }
         # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        electrolyte_diffusion_model.set_differential_system(c_e, reactions)
+        electrolyte_diffusion_model.set_differential_system(self.variables, reactions)
 
         self.update(
             negative_particle_model,
@@ -59,8 +64,6 @@ class SPMe(pybamm.LithiumIonBaseModel):
         "-----------------------------------------------------------------------------"
         "Post-Processing"
         # Exchange-current density
-        neg = ["negative electrode"]
-        pos = ["positive electrode"]
         c_e_n, _, c_e_p = c_e.orphans
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
@@ -86,26 +89,23 @@ class SPMe(pybamm.LithiumIonBaseModel):
         )
 
         # Negative electrode potential
-        phi_s_n = electrode_model.get_neg_pot_explicit_combined()
+        phi_s_n = electrode_model.get_neg_pot_explicit_combined(self.variables)
+        self.variables["Negative electrode potential"] = phi_s_n
 
         # Electrolyte potential
         electrolyte_vars = electrolyte_current_model.get_explicit_combined(
-            ocp_n, eta_r_n, c_e, phi_s_n
+            self.variables
         )
-        phi_e = electrolyte_vars["Electrolyte potential"]
         self.variables.update(electrolyte_vars)
 
         # Positive electrode potential
-        electrode_vars = electrode_model.get_explicit_combined(
-            phi_s_n, phi_e, ocp_p, eta_r_p
-        )
+        electrode_vars = electrode_model.get_explicit_combined(self.variables)
         self.variables.update(electrode_vars)
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
 
-        "-----------------------------------------------------------------------------"
-        "Defaults and Solver Conditions"
-        # default geometry
-        self.default_geometry = pybamm.Geometry("1D macro", "1D micro")
+    @property
+    def default_geometry(self):
+        return pybamm.Geometry("1D macro", "1D micro")

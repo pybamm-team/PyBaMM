@@ -38,6 +38,8 @@ class ParameterValues(dict):
         # doing parameter studies
         self.update(optional_parameters)
 
+        self._processed_symbols = {}
+
     def read_parameters_csv(self, filename):
         """Reads parameters from csv file into dict.
 
@@ -56,6 +58,12 @@ class ParameterValues(dict):
         # Drop rows that are all NaN (seems to not work with skip_blank_lines)
         df.dropna(how="all", inplace=True)
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
+
+    def update(self, values):
+        for k, v in values.items():
+            self[k] = v
+        # reset processed symbols
+        self._processed_symbols = {}
 
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.
@@ -133,8 +141,7 @@ class ParameterValues(dict):
 
     def process_geometry(self, geometry):
         """
-        Assign parameter values to a geometry.
-        Currently inplace, could be changed to return a new model.
+        Assign parameter values to a geometry (inplace), *and* evaluate.
 
         Parameters
         ----------
@@ -146,12 +153,12 @@ class ParameterValues(dict):
             for prim_sec, variables in geometry[domain].items():
                 for spatial_variable, spatial_limits in variables.items():
                     for lim, sym in spatial_limits.items():
-                        geometry[domain][prim_sec][spatial_variable][
-                            lim
-                        ] = self.process_symbol(sym).evaluate()
+                        sym_eval = self.process_symbol(sym).evaluate()
+                        geometry[domain][prim_sec][spatial_variable][lim] = sym_eval
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
+        If a symbol has already been processed, the stored value is returned.
 
         Parameters
         ----------
@@ -165,6 +172,15 @@ class ParameterValues(dict):
 
         """
         pybamm.logger.debug("Set parameters for {!s}".format(symbol))
+        try:
+            return self._processed_symbols[symbol.id]
+        except KeyError:
+            processed_symbol = self._process_symbol(symbol)
+            self._processed_symbols[symbol.id] = processed_symbol
+            return processed_symbol
+
+    def _process_symbol(self, symbol):
+        """ See :meth:`ParameterValues.process_symbol()`. """
 
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]

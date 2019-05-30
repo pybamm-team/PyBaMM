@@ -60,9 +60,6 @@ class BaseModel(object):
         self.use_simplify = True
         self.use_to_python = True
 
-        # Default behaviour: no capacitance in the model
-        self._use_capacitance = False
-
     def _set_dict(self, dict, name):
         """
         Convert any scalar equations in dict to 'pybamm.Scalar'
@@ -75,7 +72,9 @@ class BaseModel(object):
 
         if not all(
             [
-                variable.domain == equation.domain or equation.domain == []
+                variable.domain == equation.domain
+                or variable.domain == []
+                or equation.domain == []
                 for variable, equation in dict.items()
             ]
         ):
@@ -192,8 +191,8 @@ class BaseModel(object):
         self._jacobian = jacobian
 
     @property
-    def use_capacitance(self):
-        return self._use_capacitance
+    def set_of_parameters(self):
+        return self._set_of_parameters
 
     def __getitem__(self, key):
         return self.rhs[key]
@@ -245,6 +244,13 @@ class BaseModel(object):
         post_discretisation : boolean
             A flag indicating tests to be skipped after discretisation
         """
+        self.check_well_determined(post_discretisation)
+        self.check_algebraic_equations(post_discretisation)
+        self.check_ics_bcs()
+        self.check_variables()
+
+    def check_well_determined(self, post_discretisation):
+        """ Check that the model is not under- or over-determined. """
         # Equations (differential and algebraic)
         # Get all the variables from differential and algebraic equations
         vars_in_rhs_keys = set()
@@ -286,9 +292,14 @@ class BaseModel(object):
         extra_variables = vars_in_eqns.difference(vars_in_keys)
         if extra_variables:
             raise pybamm.ModelError("model is underdetermined (too many variables)")
-        # Before discretisation, each algebraic equation key must appear in the equation
-        # After discretisation, there must be at least one StateVector in each algebraic
-        # equation
+
+    def check_algebraic_equations(self, post_discretisation):
+        """
+        Check that the algebraic equations are well-posed.
+        Before discretisation, each algebraic equation key must appear in the equation
+        After discretisation, there must be at least one StateVector in each algebraic
+        equation
+        """
         if not post_discretisation:
             # After the model has been defined, each algebraic equation key should
             # appear in that algebraic equation
@@ -307,6 +318,8 @@ class BaseModel(object):
                         "each algebraic equation must contain at least one StateVector"
                     )
 
+    def check_ics_bcs(self):
+        """ Check that the initial and boundary conditions are well-posed. """
         # Initial conditions
         for var in self.rhs.keys():
             if var not in self.initial_conditions.keys():
@@ -316,10 +329,12 @@ class BaseModel(object):
 
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_spatial_derivatives():
+            if eqn.has_symbol_of_class((pybamm.Gradient, pybamm.Divergence)):
                 # Variable must be in the boundary conditions
                 if not any(
-                    var.id == symbol.id for symbol in self.boundary_conditions.keys()
+                    var.id == x.id
+                    for symbol in self.boundary_conditions.keys()
+                    for x in symbol.pre_order()
                 ):
                     raise pybamm.ModelError(
                         """
@@ -329,7 +344,8 @@ class BaseModel(object):
                         )
                     )
 
-        # Standard Output Variables
+    def check_variables(self):
+        """ Chec that the right variables are provided. """
         missing_vars = []
         for output, expression in self._variables.items():
             if expression is None:
@@ -354,13 +370,17 @@ class StandardBatteryBaseModel(BaseModel):
     **Extends:** :class:`StandardBatteryBaseModel`
     """
 
-    def __init__(self):
+    def __init__(self, options=None):
         super().__init__()
+        self._extra_options = options
+        self.set_standard_output_variables()
 
+    @property
+    def default_parameter_values(self):
         # Default parameter values, geometry, submesh, spatial methods and solver
         # Lion parameters left as default parameter set for tests
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
-        self.default_parameter_values = pybamm.ParameterValues(
+        return pybamm.ParameterValues(
             os.path.join(
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
             ),
@@ -393,32 +413,77 @@ class StandardBatteryBaseModel(BaseModel):
                 ),
             },
         )
-        self.default_geometry = pybamm.Geometry("1D macro", "1+1D micro")
+
+    @property
+    def default_geometry(self):
+        return pybamm.Geometry("1D macro", "1+1D micro")
+
+    @property
+    def default_var_pts(self):
         var = pybamm.standard_spatial_vars
-        self.default_var_pts = {
+        return {
             var.x_n: 40,
             var.x_s: 25,
             var.x_p: 35,
             var.r_n: 10,
             var.r_p: 10,
+            var.z: 10,
         }
-        self.default_submesh_types = {
+
+    @property
+    def default_submesh_types(self):
+        return {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
             "positive electrode": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
         }
-        self.default_spatial_methods = {
+
+    @property
+    def default_spatial_methods(self):
+        return {
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.FiniteVolume,
         }
-        try:
-            self.default_solver = pybamm.ScikitsOdeSolver()
-        except ImportError:
-            self.default_solver = pybamm.ScipySolver()
 
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        try:
+            default_solver = pybamm.ScikitsOdeSolver()
+        except ImportError:
+            default_solver = pybamm.ScipySolver()
+
+        return default_solver
+
+    @property
+    def options(self):
+        default_options = {"capacitance": False, "bc_options": {"dimensionality": 0}}
+        if self._extra_options is None:
+            options = default_options
+        else:
+            # any extra options overwrite the default options
+            options = {**default_options, **self._extra_options}
+
+        # Some standard checks to make sure options are compatible
+        if (
+            isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
+            and options["capacitance"] is False
+            and options["bc_options"]["dimensionality"] == 1
+        ):
+            raise pybamm.ModelError(
+                "must use capacitance formulation to solve {!s} in 2D".format(self)
+            )
+
+        return options
+
+    def set_standard_output_variables(self):
         # Standard output variables
         # Interfacial current
         self.variables.update(
@@ -500,9 +565,9 @@ class StandardBatteryBaseModel(BaseModel):
         # Potential
         self.variables.update(
             {
-                "Negative electrode potential [V]": None,
-                "Positive electrode potential [V]": None,
-                "Electrolyte potential [V]": None,
+                "Negative electrode potential": None,
+                "Positive electrode potential": None,
+                "Electrolyte potential": None,
             }
         )
 
@@ -539,7 +604,7 @@ class StandardBatteryBaseModel(BaseModel):
 class SubModel(StandardBatteryBaseModel):
     def __init__(self, set_of_parameters):
         super().__init__()
-        self.set_of_parameters = set_of_parameters
+        self._set_of_parameters = set_of_parameters
         # Initialise empty variables (to avoid overwriting with 'None')
         self.variables = {}
 
@@ -553,12 +618,14 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
 
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, options=None):
+        super().__init__(options)
+        self._set_of_parameters = pybamm.standard_parameters_lead_acid
 
-        # Overwrite default parameter values
+    @property
+    def default_parameter_values(self):
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
-        self.default_parameter_values = pybamm.ParameterValues(
+        return pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current [A]": 1,
@@ -590,9 +657,12 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
             },
         )
 
-        # Overwrite geometry
-        self.default_geometry = pybamm.Geometry("1D macro")
+    @property
+    def default_geometry(self):
+        return pybamm.Geometry("1D macro")
 
+    def set_standard_output_variables(self):
+        super().set_standard_output_variables()
         # Standard time variable
         time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
         I = pybamm.electrical_parameters.dimensional_current_with_time
@@ -618,6 +688,8 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
     def __init__(self):
         super().__init__()
 
+    def set_standard_output_variables(self):
+        super().set_standard_output_variables()
         # Additional standard output variables
         # Time
         time_scale = pybamm.standard_parameters_lithium_ion.tau_discharge

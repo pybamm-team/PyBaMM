@@ -2,7 +2,11 @@
 # Test for the operator class
 #
 import pybamm
-from tests import get_mesh_for_testing, get_p2d_mesh_for_testing
+from tests import (
+    get_mesh_for_testing,
+    get_p2d_mesh_for_testing,
+    get_1p1d_mesh_for_testing,
+)
 
 import numpy as np
 from scipy.sparse import kron, eye
@@ -92,6 +96,47 @@ class TestFiniteVolume(unittest.TestCase):
             surf_eqn_disc.evaluate(None, linear_y), y_surf
         )
 
+    def test_extrapolate_2d_models(self):
+        # create discretisation
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # Microscale
+        var = pybamm.Variable("var", domain="negative particle")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
+        # evaluate
+        y_macro = mesh["negative electrode"][0].nodes
+        y_micro = mesh["negative particle"][0].nodes
+        y = np.outer(y_macro, y_micro).reshape(-1, 1)
+        # extrapolate to r=1 --> should evaluate to y_macro
+        np.testing.assert_array_almost_equal(
+            extrap_right_disc.evaluate(y=y)[:, 0], y_macro
+        )
+
+        var = pybamm.Variable("var", domain="positive particle")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["positive electrode"])
+
+        # 2d macroscale
+        mesh = get_1p1d_mesh_for_testing()
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="negative electrode")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, ["current collector"])
+
     def test_discretise_diffusivity_times_spatial_operator(self):
         # Set up
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -125,7 +170,7 @@ class TestFiniteVolume(unittest.TestCase):
         ]:
             # Check that the equation can be evaluated in each case
             # Dirichlet
-            disc._bcs = {
+            disc.bcs = {
                 var.id: {
                     "left": (pybamm.Scalar(0), "Dirichlet"),
                     "right": (pybamm.Scalar(1), "Dirichlet"),
@@ -134,7 +179,7 @@ class TestFiniteVolume(unittest.TestCase):
             eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, y_test)
             # Neumann
-            disc._bcs = {
+            disc.bcs = {
                 var.id: {
                     "left": (pybamm.Scalar(0), "Neumann"),
                     "right": (pybamm.Scalar(1), "Neumann"),
@@ -143,7 +188,7 @@ class TestFiniteVolume(unittest.TestCase):
             eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, y_test)
             # One of each
-            disc._bcs = {
+            disc.bcs = {
                 var.id: {
                     "left": (pybamm.Scalar(0), "Dirichlet"),
                     "right": (pybamm.Scalar(1), "Neumann"),
@@ -151,7 +196,7 @@ class TestFiniteVolume(unittest.TestCase):
             }
             eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, y_test)
-            disc._bcs = {
+            disc.bcs = {
                 var.id: {
                     "left": (pybamm.Scalar(0), "Neumann"),
                     "right": (pybamm.Scalar(1), "Dirichlet"),
@@ -195,10 +240,6 @@ class TestFiniteVolume(unittest.TestCase):
         )
 
         # test errors
-        with self.assertRaisesRegex(
-            TypeError, "discretised_symbol must be a StateVector or Concatenation"
-        ):
-            pybamm.FiniteVolume(mesh).add_ghost_nodes(var, pybamm.Scalar(1), None)
         bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
         with self.assertRaisesRegex(ValueError, "boundary condition must be"):
             pybamm.FiniteVolume(mesh).add_ghost_nodes(var, discretised_symbol, bcs)
@@ -350,7 +391,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
@@ -372,7 +413,7 @@ class TestFiniteVolume(unittest.TestCase):
             }
         }
 
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
@@ -408,7 +449,7 @@ class TestFiniteVolume(unittest.TestCase):
             }
         }
 
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
@@ -425,7 +466,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         y_linear = combined_submesh[0].nodes
         grad_eqn_disc = disc.process_symbol(grad_eqn)
@@ -445,7 +486,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(6), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         div_eqn_disc = disc.process_symbol(div_eqn)
         np.testing.assert_array_almost_equal(
@@ -479,7 +520,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
@@ -493,24 +534,25 @@ class TestFiniteVolume(unittest.TestCase):
 
         np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts + 1]))
 
-        # div: test on linear r^2
-        # div (grad r^2) = 6
-        const = 6 * np.ones(sec_pts * prim_pts)
-
+        # div
+        # div (grad r^2) = 6, N_left = N_right = 0
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
+        bc_var = disc.process_symbol(
+            pybamm.SpatialVariable("x_n", domain="negative electrode")
+        )
         boundary_conditions = {
-            var.id: {
-                "left": (pybamm.Scalar(6), "Dirichlet"),
-                "right": (pybamm.Scalar(6), "Dirichlet"),
-            }
+            var.id: {"left": (bc_var, "Neumann"), "right": (bc_var, "Neumann")}
         }
-        disc._bcs = boundary_conditions
-
+        disc.bcs = boundary_conditions
         div_eqn_disc = disc.process_symbol(div_eqn)
+
+        const = 6 * np.ones(sec_pts * prim_pts)
         div_eval = div_eqn_disc.evaluate(None, const)
         div_eval = np.reshape(div_eval, [sec_pts, prim_pts])
-        np.testing.assert_array_almost_equal(div_eval, np.zeros([sec_pts, prim_pts]))
+        np.testing.assert_array_almost_equal(
+            div_eval[:, :-1], np.zeros([sec_pts, prim_pts - 1])
+        )
 
     def test_grad_div_shapes_Neumann_bcs(self):
         """Test grad and div with Neumann boundary conditions (applied by div on N)"""
@@ -544,7 +586,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Neumann"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         # Linear y should have laplacian zero
@@ -586,7 +628,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         div_eqn_disc = disc.process_symbol(div_eqn)
 
@@ -607,7 +649,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         div_eqn_disc = disc.process_symbol(div_eqn)
 
@@ -659,7 +701,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         linear_y = combined_submesh[0].nodes
@@ -709,7 +751,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         const = 6 * np.ones(sec_pts * prim_pts)
@@ -735,7 +777,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         disc.set_variable_slices([var])
 
@@ -758,7 +800,7 @@ class TestFiniteVolume(unittest.TestCase):
                 "right": (pybamm.Scalar(combined_submesh[0].edges[-1]), "Dirichlet"),
             }
         }
-        disc._bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         np.testing.assert_array_almost_equal(
@@ -774,7 +816,7 @@ class TestFiniteVolume(unittest.TestCase):
 
     def test_definite_integral(self):
         # create discretisation
-        mesh = get_mesh_for_testing(200)
+        mesh = get_mesh_for_testing(xpts=200, rpts=200)
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
@@ -864,8 +906,16 @@ class TestFiniteVolume(unittest.TestCase):
         x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
         int_grad_phi = pybamm.IndefiniteIntegral(i, x)
         disc.set_variable_slices([phi])  # i is not a fundamental variable
-
+        # Set boundary conditions (required for shape but don't matter)
+        disc._bcs = {
+            phi.id: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
         int_grad_phi_disc = disc.process_symbol(int_grad_phi)
+        left_boundary_value = pybamm.BoundaryValue(int_grad_phi, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
 
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
 
@@ -874,18 +924,18 @@ class TestFiniteVolume(unittest.TestCase):
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_equal(phi_exact, phi_approx)
-
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
         # linear case
         phi_exact = combined_submesh[0].nodes[:, np.newaxis]
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # sine case
         phi_exact = np.sin(combined_submesh[0].nodes[:, np.newaxis])
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # --------------------------------------------------------------------
         # region which doesn't start at zero
@@ -894,8 +944,15 @@ class TestFiniteVolume(unittest.TestCase):
         x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
         int_grad_phi = pybamm.IndefiniteIntegral(i, x)
         disc.set_variable_slices([phi])  # i is not a fundamental variable
-
+        disc._bcs = {
+            phi.id: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
         int_grad_phi_disc = disc.process_symbol(int_grad_phi)
+        left_boundary_value = pybamm.BoundaryValue(int_grad_phi, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
         combined_submesh = mesh.combine_submeshes("separator", "positive electrode")
 
         # constant case
@@ -903,18 +960,23 @@ class TestFiniteVolume(unittest.TestCase):
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
         phi_approx += 1  # add constant of integration
         np.testing.assert_array_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # linear case
-        phi_exact = combined_submesh[0].nodes[:, np.newaxis]
+        phi_exact = (
+            combined_submesh[0].nodes[:, np.newaxis] - combined_submesh[0].edges[0]
+        )
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # sine case
-        phi_exact = np.sin(combined_submesh[0].nodes[:, np.newaxis])
+        phi_exact = np.sin(
+            combined_submesh[0].nodes[:, np.newaxis] - combined_submesh[0].edges[0]
+        )
         phi_approx = int_grad_phi_disc.evaluate(None, phi_exact)
-        phi_approx += phi_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(phi_exact, phi_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=phi_exact), 0)
 
         # --------------------------------------------------------------------
         # micrsoscale case
@@ -923,8 +985,16 @@ class TestFiniteVolume(unittest.TestCase):
         r_n = pybamm.SpatialVariable("r_n", ["negative particle"])
         c_integral = pybamm.IndefiniteIntegral(N, r_n)
         disc.set_variable_slices([c])  # N is not a fundamental variable
+        disc._bcs = {
+            c.id: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
 
         c_integral_disc = disc.process_symbol(c_integral)
+        left_boundary_value = pybamm.BoundaryValue(c_integral, "left")
+        left_boundary_value_disc = disc.process_symbol(left_boundary_value)
         combined_submesh = mesh["negative particle"]
 
         # constant case
@@ -932,18 +1002,19 @@ class TestFiniteVolume(unittest.TestCase):
         c_approx = c_integral_disc.evaluate(None, c_exact)
         c_approx += 1  # add constant of integration
         np.testing.assert_array_equal(c_exact, c_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
 
         # linear case
         c_exact = combined_submesh[0].nodes[:, np.newaxis]
         c_approx = c_integral_disc.evaluate(None, c_exact)
-        c_approx += c_exact[0]  # add constant of integration
         np.testing.assert_array_almost_equal(c_exact, c_approx)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
 
         # sine case
         c_exact = np.sin(combined_submesh[0].nodes[:, np.newaxis])
         c_approx = c_integral_disc.evaluate(None, c_exact)
-        c_approx += c_exact[0]  # add constant of integration
-        np.testing.assert_array_almost_equal(c_exact, c_approx)
+        np.testing.assert_array_almost_equal(c_exact, c_approx, decimal=3)
+        self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
 
         # ------------
         # check raises error for variales not on mesh edges
@@ -959,7 +1030,13 @@ class TestFiniteVolume(unittest.TestCase):
         grad_and_div = pybamm.div(pybamm.grad(phi))
         int_grad_phi = pybamm.IndefiniteIntegral(grad_and_div, x)
         disc.set_variable_slices([phi])
-
+        # Add boundary conditions so that the integrand has the right shape
+        disc._bcs = {
+            phi.id: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
         with self.assertRaisesRegex(pybamm.ModelError, "integrated"):
             disc.process_symbol(int_grad_phi)
 
@@ -1074,7 +1151,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # grad
         eqn = pybamm.grad(var)
-        disc._bcs = {
+        disc.bcs = {
             var.id: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(2), "Dirichlet"),
@@ -1101,7 +1178,7 @@ class TestFiniteVolume(unittest.TestCase):
         # div(grad)
         flux = pybamm.grad(var)
         eqn = pybamm.div(flux)
-        disc._bcs = {
+        disc.bcs = {
             var.id: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),
@@ -1114,7 +1191,7 @@ class TestFiniteVolume(unittest.TestCase):
         # div(grad) with averaging
         flux = var * pybamm.grad(var)
         eqn = pybamm.div(flux)
-        disc._bcs = {
+        disc.bcs = {
             var.id: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),

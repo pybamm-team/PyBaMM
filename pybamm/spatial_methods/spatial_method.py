@@ -65,12 +65,19 @@ class SpatialMethod:
         broadcasted_symbol: class: `pybamm.Symbol`
             The discretised symbol of the correct size for the spatial method
         """
-        vector_size = 0
-        for dom in domain:
-            for i in range(len(self.mesh[dom])):
-                vector_size += self.mesh[dom][i].npts_for_broadcast
+        vector_size_1D = sum(self.mesh[dom][0].npts_for_broadcast for dom in domain)
+        vector_size_2D = sum(
+            subdom.npts_for_broadcast for dom in domain for subdom in self.mesh[dom]
+        )
 
-        return symbol * pybamm.Vector(np.ones(vector_size), domain=domain)
+        if symbol.domain == ["current collector"]:
+            out = pybamm.Outer(
+                symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
+            )
+        else:
+            out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
+        self.test_shape(out)
+        return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """
@@ -178,9 +185,11 @@ class SpatialMethod:
         :class:`pybamm.Variable`
             The variable representing the surface value.
         """
-        n = sum(self.mesh[dom][0].npts for dom in discretised_child.domain)
+        if any(len(self.mesh[dom]) > 1 for dom in discretised_child.domain):
+            raise NotImplementedError("Cannot process 2D symbol in base spatial method")
         if isinstance(symbol, pybamm.BoundaryFlux):
             raise TypeError("Cannot process BoundaryFlux in base spatial method")
+        n = sum(self.mesh[dom][0].npts for dom in discretised_child.domain)
         if symbol.side == "left":
             # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
             # (row[i], col[i]) for each index of data. Here we just want a single point
@@ -257,3 +266,30 @@ class SpatialMethod:
 
         """
         return bin_op.__class__(disc_left, disc_right)
+
+    @staticmethod
+    def test_shape(symbol):
+        """
+        Check that the discretised symbol has a pybamm `shape`, i.e. can be evaluated
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            The symbol to be tested
+
+        Raises
+        ------
+        pybamm.ShapeError
+            If the shape of the object cannot be found
+        """
+        try:
+            symbol.shape
+        except ValueError as e:
+            raise pybamm.ShapeError(
+                """
+                Cannot evaluate the discretised symbol to find its shape
+                (original error: {})
+                """.format(
+                    e
+                )
+            )

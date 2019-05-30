@@ -19,6 +19,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         # Variables and reactions
         phi_e = pybamm.standard_variables.phi_e
         c_e = pybamm.standard_variables.c_e
+        variables = {"Electrolyte concentration": c_e, "Electrolyte potential": phi_e}
         onen = pybamm.Broadcast(1, ["negative electrode"])
         onep = pybamm.Broadcast(1, ["positive electrode"])
         reactions = {
@@ -27,7 +28,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
 
         # Set up model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        model.set_algebraic_system(phi_e, c_e, reactions)
+        model.set_algebraic_system(variables, reactions)
 
         # some small changes so that tests pass
         model.algebraic.update({c_e: c_e - pybamm.Scalar(1)})
@@ -42,26 +43,26 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         modeltest.test_all()
 
     def test_explicit(self):
+        # Set up
         param = pybamm.standard_parameters_lithium_ion
 
-        # Set up
         c_e_n = pybamm.Broadcast(1, domain=["negative electrode"])
         c_e_s = pybamm.Broadcast(1, domain=["separator"])
         c_e_p = pybamm.Broadcast(1, domain=["positive electrode"])
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-        ocp_n = pybamm.Scalar(0)
-        eta_r_n = pybamm.Scalar(0)
-        phi_s_n = pybamm.Scalar(0)
-
-        # electrode model
-        # electrode_model = pybamm.electrode.Ohm(param)
-        # phi_s_n = electrode_model.get_neg_pot_explicit_combined()
+        variables = {
+            "Electrolyte concentration": pybamm.Concatenation(c_e_n, c_e_s, c_e_p),
+            "Negative electrode open circuit potential": pybamm.Scalar(0),
+            "Negative electrode surface potential difference": pybamm.Scalar(0),
+            "Negative reaction overpotential": pybamm.Scalar(0),
+            "Negative electrode potential": pybamm.Scalar(0),
+            "Current collector current density": param.current_with_time,
+        }
 
         # Model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        leading_order_vars = model.get_explicit_leading_order(ocp_n, eta_r_n)
-        combined_vars = model.get_explicit_combined(ocp_n, eta_r_n, c_e, phi_s_n)
+        leading_order_vars = model.get_explicit_leading_order(variables)
+        combined_vars = model.get_explicit_combined(variables)
 
         # Get disc
         modeltest = tests.StandardModelTest(model)
@@ -163,10 +164,16 @@ class TestMacInnesCapacitance(unittest.TestCase):
         # Variables
         delta_phi_n = pybamm.standard_variables.delta_phi_n
         delta_phi_p = pybamm.standard_variables.delta_phi_p
-        c_e_n = pybamm.standard_variables.c_e_n
-        c_e_p = pybamm.standard_variables.c_e_p
+        c_e = pybamm.standard_variables.c_e
+        c_e_n, _, c_e_p = c_e.orphans
         c_s_n_surf = pybamm.Scalar(0.8)
         c_s_p_surf = pybamm.Scalar(0.8)
+        variables = {
+            "Electrolyte concentration": c_e,
+            "Negative electrode surface potential difference": delta_phi_n,
+            "Positive electrode surface potential difference": delta_phi_p,
+            "Current collector current density": param.current_with_time,
+        }
 
         # Exchange-current density
         neg = ["negative electrode"]
@@ -186,23 +193,27 @@ class TestMacInnesCapacitance(unittest.TestCase):
         j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, ["positive electrode"])
         reactions = {"main": {"neg": {"aj": j_n}, "pos": {"aj": j_p}}}
 
-        for use_cap in [True, False]:
+        for cap_options in ["differential", "algebraic"]:
             # Negative electrode
-            model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
-            model_n.set_full_system(delta_phi_n, c_e_n, reactions)
+            model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
+            model_n.set_full_system(variables, reactions, neg)
             # Update model for tests
-            model_n.rhs.update({c_e_n: pybamm.Scalar(0)})
-            model_n.initial_conditions.update({c_e_n: pybamm.Scalar(1)})
+            model_n.rhs.update({c_e: pybamm.Scalar(0), delta_phi_p: pybamm.Scalar(0)})
+            model_n.initial_conditions.update(
+                {c_e: pybamm.Scalar(1), delta_phi_p: pybamm.Scalar(1)}
+            )
             # Test
             modeltest_n = tests.StandardModelTest(model_n)
             modeltest_n.test_all()
 
             # Positive electrode
-            model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
-            model_p.set_full_system(delta_phi_p, c_e_p, reactions)
+            model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
+            model_p.set_full_system(variables, reactions, pos)
             # Update model for tests
-            model_p.rhs.update({c_e_p: pybamm.Scalar(0)})
-            model_p.initial_conditions.update({c_e_p: pybamm.Scalar(1)})
+            model_p.rhs.update({c_e: pybamm.Scalar(0), delta_phi_n: pybamm.Scalar(0)})
+            model_p.initial_conditions.update(
+                {c_e: pybamm.Scalar(1), delta_phi_n: pybamm.Scalar(1)}
+            )
             # Test
             modeltest_p = tests.StandardModelTest(model_p)
             modeltest_p.test_all()
@@ -212,11 +223,16 @@ class TestMacInnesCapacitance(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
 
         # Variables
+        delta_phi_n = pybamm.Variable("Negative electrode surface potential difference")
+        delta_phi_p = pybamm.Variable("Positive electrode surface potential difference")
         c_e = pybamm.Scalar(1)
-        delta_phi_n = pybamm.Variable("negative electrode potential difference")
-        delta_phi_p = pybamm.Variable("positive electrode potential difference")
         c_s_n_surf = pybamm.Scalar(0.8)
         c_s_p_surf = pybamm.Scalar(0.8)
+        variables = {
+            "Negative electrode surface potential difference": delta_phi_n,
+            "Positive electrode surface potential difference": delta_phi_p,
+            "Current collector current density": param.current_with_time,
+        }
 
         # Interfacial current density
         # Exchange-current density
@@ -237,17 +253,17 @@ class TestMacInnesCapacitance(unittest.TestCase):
         j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, ["positive electrode"])
         reactions = {"main": {"neg": {"aj": j_n}, "pos": {"aj": j_p}}}
 
-        for use_cap in [True, False]:
+        for cap_options in ["differential", "algebraic"]:
             # Negative electrode
-            model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
-            model_n.set_leading_order_system(delta_phi_n, reactions, neg)
+            model_n = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
+            model_n.set_leading_order_system(variables, reactions, neg)
             # Test
             modeltest_n = tests.StandardModelTest(model_n)
             modeltest_n.test_all()
 
             # Positive electrode
-            model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, use_cap)
-            model_p.set_leading_order_system(delta_phi_p, reactions, pos)
+            model_p = pybamm.electrolyte_current.MacInnesCapacitance(param, cap_options)
+            model_p.set_leading_order_system(variables, reactions, pos)
             # Test
             modeltest_p = tests.StandardModelTest(model_p)
             modeltest_p.test_all()
@@ -255,9 +271,12 @@ class TestMacInnesCapacitance(unittest.TestCase):
     def test_failure(self):
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.electrolyte_current.MacInnesCapacitance(param)
-        delta_phi = pybamm.Symbol("sym", domain="test")
+        variables = {
+            "Current collector current density": None,
+            "Electrolyte concentration": pybamm.standard_variables.c_e,
+        }
         with self.assertRaises(pybamm.DomainError):
-            model.set_full_system(delta_phi, None, None)
+            model.set_full_system(variables, None, "not a domain")
 
 
 if __name__ == "__main__":

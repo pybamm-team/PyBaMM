@@ -77,7 +77,7 @@ def simplify_addition_subtraction(myclass, left, right):
         1 - (2 + 3)       -> [1, 2, 3]    and [None, Subtraction, Subtraction]
         (1 + 2) - (2 + 3) -> [1, 2, 2, 3] and [None, Addition, Subtraction, Subtraction]
         """
-        for child in [left_child, right_child]:
+        for side, child in [("left", left_child), ("right", right_child)]:
             if isinstance(child, (pybamm.Addition, pybamm.Subtraction)):
                 left, right = child.orphans
                 flatten(child.__class__, left, right, in_subtraction)
@@ -91,7 +91,7 @@ def simplify_addition_subtraction(myclass, left, right):
                 else:
                     numerator_types.append(pybamm.Addition)
 
-            if child == left_child:
+            if side == "left":
                 if in_subtraction is None:
                     in_subtraction = this_class == pybamm.Subtraction
                 elif this_class == pybamm.Subtraction:
@@ -270,9 +270,9 @@ def simplify_multiplication_division(myclass, left, right):
         (1 @ 2) / 3 ->  [1, 2]       [3]       [None, MatrixMultiplication]
         1 / (c / 2) ->  [1, 2]       [c]       [None, Multiplication]
         """
-        for child in [left_child, right_child]:
+        for side, child in [("left", left_child), ("right", right_child)]:
 
-            if child == left_child:
+            if side == "left":
                 other_child = right_child
             else:
                 other_child = left_child
@@ -286,7 +286,7 @@ def simplify_multiplication_division(myclass, left, right):
             ):
                 left, right = child.orphans
                 if (
-                    child == left_child
+                    side == "left"
                     and this_class == pybamm.Multiplication
                     and isinstance(other_child, pybamm.Vector)
                 ):
@@ -298,7 +298,7 @@ def simplify_multiplication_division(myclass, left, right):
                         this_class, child.__class__, left, right, in_numerator, True
                     )
                     break
-                if child == left_child:
+                if side == "left":
                     flatten(
                         previous_class, child.__class__, left, right, in_numerator, True
                     )
@@ -312,7 +312,7 @@ def simplify_multiplication_division(myclass, left, right):
                 and not in_matrix_multiplication
             ):
                 left, right = child.orphans
-                if child == left_child:
+                if side == "left":
                     flatten(
                         previous_class,
                         child.__class__,
@@ -329,18 +329,18 @@ def simplify_multiplication_division(myclass, left, right):
             else:
                 if in_numerator:
                     numerator.append(child)
-                    if child == left_child:
+                    if side == "left":
                         numerator_types.append(previous_class)
                     else:
                         numerator_types.append(this_class)
                 else:
                     denominator.append(child)
-                    if child == left_child:
+                    if side == "left":
                         denominator_types.append(previous_class)
                     else:
                         denominator_types.append(this_class)
 
-            if child == left_child and this_class == pybamm.Division:
+            if side == "left" and this_class == pybamm.Division:
                 in_numerator = not in_numerator
 
     flatten(None, myclass, left, right, True, myclass == pybamm.MatrixMultiplication)
@@ -532,52 +532,65 @@ def simplify_multiplication_division(myclass, left, right):
     return result
 
 
-def simplify(symbol):
-    """
-    This function recurses down the tree, applying any simplifications defined in
-    classes derived from pybamm.Symbol. E.g. any expression multiplied by a
-    pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0)
+class Simplification(object):
+    def __init__(self, simplified_symbols=None):
+        self._simplified_symbols = simplified_symbols or {}
 
-    Parameters
-    ----------
-    symbol : :class:`pybamm.Symbol`
+    def simplify(self, symbol):
+        """
+        This function recurses down the tree, applying any simplifications defined in
+        classes derived from pybamm.Symbol. E.g. any expression multiplied by a
+        pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0).
+        If a symbol has already been simplified, the stored value is returned.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
         The symbol to simplify
 
-    Returns
-    -------
-    :class:`pybamm.Symbol`
+        Returns
+        -------
+        :class:`pybamm.Symbol`
         Simplified symbol
-    """
-    pybamm.logger.debug("Simplify {!s}".format(symbol))
-
-    if isinstance(symbol, pybamm.BinaryOperator):
-        left, right = symbol.children
-        # process children
-        new_left = simplify(left)
-        new_right = simplify(right)
-        # make new symbol, ensure domain remains the same
-        # _binary_simplify defined in derived classes for specific rules
-        new_symbol = symbol._binary_simplify(new_left, new_right)
-        new_symbol.domain = symbol.domain
-        return simplify_if_constant(new_symbol)
-
-    elif isinstance(symbol, pybamm.UnaryOperator):
-        new_child = simplify(symbol.child)
-        new_symbol = symbol._unary_simplify(new_child)
-        new_symbol.domain = symbol.domain
-        return simplify_if_constant(new_symbol)
-
-    elif isinstance(symbol, pybamm.Concatenation):
-        new_children = [simplify(child) for child in symbol.cached_children]
-        new_symbol = symbol._concatenation_simplify(new_children)
-
-        return simplify_if_constant(new_symbol)
-
-    else:
-        # Backup option: return new copy of the object
+        """
+        pybamm.logger.debug("Simplify {!s}".format(symbol))
         try:
-            return symbol.new_copy()
-        except NotImplementedError:
-            raise NotImplementedError(
-                "Cannot simplify symbol of type '{}'".format(type(symbol))
-            )
+            return self._simplified_symbols[symbol.id]
+        except KeyError:
+            simplified_symbol = self._simplify(symbol)
+            self._simplified_symbols[symbol.id] = simplified_symbol
+            return simplified_symbol
+
+    def _simplify(self, symbol):
+        """ See :meth:`Simplification.simplify()`. """
+
+        if isinstance(symbol, pybamm.BinaryOperator):
+            left, right = symbol.children
+            # process children
+            new_left = self.simplify(left)
+            new_right = self.simplify(right)
+            # make new symbol, ensure domain remains the same
+            # _binary_simplify defined in derived classes for specific rules
+            new_symbol = symbol._binary_simplify(new_left, new_right)
+            new_symbol.domain = symbol.domain
+            return simplify_if_constant(new_symbol)
+
+        elif isinstance(symbol, pybamm.UnaryOperator):
+            new_child = self.simplify(symbol.child)
+            new_symbol = symbol._unary_simplify(new_child)
+            new_symbol.domain = symbol.domain
+            return simplify_if_constant(new_symbol)
+
+        elif isinstance(symbol, pybamm.Concatenation):
+            new_children = [self.simplify(child) for child in symbol.children]
+            new_symbol = symbol._concatenation_simplify(new_children)
+            return simplify_if_constant(new_symbol)
+
+        else:
+            # Backup option: return new copy of the object
+            try:
+                return symbol.new_copy()
+            except NotImplementedError:
+                raise NotImplementedError(
+                    "Cannot simplify symbol of type '{}'".format(type(symbol))
+                )

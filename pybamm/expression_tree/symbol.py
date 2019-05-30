@@ -451,25 +451,24 @@ class Symbol(anytree.NodeMixin):
         else:
             return False
 
-    def has_spatial_derivatives(self):
-        """Returns True if equation has spatial derivatives (grad or div)."""
-        return self.has_gradient() or self.has_divergence()
+    def evaluates_on_edges(self):
+        """
+        Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
+        operator, but not a divergence operator, and is not an IndefiniteIntegral.
+        """
+        return (
+            self.has_symbol_of_class(pybamm.Gradient)
+            and not self.has_symbol_of_class(pybamm.Divergence)
+            and not self.has_symbol_of_class(pybamm.IndefiniteIntegral)
+        )
 
-    def has_gradient_and_not_divergence(self):
-        """Returns True if equation has a Gradient term and not Divergence term."""
-        return self.has_gradient() and not self.has_divergence()
+    def has_symbol_of_class(self, symbol_class):
+        """Returns True if equation has a term of the class(es) `symbol_class`."""
+        return any(isinstance(symbol, symbol_class) for symbol in self.pre_order())
 
-    def has_gradient(self):
-        """Returns True if equation has a Gradient term."""
-        return any(isinstance(symbol, pybamm.Gradient) for symbol in self.pre_order())
-
-    def has_divergence(self):
-        """Returns True if equation has a Divergence term."""
-        return any(isinstance(symbol, pybamm.Divergence) for symbol in self.pre_order())
-
-    def simplify(self):
-        """ Simplify the expression tree. See :meth:`pybamm.simplify()`. """
-        return pybamm.simplify(self)
+    def simplify(self, simplified_symbols=None):
+        """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
+        return pybamm.Simplification(simplified_symbols).simplify(self)
 
     def new_copy(self):
         """
@@ -507,9 +506,10 @@ class Symbol(anytree.NodeMixin):
             y = None
         else:
             min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
-            y = np.ones(min_y_size)
-        eval = self.evaluate(t=0, y=y)
-        if isinstance(eval, numbers.Number):
+            # Pick a y that won't cause RuntimeWarnings
+            y = np.linspace(0.1, 0.9, min_y_size)
+        evaluated_self = self.evaluate(t=0, y=y)
+        if isinstance(evaluated_self, numbers.Number):
             return ()
         else:
-            return eval.shape
+            return evaluated_self.shape

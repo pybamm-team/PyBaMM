@@ -247,13 +247,14 @@ class TestSymbol(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
 
         c_e = pybamm.standard_variables.c_e
+        variables = {"Electrolyte concentration": c_e}
         onen = pybamm.Broadcast(1, ["negative electrode"])
         onep = pybamm.Broadcast(1, ["positive electrode"])
         reactions = {
             "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
         }
         model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model.set_differential_system(c_e, reactions)
+        model.set_differential_system(variables, reactions)
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test.png")
         self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
@@ -266,18 +267,14 @@ class TestSymbol(unittest.TestCase):
         div_eqn = pybamm.div(var)
         grad_div_eqn = pybamm.div(grad_eqn)
         algebraic_eqn = 2 * var + 3
-        self.assertTrue(grad_eqn.has_spatial_derivatives())
-        self.assertTrue(grad_eqn.has_gradient())
-        self.assertFalse(grad_eqn.has_divergence())
-        self.assertTrue(div_eqn.has_spatial_derivatives())
-        self.assertFalse(div_eqn.has_gradient())
-        self.assertTrue(div_eqn.has_divergence())
-        self.assertTrue(grad_div_eqn.has_spatial_derivatives())
-        self.assertTrue(grad_div_eqn.has_gradient())
-        self.assertTrue(grad_div_eqn.has_divergence())
-        self.assertFalse(algebraic_eqn.has_spatial_derivatives())
-        self.assertFalse(algebraic_eqn.has_gradient())
-        self.assertFalse(algebraic_eqn.has_divergence())
+        self.assertTrue(grad_eqn.has_symbol_of_class(pybamm.Gradient))
+        self.assertFalse(grad_eqn.has_symbol_of_class(pybamm.Divergence))
+        self.assertFalse(div_eqn.has_symbol_of_class(pybamm.Gradient))
+        self.assertTrue(div_eqn.has_symbol_of_class(pybamm.Divergence))
+        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Gradient))
+        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Divergence))
+        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Gradient))
+        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Divergence))
 
     def test_orphans(self):
         a = pybamm.Scalar(1)
