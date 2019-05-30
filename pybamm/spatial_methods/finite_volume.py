@@ -537,8 +537,10 @@ class FiniteVolume(pybamm.SpatialMethod):
             disc_left = self.compute_diffusivity(disc_left)
         # Return new binary operator with appropriate class
         out = bin_op.__class__(disc_left, disc_right)
-        import ipdb; ipdb.set_trace()
-        self.test_shape(out)
+        try:
+            self.test_shape(out)
+        except pybamm.ShapeError:
+            import ipdb; ipdb.set_trace()
         return out
 
     def compute_diffusivity(self, discretised_symbol):

@@ -76,7 +76,10 @@ class SpatialMethod:
             )
         else:
             out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
-        self.test_shape(out)
+        try:
+            self.test_shape(out)
+        except pybamm.ShapeError:
+            import ipdb; ipdb.set_trace()    
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -285,7 +288,6 @@ class SpatialMethod:
         try:
             symbol.shape
         except ValueError as e:
-            import ipdb; ipdb.set_trace()
             raise pybamm.ShapeError(
                 """
                 Cannot evaluate the discretised symbol to find its shape

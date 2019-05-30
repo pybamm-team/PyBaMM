@@ -364,12 +364,9 @@ class Discretisation(object):
         try:
             return self._discretised_symbols[symbol.id]
         except KeyError:
-            try:
-                discretised_symbol = self._process_symbol(symbol)
-                self._discretised_symbols[symbol.id] = discretised_symbol
-                return discretised_symbol
-            except KeyError:
-                import ipdb; ipdb.set_trace()
+            discretised_symbol = self._process_symbol(symbol)
+            self._discretised_symbols[symbol.id] = discretised_symbol
+            return discretised_symbol
 
     def _process_symbol(self, symbol):
         """ See :meth:`Discretisation.process_symbol()`. """
@@ -438,7 +435,6 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
-
             return new_symbol
 
         else:

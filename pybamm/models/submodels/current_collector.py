@@ -26,6 +26,30 @@ class OhmTwoDimensional(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
+    def set_uniform_current(self, i_boundary_cc):
+        """
+        PDE system for current in the current collectors, using Ohm's law
+
+        Parameters
+        ----------
+        i_boundary_cc : :class:`pybamm.Variable`
+            Current density at the current collector
+
+        """
+        param = self.set_of_parameters
+
+        # algebraic equations
+        applied_current = param.current_with_time
+        self.algebraic = {
+            i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z,
+        }
+        self.initial_conditions = {
+            i_boundary_cc: applied_current / param.l_y / param.l_z,
+        }
+        self.variables = {
+            "Current collector current density": i_boundary_cc,
+        }
+
     def set_algebraic_system(self, v_boundary_cc, i_boundary_cc):
         """
         PDE system for current in the current collectors, using Ohm's law

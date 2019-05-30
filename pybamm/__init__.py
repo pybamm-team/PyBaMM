@@ -173,8 +173,10 @@ from .geometry.geometry import (
     Geometry2p1DMacro,
     Geometry1DMicro,
     Geometry1p1DMicro,
-    Geometry2p1DMicro,
-    Geometry3p1DMicro,
+    Geometry1p0p1DMicro,
+    Geometry1p1p1DMicro,
+    Geometry2p0p1DMicro,
+    Geometry2p1p1DMicro,
 )
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS

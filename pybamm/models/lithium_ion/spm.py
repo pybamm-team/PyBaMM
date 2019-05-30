@@ -24,10 +24,19 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         "-----------------------------------------------------------------------------"
         "Boundary conditions"
-        v_boundary_cc = pybamm.Variable("Current collector voltage", domain="current collector")
-        i_boundary_cc = pybamm.Variable("Current collector current density", domain="current collector")
-        bc_variables = {"i_boundary_cc": i_boundary_cc, "v_boundary_cc": v_boundary_cc}
-        self.set_boundary_conditions(bc_variables)
+        if self.options["bc_options"]["dimensionality"] == 0:
+            i_boundary_cc = param.current_with_time
+            self.variables["Current collector current density"] = i_boundary_cc
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            raise NotImplementedError
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            i_boundary_cc = pybamm.Variable("Current collector current density", domain="current collector")
+            current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
+            current_collector_model.set_uniform_current(i_boundary_cc)
+            #current_collector_model.set_algebraic_system(v_boundary_cc, i_boundary_cc)
+            self.update(current_collector_model)
+            i_boundary_cc = self.variables["Current collector current density"]
+
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -94,9 +103,9 @@ class SPM(pybamm.LithiumIonBaseModel):
         if dimensionality == 0:
             return pybamm.Geometry("1D macro", "1D micro")
         elif dimensionality == 1:
-            return pybamm.Geometry("1+1D macro", "1D micro")
+            return pybamm.Geometry("1+1D macro", "(1+1)+1D micro")
         elif dimensionality == 2:
-            return pybamm.Geometry("2+1D macro", "1D micro")
+            return pybamm.Geometry("2+1D macro", "(2+1)+1D micro")
 
     @property
     def default_submesh_types(self):
@@ -137,23 +146,3 @@ class SPM(pybamm.LithiumIonBaseModel):
                 "positive particle": pybamm.FiniteVolume,
                 "current collector": pybamm.FiniteElementFenics,
             }
-
-    def set_boundary_conditions(self, bc_variables=None):
-        """Get boundary conditions"""
-        # TODO: edit to allow constant-current and constant-power control
-        param = self.set_of_parameters
-        dimensionality = self.options["bc_options"]["dimensionality"]
-        if dimensionality == 0:
-            current_bc = param.current_with_time
-            self.variables["Current collector current density"] = current_bc
-            # TO DO: fix voltage here
-            voltage = pybamm.Scalar(1)
-            self.variables["Current collector voltage"] = voltage
-        elif dimensionality == 1:
-            raise NotImplementedError
-        elif dimensionality == 2:
-            i_boundary_cc = bc_variables["i_boundary_cc"]
-            v_boundary_cc = bc_variables["v_boundary_cc"]
-            current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
-            current_collector_model.set_algebraic_system(v_boundary_cc, i_boundary_cc)
-            self.update(current_collector_model)

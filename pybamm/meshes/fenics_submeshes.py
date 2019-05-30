@@ -38,10 +38,10 @@ class FenicsMesh2D:
         for var in spatial_vars:
             if var.name == "y":
                 y_lims = lims[var]
-                Ny = npts[var.id]
+                Ny = npts[var.id] - 1
             elif var.name == "z":
                 z_lims = lims[var]
-                Nz = npts[var.id]
+                Nz = npts[var.id] - 1
             else:
                 raise pybamm.DomainError("spatial variable must be y or z not {}".format(var.name))
 

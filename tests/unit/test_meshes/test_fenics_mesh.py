@@ -55,7 +55,7 @@ class TestMesh(unittest.TestCase):
         for domain in mesh:
             if domain == "current collector":
                 # NOTE: only for degree 1
-                npts = (var_pts[var.y] + 1) * (var_pts[var.z] + 1)
+                npts = var_pts[var.y] * var_pts[var.z]
                 self.assertEqual(mesh[domain][0].npts, npts)
             else:
                 self.assertEqual(len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1)

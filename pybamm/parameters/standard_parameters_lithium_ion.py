@@ -34,6 +34,7 @@ L_y = pybamm.geometric_parameters.L_y
 L_z = pybamm.geometric_parameters.L_z
 A_cc = pybamm.geometric_parameters.A_cc
 
+
 # Tab geometry
 L_tab_n = pybamm.geometric_parameters.L_tab_n
 Centre_y_tab_n = pybamm.geometric_parameters.Centre_y_tab_n
@@ -192,6 +193,7 @@ l_p = pybamm.geometric_parameters.l_p
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
 l_cp = pybamm.geometric_parameters.l_cp
+delta = pybamm.geometric_parameters.delta
 
 # Tab geometry
 l_tab_n = pybamm.geometric_parameters.l_tab_n

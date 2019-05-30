@@ -56,8 +56,8 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         """
         # only implemented in y-z plane
         if symbol.name in ["y", "z"]:
-            symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
+            symbol_mesh = self.mesh
+            return pybamm.Vector(symbol_mesh[0].npts, domain=symbol.domain)
         else:
             raise NotImplementedError(
                 "FiniteElementFenics only implemented in the y-z plane"
