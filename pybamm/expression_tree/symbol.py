@@ -401,13 +401,17 @@ class Symbol(anytree.NodeMixin):
     def evaluate_for_shape(self):
         """Evaluate expression tree to find its shape. For symbols that cannot be
         evaluated directly (e.g. `Variable` or `Parameter`), a vector of the appropriate
-        shape is returned instead, using arbitrary domain sizes from the dictionary
-        `DOMAIN_SIZES_FOR_TESTING`
+        shape is returned instead, using the symbol's domain.
         See :meth:`pybamm.Symbol.evaluate()`
         """
         return self.evaluate()
 
     def evaluate_for_shape_using_domain(self):
+        """
+        Return a vector of the appropriate shape, based on the symbol's domain.
+        Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they
+        do.
+        """
         if self.domain == []:
             size = 1
         else:

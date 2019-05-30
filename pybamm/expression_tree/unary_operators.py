@@ -408,6 +408,7 @@ class Integral(SpatialOperator):
         return self.__class__(child, self.integration_variable)
 
     def evaluate_for_shape(self):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return self.evaluate_for_shape_using_domain()
 
 
@@ -482,6 +483,10 @@ class BoundaryOperator(SpatialOperator):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return self.__class__(child, self.side)
 
+    def evaluate_for_shape(self):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        return self.evaluate_for_shape_using_domain()
+
 
 class BoundaryValue(BoundaryOperator):
     """A node in the expression tree which gets the boundary value of a variable.
@@ -498,9 +503,6 @@ class BoundaryValue(BoundaryOperator):
 
     def __init__(self, child, side):
         super().__init__("boundary value", child, side)
-
-    def evaluate_for_shape(self):
-        return self.evaluate_for_shape_using_domain()
 
 
 class BoundaryFlux(BoundaryOperator):

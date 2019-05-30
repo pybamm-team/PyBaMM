@@ -30,8 +30,5 @@ class Variable(pybamm.Symbol):
         return Variable(self.name, self.domain)
 
     def evaluate_for_shape(self):
-        """
-        Returns a vector of NaNs to represent the shape of a Variable.
-        See :meth:`pybamm.Symbol.evaluate_for_shape()`
-        """
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return self.evaluate_for_shape_using_domain()
