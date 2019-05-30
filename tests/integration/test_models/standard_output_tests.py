@@ -458,6 +458,8 @@ class CurrentTests(BaseOutputTest):
 
         self.i_s_n = self.get_var("Negative electrode current density")
         self.i_s_p = self.get_var("Positive electrode current density")
+        self.i_s = self.get_var("Electrode current density")
+        self.i_e = self.get_var("Electrolyte current density")
 
     def test_interfacial_current_average(self):
         """Test that average of the interfacial current density is equal to the true
@@ -472,8 +474,20 @@ class CurrentTests(BaseOutputTest):
     def test_conservation(self):
         """Test sum of electrode and electrolyte current densities give the applied
         current density"""
+        t, x_n, x_s, x_p = self.t, self.x_n, self.x_s, self.x_p
 
-        # TODO: add a total function
+        current_param = pybamm.electrical_parameters.current_with_time
+        i_cell = self.param.process_symbol(current_param).evaluate(t=t)
+        for x in [x_n, x_s, x_p]:
+            np.testing.assert_array_almost_equal(
+                self.i_s(t, x) + self.i_e(t, x), i_cell, decimal=3
+            )
+        np.testing.assert_array_almost_equal(
+            self.i_s(t, x_n), self.i_s_n(t, x_n), decimal=3
+        )
+        np.testing.assert_array_almost_equal(
+            self.i_s(t, x_p), self.i_s_p(t, x_p), decimal=3
+        )
 
     def test_current_density_boundaries(self):
         """Test the boundary values of the current densities"""
