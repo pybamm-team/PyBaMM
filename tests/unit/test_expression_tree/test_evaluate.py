@@ -327,6 +327,14 @@ class TestEvaluate(unittest.TestCase):
             result = evaluator.evaluate(t=t, y=y).toarray()
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
+        # test Outer
+        v = pybamm.Vector(np.ones(5), domain="current collector")
+        w = pybamm.Vector(2 * np.ones(3), domain="test")
+        expr = pybamm.Outer(v, w)
+        evaluator = pybamm.EvaluatorPython(expr)
+        result = evaluator.evaluate()
+        np.testing.assert_allclose(result, expr.evaluate())
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
