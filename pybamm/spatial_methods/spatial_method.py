@@ -200,12 +200,7 @@ class SpatialMethod:
             right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
             bv_vector = pybamm.Matrix(right_vector)
 
-        try:
-            out = bv_vector @ discretised_child
-        except pybamm.ShapeError:
-            import ipdb
-
-            ipdb.set_trace()
+        out = bv_vector @ discretised_child
         # boundary value removes domain
         out.domain = []
         return out

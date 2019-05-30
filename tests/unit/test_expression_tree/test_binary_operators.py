@@ -202,6 +202,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(prod.evaluate(), 12)
 
     def test_sparse_multiply(self):
+        pybamm.debug_mode = True
         row = np.array([0, 3, 1, 0])
         col = np.array([0, 3, 1, 2])
         data = np.array([4, 5, 7, 9])
@@ -253,6 +254,7 @@ class TestBinaryOperators(unittest.TestCase):
             pybammS1 @ pybammS1
         with self.assertRaisesRegex(pybamm.ShapeError, "dimension mismatch"):
             pybammS2 @ pybammS2
+        pybamm.debug_mode = False
 
     def test_sparse_divide(self):
         row = np.array([0, 3, 1, 0])

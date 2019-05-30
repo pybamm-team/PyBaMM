@@ -20,13 +20,16 @@ class Concatenation(pybamm.Symbol):
 
     """
 
-    def __init__(self, *children, name=None, check_domain=True):
+    def __init__(
+        self, *children, name=None, check_domain=True, concat_fun=np.concatenate
+    ):
         if name is None:
             name = "concatenation"
         if check_domain:
             domain = self.get_children_domains(children)
         else:
             domain = []
+        self.concat_fun = concat_fun
         super().__init__(name, children, domain=domain)
 
     def get_children_domains(self, children):
@@ -77,10 +80,11 @@ class Concatenation(pybamm.Symbol):
         return new_symbol
 
     def evaluate_for_shape(self):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape` """
         if len(self.children) == 0:
             return np.array([])
         else:
-            return np.concatenate(
+            return self.concat_fun(
                 [child.evaluate_for_shape() for child in self.children]
             )
 
@@ -275,14 +279,10 @@ class SparseStack(Concatenation):
 
     def __init__(self, *children):
         children = list(children)
-        super().__init__(*children, name="sparse stack", check_domain=False)
+        super().__init__(
+            *children, name="sparse stack", check_domain=False, concat_fun=vstack
+        )
 
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation.evaluate()`. """
         return vstack(children_eval)
-
-    def evaluate_for_shape(self):
-        if len(self.children) == 0:
-            return np.array([])
-        else:
-            return vstack([child.evaluate_for_shape() for child in self.children])

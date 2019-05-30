@@ -17,7 +17,7 @@ if sys.version_info[0] < 3:
     del (x)  # Before Python3, list comprehension iterators leaked
 
 #
-# Expose pints version
+# Expose pybamm version
 #
 
 
@@ -26,6 +26,12 @@ def version(formatted=False):
         return "PyBaMM " + VERSION
     else:
         return VERSION_INT
+
+
+#
+# Set debug mode to false by default
+#
+debug_mode = False
 
 
 #
@@ -49,13 +55,6 @@ from .logger import logger, set_logging_level
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.exceptions import (
-    DomainError,
-    ModelError,
-    SolverError,
-    ShapeError,
-    ModelWarning,
-)
 from .expression_tree.symbol import Symbol
 from .expression_tree.binary_operators import (
     is_scalar_zero,
@@ -110,6 +109,13 @@ from .expression_tree.independent_variable import (
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector, StateVector
 
+from .expression_tree.exceptions import (
+    DomainError,
+    ModelError,
+    SolverError,
+    ShapeError,
+    ModelWarning,
+)
 from .expression_tree.simplify import (
     Simplification,
     simplify_if_constant,

@@ -87,12 +87,13 @@ class Symbol(anytree.NodeMixin):
             self.set_id()
             # Test shape on everything but nodes that contain the base Symbol class or
             # the base BinaryOperator class
-            if not any(
-                issubclass(pybamm.Symbol, type(x))
-                or issubclass(pybamm.BinaryOperator, type(x))
-                for x in self.pre_order()
-            ):
-                self.test_shape()
+            if pybamm.debug_mode is True:
+                if not any(
+                    issubclass(pybamm.Symbol, type(x))
+                    or issubclass(pybamm.BinaryOperator, type(x))
+                    for x in self.pre_order()
+                ):
+                    self.test_shape()
 
     @property
     def id(self):
