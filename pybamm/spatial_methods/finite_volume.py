@@ -84,7 +84,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         gradient_matrix = self.gradient_matrix(domain)
 
         out = gradient_matrix @ discretised_symbol
-        self.test_shape(out)
+        out.test_shape()
         return out
 
     def gradient_matrix(self, domain):
@@ -152,7 +152,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             out = divergence_matrix @ discretised_symbol
 
-        self.test_shape(out)
+        out.test_shape()
         return out
 
     def divergence_matrix(self, domain):
@@ -209,7 +209,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             out = integration_vector @ discretised_symbol
         out.domain = []
 
-        self.test_shape(out)
+        out.test_shape()
         return out
 
     def definite_integral_vector(self, domain):
@@ -262,7 +262,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         out.domain = domain
 
-        self.test_shape(out)
+        out.test_shape()
         return out
 
     def indefinite_integral_matrix(self, domain):
@@ -496,7 +496,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             boundary_value.domain = []
 
-        self.test_shape(boundary_value)
+        boundary_value.test_shape()
         return boundary_value
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
@@ -537,7 +537,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             disc_left = self.compute_diffusivity(disc_left)
         # Return new binary operator with appropriate class
         out = bin_op.__class__(disc_left, disc_right)
-        self.test_shape(out)
+        out.test_shape()
         return out
 
     def compute_diffusivity(self, discretised_symbol):
@@ -599,5 +599,5 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             out = arithmetic_mean(discretised_symbol)
 
-        self.test_shape(out)
+        out.test_shape()
         return out

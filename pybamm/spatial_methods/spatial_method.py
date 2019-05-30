@@ -76,7 +76,7 @@ class SpatialMethod:
             )
         else:
             out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
-        self.test_shape(out)
+        out.test_shape()
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -266,30 +266,3 @@ class SpatialMethod:
 
         """
         return bin_op.__class__(disc_left, disc_right)
-
-    @staticmethod
-    def test_shape(symbol):
-        """
-        Check that the discretised symbol has a pybamm `shape`, i.e. can be evaluated
-
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            The symbol to be tested
-
-        Raises
-        ------
-        pybamm.ShapeError
-            If the shape of the object cannot be found
-        """
-        try:
-            symbol.shape
-        except ValueError as e:
-            raise pybamm.ShapeError(
-                """
-                Cannot evaluate the discretised symbol to find its shape
-                (original error: {})
-                """.format(
-                    e
-                )
-            )

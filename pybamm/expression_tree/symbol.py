@@ -10,6 +10,12 @@ import autograd.numpy as np
 
 from anytree.exporter import DotExporter
 
+DOMAIN_SHAPES_FOR_TESTING = {
+    "negative electrode": 17,
+    "separator": 29,
+    "positive electrode": 43,
+}
+
 
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
@@ -492,12 +498,10 @@ class Symbol(anytree.NodeMixin):
     @property
     def shape(self):
         """
-        Shape of an object, found by evaluating it with appropriate t and y
-
-        Raises
-        ------
-        NotImplementedError
-            If trying to find the shape of an object that cannot be evaluated
+        Shape of an object, found by evaluating it with appropriate t and y. If a symbol
+        cannot be evaluated directly (e.g. it is a `Variable` or `Parameter`), it is
+        instead given an arbitrary domain-dependent shape from the dictionary
+        `pybamm.DOMAIN_SHAPES_FOR_TESTING` (note that this only works for some domains)
         """
         state_vectors_in_node = [
             x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
@@ -513,3 +517,17 @@ class Symbol(anytree.NodeMixin):
             return ()
         else:
             return evaluated_self.shape
+
+    def test_shape(self):
+        """
+        Check that the discretised self has a pybamm `shape`, i.e. can be evaluated
+
+        Raises
+        ------
+        pybamm.ShapeError
+            If the shape of the object cannot be found
+        """
+        try:
+            self.shape
+        except ValueError as e:
+            raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))

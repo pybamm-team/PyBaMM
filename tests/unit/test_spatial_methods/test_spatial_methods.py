@@ -39,11 +39,11 @@ class TestSpatialMethod(unittest.TestCase):
         spatial_method = pybamm.SpatialMethod(mesh)
         # right shape, passes
         y1 = pybamm.StateVector(slice(0, 10))
-        spatial_method.test_shape(y1)
+        y1.test_shape()
         # bad shape, fails
         y2 = pybamm.StateVector(slice(0, 5))
         with self.assertRaises(pybamm.ShapeError):
-            spatial_method.test_shape(y1 + y2)
+            (y1 + y2).test_shape()
 
 
 if __name__ == "__main__":
