@@ -530,7 +530,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             boundary_value.domain = []
 
-        self.test_shape(boundary_value)
+        try:
+            self.test_shape(boundary_value)
+        except pybamm.ShapeError:
+            import ipdb
+
+            ipdb.set_trace()
         return boundary_value
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):

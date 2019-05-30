@@ -520,6 +520,7 @@ class VelocityTests(BaseOutputTest):
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""
         np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0)
+        np.testing.assert_array_almost_equal(self.v_box(self.t, 1), 0)
 
     def test_vertical_velocity(self):
         """Test the boundary values of the current densities"""

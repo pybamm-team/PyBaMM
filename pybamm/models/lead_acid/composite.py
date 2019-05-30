@@ -167,7 +167,7 @@ class Composite(pybamm.LeadAcidBaseModel):
     def set_convection_variables(self):
         if self.options["convection"] is not False:
             velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
-            velocity_vars = velocity_model.get_explicit_composite(self.reactions)
+            velocity_vars = velocity_model.get_explicit_composite(self.variables)
             self.variables.update(velocity_vars)
 
     @property
