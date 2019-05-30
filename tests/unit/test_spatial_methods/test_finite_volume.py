@@ -31,6 +31,23 @@ class TestFiniteVolume(unittest.TestCase):
             diffusivity_d.evaluate(None, y_test), np.ones((n + 1, 1))
         )
 
+    def test_edge_to_node(self):
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        fin_vol = pybamm.FiniteVolume(mesh)
+        n = mesh["negative electrode"][0].npts + 1
+
+        c = pybamm.Vector(np.ones(n), domain=["negative electrode"])
+        average_c = fin_vol.edge_to_node(c)
+        np.testing.assert_array_equal(average_c.evaluate(), np.ones((n - 1, 1)))
+
+        d = pybamm.StateVector(slice(0, n), domain=["negative electrode"])
+        y_test = np.ones(n)
+        average_d = fin_vol.edge_to_node(d)
+        np.testing.assert_array_equal(
+            average_d.evaluate(None, y_test), np.ones((n - 1, 1))
+        )
+
     def test_extrapolate_left_right(self):
         # create discretisation
         mesh = get_mesh_for_testing()
