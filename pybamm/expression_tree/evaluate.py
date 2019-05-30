@@ -70,6 +70,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
             symbol_str = \
                 "{0}.multiply(1/{1}) if scipy.sparse.issparse({0}) else " \
                 "{0} / {1}".format(children_vars[0], children_vars[1])
+        elif isinstance(symbol, pybamm.Outer):
+            symbol_str = "np.outer({}, {}).reshape(-1, 1)".format(children_vars[0],
+                                                                  children_vars[1])
         else:
             symbol_str = children_vars[0] + ' ' + symbol.name + ' ' + children_vars[1]
 
@@ -84,7 +87,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
 
         # Index has a different syntax than other univariate operations
         elif isinstance(symbol, pybamm.Index):
-            symbol_str = "{}[{}]".format(children_vars[0], symbol.index)
+            symbol_str = "{}[{}:{}]".format(children_vars[0],
+                                            symbol.slice.start,
+                                            symbol.slice.stop)
         else:
             symbol_str = symbol.name + children_vars[0]
 
@@ -137,7 +142,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
     variable_symbols[symbol.id] = symbol_str
 
 
-def to_python(symbol):
+def to_python(symbol, debug=False):
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -146,6 +151,9 @@ def to_python(symbol):
     ----------
     symbol : :class:`pybamm.Symbol`
         The symbol to convert to python code
+
+    debug : bool
+        If set to True, the function also emits debug code
 
     Returns
     -------
@@ -162,19 +170,30 @@ def to_python(symbol):
     find_symbols(symbol, constant_values, variable_symbols)
 
     line_format = "{} = {}"
-    variable_lines = [
-        #"print('{}'); ".format(line_format.format(
-        #    id_to_python_variable(symbol_id, False),
-        #    symbol_line
-        #)) +
-        line_format.format(
-            id_to_python_variable(symbol_id, False),
-            symbol_line
-        )
-        #+
-        #"; print(type({0}),{0}.shape)".format(id_to_python_variable(symbol_id, False))
-        for symbol_id, symbol_line in variable_symbols.items()
-    ]
+
+    if debug:
+        variable_lines = [
+            "print('{}'); ".format(line_format.format(
+                id_to_python_variable(symbol_id, False),
+                symbol_line
+            )) +
+            line_format.format(
+                id_to_python_variable(symbol_id, False),
+                symbol_line
+            )
+            +
+            "; print(type({0}),{0}.shape)".format(
+                id_to_python_variable(symbol_id, False))
+            for symbol_id, symbol_line in variable_symbols.items()
+        ]
+    else:
+        variable_lines = [
+            line_format.format(
+                id_to_python_variable(symbol_id, False),
+                symbol_line
+            )
+            for symbol_id, symbol_line in variable_symbols.items()
+        ]
 
     return constant_values, "\n".join(variable_lines)
 
@@ -194,7 +213,7 @@ class EvaluatorPython:
     """
 
     def __init__(self, symbol):
-        constants, self._variable_function = pybamm.to_python(symbol)
+        constants, self._variable_function = pybamm.to_python(symbol, debug=False)
 
         # store all the constant symbols in the tree as internal variables of this
         # object
