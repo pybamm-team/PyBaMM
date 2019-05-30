@@ -294,9 +294,24 @@ class TestSymbol(unittest.TestCase):
         state = pybamm.StateVector(slice(10, 25))
         self.assertEqual(state.shape, (15, 1))
 
+        param = pybamm.Parameter("a")
+        self.assertEqual(param.shape, ())
+
+        func = pybamm.FunctionParameter("func", state)
+        self.assertEqual(func.shape, state.shape)
+
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):
             sym.shape
+
+    def test_test_shape(self):
+        # right shape, passes
+        y1 = pybamm.StateVector(slice(0, 10))
+        y1.test_shape()
+        # bad shape, fails
+        y2 = pybamm.StateVector(slice(0, 5))
+        with self.assertRaises(pybamm.ShapeError):
+            (y1 + y2).test_shape()
 
 
 if __name__ == "__main__":

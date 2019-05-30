@@ -66,6 +66,13 @@ class UnaryOperator(pybamm.Symbol):
             child = self.child.evaluate(t, y)
             return self._unary_evaluate(child)
 
+    def evaluate_for_shape(self, t=None, y=None):
+        """
+        Default behaviour: unary operator has same shape as child
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return self.child.evaluate_for_shape(t, y)
+
 
 class Negate(UnaryOperator):
     """A node in the expression tree representing a `-` negation operator

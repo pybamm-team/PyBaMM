@@ -26,6 +26,13 @@ class Parameter(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Parameter(self.name, self.domain)
 
+    def evaluate_for_shape(self, t=None, y=None):
+        """
+        Returns the scalar '1' to represent the shape of a parameter.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return 1
+
 
 class FunctionParameter(pybamm.UnaryOperator):
     """A node in the expression tree representing a function parameter

@@ -10,7 +10,7 @@ import autograd.numpy as np
 
 from anytree.exporter import DotExporter
 
-DOMAIN_SHAPES_FOR_TESTING = {
+DOMAIN_SIZES_FOR_TESTING = {
     "negative electrode": 17,
     "separator": 29,
     "positive electrode": 43,
@@ -368,7 +368,7 @@ class Symbol(anytree.NodeMixin):
         )
 
     def evaluate(self, t=None, y=None, known_evals=None):
-        """Evaluate expression tree (wrapper for dict of known values).
+        """Evaluate expression tree (wrapper to allow using dict of known values).
         If the dict 'known_evals' is provided, the dict is searched for self.id; if
         self.id is in the keys, return that value; otherwise, evaluate using
         :meth:`_base_evaluate()` and add that value to known_evals
@@ -395,6 +395,15 @@ class Symbol(anytree.NodeMixin):
             return known_evals[self.id], known_evals
         else:
             return self._base_evaluate(t, y)
+
+    def evaluate_for_shape(self, t=None, y=None):
+        """Evaluate expression tree to find its shape. For symbols that cannot be
+        evaluated directly (e.g. `Variable` or `Parameter`), a vector of the appropriate
+        shape is returned instead, using arbitrary domain sizes from the dictionary
+        `DOMAIN_SIZES_FOR_TESTING`
+        See :meth:`pybamm.Symbol.evaluate()`
+        """
+        return self.evaluate(t, y)
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
@@ -501,7 +510,7 @@ class Symbol(anytree.NodeMixin):
         Shape of an object, found by evaluating it with appropriate t and y. If a symbol
         cannot be evaluated directly (e.g. it is a `Variable` or `Parameter`), it is
         instead given an arbitrary domain-dependent shape from the dictionary
-        `pybamm.DOMAIN_SHAPES_FOR_TESTING` (note that this only works for some domains)
+        `pybamm.DOMAIN_SIZES_FOR_TESTING` (note that this only works for some domains)
         """
         state_vectors_in_node = [
             x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
@@ -512,7 +521,7 @@ class Symbol(anytree.NodeMixin):
             min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
             # Pick a y that won't cause RuntimeWarnings
             y = np.linspace(0.1, 0.9, min_y_size)
-        evaluated_self = self.evaluate(t=0, y=y)
+        evaluated_self = self.evaluate_for_shape(t=0, y=y)
         if isinstance(evaluated_self, numbers.Number):
             return ()
         else:

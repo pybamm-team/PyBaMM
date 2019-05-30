@@ -2,7 +2,6 @@
 # Tests for the Parameter class
 #
 import pybamm
-
 import unittest
 
 
@@ -13,6 +12,10 @@ class TestParameter(unittest.TestCase):
         self.assertEqual(a.domain, [])
         c = pybamm.Parameter("c", domain=["test"])
         self.assertEqual(c.domain[0], "test")
+
+    def test_evaluate_for_shape(self):
+        a = pybamm.Parameter("a")
+        self.assertEqual(a.evaluate_for_shape(), 1)
 
 
 class TestFunctionParameter(unittest.TestCase):
@@ -28,6 +31,11 @@ class TestFunctionParameter(unittest.TestCase):
         var = pybamm.Variable("var")
         func = pybamm.FunctionParameter("a", var).diff(var)
         self.assertEqual(func.diff_variable, var)
+
+    def test_evaluate_for_shape(self):
+        a = pybamm.Parameter("a")
+        func = pybamm.FunctionParameter("func", 2 * a)
+        self.assertEqual(func.evaluate_for_shape(), 2)
 
 
 if __name__ == "__main__":

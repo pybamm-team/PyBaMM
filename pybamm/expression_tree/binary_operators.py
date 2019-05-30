@@ -141,6 +141,12 @@ class BinaryOperator(pybamm.Symbol):
             right = self.right.evaluate(t, y)
             return self._binary_evaluate(left, right)
 
+    def evaluate_for_shape(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape()`. """
+        left = self.left.evaluate_for_shape(t, y)
+        right = self.right.evaluate_for_shape(t, y)
+        return self._binary_evaluate(left, right)
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
