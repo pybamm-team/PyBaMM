@@ -107,7 +107,7 @@ from .expression_tree.exceptions import (
     SolverError,
     ShapeError,
     ModelWarning,
-    UndefinedOperation,
+    UndefinedOperationError,
     GeometryError,
 )
 from .expression_tree.simplify import (

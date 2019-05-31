@@ -47,7 +47,7 @@ class ModelWarning(UserWarning):
     pass
 
 
-class UndefinedOperation(Exception):
+class UndefinedOperationError(Exception):
     """
     Undefined operation: Raised when a mathematical operation is not well-defined
     """
