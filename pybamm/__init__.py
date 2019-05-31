@@ -29,15 +29,6 @@ def version(formatted=False):
 
 
 #
-# Utility classes and methods
-#
-from .util import Timer
-from .util import profile
-from .util import load_function
-from .logger import logger, set_logging_level
-from .settings import settings
-
-#
 # Constants
 #
 # Float format: a float can be converted to a 17 digit decimal and back without
@@ -53,6 +44,7 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 from .util import Timer
 from .util import load_function
 from .logger import logger, set_logging_level
+from .settings import settings
 
 #
 # Classes for the Expression Tree

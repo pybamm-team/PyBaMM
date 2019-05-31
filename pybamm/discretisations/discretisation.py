@@ -427,7 +427,7 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
+            new_symbol = spatial_method.concatenation(new_children)
 
             return new_symbol
 
