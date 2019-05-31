@@ -442,6 +442,22 @@ class TestSimplify(unittest.TestCase):
                 expr_simp.evaluate(y=np.ones(300)).toarray(), m1.evaluate()
             )
 
+        # adding zero
+        m2 = pybamm.Matrix(np.random.rand(300, 300))
+        for expr in [m1 + m2, m2 + m1]:
+            expr_simp = expr.simplify()
+            self.assertIsInstance(expr_simp, pybamm.Matrix)
+            np.testing.assert_array_equal(
+                expr_simp.evaluate(y=np.ones(300)), m2.evaluate()
+            )
+
+        # subtracting zero
+        for expr in [m1 - m2, - m2 - m1]:
+            expr_simp = expr.simplify()
+            self.assertIsInstance(expr_simp, pybamm.Matrix)
+            np.testing.assert_array_equal(
+                expr_simp.evaluate(y=np.ones(300)), - m2.evaluate())
+
     def test_domain_concatenation_simplify(self):
         # create discretisation
         disc = get_discretisation_for_testing()

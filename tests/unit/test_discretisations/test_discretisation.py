@@ -40,6 +40,10 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaises(pybamm.ModelError):
             result = disc._concatenate_in_order(initial_conditions, check_complete=True)
 
+    def test_no_mesh(self):
+        disc = pybamm.Discretisation(None, None)
+        self.assertEqual(disc._spatial_methods, {})
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
@@ -730,6 +734,36 @@ class TestDiscretise(unittest.TestCase):
             r_disc.evaluate(),
             3 * disc.mesh["negative particle"][0].nodes[:, np.newaxis],
         )
+
+    def test_exceptions(self):
+        c_n = pybamm.Variable("c", domain=["negative electrode"])
+        N_n = pybamm.grad(c_n)
+        c_s = pybamm.Variable("c", domain=["separator"])
+        N_s = pybamm.grad(c_s)
+        model = pybamm.BaseModel()
+        model.rhs = {c_n: pybamm.div(N_n), c_s: pybamm.div(N_s)}
+        model.initial_conditions = {c_n: pybamm.Scalar(3), c_s: pybamm.Scalar(1)}
+        model.boundary_conditions = {
+            c_n: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+            c_s: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+        }
+
+        disc = get_discretisation_for_testing()
+
+        # check raises error if different sized key and output var
+        model.variables = {c_n.name: c_s}
+        with self.assertRaisesRegex(pybamm.ModelError, "variable and its eqn"):
+            disc.process_model(model, inplace=False)
+
+        # check doesn't raise if concatenation
+        model.variables = {c_n.name: pybamm.Concatenation(c_n, c_s)}
+        disc.process_model(model, inplace=False)
+
+        # check doesn't raise if broadcast
+        model.variables = {
+            c_n.name: pybamm.Broadcast(pybamm.Scalar(2), ["negative electrode"])
+        }
+        disc.process_model(model, inplace=False)
 
 
 if __name__ == "__main__":

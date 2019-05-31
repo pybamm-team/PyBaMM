@@ -94,6 +94,11 @@ class TestBaseModel(unittest.TestCase):
         model.variables = variables
         self.assertEqual(variables, model.variables)
 
+    def test_jac_set_get(self):
+        model = pybamm.BaseModel()
+        model.jacobian = "test"
+        self.assertEqual(model.jacobian, "test")
+
     def test_model_dict_behaviour(self):
         model = pybamm.BaseModel()
         key = pybamm.Symbol("c")

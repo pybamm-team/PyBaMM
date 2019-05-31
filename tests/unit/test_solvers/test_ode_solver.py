@@ -6,6 +6,11 @@ import unittest
 
 
 class TestOdeSolver(unittest.TestCase):
+    def test_exceptions(self):
+        solver = pybamm.OdeSolver()
+        with self.assertRaises(NotImplementedError):
+            solver.integrate(None, None, None)
+
     def test_wrong_solver(self):
         # Create model
         model = pybamm.BaseModel()

@@ -116,6 +116,10 @@ class TestUnaryOperators(unittest.TestCase):
         # with slice
         ind = pybamm.Index(vec, slice(1, 3))
         np.testing.assert_array_equal(ind.evaluate(), np.array([[2], [3]]))
+        # with only stop slice
+        ind = pybamm.Index(vec, slice(3))
+        np.testing.assert_array_equal(ind.evaluate(), np.array([[1], [2], [3]]))
+
         # errors
         with self.assertRaisesRegex(TypeError, "index must be integer or slice"):
             pybamm.Index(vec, 0.0)
@@ -132,7 +136,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # absolute value (not implemented)
         absa = abs(a)
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(pybamm.UndefinedOperationError):
             absa.diff(a)
 
         # function: use autograd
