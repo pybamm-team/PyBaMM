@@ -58,5 +58,7 @@ share/
 pyvenv.cfg
 .vscode
 
+/htmlcov
+
 # sundials
 sundials
