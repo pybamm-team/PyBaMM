@@ -115,7 +115,7 @@ class Symbol(anytree.NodeMixin):
         """
         return tuple([child.new_copy() for child in self.children])
 
-    def render(self):
+    def render(self):  # pragma: no cover
         """print out a visual representation of the tree (this node and its
         children)
         """

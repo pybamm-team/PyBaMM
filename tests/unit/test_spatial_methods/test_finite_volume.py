@@ -1058,10 +1058,6 @@ class TestFiniteVolume(unittest.TestCase):
             x1_disc.evaluate(), disc.mesh["negative electrode"][0].nodes[:, np.newaxis]
         )
 
-        z = pybamm.SpatialVariable("z", ["negative electrode"])
-        with self.assertRaises(NotImplementedError):
-            disc.process_symbol(z)
-
         x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
         x2_disc = disc.process_symbol(x2)
         self.assertIsInstance(x2_disc, pybamm.Vector)
@@ -1200,6 +1196,31 @@ class TestFiniteVolume(unittest.TestCase):
         eqn_disc = disc.process_symbol(eqn)
         eqn_jac = eqn_disc.jac(y)
         eqn_jac.evaluate(y=y_test)
+
+    def test_boundary_value_domain(self):
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # add ghost nodes
+        c_s_n = pybamm.Variable("c_s_n", domain=["negative particle"])
+        c_s_p = pybamm.Variable("c_s_p", domain=["positive particle"])
+
+        disc.set_variable_slices([c_s_n, c_s_p])
+
+        # surface values
+        c_s_n_surf = pybamm.surf(c_s_n)
+        c_s_p_surf = pybamm.surf(c_s_p)
+
+        c_s_n_surf_disc = disc.process_symbol(c_s_n_surf)
+        c_s_p_surf_disc = disc.process_symbol(c_s_p_surf)
+
+        self.assertEqual(c_s_n_surf_disc.domain, ['negative electrode'])
+        self.assertEqual(c_s_p_surf_disc.domain, ['positive electrode'])
 
 
 if __name__ == "__main__":
