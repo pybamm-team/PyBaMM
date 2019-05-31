@@ -47,7 +47,7 @@ class Ohm(pybamm.SubModel):
         """ Unpack variables for post-processing """
         i_boundary_cc = variables["Current collector current density"]
         ocp_p = variables["Positive electrode open circuit potential"]
-        eta_r_p = variables["Positive reaction overpotential"]
+        eta_r_p = variables["Positive electrode reaction overpotential"]
         phi_e = variables["Electrolyte potential"]
 
         ocp_p_av = pybamm.average(ocp_p)

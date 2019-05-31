@@ -92,10 +92,14 @@ class VoltageTests(BaseOutputTest):
     def __init__(self, model, param, disc, solver, operating_condition):
         super().__init__(model, param, disc, solver, operating_condition)
 
-        self.eta_n = self.get_var("Negative reaction overpotential [V]")
-        self.eta_p = self.get_var("Positive reaction overpotential [V]")
-        self.eta_r_n_av = self.get_var("Average negative reaction overpotential [V]")
-        self.eta_r_p_av = self.get_var("Average positive reaction overpotential [V]")
+        self.eta_n = self.get_var("Negative electrode reaction overpotential [V]")
+        self.eta_p = self.get_var("Positive electrode reaction overpotential [V]")
+        self.eta_r_n_av = self.get_var(
+            "Average negative electrode reaction overpotential [V]"
+        )
+        self.eta_r_p_av = self.get_var(
+            "Average positive electrode reaction overpotential [V]"
+        )
         self.eta_r_av = self.get_var("Average reaction overpotential [V]")
 
         self.eta_e_av = self.get_var("Average electrolyte overpotential [V]")

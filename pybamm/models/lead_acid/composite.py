@@ -167,18 +167,17 @@ class Composite(pybamm.LeadAcidBaseModel):
         phi_s = self.variables["Electrode potential"]
         phi_e_n, _, phi_e_p = phi_e.orphans
         phi_s_n, _, phi_s_p = phi_s.orphans
-        delta_phi_n = phi_s_n - phi_e_n
-        delta_phi_p = phi_s_p - phi_e_p
 
         # Potentials
         ocp_n = param.U_n(c_e_n)
         ocp_p = param.U_p(c_e_p)
-        eta_r_n = delta_phi_n - ocp_n
-        eta_r_p = delta_phi_p - ocp_p
+        eta_r_n = phi_s_n - phi_e_n - ocp_n
+        eta_r_p = phi_s_p - phi_e_p - ocp_p
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
+        potential_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), delta_phi=(phi_s_n - phi_e_n, phi_s_p - phi_e_p)
+        )
+        self.variables.update(potential_vars)
 
         # Exchange-current density
         j0_n = int_curr_model.get_exchange_current_densities(c_e_n)

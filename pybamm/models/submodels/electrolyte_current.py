@@ -68,7 +68,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         """
         # unpack variables
         ocp_n = variables["Negative electrode open circuit potential"]
-        eta_r_n = variables["Negative reaction overpotential"]
+        eta_r_n = variables["Negative electrode reaction overpotential"]
         i_boundary_cc = variables["Current collector current density"]
 
         # import parameters and spatial variables
@@ -128,7 +128,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         # unpack variables
         i_boundary_cc, _, c_e, epsilon = self.unpack(variables)
         ocp_n = variables["Negative electrode open circuit potential"]
-        eta_r_n = variables["Negative reaction overpotential"]
+        eta_r_n = variables["Negative electrode reaction overpotential"]
         phi_s_n = variables["Negative electrode potential"]
         try:
             c_e_0 = variables["Average electrolyte concentration"]
