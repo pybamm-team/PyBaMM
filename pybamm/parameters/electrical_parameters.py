@@ -5,19 +5,11 @@
 Standard electrical parameters
 """
 import pybamm
-
-
-def sign(x):
-    if x > 0:
-        return 1
-    elif x < 0:
-        return -1
-    else:
-        return 0
+import numpy as np
 
 
 def abs_non_zero(x):
-    if x == 0:
+    if x == 0:  # pragma: no cover
         return 1
     else:
         return abs(x)
@@ -39,6 +31,6 @@ voltage_low_cut_dimensional = pybamm.Parameter("Lower voltage cut-off [V]")
 voltage_high_cut_dimensional = pybamm.Parameter("Upper voltage cut-off [V]")
 current_with_time = pybamm.FunctionParameter(
     "Current function", pybamm.t
-) * pybamm.Function(sign, I_typ)
+) * pybamm.Function(np.sign, I_typ)
 dimensional_current_density_with_time = i_typ * current_with_time
 dimensional_current_with_time = I_typ * current_with_time
