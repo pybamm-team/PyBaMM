@@ -157,6 +157,16 @@ class TestEvaluate(unittest.TestCase):
                          "scipy.sparse.vstack(({},{}))".format(var_a, var_b)
                          )
 
+        # test that Concatentation throws
+        expr = pybamm.Concatenation(a, b)
+        with self.assertRaises(NotImplementedError):
+            pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+
+        # test that these nodes throw
+        for expr in (pybamm.Variable('a'), pybamm.Parameter('a')):
+            with self.assertRaises(NotImplementedError):
+                pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+
     def test_domain_concatenation(self):
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
@@ -189,6 +199,12 @@ class TestEvaluate(unittest.TestCase):
                              var_a, a_pts, var_b, b_pts)
                          )
 
+        evaluator = pybamm.EvaluatorPython(expr)
+        result = evaluator.evaluate(y=y)
+        np.testing.assert_allclose(result, expr.evaluate(y=y))
+
+        # check that concatenating a single domain is consistent
+        expr = pybamm.DomainConcatenation([a], mesh)
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator.evaluate(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))
