@@ -110,12 +110,16 @@ class AbsoluteValue(UnaryOperator):
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # Derivative is not well-defined
-        raise NotImplementedError("Derivative of absolute function is not defined")
+        raise pybamm.UndefinedOperationError(
+            "Derivative of absolute function is not defined"
+        )
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         # Derivative is not well-defined
-        raise NotImplementedError("Derivative of absolute function is not defined")
+        raise pybamm.UndefinedOperationError(
+            "Derivative of absolute function is not defined"
+        )
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """

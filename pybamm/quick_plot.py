@@ -237,7 +237,7 @@ class QuickPlot(object):
             top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
         )
 
-        if not testing:
+        if not testing:  # pragma: no cover
             plt.show()
 
     def update(self, val):

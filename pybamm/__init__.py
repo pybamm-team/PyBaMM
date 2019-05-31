@@ -42,7 +42,6 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 # Utility classes and methods
 #
 from .util import Timer
-from .util import profile
 from .util import load_function
 from .logger import logger, set_logging_level
 
@@ -109,6 +108,8 @@ from .expression_tree.exceptions import (
     SolverError,
     ShapeError,
     ModelWarning,
+    UndefinedOperationError,
+    GeometryError,
 )
 from .expression_tree.simplify import (
     Simplification,

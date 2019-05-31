@@ -34,8 +34,9 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.update(0.01)
 
         # Test with different output variables
-        quick_plot = pybamm.QuickPlot(model, mesh, solver,
-                                      ["b broadcasted", "c broadcasted"])
+        quick_plot = pybamm.QuickPlot(
+            model, mesh, solver, ["b broadcasted", "c broadcasted"]
+        )
         self.assertEqual(len(quick_plot.axis), 2)
         quick_plot.plot(0)
 

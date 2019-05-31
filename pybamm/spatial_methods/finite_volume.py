@@ -55,11 +55,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         # for finite volume we use the cell centres
-        if symbol.name in ["x_n", "x_s", "x_p", "r_n", "r_p", "x", "r"]:
-            symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
-        else:
-            raise NotImplementedError("3D meshes not yet implemented")
+        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+        return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -192,9 +189,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         return pybamm.Matrix(matrix)
 
     def integral(self, domain, symbol, discretised_symbol):
-        """Vector-vector dot product to implement the integral operator.
-        See :meth:`pybamm.BaseDiscretisation.integral`
-        """
+        """Vector-vector dot product to implement the integral operator. """
         # Calculate integration vector
         integration_vector = self.definite_integral_vector(domain)
 
@@ -243,18 +238,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         return pybamm.Matrix(vector[np.newaxis, :])
 
     def indefinite_integral(self, domain, symbol, discretised_symbol):
-        """Implementation of the indefinite integral operator. The
-        input discretised symbol must be defined on the internal mesh edges.
-        See :meth:`pybamm.BaseDiscretisation.indefinite_integral`
-        """
+        """Implementation of the indefinite integral operator. """
 
-        if not symbol.evaluates_on_edges():
-            raise pybamm.ModelError(
-                "Symbol to be integrated must be valid on the mesh edges"
-            )
-
-        # Calculate integration matrix
-        integration_matrix = self.indefinite_integral_matrix(domain)
+        # Different integral matrix depending on whether the integrand evaluates on
+        # edges or nodes
+        if symbol.evaluates_on_edges():
+            integration_matrix = self.indefinite_integral_matrix_edges(domain)
+        else:
+            integration_matrix = self.indefinite_integral_matrix_nodes(domain)
 
         # Don't need to check for spherical domains as spherical polars
         # only change the diveregence (symbols here have grad and no div)
@@ -265,9 +256,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         self.test_shape(out)
         return out
 
-    def indefinite_integral_matrix(self, domain):
+    def indefinite_integral_matrix_edges(self, domain):
         """
-        Matrix for finite-volume implementation of the indefinite integral
+        Matrix for finite-volume implementation of the indefinite integral where the
+        integrand is evaluated on mesh edges
 
         .. math::
             F(x) = \\int_0^x\\!f(u)\\,du
@@ -298,8 +290,8 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Vector`
-            The finite volume integral vector for the domain
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
         """
 
         # Create appropriate submesh by combining submeshes in domain
@@ -318,6 +310,41 @@ class FiniteVolume(pybamm.SpatialMethod):
         # add a column of zeros at each end
         zero_col = csr_matrix((n, 1))
         sub_matrix = hstack([zero_col, sub_matrix, zero_col])
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
+
+        return pybamm.Matrix(matrix)
+
+    def indefinite_integral_matrix_nodes(self, domain):
+        """
+        Matrix for finite-volume implementation of the indefinite integral where the
+        integrand is evaluated on mesh nodes.
+        This is just a straightforward cumulative sum of the integrand
+
+        Parameters
+        ----------
+        domain : list
+            The domain(s) of integration
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
+        """
+
+        # Create appropriate submesh by combining submeshes in domain
+        submesh_list = self.mesh.combine_submeshes(*domain)
+        submesh = submesh_list[0]
+        n = submesh.npts
+        sec_pts = len(submesh_list)
+
+        du_n = submesh.d_edges
+        du_entries = [du_n] * (n)
+        offset = -np.arange(1, n + 1, 1)
+        sub_matrix = diags(du_entries, offset, shape=(n + 1, n))
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
         # not supported by the default kron format
         # Note that this makes column-slicing inefficient, but this should not be an
@@ -363,8 +390,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # get relevant grid points
         submesh_list = self.mesh.combine_submeshes(*symbol.domain)
-        if isinstance(submesh_list[0].npts, list):
-            NotImplementedError("Can only take in 1D primary directions")
 
         # Prepare sizes and empty bcs_vector
         n = submesh_list[0].npts
@@ -444,8 +469,6 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Find the number of submeshes
         submesh_list = self.mesh.combine_submeshes(*discretised_child.domain)
-        if isinstance(submesh_list[0].npts, list):
-            NotImplementedError("Can only take in 1D primary directions")
 
         prim_pts = submesh_list[0].npts
         sec_pts = len(submesh_list)
@@ -529,20 +552,64 @@ class FiniteVolume(pybamm.SpatialMethod):
         # no need to do any averaging
         if left_evaluates_on_edges == right_evaluates_on_edges:
             pass
-        # If only left child evaluates on edges, compute diffusivity for right child
+        # If only left child evaluates on edges, map right child onto edges
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
-            disc_right = self.compute_diffusivity(disc_right)
-        # If only right child evaluates on edges, compute diffusivity for left child
+            disc_right = self.node_to_edge(disc_right)
+        # If only right child evaluates on edges, map left child onto edges
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
-            disc_left = self.compute_diffusivity(disc_left)
+            disc_left = self.node_to_edge(disc_left)
         # Return new binary operator with appropriate class
         out = bin_op.__class__(disc_left, disc_right)
         self.test_shape(out)
         return out
 
-    def compute_diffusivity(self, discretised_symbol):
+    def concatenation(self, disc_children):
+        """Discrete concatenation, taking `edge_to_node` for children that evaluate on
+        edges.
+        See :meth:`pybamm.SpatialMethod.concatenation`
         """
-        Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
+        for idx, child in enumerate(disc_children):
+            n_nodes = sum(
+                len(mesh.nodes) for mesh in self.mesh.combine_submeshes(*child.domain)
+            )
+            n_edges = sum(
+                len(mesh.edges) for mesh in self.mesh.combine_submeshes(*child.domain)
+            )
+            child_size = child.size
+            if child_size != n_nodes:
+                # Average any children that evaluate on the edges (size n_edges) to
+                # evaluate on nodes instead, so that concatenation works properly
+                if child_size == n_edges:
+                    disc_children[idx] = self.edge_to_node(child)
+                else:
+                    raise pybamm.ShapeError(
+                        """
+                        child must have size n_nodes (number of nodes in the mesh)
+                        or n_edges (number of edges in the mesh)
+                        """
+                    )
+        return pybamm.DomainConcatenation(disc_children, self.mesh)
+
+    def edge_to_node(self, discretised_symbol):
+        """
+        Convert a discretised symbol evaluated on the cell edges to a discretised symbol
+        evaluated on the cell nodes.
+        See :meth:`pybamm.FiniteVolume.shift`
+        """
+        return self.shift(discretised_symbol, "edge to node")
+
+    def node_to_edge(self, discretised_symbol):
+        """
+        Convert a discretised symbol evaluated on the cell nodes to a discretised symbol
+        evaluated on the cell edges.
+        See :meth:`pybamm.FiniteVolume.shift`
+        """
+        return self.shift(discretised_symbol, "node to edge")
+
+    def shift(self, discretised_symbol, shift_key):
+        """
+        Convert a discretised symbol evaluated at edges/nodes, to a discretised symbol
+        evaluated at nodes/edges.
         For now we just take the arithemtic mean, though it may be better to take the
         harmonic mean based on [1].
 
@@ -553,18 +620,22 @@ class FiniteVolume(pybamm.SpatialMethod):
         ----------
         discretised_symbol : :class:`pybamm.Symbol`
             Symbol to be averaged. When evaluated, this symbol returns either a scalar
-            or an array of shape (n,), where n is the number of points in the mesh for
-            the symbol's domain (n = self.mesh[symbol.domain].npts)
+            or an array of shape (n,) or (n+1,), where n is the number of points in the
+            mesh for the symbol's domain (n = self.mesh[symbol.domain].npts)
+        shift_key : str
+            Whether to shift from nodes to edges ("node to edge"), or from edges to
+            nodes ("edge to node")
 
         Returns
         -------
-        :class:`pybamm.Function`
+        :class:`pybamm.Symbol`
             Averaged symbol. When evaluated, this returns either a scalar or an array of
-            shape (n+1,) as appropriate.
+            shape (n+1,) (if `shift_key = "node to edge"`) or (n,) (if
+            `shift_key = "edge to node"`)
         """
 
         def arithmetic_mean(array):
-            """Calculate the arithemetic mean of an array using matrix multiplication"""
+            """Calculate the arithmetic mean of an array using matrix multiplication"""
             # Create appropriate submesh by combining submeshes in domain
             submesh_list = self.mesh.combine_submeshes(*array.domain)
 
@@ -574,13 +645,21 @@ class FiniteVolume(pybamm.SpatialMethod):
             # Create 1D matrix using submesh
             n = submesh.npts
 
-            sub_matrix_left = csr_matrix(([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n))
-            sub_matrix_center = diags([0.5, 0.5], [0, 1], shape=(n - 1, n))
-            sub_matrix_right = csr_matrix(
-                ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
-            )
-            sub_matrix = vstack([sub_matrix_left, sub_matrix_center, sub_matrix_right])
-
+            if shift_key == "node to edge":
+                sub_matrix_left = csr_matrix(
+                    ([1.5, -0.5], ([0, 0], [0, 1])), shape=(1, n)
+                )
+                sub_matrix_center = diags([0.5, 0.5], [0, 1], shape=(n - 1, n))
+                sub_matrix_right = csr_matrix(
+                    ([-0.5, 1.5], ([0, 0], [n - 2, n - 1])), shape=(1, n)
+                )
+                sub_matrix = vstack(
+                    [sub_matrix_left, sub_matrix_center, sub_matrix_right]
+                )
+            elif shift_key == "edge to node":
+                sub_matrix = diags([0.5, 0.5], [0, 1], shape=(n, n + 1))
+            else:
+                raise ValueError("shift key '{}' not recognised".format(shift_key))
             # Second dimension length
             second_dim_len = len(submesh_list)
 
