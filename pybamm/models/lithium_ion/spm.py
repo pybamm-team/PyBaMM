@@ -16,6 +16,8 @@ class SPM(pybamm.LithiumIonBaseModel):
         "-----------------------------------------------------------------------------"
         "Parameters"
         param = pybamm.standard_parameters_lithium_ion
+        i_boundary_cc = param.current_with_time
+        self.variables["Current collector current density"] = i_boundary_cc
 
         "-----------------------------------------------------------------------------"
         "Model Variables"
@@ -27,9 +29,11 @@ class SPM(pybamm.LithiumIonBaseModel):
         "Submodels"
 
         # Interfacial current density
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
         int_curr_model = pybamm.interface.LithiumIonReaction(param)
-        j_n = int_curr_model.get_homogeneous_interfacial_current(["negative electrode"])
-        j_p = int_curr_model.get_homogeneous_interfacial_current(["positive electrode"])
+        j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
+        j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
 
         # Particle models
         negative_particle_model = pybamm.particle.Standard(param)
@@ -49,8 +53,6 @@ class SPM(pybamm.LithiumIonBaseModel):
         self.variables.update(conc_vars)
 
         # Exchange-current density
-        neg = ["negative electrode"]
-        pos = ["positive electrode"]
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
         j0_n = int_curr_model.get_exchange_current_densities(c_e, c_s_n_surf, neg)
@@ -70,15 +72,12 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
-        elyte_vars = eleclyte_current_model.get_explicit_leading_order(ocp_n, eta_r_n)
+        elyte_vars = eleclyte_current_model.get_explicit_leading_order(self.variables)
         self.variables.update(elyte_vars)
 
         # Electrode
         electrode_model = pybamm.electrode.Ohm(param)
-        phi_e = self.variables["Electrolyte potential"]
-        electrode_vars = electrode_model.get_explicit_leading_order(
-            ocp_p, eta_r_p, phi_e
-        )
+        electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
         self.variables.update(electrode_vars)
 
         # Cut-off voltage

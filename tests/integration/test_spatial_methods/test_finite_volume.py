@@ -102,7 +102,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
         # Function for convergence testing
         def get_error(n):
             # create mesh and discretisation (single particle)
-            mesh = get_mesh_for_testing(n)
+            mesh = get_mesh_for_testing(rpts=n)
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
             r = submesh[0].nodes
@@ -139,7 +139,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
         # Function for convergence testing
         def get_error(n):
             # create mesh and discretisation (single particle)
-            mesh = get_mesh_for_testing(n)
+            mesh = get_mesh_for_testing(rpts=n)
             disc = pybamm.Discretisation(mesh, spatial_methods)
             submesh = mesh["negative particle"]
             r = submesh[0].nodes

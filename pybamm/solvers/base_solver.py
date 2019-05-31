@@ -12,12 +12,21 @@ class BaseSolver(object):
         The tolerance for the solver (default is 1e-8).
     """
 
-    def __init__(self, tol=1e-8):
+    def __init__(self, method=None, tol=1e-8):
+        self._method = method
         self._tol = tol
 
         # Solutions
         self._t = None
         self._y = None
+
+    @property
+    def method(self):
+        return self._method
+
+    @method.setter
+    def method(self, value):
+        self._method = value
 
     @property
     def tol(self):

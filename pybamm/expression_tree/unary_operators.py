@@ -26,8 +26,8 @@ class UnaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, child):
-        self.child = child
         super().__init__(name, children=[child], domain=child.domain)
+        self.child = self.children[0]
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -35,7 +35,7 @@ class UnaryOperator(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_child = self.child.simplify()
+        new_child = self.child.new_copy()
         return self._unary_new_copy(new_child)
 
     def _unary_new_copy(self, child):
@@ -110,14 +110,14 @@ class AbsoluteValue(UnaryOperator):
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # Derivative is not well-defined
-        raise pybamm.UndefinedOperation(
+        raise pybamm.UndefinedOperationError(
             "Derivative of absolute function is not defined"
         )
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
         # Derivative is not well-defined
-        raise pybamm.UndefinedOperation(
+        raise pybamm.UndefinedOperationError(
             "Derivative of absolute function is not defined"
         )
 
@@ -251,7 +251,7 @@ class Index(UnaryOperator):
                 self.name,
                 self.slice.start,
                 self.slice.stop,
-                self.child.id,
+                self.children[0].id,
             )
             + tuple(self.domain)
         )
@@ -382,7 +382,12 @@ class Integral(SpatialOperator):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
         self._id = hash(
-            (self.__class__, self.name, self.integration_variable.id, self.child.id)
+            (
+                self.__class__,
+                self.name,
+                self.integration_variable.id,
+                self.children[0].id,
+            )
             + tuple(self.domain)
         )
 
@@ -453,7 +458,8 @@ class BoundaryOperator(SpatialOperator):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
         self._id = hash(
-            (self.__class__, self.name, self.side, self.child.id) + tuple(self.domain)
+            (self.__class__, self.name, self.side, self.children[0].id)
+            + tuple(self.domain)
         )
 
     def _unary_simplify(self, simplified_child):
@@ -586,7 +592,7 @@ def average(symbol):
         the new averaged symbol
     """
     # If symbol doesn't have a domain, its average value is itself
-    if symbol.domain == []:
+    if symbol.domain in [[], ["current collector"]]:
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
@@ -618,6 +624,8 @@ def average(symbol):
         elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             x = pybamm.standard_spatial_vars.x
             l = pybamm.Scalar(1)
+        else:
+            raise pybamm.DomainError("domain '{}' not recognised".format(symbol.domain))
 
         return Integral(symbol, x) / l
 

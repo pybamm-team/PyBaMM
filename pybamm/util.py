@@ -4,10 +4,8 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-import cProfile
 import importlib
 import os
-import pstats
 import sys
 import timeit
 

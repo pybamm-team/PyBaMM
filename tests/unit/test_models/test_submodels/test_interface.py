@@ -7,7 +7,7 @@ class TestInterface(unittest.TestCase):
         model = pybamm.interface.InterfacialCurrent(None)
 
         with self.assertRaises(pybamm.DomainError):
-            model.get_homogeneous_interfacial_current("not a domain")
+            model.get_homogeneous_interfacial_current(None, "not a domain")
 
         with self.assertRaises(pybamm.DomainError):
             model.get_butler_volmer(None, None, "not a domain")

@@ -136,7 +136,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # absolute value (not implemented)
         absa = abs(a)
-        with self.assertRaises(pybamm.UndefinedOperation):
+        with self.assertRaises(pybamm.UndefinedOperationError):
             absa.diff(a)
 
         # function: use autograd
@@ -228,6 +228,10 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertEqual(av_a.children[0].integration_variable.domain, x.domain)
             self.assertEqual(av_a.domain, [])
+
+        a = pybamm.Symbol("a", domain="bad domain")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.average(a)
 
 
 if __name__ == "__main__":

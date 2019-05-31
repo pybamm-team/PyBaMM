@@ -19,7 +19,14 @@ class TestOhm(unittest.TestCase):
 
         with self.assertRaises(pybamm.DomainError):
             phi_s = pybamm.Variable("phi_s", "not a domain")
-            model.set_algebraic_system(phi_s, {})
+            i_boundary_cc = param.current_with_time
+            variables = {
+                "Negative electrode potential": phi_s,
+                "Current collector current density": i_boundary_cc,
+            }
+            reactions = {}
+            domain = ["not a domain"]
+            model.set_algebraic_system(variables, reactions, domain)
 
 
 if __name__ == "__main__":

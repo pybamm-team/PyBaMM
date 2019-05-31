@@ -308,8 +308,7 @@ class Discretisation(object):
         # Create lumped mass matrix (of zeros) of the correct shape for the
         # discretised algebraic equations
         if model.algebraic.keys():
-            y0 = model.concatenated_initial_conditions
-            mass_algebraic_size = model.concatenated_algebraic.evaluate(0, y0).shape[0]
+            mass_algebraic_size = model.concatenated_algebraic.shape[0]
             mass_algebraic = csr_matrix((mass_algebraic_size, mass_algebraic_size))
             mass_list.append(mass_algebraic)
 
@@ -338,19 +337,13 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
 
-            if eqn.evaluates_to_number():
-                if not isinstance(eqn_key, str):
-                    if eqn_key.domain == []:
-                        eqn = pybamm.Broadcast(eqn, eqn_key.domain)
-                    else:
-                        eqn = self._spatial_methods[eqn_key.domain[0]].broadcast(
-                            eqn, eqn_key.domain
-                        )
-
-            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            if eqn.evaluates_to_number() and not isinstance(eqn_key, str):
+                eqn = pybamm.Broadcast(eqn, eqn_key.domain)
 
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
+            pybamm.logger.debug("**Discretise {!s}".format(eqn_key))
+            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
@@ -368,7 +361,6 @@ class Discretisation(object):
             Discretised symbol
 
         """
-        pybamm.logger.debug("Discretise {!s}".format(symbol))
         try:
             return self._discretised_symbols[symbol.id]
         except KeyError:
@@ -396,6 +388,7 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)
+            pybamm.SpatialMethod.test_shape(disc_child)
             if child.domain != []:
                 child_spatial_method = self._spatial_methods[child.domain[0]]
             if isinstance(symbol, pybamm.Gradient):
@@ -540,22 +533,18 @@ class Discretisation(object):
         # Individual
         for var in model.rhs.keys():
             assert (
-                model.rhs[var].evaluate(0, y0).shape
-                == model.initial_conditions[var].evaluate(0, None).shape
+                model.rhs[var].shape == model.initial_conditions[var].shape
             ), pybamm.ModelError(
                 """
                 rhs and initial_conditions must have the same shape after discretisation
                 but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
                 """.format(
-                    model.rhs[var].evaluate(0, y0).shape,
-                    model.initial_conditions[var].evaluate(0, None).shape,
-                    var,
+                    model.rhs[var].shape, model.initial_conditions[var].shape, var
                 )
             )
         # Concatenated
         assert (
-            model.concatenated_rhs.evaluate(0, y0).shape[0]
-            + model.concatenated_algebraic.evaluate(0, y0).shape[0]
+            model.concatenated_rhs.shape[0] + model.concatenated_algebraic.shape[0]
             == y0.shape[0]
         ), pybamm.ModelError(
             """
@@ -563,8 +552,8 @@ class Discretisation(object):
             same shape after discretisation but rhs.shape = {}, algebraic.shape = {},
             and initial_conditions.shape = {}.
             """.format(
-                model.concatenated_rhs.evaluate(0, y0).shape,
-                model.concatenated_algebraic.evaluate(0, y0).shape,
+                model.concatenated_rhs.shape,
+                model.concatenated_algebraic.shape,
                 y0.shape,
             )
         )
@@ -572,19 +561,20 @@ class Discretisation(object):
     def check_variables(self, model):
         """
         Check variables in variable list against rhs
-        Be lenient with size check if the variable in model.variables is broadcasted
+        Be lenient with size check if the variable in model.variables is broadcasted, or
+        a concatenation, or an outer product
         (if broadcasted, variable is a multiplication with a vector of ones)
         """
-        y0 = model.concatenated_initial_conditions
         for rhs_var in model.rhs.keys():
             if rhs_var.name in model.variables.keys():
                 var = model.variables[rhs_var.name]
 
                 different_shapes = not np.array_equal(
-                    model.rhs[rhs_var].evaluate(0, y0).shape, var.evaluate(0, y0).shape
+                    model.rhs[rhs_var].shape, var.shape
                 )
 
                 not_concatenation = not isinstance(var, pybamm.Concatenation)
+                not_outer = not isinstance(var, pybamm.Outer)
 
                 not_mult_by_one_vec = not (
                     isinstance(var, pybamm.Multiplication)
@@ -592,14 +582,17 @@ class Discretisation(object):
                     and np.all(var.right.entries == 1)
                 )
 
-                if different_shapes and not_concatenation and not_mult_by_one_vec:
+                if (
+                    different_shapes
+                    and not_concatenation
+                    and not_outer
+                    and not_mult_by_one_vec
+                ):
                     raise pybamm.ModelError(
                         """
                     variable and its eqn must have the same shape after discretisation
                     but variable.shape = {} and rhs.shape = {} for variable '{}'.
                     """.format(
-                            var.evaluate(0, y0).shape,
-                            model.rhs[rhs_var].evaluate(0, y0).shape,
-                            var,
+                            var.shape, model.rhs[rhs_var].shape, var
                         )
                     )

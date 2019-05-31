@@ -42,7 +42,6 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 # Utility classes and methods
 #
 from .util import Timer
-from .util import profile
 from .util import load_function
 from .logger import logger, set_logging_level
 
@@ -60,6 +59,8 @@ from .expression_tree.binary_operators import (
     Multiplication,
     MatrixMultiplication,
     Division,
+    Outer,
+    outer,
 )
 from .expression_tree.concatenations import (
     Concatenation,
@@ -144,6 +145,7 @@ from .models.submodels import (
     particle,
     porosity,
     potential,
+    vertical,
 )
 
 #
@@ -162,9 +164,10 @@ from .parameters.print_parameters import print_parameters, print_evaluated_param
 from .geometry.geometry import (
     Geometry,
     Geometry1DMacro,
+    Geometry3DMacro,
+    Geometry1p1DMacro,
     Geometry1DMicro,
     Geometry1p1DMicro,
-    Geometry3DMacro,
 )
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS

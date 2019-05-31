@@ -20,12 +20,14 @@ class InterfacialCurrent(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def get_homogeneous_interfacial_current(self, domain):
+    def get_homogeneous_interfacial_current(self, i_boundary_cc, domain):
         """
         Homogeneous reaction at the electrode-electrolyte interface
 
         Parameters
         ----------
+        i_boundary_cc : :class:`pybamm.Symbol`
+            The current in the current collectors (can be 0D, 1D or 2D)
         domain : iter of str
             The domain(s) in which to compute the interfacial current.
 
@@ -34,12 +36,10 @@ class InterfacialCurrent(pybamm.SubModel):
         :class:`pybamm.Symbol`
             Homogeneous interfacial current density
         """
-        icell = pybamm.electrical_parameters.current_with_time
-
         if domain == ["negative electrode"]:
-            return icell / pybamm.geometric_parameters.l_n
+            return i_boundary_cc / pybamm.geometric_parameters.l_n
         elif domain == ["positive electrode"]:
-            return -icell / pybamm.geometric_parameters.l_p
+            return -i_boundary_cc / pybamm.geometric_parameters.l_p
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
@@ -130,13 +130,13 @@ class InterfacialCurrent(pybamm.SubModel):
         i_typ = self.set_of_parameters.i_typ
 
         # Broadcast if necessary
-        if j_n.domain == []:
+        if j_n.domain in [[], ["current collector"]]:
             j_n = pybamm.Broadcast(j_n, ["negative electrode"])
-        if j_p.domain == []:
+        if j_p.domain in [[], ["current collector"]]:
             j_p = pybamm.Broadcast(j_p, ["positive electrode"])
-        if j0_n.domain == []:
+        if j0_n.domain in [[], ["current collector"]]:
             j0_n = pybamm.Broadcast(j0_n, ["negative electrode"])
-        if j0_p.domain == []:
+        if j0_p.domain in [[], ["current collector"]]:
             j0_p = pybamm.Broadcast(j0_p, ["positive electrode"])
 
         # Concatenations

@@ -35,16 +35,7 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(tol, root_method, root_tol)
-        self._method = method
-
-    @property
-    def method(self):
-        return self._method
-
-    @method.setter
-    def method(self, value):
-        self._method = value
+        super().__init__(method, tol, root_method, root_tol)
 
     def integrate(
         self, residuals, y0, t_eval, events=None, mass_matrix=None, jacobian=None
