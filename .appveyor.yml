@@ -18,4 +18,3 @@ build: off
 
 test_script:
   - "%PYTHON%\\python.exe -m unittest discover -v -s tests/unit"
-
