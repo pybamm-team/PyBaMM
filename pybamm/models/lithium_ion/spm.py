@@ -32,15 +32,15 @@ class SPM(pybamm.LithiumIonBaseModel):
         elif self.options["bc_options"]["dimensionality"] == 1:
             raise NotImplementedError
         elif self.options["bc_options"]["dimensionality"] == 2:
-            v_boundary_cc = pybamm.Variable(
-                "Current collector voltage", domain="current collector"
-            )
+            #v_boundary_cc = pybamm.Variable(
+            #    "Current collector voltage", domain="current collector"
+            #)
             i_boundary_cc = pybamm.Variable(
                 "Current collector current density", domain="current collector"
             )
             current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
-            #current_collector_model.set_uniform_current(i_boundary_cc)
-            current_collector_model.set_algebraic_system(v_boundary_cc, i_boundary_cc)
+            current_collector_model.set_uniform_current(i_boundary_cc)
+            #current_collector_model.set_algebraic_system(v_boundary_cc, i_boundary_cc)
             self.update(current_collector_model)
             i_boundary_cc = self.variables["Current collector current density"]
             curr_coll_domain = ["current collector"]
