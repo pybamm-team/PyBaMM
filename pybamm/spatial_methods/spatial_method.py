@@ -76,10 +76,8 @@ class SpatialMethod:
             )
         else:
             out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
-        try:
-            self.test_shape(out)
-        except pybamm.ShapeError:
-            import ipdb; ipdb.set_trace()    
+
+        self.test_shape(out)
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):

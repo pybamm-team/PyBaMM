@@ -111,7 +111,6 @@ class ParameterValues(dict):
 
         for variable, equation in model.variables.items():
             model.variables[variable] = processing_function(equation)
-
         for idx, equation in enumerate(model.events):
             model.events[idx] = processing_function(equation)
 

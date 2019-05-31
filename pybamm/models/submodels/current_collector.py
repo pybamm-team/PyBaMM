@@ -41,14 +41,12 @@ class OhmTwoDimensional(pybamm.SubModel):
         # algebraic equations
         applied_current = param.current_with_time
         self.algebraic = {
-            i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z,
+            i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z
         }
         self.initial_conditions = {
-            i_boundary_cc: applied_current / param.l_y / param.l_z,
+            i_boundary_cc: applied_current / param.l_y / param.l_z
         }
-        self.variables = {
-            "Current collector current density": i_boundary_cc,
-        }
+        self.variables = {"Current collector current density": i_boundary_cc}
 
     def set_algebraic_system(self, v_boundary_cc, i_boundary_cc):
         """
@@ -69,7 +67,8 @@ class OhmTwoDimensional(pybamm.SubModel):
         # algebraic equations
         applied_current = param.current_with_time
         self.algebraic = {
-            v_boundary_cc: pybamm.laplacian(v_boundary_cc) + param.alpha * pybamm.source(i_boundary_cc),
+            v_boundary_cc: pybamm.laplacian(v_boundary_cc)
+            + param.alpha * pybamm.source(i_boundary_cc, v_boundary_cc),
             i_boundary_cc: pybamm.Integral(i_boundary_cc, [y, z]) - applied_current,
         }
         self.initial_conditions = {
@@ -84,7 +83,10 @@ class OhmTwoDimensional(pybamm.SubModel):
             param.sigma_cp * (param.L_x / param.L_z) ** 2 * param.l_tab_p * param.l_cp
         )
         self.boundary_conditions = {
-            v_boundary_cc: {"left": (neg_tab_bc, "Neumann"), "right": (pos_tab_bc, "Neumann")}
+            v_boundary_cc: {
+                "left": (neg_tab_bc, "Neumann"),
+                "right": (pos_tab_bc, "Neumann"),
+            }
         }
         self.variables = {
             "Current collector voltage": v_boundary_cc,

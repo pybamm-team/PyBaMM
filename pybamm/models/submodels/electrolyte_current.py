@@ -79,7 +79,9 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # electrolye potential
-        phi_e_const = pybamm.boundary_value(-ocp_n - eta_r_n, "left")
+        phi_e_const = -pybamm.boundary_value(ocp_n, "left") - pybamm.boundary_value(
+            eta_r_n, "left"
+        )
         phi_e_n = pybamm.Broadcast(phi_e_const, ["negative electrode"])
         phi_e_s = pybamm.Broadcast(phi_e_const, ["separator"])
         phi_e_p = pybamm.Broadcast(phi_e_const, ["positive electrode"])

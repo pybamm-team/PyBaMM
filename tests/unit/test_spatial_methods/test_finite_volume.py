@@ -112,6 +112,11 @@ class TestFiniteVolume(unittest.TestCase):
         extrap_right = pybamm.BoundaryValue(var, "right")
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, [])
+        # domain for boundary values must now be explicitly set
+        extrap_right.domain = ["negative electrode"]
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
         self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
         # evaluate
         y_macro = mesh["negative electrode"][0].nodes
@@ -126,6 +131,11 @@ class TestFiniteVolume(unittest.TestCase):
         extrap_right = pybamm.BoundaryValue(var, "right")
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, [])
+        # domain for boundary values must now be explicitly set
+        extrap_right.domain = ["positive electrode"]
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
         self.assertEqual(extrap_right_disc.domain, ["positive electrode"])
 
         # 2d macroscale
@@ -133,6 +143,11 @@ class TestFiniteVolume(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable("var", domain="negative electrode")
         extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_right_disc = disc.process_symbol(extrap_right)
+        self.assertEqual(extrap_right_disc.domain, [])
+        # domain for boundary values must now be explicitly set
+        extrap_right.domain = ["current collector"]
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
         self.assertEqual(extrap_right_disc.domain, ["current collector"])
@@ -859,7 +874,7 @@ class TestFiniteVolume(unittest.TestCase):
         self.assertEqual(integral_eqn_disc.evaluate(None, constant_y), ls + lp)
         linear_y = combined_submesh[0].nodes
         self.assertAlmostEqual(
-            integral_eqn_disc.evaluate(None, linear_y), (1 - (ln) ** 2) / 2
+            integral_eqn_disc.evaluate(None, linear_y)[0][0], (1 - (ln) ** 2) / 2
         )
         cos_y = np.cos(combined_submesh[0].nodes[:, np.newaxis])
         np.testing.assert_array_almost_equal(

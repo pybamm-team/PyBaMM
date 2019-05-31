@@ -33,7 +33,9 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         return mass_matrix
 
 
-def get_mesh_for_testing(xpts=None, rpts=10, ypts=12, zpts=15, geometry=None, cc_submesh=None):
+def get_mesh_for_testing(
+    xpts=None, rpts=10, ypts=12, zpts=15, geometry=None, cc_submesh=None
+):
     param = pybamm.ParameterValues(
         base_parameters={
             "Electrode depth [m]": 0.1,
@@ -93,9 +95,13 @@ def get_1p1d_mesh_for_testing(xpts=None, zpts=15):
     return get_mesh_for_testing(xpts=xpts, zpts=zpts, geometry=geometry)
 
 
-def get_2p1d_mesh_for_testing(xpts=None, ypts=15, zpts=15, cc_submesh=pybamm.FenicsMesh2D):
+def get_2p1d_mesh_for_testing(
+    xpts=None, ypts=15, zpts=15, cc_submesh=pybamm.FenicsMesh2D
+):
     geometry = pybamm.Geometry("2+1D macro")
-    return get_mesh_for_testing(xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh)
+    return get_mesh_for_testing(
+        xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
+    )
 
 
 def get_discretisation_for_testing(xpts=None, rpts=10, mesh=None):
@@ -119,5 +125,7 @@ def get_1p1d_discretisation_for_testing(xpts=None, zpts=15):
     return get_discretisation_for_testing(mesh=get_1p1d_mesh_for_testing(xpts, zpts))
 
 
-def get_2p1d_discretisation_for_testing(xpts=None, ypts = 15, zpts=15):
-    return get_discretisation_for_testing(mesh=get_2p1d_mesh_for_testing(xpts, ypts, zpts))
+def get_2p1d_discretisation_for_testing(xpts=None, ypts=15, zpts=15):
+    return get_discretisation_for_testing(
+        mesh=get_2p1d_mesh_for_testing(xpts, ypts, zpts)
+    )

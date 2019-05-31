@@ -115,11 +115,9 @@ class Geometry1p1DMacro(Geometry1DMacro):
             "tabs": {
                 "negative": {
                     "z_centre": pybamm.geometric_parameters.centre_z_tab_n,
-                    "width": pybamm.geometric_parameters.l_tab_n,
                 },
                 "positive": {
                     "z_centre": pybamm.geometric_parameters.centre_z_tab_p,
-                    "width": pybamm.geometric_parameters.l_tab_p,
                 },
             },
         }

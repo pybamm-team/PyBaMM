@@ -62,6 +62,7 @@ from .expression_tree.binary_operators import (
     Division,
     Outer,
     outer,
+    source,
 )
 from .expression_tree.concatenations import (
     Concatenation,
@@ -81,7 +82,7 @@ from .expression_tree.unary_operators import (
     Gradient,
     Divergence,
     Laplacian,
-    Source,
+    Mass,
     BoundaryOperator,
     BoundaryValue,
     BoundaryFlux,
@@ -93,7 +94,6 @@ from .expression_tree.unary_operators import (
     surf,
     average,
     boundary_value,
-    source,
 )
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast

@@ -92,6 +92,17 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta.integration_variable, x)
         self.assertEqual(inta.domain, [])
 
+        # space integral over two variables
+        b = pybamm.Symbol("b", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        inta = pybamm.Integral(b, [y, z])
+        self.assertEqual(inta.name, "integral dy dz ['current collector']")
+        self.assertEqual(inta.children[0].name, b.name)
+        self.assertEqual(inta.integration_variable[0], y)
+        self.assertEqual(inta.integration_variable[1], z)
+        self.assertEqual(inta.domain, [])
+
         # Indefinite
         inta = pybamm.IndefiniteIntegral(a, x)
         self.assertEqual(inta.name, "a integrated w.r.t x on ['negative electrode']")
@@ -103,10 +114,13 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Symbol("a", domain=["negative electrode"])
         x = pybamm.SpatialVariable("x", ["separator"])
         y = pybamm.Variable("y")
+        z = pybamm.SpatialVariable("z", ["negative electrode"])
         with self.assertRaises(pybamm.DomainError):
             pybamm.Integral(a, x)
         with self.assertRaises(ValueError):
             pybamm.Integral(a, y)
+        with self.assertRaises(ValueError):
+            pybamm.Integral(a, [z, t])
 
     def test_index(self):
         vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))

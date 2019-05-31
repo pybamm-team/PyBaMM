@@ -25,12 +25,17 @@ class TestFiniteElement(unittest.TestCase):
         disc.set_variable_slices([var])
         y_test = np.ones(mesh["current collector"][0].npts)
         const_source = pybamm.Broadcast(1, "current collector")
-        disc.bcs = {var.id: {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(0), "Neumann")}}
+        disc.bcs = {
+            var.id: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
 
         for eqn in [
             pybamm.laplacian(var),
-            pybamm.source(const_source),
-            pybamm.laplacian(var) - pybamm.source(const_source),
+            pybamm.source(const_source, var),
+            pybamm.laplacian(var) - pybamm.source(const_source, var),
             pybamm.Integral(var, [y, z]) - 1,
         ]:
             eqn_disc = disc.process_symbol(eqn)

@@ -95,7 +95,8 @@ class TestGeometry1p1DMacro(unittest.TestCase):
             for spatial_vars in prim_sec_vars.values():
                 all(
                     self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
-                    for spatial_var in spatial_vars.keys() if spatial_var not in ["negative", "positive"]
+                    for spatial_var in spatial_vars.keys()
+                    if spatial_var not in ["negative", "positive"]
                 )
 
 
@@ -116,7 +117,8 @@ class TestGeometry2p1DMacro(unittest.TestCase):
             for spatial_vars in prim_sec_vars.values():
                 all(
                     self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
-                    for spatial_var in spatial_vars.keys() if spatial_var not in ["negative", "positive"]
+                    for spatial_var in spatial_vars.keys()
+                    if spatial_var not in ["negative", "positive"]
                 )
 
 

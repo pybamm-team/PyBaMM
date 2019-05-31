@@ -58,7 +58,9 @@ class TestMesh(unittest.TestCase):
                 npts = var_pts[var.y] * var_pts[var.z]
                 self.assertEqual(mesh[domain][0].npts, npts)
             else:
-                self.assertEqual(len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1)
+                self.assertEqual(
+                    len(mesh[domain][0].edges), len(mesh[domain][0].nodes) + 1
+                )
 
     def test_init_failure(self):
         geometry = pybamm.Geometry2p1DMacro()
@@ -67,8 +69,8 @@ class TestMesh(unittest.TestCase):
 
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.y: 10, var.z: 10}
-        geometry = pybamm.Geometry2p1DMicro()
-        with self.assertRaises(KeyError):
+        geometry = pybamm.Geometry2p1DMacro()
+        with self.assertRaises(TypeError):
             pybamm.Mesh(geometry, None, var_pts)
 
 

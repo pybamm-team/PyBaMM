@@ -27,16 +27,24 @@ class SPM(pybamm.LithiumIonBaseModel):
         if self.options["bc_options"]["dimensionality"] == 0:
             i_boundary_cc = param.current_with_time
             self.variables["Current collector current density"] = i_boundary_cc
+            curr_coll_domain = []
+            broadcast = True
         elif self.options["bc_options"]["dimensionality"] == 1:
             raise NotImplementedError
         elif self.options["bc_options"]["dimensionality"] == 2:
-            i_boundary_cc = pybamm.Variable("Current collector current density", domain="current collector")
+            v_boundary_cc = pybamm.Variable(
+                "Current collector voltage", domain="current collector"
+            )
+            i_boundary_cc = pybamm.Variable(
+                "Current collector current density", domain="current collector"
+            )
             current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
-            current_collector_model.set_uniform_current(i_boundary_cc)
-            #current_collector_model.set_algebraic_system(v_boundary_cc, i_boundary_cc)
+            #current_collector_model.set_uniform_current(i_boundary_cc)
+            current_collector_model.set_algebraic_system(v_boundary_cc, i_boundary_cc)
             self.update(current_collector_model)
             i_boundary_cc = self.variables["Current collector current density"]
-
+            curr_coll_domain = ["current collector"]
+            broadcast = False
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -50,9 +58,9 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         # Particle models
         negative_particle_model = pybamm.particle.Standard(param)
-        negative_particle_model.set_differential_system(c_s_n, j_n, broadcast=True)
+        negative_particle_model.set_differential_system(c_s_n, j_n, broadcast=broadcast)
         positive_particle_model = pybamm.particle.Standard(param)
-        positive_particle_model.set_differential_system(c_s_p, j_p, broadcast=True)
+        positive_particle_model.set_differential_system(c_s_p, j_p, broadcast=broadcast)
         self.update(negative_particle_model, positive_particle_model)
 
         "-----------------------------------------------------------------------------"
@@ -68,6 +76,9 @@ class SPM(pybamm.LithiumIonBaseModel):
         # Exchange-current density
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
+        c_s_n_surf.domain = curr_coll_domain
+        c_s_p_surf.domain = curr_coll_domain
+
         j0_n = int_curr_model.get_exchange_current_densities(c_e, c_s_n_surf, neg)
         j0_p = int_curr_model.get_exchange_current_densities(c_e, c_s_p_surf, pos)
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
@@ -94,8 +105,10 @@ class SPM(pybamm.LithiumIonBaseModel):
         self.variables.update(electrode_vars)
 
         # Cut-off voltage
-        voltage = self.variables["Terminal voltage"]
-        self.events.append(voltage - param.voltage_low_cut)
+        # TO DO: get terminal voltage in 2D
+        if self.options["bc_options"]["dimensionality"] == 0:
+            voltage = self.variables["Terminal voltage"]
+            self.events.append(voltage - param.voltage_low_cut)
 
     @property
     def default_geometry(self):
@@ -103,9 +116,9 @@ class SPM(pybamm.LithiumIonBaseModel):
         if dimensionality == 0:
             return pybamm.Geometry("1D macro", "1D micro")
         elif dimensionality == 1:
-            return pybamm.Geometry("1+1D macro", "(1+1)+1D micro")
+            return pybamm.Geometry("1+1D macro", "(1+0)+1D micro")
         elif dimensionality == 2:
-            return pybamm.Geometry("2+1D macro", "(2+1)+1D micro")
+            return pybamm.Geometry("2+1D macro", "(2+0)+1D micro")
 
     @property
     def default_submesh_types(self):
@@ -146,3 +159,15 @@ class SPM(pybamm.LithiumIonBaseModel):
                 "positive particle": pybamm.FiniteVolume,
                 "current collector": pybamm.FiniteElementFenics,
             }
+
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        # Different solver depending on whether we solve ODEs or DAEs
+        dimensionality = self.options["bc_options"]["dimensionality"]
+        if dimensionality == 0:
+            return pybamm.ScikitsOdeSolver()
+        else:
+            return pybamm.ScikitsDaeSolver()

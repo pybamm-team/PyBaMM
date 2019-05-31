@@ -81,7 +81,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         Parameters
         ----------
         symbol: :class:`pybamm.Symbol`
-            The symbol that we will take the gradient of.
+            The symbol that we will take the laplacian of.
         discretised_symbol: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
         boundary_conditions : dict
@@ -97,7 +97,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         domain = symbol.domain[0]
         mesh = self.mesh[domain][0]
 
-        stiffness_matrix = self.stiffness_matrix(domain)
+        stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
 
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
         lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
@@ -112,7 +112,14 @@ class FiniteElementFenics(pybamm.SpatialMethod):
             )
             boundary_load = boundary_load + lbc_load
         elif lbc_type == "Dirichlet":
-            raise NotImplementedError("Dirichlet boundary conditons not implemented")
+            # make unit source which will be adjusted to give the dirichlet value
+            # in the correct entries
+            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(1), mesh.negativetab)
+            lbc_vec = dolfin.assemble(dolfin.Constant(1) * mesh.TestFunction * mesh.dx)
+            bc.apply(lbc_vec)
+            # multiply by the lbc value
+            lbc_load = lbc_value * pybamm.Vector(lbc_vec.get_local()[:])
+            boundary_load = boundary_load - lbc_load
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -128,7 +135,14 @@ class FiniteElementFenics(pybamm.SpatialMethod):
             )
             boundary_load = boundary_load + rbc_load
         elif rbc_type == "Dirichlet":
-            raise NotImplementedError("Dirichlet boundary conditons not implemented")
+            # make unit source which will be adjusted to give the dirichlet value
+            # in the correct entries
+            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(1), mesh.positivetab)
+            rbc_vec = dolfin.assemble(dolfin.Constant(1) * mesh.TestFunction * mesh.dx)
+            bc.apply(rbc_vec)
+            # multiply by the rbc value
+            rbc_load = rbc_value * pybamm.Vector(rbc_vec.get_local()[:])
+            boundary_load = boundary_load - rbc_load
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -138,20 +152,24 @@ class FiniteElementFenics(pybamm.SpatialMethod):
 
         return -stiffness_matrix @ discretised_symbol + boundary_load
 
-    def stiffness_matrix(self, domain):
+    def stiffness_matrix(self, symbol, boundary_conditions):
         """
         Laplacian (stiffness) matrix for finite elements in the appropriate domain.
 
         Parameters
         ----------
-        domain : list
-            The domain(s) in which to compute the gradient matrix
+        symbol: :class:`pybamm.Symbol`
+            The symbol for which we want to calculate the laplacian matrix
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
 
         Returns
         -------
         :class:`pybamm.Matrix`
             The (sparse) finite element stiffness matrix for the domain
         """
+        domain = symbol.domain[0]
         mesh = self.mesh[domain][0]
 
         # make form for the stiffness
@@ -163,7 +181,22 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         )
 
         # assemble the stifnness matrix
-        stiffness = csr_matrix(dolfin.assemble(stiffness_form).array())
+        stiffness = dolfin.assemble(stiffness_form)
+
+        # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
+        lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
+        rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
+
+        if lbc_type == "Dirichlet":
+            # set source terms to zero on boundary
+            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(0) , mesh.negativetab)
+            bc.apply(stiffness)
+        if rbc_type == "Dirichlet":
+            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(0) , mesh.positivetab)
+            bc.apply(stiffness)
+
+        # get assembled mass matrix entries and convert to csr matrix
+        stiffness = csr_matrix(stiffness.array())
 
         return pybamm.Matrix(stiffness)
 
@@ -246,45 +279,23 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         mass_form = mesh.TrialFunction * mesh.TestFunction * mesh.dx
 
         # assemble mass matrix
-        mass = csr_matrix(dolfin.assemble(mass_form).array())
+        mass = dolfin.assemble(mass_form)
 
-        # TO DO: implement Dirichlet BCs
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
-        #lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
-        #rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
+        lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
+        rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
 
-        #if lbc_type == "Dirichlet":
-        #    raise NotImplementedError("Dirichlet boundary conditons not implemented")
+        if lbc_type == "Dirichlet":
+            # set source terms to zero on boundary
+            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(0) , mesh.negativetab)
+            bc.zero(mass)
+            raise NotImplementedError("Dirichlet boundary conditons not implemented")
+        if rbc_type == "Dirichlet":
+            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(0) , mesh.positivetab)
+            bc.zero(mass)
+            raise NotImplementedError("Dirichlet boundary conditons not implemented")
 
-        #if rbc_type == "Dirichlet":
-        #    raise NotImplementedError("Dirichlet boundary conditons not implemented")
+        # get assembled mass matrix entries and convert to csr matrix
+        mass = csr_matrix(mass.array())
 
         return pybamm.Matrix(mass)
-
-    def source(self, symbol, discretised_symbol, boundary_conditions):
-        """
-        Calculates weak form of source terms in the finite element method.
-
-        Parameters
-        ----------
-        symbol: :class:`pybamm.Variable`
-            The variable corresponding to the equation for which we are
-            calculating the mass matrix.
-        discretised_symbol: :class:`pybamm.Symbol`
-            The discretised symbol of the correct size
-        boundary_conditions : dict
-            The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
-
-        Returns
-        -------
-        :class: `pybamm.Array`
-            Contains the result of acting the mass matrix on
-            the child discretised_symbol
-        """
-        # TO DO: when implementing dirichlet bcs the mass matrix here will
-        # be different if the eqn key is in the bcs NOT the symbol, so Source
-        # should probbaly be a binary operator which takes the symbol of the eqn key
-        # the symbol of the source
-        mass_matrix = self.mass_matrix(symbol, boundary_conditions)
-        return mass_matrix @ discretised_symbol

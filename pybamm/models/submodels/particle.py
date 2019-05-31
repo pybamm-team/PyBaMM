@@ -101,6 +101,7 @@ class Standard(pybamm.SubModel):
             broadcast_domain = ["positive electrode"]
 
         c_surf = pybamm.surf(c)
+
         if broadcast:
             c_surf = pybamm.Broadcast(c_surf, broadcast_domain)
 

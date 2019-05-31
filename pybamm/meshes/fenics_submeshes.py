@@ -43,7 +43,9 @@ class FenicsMesh2D:
                 z_lims = lims[var]
                 Nz = npts[var.id] - 1
             else:
-                raise pybamm.DomainError("spatial variable must be y or z not {}".format(var.name))
+                raise pybamm.DomainError(
+                    "spatial variable must be y or z not {}".format(var.name)
+                )
 
         # check coordinate system agrees
         if spatial_vars[0].coord_sys == spatial_vars[1].coord_sys:
@@ -64,16 +66,16 @@ class FenicsMesh2D:
         )
 
         # create SubDomain classes for the tabs
-        negativetab = Tab(y_lims, z_lims, tabs["negative"])
-        positivetab = Tab(y_lims, z_lims, tabs["positive"])
+        self.negativetab = Tab(y_lims, z_lims, tabs["negative"])
+        self.positivetab = Tab(y_lims, z_lims, tabs["positive"])
 
         # initialize mesh function for boundary domains
         boundary_markers = dolfin.MeshFunction(
             "size_t", self.fem_mesh, self.fem_mesh.topology().dim() - 1
         )
         boundary_markers.set_all(0)
-        negativetab.mark(boundary_markers, 1)
-        positivetab.mark(boundary_markers, 2)
+        self.negativetab.mark(boundary_markers, 1)
+        self.positivetab.mark(boundary_markers, 2)
 
         # create measure of parts of the boundary
         self.ds = dolfin.Measure(

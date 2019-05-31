@@ -340,15 +340,15 @@ class Laplacian(SpatialOperator):
         super().__init__("laplacian", child)
 
 
-class Source(SpatialOperator):
-    """A node in the expression tree representing a source term in the (weak)
-    finite element formulation
+class Mass(SpatialOperator):
+    """Returns the mass matrix for a given symbol, accounting for boundary conditions
+    where necessary (e.g. in the finite element formualtion)
 
     **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
-        super().__init__("source", child)
+        super().__init__("mass", child)
 
 
 class Integral(SpatialOperator):
@@ -381,16 +381,16 @@ class Integral(SpatialOperator):
                         raise pybamm.DomainError(
                             """child and integration_variable must have the same domain"""
                         )
-                elif not isinstance(var, pybamm.IndependentVariable):
+                else:
+                    # only allow integration over multiple spatial variables NOT space and time
                     raise ValueError(
-                        """integration_variable must be of type pybamm.IndependentVariable,
+                        """integration_variable must be of type pybamm.SpatialVariable,
                            not {}""".format(
                             type(var)
                         )
                     )
                 name += " d{}".format(var.name)
-                if isinstance(var, pybamm.SpatialVariable):
-                    name += " {}".format(var.domain)
+            name += " {}".format(child.domain)
         else:
             if isinstance(integration_variable, pybamm.SpatialVariable):
                 # Check that child and integration_variable domains agree
@@ -398,16 +398,16 @@ class Integral(SpatialOperator):
                     raise pybamm.DomainError(
                         """child and integration_variable must have the same domain"""
                     )
-                elif not isinstance(integration_variable, pybamm.IndependentVariable):
-                    raise ValueError(
-                        """integration_variable must be of type pybamm.IndependentVariable,
-                               not {}""".format(
-                            type(integration_variable)
-                        )
+            elif not isinstance(integration_variable, pybamm.IndependentVariable):
+                raise ValueError(
+                    """integration_variable must be of type pybamm.IndependentVariable,
+                           not {}""".format(
+                        type(integration_variable)
                     )
-                name = "integral d{}".format(integration_variable.name)
-                if isinstance(integration_variable, pybamm.SpatialVariable):
-                    name += " {}".format(integration_variable.domain)
+                )
+            name = "integral d{}".format(integration_variable.name)
+            if isinstance(integration_variable, pybamm.SpatialVariable):
+                name += " {}".format(integration_variable.domain)
 
         self._integration_variable = integration_variable
         super().__init__(name, child)
@@ -727,28 +727,3 @@ def boundary_value(symbol, side):
     # Otherwise, calculate boundary value
     else:
         return BoundaryValue(symbol, side)
-
-
-#
-# Method to call Source
-#
-
-
-def source(expression):
-    """convenience function for creating a :class:`Source`
-
-    Parameters
-    ----------
-
-    expression : :class:`Symbol`
-        this sub-expression will be converted into weak form by multiplication
-        with the mass matrix
-
-    Returns
-    -------
-
-    :class:`Source`
-        the weak form of the source ``expression``
-    """
-
-    return Source(expression)

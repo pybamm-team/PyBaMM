@@ -400,8 +400,8 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Laplacian):
                 return child_spatial_method.laplacian(child, disc_child, self.bcs)
 
-            elif isinstance(symbol, pybamm.Source):
-                return child_spatial_method.source(child, disc_child, self.bcs)
+            elif isinstance(symbol, pybamm.Mass):
+                return child_spatial_method.mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
                 return child_spatial_method.indefinite_integral(

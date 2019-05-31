@@ -72,8 +72,9 @@ class Mesh(dict):
                 ]
             else:
                 if "secondary" in geometry[domain].keys():
+                    repeats = 1
                     for var in geometry[domain]["secondary"].keys():
-                        repeats = submesh_pts[domain][var.id]  # note (specific to FV)
+                        repeats *= submesh_pts[domain][var.id]  # note (specific to FV)
                 else:
                     repeats = 1
                 self[domain] = [
