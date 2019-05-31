@@ -235,7 +235,7 @@ class EvaluatorPython:
 
     def evaluate(self, t=None, y=None, known_evals=None):
         """
-        Acts as a drop-in replacement for :funct:`pybamm.Symbol.evaluate`
+        Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
         """
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
