@@ -70,7 +70,7 @@ class Function(pybamm.Symbol):
                 # function, and apply chain rule
                 if variable.id in [symbol.id for symbol in child.pre_order()]:
                     partial_derivatives[i] = child.diff(variable) * Function(
-                        autograd.grad(self.func), child
+                        autograd.grad(self.func), *children
                     )
 
             # remove None entries
@@ -84,20 +84,36 @@ class Function(pybamm.Symbol):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        child = self.orphans[0]
-        if child.evaluates_to_number():
-            # return zeros of right size
+
+        children = self.orphans
+
+        if all(child.evaluates_to_number() for child in children):
+            # if children all evaluate to numbers the return zeros
+            # of right size
             variable_y_indices = np.arange(
                 variable.y_slice.start, variable.y_slice.stop
             )
             jac = csr_matrix((1, np.size(variable_y_indices)))
-            return pybamm.Matrix(jac)
+            jacobian = pybamm.Matrix(jac)
         else:
-            jac_fun = Function(autograd.elementwise_grad(self.func), child) * child.jac(
-                variable
-            )
-            jac_fun.domain = self.domain
-            return jac_fun
+
+            # if at least one child contains variable dependence, then
+            # calculate the required partial jacobians and add them
+            jacobian = None
+            for child in children:
+                if not child.evaluates_to_number():
+                    jac_fun = Function(
+                        autograd.elementwise_grad(self.func), *children
+                    ) * child.jac(variable)
+
+                    jac_fun.domain = self.domain
+
+                    if jacobian is None:
+                        jacobian = jac_fun
+                    else:
+                        jacobian += jac_fun
+
+        return jacobian
 
     def _unary_evaluate(self, child):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
