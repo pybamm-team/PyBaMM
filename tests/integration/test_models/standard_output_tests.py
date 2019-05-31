@@ -47,6 +47,9 @@ class StandardOutputTests(object):
         if self.chemistry == "Lithium-ion":
             self.run_test_class(ParticleConcentrationTests)
 
+        if self.model.options["convection"] is not False:
+            self.run_test_class(VelocityTests)
+
 
 class BaseOutputTest(object):
     def __init__(self, model, param, disc, solver, operating_condition):
@@ -371,8 +374,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         """Test that the internal boundary fluxes are continuous. Test current
         collector fluxes are zero."""
         t, x = self.t, self.x_edge
-        np.testing.assert_array_equal(self.N_e_hat(t, x[0]), 0)
-        np.testing.assert_array_equal(self.N_e_hat(t, x[-1]), 0)
+        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[0]), 0)
+        np.testing.assert_array_almost_equal(self.N_e_hat(t, x[-1]), 0)
 
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,
@@ -504,3 +507,44 @@ class CurrentTests(BaseOutputTest):
         # current density will be affected slightly by capacitance effects
         if self.model.options["capacitance"] != "differential":
             self.test_interfacial_current_average()
+
+
+class VelocityTests(BaseOutputTest):
+    def __init__(self, model, param, disc, solver, operating_condition):
+        super().__init__(model, param, disc, solver, operating_condition)
+
+        self.v_box = self.get_var("Volume-averaged velocity")
+        self.i_e = self.get_var("Electrolyte current density")
+        self.dVbox_dz = self.get_var("Vertical volume-averaged acceleration")
+
+    def test_velocity_boundaries(self):
+        """Test the boundary values of the current densities"""
+        np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0)
+        np.testing.assert_array_almost_equal(self.v_box(self.t, 1), 0)
+
+    def test_vertical_velocity(self):
+        """Test the boundary values of the current densities"""
+        np.testing.assert_array_equal(self.dVbox_dz(self.t, 0), 0)
+        np.testing.assert_array_less(self.dVbox_dz(self.t, 0.5), 0)
+        np.testing.assert_array_equal(self.dVbox_dz(self.t, 1), 0)
+
+    def test_velocity_vs_current(self):
+        """Test the boundary values of the current densities"""
+        t, x_n, x_p = self.t, self.x_n, self.x_p
+
+        beta_n = pybamm.standard_parameters_lead_acid.beta_n
+        beta_n = self.param.process_symbol(beta_n).evaluate()
+        beta_p = pybamm.standard_parameters_lead_acid.beta_p
+        beta_p = self.param.process_symbol(beta_p).evaluate()
+
+        np.testing.assert_array_almost_equal(
+            self.v_box(t, x_n), beta_n * self.i_e(t, x_n)
+        )
+        np.testing.assert_array_almost_equal(
+            self.v_box(t, x_p), beta_p * self.i_e(t, x_p)
+        )
+
+    def test_all(self):
+        self.test_velocity_boundaries()
+        self.test_vertical_velocity()
+        self.test_velocity_vs_current()
