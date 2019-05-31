@@ -44,7 +44,7 @@ class Symbol(anytree.NodeMixin):
 
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
-        if pybamm.debug_mode is True:
+        if pybamm.settings.debug_mode is True:
             if not any(
                 issubclass(pybamm.Symbol, type(x))
                 or issubclass(pybamm.BinaryOperator, type(x))

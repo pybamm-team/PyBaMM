@@ -29,10 +29,13 @@ def version(formatted=False):
 
 
 #
-# Set debug mode to false by default
+# Utility classes and methods
 #
-debug_mode = False
-
+from .util import Timer
+from .util import profile
+from .util import load_function
+from .logger import logger, set_logging_level
+from .settings import settings
 
 #
 # Constants
@@ -43,14 +46,6 @@ FLOAT_FORMAT = "{: .17e}"
 # Absolute path to the PyBaMM repo
 script_path = os.path.abspath(__file__)
 ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
-
-#
-# Utility classes and methods
-#
-from .util import Timer
-from .util import profile
-from .util import load_function
-from .logger import logger, set_logging_level
 
 #
 # Classes for the Expression Tree
