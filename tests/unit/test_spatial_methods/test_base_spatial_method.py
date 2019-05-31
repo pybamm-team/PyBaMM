@@ -1,10 +1,10 @@
 #
 # Test for the base Spatial Method class
 #
+import numpy as np
 import pybamm
-from tests import get_mesh_for_testing, get_1p1d_mesh_for_testing
-
 import unittest
+from tests import get_mesh_for_testing, get_1p1d_mesh_for_testing
 
 
 class TestSpatialMethod(unittest.TestCase):
@@ -20,6 +20,33 @@ class TestSpatialMethod(unittest.TestCase):
             spatial_method.integral(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.indefinite_integral(None, None, None)
+
+    def test_discretise_spatial_variable(self):
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_method = pybamm.SpatialMethod(mesh)
+
+        # centre
+        x1 = pybamm.SpatialVariable("x", ["negative electrode"])
+        x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        r = pybamm.SpatialVariable("r", ["negative particle"])
+        for var in [x1, x2, r]:
+            var_disc = spatial_method.spatial_variable(var)
+            self.assertIsInstance(var_disc, pybamm.Vector)
+            np.testing.assert_array_equal(
+                var_disc.evaluate()[:, 0], mesh.combine_submeshes(*var.domain)[0].nodes
+            )
+
+        # edges
+        x1_edge = pybamm.SpatialVariable("x_edge", ["negative electrode"])
+        x2_edge = pybamm.SpatialVariable("x_edge", ["negative electrode", "separator"])
+        r_edge = pybamm.SpatialVariable("r_edge", ["negative particle"])
+        for var in [x1_edge, x2_edge, r_edge]:
+            var_disc = spatial_method.spatial_variable(var)
+            self.assertIsInstance(var_disc, pybamm.Vector)
+            np.testing.assert_array_equal(
+                var_disc.evaluate()[:, 0], mesh.combine_submeshes(*var.domain)[0].edges
+            )
 
     def test_broadcast_checks(self):
         child = pybamm.Symbol("sym", domain=["negative electrode"])

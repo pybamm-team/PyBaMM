@@ -25,6 +25,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.set_porosity_submodel()
         self.set_diffusion_submodel()
         self.set_current_variables()
+        self.set_convection_variables()
 
         # ODEs only (don't use jacobian, use base spatial method)
         self.use_jacobian = False
@@ -156,7 +157,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.variables.update({**ocp_vars, **eta_r_vars})
 
     def set_porosity_submodel(self):
-        " Set model for porosity"
         param = self.set_of_parameters
         porosity_model = pybamm.porosity.Standard(param)
         porosity_model.set_leading_order_system(self.variables)
@@ -196,6 +196,17 @@ class LOQS(pybamm.LeadAcidBaseModel):
             voltage.domain = "current collector"
             voltage = pybamm.boundary_value(voltage, "right")
         self.events.append(voltage - param.voltage_low_cut)
+
+    def set_convection_variables(self):
+        velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
+        if self.options["convection"] is not False:
+            velocity_vars = velocity_model.get_explicit_leading_order(self.variables)
+            self.variables.update(velocity_vars)
+        else:
+            whole_cell = ["negative electrode", "separator", "positive electrode"]
+            v_box = pybamm.Broadcast(0, whole_cell)
+            dVbox_dz = pybamm.Broadcast(0, whole_cell)
+            self.variables.update(velocity_model.get_variables(v_box, dVbox_dz))
 
     @property
     def default_spatial_methods(self):

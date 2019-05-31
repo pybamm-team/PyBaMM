@@ -34,7 +34,8 @@ class SpatialMethod:
     def spatial_variable(self, symbol):
         """
         Convert a :class:`pybamm.SpatialVariable` node to a linear algebra object that
-        can be evaluated (here, a :class:`pybamm.Vector` on the nodes).
+        can be evaluated (here, a :class:`pybamm.Vector` on either the nodes or the
+        edges).
 
         Parameters
         -----------
@@ -47,7 +48,10 @@ class SpatialMethod:
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
+        if symbol.name.endswith("_edge"):
+            return pybamm.Vector(symbol_mesh[0].edges, domain=symbol.domain)
+        else:
+            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
     def broadcast(self, symbol, domain):
         """
