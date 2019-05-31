@@ -42,7 +42,7 @@ class Time(IndependentVariable):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         if t is None:
             raise ValueError("t must be provided")
-        return float(t)
+        return t
 
 
 class SpatialVariable(IndependentVariable):

@@ -85,6 +85,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         neg = ["negative electrode"]
         pos = ["positive electrode"]
         int_curr_model = pybamm.interface.LeadAcidReaction(param)
+        pot_model = pybamm.potential.Potential(param)
         j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
         j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)
 
@@ -101,9 +102,11 @@ class LOQS(pybamm.LeadAcidBaseModel):
             ]
             self.set_boundary_conditions(self.variables)
 
-            # Reaction overpotential
-            eta_r_n = delta_phi_n - ocp_n
-            eta_r_p = delta_phi_p - ocp_p
+            # Potentials
+            pot_vars = pot_model.get_all_potentials(
+                (ocp_n, ocp_p), (delta_phi_n, delta_phi_p)
+            )
+            self.variables.update(pot_vars)
 
             # Interfacial current density
             j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
@@ -144,16 +147,12 @@ class LOQS(pybamm.LeadAcidBaseModel):
             # Potentials
             eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
             eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
+            pot_vars = pot_model.get_all_potentials((ocp_n, ocp_p), (eta_r_n, eta_r_p))
+            self.variables.update(pot_vars)
 
         # Exchange-current density
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
-
-        # Potentials
-        pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
 
     def set_porosity_submodel(self):
         " Set model for porosity"

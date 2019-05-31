@@ -43,8 +43,8 @@ output_variables = [
     "Interfacial current density [A.m-2]",
     "Electrolyte concentration [mol.m-3]",
     "Current [A]",
-    "Porosity",
-    "Electrolyte potential [V]",
+    "Negative electrode surface potential difference",
+    "Positive electrode surface potential difference",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solvers, output_variables)
