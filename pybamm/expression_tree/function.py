@@ -31,7 +31,7 @@ class Function(pybamm.Symbol):
         super().__init__(name, children=children_list, domain=domain)
 
         self.function = function
-        self.number_of_parameters = len(children_list)
+        self.number_of_inputs = len(children_list)
 
         # hack to work out whether function takes any params
         # (signature doesn't work for numpy)
@@ -115,22 +115,47 @@ class Function(pybamm.Symbol):
 
         return jacobian
 
-    def _unary_evaluate(self, child):
-        """ See :meth:`UnaryOperator._unary_evaluate()`. """
-        if self.takes_no_params:
+    def _function_evaluate(self, child):
+        if self.number_of_inputs == 0:
             return self.func()
         else:
             return self.func(child)
 
-    def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
-        return pybamm.Function(self.func, child)
+    def _function_new_copy(self, children):
+        """Returns a new copy of the function. 
+        
+        Inputs
+        ------
+        children : : list
+            A list of the children of the function
+           
+        Returns
+        -------
+            : :pybamm.Function
+            A new copy of the function
+        """
+        return pybamm.Function(self.func, *children)
 
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`UnaryOperator._unary_simplify()`. """
-        if self.takes_no_params:
+    def _function_simplify(self, simplified_children):
+        """
+        Simplifies the function. 
+
+        Inputs
+        ------
+        simplified_children: : list 
+            A list of simplified children of the function
+        
+        Returns
+        -------
+         :: pybamm.Scalar() if no children
+         :: 
+
+
+
+        """
+        if self.number_of_inputs == 0:
             # If self.func() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.func())
         else:
-            return pybamm.Function(self.func, simplified_child)
+            return pybamm.Function(self.func, *simplified_children)
 
