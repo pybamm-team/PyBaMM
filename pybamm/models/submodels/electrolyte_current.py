@@ -396,8 +396,8 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         j_n_0 = int_curr_model.get_butler_volmer(j0_n_0, eta_r_n_0, neg)
         j_p_0 = int_curr_model.get_butler_volmer(j0_p_0, eta_r_p_0, pos)
 
-        delta_phi_n_1 = j_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
-        delta_phi_p_1 = j_p_0.diff(c_e_0) * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
+        delta_phi_n_1 = j0_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
+        delta_phi_p_1 = j0_p_0.diff(c_e_0) * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
 
         delta_phi_n = delta_phi_n_0 + param.C_e * delta_phi_n_1
         delta_phi_p = delta_phi_p_0 + param.C_e * delta_phi_p_1
@@ -409,7 +409,13 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         pot_model = pybamm.potential.Potential(param)
         ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
         eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        return {**ocp_vars, **eta_r_vars}
+        return {
+            **ocp_vars,
+            **eta_r_vars,
+            "j0_n_diff": j0_n_0.diff(c_e_0),
+            "j_n_diff": j_n_0.diff(c_e_0),
+            "j_n_dp": j_n_0.diff(delta_phi_n_0),
+        }
 
     @property
     def default_solver(self):

@@ -89,7 +89,6 @@ class Potential(pybamm.SubModel):
         ocv_av = vars["Average open circuit potential"]
         ocv_av_dim = vars["Average open circuit potential [V]"]
 
-        # Variables
         return {
             **vars,
             "Measured open circuit voltage": ocv,

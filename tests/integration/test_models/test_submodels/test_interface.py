@@ -162,6 +162,70 @@ class TestButlerVolmer(unittest.TestCase):
         whole_cell_mesh = disc.mesh.combine_submeshes(*whole_cell)
         self.assertEqual(j.evaluate(None, y).shape, (whole_cell_mesh[0].npts, 1))
 
+    def test_diff_c_e_lead_acid(self):
+
+        # With intercalation
+        param = pybamm.standard_parameters_lead_acid
+        model = pybamm.interface.LeadAcidReaction(param)
+        parameter_values = model.default_parameter_values
+
+        def j_n(c_e):
+            eta_r_n = param.U_n_dimensional(c_e)
+            return eta_r_n
+            # return model.get_butler_volmer(c_e, eta_r_n, ["negative electrode"])
+
+        def j_p(c_e):
+            eta_r_p = param.U_p_dimensional(c_e)
+            return eta_r_p
+            # return model.get_butler_volmer(c_e, eta_r_p, ["positive electrode"])
+
+        c_e = pybamm.Scalar(0.5)
+        h = pybamm.Scalar(0.00001)
+
+        # Analytical
+        j_n_diff = parameter_values.process_symbol(j_n(c_e).diff(c_e))
+        j_p_diff = parameter_values.process_symbol(j_p(c_e).diff(c_e))
+
+        # Numerical
+        j_n_FD = parameter_values.process_symbol(
+            (j_n(c_e + h) - j_n(c_e - h)) / (2 * h)
+        )
+        self.assertAlmostEqual(j_n_diff.evaluate(), j_n_FD.evaluate())
+        j_p_FD = parameter_values.process_symbol(
+            (j_p(c_e + h) - j_p(c_e - h)) / (2 * h)
+        )
+        self.assertAlmostEqual(j_p_diff.evaluate(), j_p_FD.evaluate())
+
+    def test_diff_delta_phi_e_lead_acid(self):
+
+        # With intercalation
+        param = pybamm.standard_parameters_lead_acid
+        model = pybamm.interface.LeadAcidReaction(param)
+        parameter_values = model.default_parameter_values
+
+        def j_n(delta_phi):
+            return model.get_butler_volmer(1, delta_phi - 1, ["negative electrode"])
+
+        def j_p(delta_phi):
+            return model.get_butler_volmer(1, delta_phi - 1, ["positive electrode"])
+
+        delta_phi = pybamm.Scalar(0.5)
+        h = pybamm.Scalar(0.00001)
+
+        # Analytical
+        j_n_diff = parameter_values.process_symbol(j_n(delta_phi).diff(delta_phi))
+        j_p_diff = parameter_values.process_symbol(j_p(delta_phi).diff(delta_phi))
+
+        # Numerical
+        j_n_FD = parameter_values.process_symbol(
+            (j_n(delta_phi + h) - j_n(delta_phi - h)) / (2 * h)
+        )
+        self.assertAlmostEqual(j_n_diff.evaluate(), j_n_FD.evaluate())
+        j_p_FD = parameter_values.process_symbol(
+            (j_p(delta_phi + h) - j_p(delta_phi - h)) / (2 * h)
+        )
+        self.assertAlmostEqual(j_p_diff.evaluate(), j_p_FD.evaluate())
+
     def test_failure(self):
         model = pybamm.interface.InterfacialCurrent(None)
         with self.assertRaises(pybamm.DomainError):
@@ -301,6 +365,36 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         model = pybamm.interface.LeadAcidReaction(None)
         with self.assertRaises(pybamm.DomainError):
             model.get_exchange_current_densities(None, "not a domain")
+
+    def test_diff_lead_acid(self):
+
+        # With intercalation
+        param = pybamm.standard_parameters_lead_acid
+        model = pybamm.interface.LeadAcidReaction(param)
+        parameter_values = model.default_parameter_values
+
+        def j0_n(c_e):
+            return model.get_exchange_current_densities(c_e, ["negative electrode"])
+
+        def j0_p(c_e):
+            return model.get_exchange_current_densities(c_e, ["positive electrode"])
+
+        c_e = pybamm.Scalar(0.5)
+        h = pybamm.Scalar(0.00001)
+
+        # Analytical
+        j0_n_diff = parameter_values.process_symbol(j0_n(c_e).diff(c_e))
+        j0_p_diff = parameter_values.process_symbol(j0_p(c_e).diff(c_e))
+
+        # Numerical
+        j0_n_FD = parameter_values.process_symbol(
+            (j0_n(c_e + h) - j0_n(c_e - h)) / (2 * h)
+        )
+        self.assertAlmostEqual(j0_n_diff.evaluate(), j0_n_FD.evaluate())
+        j0_p_FD = parameter_values.process_symbol(
+            (j0_p(c_e + h) - j0_p(c_e - h)) / (2 * h)
+        )
+        self.assertAlmostEqual(j0_p_diff.evaluate(), j0_p_FD.evaluate())
 
 
 if __name__ == "__main__":

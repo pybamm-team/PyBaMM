@@ -39,10 +39,10 @@ class StandardOutputTests(object):
         tests.test_all()
 
     def test_all(self, skip_first_timestep=False):
-        self.run_test_class(VoltageTests)
-        self.run_test_class(ElectrolyteConcentrationTests)
+        # self.run_test_class(VoltageTests)
+        # self.run_test_class(ElectrolyteConcentrationTests)
         self.run_test_class(PotentialTests)
-        self.run_test_class(CurrentTests)
+        # self.run_test_class(CurrentTests)
 
         if self.chemistry == "Lithium-ion":
             self.run_test_class(ParticleConcentrationTests)
@@ -434,6 +434,9 @@ class PotentialTests(BaseOutputTest):
         potential and electrolyte potential"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
+        import ipdb
+
+        ipdb.set_trace()
         np.testing.assert_array_almost_equal(
             self.phi_s_n(t, x_n) - self.phi_e_n(t, x_n), self.delta_phi_n(t, x_n)
         )
