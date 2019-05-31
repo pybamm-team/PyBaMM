@@ -30,19 +30,16 @@ class Potential(pybamm.SubModel):
             Dimensionless positive electrode overpotential
         name : str
             Name to assign to the symbol
-        dimensional_shift : bool
-            Whether to shift the symbols by a constant when re-dimensionalising
+        dimensional_shift : bool, optional
+            Whether to shift the symbols by a constant when re-dimensionalising. Default
+            is False.
         """
         # Load parameters
         param = self.set_of_parameters
 
         # Define dimensional shifts
-        if dimensional_shift:
-            shift_n = param.U_n_ref
-            shift_p = param.U_p_ref
-        else:
-            shift_n = 0
-            shift_p = 0
+        shift_n = dimensional_shift * param.U_n_ref
+        shift_p = dimensional_shift * param.U_p_ref
 
         # Broadcast if necessary
         if pot_n.domain in [[], ["current collector"]]:
@@ -55,10 +52,10 @@ class Potential(pybamm.SubModel):
         pot_p_av = pybamm.average(pot_p)
         pot_av = pot_p_av - pot_n_av
 
-        pot_n_dim = shift_n * param.potential_scale * pot_n
-        pot_p_dim = shift_p * param.potential_scale * pot_p
-        pot_n_av_dim = shift_n * param.potential_scale * pot_n_av
-        pot_p_av_dim = shift_p * param.potential_scale * pot_p_av
+        pot_n_dim = shift_n + param.potential_scale * pot_n
+        pot_p_dim = shift_p + param.potential_scale * pot_p
+        pot_n_av_dim = shift_n + param.potential_scale * pot_n_av
+        pot_p_av_dim = shift_p + param.potential_scale * pot_p_av
         pot_av_dim = pot_p_av_dim - pot_n_av_dim
 
         # Update variables
@@ -77,45 +74,40 @@ class Potential(pybamm.SubModel):
 
     def get_derived_open_circuit_potentials(self, ocp_n, ocp_p):
         " See :meth:`pybamm.Potential.get_derived_potential()`"
-        return self.get_derived_potential(ocp_n, ocp_p, "open circuit potential")
-        # Broadcast if necessary
-        if ocp_n.domain in [[], ["current collector"]]:
-            ocp_n = pybamm.Broadcast(ocp_n, ["negative electrode"])
-        if ocp_p.domain in [[], ["current collector"]]:
-            ocp_p = pybamm.Broadcast(ocp_p, ["positive electrode"])
+        vars = self.get_derived_potential(ocp_n, ocp_p, "open circuit potential", True)
 
-        # Dimensionless
-        ocp_n_av = pybamm.average(ocp_n)
-        ocp_p_av = pybamm.average(ocp_p)
+        # Get open-circuit voltage
+        param = self.set_of_parameters
+        ocp_n = vars["Negative electrode open circuit potential"]
+        ocp_p = vars["Positive electrode open circuit potential"]
         ocp_n_left = pybamm.boundary_value(ocp_n, "left")
         ocp_p_right = pybamm.boundary_value(ocp_p, "right")
-        ocv_av = ocp_p_av - ocp_n_av
         ocv = ocp_p_right - ocp_n_left
+        ocv_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * ocv
 
-        # Dimensional
-        ocp_n_av_dim = param.U_n_ref + param.potential_scale * ocp_n_av
-        ocp_p_av_dim = param.U_p_ref + param.potential_scale * ocp_p_av
-        ocp_n_left_dim = param.U_n_ref + param.potential_scale * ocp_n_left
-        ocp_p_right_dim = param.U_p_ref + param.potential_scale * ocp_p_right
-        ocv_av_dim = ocp_p_av_dim - ocp_n_av_dim
-        ocv_dim = ocp_p_right_dim - ocp_n_left_dim
+        # Change name for average from "potential" to "voltage"
+        ocv_av = vars["Average open circuit potential"]
+        ocv_av_dim = vars["Average open circuit potential [V]"]
 
         # Variables
         return {
-            "Average open circuit voltage": ocv_av,
+            **vars,
             "Measured open circuit voltage": ocv,
-            "Average open circuit voltage [V]": ocv_av_dim,
+            "Average open circuit voltage": ocv_av,
             "Measured open circuit voltage [V]": ocv_dim,
+            "Average open circuit voltage [V]": ocv_av_dim,
         }
 
     def get_derived_reaction_overpotentials(self, eta_r_n, eta_r_p):
         " See :meth:`pybamm.Potential.get_derived_potential()`"
-        return self.get_derived_potential(eta_r_n, eta_r_p, "reaction overpotential")
+        return self.get_derived_potential(
+            eta_r_n, eta_r_p, "reaction overpotential", False
+        )
 
     def get_derived_surface_potential_differences(self, delta_phi_n, delta_phi_p):
         " See :meth:`pybamm.Potential.get_derived_potential()`"
         return self.get_derived_potential(
-            delta_phi_n, delta_phi_p, "surface potential difference"
+            delta_phi_n, delta_phi_p, "surface potential difference", True
         )
 
     def get_all_potentials(self, ocp, eta_r=None, delta_phi=None):

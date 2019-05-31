@@ -104,7 +104,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
             # Potentials
             pot_vars = pot_model.get_all_potentials(
-                (ocp_n, ocp_p), (delta_phi_n, delta_phi_p)
+                (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
             )
             self.variables.update(pot_vars)
 
@@ -147,7 +147,9 @@ class LOQS(pybamm.LeadAcidBaseModel):
             # Potentials
             eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
             eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
-            pot_vars = pot_model.get_all_potentials((ocp_n, ocp_p), (eta_r_n, eta_r_p))
+            pot_vars = pot_model.get_all_potentials(
+                (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
+            )
             self.variables.update(pot_vars)
 
         # Exchange-current density

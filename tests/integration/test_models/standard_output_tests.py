@@ -410,10 +410,10 @@ class PotentialTests(BaseOutputTest):
         self.phi_e_p = self.get_var("Positive electrolyte potential [V]")
 
         self.delta_phi_n = self.get_var(
-            "Negative electrode surface potential difference"
+            "Negative electrode surface potential difference [V]"
         )
         self.delta_phi_p = self.get_var(
-            "Positive electrode surface potential difference"
+            "Positive electrode surface potential difference [V]"
         )
 
     def test_negative_electrode_potential_profile(self):
@@ -433,10 +433,11 @@ class PotentialTests(BaseOutputTest):
         """Test that potential differences are the difference between electrode
         potential and electrolyte potential"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
-        np.testing.assert_array_equal(
+
+        np.testing.assert_array_almost_equal(
             self.phi_s_n(t, x_n) - self.phi_e_n(t, x_n), self.delta_phi_n(t, x_n)
         )
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             self.phi_s_p(t, x_p) - self.phi_e_p(t, x_p), self.delta_phi_p(t, x_p)
         )
 
