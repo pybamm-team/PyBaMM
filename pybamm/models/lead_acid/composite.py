@@ -165,10 +165,15 @@ class Composite(pybamm.LeadAcidBaseModel):
         self.events.append(voltage - param.voltage_low_cut)
 
     def set_convection_variables(self):
+        velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
         if self.options["convection"] is not False:
-            velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
-            velocity_vars = velocity_model.get_explicit_composite(self.reactions)
+            velocity_vars = velocity_model.get_explicit_composite(self.variables)
             self.variables.update(velocity_vars)
+        else:
+            whole_cell = ["negative electrode", "separator", "positive electrode"]
+            v_box = pybamm.Broadcast(0, whole_cell)
+            dVbox_dz = pybamm.Broadcast(0, whole_cell)
+            self.variables.update(velocity_model.get_variables(v_box, dVbox_dz))
 
     @property
     def default_solver(self):

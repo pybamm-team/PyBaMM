@@ -30,24 +30,13 @@ class Velocity(pybamm.SubModel):
         # Unpack variables
         param = self.set_of_parameters
         p = variables["Electrolyte pressure"]
-        i_boundary_cc = variables["Current collector current density"]
         # c_e = variables["Electrolyte concentration"]
 
         # Set up reactions
         j = variables["Interfacial current density"]
         v_mass = -pybamm.grad(p)
         v_box = v_mass
-
-        # Explicit expression for dVdz in the separator
-        l_s = pybamm.geometric_parameters.l_s
-        v_box_n_right = param.beta_n * i_boundary_cc
-        v_box_p_left = param.beta_p * i_boundary_cc
-        d_vbox_s__dx = (v_box_p_left - v_box_n_right) / l_s
-        dVbox_dz = pybamm.Concatenation(
-            pybamm.Broadcast(0, "negative electrode"),
-            pybamm.Broadcast(-d_vbox_s__dx, "separator"),
-            pybamm.Broadcast(0, "positive electrode"),
-        )
+        _, dVbox_dz = self.get_separator_velocities(variables)
 
         # Build model
         self.algebraic = {p: pybamm.div(v_box) + dVbox_dz - param.beta * j}
@@ -57,82 +46,88 @@ class Velocity(pybamm.SubModel):
         }
         self.variables = self.get_variables(v_box, dVbox_dz)
 
-    def get_explicit_leading_order(self, reactions):
+    def get_explicit_leading_order(self, variables):
         """
         Provides explicit velocity for the leading-order models, as a post-processing
         step.
 
         Parameters
         ----------
-        reactions : dict
-            Dictionary of reaction variables
+        variables : dict
+            Dictionary of symbols to use in the model
         """
         # Set up
         param = self.set_of_parameters
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        j_n = reactions["main"]["neg"]["aj"]
-        j_p = reactions["main"]["pos"]["aj"]
+        j_n = variables["Negative electrode interfacial current density"]
+        j_p = variables["Positive electrode interfacial current density"]
 
         # Volume-averaged velocity
         v_box_n = param.beta_n * pybamm.outer(j_n, x_n)
         v_box_p = param.beta_p * pybamm.outer(j_p, x_p - 1)
 
-        v_box, dVbox_dz = self.get_combined_velocities(v_box_n, v_box_p)
+        v_box_s, dVbox_dz = self.get_separator_velocities(variables)
+        v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
 
         return self.get_variables(v_box, dVbox_dz)
 
-    def get_explicit_composite(self, reactions):
+    def get_explicit_composite(self, variables):
         """
         Provides explicit velocity for the composite models, as a post-processing step.
 
         Parameters
         ----------
-        reactions : dict
-            Dictionary of reaction variables
+        variables : dict
+            Dictionary of symbols to use in the model
         """
         # Set up
         param = self.set_of_parameters
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
-        j_n = reactions["main"]["neg"]["aj"]
-        j_p = reactions["main"]["pos"]["aj"]
+        j_n = variables["Negative electrode interfacial current density"]
+        j_p = variables["Positive electrode interfacial current density"]
 
         # Volume-averaged velocity
         v_box_n = param.beta_n * pybamm.IndefiniteIntegral(j_n, x_n)
-        v_box_p = param.beta_p * pybamm.IndefiniteIntegral(j_p, x_p)
+        # Shift v_box_p to be equal to 0 at x_p = 1
+        v_box_p = param.beta_p * (
+            pybamm.IndefiniteIntegral(j_p, x_p) - pybamm.Integral(j_p, x_p)
+        )
 
-        v_box, dVbox_dz = self.get_combined_velocities(v_box_n, v_box_p)
+        v_box_s, dVbox_dz = self.get_separator_velocities(variables)
+        v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
 
         return self.get_variables(v_box, dVbox_dz)
 
-    def get_combined_velocities(self, v_box_n, v_box_p):
+    def get_separator_velocities(self, variables):
         """
         Calculate x- and z-components of velocity in the separator
 
         Parameters
         ----------
-        v_box_n : :class:`pybamm.Symbol`
-            The x-component of velocity in the negative electrode
-        v_box_p : :class:`pybamm.Symbol`
-            The x-component of velocity in the positive electrode
+        variables : dict
+            Dictionary of symbols to use in the model
 
         Returns
         -------
-        v_box : :class:`pybamm.Symbol`
-            The x-component of velocity in the whole cell
+        v_box_s : :class:`pybamm.Symbol`
+            The x-component of velocity in the separator
         dVbox_dz : :class:`pybamm.Symbol`
             The z-component of velocity in the separator
         """
+        # Set up
+        param = self.set_of_parameters
         l_n = pybamm.geometric_parameters.l_n
         l_s = pybamm.geometric_parameters.l_s
         x_s = pybamm.standard_spatial_vars.x_s
 
         # Difference in negative and positive electrode velocities determines the
         # velocity in the separator
-        v_box_n_right = pybamm.boundary_value(v_box_n, "right")
-        v_box_p_left = pybamm.boundary_value(v_box_p, "left")
+        i_boundary_cc = variables["Current collector current density"]
+        v_box_n_right = param.beta_n * i_boundary_cc
+        v_box_p_left = param.beta_p * i_boundary_cc
         d_vbox_s__dx = (v_box_p_left - v_box_n_right) / l_s
 
         # Simple formula for velocity in the separator
@@ -143,8 +138,7 @@ class Velocity(pybamm.SubModel):
         )
         v_box_s = d_vbox_s__dx * (x_s - l_n) + v_box_n_right
 
-        v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
-        return v_box, dVbox_dz
+        return v_box_s, dVbox_dz
 
     def get_variables(self, v_box, dVbox_dz):
         """
