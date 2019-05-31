@@ -4,10 +4,8 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-import cProfile
 import importlib
 import os
-import pstats
 import sys
 import timeit
 
@@ -70,14 +68,6 @@ class Timer(object):
         or since meth:`reset()` was last called.
         """
         return timeit.default_timer() - self._start
-
-
-def profile(code, sort="cumulative", num=30):
-    """Common-use for cProfile"""
-    cProfile.run(code)
-    stats = pstats.Stats()
-    stats.sort_stats(sort)
-    return stats
 
 
 def load_function(filename):

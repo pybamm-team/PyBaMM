@@ -55,11 +55,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         # for finite volume we use the cell centres
-        if symbol.name in ["x_n", "x_s", "x_p", "r_n", "r_p", "x", "r"]:
-            symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
-        else:
-            raise NotImplementedError("3D meshes not yet implemented")
+        symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
+        return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -250,13 +247,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         else:
             integration_matrix = self.indefinite_integral_matrix_nodes(domain)
 
-        # Calculate integration matrix
-
         # Don't need to check for spherical domains as spherical polars
         # only change the diveregence (symbols here have grad and no div)
         out = integration_matrix @ discretised_symbol
-        # if symbol.evaluate_on == "edges":
-        #     out = self.node_to_edge(out)
 
         out.domain = domain
 
@@ -397,8 +390,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # get relevant grid points
         submesh_list = self.mesh.combine_submeshes(*symbol.domain)
-        if isinstance(submesh_list[0].npts, list):
-            NotImplementedError("Can only take in 1D primary directions")
 
         # Prepare sizes and empty bcs_vector
         n = submesh_list[0].npts
@@ -478,8 +469,6 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Find the number of submeshes
         submesh_list = self.mesh.combine_submeshes(*discretised_child.domain)
-        if isinstance(submesh_list[0].npts, list):
-            NotImplementedError("Can only take in 1D primary directions")
 
         prim_pts = submesh_list[0].npts
         sec_pts = len(submesh_list)
@@ -563,10 +552,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         # no need to do any averaging
         if left_evaluates_on_edges == right_evaluates_on_edges:
             pass
-        # If only left child evaluates on edges, compute diffusivity for right child
+        # If only left child evaluates on edges, map right child onto edges
         elif left_evaluates_on_edges and not right_evaluates_on_edges:
             disc_right = self.node_to_edge(disc_right)
-        # If only right child evaluates on edges, compute diffusivity for left child
+        # If only right child evaluates on edges, map left child onto edges
         elif right_evaluates_on_edges and not left_evaluates_on_edges:
             disc_left = self.node_to_edge(disc_left)
         # Return new binary operator with appropriate class
@@ -603,22 +592,24 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def edge_to_node(self, discretised_symbol):
         """
-        Compute the diffusivity at cell nodes, based on the diffusivity at cell edges.
+        Convert a discretised symbol evaluated on the cell edges to a discretised symbol
+        evaluated on the cell nodes.
         See :meth:`pybamm.FiniteVolume.shift`
         """
         return self.shift(discretised_symbol, "edge to node")
 
     def node_to_edge(self, discretised_symbol):
         """
-        Compute the diffusivity at cell edges, based on the diffusivity at cell nodes.
+        Convert a discretised symbol evaluated on the cell nodes to a discretised symbol
+        evaluated on the cell edges.
         See :meth:`pybamm.FiniteVolume.shift`
         """
         return self.shift(discretised_symbol, "node to edge")
 
     def shift(self, discretised_symbol, shift_key):
         """
-        Compute the diffusivity at cell edges/nodes, based on the diffusivity at cell
-        nodes/edges.
+        Convert a discretised symbol evaluated at edges/nodes, to a discretised symbol
+        evaluated at nodes/edges.
         For now we just take the arithemtic mean, though it may be better to take the
         harmonic mean based on [1].
 

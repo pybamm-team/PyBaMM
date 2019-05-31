@@ -8,8 +8,8 @@ from scipy.sparse import eye, kron, coo_matrix
 
 class SpatialMethod:
     """
-    A general spatial methods class, with default (trivial) behaviour for broadcast,
-    mass_matrix and node_to_edge.
+    A general spatial methods class, with default (trivial) behaviour for some spatial
+    operations.
     All spatial methods will follow the general form of SpatialMethod in
     that they contain a method for broadcasting variables onto a mesh,
     a gradient operator, and a diverence operator.
