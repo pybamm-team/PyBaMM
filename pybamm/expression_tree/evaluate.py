@@ -1,5 +1,5 @@
 #
-# Simplify a symbol
+# Write a symbol to python
 #
 import pybamm
 
