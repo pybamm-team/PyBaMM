@@ -1,7 +1,7 @@
 #
 # Equation classes for the electrolyte current
 #
-import numpy as np
+import autograd.numpy as np
 import pybamm
 
 
@@ -378,8 +378,8 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         param = self.set_of_parameters
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        phi_e_0 = variables["Electrolyte potential"].orphans[0].orphans[0]
-        phi_s_p_0 = variables["Electrode potential"].orphans[2].orphans[0]
+        phi_e_0 = pybamm.average(variables["Electrolyte potential"])
+        phi_s_p_0 = pybamm.average(variables["Electrode potential"].orphans[2])
         # CHECK WHY AVERAGE DIDN'T WORK
         c_e_0 = variables["Average electrolyte concentration"]
         delta_phi_n_0 = -phi_e_0
@@ -396,26 +396,26 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         j_n_0 = int_curr_model.get_butler_volmer(j0_n_0, eta_r_n_0, neg)
         j_p_0 = int_curr_model.get_butler_volmer(j0_p_0, eta_r_p_0, pos)
 
-        delta_phi_n_1 = j0_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
-        delta_phi_p_1 = j0_p_0.diff(c_e_0) * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
+        ocp_n_0 = param.U_n(c_e_0)
+        j_n_diff_c_e_0 = 2 * j0_n_0.diff(c_e_0) * pybamm.Function(
+            np.sinh, eta_r_n_0
+        ) - 2 * j0_n_0 * ocp_n_0.diff(c_e_0) * pybamm.Function(np.cosh, eta_r_n_0)
+        ocp_p_0 = param.U_p(c_e_0)
+        j_p_diff_c_e_0 = 2 * j0_p_0.diff(c_e_0) * pybamm.Function(
+            np.sinh, eta_r_p_0
+        ) - 2 * j0_p_0 * ocp_p_0.diff(c_e_0) * pybamm.Function(np.cosh, eta_r_p_0)
+        delta_phi_n_1_bar = -j_n_diff_c_e_0 * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
+        delta_phi_p_1_bar = -j_p_diff_c_e_0 * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
 
-        delta_phi_n = delta_phi_n_0 + param.C_e * delta_phi_n_1
-        delta_phi_p = delta_phi_p_0 + param.C_e * delta_phi_p_1
+        delta_phi_n = delta_phi_n_0 + param.C_e * delta_phi_n_1_bar
+        delta_phi_p = delta_phi_p_0 + param.C_e * delta_phi_p_1_bar
         ocp_n = param.U_n(c_e_n)
         ocp_p = param.U_p(c_e_p)
-        eta_r_n = delta_phi_n - ocp_n
-        eta_r_p = delta_phi_p - ocp_p
 
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        return {
-            **ocp_vars,
-            **eta_r_vars,
-            "j0_n_diff": j0_n_0.diff(c_e_0),
-            "j_n_diff": j_n_0.diff(c_e_0),
-            "j_n_dp": j_n_0.diff(delta_phi_n_0),
-        }
+        return pot_model.get_all_potentials(
+            (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
+        )
 
     @property
     def default_solver(self):
