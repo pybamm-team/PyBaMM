@@ -170,14 +170,12 @@ class TestButlerVolmer(unittest.TestCase):
         parameter_values = model.default_parameter_values
 
         def j_n(c_e):
-            eta_r_n = param.U_n_dimensional(c_e)
-            return eta_r_n
-            # return model.get_butler_volmer(c_e, eta_r_n, ["negative electrode"])
+            eta_r_n = 1 - param.U_n_dimensional(c_e)
+            return model.get_butler_volmer(c_e, eta_r_n, ["negative electrode"])
 
         def j_p(c_e):
-            eta_r_p = param.U_p_dimensional(c_e)
-            return eta_r_p
-            # return model.get_butler_volmer(c_e, eta_r_p, ["positive electrode"])
+            eta_r_p = 1 - param.U_p_dimensional(c_e)
+            return model.get_butler_volmer(c_e, eta_r_p, ["positive electrode"])
 
         c_e = pybamm.Scalar(0.5)
         h = pybamm.Scalar(0.00001)
