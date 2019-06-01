@@ -111,7 +111,10 @@ class Potential(pybamm.SubModel):
 
     def get_all_potentials(self, ocp, eta_r=None, delta_phi=None):
         ocp_n, ocp_p = ocp
-        if delta_phi is None and eta_r is not None:
+        if delta_phi is not None and eta_r is not None:
+            eta_r_n, eta_r_p = eta_r
+            delta_phi_n, delta_phi_p = delta_phi
+        elif delta_phi is None and eta_r is not None:
             eta_r_n, eta_r_p = eta_r
             delta_phi_n = eta_r_n + ocp_n
             delta_phi_p = eta_r_p + ocp_p

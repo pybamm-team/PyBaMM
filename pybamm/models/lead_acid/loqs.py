@@ -104,10 +104,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
             self.set_boundary_conditions(self.variables)
 
             # Potentials
-            pot_vars = pot_model.get_all_potentials(
-                (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
-            )
-            self.variables.update(pot_vars)
+            eta_r_n = delta_phi_n - ocp_n
+            eta_r_p = delta_phi_p - ocp_p
 
             # Interfacial current density
             j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
@@ -131,6 +129,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
             )
             self.update(eleclyte_current_model)
 
+            pot_vars = pot_model.get_all_potentials(
+                (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
+            )
+            self.variables.update(pot_vars)
         else:
             i_boundary_cc = param.current_with_time
             self.variables["Current collector current density"] = i_boundary_cc

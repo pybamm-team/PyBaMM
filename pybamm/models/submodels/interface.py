@@ -212,6 +212,36 @@ class LeadAcidReaction(InterfacialCurrent, pybamm.LeadAcidBaseModel):
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
+    def get_butler_volmer_from_variables(self, c_e, delta_phi, domain=None):
+        """
+        Butler-Volmer reactions, using the variables directly
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            Electrolyte current density
+        delta_phi : :class:`pybamm.Symbol`
+            Surface potential difference
+        domain : iter of str, optional
+            The domain(s) in which to compute the interfacial current. Default is None,
+            in which case c_e.domain is used.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            Interfacial current density
+
+        """
+        param = self.set_of_parameters
+
+        domain = domain or c_e.domain
+        j0 = self.get_exchange_current_densities(c_e, domain)
+        if domain == ["negative electrode"]:
+            ocp = param.U_n(c_e)
+        elif domain == ["positive electrode"]:
+            ocp = param.U_p(c_e)
+        return self.get_butler_volmer(j0, delta_phi - ocp, domain)
+
 
 class LithiumIonReaction(InterfacialCurrent):
     """

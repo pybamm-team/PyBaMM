@@ -380,32 +380,25 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         pos = ["positive electrode"]
         phi_e_0 = pybamm.average(variables["Electrolyte potential"])
         phi_s_p_0 = pybamm.average(variables["Electrode potential"].orphans[2])
-        # CHECK WHY AVERAGE DIDN'T WORK
-        c_e_0 = variables["Average electrolyte concentration"]
         delta_phi_n_0 = -phi_e_0
         delta_phi_p_0 = phi_s_p_0 - phi_e_0
+
+        # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
+        c_e_0 = 1 * variables["Average electrolyte concentration"]
         c_e = variables["Electrolyte concentration"]
         c_e_n, c_e_s, c_e_p = c_e.orphans
         c_e_n_1_bar = (pybamm.average(c_e_n) - c_e_0) / param.C_e
         c_e_p_1_bar = (pybamm.average(c_e_p) - c_e_0) / param.C_e
 
-        eta_r_n_0 = delta_phi_n_0 - param.U_n(c_e_0)
-        eta_r_p_0 = delta_phi_p_0 - param.U_p(c_e_0)
-        j0_n_0 = int_curr_model.get_exchange_current_densities(c_e_0, neg)
-        j0_p_0 = int_curr_model.get_exchange_current_densities(c_e_0, pos)
-        j_n_0 = int_curr_model.get_butler_volmer(j0_n_0, eta_r_n_0, neg)
-        j_p_0 = int_curr_model.get_butler_volmer(j0_p_0, eta_r_p_0, pos)
+        j_n_0 = int_curr_model.get_butler_volmer_from_variables(
+            c_e_0, delta_phi_n_0, neg
+        )
+        j_p_0 = int_curr_model.get_butler_volmer_from_variables(
+            c_e_0, delta_phi_p_0, pos
+        )
 
-        ocp_n_0 = param.U_n(c_e_0)
-        j_n_diff_c_e_0 = 2 * j0_n_0.diff(c_e_0) * pybamm.Function(
-            np.sinh, eta_r_n_0
-        ) - 2 * j0_n_0 * ocp_n_0.diff(c_e_0) * pybamm.Function(np.cosh, eta_r_n_0)
-        ocp_p_0 = param.U_p(c_e_0)
-        j_p_diff_c_e_0 = 2 * j0_p_0.diff(c_e_0) * pybamm.Function(
-            np.sinh, eta_r_p_0
-        ) - 2 * j0_p_0 * ocp_p_0.diff(c_e_0) * pybamm.Function(np.cosh, eta_r_p_0)
-        delta_phi_n_1_bar = -j_n_diff_c_e_0 * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
-        delta_phi_p_1_bar = -j_p_diff_c_e_0 * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
+        delta_phi_n_1_bar = -j_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
+        delta_phi_p_1_bar = -j_p_0.diff(c_e_0) * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
 
         delta_phi_n = delta_phi_n_0 + param.C_e * delta_phi_n_1_bar
         delta_phi_p = delta_phi_p_0 + param.C_e * delta_phi_p_1_bar

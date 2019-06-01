@@ -183,8 +183,34 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Exchange-current density
         j0_n = int_curr_model.get_exchange_current_densities(c_e_n)
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p)
-        j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n)
-        j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p)
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        phi_e_0 = pybamm.average(self.variables["Electrolyte potential"])
+        phi_s_p_0 = pybamm.average(self.variables["Electrode potential"].orphans[2])
+        delta_phi_n_0 = -phi_e_0
+        delta_phi_p_0 = phi_s_p_0 - phi_e_0
+
+        # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
+        c_e_0 = 1 * self.variables["Average electrolyte concentration"]
+
+        j_n_0 = int_curr_model.get_butler_volmer_from_variables(
+            c_e_0, delta_phi_n_0, neg
+        )
+        j_p_0 = int_curr_model.get_butler_volmer_from_variables(
+            c_e_0, delta_phi_p_0, pos
+        )
+        c_e_n_1 = (c_e_n - c_e_0) / param.C_e
+        c_e_p_1 = (c_e_p - c_e_0) / param.C_e
+        delta_phi_n_1 = (phi_s_n - phi_e_n - delta_phi_n_0) / param.C_e
+        delta_phi_p_1 = (phi_s_p - phi_e_p - delta_phi_p_0) / param.C_e
+
+        j_n_1 = j_n_0.diff(c_e_0) * c_e_n_1 + j_n_0.diff(delta_phi_n_0) * delta_phi_n_1
+        j_p_1 = j_p_0.diff(c_e_0) * c_e_p_1 + j_p_0.diff(delta_phi_p_0) * delta_phi_p_1
+        j_n = j_n_0 + param.C_e * j_n_1_bar
+        j_p = j_p_0 + param.C_e * j_p_1_bar
+
+        # j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n)
+        # j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p)
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
 
