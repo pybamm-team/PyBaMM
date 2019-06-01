@@ -118,16 +118,16 @@ class OdeSolver(pybamm.BaseSolver):
                 jac_rhs = simp.simplify(jac_rhs)
 
             if model.use_to_python:
-                pybamm.logger.debug("Converting jacobian to python")
+                pybamm.logger.info("Converting jacobian to python")
                 jac_rhs = pybamm.EvaluatorPython(jac_rhs)
 
         else:
             jac_rhs = None
 
         if model.use_to_python:
-            pybamm.logger.debug("Converting RHS to python")
+            pybamm.logger.info("Converting RHS to python")
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
-            pybamm.logger.debug("Converting events to python")
+            pybamm.logger.info("Converting events to python")
             events = [pybamm.EvaluatorPython(event) for event in events]
 
         return concatenated_rhs, y0, events, jac_rhs

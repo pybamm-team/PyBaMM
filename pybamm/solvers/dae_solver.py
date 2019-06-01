@@ -157,11 +157,11 @@ class DaeSolver(pybamm.BaseSolver):
             jac = None
 
         if model.use_to_python:
-            pybamm.logger.debug("Converting RHS to python")
+            pybamm.logger.info("Converting RHS to python")
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
-            pybamm.logger.debug("Converting algebraic to python")
+            pybamm.logger.info("Converting algebraic to python")
             concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
-            pybamm.logger.debug("Converting events to python")
+            pybamm.logger.info("Converting events to python")
             events = [pybamm.EvaluatorPython(event) for event in events]
 
         # Calculate consistent initial conditions for the algebraic equations

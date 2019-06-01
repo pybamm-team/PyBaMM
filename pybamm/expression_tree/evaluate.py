@@ -10,10 +10,17 @@ from collections import OrderedDict
 
 
 def id_to_python_variable(symbol_id, constant=False):
+    """
+    This function defines the format for the python variable names used in find_symbols and
+    to_python. Variable names are based on a nodes' id to make them unique
+    """
+
     if constant:
         var_format = "self.const_{:05d}"
     else:
         var_format = "self.var_{:05d}"
+
+    # Need to replace "-" character to make them valid python variable names
     return var_format.format(symbol_id).replace("-", "m")
 
 

@@ -290,6 +290,7 @@ class TestEvaluate(unittest.TestCase):
         expr = a * b + b + a**2 / b + 2 * a + b / 2 + 4
         evaluator = pybamm.EvaluatorPython(expr)
         for y in y_tests:
+            from IPython import embed; embed(); import ipdb; ipdb.set_trace()
             result = evaluator.evaluate(t=None, y=y)
             self.assertEqual(result, expr.evaluate(t=None, y=y))
 
