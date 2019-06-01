@@ -111,13 +111,19 @@ class TestUnaryOperators(unittest.TestCase):
     def test_index(self):
         vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
         # with integer
-        ind = pybamm.Index(vec, 3)
+        ind = vec[3]
+        self.assertIsInstance(ind, pybamm.Index)
+        self.assertEqual(ind.slice, slice(3, 4))
         self.assertEqual(ind.evaluate(), 4)
         # with slice
-        ind = pybamm.Index(vec, slice(1, 3))
+        ind = vec[1:3]
+        self.assertIsInstance(ind, pybamm.Index)
+        self.assertEqual(ind.slice, slice(1, 3))
         np.testing.assert_array_equal(ind.evaluate(), np.array([[2], [3]]))
         # with only stop slice
-        ind = pybamm.Index(vec, slice(3))
+        ind = vec[:3]
+        self.assertIsInstance(ind, pybamm.Index)
+        self.assertEqual(ind.slice, slice(3))
         np.testing.assert_array_equal(ind.evaluate(), np.array([[1], [2], [3]]))
 
         # errors
