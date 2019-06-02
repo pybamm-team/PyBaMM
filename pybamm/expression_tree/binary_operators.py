@@ -110,10 +110,6 @@ class BinaryOperator(pybamm.Symbol):
                 )
             )
 
-    def _binary_evaluate(self, left, right):
-        """ Perform binary operation on nodes 'left' and 'right'. """
-        raise NotImplementedError
-
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         # process children
@@ -141,6 +137,10 @@ class BinaryOperator(pybamm.Symbol):
             right = self.right.evaluate(t, y)
             return self._binary_evaluate(left, right)
 
+    def _binary_evaluate(self, left, right):
+        """ Perform binary operation on nodes 'left' and 'right'. """
+        raise NotImplementedError
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
@@ -152,17 +152,14 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("**", left, right)
 
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            # apply chain rule and power rule
-            base, exponent = self.orphans
-            return base ** (exponent - 1) * (
-                exponent * base.diff(variable)
-                + base * pybamm.Function(np.log, base) * exponent.diff(variable)
-            )
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        # apply chain rule and power rule
+        base, exponent = self.orphans
+        return base ** (exponent - 1) * (
+            exponent * base.diff(variable)
+            + base * pybamm.Function(np.log, base) * exponent.diff(variable)
+        )
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -213,12 +210,9 @@ class Addition(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("+", left, right)
 
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            return self.left.diff(variable) + self.right.diff(variable)
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return self.left.diff(variable) + self.right.diff(variable)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -267,12 +261,9 @@ class Subtraction(BinaryOperator):
 
         super().__init__("-", left, right)
 
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            return self.left.diff(variable) - self.right.diff(variable)
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return self.left.diff(variable) - self.right.diff(variable)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -324,14 +315,11 @@ class Multiplication(BinaryOperator):
 
         super().__init__("*", left, right)
 
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            # apply product rule
-            left, right = self.orphans
-            return left.diff(variable) * right + left * right.diff(variable)
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        # apply product rule
+        left, right = self.orphans
+        return left.diff(variable) * right + left * right.diff(variable)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -443,16 +431,11 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         super().__init__("/", left, right)
 
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            # apply quotient rule
-            top, bottom = self.orphans
-            return (
-                top.diff(variable) * bottom - top * bottom.diff(variable)
-            ) / bottom ** 2
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        # apply quotient rule
+        top, bottom = self.orphans
+        return (top.diff(variable) * bottom - top * bottom.diff(variable)) / bottom ** 2
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
