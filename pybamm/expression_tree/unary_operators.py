@@ -152,13 +152,7 @@ class Function(UnaryOperator):
     def _diff(self, variable):
         """ See :meth:`pybamm.Symbol._diff()`. """
         child = self.orphans[0]
-        if variable.id in [symbol.id for symbol in child.pre_order()]:
-            # if variable appears in the function,use autograd to differentiate
-            # function, and apply chain rule
-            return child.diff(variable) * Function(autograd.grad(self.func), child)
-        else:
-            # otherwise the derivative of the function is zero
-            return pybamm.Scalar(0)
+        return child.diff(variable) * Function(autograd.grad(self.func), child)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """

@@ -392,7 +392,7 @@ class MatrixMultiplication(BinaryOperator):
         super().__init__("@", left, right)
 
     def diff(self, variable):
-        """ See :meth:`pybamm.BinaryOperator._binary_diff()`. """
+        """ See :meth:`pybamm.Symbol.diff()`. """
         # We shouldn't need this
         raise NotImplementedError
 
@@ -521,7 +521,7 @@ class Outer(BinaryOperator):
         return "outer({!s}, {!s})".format(self.left, self.right)
 
     def diff(self, variable):
-        """ See :meth:`pybamm.BinaryOperator._binary_diff()`. """
+        """ See :meth:`pybamm.Symbol.diff()`. """
         raise NotImplementedError("diff not implemented for symbol of type 'Outer'")
 
     def jac(self, variable):
