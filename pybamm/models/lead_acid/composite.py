@@ -108,12 +108,34 @@ class Composite(pybamm.LeadAcidBaseModel):
             c_e = self.variables["Electrolyte concentration"]
             c_e_n_bar = pybamm.average(c_e.orphans[0])
             c_e_p_bar = pybamm.average(c_e.orphans[2])
-            j_n_bar = int_curr_model.get_butler_volmer_from_variables(
-                c_e_n_bar, delta_phi_n_bar, neg
-            )
-            j_p_bar = int_curr_model.get_butler_volmer_from_variables(
-                c_e_p_bar, delta_phi_p_bar, pos
-            )
+            if self.options["first-order potential"] == "linear":
+                delta_phi_n_0 = pybamm.average(
+                    self.leading_order_variables[
+                        "Negative electrode surface potential difference"
+                    ]
+                )
+                delta_phi_p_0 = pybamm.average(
+                    self.leading_order_variables[
+                        "Positive electrode surface potential difference"
+                    ]
+                )
+                c_e_0 = self.leading_order_variables[
+                    "Average electrolyte concentration"
+                ]
+
+                j_n_bar = int_curr_model.get_first_order_butler_volmer(
+                    c_e_n_bar, delta_phi_n_bar, c_e_0, delta_phi_n_0, neg
+                )
+                j_p_bar = int_curr_model.get_first_order_butler_volmer(
+                    c_e_p_bar, delta_phi_p_bar, c_e_0, delta_phi_p_0, pos
+                )
+            elif self.options["first-order potential"] == "average":
+                j_n_bar = int_curr_model.get_butler_volmer_from_variables(
+                    c_e_n_bar, delta_phi_n_bar, neg
+                )
+                j_p_bar = int_curr_model.get_butler_volmer_from_variables(
+                    c_e_p_bar, delta_phi_p_bar, pos
+                )
 
             # Call submodel using average variables and average reactions
             reactions_bar = {"main": {"neg": {"aj": j_n_bar}, "pos": {"aj": j_p_bar}}}

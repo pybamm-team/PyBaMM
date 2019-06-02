@@ -140,7 +140,8 @@ class DaeSolver(pybamm.BaseSolver):
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(
-                slice(0, np.size(model.concatenated_initial_conditions)))
+                slice(0, np.size(model.concatenated_initial_conditions))
+            )
             jac_rhs = concatenated_rhs.jac(y)
             jac_algebraic = concatenated_algebraic.jac(y)
 

@@ -5,9 +5,15 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS({"capacitance": "differential"}),
-    pybamm.lead_acid.Composite({"capacitance": "differential"}),
-    pybamm.lead_acid.NewmanTiedemann({"capacitance": "differential"}),
+    pybamm.lead_acid.LOQS(
+        {"capacitance": "algebraic", "first-order potential": "average"}
+    ),
+    pybamm.lead_acid.Composite(
+        {"capacitance": "algebraic", "first-order potential": "average"}
+    ),
+    pybamm.lead_acid.NewmanTiedemann(
+        {"capacitance": "algebraic", "first-order potential": "average"}
+    ),
 ]
 
 # create geometry

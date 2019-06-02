@@ -50,6 +50,7 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create function to evaluate jacobian
         if jac_rhs is not None:
+
             def jacobian(t, y):
                 return jac_rhs.evaluate(t, y, known_evals={})[0]
 

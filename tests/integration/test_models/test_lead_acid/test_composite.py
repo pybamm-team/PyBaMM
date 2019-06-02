@@ -16,7 +16,8 @@ class TestLeadAcidComposite(unittest.TestCase):
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
-        model = pybamm.lead_acid.Composite({"convection": True})
+        options = {"convection": True, "first-order potential": "average"}
+        model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 

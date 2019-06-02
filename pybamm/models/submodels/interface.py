@@ -197,7 +197,9 @@ class InterfacialCurrent(pybamm.SubModel):
             "Exchange-current density [A.m-2]": i_typ * j0,
         }
 
-    def get_first_order_butler_volmer(self, c_e, delta_phi, c_e_0, delta_phi_0):
+    def get_first_order_butler_volmer(
+        self, c_e, delta_phi, c_e_0, delta_phi_0, domain=None
+    ):
         """
         First-order correction for the Butler-Volmer reactions
 
@@ -221,7 +223,8 @@ class InterfacialCurrent(pybamm.SubModel):
         param = self.set_of_parameters
         # Take 1 * c_e_0 as a hack for differentiation
         c_e_0 *= 1
-        j_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_0, c_e.domain)
+        domain = domain or c_e.domain
+        j_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_0, domain)
         c_e_1 = (c_e - c_e_0) / param.C_e
         delta_phi_1 = (delta_phi - delta_phi_0) / param.C_e
 
