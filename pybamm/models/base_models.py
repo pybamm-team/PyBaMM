@@ -468,6 +468,7 @@ class StandardBatteryBaseModel(BaseModel):
             "bc_options": {"dimensionality": 0},
             "capacitance": False,
             "convection": False,
+            "first-order potential": "linear",
         }
         if self._extra_options is None:
             options = default_options

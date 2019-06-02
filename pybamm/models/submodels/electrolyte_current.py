@@ -358,7 +358,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         self.variables = self.get_variables(phi_e, i_e, eta_e_av)
 
-    def get_first_order_potential_differences(self, variables, int_curr_model):
+    def get_first_order_potential_differences(self, variables, int_curr_model, options):
         """
         Provides and explicit combined leading and first order solution to the
         electrolyte current conservation equation where the constitutive equation is
@@ -376,12 +376,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         param = self.set_of_parameters
-        neg = ["negative electrode"]
-        pos = ["positive electrode"]
-        phi_e_0 = pybamm.average(variables["Electrolyte potential"])
-        phi_s_p_0 = pybamm.average(variables["Electrode potential"].orphans[2])
-        delta_phi_n_0 = -phi_e_0
-        delta_phi_p_0 = phi_s_p_0 - phi_e_0
+        delta_phi_n_0 = pybamm.average(
+            variables["Negative electrode surface potential difference"]
+        )
+        delta_phi_p_0 = pybamm.average(
+            variables["Positive electrode surface potential difference"]
+        )
 
         # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
         c_e_0 = 1 * variables["Average electrolyte concentration"]
@@ -389,12 +389,18 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         c_e_n, c_e_s, c_e_p = c_e.orphans
         c_e_n_1_bar = (pybamm.average(c_e_n) - c_e_0) / param.C_e
         c_e_p_1_bar = (pybamm.average(c_e_p) - c_e_0) / param.C_e
+        from IPython import embed
+
+        embed()
+        import ipdb
+
+        ipdb.set_trace()
 
         j_n_0 = int_curr_model.get_butler_volmer_from_variables(
-            c_e_0, delta_phi_n_0, neg
+            c_e_0, delta_phi_n_0, ["negative electrode"]
         )
         j_p_0 = int_curr_model.get_butler_volmer_from_variables(
-            c_e_0, delta_phi_p_0, pos
+            c_e_0, delta_phi_p_0, ["positive electrode"]
         )
 
         delta_phi_n_1_bar = -j_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)

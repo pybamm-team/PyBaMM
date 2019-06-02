@@ -6,7 +6,20 @@ import pybamm
 
 class Composite(pybamm.LeadAcidBaseModel):
     """Composite model for lead-acid, from [1]_.
-    Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
+    Uses leading-order model from :class:`pybamm.lead_acid.LOQS`.
+
+    Notes
+    -----
+    The composite solution is computed as follows:
+    - Get leading-order concentration and porosity from the leading-order model
+    - Solve for electrolyte concentration, using leading-order porosity and uniform
+      interfacial current density
+    - Calculate average first-order surface potential differences
+    - Calculate first-order electrolyte and electrode potentials, using average surface
+      potential differences
+    - Calcualte first-order surface potential-differences and interfacial current
+      densities using first-order potentials, and hence update porosity
+    - Optionally, post-process to find convection velocity
 
     References
     ----------
@@ -25,6 +38,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Leading order model and variables
         leading_order_model = pybamm.lead_acid.LOQS(options)
         self.update(leading_order_model)
+        self.leading_order_variables = leading_order_model.variables
 
         # Model variables
         self.variables["Electrolyte concentration"] = pybamm.standard_variables.c_e
@@ -94,10 +108,10 @@ class Composite(pybamm.LeadAcidBaseModel):
             # j_vars = int_curr_model.get_derived_interfacial_currents(
             #     j_n_av, j_p_av, j0_n_av, j0_p_av
             # )
-            j_vars = eleclyte_current_model.get_first_order_potential_differences(
-                self.variables, int_curr_model
+            pot_vars = eleclyte_current_model.get_first_order_potential_differences(
+                self.variables, int_curr_model, self.options["first-order potential"]
             )
-            self.variables.update(j_vars)
+            self.variables.update(pot_vars)
         else:
 
             delta_phi_n_av = pybamm.Variable(
@@ -158,7 +172,7 @@ class Composite(pybamm.LeadAcidBaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        # self.events.append(voltage - param.voltage_low_cut)
+        self.events.append(voltage - param.voltage_low_cut)
 
     def set_interface_variables(self, int_curr_model):
         param = self.set_of_parameters
@@ -172,8 +186,6 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Potentials
         ocp_n = param.U_n(c_e_n)
         ocp_p = param.U_p(c_e_p)
-        eta_r_n = phi_s_n - phi_e_n - ocp_n
-        eta_r_p = phi_s_p - phi_e_p - ocp_p
         pot_model = pybamm.potential.Potential(param)
         potential_vars = pot_model.get_all_potentials(
             (ocp_n, ocp_p), delta_phi=(phi_s_n - phi_e_n, phi_s_p - phi_e_p)
@@ -185,13 +197,15 @@ class Composite(pybamm.LeadAcidBaseModel):
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p)
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        phi_e_0 = pybamm.average(self.variables["Electrolyte potential"])
-        phi_s_p_0 = pybamm.average(self.variables["Electrode potential"].orphans[2])
+        phi_e_0 = pybamm.average(self.leading_order_variables["Electrolyte potential"])
+        phi_s_p_0 = pybamm.average(
+            self.leading_order_variables["Electrode potential"].orphans[2]
+        )
         delta_phi_n_0 = -phi_e_0
         delta_phi_p_0 = phi_s_p_0 - phi_e_0
 
         # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
-        c_e_0 = 1 * self.variables["Average electrolyte concentration"]
+        c_e_0 = 1 * self.leading_order_variables["Average electrolyte concentration"]
 
         j_n_0 = int_curr_model.get_butler_volmer_from_variables(
             c_e_0, delta_phi_n_0, neg
@@ -204,10 +218,14 @@ class Composite(pybamm.LeadAcidBaseModel):
         delta_phi_n_1 = (phi_s_n - phi_e_n - delta_phi_n_0) / param.C_e
         delta_phi_p_1 = (phi_s_p - phi_e_p - delta_phi_p_0) / param.C_e
 
-        j_n_1 = j_n_0.diff(c_e_0) * c_e_n_1 + j_n_0.diff(delta_phi_n_0) * delta_phi_n_1
-        j_p_1 = j_p_0.diff(c_e_0) * c_e_p_1 + j_p_0.diff(delta_phi_p_0) * delta_phi_p_1
-        j_n = j_n_0 + param.C_e * j_n_1_bar
-        j_p = j_p_0 + param.C_e * j_p_1_bar
+        djn0_dce0 = self.variables["d(j_n_0)/d(c_e_0)"]
+        djp0_dce0 = self.variables["d(j_p_0)/d(c_e_0)"]
+        djn0_dpn0 = self.variables["d(j_n_0)/d(delta_phi_n_0)"]
+        djp0_dpp0 = self.variables["d(j_p_0)/d(delta_phi_p_0)"]
+        j_n_1 = djn0_dce0 * c_e_n_1 + djn0_dpn0 * delta_phi_n_1
+        j_p_1 = djp0_dce0 * c_e_p_1 + djp0_dpp0 * delta_phi_p_1
+        j_n = j_n_0 + param.C_e * j_n_1
+        j_p = j_p_0 + param.C_e * j_p_1
 
         # j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n)
         # j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p)
