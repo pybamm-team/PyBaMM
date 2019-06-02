@@ -62,8 +62,7 @@ def plot_voltages(all_variables, t_eval, Crates):
             )
         # plt.legend(loc="upper right")
     file_name = "capacitance_voltage_comparison.eps".format(Crate)
-    plt.show()
-    # plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def plot_errors(all_variables, t_eval, Crates):
@@ -92,7 +91,7 @@ def plot_errors(all_variables, t_eval, Crates):
 
         for j, (model, variables) in enumerate(models_variables.items()):
             options = dict(model[1])
-            if options["capacitance"] == False:
+            if options["capacitance"] is False:
                 base_model_results = models_variables[model]
                 continue
             if k == 0:
@@ -107,8 +106,7 @@ def plot_errors(all_variables, t_eval, Crates):
             ax.loglog(variables["Time [s]"](t_eval), error, linestyles[j], label=label)
         # plt.legend(loc="upper right")
     file_name = "capacitance_errors_voltages.eps".format(Crate)
-    plt.show()
-    # plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 if __name__ == "__main__":
@@ -123,7 +121,7 @@ if __name__ == "__main__":
             pybamm.lead_acid.NewmanTiedemann({"capacitance": "differential"}),
             pybamm.lead_acid.NewmanTiedemann({"capacitance": "algebraic"}),
         ]
-        Crates = [0.1]  # , 0.5, 1, 2]
+        Crates = [0.1, 0.5, 1, 2]
         all_variables, t_eval = model_comparison(models, Crates, t_eval)
         with open("capacitance_data.pickle", "wb") as f:
             data = (all_variables, t_eval)
@@ -131,5 +129,5 @@ if __name__ == "__main__":
 
     with open("capacitance_data.pickle", "rb") as f:
         (all_variables, t_eval) = pickle.load(f)
-    # plot_voltages(all_variables, t_eval, [1])
+    plot_voltages(all_variables, t_eval, [1])
     plot_errors(all_variables, t_eval, [0.1, 0.5, 1, 2])
