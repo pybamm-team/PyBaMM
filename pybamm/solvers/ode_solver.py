@@ -50,7 +50,6 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create function to evaluate jacobian
         if jac_rhs is not None:
-
             def jacobian(t, y):
                 return jac_rhs.evaluate(t, y, known_evals={})[0]
 
@@ -118,8 +117,18 @@ class OdeSolver(pybamm.BaseSolver):
             if model.use_simplify:
                 jac_rhs = simp.simplify(jac_rhs)
 
+            if model.use_to_python:
+                pybamm.logger.info("Converting jacobian to python")
+                jac_rhs = pybamm.EvaluatorPython(jac_rhs)
+
         else:
             jac_rhs = None
+
+        if model.use_to_python:
+            pybamm.logger.info("Converting RHS to python")
+            concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
+            pybamm.logger.info("Converting events to python")
+            events = [pybamm.EvaluatorPython(event) for event in events]
 
         return concatenated_rhs, y0, events, jac_rhs
 
