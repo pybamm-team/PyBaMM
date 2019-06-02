@@ -164,37 +164,45 @@ class Composite(pybamm.LeadAcidBaseModel):
         phi_s = self.variables["Electrode potential"]
         phi_e_n, _, phi_e_p = phi_e.orphans
         phi_s_n, _, phi_s_p = phi_s.orphans
+        delta_phi_n = phi_s_n - phi_e_n
+        delta_phi_p = phi_s_p - phi_e_p
 
         # Potentials
         ocp_n = param.U_n(c_e_n)
         ocp_p = param.U_p(c_e_p)
         pot_model = pybamm.potential.Potential(param)
         potential_vars = pot_model.get_all_potentials(
-            (ocp_n, ocp_p), delta_phi=(phi_s_n - phi_e_n, phi_s_p - phi_e_p)
+            (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
         )
-        self.variables.update(potential_vars)
+        self.variables.update()
 
         # Exchange-current density
         j0_n = int_curr_model.get_exchange_current_densities(c_e_n)
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p)
         if self.options["first-order potential"] == "linear":
+            delta_phi_n_0 = pybamm.average(
+                self.leading_order_variables[
+                    "Negative electrode surface potential difference"
+                ]
+            )
+            delta_phi_p_0 = pybamm.average(
+                self.leading_order_variables[
+                    "Positive electrode surface potential difference"
+                ]
+            )
+            c_e_0 = self.leading_order_variables["Average electrolyte concentration"]
+
             j_n = int_curr_model.get_first_order_butler_volmer(
-                self.variables, self.leading_order_variables, ["negative electrode"]
+                c_e_n, delta_phi_n, c_e_0, delta_phi_n_0
             )
             j_p = int_curr_model.get_first_order_butler_volmer(
-                self.variables, self.leading_order_variables, ["positive electrode"]
+                c_e_p, delta_phi_p, c_e_0, delta_phi_p_0
             )
         elif self.options["first-order potential"] == "average":
-            neg = ["negative electrode"]
-            pos = ["positive electrode"]
-            j_n = int_curr_model.get_butler_volmer_from_variables(
-                c_e_n, phi_s_n - phi_e_n, neg
-            )
-            j_p = int_curr_model.get_butler_volmer_from_variables(
-                c_e_p, phi_s_p - phi_e_p, pos
-            )
+            j_n = int_curr_model.get_butler_volmer_from_variables(c_e_n, delta_phi_n)
+            j_p = int_curr_model.get_butler_volmer_from_variables(c_e_p, delta_phi_p)
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
-        self.variables.update(j_vars)
+        self.variables.update({**potential_vars, **j_vars})
 
         # # Update current
         # i_e_n = pybamm.IndefiniteIntegral(j_n, x_n)

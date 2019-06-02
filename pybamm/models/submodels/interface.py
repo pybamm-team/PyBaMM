@@ -76,14 +76,14 @@ class InterfacialCurrent(pybamm.SubModel):
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
-    def get_butler_volmer_from_variables(self, c_e, delta_phi, domain):
+    def get_butler_volmer_from_variables(self, c_e, delta_phi, domain=None):
         """
         Butler-Volmer reactions, using the variables directly
 
         Parameters
         ----------
         c_e : :class:`pybamm.Symbol`
-            Electrolyte current density
+            Electrolyte concentration
         delta_phi : :class:`pybamm.Symbol`
             Surface potential difference
         domain : iter of str, optional
@@ -96,6 +96,7 @@ class InterfacialCurrent(pybamm.SubModel):
             Interfacial current density
 
         """
+        domain = domain or c_e.domain
         if domain == ["negative electrode"]:
             ocp = self.set_of_parameters.U_n
         if domain == ["positive electrode"]:
@@ -196,20 +197,31 @@ class InterfacialCurrent(pybamm.SubModel):
             "Exchange-current density [A.m-2]": i_typ * j0,
         }
 
-    def get_first_order_butler_volmer(self, variables, leading_order_vars, domain):
+    def get_first_order_butler_volmer(self, c_e, delta_phi, c_e_0, delta_phi_0):
+        """
+        First-order correction for the Butler-Volmer reactions
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            Electrolyte concentration
+        delta_phi : :class:`pybamm.Symbol`
+            Surface potential difference
+        c_e_0 : :class:`pybamm.Symbol`
+            Leading-order electrolyte concentration
+        delta_phi_0 : :class:`pybamm.Symbol`
+            Leading-order surface potential difference
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            Interfacial current density
+
+        """
         param = self.set_of_parameters
-        delta_phi_str = domain[0].capitalize() + " surface potential difference"
-        delta_phi = pybamm.average(variables[delta_phi_str])
-        delta_phi_0 = pybamm.average(leading_order_vars[delta_phi_str])
-        # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
-        c_e_0 = 1 * leading_order_vars["Average electrolyte concentration"]
-
-        if domain == ["negative electrode"]:
-            c_e = variables["Electrolyte concentration"].orphans[0]
-        elif domain == ["positive electrode"]:
-            c_e = variables["Electrolyte concentration"].orphans[2]
-
-        j_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_0, domain)
+        # Take 1 * c_e_0 as a hack for differentiation
+        c_e_0 *= 1
+        j_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_0, c_e.domain)
         c_e_1 = (c_e - c_e_0) / param.C_e
         delta_phi_1 = (delta_phi - delta_phi_0) / param.C_e
 
