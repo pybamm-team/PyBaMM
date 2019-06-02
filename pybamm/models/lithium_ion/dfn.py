@@ -92,9 +92,10 @@ class DFN(pybamm.LithiumIonBaseModel):
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
+        pot_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
+        )
+        self.variables.update(pot_vars)
 
         # Voltage
         phi_s_n = self.variables["Negative electrode potential"]
