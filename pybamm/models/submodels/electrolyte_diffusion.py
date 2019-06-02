@@ -161,7 +161,7 @@ class StefanMaxwell(pybamm.SubModel):
 
         return {
             "Electrolyte concentration": c_e,
-            # "Average electrolyte concentration": c_e_av,
+            "Average electrolyte concentration": c_e_av,
             "Negative electrolyte concentration": c_e_n,
             "Separator electrolyte concentration": c_e_s,
             "Positive electrolyte concentration": c_e_p,
