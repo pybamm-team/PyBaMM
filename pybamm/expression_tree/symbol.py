@@ -329,7 +329,7 @@ class Symbol(anytree.NodeMixin):
 
     def _diff(self, variable):
         "Default behaviour for differentiation, overriden by Binary and Unary Operators"
-        return pybamm.Scalar(0)
+        raise NotImplementedError
 
     def jac(self, variable):
         """
