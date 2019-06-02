@@ -168,6 +168,96 @@ class InterfacialCurrent(pybamm.SubModel):
             "Exchange-current density [A.m-2]": i_typ * j0,
         }
 
+    def get_first_order_potential_differences(self, variables):
+        """
+        Calculates surface potential difference using the linear first-order correction
+        to the Butler-Volmer, and then calculates derived potentials.
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of symbols to use in the model
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        param = self.set_of_parameters
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        delta_phi_n_0 = pybamm.average(
+            variables["Negative electrode surface potential difference"]
+        )
+        delta_phi_p_0 = pybamm.average(
+            variables["Positive electrode surface potential difference"]
+        )
+
+        # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
+        c_e_0 = 1 * variables["Average electrolyte concentration"]
+        c_e = variables["Electrolyte concentration"]
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        c_e_n_1_bar = (pybamm.average(c_e_n) - c_e_0) / param.C_e
+        c_e_p_1_bar = (pybamm.average(c_e_p) - c_e_0) / param.C_e
+
+        j_n_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_n_0, neg)
+        j_p_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_p_0, pos)
+
+        delta_phi_n_1_bar = -j_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
+        delta_phi_p_1_bar = -j_p_0.diff(c_e_0) * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
+
+        delta_phi_n = delta_phi_n_0 + param.C_e * delta_phi_n_1_bar
+        delta_phi_p = delta_phi_p_0 + param.C_e * delta_phi_p_1_bar
+        ocp_n = param.U_n(c_e_n)
+        ocp_p = param.U_p(c_e_p)
+
+        pot_model = pybamm.potential.Potential(param)
+        return pot_model.get_all_potentials(
+            (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
+        )
+
+    def get_average_potential_differences(self, variables):
+        """
+        Calculates surface potential difference using the average first-order correction
+        to the Butler-Volmer, and then calculates derived potentials.
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of symbols to use in the model
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        # Set up
+        param = self.set_of_parameters
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        # Unpack and average variables
+        i_bnd_cc = variables["Current collector current density"]
+        c_e = variables["Electrolyte concentration"]
+        c_e_n, _, c_e_p = c_e.orphans
+        c_e_n_bar = pybamm.average(c_e_n)
+        c_e_p_bar = pybamm.average(c_e_p)
+
+        # Calculate reaction overpotentials
+        j0_n_bar = self.get_exchange_current_densities(c_e_n_bar, neg)
+        j0_p_bar = self.get_exchange_current_densities(c_e_p_bar, pos)
+        j_n_bar = self.get_homogeneous_interfacial_current(i_bnd_cc, neg)
+        j_p_bar = self.get_homogeneous_interfacial_current(i_bnd_cc, pos)
+        eta_r_n_bar = self.get_inverse_butler_volmer(j_n_bar, j0_n_bar, neg)
+        eta_r_p_bar = self.get_inverse_butler_volmer(j_p_bar, j0_p_bar, pos)
+
+        # Set derived potential
+        ocp_n_bar = param.U_n(c_e_n_bar)
+        ocp_p_bar = param.U_p(c_e_p_bar)
+        pot_model = pybamm.potential.Potential(param)
+        return pot_model.get_all_potentials(
+            (ocp_n_bar, ocp_p_bar), eta_r=(eta_r_n_bar, eta_r_p_bar)
+        )
+
 
 class LeadAcidReaction(InterfacialCurrent, pybamm.LeadAcidBaseModel):
     """

@@ -10,6 +10,10 @@ class TestLeadAcidComposite(unittest.TestCase):
         model = pybamm.lead_acid.Composite()
         model.check_well_posedness()
 
+    def test_well_posed_average_first_order(self):
+        model = pybamm.lead_acid.Composite({"first-order potential": "average"})
+        model.check_well_posedness()
+
     def test_well_posed_with_convection(self):
         model = pybamm.lead_acid.Composite({"convection": True})
         model.check_well_posedness()

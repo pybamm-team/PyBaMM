@@ -110,7 +110,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
 
     def get_explicit_combined(self, variables):
         """
-        Provides and explicit combined leading and first order solution to the
+        Provides an explicit combined leading and first order solution to the
         electrolyte current conservation equation where the constitutive equation is
         taken to be of Stefan-Maxwell form. Note that the returned current density is
         only the leading order approximation.
@@ -357,64 +357,6 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         eta_e_av = phi_e_p_av - phi_e_n_av
 
         self.variables = self.get_variables(phi_e, i_e, eta_e_av)
-
-    def get_first_order_potential_differences(self, variables, int_curr_model, options):
-        """
-        Provides and explicit combined leading and first order solution to the
-        electrolyte current conservation equation where the constitutive equation is
-        taken to be of Stefan-Maxwell form. Note that the returned current density is
-        only the leading order approximation.
-
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of symbols to use in the model
-
-        Returns
-        -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
-        """
-        param = self.set_of_parameters
-        delta_phi_n_0 = pybamm.average(
-            variables["Negative electrode surface potential difference"]
-        )
-        delta_phi_p_0 = pybamm.average(
-            variables["Positive electrode surface potential difference"]
-        )
-
-        # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
-        c_e_0 = 1 * variables["Average electrolyte concentration"]
-        c_e = variables["Electrolyte concentration"]
-        c_e_n, c_e_s, c_e_p = c_e.orphans
-        c_e_n_1_bar = (pybamm.average(c_e_n) - c_e_0) / param.C_e
-        c_e_p_1_bar = (pybamm.average(c_e_p) - c_e_0) / param.C_e
-        from IPython import embed
-
-        embed()
-        import ipdb
-
-        ipdb.set_trace()
-
-        j_n_0 = int_curr_model.get_butler_volmer_from_variables(
-            c_e_0, delta_phi_n_0, ["negative electrode"]
-        )
-        j_p_0 = int_curr_model.get_butler_volmer_from_variables(
-            c_e_0, delta_phi_p_0, ["positive electrode"]
-        )
-
-        delta_phi_n_1_bar = -j_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
-        delta_phi_p_1_bar = -j_p_0.diff(c_e_0) * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
-
-        delta_phi_n = delta_phi_n_0 + param.C_e * delta_phi_n_1_bar
-        delta_phi_p = delta_phi_p_0 + param.C_e * delta_phi_p_1_bar
-        ocp_n = param.U_n(c_e_n)
-        ocp_p = param.U_p(c_e_p)
-
-        pot_model = pybamm.potential.Potential(param)
-        return pot_model.get_all_potentials(
-            (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
-        )
 
     @property
     def default_solver(self):

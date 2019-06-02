@@ -78,72 +78,49 @@ class Composite(pybamm.LeadAcidBaseModel):
 
     def set_electrolyte_current_model(self, int_curr_model):
         param = self.set_of_parameters
-        neg = ["negative electrode"]
-        pos = ["positive electrode"]
-        # Average composite interfacial current density
-        i_bnd_cc = self.variables["Current collector current density"]
-        c_e = self.variables["Electrolyte concentration"]
-        c_e_n, _, c_e_p = c_e.orphans
-        c_e_n_av = pybamm.average(c_e_n)
-        c_e_p_av = pybamm.average(c_e_p)
-        ocp_n_av = param.U_n(c_e_n_av)
-        ocp_p_av = param.U_p(c_e_p_av)
-        j0_n_av = int_curr_model.get_exchange_current_densities(c_e_n_av, neg)
-        j0_p_av = int_curr_model.get_exchange_current_densities(c_e_p_av, pos)
 
         if self.options["capacitance"] is False:
-            eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
-                param
-            )
-            # j_n_av = int_curr_model.get_homogeneous_interfacial_current(i_bnd_cc, neg)
-            # j_p_av = int_curr_model.get_homogeneous_interfacial_current(i_bnd_cc, pos)
-            # eta_r_n_av = int_curr_model.get_inverse_butler_volmer(j_n_av, j0_n_av, neg)
-            # eta_r_p_av = int_curr_model.get_inverse_butler_volmer(j_p_av, j0_p_av, pos)
-            # pot_model = pybamm.potential.Potential(param)
-            # ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n_av, ocp_p_av)
-            # eta_r_vars = pot_model.get_derived_reaction_overpotentials(
-            #     eta_r_n_av, eta_r_p_av
-            # )
-            # self.variables.update({**ocp_vars, **eta_r_vars})
-            # j_vars = int_curr_model.get_derived_interfacial_currents(
-            #     j_n_av, j_p_av, j0_n_av, j0_p_av
-            # )
-            pot_vars = eleclyte_current_model.get_first_order_potential_differences(
-                self.variables, int_curr_model, self.options["first-order potential"]
-            )
+            if self.options["first-order potential"] == "linear":
+                pot_vars = int_curr_model.get_first_order_potential_differences(
+                    self.variables
+                )
+            elif self.options["first-order potential"] == "average":
+                pot_vars = int_curr_model.get_barerage_potential_differences(
+                    self.variables
+                )
             self.variables.update(pot_vars)
         else:
 
-            delta_phi_n_av = pybamm.Variable(
+            delta_phi_n_bar = pybamm.Variable(
                 "Average neg electrode surface potential difference"
             )
-            delta_phi_p_av = pybamm.Variable(
+            delta_phi_p_bar = pybamm.Variable(
                 "Average pos electrode surface potential difference"
             )
-
-            eta_r_n_av = delta_phi_n_av - ocp_n_av
-            eta_r_p_av = delta_phi_p_av - ocp_p_av
-            j_n_av = int_curr_model.get_butler_volmer(j0_n_av, eta_r_n_av, neg)
-            j_p_av = int_curr_model.get_butler_volmer(j0_p_av, eta_r_p_av, pos)
-
-            # Make dictionaries to pass to submodel
             self.variables.update(
                 {
-                    "Negative electrode surface potential difference": delta_phi_n_av,
-                    "Positive electrode surface potential difference": delta_phi_p_av,
+                    "Negative electrode surface potential difference": delta_phi_n_bar,
+                    "Positive electrode surface potential difference": delta_phi_p_bar,
                 }
             )
-            reactions_av = {"main": {"neg": {"aj": j_n_av}, "pos": {"aj": j_p_av}}}
+            reactions_bar = {"main": {"neg": {"aj": j_n_bar}, "pos": {"aj": j_p_bar}}}
+
+            eta_r_n_bar = delta_phi_n_bar - ocp_n_bar
+            eta_r_p_bar = delta_phi_p_bar - ocp_p_bar
+            j_n_bar = int_curr_model.get_butler_volmer(j0_n_bar, eta_r_n_bar, neg)
+            j_p_bar = int_curr_model.get_butler_volmer(j0_p_bar, eta_r_p_bar, pos)
+
+            # Make dictionaries to pass to submodel
 
             # Call submodel using average variables and average reactions
             eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
                 param, self.options["capacitance"]
             )
             eleclyte_current_model.set_leading_order_system(
-                self.variables, reactions_av, neg
+                self.variables, reactions_bar, neg
             )
             eleclyte_current_model.set_leading_order_system(
-                self.variables, reactions_av, pos
+                self.variables, reactions_bar, pos
             )
             self.update(eleclyte_current_model)
 
@@ -197,12 +174,16 @@ class Composite(pybamm.LeadAcidBaseModel):
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p)
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        phi_e_0 = pybamm.average(self.leading_order_variables["Electrolyte potential"])
-        phi_s_p_0 = pybamm.average(
-            self.leading_order_variables["Electrode potential"].orphans[2]
+        delta_phi_n_0 = pybamm.average(
+            self.leading_order_variables[
+                "Negative electrode surface potential difference"
+            ]
         )
-        delta_phi_n_0 = -phi_e_0
-        delta_phi_p_0 = phi_s_p_0 - phi_e_0
+        delta_phi_p_0 = pybamm.average(
+            self.leading_order_variables[
+                "Positive electrode surface potential difference"
+            ]
+        )
 
         # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
         c_e_0 = 1 * self.leading_order_variables["Average electrolyte concentration"]
@@ -218,12 +199,8 @@ class Composite(pybamm.LeadAcidBaseModel):
         delta_phi_n_1 = (phi_s_n - phi_e_n - delta_phi_n_0) / param.C_e
         delta_phi_p_1 = (phi_s_p - phi_e_p - delta_phi_p_0) / param.C_e
 
-        djn0_dce0 = self.variables["d(j_n_0)/d(c_e_0)"]
-        djp0_dce0 = self.variables["d(j_p_0)/d(c_e_0)"]
-        djn0_dpn0 = self.variables["d(j_n_0)/d(delta_phi_n_0)"]
-        djp0_dpp0 = self.variables["d(j_p_0)/d(delta_phi_p_0)"]
-        j_n_1 = djn0_dce0 * c_e_n_1 + djn0_dpn0 * delta_phi_n_1
-        j_p_1 = djp0_dce0 * c_e_p_1 + djp0_dpp0 * delta_phi_p_1
+        j_n_1 = j_n_0.diff(c_e_0) * c_e_n_1 + j_n_0.diff(delta_phi_n_0) * delta_phi_n_1
+        j_p_1 = j_p_0.diff(c_e_0) * c_e_p_1 + j_p_0.diff(delta_phi_p_0) * delta_phi_p_1
         j_n = j_n_0 + param.C_e * j_n_1
         j_p = j_p_0 + param.C_e * j_p_1
 
