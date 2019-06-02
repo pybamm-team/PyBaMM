@@ -8,8 +8,8 @@ from scipy.sparse import eye, kron, coo_matrix
 
 class SpatialMethod:
     """
-    A general spatial methods class, with default (trivial) behaviour for broadcast,
-    mass_matrix and compute_diffusivity.
+    A general spatial methods class, with default (trivial) behaviour for some spatial
+    operations.
     All spatial methods will follow the general form of SpatialMethod in
     that they contain a method for broadcasting variables onto a mesh,
     a gradient operator, and a diverence operator.
@@ -34,7 +34,8 @@ class SpatialMethod:
     def spatial_variable(self, symbol):
         """
         Convert a :class:`pybamm.SpatialVariable` node to a linear algebra object that
-        can be evaluated (here, a :class:`pybamm.Vector` on the nodes).
+        can be evaluated (here, a :class:`pybamm.Vector` on either the nodes or the
+        edges).
 
         Parameters
         -----------
@@ -47,7 +48,10 @@ class SpatialMethod:
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
+        if symbol.name.endswith("_edge"):
+            return pybamm.Vector(symbol_mesh[0].edges, domain=symbol.domain)
+        else:
+            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
     def broadcast(self, symbol, domain):
         """
@@ -266,6 +270,21 @@ class SpatialMethod:
 
         """
         return bin_op.__class__(disc_left, disc_right)
+
+    def concatenation(self, disc_children):
+        """Discrete concatenation object.
+
+        Parameters
+        ----------
+        disc_children : list
+            List of discretised children
+
+        Returns
+        -------
+        :class:`pybamm.DomainConcatenation`
+            Concatenation of the discretised children
+        """
+        return pybamm.DomainConcatenation(disc_children, self.mesh)
 
     @staticmethod
     def test_shape(symbol):

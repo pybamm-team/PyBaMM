@@ -115,7 +115,7 @@ class Symbol(anytree.NodeMixin):
         """
         return tuple([child.new_copy() for child in self.children])
 
-    def render(self):
+    def render(self):  # pragma: no cover
         """print out a visual representation of the tree (this node and its
         children)
         """
@@ -302,6 +302,10 @@ class Symbol(anytree.NodeMixin):
     def __abs__(self):
         """return an :class:`AbsoluteValue` object"""
         return pybamm.AbsoluteValue(self)
+
+    def __getitem__(self, key):
+        """return a :class:`Index` object"""
+        return pybamm.Index(self, key)
 
     def diff(self, variable):
         """

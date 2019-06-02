@@ -42,7 +42,6 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 # Utility classes and methods
 #
 from .util import Timer
-from .util import profile
 from .util import load_function
 from .logger import logger, set_logging_level
 
@@ -109,12 +108,20 @@ from .expression_tree.exceptions import (
     SolverError,
     ShapeError,
     ModelWarning,
+    UndefinedOperationError,
+    GeometryError,
 )
 from .expression_tree.simplify import (
     Simplification,
     simplify_if_constant,
     simplify_addition_subtraction,
     simplify_multiplication_division,
+)
+from .expression_tree.evaluate import (
+    find_symbols,
+    id_to_python_variable,
+    to_python,
+    EvaluatorPython,
 )
 
 #
@@ -144,6 +151,7 @@ from .models.submodels import (
     particle,
     porosity,
     potential,
+    velocity,
     vertical,
 )
 
@@ -169,9 +177,8 @@ from .geometry.geometry import (
     Geometry1p1DMicro,
 )
 
-from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS
+from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
-from .geometry.standard_spatial_vars import KNOWN_COORD_SYS
 
 #
 # Mesh and Discretisation classes
