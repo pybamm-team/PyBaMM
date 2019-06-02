@@ -89,9 +89,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
 
         # electrolyte current
         i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
-        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
         i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
-        i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte ohmic losses
         delta_phi_e_av = pybamm.Scalar(0)
@@ -100,13 +98,13 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         # electrolyte overpotential
         eta_e_av = eta_c_av + delta_phi_e_av
 
-        variables = self.get_variables(phi_e, i_e, eta_e_av)
+        pot_variables = self.get_potential_variables(phi_e, eta_e_av)
+        current_variables = self.get_current_variables((i_e_n, i_e_p), i_boundary_cc)
         additional_vars = self.get_split_electrolyte_overpotential(
             eta_c_av, delta_phi_e_av
         )
-        variables.update(additional_vars)
 
-        return variables
+        return {**pot_variables, **current_variables, **additional_vars}
 
     def get_explicit_combined(self, variables):
         """
@@ -162,10 +160,8 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         phi_s_n_av = pybamm.average(phi_s_n)
 
         # electrolyte current (leading-order approximation)
-        i_e_n = i_boundary_cc * x_n / l_n
-        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
-        i_e_p = i_boundary_cc * (1 - x_p) / l_p
-        i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
+        i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
+        i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
 
         # electrolyte potential (combined leading and first order)
         phi_e_const = (
@@ -229,16 +225,15 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         eta_e_av = eta_c_av + delta_phi_e_av
 
         # get variables
-        variables = self.get_variables(phi_e, i_e, eta_e_av)
+        pot_variables = self.get_potential_variables(phi_e, eta_e_av)
+        current_variables = self.get_current_variables((i_e_n, i_e_p), i_boundary_cc)
         additional_vars = self.get_split_electrolyte_overpotential(
             eta_c_av, delta_phi_e_av
         )
 
-        variables.update(additional_vars)
+        return {**pot_variables, **current_variables, **additional_vars}
 
-        return variables
-
-    def get_variables(self, phi_e, i_e, eta_e_av):
+    def get_potential_variables(self, phi_e, eta_e_av):
         """
         Calculate dimensionless and dimensional variables for the electrolyte current
         submodel
@@ -247,8 +242,6 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         ----------
         phi_e :class:`pybamm.Concatenation`
             The electrolyte potential
-        i_e :class:`pybamm.Concatenation`
-            The electrolyte current density
         delta_phi_e_av: :class:`pybamm.Symbol`
             Average Ohmic losses in the electrolyte
         eta_e_av: :class:`Pybamm.Symbol`
@@ -270,14 +263,37 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             "Separator electrolyte potential": phi_e_s,
             "Positive electrolyte potential": phi_e_p,
             "Electrolyte potential": phi_e,
-            "Electrolyte current density": i_e,
             "Average electrolyte overpotential": eta_e_av,
             "Negative electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_n,
             "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_s,
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
-            "Electrolyte current density [A.m-2]": param.i_typ * i_e,
             "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
+        }
+
+    def get_current_variables(self, i_e, i_boundary_cc=None):
+        """
+        Calculate dimensionless and dimensional current variables.
+
+        Parameters
+        ----------
+        i_e :class:`pybamm.Symbol`
+            The electrolyte current density
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        i_typ = self.set_of_parameters.i_typ
+        if isinstance(i_e, tuple):
+            i_e_n, i_e_p = i_e
+            i_e_s = pybamm.Broadcast(i_boundary_cc, "separator")
+            i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
+
+        return {
+            "Electrolyte current density": i_e,
+            "Electrolyte current density [A.m-2]": i_typ * i_e,
         }
 
     def get_split_electrolyte_overpotential(self, eta_c_av, delta_phi_e_av):
@@ -356,7 +372,8 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         phi_e_p_av = pybamm.average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
 
-        self.variables = self.get_variables(phi_e, i_e, eta_e_av)
+        self.variables.update(self.get_potential_variables(phi_e, eta_e_av))
+        self.variables.update(self.get_current_variables(i_e))
 
     @property
     def default_solver(self):

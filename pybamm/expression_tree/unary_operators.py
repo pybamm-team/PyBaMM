@@ -281,9 +281,6 @@ class SpatialOperator(UnaryOperator):
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # We shouldn't need this
-        import ipdb
-
-        ipdb.set_trace()
         raise NotImplementedError
 
     def jac(self, variable):

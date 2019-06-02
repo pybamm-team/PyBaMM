@@ -5,9 +5,9 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.Composite(),
-    pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.LOQS({"convection": True}),
+    pybamm.lead_acid.Composite({"convection": True}),
+    pybamm.lead_acid.NewmanTiedemann({"convection": True}),
 ]
 
 # create geometry
@@ -42,7 +42,7 @@ for i, model in enumerate(models):
 output_variables = [
     "Interfacial current density [A.m-2]",
     "Electrolyte concentration [mol.m-3]",
-    "Current [A]",
+    "Volume-averaged velocity",
     "Negative electrode surface potential difference",
     "Positive electrode surface potential difference",
     "Terminal voltage [V]",

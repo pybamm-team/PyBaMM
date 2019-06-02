@@ -76,6 +76,34 @@ class InterfacialCurrent(pybamm.SubModel):
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
+    def get_butler_volmer_from_variables(self, c_e, delta_phi, domain):
+        """
+        Butler-Volmer reactions, using the variables directly
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            Electrolyte current density
+        delta_phi : :class:`pybamm.Symbol`
+            Surface potential difference
+        domain : iter of str, optional
+            The domain(s) in which to compute the interfacial current. Default is None,
+            in which case c_e.domain is used.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            Interfacial current density
+
+        """
+        if domain == ["negative electrode"]:
+            ocp = self.set_of_parameters.U_n
+        if domain == ["positive electrode"]:
+            ocp = self.set_of_parameters.U_p
+
+        j0 = self.get_exchange_current_densities(c_e, domain)
+        return self.get_butler_volmer(j0, delta_phi - ocp(c_e), domain)
+
     def get_inverse_butler_volmer(self, j, j0, domain=None):
         """
         Inverts the Butler-Volmer relation to solve for the reaction overpotential.
@@ -168,7 +196,27 @@ class InterfacialCurrent(pybamm.SubModel):
             "Exchange-current density [A.m-2]": i_typ * j0,
         }
 
-    def get_first_order_potential_differences(self, variables):
+    def get_first_order_butler_volmer(self, variables, leading_order_vars, domain):
+        param = self.set_of_parameters
+        delta_phi_str = domain[0].capitalize() + " surface potential difference"
+        delta_phi = pybamm.average(variables[delta_phi_str])
+        delta_phi_0 = pybamm.average(leading_order_vars[delta_phi_str])
+        # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
+        c_e_0 = 1 * leading_order_vars["Average electrolyte concentration"]
+
+        if domain == ["negative electrode"]:
+            c_e = variables["Electrolyte concentration"].orphans[0]
+        elif domain == ["positive electrode"]:
+            c_e = variables["Electrolyte concentration"].orphans[2]
+
+        j_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_0, domain)
+        c_e_1 = (c_e - c_e_0) / param.C_e
+        delta_phi_1 = (delta_phi - delta_phi_0) / param.C_e
+
+        j_1 = j_0.diff(c_e_0) * c_e_1 + j_0.diff(delta_phi_0) * delta_phi_1
+        return j_0 + param.C_e * j_1
+
+    def get_first_order_potential_differences(self, variables, leading_order_vars):
         """
         Calculates surface potential difference using the linear first-order correction
         to the Butler-Volmer, and then calculates derived potentials.
@@ -187,22 +235,22 @@ class InterfacialCurrent(pybamm.SubModel):
         neg = ["negative electrode"]
         pos = ["positive electrode"]
         delta_phi_n_0 = pybamm.average(
-            variables["Negative electrode surface potential difference"]
+            leading_order_vars["Negative electrode surface potential difference"]
         )
         delta_phi_p_0 = pybamm.average(
-            variables["Positive electrode surface potential difference"]
+            leading_order_vars["Positive electrode surface potential difference"]
         )
 
         # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
-        c_e_0 = 1 * variables["Average electrolyte concentration"]
-        c_e = variables["Electrolyte concentration"]
-        c_e_n, c_e_s, c_e_p = c_e.orphans
-        c_e_n_1_bar = (pybamm.average(c_e_n) - c_e_0) / param.C_e
-        c_e_p_1_bar = (pybamm.average(c_e_p) - c_e_0) / param.C_e
+        c_e_0 = 1 * leading_order_vars["Average electrolyte concentration"]
 
         j_n_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_n_0, neg)
         j_p_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_p_0, pos)
 
+        c_e = variables["Electrolyte concentration"]
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        c_e_n_1_bar = (pybamm.average(c_e_n) - c_e_0) / param.C_e
+        c_e_p_1_bar = (pybamm.average(c_e_p) - c_e_0) / param.C_e
         delta_phi_n_1_bar = -j_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
         delta_phi_p_1_bar = -j_p_0.diff(c_e_0) * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
 
@@ -218,8 +266,8 @@ class InterfacialCurrent(pybamm.SubModel):
 
     def get_average_potential_differences(self, variables):
         """
-        Calculates surface potential difference using the average first-order correction
-        to the Butler-Volmer, and then calculates derived potentials.
+        Calculates surface potential difference using the average Butler-Volmer, and
+        then calculates derived potentials.
 
         Parameters
         ----------
@@ -301,36 +349,6 @@ class LeadAcidReaction(InterfacialCurrent, pybamm.LeadAcidBaseModel):
             return param.m_p * c_e ** 2 * c_w
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
-
-    def get_butler_volmer_from_variables(self, c_e, delta_phi, domain=None):
-        """
-        Butler-Volmer reactions, using the variables directly
-
-        Parameters
-        ----------
-        c_e : :class:`pybamm.Symbol`
-            Electrolyte current density
-        delta_phi : :class:`pybamm.Symbol`
-            Surface potential difference
-        domain : iter of str, optional
-            The domain(s) in which to compute the interfacial current. Default is None,
-            in which case c_e.domain is used.
-
-        Returns
-        -------
-        :class:`pybamm.Symbol`
-            Interfacial current density
-
-        """
-        param = self.set_of_parameters
-
-        domain = domain or c_e.domain
-        j0 = self.get_exchange_current_densities(c_e, domain)
-        if domain == ["negative electrode"]:
-            ocp = param.U_n(c_e)
-        elif domain == ["positive electrode"]:
-            ocp = param.U_p(c_e)
-        return self.get_butler_volmer(j0, delta_phi - ocp, domain)
 
 
 class LithiumIonReaction(InterfacialCurrent):
