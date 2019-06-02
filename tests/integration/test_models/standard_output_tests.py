@@ -39,10 +39,10 @@ class StandardOutputTests(object):
         tests.test_all()
 
     def test_all(self, skip_first_timestep=False):
-        # self.run_test_class(VoltageTests)
-        # self.run_test_class(ElectrolyteConcentrationTests)
+        self.run_test_class(VoltageTests)
+        self.run_test_class(ElectrolyteConcentrationTests)
         self.run_test_class(PotentialTests)
-        # self.run_test_class(CurrentTests)
+        self.run_test_class(CurrentTests)
 
         if self.chemistry == "Lithium-ion":
             self.run_test_class(ParticleConcentrationTests)
@@ -487,10 +487,10 @@ class CurrentTests(BaseOutputTest):
         """Test that average of the interfacial current density is equal to the true
         value."""
         np.testing.assert_array_almost_equal(
-            self.j_n_av(self.t), self.i_cell / self.l_n, decimal=5
+            self.j_n_av(self.t), self.i_cell / self.l_n, decimal=4
         )
         np.testing.assert_array_almost_equal(
-            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=5
+            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=4
         )
 
     def test_conservation(self):

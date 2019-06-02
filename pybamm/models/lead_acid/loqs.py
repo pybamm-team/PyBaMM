@@ -54,10 +54,12 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         if self.options["capacitance"] is not False:
             delta_phi_n = pybamm.Variable(
-                "Negative electrode surface potential difference", curr_coll_domain
+                "Leading-order negative electrode surface potential difference",
+                curr_coll_domain,
             )
             delta_phi_p = pybamm.Variable(
-                "Positive electrode surface potential difference", curr_coll_domain
+                "Leading-order positive electrode surface potential difference",
+                curr_coll_domain,
             )
             self.variables.update(
                 {

@@ -592,7 +592,8 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         eta_e_av = phi_e_p_av - phi_e_n_av
 
         # Update variables
-        self.variables.update(self.get_variables(phi_e, i_e, eta_e_av))
+        self.variables.update(self.get_potential_variables(phi_e, eta_e_av))
+        self.variables.update(self.get_current_variables(i_e))
         electrode_current_model = pybamm.electrode.Ohm(param)
         vol_vars = electrode_current_model.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p)
         self.variables.update(vol_vars)

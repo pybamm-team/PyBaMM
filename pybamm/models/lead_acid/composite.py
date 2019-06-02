@@ -90,7 +90,6 @@ class Composite(pybamm.LeadAcidBaseModel):
                 )
             self.variables.update(pot_vars)
         else:
-
             delta_phi_n_bar = pybamm.Variable(
                 "Average neg electrode surface potential difference"
             )
