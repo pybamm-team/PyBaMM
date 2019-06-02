@@ -400,11 +400,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             if lbc_value.evaluates_to_number():
                 lbc_i = lbc_value
             else:
-                lbc_i = pybamm.Index(lbc_value, i)
+                lbc_i = lbc_value[i]
             if rbc_value.evaluates_to_number():
                 rbc_i = rbc_value
             else:
-                rbc_i = pybamm.Index(rbc_value, i)
+                rbc_i = rbc_value[i]
 
             if lbc_type == "Dirichlet":
                 left_ghost_constant = 2 * lbc_i
