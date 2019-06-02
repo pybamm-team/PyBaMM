@@ -322,7 +322,10 @@ class Symbol(anytree.NodeMixin):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            return pybamm.Scalar(0)
+            return self._diff(variable)
+
+    def _diff(self, variable):
+        return pybamm.Scalar(0)
 
     def jac(self, variable):
         """
