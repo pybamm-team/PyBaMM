@@ -11,8 +11,8 @@ from collections import OrderedDict
 
 def id_to_python_variable(symbol_id, constant=False):
     """
-    This function defines the format for the python variable names used in find_symbols and
-    to_python. Variable names are based on a nodes' id to make them unique
+    This function defines the format for the python variable names used in find_symbols
+    and to_python. Variable names are based on a nodes' id to make them unique
     """
 
     if constant:
