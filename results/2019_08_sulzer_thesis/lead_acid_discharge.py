@@ -1,51 +1,13 @@
 #
 # Simulations: discharge of a lead-acid battery
 #
+import argparse
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
 import pybamm
 from config import OUTPUT_DIR
-
-
-def asymptotics_comparison(models, Crates):
-    # load parameter values and geometry
-    geometry = models[0].default_geometry
-    param = models[0].default_parameter_values
-
-    # Process parameters (same parameters for all models)
-    for model in models:
-        param.process_model(model)
-    param.process_geometry(geometry)
-
-    # set mesh
-    var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5}
-    mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
-
-    # discretise models
-    discs = {}
-    for model in models:
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        # Store discretisation
-        discs[model] = disc
-
-    # solve model for range of Crates
-    all_variables = {}
-    for Crate in Crates:
-        all_variables[Crate] = {}
-        current = Crate * 17
-        param.update({"Typical current [A]": current})
-        t_eval = np.linspace(0, 1, 100)
-        for model in models:
-            param.update_model(model, discs[model])
-            solver = model.default_solver
-            solver.solve(model, t_eval)
-            all_variables[Crate][model] = pybamm.post_process_variables(
-                model.variables, solver.t, solver.y, mesh
-            )
-
-    return all_variables, t_eval
+from shared import model_comparison
 
 
 def plot_voltages(all_variables, t_eval):
@@ -72,7 +34,7 @@ def plot_voltages(all_variables, t_eval):
         ax.xaxis.set_ticks_position("bottom")
         for model, variables in models_variables.items():
             if k == 0:
-                label = model.name
+                label = model[0]
             else:
                 label = None
             if k % m == 0:
@@ -92,6 +54,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
+    t_eval = np.linspace(0, 1, 100)
     if args.compute:
         pybamm.set_logging_level("INFO")
         models = [
@@ -100,7 +63,7 @@ if __name__ == "__main__":
             pybamm.lead_acid.NewmanTiedemann(),
         ]
         Crates = [0.1, 0.2, 0.5, 1, 2, 5]
-        all_variables, t_eval = asymptotics_comparison(models, Crates)
+        all_variables, t_eval = model_comparison(models, Crates, t_eval)
         with open("discharge_asymptotics_data.pickle", "wb") as f:
             data = (all_variables, t_eval)
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)

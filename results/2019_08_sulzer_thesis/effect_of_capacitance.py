@@ -8,48 +8,7 @@ import pickle
 import pybamm
 from config import OUTPUT_DIR
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
-
-def model_comparison(models, Crates):
-    # load parameter values and geometry
-    geometry = models[0].default_geometry
-    param = models[0].default_parameter_values
-
-    # Process parameters (same parameters for all models)
-    for model in models:
-        param.process_model(model)
-    param.process_geometry(geometry)
-
-    # set mesh
-    var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20}
-    mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
-
-    # discretise models
-    discs = {}
-    for model in models:
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        # Store discretisation
-        discs[model] = disc
-
-    # solve model for range of Crates
-    all_variables = {}
-    for Crate in Crates:
-        all_variables[Crate] = {}
-        current = Crate * 17
-        pybamm.logger.info("Setting typical current to {} A".format(current))
-        param.update({"Typical current [A]": current})
-        t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)])
-        for model in models:
-            param.update_model(model, discs[model])
-            solver = model.default_solver
-            solver.solve(model, t_eval)
-            all_variables[Crate][model.name] = pybamm.post_process_variables(
-                model.variables, solver.t, solver.y, mesh
-            )
-
-    return all_variables, t_eval
+from shared import model_comparison
 
 
 def plot_voltages(all_variables, t_eval, Crates):
@@ -131,19 +90,19 @@ def plot_errors(all_variables, t_eval, Crates):
         # Linestyles
         linestyles = ["k-", "b-.", "r--"]
 
-        for j, (model_name, variables) in enumerate(models_variables.items()):
-            if model_name == "Newman-Tiedemann model":
+        for j, (model, variables) in enumerate(models_variables.items()):
+            options = dict(model[1])
+            if options["capacitance"] == False:
+                base_model_results = models_variables[model]
                 continue
             if k == 0:
-                label = model_name
+                label = model[0]
             else:
                 label = None
 
             error = np.abs(
                 variables["Terminal voltage [V]"](t_eval)
-                - models_variables["Newman-Tiedemann model"]["Terminal voltage [V]"](
-                    t_eval
-                )
+                - base_model_results["Terminal voltage [V]"](t_eval)
             )
             ax.loglog(variables["Time [s]"](t_eval), error, linestyles[j], label=label)
         # plt.legend(loc="upper right")
@@ -156,15 +115,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
+    t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)])
     if args.compute:
         pybamm.set_logging_level("INFO")
         models = [
             pybamm.lead_acid.NewmanTiedemann(),
-            pybamm.lead_acid.NewmanTiedemannCapacitance(use_capacitance=True),
-            pybamm.lead_acid.NewmanTiedemannCapacitance(use_capacitance=False),
+            pybamm.lead_acid.NewmanTiedemann({"capacitance": "differential"}),
+            pybamm.lead_acid.NewmanTiedemann({"capacitance": "algebraic"}),
         ]
-        Crates = [0.1, 0.5, 1, 2]
-        all_variables, t_eval = model_comparison(models, Crates)
+        Crates = [0.1]  # , 0.5, 1, 2]
+        all_variables, t_eval = model_comparison(models, Crates, t_eval)
         with open("capacitance_data.pickle", "wb") as f:
             data = (all_variables, t_eval)
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
