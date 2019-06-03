@@ -111,18 +111,13 @@ class ProcessedVariable(object):
         entries = np.empty(len(self.t_sol))
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
+            t = self.t_sol[idx]
             if self.known_evals:
-                entries[idx], self.known_evals[
-                    self.t_sol[idx]
-                ] = self.base_variable.evaluate(
-                    self.t_sol[idx],
-                    self.y_sol[:, idx],
-                    self.known_evals[self.t_sol[idx]],
+                entries[idx], self.known_evals[t] = self.base_variable.evaluate(
+                    t, self.y_sol[:, idx], self.known_evals[t]
                 )
             else:
-                entries[idx] = self.base_variable.evaluate(
-                    self.t_sol[idx], self.y_sol[:, idx]
-                )
+                entries[idx] = self.base_variable.evaluate(t, self.y_sol[:, idx])
 
         # No discretisation provided, or variable has no domain (function of t only)
         self._interpolation_function = interp.interp1d(
@@ -143,18 +138,16 @@ class ProcessedVariable(object):
 
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
+            t = self.t_sol[idx]
+            y = self.y_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    self.t_sol[idx],
-                    self.y_sol[:, idx],
-                    self.known_evals[self.t_sol[idx]],
+                    t, y, self.known_evals[t]
                 )
                 entries[:, idx] = eval_and_known_evals[0][:, 0]
-                self.known_evals[self.t_sol[idx]] = eval_and_known_evals[1]
+                self.known_evals[t] = eval_and_known_evals[1]
             else:
-                entries[:, idx] = self.base_variable.evaluate(
-                    self.t_sol[idx], self.y_sol[:, idx]
-                )[:, 0]
+                entries[:, idx] = self.base_variable.evaluate(t, y)[:, 0]
 
         # Process the discretisation to get x values
         nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
@@ -200,10 +193,18 @@ class ProcessedVariable(object):
 
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
-            entries[:, :, idx] = np.reshape(
-                self.base_variable.evaluate(self.t_sol[idx], self.y_sol[:, idx]),
-                [len_x, len_r],
-            )
+            t = self.t_sol[idx]
+            y = self.y_sol[:, idx]
+            if self.known_evals:
+                eval_and_known_evals = self.base_variable.evaluate(
+                    t, y, self.known_evals[t]
+                )
+                entries[:, idx] = np.reshape(eval_and_known_evals[0], [len_x, len_r])
+                self.known_evals[t] = eval_and_known_evals[1]
+            else:
+                entries[:, :, idx] = np.reshape(
+                    self.base_variable.evaluate(t, y), [len_x, len_r]
+                )
         # Process the discretisation to get x values
         nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
         edges = self.mesh.combine_submeshes(*self.domain)[0].edges
