@@ -388,7 +388,6 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)
-            pybamm.SpatialMethod.test_shape(disc_child)
             if child.domain != []:
                 child_spatial_method = self._spatial_methods[child.domain[0]]
             if isinstance(symbol, pybamm.Gradient):
@@ -434,7 +433,8 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
+            new_symbol = spatial_method.concatenation(new_children)
+
             return new_symbol
 
         else:
@@ -573,14 +573,25 @@ class Discretisation(object):
         for rhs_var in model.rhs.keys():
             if rhs_var.name in model.variables.keys():
                 var = model.variables[rhs_var.name]
-                if not (
-                    model.rhs[rhs_var].shape == var.shape
-                    or isinstance(var, (pybamm.Concatenation, pybamm.Outer))
-                    or (
-                        isinstance(var, pybamm.Multiplication)
-                        and isinstance(var.right, pybamm.Vector)
-                        and np.all(var.right.entries == 1)
-                    )
+
+                different_shapes = not np.array_equal(
+                    model.rhs[rhs_var].shape, var.shape
+                )
+
+                not_concatenation = not isinstance(var, pybamm.Concatenation)
+                not_outer = not isinstance(var, pybamm.Outer)
+
+                not_mult_by_one_vec = not (
+                    isinstance(var, pybamm.Multiplication)
+                    and isinstance(var.right, pybamm.Vector)
+                    and np.all(var.right.entries == 1)
+                )
+
+                if (
+                    different_shapes
+                    and not_concatenation
+                    and not_outer
+                    and not_mult_by_one_vec
                 ):
                     raise pybamm.ModelError(
                         """

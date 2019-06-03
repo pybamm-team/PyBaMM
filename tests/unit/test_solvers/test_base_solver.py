@@ -13,6 +13,12 @@ class TestBaseSolver(unittest.TestCase):
         self.assertEqual(solver.t, None)
         self.assertEqual(solver.y, None)
 
+        solver.tol = 1e-5
+        self.assertEqual(solver.tol, 1e-5)
+
+        with self.assertRaises(NotImplementedError):
+            solver.solve(None, None)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

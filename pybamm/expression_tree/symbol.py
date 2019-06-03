@@ -11,6 +11,18 @@ import autograd.numpy as np
 from anytree.exporter import DotExporter
 
 
+def evaluate_for_shape_using_domain(domain):
+    """
+    Return a vector of the appropriate shape, based on the domain.
+    Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
+    """
+    if domain == []:
+        size = 1
+    else:
+        size = sum(hash(dom) % 100 for dom in domain)
+    return np.nan * np.ones((size, 1))
+
+
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
 
@@ -41,6 +53,16 @@ class Symbol(anytree.NodeMixin):
 
         # Set domain (and hence id)
         self.domain = domain
+
+        # Test shape on everything but nodes that contain the base Symbol class or
+        # the base BinaryOperator class
+        if pybamm.settings.debug_mode is True:
+            if not any(
+                issubclass(pybamm.Symbol, type(x))
+                or issubclass(pybamm.BinaryOperator, type(x))
+                for x in self.pre_order()
+            ):
+                self.test_shape()
 
     @property
     def children(self):
@@ -115,7 +137,7 @@ class Symbol(anytree.NodeMixin):
         """
         return tuple([child.new_copy() for child in self.children])
 
-    def render(self):
+    def render(self):  # pragma: no cover
         """print out a visual representation of the tree (this node and its
         children)
         """
@@ -303,6 +325,10 @@ class Symbol(anytree.NodeMixin):
         """return an :class:`AbsoluteValue` object"""
         return pybamm.AbsoluteValue(self)
 
+    def __getitem__(self, key):
+        """return a :class:`Index` object"""
+        return pybamm.Index(self, key)
+
     def diff(self, variable):
         """
         Differentiate a symbol with respect to a variable. Default behaviour is to
@@ -362,7 +388,7 @@ class Symbol(anytree.NodeMixin):
         )
 
     def evaluate(self, t=None, y=None, known_evals=None):
-        """Evaluate expression tree (wrapper for dict of known values).
+        """Evaluate expression tree (wrapper to allow using dict of known values).
         If the dict 'known_evals' is provided, the dict is searched for self.id; if
         self.id is in the keys, return that value; otherwise, evaluate using
         :meth:`_base_evaluate()` and add that value to known_evals
@@ -389,6 +415,14 @@ class Symbol(anytree.NodeMixin):
             return known_evals[self.id], known_evals
         else:
             return self._base_evaluate(t, y)
+
+    def evaluate_for_shape(self):
+        """Evaluate expression tree to find its shape. For symbols that cannot be
+        evaluated directly (e.g. `Variable` or `Parameter`), a vector of the appropriate
+        shape is returned instead, using the symbol's domain.
+        See :meth:`pybamm.Symbol.evaluate()`
+        """
+        return self.evaluate()
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
@@ -492,13 +526,9 @@ class Symbol(anytree.NodeMixin):
     @property
     def shape(self):
         """
-        Shape of an object, found by evaluating it with appropriate t and y
-
-        Raises
-        ------
-        NotImplementedError
-            If trying to find the shape of an object that cannot be evaluated
+        Shape of an object, found by evaluating it with appropriate t and y.
         """
+        # Default behaviour is to try to evaluate the object directly
         state_vectors_in_node = [
             x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
         ]
@@ -508,8 +538,36 @@ class Symbol(anytree.NodeMixin):
             min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
             # Pick a y that won't cause RuntimeWarnings
             y = np.linspace(0.1, 0.9, min_y_size)
-        evaluated_self = self.evaluate(t=0, y=y)
+        evaluated_self = self.evaluate(0, y)
         if isinstance(evaluated_self, numbers.Number):
             return ()
         else:
             return evaluated_self.shape
+
+    @property
+    def shape_for_testing(self):
+        """
+        Shape of an object for cases where it cannot be evaluated directly. If a symbol
+        cannot be evaluated directly (e.g. it is a `Variable` or `Parameter`), it is
+        instead given an arbitrary domain-dependent shape from the dictionary
+        `pybamm.DOMAIN_SIZES_FOR_TESTING` (note that this only works for some domains)
+        """
+        evaluated_self = self.evaluate_for_shape()
+        if isinstance(evaluated_self, numbers.Number):
+            return ()
+        else:
+            return evaluated_self.shape
+
+    def test_shape(self):
+        """
+        Check that the discretised self has a pybamm `shape`, i.e. can be evaluated
+
+        Raises
+        ------
+        pybamm.ShapeError
+            If the shape of the object cannot be found
+        """
+        try:
+            self.shape_for_testing
+        except ValueError as e:
+            raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))

@@ -63,6 +63,7 @@ Optionally, a new spatial method can also overwrite the default behaviour for th
 - :meth:`pybamm.SpatialMethod.broadcast`
 - :meth:`pybamm.SpatialMethod.mass_matrix`
 - :meth:`pybamm.SpatialMethod.process_binary_operators`
+- :meth:`pybamm.SpatialMethod.concatenation`
 
 For an example of an existing spatial method implementation, see the Finite Volume
 `API docs <https://pybamm.readthedocs.io/en/latest/source/spatial_methods/finite_volume.html>`_

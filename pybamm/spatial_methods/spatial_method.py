@@ -8,8 +8,8 @@ from scipy.sparse import eye, kron, coo_matrix
 
 class SpatialMethod:
     """
-    A general spatial methods class, with default (trivial) behaviour for broadcast,
-    mass_matrix and compute_diffusivity.
+    A general spatial methods class, with default (trivial) behaviour for some spatial
+    operations.
     All spatial methods will follow the general form of SpatialMethod in
     that they contain a method for broadcasting variables onto a mesh,
     a gradient operator, and a diverence operator.
@@ -34,7 +34,8 @@ class SpatialMethod:
     def spatial_variable(self, symbol):
         """
         Convert a :class:`pybamm.SpatialVariable` node to a linear algebra object that
-        can be evaluated (here, a :class:`pybamm.Vector` on the nodes).
+        can be evaluated (here, a :class:`pybamm.Vector` on either the nodes or the
+        edges).
 
         Parameters
         -----------
@@ -47,7 +48,10 @@ class SpatialMethod:
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
+        if symbol.name.endswith("_edge"):
+            return pybamm.Vector(symbol_mesh[0].edges, domain=symbol.domain)
+        else:
+            return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
     def broadcast(self, symbol, domain):
         """
@@ -76,8 +80,6 @@ class SpatialMethod:
             )
         else:
             out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
-
-        self.test_shape(out)
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -201,6 +203,7 @@ class SpatialMethod:
             # as above, but now we want a single point with value 1 at (0, n-1)
             right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
             bv_vector = pybamm.Matrix(right_vector)
+
         out = bv_vector @ discretised_child
         # boundary value removes domain
         out.domain = []
@@ -268,29 +271,17 @@ class SpatialMethod:
         """
         return bin_op.__class__(disc_left, disc_right)
 
-    @staticmethod
-    def test_shape(symbol):
-        """
-        Check that the discretised symbol has a pybamm `shape`, i.e. can be evaluated
+    def concatenation(self, disc_children):
+        """Discrete concatenation object.
 
         Parameters
         ----------
-        symbol : :class:`pybamm.Symbol`
-            The symbol to be tested
+        disc_children : list
+            List of discretised children
 
-        Raises
-        ------
-        pybamm.ShapeError
-            If the shape of the object cannot be found
+        Returns
+        -------
+        :class:`pybamm.DomainConcatenation`
+            Concatenation of the discretised children
         """
-        try:
-            symbol.shape
-        except ValueError as e:
-            raise pybamm.ShapeError(
-                """
-                Cannot evaluate the discretised symbol to find its shape
-                (original error: {})
-                """.format(
-                    e
-                )
-            )
+        return pybamm.DomainConcatenation(disc_children, self.mesh)

@@ -36,6 +36,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         self.set_diffusion_submodel()
         self.set_electrolyte_current_model(int_curr_model)
         self.set_current_variables()
+        self.set_convection_variables()
 
     def set_boundary_conditions(self, bc_variables):
         """Set boundary conditions, dependent on self.options"""
@@ -162,6 +163,17 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events.append(voltage - param.voltage_low_cut)
+
+    def set_convection_variables(self):
+        velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
+        if self.options["convection"] is not False:
+            velocity_vars = velocity_model.get_explicit_composite(self.variables)
+            self.variables.update(velocity_vars)
+        else:
+            whole_cell = ["negative electrode", "separator", "positive electrode"]
+            v_box = pybamm.Broadcast(0, whole_cell)
+            dVbox_dz = pybamm.Broadcast(0, whole_cell)
+            self.variables.update(velocity_model.get_variables(v_box, dVbox_dz))
 
     @property
     def default_solver(self):

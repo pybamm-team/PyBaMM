@@ -13,6 +13,7 @@ class TestSimplify(unittest.TestCase):
         b = pybamm.Scalar(1)
         v_n = pybamm.Variable("v", "negative electrode")
         v_s = pybamm.Variable("v", "separator")
+        vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
         mesh = get_mesh_for_testing()
 
         for symbol in [
@@ -31,7 +32,7 @@ class TestSimplify(unittest.TestCase):
             pybamm.BoundaryValue(a, "right"),
             pybamm.BoundaryFlux(a, "right"),
             pybamm.Broadcast(a, "domain"),
-            pybamm.Concatenation(a, b, v_n),
+            pybamm.Concatenation(v_n, v_s),
             pybamm.NumpyConcatenation(a, b, v_s),
             pybamm.DomainConcatenation([v_n, v_s], mesh),
             pybamm.Parameter("param"),
@@ -39,6 +40,7 @@ class TestSimplify(unittest.TestCase):
             pybamm.Matrix(np.ones((50, 40))),
             pybamm.SpatialVariable("x", ["negative electrode"]),
             pybamm.t,
+            pybamm.Index(vec, 1),
         ]:
             self.assertEqual(symbol.id, symbol.new_copy().id)
 
