@@ -86,7 +86,7 @@ class DaeSolver(pybamm.BaseSolver):
         else:
             jacobian = None
 
-        self.t, self.y = self.integrate(
+        solution = self.integrate(
             residuals,
             y0,
             t_eval,
@@ -96,6 +96,7 @@ class DaeSolver(pybamm.BaseSolver):
         )
 
         pybamm.logger.info("Finish solving {}".format(model.name))
+        return solution
 
     def set_up(self, model):
         """Unpack model, perform checks, simplify and calculate jacobian.
@@ -140,7 +141,8 @@ class DaeSolver(pybamm.BaseSolver):
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(
-                slice(0, np.size(model.concatenated_initial_conditions)))
+                slice(0, np.size(model.concatenated_initial_conditions))
+            )
             jac_rhs = concatenated_rhs.jac(y)
             jac_algebraic = concatenated_algebraic.jac(y)
 

@@ -101,6 +101,6 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         if sol.flag in [0, 2]:
             # 0 = solved for all t_eval
             # 2 = found root(s)
-            return sol.values.t, np.transpose(sol.values.y)
+            return pybamm.Solution(sol.values.t, np.transpose(sol.values.y))
         else:
             raise pybamm.SolverError(sol.message)
