@@ -61,7 +61,7 @@ class Broadcast(pybamm.SpatialOperator):
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
         """
         child_eval = self.children[0].evaluate_for_shape()
-        vec = self.evaluate_for_shape_using_domain()
+        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
         if self.children[0].domain == ["current collector"]:
             return np.outer(child_eval, vec).reshape(-1, 1)
         else:

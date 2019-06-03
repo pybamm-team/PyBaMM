@@ -11,6 +11,18 @@ import autograd.numpy as np
 from anytree.exporter import DotExporter
 
 
+def evaluate_for_shape_using_domain(domain):
+    """
+    Return a vector of the appropriate shape, based on the domain.
+    Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
+    """
+    if domain == []:
+        size = 1
+    else:
+        size = sum(hash(dom) % 100 for dom in domain)
+    return np.nan * np.ones((size, 1))
+
+
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
 
@@ -411,18 +423,6 @@ class Symbol(anytree.NodeMixin):
         See :meth:`pybamm.Symbol.evaluate()`
         """
         return self.evaluate()
-
-    def evaluate_for_shape_using_domain(self):
-        """
-        Return a vector of the appropriate shape, based on the symbol's domain.
-        Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they
-        do.
-        """
-        if self.domain == []:
-            size = 1
-        else:
-            size = sum(hash(dom) % 100 for dom in self.domain)
-        return np.nan * np.ones((size, 1))
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`

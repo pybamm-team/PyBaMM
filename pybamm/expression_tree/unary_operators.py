@@ -413,7 +413,7 @@ class Integral(SpatialOperator):
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
-        return self.evaluate_for_shape_using_domain()
+        return pybamm.evaluate_for_shape_using_domain(self.domain)
 
 
 class IndefiniteIntegral(Integral):
@@ -489,7 +489,7 @@ class BoundaryOperator(SpatialOperator):
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
-        return self.evaluate_for_shape_using_domain()
+        return pybamm.evaluate_for_shape_using_domain(self.domain)
 
 
 class BoundaryValue(BoundaryOperator):
