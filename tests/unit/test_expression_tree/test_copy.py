@@ -32,7 +32,7 @@ class TestSimplify(unittest.TestCase):
             pybamm.BoundaryValue(a, "right"),
             pybamm.BoundaryFlux(a, "right"),
             pybamm.Broadcast(a, "domain"),
-            pybamm.Concatenation(a, b, v_n),
+            pybamm.Concatenation(v_n, v_s),
             pybamm.NumpyConcatenation(a, b, v_s),
             pybamm.DomainConcatenation([v_n, v_s], mesh),
             pybamm.Parameter("param"),

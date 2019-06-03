@@ -61,17 +61,6 @@ class TestSpatialMethod(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, "Cannot process 2D symbol"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
-    def test_test_shape(self):
-        mesh = get_mesh_for_testing()
-        spatial_method = pybamm.SpatialMethod(mesh)
-        # right shape, passes
-        y1 = pybamm.StateVector(slice(0, 10))
-        spatial_method.test_shape(y1)
-        # bad shape, fails
-        y2 = pybamm.StateVector(slice(0, 5))
-        with self.assertRaises(pybamm.ShapeError):
-            spatial_method.test_shape(y1 + y2)
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

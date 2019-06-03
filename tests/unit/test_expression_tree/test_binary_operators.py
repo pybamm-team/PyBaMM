@@ -233,10 +233,10 @@ class TestBinaryOperators(unittest.TestCase):
         np.testing.assert_array_equal(
             (pybammS2 * pybammD2).evaluate().toarray(), S2.toarray() * D2
         )
-        with self.assertRaisesRegex(ValueError, "inconsistent shapes"):
-            (pybammS1 * pybammS2).evaluate()
-        with self.assertRaisesRegex(ValueError, "inconsistent shapes"):
-            (pybammS2 * pybammS1).evaluate()
+        with self.assertRaisesRegex(pybamm.ShapeError, "inconsistent shapes"):
+            (pybammS1 * pybammS2).test_shape()
+        with self.assertRaisesRegex(pybamm.ShapeError, "inconsistent shapes"):
+            (pybammS2 * pybammS1).test_shape()
 
         # Matrix multiplication is normal matrix multiplication
         np.testing.assert_array_equal(
@@ -249,10 +249,10 @@ class TestBinaryOperators(unittest.TestCase):
         np.testing.assert_array_equal((pybammD2 @ pybammS1).evaluate(), D2 * S1)
         np.testing.assert_array_equal((pybammS2 @ pybammD1).evaluate(), S2 * D1)
         np.testing.assert_array_equal((pybammD1 @ pybammS2).evaluate(), D1 * S2)
-        with self.assertRaisesRegex(ValueError, "dimension mismatch"):
-            (pybammS1 @ pybammS1).evaluate()
-        with self.assertRaisesRegex(ValueError, "dimension mismatch"):
-            (pybammS2 @ pybammS2).evaluate()
+        with self.assertRaisesRegex(pybamm.ShapeError, "dimension mismatch"):
+            (pybammS1 @ pybammS1).test_shape()
+        with self.assertRaisesRegex(pybamm.ShapeError, "dimension mismatch"):
+            (pybammS2 @ pybammS2).test_shape()
 
     def test_sparse_divide(self):
         row = np.array([0, 3, 1, 0])

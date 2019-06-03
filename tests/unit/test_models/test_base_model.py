@@ -241,7 +241,7 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         model.algebraic = {
             c: 1,
-            d: pybamm.StateVector(slice(0, 15)) - pybamm.StateVector(slice(15, 25)),
+            d: pybamm.StateVector(slice(0, 15)) - pybamm.StateVector(slice(15, 30)),
         }
         with self.assertRaisesRegex(
             pybamm.ModelError,

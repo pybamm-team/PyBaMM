@@ -200,7 +200,6 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
                 + (1 - l_p) / kappa_s
             )
         )
-
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         "Ohmic losses and overpotentials"
