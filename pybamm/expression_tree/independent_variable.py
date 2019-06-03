@@ -27,6 +27,10 @@ class IndependentVariable(pybamm.Symbol):
     def __init__(self, name, domain=[]):
         super().__init__(name, domain=domain)
 
+    def evaluate_for_shape(self):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        return pybamm.evaluate_for_shape_using_domain(self.domain)
+
 
 class Time(IndependentVariable):
     """A node in the expression tree representing time
@@ -46,6 +50,13 @@ class Time(IndependentVariable):
         if t is None:
             raise ValueError("t must be provided")
         return t
+
+    def evaluate_for_shape(self):
+        """
+        Return the scalar '0' to represent the shape of the independent variable `Time`.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return 0
 
 
 class SpatialVariable(IndependentVariable):

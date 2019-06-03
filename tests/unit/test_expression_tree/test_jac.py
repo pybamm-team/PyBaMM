@@ -43,7 +43,7 @@ class TestJacobian(unittest.TestCase):
         dfunc_dy = func.jac(y).simplify().evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
-        func = u @ A
+        func = u @ pybamm.StateVector(slice(0, 1))
         with self.assertRaises(NotImplementedError):
             func.jac(y)
 

@@ -2,6 +2,7 @@
 # Unary operator classes and methods
 #
 import numbers
+import numpy as np
 import pybamm
 
 
@@ -53,3 +54,15 @@ class Broadcast(pybamm.SpatialOperator):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
         return Broadcast(child, self.domain)
+
+    def evaluate_for_shape(self):
+        """
+        Returns a vector of NaNs to represent the shape of a Broadcast.
+        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
+        """
+        child_eval = self.children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
+        if self.children[0].domain == ["current collector"]:
+            return np.outer(child_eval, vec).reshape(-1, 1)
+        else:
+            return child_eval * vec

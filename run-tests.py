@@ -7,6 +7,7 @@
 #
 import re
 import os
+import pybamm
 import sys
 import argparse
 import unittest
@@ -30,6 +31,8 @@ def run_code_tests(executable=None, folder: str = "unit"):
         tests = "tests/"
     else:
         tests = "tests/" + folder
+        if folder == "unit":
+            pybamm.settings.debug_mode = True
     if executable is None:
         suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
@@ -203,9 +206,9 @@ def test_notebook(path, executable="python"):
                 j = str(1 + i)
                 print(j + " " * (5 - len(j)) + line)
             print("-- stdout " + "-" * (79 - 10))
-            print(str(stdout, 'utf-8'))
+            print(str(stdout, "utf-8"))
             print("-- stderr " + "-" * (79 - 10))
-            print(str(stderr, 'utf-8'))
+            print(str(stderr, "utf-8"))
             print("-" * 79)
             return False
     except KeyboardInterrupt:
@@ -244,9 +247,9 @@ def test_script(path, executable="python"):
             # Show failing code, output and errors before returning
             print("ERROR")
             print("-- stdout " + "-" * (79 - 10))
-            print(str(stdout, 'utf-8'))
+            print(str(stdout, "utf-8"))
             print("-- stderr " + "-" * (79 - 10))
-            print(str(stderr, 'utf-8'))
+            print(str(stderr, "utf-8"))
             print("-" * 79)
             return False
     except KeyboardInterrupt:
