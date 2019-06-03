@@ -5,15 +5,9 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS(
-        {"capacitance": "algebraic", "first-order potential": "average"}
-    ),
-    pybamm.lead_acid.Composite(
-        {"capacitance": "algebraic", "first-order potential": "average"}
-    ),
-    pybamm.lead_acid.NewmanTiedemann(
-        {"capacitance": "algebraic", "first-order potential": "average"}
-    ),
+    pybamm.lead_acid.LOQS(),
+    pybamm.lead_acid.Composite(),
+    pybamm.lead_acid.NewmanTiedemann(),
 ]
 
 # create geometry
@@ -21,7 +15,7 @@ geometry = models[-1].default_geometry
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current [A]": 10})
+param.update({"Typical current [A]": 17 / 20})
 for model in models:
     param.process_model(model)
 param.process_geometry(geometry)
@@ -49,8 +43,8 @@ output_variables = [
     "Interfacial current density [A.m-2]",
     "Electrolyte concentration [mol.m-3]",
     "Volume-averaged velocity",
-    "Negative electrode surface potential difference",
-    "Positive electrode surface potential difference",
+    "Electrolyte current density [A.m-2]",
+    "Electrolyte potential [V]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solvers, output_variables)
