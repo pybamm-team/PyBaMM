@@ -53,7 +53,12 @@ class DaeSolver(pybamm.BaseSolver):
 
         """
         pybamm.logger.info("Start solving {}".format(model.name))
+
+        # Set up
+        timer = pybamm.Timer()
+        start_time = timer.time()
         concatenated_rhs, concatenated_algebraic, y0, events, jac = self.set_up(model)
+        set_up_time = timer.time() - start_time
 
         def residuals(t, y, ydot):
             pybamm.logger.debug(
@@ -86,6 +91,8 @@ class DaeSolver(pybamm.BaseSolver):
         else:
             jacobian = None
 
+        # Solve
+        solve_start_time = timer.time()
         solution = self.integrate(
             residuals,
             y0,
@@ -94,6 +101,10 @@ class DaeSolver(pybamm.BaseSolver):
             mass_matrix=model.mass_matrix.entries,
             jacobian=jacobian,
         )
+        # Assign times
+        solution.solve_time = timer.time() - solve_start_time
+        solution.total_time = timer.time() - start_time
+        solution.set_up_time = set_up_time
 
         pybamm.logger.info("Finish solving {}".format(model.name))
         return solution

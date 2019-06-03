@@ -375,6 +375,11 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
+        # Test time
+        self.assertGreater(
+            solution.total_time, solution.solve_time + solution.set_up_time
+        )
+
     def test_model_solver_ode_events(self):
         # Create model
         model = pybamm.BaseModel()
@@ -468,6 +473,11 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+        # Test time
+        self.assertGreater(
+            solution.total_time, solution.solve_time + solution.set_up_time
+        )
 
     def test_model_solver_dae_bad_ics(self):
         # Create model

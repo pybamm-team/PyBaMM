@@ -146,6 +146,11 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
+        # Test time
+        self.assertGreater(
+            solution.total_time, solution.solve_time + solution.set_up_time
+        )
+
     def test_model_solver_with_event(self):
         # Create model
         model = pybamm.BaseModel()
