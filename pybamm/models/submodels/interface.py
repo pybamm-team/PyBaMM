@@ -156,7 +156,9 @@ class InterfacialCurrent(pybamm.SubModel):
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
-        i_typ = self.set_of_parameters.i_typ
+        param = self.set_of_parameters
+        j_n_scale = param.i_typ / (param.a_n_dimensional * param.L_x)
+        j_p_scale = param.i_typ / (param.a_p_dimensional * param.L_x)
 
         # Broadcast if necessary
         if j_n.domain in [[], ["current collector"]]:
@@ -171,30 +173,36 @@ class InterfacialCurrent(pybamm.SubModel):
         # Concatenations
         j = pybamm.Concatenation(*[j_n, pybamm.Broadcast(0, ["separator"]), j_p])
         j0 = pybamm.Concatenation(*[j0_n, pybamm.Broadcast(0, ["separator"]), j0_p])
+        j_dimensional = pybamm.Concatenation(
+            *[j_n_scale * j_n, pybamm.Broadcast(0, ["separator"]), j_p_scale * j_p]
+        )
+        j0_dimensional = pybamm.Concatenation(
+            *[j_n_scale * j0_n, pybamm.Broadcast(0, ["separator"]), j_p_scale * j0_p]
+        )
 
         # Averages
-        j_n_av = pybamm.average(j_n)
-        j_p_av = pybamm.average(j_p)
+        j_n_bar = pybamm.average(j_n)
+        j_p_bar = pybamm.average(j_p)
 
         return {
             "Negative electrode interfacial current density": j_n,
             "Positive electrode interfacial current density": j_p,
-            "Average negative electrode interfacial current density": j_n_av,
-            "Average positive electrode interfacial current density": j_p_av,
+            "Average negative electrode interfacial current density": j_n_bar,
+            "Average positive electrode interfacial current density": j_p_bar,
             "Interfacial current density": j,
             "Negative electrode exchange-current density": j0_n,
             "Positive electrode exchange-current density": j0_p,
             "Exchange-current density": j0,
-            "Negative electrode interfacial current density [A.m-2]": i_typ * j_n,
-            "Positive electrode interfacial current density [A.m-2]": i_typ * j_p,
-            "Average negative electrode interfacial current density [A.m-2]": i_typ
-            * j_n_av,
-            "Average positive electrode interfacial current density [A.m-2]": i_typ
-            * j_p_av,
-            "Interfacial current density [A.m-2]": i_typ * j,
-            "Negative electrode exchange-current density [A.m-2]": i_typ * j0_n,
-            "Positive electrode exchange-current density [A.m-2]": i_typ * j0_p,
-            "Exchange-current density [A.m-2]": i_typ * j0,
+            "Negative electrode interfacial current density [A.m-2]": j_n_scale * j_n,
+            "Positive electrode interfacial current density [A.m-2]": j_p_scale * j_p,
+            "Average negative electrode interfacial current density [A.m-2]": j_n_scale
+            * j_n_bar,
+            "Average positive electrode interfacial current density [A.m-2]": j_p_scale
+            * j_p_bar,
+            "Interfacial current density [A.m-2]": j_dimensional,
+            "Negative electrode exchange-current density [A.m-2]": j_n_scale * j0_n,
+            "Positive electrode exchange-current density [A.m-2]": j_p_scale * j0_p,
+            "Exchange-current density [A.m-2]": j0_dimensional,
         }
 
     def get_first_order_butler_volmer(

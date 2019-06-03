@@ -15,7 +15,14 @@ geometry = models[-1].default_geometry
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current [A]": 17 / 20})
+param.update(
+    {
+        "Typical current [A]": 17,
+        "Typical electrolyte concentration [mol.m-3]": 5600,
+        "Negative electrode reference exchange-current density [A.m-2]": 0.08,
+        "Positive electrode reference exchange-current density [A.m-2]": 0.006,
+    }
+)
 for model in models:
     param.process_model(model)
 param.process_geometry(geometry)
