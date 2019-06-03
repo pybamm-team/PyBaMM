@@ -138,10 +138,8 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         ocp_n = variables["Negative electrode open circuit potential"]
         eta_r_n = variables["Negative electrode reaction overpotential"]
         phi_s_n = variables["Negative electrode potential"]
-        try:
-            c_e_0 = variables["Average electrolyte concentration"]
-        except KeyError:
-            c_e_0 = pybamm.Scalar(1)
+        # Get average electrolyte concentration if it exists, otherwise set to 1
+        c_e_0 = variables.get("Average electrolyte concentration", pybamm.Scalar(1))
 
         # import parameters and spatial variables
         param = self.set_of_parameters
