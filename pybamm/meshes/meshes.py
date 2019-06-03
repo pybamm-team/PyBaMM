@@ -32,7 +32,7 @@ class Mesh(dict):
         submesh_pts = {}
         for domain in geometry:
             submesh_pts[domain] = {}
-            if len(list(geometry[domain]["primary"].keys())) > 1:
+            if len(list(geometry[domain]["primary"].keys())) > 2:
                 raise pybamm.GeometryError
             for prim_sec in list(geometry[domain].keys()):
                 # skip over tabs key

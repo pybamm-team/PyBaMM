@@ -1266,9 +1266,15 @@ class TestFiniteVolume(unittest.TestCase):
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
 
+        # domain for boundary values must now be explicitly set
         c_s_n_surf_disc = disc.process_symbol(c_s_n_surf)
         c_s_p_surf_disc = disc.process_symbol(c_s_p_surf)
-
+        self.assertEqual(c_s_n_surf_disc.domain, [])
+        self.assertEqual(c_s_p_surf_disc.domain, [])
+        c_s_n_surf.domain = ["negative electrode"]
+        c_s_p_surf.domain = ["positive electrode"]
+        c_s_n_surf_disc = disc.process_symbol(c_s_n_surf)
+        c_s_p_surf_disc = disc.process_symbol(c_s_p_surf)
         self.assertEqual(c_s_n_surf_disc.domain, ['negative electrode'])
         self.assertEqual(c_s_p_surf_disc.domain, ['positive electrode'])
 

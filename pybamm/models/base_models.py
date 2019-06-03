@@ -427,8 +427,8 @@ class StandardBatteryBaseModel(BaseModel):
             var.x_p: 35,
             var.r_n: 10,
             var.r_p: 10,
-            var.y: 10,
-            var.z: 10,
+            var.y: 16,
+            var.z: 16,
         }
 
     @property
