@@ -72,19 +72,19 @@ for key, C_rate in C_rates.items():
 
     # discharge capacity
     discharge_capacity = pybamm.ProcessedVariable(
-        model.variables["Discharge capacity [A.h]"], solver.t, solver.y, mesh=mesh
+        model.variables["Discharge capacity [A.h]"], solution.t, solution.y, mesh=mesh
     )
-    discharge_capacity_sol = discharge_capacity(solver.t)
+    discharge_capacity_sol = discharge_capacity(solution.t)
     comsol_discharge_capacity = comsol_time * param["Typical current [A]"] / 3600
 
     # extract the voltage
     voltage = pybamm.ProcessedVariable(
-        model.variables["Terminal voltage [V]"], solver.t, solver.y, mesh=mesh
+        model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=mesh
     )
-    voltage_sol = voltage(solver.t)
+    voltage_sol = voltage(solution.t)
 
     # calculate the difference between the two solution methods
-    end_index = min(len(solver.t), len(comsol_time))
+    end_index = min(len(solution.t), len(comsol_time))
     voltage_difference = np.abs(voltage_sol[0:end_index] - comsol_voltage[0:end_index])
 
     # plot discharge curves and absolute voltage_difference

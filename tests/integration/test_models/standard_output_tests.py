@@ -58,7 +58,7 @@ class BaseOutputTest(object):
         self.disc = disc
         self.solver = solver
         self.operating_condition = operating_condition
-        self.t = solver.t
+        self.t = solution.t
 
         self.x_n = disc.mesh["negative electrode"][0].nodes
         self.x_s = disc.mesh["separator"][0].nodes
@@ -87,7 +87,7 @@ class BaseOutputTest(object):
         "Helper function to reduce repeated code."
         pybamm.logger.debug("Processing {} for {}".format(var, self.model.name))
         return pybamm.ProcessedVariable(
-            self.model.variables[var], self.solver.t, self.solver.y, mesh=self.disc.mesh
+            self.model.variables[var], self.solution.t, self.solution.y, mesh=self.disc.mesh
         )
 
 

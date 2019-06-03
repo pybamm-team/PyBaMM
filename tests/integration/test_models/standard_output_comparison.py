@@ -24,7 +24,7 @@ class StandardOutputComparison(object):
     def get_output_times(self):
         # Get max time allowed from the simulation, i.e. the smallest end time common
         # to all the solvers
-        max_t = min([solver.t[-1] for solver in self.solvers.values()])
+        max_t = min([solution.t[-1] for solver in self.solvers.values()])
 
         # Assign common time
         solver0 = self.solvers[self.models[0]]
