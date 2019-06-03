@@ -3,6 +3,7 @@
 #
 import numbers
 import numpy as np
+import pybamm
 import scipy.interpolate as interp
 
 
@@ -31,10 +32,14 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
         Dictionary of processed variables
     """
     processed_variables = {}
+    known_evals = {t: {} for t in t_sol}
     for var, eqn in variables.items():
+        pybamm.logger.debug("Post-processing {}".format(var))
         processed_variables[var] = ProcessedVariable(
-            eqn, t_sol, y_sol, mesh, interp_kind
+            eqn, t_sol, y_sol, mesh, interp_kind, known_evals
         )
+        for t in known_evals:
+            known_evals[t].update(processed_variables[var].known_evals[t])
     return processed_variables
 
 
@@ -62,15 +67,29 @@ class ProcessedVariable(object):
         The method to use for interpolation
     """
 
-    def __init__(self, base_variable, t_sol, y_sol, mesh=None, interp_kind="linear"):
+    def __init__(
+        self,
+        base_variable,
+        t_sol,
+        y_sol,
+        mesh=None,
+        interp_kind="linear",
+        known_evals=None,
+    ):
         self.base_variable = base_variable
         self.t_sol = t_sol
         self.y_sol = y_sol
         self.mesh = mesh
         self.interp_kind = interp_kind
         self.domain = base_variable.domain
+        self.known_evals = known_evals
 
-        self.base_eval = base_variable.evaluate(t_sol[0], y_sol[:, 0])
+        if self.known_evals:
+            self.base_eval, self.known_evals[t_sol[0]] = base_variable.evaluate(
+                t_sol[0], y_sol[:, 0], self.known_evals[t_sol[0]]
+            )
+        else:
+            self.base_eval = base_variable.evaluate(t_sol[0], y_sol[:, 0])
 
         if (
             isinstance(self.base_eval, numbers.Number)
@@ -92,9 +111,18 @@ class ProcessedVariable(object):
         entries = np.empty(len(self.t_sol))
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
-            entries[idx] = self.base_variable.evaluate(
-                self.t_sol[idx], self.y_sol[:, idx]
-            )
+            if self.known_evals:
+                entries[idx], self.known_evals[
+                    self.t_sol[idx]
+                ] = self.base_variable.evaluate(
+                    self.t_sol[idx],
+                    self.y_sol[:, idx],
+                    self.known_evals[self.t_sol[idx]],
+                )
+            else:
+                entries[idx] = self.base_variable.evaluate(
+                    self.t_sol[idx], self.y_sol[:, idx]
+                )
 
         # No discretisation provided, or variable has no domain (function of t only)
         self._interpolation_function = interp.interp1d(
@@ -115,9 +143,18 @@ class ProcessedVariable(object):
 
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
-            entries[:, idx] = self.base_variable.evaluate(
-                self.t_sol[idx], self.y_sol[:, idx]
-            )[:, 0]
+            if self.known_evals:
+                eval_and_known_evals = self.base_variable.evaluate(
+                    self.t_sol[idx],
+                    self.y_sol[:, idx],
+                    self.known_evals[self.t_sol[idx]],
+                )
+                entries[:, idx] = eval_and_known_evals[0][:, 0]
+                self.known_evals[self.t_sol[idx]] = eval_and_known_evals[1]
+            else:
+                entries[:, idx] = self.base_variable.evaluate(
+                    self.t_sol[idx], self.y_sol[:, idx]
+                )[:, 0]
 
         # Process the discretisation to get x values
         nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes

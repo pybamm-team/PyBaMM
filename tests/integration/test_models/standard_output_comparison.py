@@ -9,6 +9,14 @@ class StandardOutputComparison(object):
     "Calls all the tests comparing standard output variables."
 
     def __init__(self, models, discs, solvers):
+        # Process variables
+        for model in models:
+            disc = discs[model]
+            solver = solvers[model]
+            model.variables = pybamm.post_process_variables(
+                model.variables, solver.t, solver.y, disc.mesh
+            )
+
         self.models = models
         self.discs = discs
         self.solvers = solvers
@@ -79,22 +87,10 @@ class BaseOutputComparison(object):
         self.mesh = mesh
         self.solvers = solvers
 
-    def get_vars(self, var):
-        "Helper function to reduce repeated code."
-        return [
-            pybamm.ProcessedVariable(
-                model.variables[var],
-                self.solvers[model].t,
-                self.solvers[model].y,
-                mesh=self.mesh,
-            )
-            for model in self.models
-        ]
-
     def compare(self, var, tol=1e-2):
         "Compare variables from different models"
         # Get variable for each model
-        model_variables = self.get_vars(var)
+        model_variables = [model.variables[var] for model in self.models]
         var0 = model_variables[0]
 
         if var0.domain == []:
