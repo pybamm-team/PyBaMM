@@ -196,6 +196,7 @@ from .spatial_methods.finite_volume import FiniteVolume
 #
 # Solver classes
 #
+from .solvers.solution import Solution
 from .solvers.base_solver import BaseSolver
 from .solvers.ode_solver import OdeSolver
 from .solvers.dae_solver import DaeSolver

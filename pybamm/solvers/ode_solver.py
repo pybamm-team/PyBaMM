@@ -50,13 +50,14 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create function to evaluate jacobian
         if jac_rhs is not None:
+
             def jacobian(t, y):
                 return jac_rhs.evaluate(t, y, known_evals={})[0]
 
         else:
             jacobian = None
 
-        self.t, self.y = self.integrate(
+        solution = self.integrate(
             dydt,
             y0,
             t_eval,
@@ -66,6 +67,7 @@ class OdeSolver(pybamm.BaseSolver):
         )
 
         pybamm.logger.info("Finish solving {}".format(model.name))
+        return solution
 
     def set_up(self, model):
         """Unpack model, perform checks, simplify and calculate jacobian.

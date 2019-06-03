@@ -18,9 +18,9 @@ class TestScipySolver(unittest.TestCase):
 
         y0 = np.array([0])
         t_eval = np.linspace(0, 1, 100)
-        t_sol, y_sol = solver.integrate(constant_growth, y0, t_eval)
-        np.testing.assert_array_equal(t_sol, t_eval)
-        np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
+        solution = solver.integrate(constant_growth, y0, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
 
         # Exponential decay
         solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
@@ -30,8 +30,8 @@ class TestScipySolver(unittest.TestCase):
 
         y0 = np.array([1])
         t_eval = np.linspace(0, 1, 100)
-        t_sol, y_sol = solver.integrate(exponential_decay, y0, t_eval)
-        np.testing.assert_allclose(y_sol[0], np.exp(-0.1 * t_sol))
+        solution = solver.integrate(exponential_decay, y0, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_integrate_failure(self):
         # Turn off warnings to ignore sqrt error
@@ -62,9 +62,9 @@ class TestScipySolver(unittest.TestCase):
 
         y0 = np.array([0])
         t_eval = np.linspace(0, 10, 100)
-        t_sol, y_sol = solver.integrate(constant_growth, y0, t_eval, events=[y_eq_2])
-        self.assertLess(len(t_sol), len(t_eval))
-        np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
+        solution = solver.integrate(constant_growth, y0, t_eval, events=[y_eq_2])
+        self.assertLess(len(solution.t), len(t_eval))
+        np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
 
         # Exponential decay
         solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
@@ -80,13 +80,13 @@ class TestScipySolver(unittest.TestCase):
 
         y0 = np.array([1, 2])
         t_eval = np.linspace(0, 7, 100)
-        t_sol, y_sol = solver.integrate(
+        solution = solver.integrate(
             exponential_growth, y0, t_eval, events=[y_eq_5, t_eq_6]
         )
-        np.testing.assert_allclose(y_sol[0], np.exp(t_sol), rtol=1e-6)
-        np.testing.assert_allclose(y_sol[1], 2 * np.exp(t_sol), rtol=1e-6)
-        np.testing.assert_array_less(t_sol, 6)
-        np.testing.assert_array_less(y_sol, 5)
+        np.testing.assert_allclose(solution.y[0], np.exp(solution.t), rtol=1e-6)
+        np.testing.assert_allclose(solution.y[1], 2 * np.exp(solution.t), rtol=1e-6)
+        np.testing.assert_array_less(solution.t, 6)
+        np.testing.assert_array_less(solution.y, 5)
 
     def test_ode_integrate_with_jacobian(self):
         # Linear
@@ -100,10 +100,12 @@ class TestScipySolver(unittest.TestCase):
 
         y0 = np.array([0.0, 0.0])
         t_eval = np.linspace(0, 1, 100)
-        t_sol, y_sol = solver.integrate(linear_ode, y0, t_eval, jacobian=jacobian)
-        np.testing.assert_array_equal(t_sol, t_eval)
-        np.testing.assert_allclose(0.5 * t_sol, y_sol[0])
-        np.testing.assert_allclose(2.0 * t_sol - 0.25 * t_sol ** 2, y_sol[1], rtol=1e-4)
+        solution = solver.integrate(linear_ode, y0, t_eval, jacobian=jacobian)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
+        np.testing.assert_allclose(
+            2.0 * solution.t - 0.25 * solution.t ** 2, solution.y[1], rtol=1e-4
+        )
 
         # Nonlinear exponential grwoth
         solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
@@ -116,13 +118,11 @@ class TestScipySolver(unittest.TestCase):
 
         y0 = np.array([1.0, 1.0])
         t_eval = np.linspace(0, 1, 100)
-        t_sol, y_sol = solver.integrate(
-            exponential_growth, y0, t_eval, jacobian=jacobian
-        )
-        np.testing.assert_array_equal(t_sol, t_eval)
-        np.testing.assert_allclose(np.exp(t_sol), y_sol[0], rtol=1e-4)
+        solution = solver.integrate(exponential_growth, y0, t_eval, jacobian=jacobian)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(np.exp(solution.t), solution.y[0], rtol=1e-4)
         np.testing.assert_allclose(
-            np.exp(1 + t_sol - np.exp(t_sol)), y_sol[1], rtol=1e-4
+            np.exp(1 + solution.t - np.exp(solution.t)), solution.y[1], rtol=1e-4
         )
 
     def test_model_solver(self):
@@ -142,9 +142,9 @@ class TestScipySolver(unittest.TestCase):
         # Solve
         solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
         t_eval = np.linspace(0, 1, 100)
-        solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solver.t, t_eval)
-        np.testing.assert_allclose(solver.y[0], np.exp(0.1 * solver.t))
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
 
     def test_model_solver_with_event(self):
         # Create model
@@ -164,10 +164,10 @@ class TestScipySolver(unittest.TestCase):
         # Solve
         solver = pybamm.ScipySolver(tol=1e-8, method="RK45")
         t_eval = np.linspace(0, 10, 100)
-        solver.solve(model, t_eval)
-        self.assertLess(len(solver.t), len(t_eval))
-        np.testing.assert_array_equal(solver.t, t_eval[: len(solver.t)])
-        np.testing.assert_allclose(solver.y[0], np.exp(-0.1 * solver.t))
+        solution = solver.solve(model, t_eval)
+        self.assertLess(len(solution.t), len(t_eval))
+        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_ode_with_jacobian(self):
         # Create model
@@ -209,10 +209,10 @@ class TestScipySolver(unittest.TestCase):
         # Solve
         solver = pybamm.ScipySolver(tol=1e-9)
         t_eval = np.linspace(0, 1, 100)
-        solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solver.t, t_eval)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
 
-        T, Y = solver.t, solver.y
+        T, Y = solution.t, solution.y
         np.testing.assert_array_almost_equal(
             model.variables["var1"].evaluate(T, Y),
             np.ones((N, T.size)) * np.exp(T[np.newaxis, :]),
