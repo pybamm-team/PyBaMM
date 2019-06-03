@@ -17,7 +17,7 @@ if sys.version_info[0] < 3:
     del (x)  # Before Python3, list comprehension iterators leaked
 
 #
-# Expose pints version
+# Expose pybamm version
 #
 
 
@@ -44,11 +44,12 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 from .util import Timer
 from .util import load_function
 from .logger import logger, set_logging_level
+from .settings import settings
 
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import Symbol
+from .expression_tree.symbol import Symbol, evaluate_for_shape_using_domain
 from .expression_tree.binary_operators import (
     is_scalar_zero,
     is_matrix_zero,

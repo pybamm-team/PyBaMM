@@ -141,6 +141,12 @@ class BinaryOperator(pybamm.Symbol):
             right = self.right.evaluate(t, y)
             return self._binary_evaluate(left, right)
 
+    def evaluate_for_shape(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape()`. """
+        left = self.children[0].evaluate_for_shape()
+        right = self.children[1].evaluate_for_shape()
+        return self._binary_evaluate(left, right)
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
@@ -478,7 +484,10 @@ class Division(BinaryOperator):
         if issparse(left):
             return left.multiply(1 / right)
         else:
-            return left / right
+            if isinstance(right, numbers.Number) and right == 0:
+                return left * np.inf
+            else:
+                return left / right
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """

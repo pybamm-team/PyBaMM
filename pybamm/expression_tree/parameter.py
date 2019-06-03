@@ -1,6 +1,7 @@
 #
 # Parameter classes
 #
+import numpy as np
 import pybamm
 
 
@@ -25,6 +26,13 @@ class Parameter(pybamm.Symbol):
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Parameter(self.name, self.domain)
+
+    def evaluate_for_shape(self, t=None, y=None):
+        """
+        Returns the scalar 'NaN' to represent the shape of a parameter.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return np.nan
 
 
 class FunctionParameter(pybamm.UnaryOperator):
