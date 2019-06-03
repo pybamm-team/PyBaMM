@@ -106,7 +106,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
 
         return {**pot_variables, **current_variables, **additional_vars}
 
-    def get_explicit_combined(self, variables):
+    def get_explicit_combined(self, variables, first_order="composite"):
         """
         Provides an explicit combined leading and first order solution to the
         electrolyte current conservation equation where the constitutive equation is
@@ -117,12 +117,22 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         ----------
         variables : dict
             Dictionary of symbols to use in the model
+        first_order : str
+            Whether to take the linear correction to first-order, or the composite one.
+            Default is "composite".
 
         Returns
         -------
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
+
+        def first_order_function(c_e):
+            if first_order == "composite":
+                return pybamm.Function(np.log, c_e)
+            elif first_order == "linear":
+                return c_e
+
         # unpack variables
         i_boundary_cc, _, c_e, epsilon = self.unpack(variables)
         ocp_n = variables["Negative electrode open circuit potential"]
@@ -153,6 +163,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         kappa_n = param.kappa_e(c_e_0) * eps_n ** param.b
         kappa_s = param.kappa_e(c_e_0) * eps_s ** param.b
         kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
+        chi_0 = param.chi(c_e_0)
 
         # get electrode averaged values
         ocp_n_av = pybamm.average(ocp_n)
@@ -165,35 +176,30 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
 
         # electrolyte potential (combined leading and first order)
         phi_e_const = (
-            -ocp_n_av
-            - eta_r_n_av
-            + phi_s_n_av
-            - 2
-            * (1 - param.t_plus)
-            * pybamm.average(pybamm.Function(np.log, c_e_n / c_e_0))
-            - i_boundary_cc
-            * param.C_e
-            * l_n
-            / param.gamma_e
-            * (1 / (3 * kappa_n) - 1 / kappa_s)
+            (-ocp_n_av - eta_r_n_av + phi_s_n_av)
+            - chi_0 * pybamm.average(first_order_function(c_e_n / c_e_0))
+            - (
+                (i_boundary_cc * param.C_e * l_n / param.gamma_e)
+                * (1 / (3 * kappa_n) - 1 / kappa_s)
+            )
         )
 
         phi_e_n = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n / c_e_0)
+            + chi_0 * first_order_function(c_e_n / c_e_0)
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
         )
 
         phi_e_s = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s / c_e_0)
+            + chi_0 * first_order_function(c_e_s / c_e_0)
             - (i_boundary_cc * param.C_e / param.gamma_e) * (x_s / kappa_s)
         )
 
         phi_e_p = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p / c_e_0)
+            + chi_0 * first_order_function(c_e_p / c_e_0)
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * (
                 (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
@@ -211,13 +217,9 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         )
 
         # concentration overpotential (combined leading and first order)
-        eta_c_av = (
-            2
-            * (1 - param.t_plus)
-            * (
-                pybamm.average(pybamm.Function(np.log, c_e_p / c_e_0))
-                - pybamm.average(pybamm.Function(np.log, c_e_n / c_e_0))
-            )
+        eta_c_av = chi_0 * (
+            pybamm.average(first_order_function(c_e_p / c_e_0))
+            - pybamm.average(first_order_function(c_e_n / c_e_0))
         )
 
         # electrolyte overpotential
@@ -566,10 +568,10 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         phi_s_n = -pybamm.IndefiniteIntegral(i_s_n / solid_conductivity_n, x_n)
         # Separator electrolyte potential
         phi_e_n = phi_s_n - delta_phi_n
-        chi_e_s = param.chi(c_e_s)
+        chi_s = param.chi(c_e_s)
         kappa_s_eff = param.kappa_e(c_e_s) * (eps_s ** param.b)
         phi_e_s = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
-            chi_e_s / c_e_s * pybamm.grad(c_e_s)
+            chi_s / c_e_s * pybamm.grad(c_e_s)
             - param.C_e * i_boundary_cc / kappa_s_eff,
             x_s,
         )
