@@ -98,7 +98,8 @@ class ProcessedVariable(object):
         ):
             self.initialise_1D()
         else:
-            if len(self.mesh.combine_submeshes(*self.domain)) == 1:
+            n = self.mesh.combine_submeshes(*self.domain)[0].npts
+            if self.base_eval.shape[0] in [n, n + 1]:
                 self.initialise_2D()
             else:
                 self.initialise_3D()
@@ -199,7 +200,7 @@ class ProcessedVariable(object):
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, y, self.known_evals[t]
                 )
-                entries[:, idx] = np.reshape(eval_and_known_evals[0], [len_x, len_r])
+                entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_x, len_r])
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
