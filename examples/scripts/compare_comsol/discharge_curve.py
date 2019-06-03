@@ -66,9 +66,8 @@ for key, C_rate in C_rates.items():
     ).evaluate(0, 0)
 
     # solve model at comsol times
-    solver = model.default_solver
     t = comsol_time / tau
-    solver.solve(model, t)
+    solution = model.default_solver.solve(model, t)
 
     # discharge capacity
     discharge_capacity = pybamm.ProcessedVariable(

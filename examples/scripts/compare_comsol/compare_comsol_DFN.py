@@ -52,9 +52,8 @@ tau = param.process_symbol(
 ).evaluate(0, 0)
 
 # solve model at comsol times
-solver = model.default_solver
 time = comsol_variables["time"] / tau
-solver.solve(model, time)
+solution = model.default_solver.solve(model, time)
 
 "-----------------------------------------------------------------------------"
 "Get variables for comparison"

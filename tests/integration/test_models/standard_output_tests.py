@@ -8,11 +8,11 @@ import numpy as np
 class StandardOutputTests(object):
     "Calls all the tests on the standard output variables."
 
-    def __init__(self, model, parameter_values, disc, solver):
+    def __init__(self, model, parameter_values, disc, solution):
         self.model = model
         self.parameter_values = parameter_values
         self.disc = disc
-        self.solver = solver
+        self.solution = solution
 
         if isinstance(self.model, pybamm.LithiumIonBaseModel):
             self.chemistry = "Lithium-ion"
@@ -33,7 +33,7 @@ class StandardOutputTests(object):
             self.model,
             self.parameter_values,
             self.disc,
-            self.solver,
+            self.solution,
             self.operating_condition,
         )
         tests.test_all()
@@ -52,11 +52,11 @@ class StandardOutputTests(object):
 
 
 class BaseOutputTest(object):
-    def __init__(self, model, param, disc, solver, operating_condition):
+    def __init__(self, model, param, disc, solution, operating_condition):
         self.model = model
         self.param = param
         self.disc = disc
-        self.solver = solver
+        self.solution = solution
         self.operating_condition = operating_condition
         self.t = solution.t
 
@@ -87,13 +87,16 @@ class BaseOutputTest(object):
         "Helper function to reduce repeated code."
         pybamm.logger.debug("Processing {} for {}".format(var, self.model.name))
         return pybamm.ProcessedVariable(
-            self.model.variables[var], self.solution.t, self.solution.y, mesh=self.disc.mesh
+            self.model.variables[var],
+            self.solution.t,
+            self.solution.y,
+            mesh=self.disc.mesh,
         )
 
 
 class VoltageTests(BaseOutputTest):
-    def __init__(self, model, param, disc, solver, operating_condition):
-        super().__init__(model, param, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solution, operating_condition):
+        super().__init__(model, param, disc, solution, operating_condition)
 
         self.eta_n = self.get_var("Negative reaction overpotential [V]")
         self.eta_p = self.get_var("Positive reaction overpotential [V]")
@@ -231,8 +234,8 @@ class VoltageTests(BaseOutputTest):
 
 
 class ParticleConcentrationTests(BaseOutputTest):
-    def __init__(self, model, param, disc, solver, operating_condition):
-        super().__init__(model, param, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solution, operating_condition):
+        super().__init__(model, param, disc, solution, operating_condition)
 
         self.c_s_n = self.get_var("Negative particle concentration")
         self.c_s_p = self.get_var("Positive particle concentration")
@@ -312,8 +315,8 @@ class ParticleConcentrationTests(BaseOutputTest):
 
 
 class ElectrolyteConcentrationTests(BaseOutputTest):
-    def __init__(self, model, param, disc, solver, operating_condition):
-        super().__init__(model, param, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solution, operating_condition):
+        super().__init__(model, param, disc, solution, operating_condition)
 
         self.c_e = self.get_var("Electrolyte concentration")
 
@@ -397,8 +400,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
 
 
 class PotentialTests(BaseOutputTest):
-    def __init__(self, model, param, disc, solver, operating_condition):
-        super().__init__(model, param, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solution, operating_condition):
+        super().__init__(model, param, disc, solution, operating_condition)
 
         self.phi_s_n = self.get_var("Negative electrode potential [V]")
         self.phi_s_p = self.get_var("Positive electrode potential [V]")
@@ -438,8 +441,8 @@ class PotentialTests(BaseOutputTest):
 
 
 class CurrentTests(BaseOutputTest):
-    def __init__(self, model, param, disc, solver, operating_condition):
-        super().__init__(model, param, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solution, operating_condition):
+        super().__init__(model, param, disc, solution, operating_condition)
 
         self.j = self.get_var("Interfacial current density")
         self.j0 = self.get_var("Exchange-current density")
@@ -510,8 +513,8 @@ class CurrentTests(BaseOutputTest):
 
 
 class VelocityTests(BaseOutputTest):
-    def __init__(self, model, param, disc, solver, operating_condition):
-        super().__init__(model, param, disc, solver, operating_condition)
+    def __init__(self, model, param, disc, solution, operating_condition):
+        super().__init__(model, param, disc, solution, operating_condition)
 
         self.v_box = self.get_var("Volume-averaged velocity")
         self.i_e = self.get_var("Electrolyte current density")

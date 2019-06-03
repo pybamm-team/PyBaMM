@@ -110,7 +110,7 @@ disc.process_model(model)
 # solve
 solver = pybamm.ScipySolver()
 t = np.linspace(0, 1, 100)
-solver.solve(model, t)
+solution = solver.solve(model, t)
 
 # Extract output variables
 L_out = pybamm.ProcessedVariable(

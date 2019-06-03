@@ -43,7 +43,7 @@ class TestCompareOutputs(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         for i, model in enumerate(models):
             solver = model.default_solver
-            solver.solve(model, t_eval)
+            solution = solver.solve(model, t_eval)
             solvers[model] = solver
 
         # test averages
@@ -87,7 +87,7 @@ class TestCompareOutputs(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         for i, model in enumerate(models):
             solver = model.default_solver
-            solver.solve(model, t_eval)
+            solution = solver.solve(model, t_eval)
             solvers[model] = solver
 
         # compare leading and first order
@@ -132,7 +132,7 @@ class TestCompareOutputs(unittest.TestCase):
             t_eval = np.linspace(0, 1, 100)
             for i, model in enumerate(models):
                 solver = model.default_solver
-                solver.solve(model, t_eval)
+                solution = solver.solve(model, t_eval)
                 solvers[model] = solver
 
             # compare outputs
