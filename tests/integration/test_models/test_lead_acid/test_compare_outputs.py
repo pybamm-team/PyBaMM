@@ -39,15 +39,14 @@ class TestCompareOutputs(unittest.TestCase):
             discs[model] = disc
 
         # solve model
-        solvers = {}
+        solutions = {}
         t_eval = np.linspace(0, 1, 100)
         for i, model in enumerate(models):
-            solver = model.default_solver
-            solution = solver.solve(model, t_eval)
-            solvers[model] = solver
+            solution = model.default_solver.solve(model, t_eval)
+            solutions[model] = solution
 
         # test averages
-        comparison = StandardOutputComparison(models, discs, solvers)
+        comparison = StandardOutputComparison(models, discs, solutions)
         comparison.test_averages()
 
     def test_compare_low_current_asymptotics(self):
@@ -83,15 +82,13 @@ class TestCompareOutputs(unittest.TestCase):
             discs[model] = disc
 
         # solve model
-        solvers = {}
+        solutions = {}
         t_eval = np.linspace(0, 1, 100)
         for i, model in enumerate(models):
-            solver = model.default_solver
-            solution = solver.solve(model, t_eval)
-            solvers[model] = solver
-
+            solution = model.default_solver.solve(model, t_eval)
+            solutions[model] = solution
         # compare leading and first order
-        comparison = StandardOutputComparison(models[:2], discs, solvers)
+        comparison = StandardOutputComparison(models[:2], discs, solutions)
         comparison.test_all()
 
     def test_compare_outputs_capacitance(self):
@@ -128,15 +125,14 @@ class TestCompareOutputs(unittest.TestCase):
                 discs[model] = disc
 
             # solve model
-            solvers = {}
+            solutions = {}
             t_eval = np.linspace(0, 1, 100)
             for i, model in enumerate(models):
-                solver = model.default_solver
-                solution = solver.solve(model, t_eval)
-                solvers[model] = solver
+                solution = model.default_solver.solve(model, t_eval)
+                solutions[model] = solution
 
             # compare outputs
-            comparison = StandardOutputComparison(models, discs, solvers)
+            comparison = StandardOutputComparison(models, discs, solutions)
             comparison.test_all(skip_first_timestep=True)
 
 

@@ -23,7 +23,7 @@ class TestOdeSolver(unittest.TestCase):
         with self.assertRaisesRegex(
             pybamm.SolverError, "Cannot use ODE solver to solve model with DAEs"
         ):
-            solution = solver.solve(model, None)
+            solver.solve(model, None)
 
 
 if __name__ == "__main__":

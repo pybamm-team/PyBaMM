@@ -79,7 +79,7 @@ class StandardModelTest(object):
     def test_outputs(self):
         # run the standard output tests
         std_out_test = tests.StandardOutputTests(
-            self.model, self.parameter_values, self.disc, self.solver
+            self.model, self.parameter_values, self.disc, self.solution
         )
         std_out_test.test_all()
 
