@@ -22,8 +22,6 @@ class SPM(pybamm.LithiumIonBaseModel):
         c_s_n = pybamm.standard_variables.c_s_n
         c_s_p = pybamm.standard_variables.c_s_p
 
-        "-----------------------------------------------------------------------------"
-        "Boundary conditions"
         if self.options["bc_options"]["dimensionality"] == 0:
             i_boundary_cc = param.current_with_time
             self.variables["Current collector current density"] = i_boundary_cc
@@ -32,17 +30,10 @@ class SPM(pybamm.LithiumIonBaseModel):
         elif self.options["bc_options"]["dimensionality"] == 1:
             raise NotImplementedError
         elif self.options["bc_options"]["dimensionality"] == 2:
-            #v_boundary_cc = pybamm.Variable(
-            #    "Current collector voltage", domain="current collector"
-            #)
             i_boundary_cc = pybamm.Variable(
                 "Current collector current density", domain="current collector"
             )
-            current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
-            current_collector_model.set_uniform_current(i_boundary_cc)
-            #current_collector_model.set_algebraic_system(v_boundary_cc, i_boundary_cc)
-            self.update(current_collector_model)
-            i_boundary_cc = self.variables["Current collector current density"]
+            self.variables["Current collector current density"] = i_boundary_cc
             curr_coll_domain = ["current collector"]
             broadcast = False
 
@@ -103,6 +94,14 @@ class SPM(pybamm.LithiumIonBaseModel):
         electrode_model = pybamm.electrode.Ohm(param)
         electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
         self.variables.update(electrode_vars)
+
+        "-----------------------------------------------------------------------------"
+        "Boundary conditions"
+        if self.options["bc_options"]["dimensionality"] == 2:
+            current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
+            #current_collector_model.set_uniform_current(self.variables)
+            current_collector_model.set_algebraic_system_spm(self.variables)
+            self.update(current_collector_model)
 
         # Cut-off voltage
         # TO DO: get terminal voltage in 2D

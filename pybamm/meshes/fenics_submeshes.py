@@ -37,11 +37,11 @@ class FenicsMesh2D:
         # set limits and number of points
         for var in spatial_vars:
             if var.name == "y":
-                y_lims = lims[var]
-                Ny = npts[var.id] - 1
+                self.y_lims = lims[var]
+                self.Ny = npts[var.id] - 1
             elif var.name == "z":
-                z_lims = lims[var]
-                Nz = npts[var.id] - 1
+                self.z_lims = lims[var]
+                self.Nz = npts[var.id] - 1
             else:
                 raise pybamm.DomainError(
                     "spatial variable must be y or z not {}".format(var.name)
@@ -52,34 +52,35 @@ class FenicsMesh2D:
             self.coord_sys = spatial_vars[0].coord_sys
         else:
             raise pybamm.DomainError(
-                "spatial variables should have the same domain, but have domians {} and {}".format(
+                """spatial variables should have the same domain,
+                but have domians {} and {}""".format(
                     spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
                 )
             )
 
         # create mesh
         self.fem_mesh = dolfin.RectangleMesh(
-            dolfin.Point(y_lims["min"], z_lims["min"]),
-            dolfin.Point(y_lims["max"], z_lims["max"]),
-            Ny,
-            Nz,
+            dolfin.Point(self.y_lims["min"], self.z_lims["min"]),
+            dolfin.Point(self.y_lims["max"], self.z_lims["max"]),
+            self.Ny,
+            self.Nz,
         )
 
         # create SubDomain classes for the tabs
-        self.negativetab = Tab(y_lims, z_lims, tabs["negative"])
-        self.positivetab = Tab(y_lims, z_lims, tabs["positive"])
+        self.negativetab = Tab(self.y_lims, self.z_lims, tabs["negative"])
+        self.positivetab = Tab(self.y_lims, self.z_lims, tabs["positive"])
 
         # initialize mesh function for boundary domains
-        boundary_markers = dolfin.MeshFunction(
+        self.boundary_markers = dolfin.MeshFunction(
             "size_t", self.fem_mesh, self.fem_mesh.topology().dim() - 1
         )
-        boundary_markers.set_all(0)
-        self.negativetab.mark(boundary_markers, 1)
-        self.positivetab.mark(boundary_markers, 2)
+        self.boundary_markers.set_all(0)
+        self.negativetab.mark(self.boundary_markers, 1)
+        self.positivetab.mark(self.boundary_markers, 2)
 
         # create measure of parts of the boundary
         self.ds = dolfin.Measure(
-            "ds", domain=self.fem_mesh, subdomain_data=boundary_markers
+            "ds", domain=self.fem_mesh, subdomain_data=self.boundary_markers
         )
 
         # create measure for domain

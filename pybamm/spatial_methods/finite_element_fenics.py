@@ -114,12 +114,14 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         elif lbc_type == "Dirichlet":
             # make unit source which will be adjusted to give the dirichlet value
             # in the correct entries
-            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(1), mesh.negativetab)
+            bc = dolfin.DirichletBC(
+                mesh.FunctionSpace, dolfin.Constant(1), mesh.negativetab
+            )
             lbc_vec = dolfin.assemble(dolfin.Constant(1) * mesh.TestFunction * mesh.dx)
             bc.apply(lbc_vec)
             # multiply by the lbc value
             lbc_load = lbc_value * pybamm.Vector(lbc_vec.get_local()[:])
-            boundary_load = boundary_load - lbc_load
+            boundary_load = boundary_load + lbc_load
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -137,12 +139,14 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         elif rbc_type == "Dirichlet":
             # make unit source which will be adjusted to give the dirichlet value
             # in the correct entries
-            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(1), mesh.positivetab)
+            bc = dolfin.DirichletBC(
+                mesh.FunctionSpace, dolfin.Constant(1), mesh.positivetab
+            )
             rbc_vec = dolfin.assemble(dolfin.Constant(1) * mesh.TestFunction * mesh.dx)
             bc.apply(rbc_vec)
             # multiply by the rbc value
             rbc_load = rbc_value * pybamm.Vector(rbc_vec.get_local()[:])
-            boundary_load = boundary_load - rbc_load
+            boundary_load = boundary_load + rbc_load
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -188,11 +192,14 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
 
         if lbc_type == "Dirichlet":
-            # set source terms to zero on boundary
-            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(0) , mesh.negativetab)
+            bc = dolfin.DirichletBC(
+                mesh.FunctionSpace, dolfin.Constant(0), mesh.negativetab
+            )
             bc.apply(stiffness)
         if rbc_type == "Dirichlet":
-            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(0) , mesh.positivetab)
+            bc = dolfin.DirichletBC(
+                mesh.FunctionSpace, dolfin.Constant(0), mesh.positivetab
+            )
             bc.apply(stiffness)
 
         # get assembled mass matrix entries and convert to csr matrix
@@ -208,7 +215,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         # Calculate integration vector
         integration_vector = self.definite_integral_vector(domain[0])
 
-        out = integration_vector * discretised_symbol
+        out = integration_vector @ discretised_symbol
         out.domain = []
         return out
 
@@ -235,7 +242,7 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         # get primary mesh
         mesh = self.mesh[domain][0]
         vector = dolfin.assemble(mesh.TrialFunction * mesh.dx).get_local()[:]
-        return pybamm.Vector(vector)
+        return pybamm.Matrix(vector[np.newaxis, :])
 
     def indefinite_integral(self, domain, symbol, discretised_symbol):
         """Implementation of the indefinite integral operator. The
@@ -287,13 +294,16 @@ class FiniteElementFenics(pybamm.SpatialMethod):
 
         if lbc_type == "Dirichlet":
             # set source terms to zero on boundary
-            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(0) , mesh.negativetab)
+            bc = dolfin.DirichletBC(
+                mesh.FunctionSpace, dolfin.Constant(0), mesh.negativetab
+            )
             bc.zero(mass)
-            raise NotImplementedError("Dirichlet boundary conditons not implemented")
         if rbc_type == "Dirichlet":
-            bc = dolfin.DirichletBC(mesh.FunctionSpace, dolfin.Constant(0) , mesh.positivetab)
+            # set source terms to zero on boundary
+            bc = dolfin.DirichletBC(
+                mesh.FunctionSpace, dolfin.Constant(0), mesh.positivetab
+            )
             bc.zero(mass)
-            raise NotImplementedError("Dirichlet boundary conditons not implemented")
 
         # get assembled mass matrix entries and convert to csr matrix
         mass = csr_matrix(mass.array())

@@ -26,19 +26,19 @@ class OhmTwoDimensional(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_uniform_current(self, i_boundary_cc):
+    def set_uniform_current(self, bc_variables):
         """
         PDE system for current in the current collectors, using Ohm's law
 
         Parameters
         ----------
-        i_boundary_cc : :class:`pybamm.Variable`
-            Current density at the current collector
-
+        bc_variables : dict of :class:`pybamm.Symbol`
+            Dictionary of variables in the current collector
         """
         param = self.set_of_parameters
+        i_boundary_cc = bc_variables["Current collector current density"]
 
-        # algebraic equations
+        # set uniform current density (can be useful for testing)
         applied_current = param.current_with_time
         self.algebraic = {
             i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z
@@ -46,36 +46,49 @@ class OhmTwoDimensional(pybamm.SubModel):
         self.initial_conditions = {
             i_boundary_cc: applied_current / param.l_y / param.l_z
         }
-        self.variables = {"Current collector current density": i_boundary_cc}
 
-    def set_algebraic_system(self, v_boundary_cc, i_boundary_cc):
+    def set_algebraic_system_spm(self, bc_variables):
         """
         PDE system for current in the current collectors, using Ohm's law
 
         Parameters
         ----------
-        v_boundary_cc : :class:`pybamm.Variable`
-            Voltage at the current collector
-        i_boundary_cc : :class:`pybamm.Variable`
-            Current density at the current collector
+        bc_variables : dict of :class:`pybamm.Symbol`
+            Dictionary of variables in the current collector
 
         """
         param = self.set_of_parameters
+        i_boundary_cc = bc_variables["Current collector current density"]
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
 
-        # algebraic equations
+        v_boundary_cc = pybamm.Variable(
+            "Current collector voltage", domain="current collector"
+        )
+
+        # get average ocv and reaction overpotentials
+        ocv_av = bc_variables["Average open circuit voltage"]
+        eta_r_av = bc_variables["Average reaction overpotential"]
+
+        # Poisson problem in the current collector with SPM current-voltage relation
+        # We add a dummy variable to account for the constraint that the through-cell
+        # current must integrate over the current collector domain to give the applied
+        # current.
         applied_current = param.current_with_time
+        constraint_var = pybamm.Variable("Current conservation constraint", domain=[])
         self.algebraic = {
             v_boundary_cc: pybamm.laplacian(v_boundary_cc)
             + param.alpha * pybamm.source(i_boundary_cc, v_boundary_cc),
-            i_boundary_cc: pybamm.Integral(i_boundary_cc, [y, z]) - applied_current,
+            i_boundary_cc: v_boundary_cc - (ocv_av - eta_r_av),
+            constraint_var: pybamm.Integral(i_boundary_cc, [y, z]) - applied_current,
         }
         self.initial_conditions = {
             v_boundary_cc: param.U_p(param.c_p_init) - param.U_n(param.c_n_init),
             i_boundary_cc: applied_current / param.l_y / param.l_z,
+            constraint_var: 0,
         }
-        # left for negative tab, right for positive tab
+
+        # Set boundary conditions at positive tab ("right") and negative tab ("left")
         neg_tab_bc = -applied_current / (
             param.sigma_cn * (param.L_x / param.L_z) ** 2 * param.l_tab_n * param.l_cn
         )
@@ -90,5 +103,5 @@ class OhmTwoDimensional(pybamm.SubModel):
         }
         self.variables = {
             "Current collector voltage": v_boundary_cc,
-            "Current collector current density": i_boundary_cc,
+            "Current conservation constraint": constraint_var,
         }

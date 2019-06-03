@@ -569,7 +569,8 @@ def source(left, right):
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(
-            "finite element method only implemented in the 'current collector' domain, but symbols have domains {} and {}".format(
+            """finite element method only implemented in the 'current collector' domain,
+            but symbols have domains {} and {}""".format(
                 left.domain, right.domain
             )
         )

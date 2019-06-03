@@ -34,17 +34,17 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
 
 
 def get_mesh_for_testing(
-    xpts=None, rpts=10, ypts=12, zpts=15, geometry=None, cc_submesh=None
+    xpts=None, rpts=10, ypts=15, zpts=15, geometry=None, cc_submesh=None
 ):
     param = pybamm.ParameterValues(
         base_parameters={
-            "Electrode depth [m]": 0.1,
+            "Electrode depth [m]": 0.4,
             "Electrode height [m]": 0.5,
-            "Negative tab width [m]": 0.01,
-            "Negative tab centre y-coordinate [m]": 0.02,
+            "Negative tab width [m]": 0.1,
+            "Negative tab centre y-coordinate [m]": 0.1,
             "Negative tab centre z-coordinate [m]": 0.5,
-            "Positive tab width [m]": 0.01,
-            "Positive tab centre y-coordinate [m]": 0.08,
+            "Positive tab width [m]": 0.1,
+            "Positive tab centre y-coordinate [m]": 0.3,
             "Positive tab centre z-coordinate [m]": 0.5,
             "Negative electrode width [m]": 0.3,
             "Separator width [m]": 0.3,

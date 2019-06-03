@@ -379,10 +379,10 @@ class Integral(SpatialOperator):
                     # Check that child and integration_variable domains agree
                     if child.domain != var.domain:
                         raise pybamm.DomainError(
-                            """child and integration_variable must have the same domain"""
+                            "child and integration_variable must have the same domain"
                         )
                 else:
-                    # only allow integration over multiple spatial variables NOT space and time
+                    # only allow integration over multiple spatial variables
                     raise ValueError(
                         """integration_variable must be of type pybamm.SpatialVariable,
                            not {}""".format(

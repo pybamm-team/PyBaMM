@@ -150,7 +150,7 @@ class ParameterValues(dict):
 
         for domain in geometry:
             for prim_sec_tabs, variables in geometry[domain].items():
-                # process information about position and size of tabs if using 2D current collectors
+                # process tab information if using 2D current collectors
                 if prim_sec_tabs == "tabs":
                     for tab, position_size in variables.items():
                         for position_size, sym in position_size.items():
