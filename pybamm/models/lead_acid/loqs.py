@@ -21,6 +21,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.name = "LOQS model"
 
         self.set_model_variables()
+        self.set_boundary_conditions(self.variables)
         self.set_interface_and_electrolyte_submodels()
         self.set_porosity_submodel()
         self.set_diffusion_submodel()
@@ -81,81 +82,101 @@ class LOQS(pybamm.LeadAcidBaseModel):
             current_collector_model.set_leading_order_vertical_current(bc_variables)
             self.update(current_collector_model)
 
-    def set_interface_and_electrolyte_submodels(self):
+    def set_interface_and_electrolyte_submodels_direct_formulation(self):
+        # Set up
         param = self.set_of_parameters
         c_e = self.variables["Electrolyte concentration"]
-        # Exchange-current density
+        i_boundary_cc = self.variables["Current collector current density"]
         neg = ["negative electrode"]
         pos = ["positive electrode"]
         int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
         pot_model = pybamm.potential.Potential(param)
+
+        # Interfacial parameters
         j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
         j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)
-
-        # Open-circuit potential
         ocp_n = param.U_n(c_e)
         ocp_p = param.U_p(c_e)
 
-        if self.options["capacitance"] is not False:
-            delta_phi_n = self.variables[
-                "Negative electrode surface potential difference"
-            ]
-            delta_phi_p = self.variables[
-                "Positive electrode surface potential difference"
-            ]
-            self.set_boundary_conditions(self.variables)
+        # Interfacial current density
+        j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
+        j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
+        self.reactions = {
+            "main": {
+                "neg": {"s_plus": param.s_n, "aj": j_n},
+                "pos": {"s_plus": param.s_p, "aj": j_p},
+            }
+        }
 
-            # Potentials
-            eta_r_n = delta_phi_n - ocp_n
-            eta_r_p = delta_phi_p - ocp_p
+        # Potentials
+        eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
+        eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
+        pot_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
+        )
+        self.variables.update(pot_vars)
 
-            # Interfacial current density
-            j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
-            j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, pos)
-            self.reactions = {
-                "main": {
-                    "neg": {"s_plus": param.s_n, "aj": j_n},
-                    "pos": {"s_plus": param.s_p, "aj": j_p},
-                }
+        # Exchange-current density
+        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
+
+    def set_interface_and_electrolyte_submodels_capacitance_formulation(self):
+        # Set up
+        param = self.set_of_parameters
+        c_e = self.variables["Electrolyte concentration"]
+        delta_phi_n = self.variables["Negative electrode surface potential difference"]
+        delta_phi_p = self.variables["Positive electrode surface potential difference"]
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
+        pot_model = pybamm.potential.Potential(param)
+
+        # Main reaction
+        j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
+        j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)
+        ocp_n = param.U_n(c_e)
+        ocp_p = param.U_p(c_e)
+        eta_r_n = delta_phi_n - ocp_n
+        eta_r_p = delta_phi_p - ocp_p
+        j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
+        j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, pos)
+
+        self.reactions["main"] = {
+            "neg": {"s_plus": param.s_n, "aj": j_n},
+            "pos": {"s_plus": param.s_p, "aj": j_p},
+        }
+
+        # Oxygen reaction
+        if "oxygen" in self.options["side reactions"]:
+            j0_n_Ox = int_curr_model.get_exchange_current_densities(c_e, neg)
+            j0_p_Ox = int_curr_model.get_exchange_current_densities(c_e, pos)
+            ocp_n_Ox = param.U_n(c_e)
+            ocp_p_Ox = param.U_p(c_e)
+            eta_r_n_Ox = delta_phi_n - ocp_n_Ox
+            eta_r_p_Ox = delta_phi_p - ocp_p_Ox
+            j_n_Ox = int_curr_model.get_butler_volmer(j0_n_Ox, eta_r_n_Ox, neg)
+            j_p_Ox = int_curr_model.get_butler_volmer(j0_p_Ox, eta_r_p_Ox, pos)
+            self.reactions["oxygen"] = {
+                "neg": {"s_plus": param.s_n, "aj": j_n_Ox},
+                "pos": {"s_plus": param.s_p, "aj": j_p_Ox},
             }
 
-            # Electrolyte current
-            eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
-                param, self.options["capacitance"]
-            )
-            eleclyte_current_model.set_leading_order_system(
-                self.variables, self.reactions, neg
-            )
-            eleclyte_current_model.set_leading_order_system(
-                self.variables, self.reactions, pos
-            )
-            self.update(eleclyte_current_model)
+        # Electrolyte current
+        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
+            param, self.options["capacitance"]
+        )
+        eleclyte_current_model.set_leading_order_system(
+            self.variables, self.reactions, neg
+        )
+        eleclyte_current_model.set_leading_order_system(
+            self.variables, self.reactions, pos
+        )
+        self.update(eleclyte_current_model)
 
-            pot_vars = pot_model.get_all_potentials(
-                (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
-            )
-            self.variables.update(pot_vars)
-        else:
-            i_boundary_cc = param.current_with_time
-            self.variables["Current collector current density"] = i_boundary_cc
-
-            # Interfacial current density
-            j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
-            j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
-            self.reactions = {
-                "main": {
-                    "neg": {"s_plus": param.s_n, "aj": j_n},
-                    "pos": {"s_plus": param.s_p, "aj": j_p},
-                }
-            }
-
-            # Potentials
-            eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
-            eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
-            pot_vars = pot_model.get_all_potentials(
-                (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
-            )
-            self.variables.update(pot_vars)
+        pot_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
+        )
+        self.variables.update(pot_vars)
 
         # Exchange-current density
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
