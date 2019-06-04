@@ -162,10 +162,9 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             phi_s_p = variables["Positive electrode potential"]
             i_s_n = variables["Negative electrode current density"]
             i_s_p = variables["Positive electrode current density"]
-            volt_vars = electrode_current_model.get_variables(
-                phi_s_n, phi_s_p, i_s_n, i_s_p
-            )
-            self.variables.update(volt_vars)
+            pot_vars = electrode_current_model.get_potential_variables(phi_s_n, phi_s_p)
+            curr_vars = electrode_current_model.get_current_variables(i_s_n, i_s_p)
+            self.variables.update({**pot_vars, **curr_vars})
         else:
             # Electrolyte current
             eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(

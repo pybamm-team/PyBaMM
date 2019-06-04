@@ -103,7 +103,6 @@ class TestCompareOutputs(unittest.TestCase):
         options = [{"capacitance": cap} for cap in [False, "differential", "algebraic"]]
         model_combos = [
             ([pybamm.lead_acid.LOQS(opt) for opt in options]),
-            ([pybamm.lead_acid.Composite(opt) for opt in options]),
             ([pybamm.lead_acid.NewmanTiedemann(opt) for opt in options]),
         ]
 

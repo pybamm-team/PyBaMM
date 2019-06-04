@@ -36,22 +36,6 @@ class TestLeadAcidComposite(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
 
-class TestLeadAcidCompositeCapacitance(unittest.TestCase):
-    def test_basic_processing_differential(self):
-        options = {"capacitance": "differential"}
-        model = pybamm.lead_acid.Composite(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-
-    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
-    def test_basic_processing_algebraic(self):
-        options = {"capacitance": "algebraic"}
-        pybamm.set_logging_level("DEBUG")
-        model = pybamm.lead_acid.Composite(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-
-
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

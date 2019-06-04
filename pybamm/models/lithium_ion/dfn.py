@@ -102,10 +102,9 @@ class DFN(pybamm.LithiumIonBaseModel):
         phi_s_p = self.variables["Positive electrode potential"]
         i_s_n = self.variables["Negative electrode current density"]
         i_s_p = self.variables["Positive electrode current density"]
-        volt_vars = electrode_current_model.get_variables(
-            phi_s_n, phi_s_p, i_s_n, i_s_p
-        )
-        self.variables.update(volt_vars)
+        pot_vars = electrode_current_model.get_potential_variables(phi_s_n, phi_s_p)
+        curr_vars = electrode_current_model.get_current_variables(i_s_n, i_s_p)
+        self.variables.update({**pot_vars, **curr_vars})
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]

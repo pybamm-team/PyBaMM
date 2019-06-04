@@ -83,76 +83,13 @@ class Composite(pybamm.LeadAcidBaseModel):
         pybamm.logger.debug("Creating electrolyte current submodel")
         param = self.set_of_parameters
 
-        if self.options["capacitance"] is False:
-            if self.options["first-order potential"] == "linear":
-                pot_vars = int_curr_model.get_first_order_potential_differences(
-                    self.variables, self.leading_order_variables
-                )
-            elif self.options["first-order potential"] == "average":
-                pot_vars = int_curr_model.get_average_potential_differences(
-                    self.variables
-                )
-            self.variables.update(pot_vars)
-        else:
-            delta_phi_n_bar = pybamm.Variable(
-                "Average neg electrode surface potential difference"
+        if self.options["first-order potential"] == "linear":
+            pot_vars = int_curr_model.get_first_order_potential_differences(
+                self.variables, self.leading_order_variables
             )
-            delta_phi_p_bar = pybamm.Variable(
-                "Average pos electrode surface potential difference"
-            )
-            self.variables.update(
-                {
-                    "Negative electrode surface potential difference": delta_phi_n_bar,
-                    "Positive electrode surface potential difference": delta_phi_p_bar,
-                }
-            )
-
-            neg = ["negative electrode"]
-            pos = ["positive electrode"]
-            c_e = self.variables["Electrolyte concentration"]
-            c_e_n_bar = pybamm.average(c_e.orphans[0])
-            c_e_p_bar = pybamm.average(c_e.orphans[2])
-            if self.options["first-order potential"] == "linear":
-                delta_phi_n_0 = pybamm.average(
-                    self.leading_order_variables[
-                        "Negative electrode surface potential difference"
-                    ]
-                )
-                delta_phi_p_0 = pybamm.average(
-                    self.leading_order_variables[
-                        "Positive electrode surface potential difference"
-                    ]
-                )
-                c_e_0 = self.leading_order_variables[
-                    "Average electrolyte concentration"
-                ]
-
-                j_n_bar = int_curr_model.get_first_order_butler_volmer(
-                    c_e_n_bar, delta_phi_n_bar, c_e_0, delta_phi_n_0, neg
-                )
-                j_p_bar = int_curr_model.get_first_order_butler_volmer(
-                    c_e_p_bar, delta_phi_p_bar, c_e_0, delta_phi_p_0, pos
-                )
-            elif self.options["first-order potential"] == "average":
-                j_n_bar = int_curr_model.get_butler_volmer_from_variables(
-                    c_e_n_bar, delta_phi_n_bar, neg
-                )
-                j_p_bar = int_curr_model.get_butler_volmer_from_variables(
-                    c_e_p_bar, delta_phi_p_bar, pos
-                )
-
-            # Call submodel using average variables and average reactions
-            reactions_bar = {"main": {"neg": {"aj": j_n_bar}, "pos": {"aj": j_p_bar}}}
-            eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
-                param, self.options["capacitance"]
-            )
-            eleclyte_current_model.set_leading_order_system(
-                self.variables, reactions_bar, neg
-            )
-            eleclyte_current_model.set_leading_order_system(
-                self.variables, reactions_bar, pos
-            )
-            self.update(eleclyte_current_model)
+        elif self.options["first-order potential"] == "average":
+            pot_vars = int_curr_model.get_average_potential_differences(self.variables)
+        self.variables.update(pot_vars)
 
     def set_current_variables(self):
         pybamm.logger.debug("Setting current variables")
@@ -228,10 +165,11 @@ class Composite(pybamm.LeadAcidBaseModel):
         self.variables.update({**potential_vars, **j_vars})
 
         # Update current
-        curr_variables = int_curr_model.get_current_from_current_densities(
+        pybamm.logger.debug("Updating current variables with interfacial current")
+        current_variables = int_curr_model.get_current_from_current_densities(
             self.variables
         )
-        self.variables.update(curr_variables)
+        self.variables.update(current_variables)
 
     def set_convection_variables(self):
         pybamm.logger.debug("Setting convection variables")
@@ -254,4 +192,4 @@ class Composite(pybamm.LeadAcidBaseModel):
         if self.options["capacitance"] == "algebraic":
             return pybamm.ScikitsDaeSolver()
         else:
-            return pybamm.ScipySolver()
+            return pybamm.ScikitsOdeSolver()
