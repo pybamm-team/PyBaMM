@@ -11,14 +11,15 @@ class Composite(pybamm.LeadAcidBaseModel):
     Notes
     -----
     The composite solution is computed as follows:
+
     - Get leading-order concentration and porosity from the leading-order model
-    - Solve for electrolyte concentration, using leading-order porosity and uniform
-      interfacial current density
+    - Solve for electrolyte concentration, using leading-order porosity and uniform \
+    interfacial current density
     - Calculate average first-order surface potential differences
-    - Calculate first-order electrolyte and electrode potentials, using average surface
-      potential differences
-    - Calcualte first-order surface potential-differences and interfacial current
-      densities using first-order potentials, and hence update porosity
+    - Calculate first-order electrolyte and electrode potentials, using average \
+    surface potential differences
+    - Calcualte first-order surface potential-differences and interfacial current \
+    densities using first-order potentials, and hence update porosity
     - Optionally, post-process to find convection velocity
 
     References
