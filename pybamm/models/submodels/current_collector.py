@@ -58,34 +58,27 @@ class OhmTwoDimensional(pybamm.SubModel):
 
         """
         param = self.set_of_parameters
-        i_boundary_cc = bc_variables["Current collector current density"]
-        y = pybamm.standard_spatial_vars.y
-        z = pybamm.standard_spatial_vars.z
 
+        # variables
         v_boundary_cc = pybamm.Variable(
             "Current collector voltage", domain="current collector"
         )
+        i_boundary_cc = bc_variables["Current collector current density"]
 
         # get average ocv and reaction overpotentials
         ocv_av = bc_variables["Average open circuit voltage"]
         eta_r_av = bc_variables["Average reaction overpotential"]
 
-        # Poisson problem in the current collector with SPM current-voltage relation
-        # We add a dummy variable to account for the constraint that the through-cell
-        # current must integrate over the current collector domain to give the applied
-        # current.
+        # Poisson problem in the current collector with SPM current-voltage relation.
         applied_current = param.current_with_time
-        constraint_var = pybamm.Variable("Current conservation constraint", domain=[])
         self.algebraic = {
             v_boundary_cc: pybamm.laplacian(v_boundary_cc)
             + param.alpha * pybamm.source(i_boundary_cc, v_boundary_cc),
             i_boundary_cc: v_boundary_cc - (ocv_av - eta_r_av),
-            constraint_var: pybamm.Integral(i_boundary_cc, [y, z]) - applied_current,
         }
         self.initial_conditions = {
             v_boundary_cc: param.U_p(param.c_p_init) - param.U_n(param.c_n_init),
             i_boundary_cc: applied_current / param.l_y / param.l_z,
-            constraint_var: 0,
         }
 
         # Set boundary conditions at positive tab ("right") and negative tab ("left")
@@ -101,7 +94,4 @@ class OhmTwoDimensional(pybamm.SubModel):
                 "right": (pos_tab_bc, "Neumann"),
             }
         }
-        self.variables = {
-            "Current collector voltage": v_boundary_cc,
-            "Current conservation constraint": constraint_var,
-        }
+        self.variables = {"Current collector voltage": v_boundary_cc}

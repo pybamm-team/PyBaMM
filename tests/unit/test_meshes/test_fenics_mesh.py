@@ -123,13 +123,25 @@ class TestFenicsMesh(unittest.TestCase):
             }
         )
 
-        # loop over different tab placements and widths
+        # get negative tab location and size
+        negative_tab_centre_y = param.process_symbol(
+            pybamm.geometric_parameters.centre_y_tab_n
+        ).evaluate()
+        negative_tab_centre_z = param.process_symbol(
+            pybamm.geometric_parameters.centre_z_tab_n
+        ).evaluate()
+        negative_tab_width = param.process_symbol(
+            pybamm.geometric_parameters.l_tab_n
+        ).evaluate()
+
+        # loop over different positive tab placements and widths
         pos_tab_locations = {
             "top": {"y": 0.3, "z": 0.5, "width": 0.1},
             "bottom": {"y": 0.3, "z": 0, "width": 0.2},
             "left": {"y": 0, "z": 0.2, "width": 0.15},
             "right": {"y": 0.4, "z": 0.2, "width": 0.25},
         }
+
         for loc in pos_tab_locations.keys():
             param["Positive tab centre y-coordinate [m]"] = pos_tab_locations[loc]["y"]
             param["Positive tab centre z-coordinate [m]"] = pos_tab_locations[loc]["z"]
@@ -142,15 +154,6 @@ class TestFenicsMesh(unittest.TestCase):
 
             # check tab location and size
             fenics_mesh = mesh["current collector"][0]
-            negative_tab_centre_y = param.process_symbol(
-                pybamm.geometric_parameters.centre_y_tab_n
-            ).evaluate()
-            negative_tab_centre_z = param.process_symbol(
-                pybamm.geometric_parameters.centre_z_tab_n
-            ).evaluate()
-            negative_tab_width = param.process_symbol(
-                pybamm.geometric_parameters.l_tab_n
-            ).evaluate()
             positive_tab_centre_y = param.process_symbol(
                 pybamm.geometric_parameters.centre_y_tab_p
             ).evaluate()

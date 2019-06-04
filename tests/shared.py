@@ -104,6 +104,39 @@ def get_2p1d_mesh_for_testing(
     )
 
 
+def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
+    param = pybamm.ParameterValues(
+        base_parameters={
+            "Electrode depth [m]": 1,
+            "Electrode height [m]": 1,
+            "Negative tab width [m]": 1,
+            "Negative tab centre y-coordinate [m]": 0.5,
+            "Negative tab centre z-coordinate [m]": 0,
+            "Positive tab width [m]": 1,
+            "Positive tab centre y-coordinate [m]": 0.5,
+            "Positive tab centre z-coordinate [m]": 1,
+            "Negative electrode width [m]": 0.3,
+            "Separator width [m]": 0.3,
+            "Positive electrode width [m]": 0.3,
+        }
+    )
+
+    geometry = pybamm.Geometry2p1DMacro()
+    param.process_geometry(geometry)
+
+    var = pybamm.standard_spatial_vars
+    var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.y: ypts, var.z: zpts}
+
+    submesh_types = {
+        "negative electrode": pybamm.Uniform1DSubMesh,
+        "separator": pybamm.Uniform1DSubMesh,
+        "positive electrode": pybamm.Uniform1DSubMesh,
+        "current collector": pybamm.FenicsMesh2D,
+    }
+
+    return pybamm.Mesh(geometry, submesh_types, var_pts)
+
+
 def get_discretisation_for_testing(xpts=None, rpts=10, mesh=None):
     if mesh is None:
         mesh = get_mesh_for_testing(xpts=xpts, rpts=rpts)

@@ -29,7 +29,7 @@ class FenicsMesh2D:
             the tabs
         """
 
-    def __init__(self, lims, npts, tabs, degree=1):
+    def __init__(self, lims, npts, tabs):
 
         # get spatial variables
         spatial_vars = list(lims.keys())
@@ -71,24 +71,25 @@ class FenicsMesh2D:
         self.positivetab = Tab(self.y_lims, self.z_lims, tabs["positive"])
 
         # initialize mesh function for boundary domains
-        self.boundary_markers = dolfin.MeshFunction(
+        boundary_markers = dolfin.MeshFunction(
             "size_t", self.fem_mesh, self.fem_mesh.topology().dim() - 1
         )
-        self.boundary_markers.set_all(0)
-        self.negativetab.mark(self.boundary_markers, 1)
-        self.positivetab.mark(self.boundary_markers, 2)
+        boundary_markers.set_all(0)
+        self.negativetab.mark(boundary_markers, 1)
+        self.positivetab.mark(boundary_markers, 2)
 
         # create measure of parts of the boundary
         self.ds = dolfin.Measure(
-            "ds", domain=self.fem_mesh, subdomain_data=self.boundary_markers
+            "ds", domain=self.fem_mesh, subdomain_data=boundary_markers
         )
 
         # create measure for domain
         self.dx = dolfin.dx
 
-        # create function space (should probably be done as part of discretisation
-        # so that user can select element and degree as part of spatial method)
-        self.degree = degree
+        # create function space (at the moment a lot of the code relies on using
+        # degree 1 Lagrange elements, so this is hard coded in here to avoid users
+        # changing the function space)
+        self.degree = 1
         self.FunctionSpace = dolfin.FunctionSpace(
             self.fem_mesh, "Lagrange", self.degree
         )
@@ -96,8 +97,14 @@ class FenicsMesh2D:
         self.TrialFunction = dolfin.TrialFunction(self.FunctionSpace)
         self.TestFunction = dolfin.TestFunction(self.FunctionSpace)
         self.Function = dolfin.Function(self.FunctionSpace)
-        # only for degree 1
+
+        # NOTE: below only works for degree 1 Lagrange elements
+        # get number of mesh points (= to numbers of degrees of freedom)
         self.npts = np.size(self.Function.vector()[:])
+        # get mesh coordinates in the same order as the degrees of freedom
+        self.coordinates = self.fem_mesh.coordinates()[
+            dolfin.dof_to_vertex_map(self.FunctionSpace)
+        ]
 
 
 class Tab(dolfin.SubDomain):

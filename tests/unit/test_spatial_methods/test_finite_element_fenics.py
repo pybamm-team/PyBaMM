@@ -2,7 +2,7 @@
 # Test for the operator class
 #
 import pybamm
-from tests import get_2p1d_mesh_for_testing
+from tests import get_2p1d_mesh_for_testing, get_unit_2p1D_mesh_for_testing
 import numpy as np
 import unittest
 from pybamm.spatial_methods.finite_element_fenics import dolfin_spec
@@ -31,7 +31,6 @@ class TestFiniteElementFenics(unittest.TestCase):
             "current collector": pybamm.FiniteElementFenics,
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
-
         # discretise some equations
         var = pybamm.Variable("var", domain="current collector")
         y = pybamm.SpatialVariable("y", ["current collector"])
@@ -52,6 +51,7 @@ class TestFiniteElementFenics(unittest.TestCase):
             pybamm.laplacian(var) - pybamm.source(unit_source, var),
             pybamm.source(var, var),
             pybamm.laplacian(var) - pybamm.source(2 * var, var),
+            pybamm.laplacian(var) - pybamm.source(unit_source ** 2 + 1 / var, var),
             pybamm.Integral(var, [y, z]) - 1,
         ]:
             # Check that equation can be evaluated in each case
@@ -110,6 +110,86 @@ class TestFiniteElementFenics(unittest.TestCase):
         }
         with self.assertRaises(ValueError):
             eqn_disc = disc.process_symbol(eqn)
+
+    def test_manufactured_solution(self):
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=64, zpts=64)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.FiniteElementFenics,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # linear u = z (to test coordinates to degree of freedom mapping)
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+        z_vertices = mesh["current collector"][0].coordinates[:, 1]
+        np.testing.assert_array_almost_equal(
+            var_disc.evaluate(None, z_vertices),
+            z_vertices[:, np.newaxis]
+        )
+
+        # constant u = 6*y (to test coordinates to degree of freedom mapping)
+        y_vertices = mesh["current collector"][0].coordinates[:, 0]
+        np.testing.assert_array_almost_equal(
+            var_disc.evaluate(None, 6 * y_vertices),
+            6 * y_vertices[:, np.newaxis]
+        )
+
+        # mixed u = y*z (to test coordinates to degree of freedom mapping)
+        np.testing.assert_array_almost_equal(
+            var_disc.evaluate(None, y_vertices * z_vertices),
+            y_vertices[:, np.newaxis] * z_vertices[:, np.newaxis]
+        )
+
+        # laplace of u = sin(pi*z)
+        var = pybamm.Variable("var", domain="current collector")
+        eqn_zz = pybamm.laplacian(var)
+        # set boundary conditions ("left" = bottom of unit square, "right" = top
+        # of unit square, elsewhere normal derivative is zero)
+        disc.bcs = {
+            var.id: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Dirichlet"),
+            }
+        }
+        disc.set_variable_slices([var])
+        eqn_zz_disc = disc.process_symbol(eqn_zz)
+        z_vertices = mesh["current collector"][0].coordinates[:, 1][:, np.newaxis]
+        u = np.sin(np.pi * z_vertices)
+        mass = pybamm.Mass(var)
+        mass_disc = disc.process_symbol(mass)
+        soln = -np.pi ** 2 * u
+        np.testing.assert_array_almost_equal(
+            eqn_zz_disc.evaluate(None, u),
+            mass_disc.entries @ soln,
+            decimal=2
+        )
+
+        # laplace of u = cos(pi*y)*sin(pi*z)
+        var = pybamm.Variable("var", domain="current collector")
+        laplace_eqn = pybamm.laplacian(var)
+        # set boundary conditions ("left" = bottom of unit square, "right" = top
+        # of unit square, elsewhere normal derivative is zero)
+        disc.bcs = {
+            var.id: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Dirichlet"),
+            }
+        }
+        disc.set_variable_slices([var])
+        laplace_eqn_disc = disc.process_symbol(laplace_eqn)
+        y_vertices = mesh["current collector"][0].coordinates[:, 0][:, np.newaxis]
+        z_vertices = mesh["current collector"][0].coordinates[:, 1][:, np.newaxis]
+        u = np.cos(np.pi * y_vertices) * np.sin(np.pi * z_vertices)
+        mass = pybamm.Mass(var)
+        mass_disc = disc.process_symbol(mass)
+        soln = -np.pi ** 2 * u
+        np.testing.assert_array_almost_equal(
+            laplace_eqn_disc.evaluate(None, u),
+            mass_disc.entries @ soln,
+            decimal=2
+        )
 
     def test_definite_integral(self):
         mesh = get_2p1d_mesh_for_testing()
