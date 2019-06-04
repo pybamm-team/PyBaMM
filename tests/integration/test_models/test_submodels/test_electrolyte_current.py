@@ -54,7 +54,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
             "Electrolyte concentration": pybamm.Concatenation(c_e_n, c_e_s, c_e_p),
             "Negative electrode open circuit potential": pybamm.Scalar(0),
             "Negative electrode surface potential difference": pybamm.Scalar(0),
-            "Negative reaction overpotential": pybamm.Scalar(0),
+            "Negative electrode reaction overpotential": pybamm.Scalar(0),
             "Negative electrode potential": pybamm.Scalar(0),
             "Current collector current density": param.current_with_time,
         }

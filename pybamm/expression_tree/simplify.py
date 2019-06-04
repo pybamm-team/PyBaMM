@@ -553,7 +553,6 @@ class Simplification(object):
         :class:`pybamm.Symbol`
         Simplified symbol
         """
-        pybamm.logger.debug("Simplify {!s}".format(symbol))
         try:
             return self._simplified_symbols[symbol.id]
         except KeyError:

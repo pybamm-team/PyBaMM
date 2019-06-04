@@ -65,9 +65,9 @@ sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]"
 sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 
 # Microstructure
-a_n_dimensional = pybamm.Parameter("Negative electrode surface area density [m-1]")
-a_p_dimensional = pybamm.Parameter("Positive electrode surface area density [m-1]")
-b = pybamm.Parameter("Bruggeman coefficient")
+a_n_dimensional = pybamm.geometric_parameters.a_n_dimensional
+a_p_dimensional = pybamm.geometric_parameters.a_p_dimensional
+b = pybamm.geometric_parameters.b
 
 # Electrochemical reactions
 j0_n_S_ref_dimensional = pybamm.Parameter(
@@ -381,8 +381,7 @@ def kappa_e(c_e):
 def chi(c_e, c_ox=0, c_hy=0):
     return (
         chi_dimensional(c_e_typ * c_e)
-        * 2
-        * (1 - t_plus)
+        * (2 * (1 - t_plus))
         / (V_w * c_T(c_e_typ * c_e, c_e_typ * c_ox, c_e_typ * c_hy))
     )
 
@@ -392,13 +391,13 @@ def c_w(c_e):
     return c_w_dimensional(c_e_typ * c_e) / c_w_dimensional(c_e_typ)
 
 
-def U_n(c_en):
+def U_n(c_e_n):
     "Dimensionless open-circuit voltage in the negative electrode"
-    c_en_dimensional = c_en * c_e_typ
-    return (U_n_dimensional(c_en_dimensional) - U_n_ref) / potential_scale
+    c_e_n_dimensional = c_e_n * c_e_typ
+    return (U_n_dimensional(c_e_n_dimensional) - U_n_ref) / potential_scale
 
 
-def U_p(c_ep):
+def U_p(c_e_p):
     "Dimensionless open-circuit voltage in the positive electrode"
-    c_ep_dimensional = c_ep * c_e_typ
-    return (U_p_dimensional(c_ep_dimensional) - U_p_ref) / potential_scale
+    c_e_p_dimensional = c_e_p * c_e_typ
+    return (U_p_dimensional(c_e_p_dimensional) - U_p_ref) / potential_scale

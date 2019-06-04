@@ -46,9 +46,9 @@ Pore size [m],1E-07,,
 Maximum porosity of negative electrode,0.53,,
 Maximum porosity of separator,0.92,,
 Maximum porosity of positive electrode,0.57,,
-Molar volume of lead [m3.mol-1],1.82539682539683E-05,,Calculated as () divided by ()
-Molar volume of lead-dioxide [m3.mol-1],2.54797441364606E-05,,
-Molar volume of lead sulfate [m3.mol-1],4.81717011128776E-05,,
+Molar volume of lead [m3.mol-1],1.82539682539683E-05,,Calculated as 207e-3 / 11.34e3
+Molar volume of lead-dioxide [m3.mol-1],2.54797441364606E-05,,Calculated as 239e-3 / 9.38e3
+Molar volume of lead sulfate [m3.mol-1],4.81717011128776E-05,,Calculated as 303e-3 / 6.29e3
 Negative electrode volumetric capacity [C.m-3],3.473e9,bernardi1995mathematical,
 Positive electrode volumetric capacity [C.m-3],2.745e9,bernardi1995mathematical,
 ,,,

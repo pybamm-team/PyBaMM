@@ -98,10 +98,14 @@ class VoltageTests(BaseOutputTest):
         super().__init__(model, param, disc, solver, operating_condition)
         variables = self.model.variables
 
-        self.eta_n = variables["Negative reaction overpotential [V]"]
-        self.eta_p = variables["Positive reaction overpotential [V]"]
-        self.eta_r_n_av = variables["Average negative reaction overpotential [V]"]
-        self.eta_r_p_av = variables["Average positive reaction overpotential [V]"]
+        self.eta_n = variables["Negative electrode reaction overpotential [V]"]
+        self.eta_p = variables["Positive electrode reaction overpotential [V]"]
+        self.eta_r_n_av = variables[
+            "Average negative electrode reaction overpotential [V]"
+        ]
+        self.eta_r_p_av = variables[
+            "Average positive electrode reaction overpotential [V]"
+        ]
         self.eta_r_av = variables["Average reaction overpotential [V]"]
 
         self.eta_e_av = variables["Average electrolyte overpotential [V]"]
@@ -410,10 +414,16 @@ class PotentialTests(BaseOutputTest):
         self.phi_s_p = variables["Positive electrode potential [V]"]
 
         self.phi_e = variables["Electrolyte potential [V]"]
-
         self.phi_e_n = variables["Negative electrolyte potential [V]"]
         self.phi_e_s = variables["Separator electrolyte potential [V]"]
         self.phi_e_p = variables["Positive electrolyte potential [V]"]
+
+        self.delta_phi_n = variables[
+            "Negative electrode surface potential difference [V]"
+        ]
+        self.delta_phi_p = variables[
+            "Positive electrode surface potential difference [V]"
+        ]
 
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
@@ -429,6 +439,18 @@ class PotentialTests(BaseOutputTest):
         # TODO: add these when have averages
 
     def test_potential_differences(self):
+        """Test that potential differences are the difference between electrode
+        potential and electrolyte potential"""
+        t, x_n, x_p = self.t, self.x_n, self.x_p
+
+        np.testing.assert_array_almost_equal(
+            self.phi_s_n(t, x_n) - self.phi_e_n(t, x_n), self.delta_phi_n(t, x_n)
+        )
+        np.testing.assert_array_almost_equal(
+            self.phi_s_p(t, x_p) - self.phi_e_p(t, x_p), self.delta_phi_p(t, x_p)
+        )
+
+    def test_average_potential_differences(self):
         """Test electrolyte potential is less than the negative electrode potential.
         Test that the positive electrode potential is greater than the negative
         electrode potential."""
@@ -472,10 +494,10 @@ class CurrentTests(BaseOutputTest):
         """Test that average of the interfacial current density is equal to the true
         value."""
         np.testing.assert_array_almost_equal(
-            self.j_n_av(self.t), self.i_cell / self.l_n, decimal=5
+            self.j_n_av(self.t), self.i_cell / self.l_n, decimal=4
         )
         np.testing.assert_array_almost_equal(
-            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=5
+            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=4
         )
 
     def test_conservation(self):

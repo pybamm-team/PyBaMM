@@ -79,7 +79,7 @@ class TestOhm(unittest.TestCase):
             "Current collector current density": param.current_with_time,
             "Electrolyte potential": phi_e,
             "Positive electrode open circuit potential": ocp_p,
-            "Positive reaction overpotential": eta_r_p,
+            "Positive electrode reaction overpotential": eta_r_p,
         }
 
         # Model
