@@ -104,10 +104,11 @@ class Function(pybamm.Symbol):
             # if at least one child contains variable dependence, then
             # calculate the required partial jacobians and add them
             jacobian = None
-            for child in self.children:
+            children = self.orphans
+            for child in children:
                 if not child.evaluates_to_number():
                     jac_fun = Function(
-                        autograd.elementwise_grad(self.function), *self.children
+                        autograd.elementwise_grad(self.function), *children
                     ) * child.jac(variable)
 
                     jac_fun.domain = self.domain
