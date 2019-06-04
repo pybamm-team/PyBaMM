@@ -49,9 +49,9 @@ class Function(pybamm.Symbol):
             if not child.domain == []:
                 domains[i] = child.domain
 
+        # check that there is one common domain amongst children
         domains = list(filter(None, domains))
-
-        distinct_domains = set(domains)
+        distinct_domains = set(tuple(dom) for dom in domains)
 
         if len(distinct_domains) > 1:
             raise pybamm.DomainError(
@@ -69,13 +69,14 @@ class Function(pybamm.Symbol):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            partial_derivatives = [None] * len(self.children)
+            children = self.orphans
+            partial_derivatives = [None] * len(children)
             for i, child in enumerate(self.children):
                 # if variable appears in the function,use autograd to differentiate
                 # function, and apply chain rule
                 if variable.id in [symbol.id for symbol in child.pre_order()]:
                     partial_derivatives[i] = child.diff(variable) * Function(
-                        autograd.grad(self.func), *self.children
+                        autograd.grad(self.function), *children
                     )
 
             # remove None entries
@@ -140,6 +141,13 @@ class Function(pybamm.Symbol):
             return self.function()
         else:
             return self.function(*evaluated_children)
+
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        new_children = [None] * len(self.children)
+        for i, child in enumerate(self.children):
+            new_children[i] = child.new_copy()
+        return self._function_new_copy(new_children)
 
     def _function_new_copy(self, children):
         """Returns a new copy of the function.

@@ -5,6 +5,7 @@ import pybamm
 
 import unittest
 import numpy as np
+import autograd.numpy as auto_np
 
 
 def test_function(arg):
@@ -52,6 +53,19 @@ class TestFunction(unittest.TestCase):
         self.assertEqual(func.name, "function (test_multi_var_function)")
         self.assertEqual(func.children[0].name, a.name)
         self.assertEqual(func.children[1].name, b.name)
+
+    def test_with_autograd(self):
+        a = pybamm.StateVector(slice(0, 1))
+        y = np.array([5])
+        func = pybamm.Function(test_function, a)
+        self.assertEqual((func).diff(a).evaluate(y=y), 2)
+        self.assertEqual((func).diff(func).evaluate(), 1)
+        func = pybamm.Function(auto_np.sin, a)
+        self.assertEqual(func.evaluate(y=y), np.sin(a.evaluate(y=y)))
+        self.assertEqual(func.diff(a).evaluate(y=y), np.cos(a.evaluate(y=y)))
+        func = pybamm.Function(auto_np.exp, a)
+        self.assertEqual(func.evaluate(y=y), np.exp(a.evaluate(y=y)))
+        self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
 
 
 if __name__ == "__main__":

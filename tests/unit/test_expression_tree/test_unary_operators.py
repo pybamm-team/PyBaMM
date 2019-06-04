@@ -107,17 +107,6 @@ class TestUnaryOperators(unittest.TestCase):
         with self.assertRaises(pybamm.UndefinedOperationError):
             absa.diff(a)
 
-        # function: use autograd
-        func = pybamm.Function(test_function, a)
-        self.assertEqual((func).diff(a).evaluate(y=y), 2)
-        self.assertEqual((func).diff(func).evaluate(), 1)
-        func = pybamm.Function(auto_np.sin, a)
-        self.assertEqual(func.evaluate(y=y), np.sin(a.evaluate(y=y)))
-        self.assertEqual(func.diff(a).evaluate(y=y), np.cos(a.evaluate(y=y)))
-        func = pybamm.Function(auto_np.exp, a)
-        self.assertEqual(func.evaluate(y=y), np.exp(a.evaluate(y=y)))
-        self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
-
         # spatial operator (not implemented)
         spatial_a = pybamm.SpatialOperator("name", a)
         with self.assertRaises(NotImplementedError):
