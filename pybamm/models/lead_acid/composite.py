@@ -81,8 +81,6 @@ class Composite(pybamm.LeadAcidBaseModel):
 
     def set_electrolyte_current_model(self, int_curr_model):
         pybamm.logger.debug("Creating electrolyte current submodel")
-        param = self.set_of_parameters
-
         if self.options["first-order potential"] == "linear":
             pot_vars = int_curr_model.get_first_order_potential_differences(
                 self.variables, self.leading_order_variables

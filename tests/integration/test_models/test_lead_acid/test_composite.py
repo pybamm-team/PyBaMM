@@ -3,7 +3,6 @@
 #
 import pybamm
 import tests
-from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 
 import unittest
 import numpy as np
