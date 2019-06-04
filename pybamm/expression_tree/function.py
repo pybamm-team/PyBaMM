@@ -4,6 +4,7 @@
 import autograd
 import numpy as np
 import pybamm
+from inspect import signature
 from scipy.sparse import csr_matrix
 
 
@@ -30,14 +31,14 @@ class Function(pybamm.Symbol):
         super().__init__(name, children=children_list, domain=domain)
 
         self.function = function
-        self.number_of_inputs = len(children_list)
+        # self.number_of_inputs = len(children_list)
 
         # hack to work out whether function takes any params
         # (signature doesn't work for numpy)
-        # if isinstance(func, np.ufunc):
-        #     self.takes_no_params = False
-        # else:
-        #     self.takes_no_params = len(signature(func).parameters) == 0
+        if isinstance(function, np.ufunc):
+            self.takes_no_params = False
+        else:
+            self.takes_no_params = len(signature(function).parameters) == 0
 
     def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the
@@ -123,24 +124,26 @@ class Function(pybamm.Symbol):
             if self.id not in known_evals:
                 evaluated_children = [None] * len(self.children)
                 for i, child in enumerate(self.children):
-                    evaluated_children[i], known_evals = self.child.evaluate(
+                    evaluated_children[i], known_evals = child.evaluate(
                         t, y, known_evals
                     )
                 known_evals[self.id] = self._function_evaluate(evaluated_children)
             return known_evals[self.id], known_evals
         else:
-            child = self.child.evaluate(t, y)
-            return self._function_evaluate(child)
+            evaluated_children = [None] * len(self.children)
+            for i, child in enumerate(self.children):
+                evaluated_children[i] = child.evaluate(t, y)
+            return self._function_evaluate(evaluated_children)
 
     def _function_evaluate(self, evaluated_children):
-        if self.number_of_inputs == 0:
+        if self.takes_no_params is True:
             return self.function()
         else:
             return self.function(*evaluated_children)
 
     def _function_new_copy(self, children):
         """Returns a new copy of the function.
-        
+
         Inputs
         ------
         children : : list
@@ -167,7 +170,7 @@ class Function(pybamm.Symbol):
          :: pybamm.Scalar() if no children
          :: pybamm.Function if there are children
         """
-        if self.number_of_inputs == 0:
+        if self.takes_no_params is True:
             # If self.func() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.func())
         else:
