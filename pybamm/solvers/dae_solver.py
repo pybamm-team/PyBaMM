@@ -234,7 +234,7 @@ class DaeSolver(pybamm.BaseSolver):
         # Return full set of consistent initial conditions (y0_diff unchanged)
         y0_consistent = np.concatenate([y0_diff, sol.x])
 
-        if sol.success and np.all(sol.fun < self.root_tol):
+        if sol.success and np.all(sol.fun < self.root_tol * len(sol.x)):
             pybamm.logger.info("Finish calculating consistent initial conditions")
             return y0_consistent
         elif not sol.success:
