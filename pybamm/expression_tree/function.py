@@ -107,7 +107,7 @@ class Function(pybamm.Symbol):
             for child in self.children:
                 if not child.evaluates_to_number():
                     jac_fun = Function(
-                        autograd.elementwise_grad(self.func), *self.children
+                        autograd.elementwise_grad(self.function), *self.children
                     ) * child.jac(variable)
 
                     jac_fun.domain = self.domain
