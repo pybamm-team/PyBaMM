@@ -126,7 +126,6 @@ class AbsoluteValue(UnaryOperator):
         return np.abs(child)
 
 
-
 class Index(UnaryOperator):
     """A node in the expression tree, which stores the index that should be
     extracted from its child after the child has been evaluated.

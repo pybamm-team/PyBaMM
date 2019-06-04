@@ -4,7 +4,6 @@
 import autograd
 import numpy as np
 import pybamm
-from inspect import signature
 from scipy.sparse import csr_matrix
 
 
@@ -40,14 +39,16 @@ class Function(pybamm.Symbol):
         # else:
         #     self.takes_no_params = len(signature(func).parameters) == 0
 
-    def get_children_domains(self, children):
+    def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the
         children have different domains then raise an error"""
 
-        # TODO: maybe relax this for domain=[]
-        domains = [None] * len(children)
-        for i, child in enumerate(children):
-            domains[i] = child.domain
+        domains = [None] * len(children_list)
+        for i, child in enumerate(children_list):
+            if not child.domain == []:
+                domains[i] = child.domain
+
+        domains = list(filter(None, domains))
 
         distinct_domains = set(domains)
 
@@ -55,26 +56,29 @@ class Function(pybamm.Symbol):
             raise pybamm.DomainError(
                 "Functions can only be applied to variables on the same domain"
             )
+        elif len(distinct_domains) == 0:
+            domain = []
+        else:
+            domain = domains[0]
 
-        return domains[0]
+        return domain
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
-            children = self.orphans
-            partial_derivatives = [None] * len(children)
-            for i, child in enumerate(children):
+            partial_derivatives = [None] * len(self.children)
+            for i, child in enumerate(self.children):
                 # if variable appears in the function,use autograd to differentiate
                 # function, and apply chain rule
                 if variable.id in [symbol.id for symbol in child.pre_order()]:
                     partial_derivatives[i] = child.diff(variable) * Function(
-                        autograd.grad(self.func), *children
+                        autograd.grad(self.func), *self.children
                     )
 
             # remove None entries
-            partial_derivatives = list(filter(None), partial_derivatives)
+            partial_derivatives = list(filter(None, partial_derivatives))
 
             derivative = sum(partial_derivatives)
             if derivative == 0:
@@ -85,9 +89,7 @@ class Function(pybamm.Symbol):
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
 
-        children = self.orphans
-
-        if all(child.evaluates_to_number() for child in children):
+        if all(child.evaluates_to_number() for child in self.children):
             # if children all evaluate to numbers the return zeros
             # of right size
             variable_y_indices = np.arange(
@@ -100,10 +102,10 @@ class Function(pybamm.Symbol):
             # if at least one child contains variable dependence, then
             # calculate the required partial jacobians and add them
             jacobian = None
-            for child in children:
+            for child in self.children:
                 if not child.evaluates_to_number():
                     jac_fun = Function(
-                        autograd.elementwise_grad(self.func), *children
+                        autograd.elementwise_grad(self.func), *self.children
                     ) * child.jac(variable)
 
                     jac_fun.domain = self.domain
@@ -115,14 +117,29 @@ class Function(pybamm.Symbol):
 
         return jacobian
 
-    def _function_evaluate(self, child):
-        if self.number_of_inputs == 0:
-            return self.func()
+    def evaluate(self, t=None, y=None, known_evals=None):
+        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        if known_evals is not None:
+            if self.id not in known_evals:
+                evaluated_children = [None] * len(self.children)
+                for i, child in enumerate(self.children):
+                    evaluated_children[i], known_evals = self.child.evaluate(
+                        t, y, known_evals
+                    )
+                known_evals[self.id] = self._function_evaluate(evaluated_children)
+            return known_evals[self.id], known_evals
         else:
-            return self.func(child)
+            child = self.child.evaluate(t, y)
+            return self._function_evaluate(child)
+
+    def _function_evaluate(self, evaluated_children):
+        if self.number_of_inputs == 0:
+            return self.function()
+        else:
+            return self.function(*evaluated_children)
 
     def _function_new_copy(self, children):
-        """Returns a new copy of the function. 
+        """Returns a new copy of the function.
         
         Inputs
         ------
@@ -134,24 +151,21 @@ class Function(pybamm.Symbol):
             : :pybamm.Function
             A new copy of the function
         """
-        return pybamm.Function(self.func, *children)
+        return pybamm.Function(self.function, *children)
 
     def _function_simplify(self, simplified_children):
         """
-        Simplifies the function. 
+        Simplifies the function.
 
         Inputs
         ------
-        simplified_children: : list 
+        simplified_children: : list
             A list of simplified children of the function
         
         Returns
         -------
          :: pybamm.Scalar() if no children
-         :: 
-
-
-
+         :: pybamm.Function if there are children
         """
         if self.number_of_inputs == 0:
             # If self.func() takes no parameters then we can always simplify it
