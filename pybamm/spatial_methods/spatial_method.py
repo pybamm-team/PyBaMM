@@ -80,7 +80,6 @@ class SpatialMethod:
             )
         else:
             out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
-        self.test_shape(out)
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -204,6 +203,7 @@ class SpatialMethod:
             # as above, but now we want a single point with value 1 at (0, n-1)
             right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
             bv_vector = pybamm.Matrix(right_vector)
+
         out = bv_vector @ discretised_child
         # boundary value removes domain
         out.domain = []
@@ -285,30 +285,3 @@ class SpatialMethod:
             Concatenation of the discretised children
         """
         return pybamm.DomainConcatenation(disc_children, self.mesh)
-
-    @staticmethod
-    def test_shape(symbol):
-        """
-        Check that the discretised symbol has a pybamm `shape`, i.e. can be evaluated
-
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            The symbol to be tested
-
-        Raises
-        ------
-        pybamm.ShapeError
-            If the shape of the object cannot be found
-        """
-        try:
-            symbol.shape
-        except ValueError as e:
-            raise pybamm.ShapeError(
-                """
-                Cannot evaluate the discretised symbol to find its shape
-                (original error: {})
-                """.format(
-                    e
-                )
-            )
