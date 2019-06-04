@@ -57,6 +57,7 @@ class OdeSolver(pybamm.BaseSolver):
         else:
             jacobian = None
 
+        pybamm.logger.info("Calling ODE solver")
         self.t, self.y = self.integrate(
             dydt,
             y0,
@@ -106,7 +107,9 @@ class OdeSolver(pybamm.BaseSolver):
             # set up simplification object, for re-use of dict
             simp = pybamm.Simplification()
             # create simplified rhs and event expressions
+            pybamm.logger.info("Simplifying RHS")
             concatenated_rhs = simp.simplify(concatenated_rhs)
+            pybamm.logger.info("Simplifying events")
             events = [simp.simplify(event) for event in events]
 
         y0 = model.concatenated_initial_conditions[:, 0]
@@ -114,8 +117,10 @@ class OdeSolver(pybamm.BaseSolver):
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))
+            pybamm.logger.info("Calculating jacobian")
             jac_rhs = concatenated_rhs.jac(y)
             if model.use_simplify:
+                pybamm.logger.info("Simplifying jacobian")
                 jac_rhs = simp.simplify(jac_rhs)
 
             if model.use_to_python:
