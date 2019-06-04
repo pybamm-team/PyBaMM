@@ -57,7 +57,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         "particle geometry"
         # a_n dimensional
         np.testing.assert_almost_equal(
-            values.process_symbol(param.a_n_dim).evaluate(None, None),
+            values.process_symbol(param.a_n_dimensional).evaluate(None, None),
             0.18 * 10 ** (6),
             2,
         )
@@ -73,7 +73,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # a_p dimensional
         np.testing.assert_almost_equal(
-            values.process_symbol(param.a_p_dim).evaluate(None, None),
+            values.process_symbol(param.a_p_dimensional).evaluate(None, None),
             0.15 * 10 ** (6),
             2,
         )

@@ -65,9 +65,9 @@ sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]"
 sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 
 # Microstructure
-a_n_dimensional = pybamm.Parameter("Negative electrode surface area density [m-1]")
-a_p_dimensional = pybamm.Parameter("Positive electrode surface area density [m-1]")
-b = pybamm.Parameter("Bruggeman coefficient")
+a_n_dimensional = pybamm.geometric_parameters.a_n_dimensional
+a_p_dimensional = pybamm.geometric_parameters.a_p_dimensional
+b = pybamm.geometric_parameters.b
 
 # Electrochemical reactions
 j0_n_S_ref_dimensional = pybamm.Parameter(

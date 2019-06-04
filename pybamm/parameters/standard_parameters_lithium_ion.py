@@ -51,12 +51,8 @@ c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
 # Electrode properties
 c_n_max = pybamm.Parameter("Maximum concentration in negative electrode [mol.m-3]")
 c_p_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3]")
-sigma_n_dimensionalensional = pybamm.Parameter(
-    "Negative electrode conductivity [S.m-1]"
-)
-sigma_p_dimensionalensional = pybamm.Parameter(
-    "Positive electrode conductivity [S.m-1]"
-)
+sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 
 # Microscale geometry
 a_n_dimensional = pybamm.geometric_parameters.a_n_dimensional
@@ -190,8 +186,8 @@ a_n = a_n_dimensional * R_n
 a_p = a_p_dimensional * R_p
 
 # Electrode Properties
-sigma_n = sigma_n_dimensionalensional * potential_scale / i_typ / L_x
-sigma_p = sigma_p_dimensionalensional * potential_scale / i_typ / L_x
+sigma_n = sigma_n_dimensional * potential_scale / i_typ / L_x
+sigma_p = sigma_p_dimensional * potential_scale / i_typ / L_x
 
 # Electrolyte Properties
 t_plus = pybamm.Parameter("Cation transference number")
