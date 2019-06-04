@@ -55,6 +55,7 @@ class Composite(pybamm.LeadAcidBaseModel):
 
     def set_boundary_conditions(self, bc_variables):
         """Set boundary conditions, dependent on self.options"""
+        pybamm.logger.debug("Creating boundary-conditions submodel")
         param = self.set_of_parameters
         dimensionality = self.options["bc_options"]["dimensionality"]
         if dimensionality == 0:
@@ -62,6 +63,7 @@ class Composite(pybamm.LeadAcidBaseModel):
             self.variables["Current collector current density"] = current_bc
 
     def set_diffusion_submodel(self):
+        pybamm.logger.debug("Creating diffusion submodel")
         param = self.set_of_parameters
         j_n_0 = self.variables["Negative electrode interfacial current density"]
         j_p_0 = self.variables["Positive electrode interfacial current density"]
@@ -78,6 +80,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         self.update(electrolyte_conc_model)
 
     def set_electrolyte_current_model(self, int_curr_model):
+        pybamm.logger.debug("Creating electrolyte current submodel")
         param = self.set_of_parameters
 
         if self.options["capacitance"] is False:
@@ -152,6 +155,7 @@ class Composite(pybamm.LeadAcidBaseModel):
             self.update(eleclyte_current_model)
 
     def set_current_variables(self):
+        pybamm.logger.debug("Setting current variables")
         param = self.set_of_parameters
 
         # Load electrolyte and electrode potentials
@@ -174,11 +178,8 @@ class Composite(pybamm.LeadAcidBaseModel):
         electrode_vars = electrode_model.get_explicit_combined(self.variables)
         self.variables.update(electrode_vars)
 
-        # Cut-off voltage
-        voltage = self.variables["Terminal voltage"]
-        self.events.append(voltage - param.voltage_low_cut)
-
     def set_interface_variables(self, int_curr_model):
+        pybamm.logger.debug("Setting interface variables")
         param = self.set_of_parameters
         c_e = self.variables["Electrolyte concentration"]
         c_e_n, _, c_e_p = c_e.orphans
@@ -226,13 +227,14 @@ class Composite(pybamm.LeadAcidBaseModel):
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update({**potential_vars, **j_vars})
 
-        # # Update current
-        # i_e_n = pybamm.IndefiniteIntegral(j_n, x_n)
-        # # Shift i_e_p to be equal to 0 at x_p = 1
-        # i_e_p = pybamm.IndefiniteIntegral(j_p, x_p) - pybamm.Integral(j_p, x_p)
-        # self.variables.update((i_e_n, i_e_p))
+        # Update current
+        curr_variables = int_curr_model.get_current_from_current_densities(
+            self.variables
+        )
+        self.variables.update(curr_variables)
 
     def set_convection_variables(self):
+        pybamm.logger.debug("Setting convection variables")
         velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
         if self.options["convection"] is not False:
             velocity_vars = velocity_model.get_explicit_composite(self.variables)
@@ -252,4 +254,4 @@ class Composite(pybamm.LeadAcidBaseModel):
         if self.options["capacitance"] == "algebraic":
             return pybamm.ScikitsDaeSolver()
         else:
-            return pybamm.ScikitsOdeSolver()
+            return pybamm.ScipySolver()

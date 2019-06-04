@@ -329,6 +329,30 @@ class InterfacialCurrent(pybamm.SubModel):
             (ocp_n_bar, ocp_p_bar), eta_r=(eta_r_n_bar, eta_r_p_bar)
         )
 
+    def get_current_from_current_densities(self, variables):
+        param = self.set_of_parameters
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
+        j_n = variables["Negative electrode interfacial current density"]
+        j_p = variables["Positive electrode interfacial current density"]
+        i_boundary_cc = variables["Current collector current density"]
+
+        # Electrolyte current
+        i_e_n = pybamm.IndefiniteIntegral(j_n, x_n)
+        # Shift i_e_p to be equal to 0 at x_p = 1
+        i_e_p = pybamm.IndefiniteIntegral(j_p, x_p) - pybamm.Integral(j_p, x_p)
+        eleclyte_model = pybamm.electrolyte_current.ElectrolyteCurrentBaseModel(param)
+        eleclyte_variables = eleclyte_model.get_current_variables(
+            (i_e_n, i_e_p), i_boundary_cc
+        )
+
+        # Electrode current
+        i_s_n = i_boundary_cc - i_e_n
+        i_s_p = i_boundary_cc - i_e_p
+        electrode_model = pybamm.electrode.Ohm(param)
+        electrode_variables = electrode_model.get_current_variables(i_s_n, i_s_p)
+        return {**eleclyte_variables, **electrode_variables}
+
 
 class LeadAcidReaction(InterfacialCurrent, pybamm.LeadAcidBaseModel):
     """

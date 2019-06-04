@@ -16,7 +16,7 @@ class TestLeadAcidComposite(unittest.TestCase):
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
-        options = {"convection": True, "first-order potential": "average"}
+        options = {"convection": True}
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -46,6 +46,7 @@ class TestLeadAcidCompositeCapacitance(unittest.TestCase):
     @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
         options = {"capacitance": "algebraic"}
+        pybamm.set_logging_level("DEBUG")
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

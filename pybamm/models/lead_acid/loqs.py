@@ -27,7 +27,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.set_current_variables()
         self.set_convection_variables()
 
-        # ODEs only (don't use jacobian, use base spatial method)
+        # ODEs only (don't use jacobian)
         self.use_jacobian = False
 
     def set_model_variables(self):
