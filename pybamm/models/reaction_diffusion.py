@@ -30,7 +30,7 @@ class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
         # Interfacial current density
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        int_curr_model = pybamm.interface.LeadAcidReaction(param)
+        int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
         j_n = int_curr_model.get_homogeneous_interfacial_current(current, neg)
         j_p = int_curr_model.get_homogeneous_interfacial_current(current, pos)
 

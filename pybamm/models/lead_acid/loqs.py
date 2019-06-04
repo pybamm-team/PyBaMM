@@ -87,7 +87,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # Exchange-current density
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        int_curr_model = pybamm.interface.LeadAcidReaction(param)
+        int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
         pot_model = pybamm.potential.Potential(param)
         j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
         j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)

@@ -155,6 +155,7 @@ from .models.submodels import (
     velocity,
     vertical,
 )
+from .models.submodels import interface_lead_acid
 
 #
 # Parameters class and methods

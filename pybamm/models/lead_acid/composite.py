@@ -46,7 +46,7 @@ class Composite(pybamm.LeadAcidBaseModel):
 
         # Submodels
         self.set_boundary_conditions(None)
-        int_curr_model = pybamm.interface.LeadAcidReaction(self.set_of_parameters)
+        int_curr_model = pybamm.interface_lead_acid.MainReaction(self.set_of_parameters)
         self.set_diffusion_submodel()
         self.set_electrolyte_current_model(int_curr_model)
         self.set_current_variables()

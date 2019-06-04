@@ -12,7 +12,7 @@ class TestHomogeneousReaction(unittest.TestCase):
     def test_set_parameters(self):
         param = pybamm.standard_parameters_lithium_ion
         current = param.current_with_time
-        model = pybamm.interface.InterfacialCurrent(param)
+        model = pybamm.interface.InterfacialReaction(param)
         j_n = model.get_homogeneous_interfacial_current(current, ["negative electrode"])
         j_p = model.get_homogeneous_interfacial_current(current, ["positive electrode"])
         parameter_values = model.default_parameter_values
@@ -34,7 +34,7 @@ class TestHomogeneousReaction(unittest.TestCase):
 
         param = pybamm.standard_parameters_lithium_ion
         current = param.current_with_time
-        model = pybamm.interface.InterfacialCurrent(param)
+        model = pybamm.interface.InterfacialReaction(param)
         j_n = model.get_homogeneous_interfacial_current(current, ["negative electrode"])
         j_p = model.get_homogeneous_interfacial_current(current, ["positive electrode"])
         parameter_values = model.default_parameter_values
@@ -54,7 +54,7 @@ class TestHomogeneousReaction(unittest.TestCase):
 
         param = pybamm.standard_parameters_lithium_ion
         current = param.current_with_time
-        model = pybamm.interface.InterfacialCurrent(param)
+        model = pybamm.interface.InterfacialReaction(param)
         j_n = model.get_homogeneous_interfacial_current(current, ["negative electrode"])
         j_p = model.get_homogeneous_interfacial_current(current, ["positive electrode"])
         parameter_values = model.default_parameter_values
@@ -83,7 +83,7 @@ class TestHomogeneousReaction(unittest.TestCase):
         )
 
     def test_failure(self):
-        model = pybamm.interface.InterfacialCurrent(None)
+        model = pybamm.interface.InterfacialReaction(None)
         with self.assertRaises(pybamm.DomainError):
             model.get_homogeneous_interfacial_current(None, "not a domain")
 
@@ -103,7 +103,7 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_creation(self):
         param = pybamm.standard_parameters_lithium_ion
-        model = pybamm.interface.InterfacialCurrent(param)
+        model = pybamm.interface.InterfacialReaction(param)
         j_n = model.get_butler_volmer(self.j0_n, self.eta_r_n)
         j_p = model.get_butler_volmer(self.j0_p, self.eta_r_p)
 
@@ -117,7 +117,7 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_set_parameters(self):
         param = pybamm.standard_parameters_lithium_ion
-        model = pybamm.interface.InterfacialCurrent(param)
+        model = pybamm.interface.InterfacialReaction(param)
         j_n = model.get_butler_volmer(self.j0_n, self.eta_r_n)
         j_p = model.get_butler_volmer(self.j0_p, self.eta_r_p)
 
@@ -130,7 +130,7 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_discretisation(self):
         param = pybamm.standard_parameters_lithium_ion
-        model = pybamm.interface.InterfacialCurrent(param)
+        model = pybamm.interface.InterfacialReaction(param)
         j_n = model.get_butler_volmer(self.j0_n, self.eta_r_n)
         j_p = model.get_butler_volmer(self.j0_p, self.eta_r_p)
         j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
@@ -166,7 +166,7 @@ class TestButlerVolmer(unittest.TestCase):
 
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model = pybamm.interface.LeadAcidReaction(param)
+        model = pybamm.interface_lead_acid.MainReaction(param)
         parameter_values = model.default_parameter_values
 
         def j_n(c_e):
@@ -198,7 +198,7 @@ class TestButlerVolmer(unittest.TestCase):
 
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model = pybamm.interface.LeadAcidReaction(param)
+        model = pybamm.interface_lead_acid.MainReaction(param)
         parameter_values = model.default_parameter_values
 
         def j_n(delta_phi):
@@ -225,7 +225,7 @@ class TestButlerVolmer(unittest.TestCase):
         self.assertAlmostEqual(j_p_diff.evaluate(), j_p_FD.evaluate())
 
     def test_failure(self):
-        model = pybamm.interface.InterfacialCurrent(None)
+        model = pybamm.interface.InterfacialReaction(None)
         with self.assertRaises(pybamm.DomainError):
             model.get_butler_volmer(None, None, "not a domain")
         with self.assertRaises(pybamm.DomainError):
@@ -253,15 +253,6 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         del self.c_s_n_surf
         del self.c_s_p_surf
 
-    def test_creation_lead_acid(self):
-        # With intercalation
-        param = pybamm.standard_parameters_lead_acid
-        model = pybamm.interface.LeadAcidReaction(param)
-        j0_n = model.get_exchange_current_densities(self.c_e_n)
-        j0_p = model.get_exchange_current_densities(self.c_e_p)
-        self.assertEqual(j0_n.domain, ["negative electrode"])
-        self.assertEqual(j0_p.domain, ["positive electrode"])
-
     def test_creation_lithium_ion(self):
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.interface.LithiumIonReaction(param)
@@ -269,20 +260,6 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         j0_p = model.get_exchange_current_densities(self.c_e_p, self.c_s_p_surf)
         self.assertEqual(j0_n.domain, ["negative electrode"])
         self.assertEqual(j0_p.domain, ["positive electrode"])
-
-    def test_set_parameters_lead_acid(self):
-        # With intercalation
-        param = pybamm.standard_parameters_lead_acid
-        model = pybamm.interface.LeadAcidReaction(param)
-        j0_n = model.get_exchange_current_densities(self.c_e_n)
-        j0_p = model.get_exchange_current_densities(self.c_e_p)
-        # Process parameters
-        parameter_values = model.default_parameter_values
-        j0_n = parameter_values.process_symbol(j0_n)
-        j0_p = parameter_values.process_symbol(j0_p)
-        # Test
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_n.pre_order()]
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_p.pre_order()]
 
     def test_set_parameters_lithium_ion(self):
         param = pybamm.standard_parameters_lithium_ion
@@ -296,32 +273,6 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         # Test
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_n.pre_order()]
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_p.pre_order()]
-
-    def test_discretisation_lead_acid(self):
-        # With intercalation
-        param = pybamm.standard_parameters_lead_acid
-        model = pybamm.interface.LeadAcidReaction(param)
-        j0_n = model.get_exchange_current_densities(self.c_e_n)
-        j0_p = model.get_exchange_current_densities(self.c_e_p)
-        # Process parameters and discretise
-        parameter_values = model.default_parameter_values
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
-        disc.set_variable_slices([self.c_e])
-        j0_n = disc.process_symbol(parameter_values.process_symbol(j0_n))
-        j0_p = disc.process_symbol(parameter_values.process_symbol(j0_p))
-
-        # Test
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        submesh = mesh.combine_submeshes(*whole_cell)
-        y = submesh[0].nodes ** 2
-        # should evaluate to vectors with the right shape
-        self.assertEqual(
-            j0_n.evaluate(y=y).shape, (mesh["negative electrode"][0].npts, 1)
-        )
-        self.assertEqual(
-            j0_p.evaluate(y=y).shape, (mesh["positive electrode"][0].npts, 1)
-        )
 
     def test_discretisation_lithium_ion(self):
         param = pybamm.standard_parameters_lithium_ion
@@ -360,39 +311,6 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         model = pybamm.interface.LithiumIonReaction(None)
         with self.assertRaises(pybamm.DomainError):
             model.get_exchange_current_densities(None, None, "not a domain")
-        model = pybamm.interface.LeadAcidReaction(None)
-        with self.assertRaises(pybamm.DomainError):
-            model.get_exchange_current_densities(None, "not a domain")
-
-    def test_diff_lead_acid(self):
-
-        # With intercalation
-        param = pybamm.standard_parameters_lead_acid
-        model = pybamm.interface.LeadAcidReaction(param)
-        parameter_values = model.default_parameter_values
-
-        def j0_n(c_e):
-            return model.get_exchange_current_densities(c_e, ["negative electrode"])
-
-        def j0_p(c_e):
-            return model.get_exchange_current_densities(c_e, ["positive electrode"])
-
-        c_e = pybamm.Scalar(0.5)
-        h = pybamm.Scalar(0.00001)
-
-        # Analytical
-        j0_n_diff = parameter_values.process_symbol(j0_n(c_e).diff(c_e))
-        j0_p_diff = parameter_values.process_symbol(j0_p(c_e).diff(c_e))
-
-        # Numerical
-        j0_n_FD = parameter_values.process_symbol(
-            (j0_n(c_e + h) - j0_n(c_e - h)) / (2 * h)
-        )
-        self.assertAlmostEqual(j0_n_diff.evaluate(), j0_n_FD.evaluate())
-        j0_p_FD = parameter_values.process_symbol(
-            (j0_p(c_e + h) - j0_p(c_e - h)) / (2 * h)
-        )
-        self.assertAlmostEqual(j0_p_diff.evaluate(), j0_p_FD.evaluate())
 
 
 if __name__ == "__main__":
