@@ -172,7 +172,7 @@ class Function(pybamm.Symbol):
         """
         if self.takes_no_params is True:
             # If self.func() takes no parameters then we can always simplify it
-            return pybamm.Scalar(self.func())
+            return pybamm.Scalar(self.function())
         else:
-            return pybamm.Function(self.func, *simplified_children)
+            return pybamm.Function(self.function, *simplified_children)
 
