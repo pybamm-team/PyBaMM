@@ -157,8 +157,6 @@ class ProcessedVariable(object):
             space = nodes
         elif entries.shape[0] == len(edges):
             space = edges
-        else:
-            raise ValueError("variable shape does not match domain shape")
 
         # add points outside domain for extrapolation to boundaries
         extrap_space_left = np.array([2 * space[0] - space[1]])
@@ -214,7 +212,7 @@ class ProcessedVariable(object):
         elif entries.shape[1] == len(edges):
             r_sol = edges
         else:
-            raise ValueError("variable shape does not match domain shape")
+            raise ValueError("3D variable shape does not match domain shape")
 
         # Get x values
         if self.domain == ["negative particle"]:
