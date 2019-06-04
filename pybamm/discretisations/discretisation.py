@@ -385,6 +385,7 @@ class Discretisation(object):
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )
+
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)
@@ -419,6 +420,14 @@ class Discretisation(object):
 
             else:
                 return symbol._unary_new_copy(disc_child)
+        
+        elif isinstance(symbol, pybamm.Function):
+            disc_children = [None] * len(symbol.children)
+            for i, child in enumerate(symbol.children):
+                disc_children[i] = self.process_symbol(child)
+                pybamm.SpatialMethod.test_shape(disc_children[i])
+
+            return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.Variable):
             return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)

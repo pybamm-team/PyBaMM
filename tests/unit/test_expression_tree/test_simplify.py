@@ -39,6 +39,12 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance((f).simplify(), pybamm.Scalar)
         self.assertEqual((f).simplify().evaluate(), math.sin(1))
 
+        def myfunction(x, y):
+            return x * y
+        f = pybamm.Function(myfunction, a, b)
+        self.assertIsInstance((f).simplify(), pybamm.Scalar)
+        self.assertEqual((f).simplify().evaluate(), 0)
+
         # FunctionParameter
         f = pybamm.FunctionParameter("function", b)
         self.assertIsInstance((f).simplify(), pybamm.FunctionParameter)
