@@ -2,7 +2,6 @@
 # Equations for the electrode-electrolyte interface for lead-acid models
 #
 import pybamm
-import autograd.numpy as np
 
 
 class MainReaction(pybamm.interface.InterfacialReaction, pybamm.LeadAcidBaseModel):

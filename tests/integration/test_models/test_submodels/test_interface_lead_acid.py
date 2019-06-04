@@ -5,7 +5,6 @@ import pybamm
 from tests import get_discretisation_for_testing
 
 import unittest
-import numpy as np
 
 
 class TestExchangeCurrentDensity(unittest.TestCase):
