@@ -52,8 +52,8 @@ class TestReactionDiffusionModel(unittest.TestCase):
 
             # Discretise and solve
             model_disc = disc.process_model(model, inplace=False)
-            solver.solve(model_disc, t_eval)
-            t, y = solver.t, solver.y
+            solution = solver.solve(model_disc, t_eval)
+            t, y = solution.t, solution.y
             return pybamm.ProcessedVariable(
                 model_disc.variables["Electrolyte concentration"], t, y, mesh=disc.mesh
             )

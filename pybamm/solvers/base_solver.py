@@ -16,10 +16,6 @@ class BaseSolver(object):
         self._method = method
         self._tol = tol
 
-        # Solutions
-        self._t = None
-        self._y = None
-
     @property
     def method(self):
         return self._method
@@ -35,22 +31,6 @@ class BaseSolver(object):
     @tol.setter
     def tol(self, value):
         self._tol = value
-
-    @property
-    def t(self):
-        return self._t
-
-    @t.setter
-    def t(self, value):
-        self._t = value
-
-    @property
-    def y(self):
-        return self._y
-
-    @y.setter
-    def y(self, value):
-        self._y = value
 
     def solve(self, model, t_eval):
         """Calculate the solution of the model at specified times.

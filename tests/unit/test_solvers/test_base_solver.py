@@ -10,8 +10,6 @@ class TestBaseSolver(unittest.TestCase):
     def test_base_solver_init(self):
         solver = pybamm.BaseSolver(tol=1e-4)
         self.assertEqual(solver.tol, 1e-4)
-        self.assertEqual(solver.t, None)
-        self.assertEqual(solver.y, None)
 
         solver.tol = 1e-5
         self.assertEqual(solver.tol, 1e-5)

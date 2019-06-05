@@ -52,18 +52,17 @@ tau = param.process_symbol(
 ).evaluate(0, 0)
 
 # solve model at comsol times
-solver = model.default_solver
 time = comsol_variables["time"] / tau
-solver.solve(model, time)
+solution = model.default_solver.solve(model, time)
 
 "-----------------------------------------------------------------------------"
 "Get variables for comparison"
 
 # discharge capacity
 discharge_capacity = pybamm.ProcessedVariable(
-    model.variables["Discharge capacity [A.h]"], solver.t, solver.y, mesh=mesh
+    model.variables["Discharge capacity [A.h]"], solution.t, solution.y, mesh=mesh
 )
-discharge_capacity_sol = discharge_capacity(solver.t)
+discharge_capacity_sol = discharge_capacity(solution.t)
 comsol_discharge_capacity = (
     comsol_variables["time"] * param["Typical current [A]"] / 3600
 )
@@ -89,7 +88,7 @@ output_variables = {
 }
 
 processed_variables = pybamm.post_process_variables(
-    output_variables, solver.t, solver.y, mesh=mesh
+    output_variables, solution.t, solution.y, mesh=mesh
 )
 
 "-----------------------------------------------------------------------------"
@@ -211,7 +210,7 @@ discharge_capacity_tracer, = plt.plot(
 )
 plt.plot(
     discharge_capacity_sol,
-    processed_variables["voltage"](solver.t),
+    processed_variables["voltage"](solution.t),
     "b-",
     label="PyBaMM",
 )

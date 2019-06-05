@@ -76,6 +76,6 @@ class ScipySolver(pybamm.OdeSolver):
         )
 
         if sol.success:
-            return sol.t, sol.y
+            return pybamm.Solution(sol.t, sol.y)
         else:
             raise pybamm.SolverError(sol.message)
