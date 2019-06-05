@@ -127,6 +127,28 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def laplacian(self, symbol, discretised_symbol, boundary_conditions):
+        """
+        Implements the laplacian for a spatial method.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Symbol`
+            The symbol that we will take the gradient of.
+        discretised_symbol: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        Returns
+        -------
+        :class: `pybamm.Array`
+            Contains the result of acting the discretised laplacian on
+            the child discretised_symbol
+        """
+        raise NotImplementedError
+
     def integral(self, domain, symbol, discretised_symbol):
         """
         Implements the integral for a spatial method.
