@@ -16,3 +16,4 @@ Expression Tree
   broadcasts
   simplify
   function
+  evaluate

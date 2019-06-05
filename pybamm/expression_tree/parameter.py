@@ -1,6 +1,7 @@
 #
 # Parameter classes
 #
+import numpy as np
 import pybamm
 
 
@@ -25,6 +26,13 @@ class Parameter(pybamm.Symbol):
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Parameter(self.name, self.domain)
+
+    def evaluate_for_shape(self, t=None, y=None):
+        """
+        Returns the scalar 'NaN' to represent the shape of a parameter.
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return np.nan
 
 
 class FunctionParameter(pybamm.Symbol):
@@ -51,7 +59,9 @@ class FunctionParameter(pybamm.Symbol):
     def __init__(self, name, *children, diff_variable=None):
         # assign diff variable
         self.diff_variable = diff_variable
-        super().__init__(name, children=children)
+        children_list = list(children)
+        domain = self.get_children_domains(children_list)
+        super().__init__(name, children=children, domain=domain)
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id` """
@@ -60,6 +70,30 @@ class FunctionParameter(pybamm.Symbol):
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
         )
+
+    def get_children_domains(self, children_list):
+        """Obtains the unique domain of the children. If the
+        children have different domains then raise an error"""
+
+        domains = [None] * len(children_list)
+        for i, child in enumerate(children_list):
+            if not child.domain == []:
+                domains[i] = child.domain
+
+        # check that there is one common domain amongst children
+        domains = list(filter(None, domains))
+        distinct_domains = set(tuple(dom) for dom in domains)
+
+        if len(distinct_domains) > 1:
+            raise pybamm.DomainError(
+                "Functions can only be applied to variables on the same domain"
+            )
+        elif len(distinct_domains) == 0:
+            domain = []
+        else:
+            domain = domains[0]
+
+        return domain
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -88,3 +122,14 @@ class FunctionParameter(pybamm.Symbol):
             A new copy of the function parameter
         """
         return FunctionParameter(self.name, *children, diff_variable=self.diff_variable)
+
+    def evaluate_for_shape(self, t=None, y=None):
+        """
+        Returns the sum of the evaluated children
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        evaluated_children = [None] * len(self.children)
+        for i, child in enumerate(self.children):
+            evaluated_children[i] = child.evaluate_for_shape()
+        return evaluated_children[0]
+

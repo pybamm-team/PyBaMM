@@ -20,13 +20,14 @@ class Concatenation(pybamm.Symbol):
 
     """
 
-    def __init__(self, *children, name=None, check_domain=True):
+    def __init__(self, *children, name=None, check_domain=True, concat_fun=None):
         if name is None:
             name = "concatenation"
         if check_domain:
             domain = self.get_children_domains(children)
         else:
             domain = []
+        self.concatenation_function = concat_fun
         super().__init__(name, children, domain=domain)
 
     def get_children_domains(self, children):
@@ -41,8 +42,11 @@ class Concatenation(pybamm.Symbol):
         return domain
 
     def _concatenation_evaluate(self, children_eval):
-        """ Concatenate the evaluated children. """
-        raise NotImplementedError
+        """ See :meth:`Concatenation._concatenation_evaluate()`. """
+        if len(children_eval) == 0:
+            return np.array([])
+        else:
+            return self.concatenation_function(children_eval)
 
     def evaluate(self, t=None, y=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -76,6 +80,17 @@ class Concatenation(pybamm.Symbol):
         new_symbol.domain = []
         return new_symbol
 
+    def evaluate_for_shape(self):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape` """
+        if len(self.children) == 0:
+            return np.array([])
+        else:
+            # Default: use np.concatenate
+            concatenation_function = self.concatenation_function or np.concatenate
+            return concatenation_function(
+                [child.evaluate_for_shape() for child in self.children]
+            )
+
 
 class NumpyConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of equations, when we
@@ -101,14 +116,12 @@ class NumpyConcatenation(Concatenation):
         for i, child in enumerate(children):
             if child.evaluates_to_number():
                 children[i] = child * pybamm.Vector(np.array([1]))
-        super().__init__(*children, name="numpy concatenation", check_domain=False)
-
-    def _concatenation_evaluate(self, children_eval):
-        """ See :meth:`Concatenation._concatenation_evaluate()`. """
-        if len(children_eval) == 0:
-            return np.array([])
-        else:
-            return np.concatenate(children_eval)
+        super().__init__(
+            *children,
+            name="numpy concatenation",
+            check_domain=False,
+            concat_fun=np.concatenate
+        )
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -267,8 +280,6 @@ class SparseStack(Concatenation):
 
     def __init__(self, *children):
         children = list(children)
-        super().__init__(*children, name="sparse stack", check_domain=False)
-
-    def _concatenation_evaluate(self, children_eval):
-        """ See :meth:`Concatenation.evaluate()`. """
-        return vstack(children_eval)
+        super().__init__(
+            *children, name="sparse stack", check_domain=False, concat_fun=vstack
+        )

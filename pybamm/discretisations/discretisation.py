@@ -211,6 +211,7 @@ class Discretisation(object):
             processed_bcs[key.id] = {}
             for side, bc in bcs.items():
                 eqn, typ = bc
+                pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
                 processed_eqn = self.process_symbol(eqn)
                 processed_bcs[key.id][side] = (processed_eqn, typ)
 
@@ -235,8 +236,8 @@ class Discretisation(object):
         """
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
-        # Concatenate rhs into a single state vector
 
+        # Concatenate rhs into a single state vector
         # Need to concatenate in order as the ordering of equations could be different
         # in processed_rhs and model.rhs (for Python Version <= 3.5)
         processed_concatenated_rhs = self._concatenate_in_order(processed_rhs)
@@ -342,7 +343,7 @@ class Discretisation(object):
 
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
-            pybamm.logger.debug("**Discretise {!s}".format(eqn_key))
+            pybamm.logger.debug("Discretise {!r}".format(eqn_key))
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
         return new_var_eqn_dict
 
@@ -389,7 +390,6 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)
-            pybamm.SpatialMethod.test_shape(disc_child)
             if child.domain != []:
                 child_spatial_method = self._spatial_methods[child.domain[0]]
             if isinstance(symbol, pybamm.Gradient):
@@ -425,7 +425,6 @@ class Discretisation(object):
             disc_children = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):
                 disc_children[i] = self.process_symbol(child)
-                pybamm.SpatialMethod.test_shape(disc_children[i])
 
             return symbol._function_new_copy(disc_children)
 
@@ -437,7 +436,7 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            new_symbol = pybamm.DomainConcatenation(new_children, self.mesh)
+            new_symbol = spatial_method.concatenation(new_children)
 
             return new_symbol
 

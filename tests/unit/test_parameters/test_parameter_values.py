@@ -107,12 +107,14 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_broad.children[0].evaluate(), np.array([1]))
 
         # process concatenation
-        conc = pybamm.Concatenation(a, b)
+        conc = pybamm.Concatenation(
+            pybamm.Vector(np.ones(10)), pybamm.Vector(2 * np.ones(15))
+        )
         processed_conc = parameter_values.process_symbol(conc)
-        self.assertIsInstance(processed_conc.children[0], pybamm.Scalar)
-        self.assertIsInstance(processed_conc.children[1], pybamm.Scalar)
-        self.assertEqual(processed_conc.children[0].value, 1)
-        self.assertEqual(processed_conc.children[1].value, 2)
+        self.assertIsInstance(processed_conc.children[0], pybamm.Vector)
+        self.assertIsInstance(processed_conc.children[1], pybamm.Vector)
+        np.testing.assert_array_equal(processed_conc.children[0].entries, 1)
+        np.testing.assert_array_equal(processed_conc.children[1].entries, 2)
 
         # process domain concatenation
         c_e_n = pybamm.Variable("c_e_n", ["negative electrode"])

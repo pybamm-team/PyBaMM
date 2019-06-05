@@ -86,6 +86,7 @@ class DaeSolver(pybamm.BaseSolver):
         else:
             jacobian = None
 
+        pybamm.logger.info("Calling DAE solver")
         self.t, self.y = self.integrate(
             residuals,
             y0,
@@ -129,12 +130,45 @@ class DaeSolver(pybamm.BaseSolver):
         concatenated_rhs = model.concatenated_rhs
         concatenated_algebraic = model.concatenated_algebraic
         events = model.events
+
         if model.use_simplify:
             # set up simplification object, for re-use of dict
             simp = pybamm.Simplification()
+            pybamm.logger.info("Simplifying RHS")
             concatenated_rhs = simp.simplify(concatenated_rhs)
+            pybamm.logger.info("Simplifying algebraic")
             concatenated_algebraic = simp.simplify(concatenated_algebraic)
+            pybamm.logger.info("Simplifying events")
             events = [simp.simplify(event) for event in events]
+
+        if model.use_jacobian:
+            # Create Jacobian from simplified rhs
+            y = pybamm.StateVector(
+                slice(0, np.size(model.concatenated_initial_conditions))
+            )
+            pybamm.logger.info("Calculating jacobian")
+            jac_rhs = concatenated_rhs.jac(y)
+            jac_algebraic = concatenated_algebraic.jac(y)
+            jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
+
+            if model.use_simplify:
+                pybamm.logger.info("Simplifying jacobian")
+                jac = jac.simplify()
+
+            if model.use_to_python:
+                pybamm.logger.info("Converting jacobian to python")
+                jac = pybamm.EvaluatorPython(jac)
+
+        else:
+            jac = None
+
+        if model.use_to_python:
+            pybamm.logger.info("Converting RHS to python")
+            concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
+            pybamm.logger.info("Converting algebraic to python")
+            concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
+            pybamm.logger.info("Converting events to python")
+            events = [pybamm.EvaluatorPython(event) for event in events]
 
         # Calculate consistent initial conditions for the algebraic equations
         def rhs(t, y):
@@ -150,21 +184,6 @@ class DaeSolver(pybamm.BaseSolver):
         else:
             # can use DAE solver to solve ODE model
             y0 = model.concatenated_initial_conditions[:, 0]
-
-        # Calculate jacobian
-        if model.use_jacobian:
-            # Create Jacobian from simplified rhs
-            y = pybamm.StateVector(slice(0, np.size(y0)))
-            jac_rhs = concatenated_rhs.jac(y)
-            jac_algebraic = concatenated_algebraic.jac(y)
-            if model.use_simplify:
-                jac_rhs = simp.simplify(jac_rhs)
-                jac_algebraic = simp.simplify(jac_algebraic)
-
-            jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
-
-        else:
-            jac = None
 
         return concatenated_rhs, concatenated_algebraic, y0, events, jac
 

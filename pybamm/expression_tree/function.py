@@ -28,7 +28,6 @@ class Function(pybamm.Symbol):
         name = "function ({})".format(function.__name__)
         children_list = list(children)
         domain = self.get_children_domains(children_list)
-        super().__init__(name, children=children_list, domain=domain)
 
         self.function = function
         # self.number_of_inputs = len(children_list)
@@ -39,6 +38,8 @@ class Function(pybamm.Symbol):
             self.takes_no_params = False
         else:
             self.takes_no_params = len(signature(function).parameters) == 0
+
+        super().__init__(name, children=children_list, domain=domain)
 
     def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the
@@ -136,6 +137,17 @@ class Function(pybamm.Symbol):
             for i, child in enumerate(self.children):
                 evaluated_children[i] = child.evaluate(t, y)
             return self._function_evaluate(evaluated_children)
+
+    def evaluate_for_shape(self, t=None, y=None):
+        """
+        Default behaviour: has same shape as all child
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        evaluated_children = [None] * len(self.children)
+        for i, child in enumerate(self.children):
+            evaluated_children[i] = child.evaluate_for_shape()
+
+        return self._function_evaluate(evaluated_children)
 
     def _function_evaluate(self, evaluated_children):
         if self.takes_no_params is True:

@@ -16,6 +16,13 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(t_eval=np.linspace(0, 0.6))
 
+    def test_basic_processing_with_convection(self):
+        model = pybamm.lead_acid.NewmanTiedemann({"convection": True})
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10}
+        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+        modeltest.test_all(t_eval=np.linspace(0, 0.6))
+
     def test_optimisations(self):
         model = pybamm.lead_acid.NewmanTiedemann()
         optimtest = tests.OptimisationsTest(model)
@@ -24,9 +31,11 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         simplified = optimtest.evaluate_model(simplify=True)
         using_known_evals = optimtest.evaluate_model(use_known_evals=True)
         simp_and_known = optimtest.evaluate_model(simplify=True, use_known_evals=True)
+        simp_and_python = optimtest.evaluate_model(simplify=True, to_python=True)
         np.testing.assert_array_almost_equal(original, simplified)
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
+        np.testing.assert_array_almost_equal(original, simp_and_python)
 
 
 class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):

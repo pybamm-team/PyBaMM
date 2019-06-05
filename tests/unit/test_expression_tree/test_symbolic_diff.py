@@ -57,6 +57,19 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         func = pybamm.Function(np.sin, a * b)
         self.assertEqual(func.diff(a).evaluate(y=y), 3 * np.cos(15))
 
+    def test_diff_zero(self):
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+        func = (a * 2 + 5 * (-a)) / (a * a)
+        self.assertEqual(func.diff(b).id, pybamm.Scalar(0).id)
+        self.assertNotEqual(func.diff(a).id, pybamm.Scalar(0).id)
+
+    def test_exceptions(self):
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+        with self.assertRaises(NotImplementedError):
+            a._diff(b)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
