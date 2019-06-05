@@ -90,12 +90,25 @@ class ParameterValues(dict):
             processing_function = self.update_scalars
 
         for variable, equation in model.rhs.items():
+            pybamm.logger.debug(
+                "{} parameters for {!r} (rhs)".format(processing.capitalize(), variable)
+            )
             model.rhs[variable] = processing_function(equation)
 
         for variable, equation in model.algebraic.items():
+            pybamm.logger.debug(
+                "{} parameters for {!r} (algebraic)".format(
+                    processing.capitalize(), variable
+                )
+            )
             model.algebraic[variable] = processing_function(equation)
 
         for variable, equation in model.initial_conditions.items():
+            pybamm.logger.debug(
+                "{} parameters for {!r} (initial conditions)".format(
+                    processing.capitalize(), variable
+                )
+            )
             model.initial_conditions[variable] = processing_function(equation)
 
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
@@ -105,13 +118,26 @@ class ParameterValues(dict):
             new_boundary_conditions[processed_variable] = {}
             for side in ["left", "right"]:
                 bc, typ = bcs[side]
+                pybamm.logger.debug(
+                    "{} parameters for {!r} ({} bc)".format(
+                        processing.capitalize(), variable, side
+                    )
+                )
                 processed_bc = (processing_function(bc), typ)
                 new_boundary_conditions[processed_variable][side] = processed_bc
         model.boundary_conditions = new_boundary_conditions
 
         for variable, equation in model.variables.items():
+            pybamm.logger.debug(
+                "{} parameters for {!r} (variables)".format(
+                    processing.capitalize(), variable
+                )
+            )
             model.variables[variable] = processing_function(equation)
         for idx, equation in enumerate(model.events):
+            pybamm.logger.debug(
+                "{} parameters for event {}".format(processing.capitalize(), idx)
+            )
             model.events[idx] = processing_function(equation)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
@@ -180,7 +206,6 @@ class ParameterValues(dict):
             Symbol with Parameter instances replaced by Value
 
         """
-        pybamm.logger.debug("Set parameters for {!s}".format(symbol))
         try:
             return self._processed_symbols[symbol.id]
         except KeyError:

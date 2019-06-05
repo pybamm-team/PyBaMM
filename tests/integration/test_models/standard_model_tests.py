@@ -74,12 +74,12 @@ class StandardModelTest(object):
         if t_eval is None:
             t_eval = np.linspace(0, 1, 100)
 
-        self.solver.solve(self.model, t_eval)
+        self.solution = self.solver.solve(self.model, t_eval)
 
     def test_outputs(self):
         # run the standard output tests
         std_out_test = tests.StandardOutputTests(
-            self.model, self.parameter_values, self.disc, self.solver
+            self.model, self.parameter_values, self.disc, self.solution
         )
         std_out_test.test_all()
 

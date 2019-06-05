@@ -88,12 +88,9 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.Symbol.__str__()`. """
         return "{}{!s}".format(self.name, self.child)
 
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            return -self.child.diff(variable)
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return -self.child.diff(variable)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -159,19 +156,10 @@ class Function(UnaryOperator):
         else:
             self.takes_no_params = len(signature(func).parameters) == 0
 
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        if variable.id == self.id:
-            return pybamm.Scalar(1)
-        else:
-            child = self.orphans[0]
-            if variable.id in [symbol.id for symbol in child.pre_order()]:
-                # if variable appears in the function,use autograd to differentiate
-                # function, and apply chain rule
-                return child.diff(variable) * Function(autograd.grad(self.func), child)
-            else:
-                # otherwise the derivative of the function is zero
-                return pybamm.Scalar(0)
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        child = self.orphans[0]
+        return child.diff(variable) * Function(autograd.grad(self.func), child)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """

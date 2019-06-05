@@ -15,8 +15,8 @@ class TestQuickPlot(unittest.TestCase):
         disc.process_model(model)
         solver = model.default_solver
         t_eval = np.linspace(0, 2, 100)
-        solver.solve(model, t_eval)
-        quick_plot = pybamm.QuickPlot(model, mesh, solver)
+        solution = solver.solve(model, t_eval)
+        quick_plot = pybamm.QuickPlot(model, mesh, solution)
         quick_plot.plot(0)
 
         # update the axis
@@ -35,7 +35,7 @@ class TestQuickPlot(unittest.TestCase):
 
         # Test with different output variables
         quick_plot = pybamm.QuickPlot(
-            model, mesh, solver, ["b broadcasted", "c broadcasted"]
+            model, mesh, solution, ["b broadcasted", "c broadcasted"]
         )
         self.assertEqual(len(quick_plot.axis), 2)
         quick_plot.plot(0)
@@ -58,11 +58,11 @@ class TestQuickPlot(unittest.TestCase):
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "'models' must be"):
             pybamm.QuickPlot(1, None, None)
-        with self.assertRaisesRegex(TypeError, "'solvers' must be"):
+        with self.assertRaisesRegex(TypeError, "'solutions' must be"):
             pybamm.QuickPlot(pybamm.BaseModel(), None, 1)
         with self.assertRaisesRegex(ValueError, "must provide the same"):
             pybamm.QuickPlot(
-                pybamm.BaseModel(), None, [pybamm.BaseSolver(), pybamm.BaseSolver()]
+                pybamm.BaseModel(), None, [pybamm.Solution(0, 0), pybamm.Solution(0, 0)]
             )
 
 

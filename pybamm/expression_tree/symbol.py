@@ -331,9 +331,10 @@ class Symbol(anytree.NodeMixin):
 
     def diff(self, variable):
         """
-        Differentiate a symbol with respect to a variable. Default behaviour is to
-        return `1` if differentiating with respect to yourself and zero otherwise.
-        Binary and Unary Operators override this.
+        Differentiate a symbol with respect to a variable. For any symbol that can be
+        differentiated, return `1` if differentiating with respect to yourself,
+        `self._diff(variable)` if `variable` is in the expression tree of the symbol,
+        and zero otherwise.
 
         Parameters
         ----------
@@ -343,8 +344,14 @@ class Symbol(anytree.NodeMixin):
         """
         if variable.id == self.id:
             return pybamm.Scalar(1)
+        elif any(variable.id == x.id for x in self.pre_order()):
+            return self._diff(variable)
         else:
             return pybamm.Scalar(0)
+
+    def _diff(self, variable):
+        "Default behaviour for differentiation, overriden by Binary and Unary Operators"
+        raise NotImplementedError
 
     def jac(self, variable):
         """
