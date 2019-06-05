@@ -178,14 +178,11 @@ from .geometry.geometry import (
     Geometry,
     Geometry1DMacro,
     Geometry3DMacro,
-    Geometry1p1DMacro,
-    Geometry2p1DMacro,
     Geometry1DMicro,
     Geometry1p1DMicro,
-    Geometry1p0p1DMicro,
-    Geometry1p1p1DMicro,
-    Geometry2p0p1DMicro,
-    Geometry2p1p1DMicro,
+    Geometryxp1DMacro,
+    Geometryxp0p1DMicro,
+    Geometryxp1p1DMicro,
 )
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS

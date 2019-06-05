@@ -129,7 +129,7 @@ class TestFiniteElementFenics(unittest.TestCase):
             z_vertices[:, np.newaxis]
         )
 
-        # constant u = 6*y (to test coordinates to degree of freedom mapping)
+        # linear u = 6*y (to test coordinates to degree of freedom mapping)
         y_vertices = mesh["current collector"][0].coordinates[:, 0]
         np.testing.assert_array_almost_equal(
             var_disc.evaluate(None, 6 * y_vertices),

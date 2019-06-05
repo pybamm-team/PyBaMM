@@ -254,7 +254,6 @@ class TestMesh(unittest.TestCase):
 
         geometry = pybamm.Geometry("1+1D macro")
         param.process_geometry(geometry)
-
         # provide mesh properties
 
         var = pybamm.standard_spatial_vars

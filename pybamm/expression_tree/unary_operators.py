@@ -398,42 +398,28 @@ class Integral(SpatialOperator):
     """
 
     def __init__(self, child, integration_variable):
-        if isinstance(integration_variable, list):
-            name = "integral"
-            for var in integration_variable:
-                if isinstance(var, pybamm.SpatialVariable):
-                    # Check that child and integration_variable domains agree
-                    if child.domain != var.domain:
-                        raise pybamm.DomainError(
-                            "child and integration_variable must have the same domain"
-                        )
-                else:
-                    # only allow integration over multiple spatial variables
-                    raise ValueError(
-                        """integration_variable must be of type pybamm.SpatialVariable,
-                           not {}""".format(
-                            type(var)
-                        )
-                    )
-                name += " d{}".format(var.name)
-            name += " {}".format(child.domain)
-        else:
-            if isinstance(integration_variable, pybamm.SpatialVariable):
+        if not isinstance(integration_variable, list):
+            integration_variable = [integration_variable]
+
+        name = "integral"
+        for var in integration_variable:
+            if isinstance(var, pybamm.SpatialVariable):
                 # Check that child and integration_variable domains agree
-                if child.domain != integration_variable.domain:
+                if child.domain != var.domain:
                     raise pybamm.DomainError(
-                        """child and integration_variable must have the same domain"""
+                        "child and integration_variable must have the same domain"
                     )
-            elif not isinstance(integration_variable, pybamm.IndependentVariable):
+            elif not isinstance(var, pybamm.IndependentVariable):
                 raise ValueError(
                     """integration_variable must be of type pybamm.IndependentVariable,
                            not {}""".format(
-                        type(integration_variable)
+                        type(var)
                     )
                 )
-            name = "integral d{}".format(integration_variable.name)
-            if isinstance(integration_variable, pybamm.SpatialVariable):
-                name += " {}".format(integration_variable.domain)
+            name += " d{}".format(var.name)
+
+        if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
+            name += " {}".format(child.domain)
 
         self._integration_variable = integration_variable
         super().__init__(name, child)
@@ -446,28 +432,19 @@ class Integral(SpatialOperator):
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
-        if isinstance(self.integration_variable, list):
-            self._id = hash(
-                (self.__class__, self.name)
-                + tuple(
-                    [
-                        integration_variable.id
-                        for integration_variable in self.integration_variable
-                    ]
-                )
-                + (self.children[0].id,)
-                + tuple(self.domain)
+        if not isinstance(self.integration_variable, list):
+            self.integration_variable = [self.integration_variable]
+        self._id = hash(
+            (self.__class__, self.name)
+            + tuple(
+                [
+                    integration_variable.id
+                    for integration_variable in self.integration_variable
+                ]
             )
-        else:
-            self._id = hash(
-                (
-                    self.__class__,
-                    self.name,
-                    self.integration_variable.id,
-                    self.children[0].id,
-                )
-                + tuple(self.domain)
-            )
+            + (self.children[0].id,)
+            + tuple(self.domain)
+        )
 
     def _unary_simplify(self, simplified_child):
         """ See :meth:`UnaryOperator._unary_simplify()`. """
@@ -504,6 +481,13 @@ class IndefiniteIntegral(Integral):
     """
 
     def __init__(self, child, integration_variable):
+        if isinstance(integration_variable, list):
+            if len(integration_variable) > 1:
+                raise NotImplementedError(
+                    "Indefinite integral only implemeted w.r.t. one variable"
+                )
+            else:
+                integration_variable = integration_variable[0]
         super().__init__(child, integration_variable)
         # Overwrite the name
         self.name = "{} integrated w.r.t {}".format(

@@ -83,7 +83,7 @@ class TestGeometry3DMacro(unittest.TestCase):
 
 class TestGeometry1p1DMacro(unittest.TestCase):
     def test_geometry_keys(self):
-        geometry = pybamm.Geometry1p1DMacro()
+        geometry = pybamm.Geometryxp1DMacro(cc_dimension=1)
         for key, prim_sec_vars in geometry.items():
             self.assertIn("primary", prim_sec_vars.keys())
             if key != "current collector":
@@ -102,7 +102,7 @@ class TestGeometry1p1DMacro(unittest.TestCase):
 
 class TestGeometry2p1DMacro(unittest.TestCase):
     def test_geometry_keys(self):
-        geometry = pybamm.Geometry2p1DMacro()
+        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
         for key, prim_sec_vars in geometry.items():
             self.assertIn("primary", prim_sec_vars.keys())
             if key != "current collector":
@@ -135,7 +135,7 @@ class TestGeometry1p1DMicro(unittest.TestCase):
 
 class TestGeometry1p0p1DMicro(unittest.TestCase):
     def test_geometry_keys(self):
-        geometry = pybamm.Geometry1p0p1DMicro()
+        geometry = pybamm.Geometryxp0p1DMicro(cc_dimension=1)
         for prim_sec_vars in geometry.values():
             for spatial_vars in prim_sec_vars.values():
                 all(
@@ -146,7 +146,7 @@ class TestGeometry1p0p1DMicro(unittest.TestCase):
 
 class TestGeometry1p1p1DMicro(unittest.TestCase):
     def test_geometry_keys(self):
-        geometry = pybamm.Geometry1p1p1DMicro()
+        geometry = pybamm.Geometryxp1p1DMicro(cc_dimension=1)
         for prim_sec_vars in geometry.values():
             for spatial_vars in prim_sec_vars.values():
                 all(
@@ -157,7 +157,7 @@ class TestGeometry1p1p1DMicro(unittest.TestCase):
 
 class TestGeometry2p0p1DMicro(unittest.TestCase):
     def test_geometry_keys(self):
-        geometry = pybamm.Geometry2p0p1DMicro()
+        geometry = pybamm.Geometryxp0p1DMicro(cc_dimension=2)
         for prim_sec_vars in geometry.values():
             for spatial_vars in prim_sec_vars.values():
                 all(
@@ -168,7 +168,7 @@ class TestGeometry2p0p1DMicro(unittest.TestCase):
 
 class TestGeometry2p1p1DMicro(unittest.TestCase):
     def test_geometry_keys(self):
-        geometry = pybamm.Geometry2p1p1DMicro()
+        geometry = pybamm.Geometryxp1p1DMicro(cc_dimension=2)
         for prim_sec_vars in geometry.values():
             for spatial_vars in prim_sec_vars.values():
                 all(

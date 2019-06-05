@@ -121,7 +121,7 @@ def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
         }
     )
 
-    geometry = pybamm.Geometry2p1DMacro()
+    geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
     param.process_geometry(geometry)
 
     var = pybamm.standard_spatial_vars

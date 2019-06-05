@@ -147,7 +147,6 @@ class ParameterValues(dict):
         geometry : :class:`pybamm.Geometry`
                 Geometry specs to assign parameter values to
         """
-
         for domain in geometry:
             for prim_sec_tabs, variables in geometry[domain].items():
                 # process tab information if using 2D current collectors

@@ -31,7 +31,7 @@ class TestFenicsMesh(unittest.TestCase):
             }
         )
 
-        geometry = pybamm.Geometry2p1DMacro()
+        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
         param.process_geometry(geometry)
 
         var = pybamm.standard_spatial_vars
@@ -71,13 +71,12 @@ class TestFenicsMesh(unittest.TestCase):
                 )
 
     def test_init_failure(self):
-        geometry = pybamm.Geometry2p1DMacro()
+        geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
         with self.assertRaises(KeyError):
             pybamm.Mesh(geometry, None, {})
 
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.y: 10, var.z: 10}
-        geometry = pybamm.Geometry2p1DMacro()
         with self.assertRaises(TypeError):
             pybamm.Mesh(geometry, None, var_pts)
 
@@ -148,7 +147,7 @@ class TestFenicsMesh(unittest.TestCase):
             param["Positive tab width [m]"] = pos_tab_locations[loc]["width"]
 
             # check geometry can be processed
-            geometry = pybamm.Geometry2p1DMacro()
+            geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
             param.process_geometry(geometry)
             mesh = mesh_type(geometry, submesh_types, var_pts)
 

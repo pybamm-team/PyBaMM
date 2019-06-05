@@ -2,6 +2,7 @@
 # Single Particle Model (SPM)
 #
 import pybamm
+import autograd.numpy as np
 
 
 class SPM(pybamm.LithiumIonBaseModel):
@@ -99,7 +100,7 @@ class SPM(pybamm.LithiumIonBaseModel):
         "Boundary conditions"
         if self.options["bc_options"]["dimensionality"] == 2:
             current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
-            #current_collector_model.set_uniform_current(self.variables)
+            # current_collector_model.set_uniform_current(self.variables)
             current_collector_model.set_algebraic_system_spm(self.variables)
             self.update(current_collector_model)
 
@@ -108,6 +109,9 @@ class SPM(pybamm.LithiumIonBaseModel):
         if self.options["bc_options"]["dimensionality"] == 0:
             voltage = self.variables["Terminal voltage"]
             self.events.append(voltage - param.voltage_low_cut)
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            voltage = self.variables["Terminal voltage"]
+            self.events.append(pybamm.Function(np.min, voltage) - param.voltage_low_cut)
 
     @property
     def default_geometry(self):
@@ -121,43 +125,35 @@ class SPM(pybamm.LithiumIonBaseModel):
 
     @property
     def default_submesh_types(self):
+        base_submeshes = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
+            "positive particle": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Uniform1DSubMesh,
+        }
         dimensionality = self.options["bc_options"]["dimensionality"]
         if dimensionality in [0, 1]:
-            return {
-                "negative electrode": pybamm.Uniform1DSubMesh,
-                "separator": pybamm.Uniform1DSubMesh,
-                "positive electrode": pybamm.Uniform1DSubMesh,
-                "negative particle": pybamm.Uniform1DSubMesh,
-                "positive particle": pybamm.Uniform1DSubMesh,
-                "current collector": pybamm.Uniform1DSubMesh,
-            }
+            return base_submeshes
         elif dimensionality == 2:
-            return {
-                "negative electrode": pybamm.Uniform1DSubMesh,
-                "separator": pybamm.Uniform1DSubMesh,
-                "positive electrode": pybamm.Uniform1DSubMesh,
-                "negative particle": pybamm.Uniform1DSubMesh,
-                "positive particle": pybamm.Uniform1DSubMesh,
-                "current collector": pybamm.FenicsMesh2D,
-            }
+            base_submeshes["current collector"] = pybamm.FenicsMesh2D
+            return base_submeshes
 
     @property
     def default_spatial_methods(self):
+        base_spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.FiniteVolume,
+        }
         dimensionality = self.options["bc_options"]["dimensionality"]
         if dimensionality in [0, 1]:
-            return {
-                "macroscale": pybamm.FiniteVolume,
-                "negative particle": pybamm.FiniteVolume,
-                "positive particle": pybamm.FiniteVolume,
-                "current collector": pybamm.FiniteVolume,
-            }
+            return base_spatial_methods
         elif dimensionality == 2:
-            return {
-                "macroscale": pybamm.FiniteVolume,
-                "negative particle": pybamm.FiniteVolume,
-                "positive particle": pybamm.FiniteVolume,
-                "current collector": pybamm.FiniteElementFenics,
-            }
+            base_spatial_methods["current collector"] = pybamm.FiniteElementFenics
+            return base_spatial_methods
 
     @property
     def default_solver(self):

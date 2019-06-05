@@ -3,13 +3,6 @@
 #
 import pybamm
 
-import importlib
-
-dolfin_spec = importlib.util.find_spec("dolfin")
-if dolfin_spec is not None:
-    dolfin = importlib.util.module_from_spec(dolfin_spec)
-    dolfin_spec.loader.exec_module(dolfin)
-
 
 class OhmTwoDimensional(pybamm.SubModel):
     """
