@@ -114,6 +114,7 @@ matrix:
         - os: osx
           language: generic
           env:
+            - TOXENV=py36
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
           if: type != cron
