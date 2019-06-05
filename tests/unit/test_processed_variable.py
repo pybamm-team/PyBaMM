@@ -203,7 +203,7 @@ class TestProcessedVariable(unittest.TestCase):
         model.variables = {"c": c}
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
-        t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
+        t_sol, y_sol = modeltest.solution.t, modeltest.solution.y
         processed_vars = pybamm.post_process_variables(model.variables, t_sol, y_sol)
         np.testing.assert_array_almost_equal(processed_vars["c"](t_sol), np.exp(-t_sol))
 
@@ -228,7 +228,7 @@ class TestProcessedVariable(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
         # set up testing
-        t_sol, y_sol = modeltest.solver.t, modeltest.solver.y
+        t_sol, y_sol = modeltest.solution.t, modeltest.solution.y
         x = pybamm.SpatialVariable("x", domain=whole_cell)
         x_sol = modeltest.disc.process_symbol(x).entries[:, 0]
         processed_vars = pybamm.post_process_variables(

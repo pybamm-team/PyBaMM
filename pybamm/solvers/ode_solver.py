@@ -30,7 +30,12 @@ class OdeSolver(pybamm.BaseSolver):
 
         """
         pybamm.logger.info("Start solving {}".format(model.name))
+
+        # Set up
+        timer = pybamm.Timer()
+        start_time = timer.time()
         concatenated_rhs, y0, events, jac_rhs = self.set_up(model)
+        set_up_time = timer.time() - start_time
 
         # Create function to evaluate rhs
         def dydt(t, y):
@@ -57,8 +62,10 @@ class OdeSolver(pybamm.BaseSolver):
         else:
             jacobian = None
 
+        # Solve
+        solve_start_time = timer.time()
         pybamm.logger.info("Calling ODE solver")
-        self.t, self.y = self.integrate(
+        solution = self.integrate(
             dydt,
             y0,
             t_eval,
@@ -67,7 +74,13 @@ class OdeSolver(pybamm.BaseSolver):
             jacobian=jacobian,
         )
 
+        # Assign times
+        solution.solve_time = timer.time() - solve_start_time
+        solution.total_time = timer.time() - start_time
+        solution.set_up_time = set_up_time
+
         pybamm.logger.info("Finish solving {}".format(model.name))
+        return solution
 
     def set_up(self, model):
         """Unpack model, perform checks, simplify and calculate jacobian.

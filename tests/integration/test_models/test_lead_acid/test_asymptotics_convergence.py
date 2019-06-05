@@ -49,16 +49,16 @@ class TestAsymptoticConvergence(unittest.TestCase):
             # Solve, make sure times are the same
             t_eval = np.linspace(0, 0.6)
             solver_loqs = leading_order_model.default_solver
-            solver_loqs.solve(leading_order_model, t_eval)
+            solution_loqs = solver_loqs.solve(leading_order_model, t_eval)
             solver_comp = composite_model.default_solver
-            solver_comp.solve(composite_model, t_eval)
+            solution_comp = solver_comp.solve(composite_model, t_eval)
             solver_full = full_model.default_solver
-            solver_full.solve(full_model, t_eval)
+            solution_full = solver_full.solve(full_model, t_eval)
 
             # Post-process variables
-            t_loqs, y_loqs = solver_loqs.t, solver_loqs.y
-            t_comp, y_comp = solver_comp.t, solver_comp.y
-            t_full, y_full = solver_full.t, solver_full.y
+            t_loqs, y_loqs = solution_loqs.t, solution_loqs.y
+            t_comp, y_comp = solution_comp.t, solution_comp.y
+            t_full, y_full = solution_full.t, solution_full.y
             voltage_loqs = pybamm.ProcessedVariable(
                 leading_order_model.variables["Terminal voltage"], t_loqs, y_loqs
             )
