@@ -41,6 +41,7 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 # Utility classes and methods
 #
+from .util import root_dir
 from .util import Timer
 from .util import profile
 from .util import load_function
