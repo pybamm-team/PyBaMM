@@ -46,14 +46,6 @@ class TestFunction(unittest.TestCase):
         logvar = pybamm.Function(np.log1p, var)
         np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
 
-    def test_function_of_multiple_variables(self):
-        a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
-        func = pybamm.Function(test_multi_var_function, a, b)
-        self.assertEqual(func.name, "function (test_multi_var_function)")
-        self.assertEqual(func.children[0].name, a.name)
-        self.assertEqual(func.children[1].name, b.name)
-
     def test_with_autograd(self):
         a = pybamm.StateVector(slice(0, 1))
         y = np.array([5])
@@ -66,6 +58,25 @@ class TestFunction(unittest.TestCase):
         func = pybamm.Function(auto_np.exp, a)
         self.assertEqual(func.evaluate(y=y), np.exp(a.evaluate(y=y)))
         self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
+
+    def test_function_of_multiple_variables(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Parameter("b")
+        func = pybamm.Function(test_multi_var_function, a, b)
+        self.assertEqual(func.name, "function (test_multi_var_function)")
+        self.assertEqual(func.children[0].name, a.name)
+        self.assertEqual(func.children[1].name, b.name)
+
+        # test eval and diff
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+        y = np.array([5, 2])
+        func = pybamm.Function(test_multi_var_function, a, b)
+
+        self.assertEqual(func.evaluate(y=y), 7)
+        self.assertEqual((func).diff(a).evaluate(y=y), 1)
+        self.assertEqual((func).diff(b).evaluate(y=y), 1)
+        self.assertEqual((func).diff(func).evaluate(), 1)
 
 
 if __name__ == "__main__":
