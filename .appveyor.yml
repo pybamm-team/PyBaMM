@@ -1,6 +1,6 @@
 branches:
   only:
-    - master
+    - issue-130-windows
 
 environment:
 
