@@ -1,6 +1,6 @@
 sudo: false
 
-dist: trusty
+dist: xenial
 
 language: python
 
@@ -94,7 +94,7 @@ matrix:
           if: type != cron
         # Unit testing on OS/X
         - os: osx
-          language: generic
+          python: 3.6
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
@@ -162,6 +162,11 @@ matrix:
             - PYBAMM_EXAMPLES=true
           if: type == cron
 
+# Install graphviz for macs 
+before_install:
+  - if [[ $TRAVIS_OS_NAME == "osx"]]; then brew update; fi
+  - if [[ $TRAVIS_OS_NAME == "osx"]]; then brew install graphviz; fi
+
 # Install dependencies
 # Note: Use pip (not apt-get) for Python dependencies
 # Note: Only install normal dependencies for unit tests; these should be tested
@@ -172,7 +177,7 @@ install:
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -e .[docs]; fi;
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
-  - source scripts/install_scikits_odes.sh
+  - if [[ $TRAVIS_OS_NAME != "osx"]]; then source scripts/install_scikits_odes.sh
 
 before_script:
 - python --version
