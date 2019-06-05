@@ -157,7 +157,7 @@ class Function(pybamm.Symbol):
         ------
         children : : list
             A list of the children of the function
-           
+
         Returns
         -------
             : :pybamm.Function
@@ -173,7 +173,7 @@ class Function(pybamm.Symbol):
         ------
         simplified_children: : list
             A list of simplified children of the function
-        
+
         Returns
         -------
          :: pybamm.Scalar() if no children

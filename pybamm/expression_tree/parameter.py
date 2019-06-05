@@ -81,7 +81,7 @@ class FunctionParameter(pybamm.Symbol):
         ------
         children : : list
             A list of the children of the function
-           
+
         Returns
         -------
             : :pybamm.FunctionParameter

@@ -580,7 +580,7 @@ class Simplification(object):
             new_symbol = symbol._unary_simplify(new_child)
             new_symbol.domain = symbol.domain
             return simplify_if_constant(new_symbol)
-        
+
         elif isinstance(symbol, pybamm.Function):
             simplified_children = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):

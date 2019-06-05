@@ -5,7 +5,6 @@ import pybamm
 
 import unittest
 import numpy as np
-import autograd.numpy as auto_np
 
 
 class TestUnaryOperators(unittest.TestCase):

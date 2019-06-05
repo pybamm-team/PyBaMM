@@ -420,7 +420,7 @@ class Discretisation(object):
 
             else:
                 return symbol._unary_new_copy(disc_child)
-        
+
         elif isinstance(symbol, pybamm.Function):
             disc_children = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):
