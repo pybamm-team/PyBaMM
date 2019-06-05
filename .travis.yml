@@ -170,8 +170,8 @@ matrix:
 
 # Install graphviz for macs 
 before_install:
-  - if [[ $TRAVIS_OS_NAME == "osx"]]; then brew update; fi
-  - if [[ $TRAVIS_OS_NAME == "osx"]]; then brew install graphviz; fi
+  - if [[ $TRAVIS_OS_NAME == "osx" ]]; then brew update; fi
+  - if [[ $TRAVIS_OS_NAME == "osx" ]]; then brew install graphviz; fi
 
 # Install dependencies
 # Note: Use pip (not apt-get) for Python dependencies
