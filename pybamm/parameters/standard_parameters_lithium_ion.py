@@ -84,6 +84,9 @@ c_p_init_dimensional = pybamm.Parameter(
     "Initial concentration in positive electrode [mol.m-3]"
 )
 
+# thermal
+Delta_T = pybamm.thermal_parameters.Delta_T
+
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
 
@@ -128,7 +131,7 @@ def dUdT_n_dimensional(sto):
 def dUdT_p_dimensional(sto):
     "Dimensional entropic change of the positive electrode open circuit voltage [V.K-1]"
     return pybamm.FunctionParameter(
-        "Positive electrode OCV entropic change", sto, c_n_max
+        "Positive electrode OCV entropic change", sto, c_p_max
     )
 
 
@@ -301,10 +304,10 @@ def U_p(c_s_p):
 def dUdT_n(c_s_n):
     "Dimensionless entropic change in negative open-circuit potential"
     sto = c_s_n
-    return dUdT_n_dimensional(sto) * T_ref / potential_scale
+    return dUdT_n_dimensional(sto) * Delta_T / potential_scale
 
 
 def dUdT_p(c_s_p):
     "Dimensionless entropic change in positive open-circuit potential"
     sto = c_s_p
-    return dUdT_p_dimensional(sto) * T_ref / potential_scale
+    return dUdT_p_dimensional(sto) * Delta_T / potential_scale

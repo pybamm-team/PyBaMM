@@ -412,10 +412,10 @@ class StandardBatteryBaseModel(BaseModel):
                     input_path, "lico2_diffusivity_Dualfoil.py"
                 ),
                 "Negative electrode OCV entropic change": os.path.join(
-                    input_path, "graphite_entropic_change_Moura"
+                    input_path, "graphite_entropic_change_Moura.py"
                 ),
                 "Positive electrode OCV entropic change": os.path.join(
-                    input_path, "lico2_entropic_change_Moura"
+                    input_path, "lico2_entropic_change_Moura.py"
                 )
             },
         )

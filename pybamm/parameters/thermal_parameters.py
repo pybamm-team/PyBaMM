@@ -47,7 +47,6 @@ lambda_eff_dim = pybamm.Parameter("Effective thermal conductivity [W.m-1.K-1]")
 # Initial temperature
 T_init_dim = pybamm.Parameter("Initial temperature [K]")
 
-
 # --------------------------------------------------------------------------------------
 # Timescales
 tau_th_yz = rho_eff_dim * (pybamm.geometric_parameters.L_z ** 2) / lambda_eff_dim
@@ -70,4 +69,4 @@ lambda_cp = lambda_cp_dim / lambda_eff_dim
 Theta = Delta_T / T_ref
 h = h_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
 
-T_init = T_init_dim / T_ref
+T_init = (T_init_dim - T_ref) / Delta_T
