@@ -422,10 +422,7 @@ class Discretisation(object):
                 return symbol._unary_new_copy(disc_child)
 
         elif isinstance(symbol, pybamm.Function):
-            disc_children = [None] * len(symbol.children)
-            for i, child in enumerate(symbol.children):
-                disc_children[i] = self.process_symbol(child)
-
+            disc_children = [self.process_symbol(child) for child in symbol.children]
             return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.Variable):

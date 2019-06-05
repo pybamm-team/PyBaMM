@@ -214,9 +214,7 @@ class ParameterValues(dict):
             return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_children = [None] * len(symbol.children)
-            for i, child in enumerate(symbol.children):
-                new_children[i] = self.process_symbol(child)
+            new_children = [self.process_symbol(child) for child in symbol.children]
             function_name = self[symbol.name]
 
             if callable(function_name):

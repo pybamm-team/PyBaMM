@@ -30,7 +30,6 @@ class Function(pybamm.Symbol):
         domain = self.get_children_domains(children_list)
 
         self.function = function
-        # self.number_of_inputs = len(children_list)
 
         # hack to work out whether function takes any params
         # (signature doesn't work for numpy)
@@ -45,13 +44,9 @@ class Function(pybamm.Symbol):
         """Obtains the unique domain of the children. If the
         children have different domains then raise an error"""
 
-        domains = [None] * len(children_list)
-        for i, child in enumerate(children_list):
-            if not child.domain == []:
-                domains[i] = child.domain
+        domains = [child.domain for child in children_list if child.domain != []]
 
         # check that there is one common domain amongst children
-        domains = list(filter(None, domains))
         distinct_domains = set(tuple(dom) for dom in domains)
 
         if len(distinct_domains) > 1:
@@ -104,7 +99,7 @@ class Function(pybamm.Symbol):
 
             # if at least one child contains variable dependence, then
             # calculate the required partial jacobians and add them
-            jacobian = None
+            jacobian = 0
             children = self.orphans
             for child in children:
                 if not child.evaluates_to_number():
@@ -114,10 +109,7 @@ class Function(pybamm.Symbol):
 
                     jac_fun.domain = self.domain
 
-                    if jacobian is None:
-                        jacobian = jac_fun
-                    else:
-                        jacobian += jac_fun
+                    jacobian += jac_fun
 
         return jacobian
 
@@ -133,9 +125,7 @@ class Function(pybamm.Symbol):
                 known_evals[self.id] = self._function_evaluate(evaluated_children)
             return known_evals[self.id], known_evals
         else:
-            evaluated_children = [None] * len(self.children)
-            for i, child in enumerate(self.children):
-                evaluated_children[i] = child.evaluate(t, y)
+            evaluated_children = [child.evaluate(t, y) for child in self.children]
             return self._function_evaluate(evaluated_children)
 
     def evaluate_for_shape(self, t=None, y=None):
@@ -143,10 +133,7 @@ class Function(pybamm.Symbol):
         Default behaviour: has same shape as all child
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        evaluated_children = [None] * len(self.children)
-        for i, child in enumerate(self.children):
-            evaluated_children[i] = child.evaluate_for_shape()
-
+        evaluated_children = [child.evaluate_for_shape() for child in self.children]
         return self._function_evaluate(evaluated_children)
 
     def _function_evaluate(self, evaluated_children):
@@ -157,10 +144,7 @@ class Function(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_children = [None] * len(self.children)
-        for i, child in enumerate(self.children):
-            new_children[i] = child.new_copy()
-        return self._function_new_copy(new_children)
+        return self._function_new_copy(self.orphans)
 
     def _function_new_copy(self, children):
         """Returns a new copy of the function.

@@ -74,14 +74,9 @@ class FunctionParameter(pybamm.Symbol):
     def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the
         children have different domains then raise an error"""
-
-        domains = [None] * len(children_list)
-        for i, child in enumerate(children_list):
-            if not child.domain == []:
-                domains[i] = child.domain
+        domains = [child.domain for child in children_list if child.domain != []]
 
         # check that there is one common domain amongst children
-        domains = list(filter(None, domains))
         distinct_domains = set(tuple(dom) for dom in domains)
 
         if len(distinct_domains) > 1:
@@ -103,10 +98,7 @@ class FunctionParameter(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_children = [None] * len(self.children)
-        for i, child in enumerate(self.children):
-            new_children[i] = child.new_copy()
-        return self._function_parameter_new_copy(new_children)
+        return self._function_parameter_new_copy(self.orphans)
 
     def _function_parameter_new_copy(self, children):
         """Returns a new copy of the function parameter.
@@ -128,8 +120,5 @@ class FunctionParameter(pybamm.Symbol):
         Returns the sum of the evaluated children
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        evaluated_children = [None] * len(self.children)
-        for i, child in enumerate(self.children):
-            evaluated_children[i] = child.evaluate_for_shape()
-        return evaluated_children[0]
+        return sum(child.evaluate_for_shape() for child in self.children)
 
