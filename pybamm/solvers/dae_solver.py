@@ -93,6 +93,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         # Solve
         solve_start_time = timer.time()
+        pybamm.logger.info("Calling DAE solver")
         solution = self.integrate(
             residuals,
             y0,
@@ -145,8 +146,11 @@ class DaeSolver(pybamm.BaseSolver):
         if model.use_simplify:
             # set up simplification object, for re-use of dict
             simp = pybamm.Simplification()
+            pybamm.logger.info("Simplifying RHS")
             concatenated_rhs = simp.simplify(concatenated_rhs)
+            pybamm.logger.info("Simplifying algebraic")
             concatenated_algebraic = simp.simplify(concatenated_algebraic)
+            pybamm.logger.info("Simplifying events")
             events = [simp.simplify(event) for event in events]
 
         if model.use_jacobian:
@@ -154,16 +158,17 @@ class DaeSolver(pybamm.BaseSolver):
             y = pybamm.StateVector(
                 slice(0, np.size(model.concatenated_initial_conditions))
             )
+            pybamm.logger.info("Calculating jacobian")
             jac_rhs = concatenated_rhs.jac(y)
             jac_algebraic = concatenated_algebraic.jac(y)
-
-            if model.use_simplify:
-                jac_rhs = jac_rhs.simplify()
-                jac_algebraic = jac_algebraic.simplify()
-
             jac = pybamm.SparseStack(jac_rhs, jac_algebraic)
 
+            if model.use_simplify:
+                pybamm.logger.info("Simplifying jacobian")
+                jac = jac.simplify()
+
             if model.use_to_python:
+                pybamm.logger.info("Converting jacobian to python")
                 jac = pybamm.EvaluatorPython(jac)
 
         else:
