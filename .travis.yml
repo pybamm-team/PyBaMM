@@ -78,6 +78,20 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_SCIKITS_ODES=true
+        - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
+          env:
+            - PYBAMM_UNIT=true
           if: type != cron
         - python: "3.7"
           addons:
