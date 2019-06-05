@@ -93,12 +93,12 @@ matrix:
             - PYBAMM_EXAMPLES=true
           if: type != cron
         # Unit testing on OS/X
-         - os: osx
-           language: generic
-           env:
-             - PYBAMM_UNIT=true
-             - PYBAMM_EXAMPLES=true
-           if: type != cron
+        - os: osx
+          language: generic
+          env:
+            - PYBAMM_UNIT=true
+            - PYBAMM_EXAMPLES=true
+          if: type != cron
         # Docs, style and cover checking, latest Python version only
         - python: "3.6"
           addons:
