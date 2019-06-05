@@ -79,6 +79,15 @@ class TestFunction(unittest.TestCase):
         self.assertEqual((func).diff(func).evaluate(), 1)
 
 
+def TestSpecificFunctions(self):
+    def test_exp(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.exp(a)
+        self.assertIsInstance(fun, pybamm.Exponential)
+        self.assertEqual(fun.child.id, a.id)
+        self.assertEqual(fun.evaluate(), np.exp(3))
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

@@ -71,9 +71,7 @@ class Function(pybamm.Symbol):
                 # if variable appears in the function,use autograd to differentiate
                 # function, and apply chain rule
                 if variable.id in [symbol.id for symbol in child.pre_order()]:
-                    partial_derivatives[i] = child.diff(variable) * Function(
-                        autograd.grad(self.function), *children
-                    )
+                    partial_derivatives[i] = child.diff(variable) * self._diff(children)
 
             # remove None entries
             partial_derivatives = list(filter(None, partial_derivatives))
@@ -83,6 +81,9 @@ class Function(pybamm.Symbol):
                 derivative = pybamm.Scalar(0)
 
             return derivative
+
+    def _diff(self, children):
+        return Function(autograd.elementwise_grad(self.function), *children)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -103,9 +104,7 @@ class Function(pybamm.Symbol):
             children = self.orphans
             for child in children:
                 if not child.evaluates_to_number():
-                    jac_fun = Function(
-                        autograd.elementwise_grad(self.function), *children
-                    ) * child.jac(variable)
+                    jac_fun = self._diff(children) * child.jac(variable)
 
                     jac_fun.domain = self.domain
                     if jacobian is None:
@@ -161,7 +160,7 @@ class Function(pybamm.Symbol):
             : :pybamm.Function
             A new copy of the function
         """
-        return pybamm.Function(self.function, *children)
+        return self.__class__(self.function, *children)
 
     def _function_simplify(self, simplified_children):
         """
@@ -181,5 +180,16 @@ class Function(pybamm.Symbol):
             # If self.func() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.function())
         else:
-            return pybamm.Function(self.function, *simplified_children)
+            return self.__class__(self.function, *simplified_children)
 
+
+class Exponential(Function):
+    def __init__(self, child):
+        super().__init__(np.exp, child)
+
+    def _diff(self, variable):
+        return Exponential(self.child)
+
+
+def exp(child):
+    return Exponential(child)
