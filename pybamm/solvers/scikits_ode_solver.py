@@ -15,6 +15,10 @@ if scikits_odes_spec is not None:
         scikits_odes_spec.loader.exec_module(scikits_odes)
 
 
+def have_scikits_odes():
+    return scikits_odes_spec is None
+
+
 class ScikitsOdeSolver(pybamm.OdeSolver):
     """Solve a discretised model, using scikits.odes.
 

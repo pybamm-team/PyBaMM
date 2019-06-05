@@ -74,6 +74,7 @@ class TestQuickPlot(unittest.TestCase):
 
         quick_plot.update(0.01)
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_plot_lead_acid(self):
         loqs = pybamm.lead_acid.LOQS()
         geometry = loqs.default_geometry

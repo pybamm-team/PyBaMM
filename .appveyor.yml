@@ -12,7 +12,6 @@ environment:
 install:
   - "%PYTHON%\\python.exe --version"
   - "%PYTHON%\\python.exe -m pip install --upgrade pip setuptools wheel graphviz"
-  - scripts/install_scikits_odes.ps1
   - "%PYTHON%\\python.exe -m pip install ."
 
 build: off

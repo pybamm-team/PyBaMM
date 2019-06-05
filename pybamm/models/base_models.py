@@ -378,7 +378,7 @@ class StandardBatteryBaseModel(BaseModel):
     def default_parameter_values(self):
         # Default parameter values, geometry, submesh, spatial methods and solver
         # Lion parameters left as default parameter set for tests
-        pybamm_path = pybamm.__path__[0]+'/..'
+        pybamm_path = pybamm.__path__[0] + '/..'
         input_path = os.path.join(pybamm_path, "input", "parameters", "lithium-ion")
         return pybamm.ParameterValues(
             os.path.join(
@@ -624,7 +624,7 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
 
     @property
     def default_parameter_values(self):
-        pybamm_path = pybamm.__path__[0]+'/..'
+        pybamm_path = pybamm.__path__[0] + '/..'
         input_path = os.path.join(pybamm_path, "input", "parameters", "lead-acid")
         return pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",

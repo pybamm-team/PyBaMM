@@ -2,15 +2,14 @@
 # Tests for the lead-acid Newman-Tiedemann model
 #
 import pybamm
-from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
 
 import unittest
 import numpy as np
 
 
-@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
 class TestLeadAcidNewmanTiedemann(unittest.TestCase):
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):
         model = pybamm.lead_acid.NewmanTiedemann()
         modeltest = tests.StandardModelTest(model)
@@ -30,13 +29,14 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
 
 
 class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_differential(self):
         options = {"capacitance": "differential"}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
         options = {"capacitance": "algebraic"}
         model = pybamm.lead_acid.NewmanTiedemann(options)

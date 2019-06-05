@@ -2,14 +2,13 @@
 # Tests for the lithium-ion DFN model
 #
 import pybamm
-from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
 
 import numpy as np
 import unittest
 
 
-@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestDFN(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lithium_ion.DFN()
