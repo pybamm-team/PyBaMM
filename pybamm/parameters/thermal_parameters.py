@@ -11,7 +11,7 @@ T_ref = pybamm.Parameter("Reference temperature [K]")
 
 # Density
 rho_cn_dim = pybamm.Parameter("Negative current collector density [kg.m-3]")
-rho_n_dim = pybamm.Parameters("Negative electrode density [kg.m-3]")
+rho_n_dim = pybamm.Parameter("Negative electrode density [kg.m-3]")
 rho_s_dim = pybamm.Parameter("Separator density [kg.m-3]")
 rho_p_dim = pybamm.Parameter("Positive electrode density [kg.m-3]")
 rho_cp_dim = pybamm.Parameter("Positive current collector density [kg.m-3]")
@@ -45,7 +45,7 @@ rho_eff_dim = pybamm.Parameter("Lumped effective thermal density [J.K-1.m-3]")
 lambda_eff_dim = pybamm.Parameter("Effective thermal conductivity [W.m-1.K-1]")
 
 # Initial temperature
-T_init_dim = pybamm.Parameters("Initial temperature [K]")
+T_init_dim = pybamm.Parameter("Initial temperature [K]")
 
 
 # --------------------------------------------------------------------------------------
