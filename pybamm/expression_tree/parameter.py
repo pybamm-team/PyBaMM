@@ -35,7 +35,7 @@ class Parameter(pybamm.Symbol):
         return np.nan
 
 
-class FunctionParameter(pybamm.UnaryOperator):
+class FunctionParameter(pybamm.Symbol):
     """A node in the expression tree representing a function parameter
 
     This node will be replaced by a :class:`pybamm.Function` node if a callable function
@@ -56,10 +56,12 @@ class FunctionParameter(pybamm.UnaryOperator):
 
     """
 
-    def __init__(self, name, child, diff_variable=None):
+    def __init__(self, name, *children, diff_variable=None):
         # assign diff variable
         self.diff_variable = diff_variable
-        super().__init__(name, child)
+        children_list = list(children)
+        domain = self.get_children_domains(children_list)
+        super().__init__(name, children=children, domain=domain)
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id` """
@@ -69,12 +71,54 @@ class FunctionParameter(pybamm.UnaryOperator):
             + tuple(self.domain)
         )
 
+    def get_children_domains(self, children_list):
+        """Obtains the unique domain of the children. If the
+        children have different domains then raise an error"""
+        domains = [child.domain for child in children_list if child.domain != []]
+
+        # check that there is one common domain amongst children
+        distinct_domains = set(tuple(dom) for dom in domains)
+
+        if len(distinct_domains) > 1:
+            raise pybamm.DomainError(
+                "Functions can only be applied to variables on the same domain"
+            )
+        elif len(distinct_domains) == 0:
+            domain = []
+        else:
+            domain = domains[0]
+
+        return domain
+
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
-        return FunctionParameter(self.name, self.orphans[0], diff_variable=variable)
+        return FunctionParameter(self.name, *self.orphans, diff_variable=variable)
 
-    def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
-        return FunctionParameter(self.name, child, diff_variable=self.diff_variable)
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return self._function_parameter_new_copy(self.orphans)
+
+    def _function_parameter_new_copy(self, children):
+        """Returns a new copy of the function parameter.
+
+        Inputs
+        ------
+        children : : list
+            A list of the children of the function
+
+        Returns
+        -------
+            : :pybamm.FunctionParameter
+            A new copy of the function parameter
+        """
+        return FunctionParameter(self.name, *children, diff_variable=self.diff_variable)
+
+    def evaluate_for_shape(self, t=None, y=None):
+        """
+        Returns the sum of the evaluated children
+        See :meth:`pybamm.Symbol.evaluate_for_shape()`
+        """
+        return sum(child.evaluate_for_shape() for child in self.children)
+
