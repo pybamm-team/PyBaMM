@@ -1,13 +1,11 @@
 import numpy as np
 import pybamm
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS(
-        {"capacitance": "differential", "side reactions": ["oxygen"]}
-    ),
+    pybamm.lead_acid.LOQS({"capacitance": "algebraic", "side reactions": ["oxygen"]}),
     pybamm.lead_acid.LOQS({"capacitance": "differential"}),
 ]
 
@@ -18,7 +16,7 @@ geometry = models[-1].default_geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 17,
+        "Typical current [A]": -1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
         "Positive electrode reference exchange-current density [A.m-2]": 0.006,

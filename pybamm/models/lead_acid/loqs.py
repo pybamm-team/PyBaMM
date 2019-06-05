@@ -27,7 +27,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         else:
             self.set_interface_and_electrolyte_submodels_capacitance_formulation()
         self.set_porosity_submodel()
-        self.set_diffusion_submodel()
+        self.set_diffusion_submodels()
         self.set_current_variables()
         self.set_convection_variables()
 
@@ -71,6 +71,9 @@ class LOQS(pybamm.LeadAcidBaseModel):
                     "Positive electrode surface potential difference": delta_phi_p,
                 }
             )
+        if "oxygen" in self.options["side reactions"]:
+            c_ox = pybamm.Variable("Oxygen concentration", curr_coll_domain)
+            self.variables["Oxygen concentration"] = c_ox
 
     def set_boundary_conditions(self, bc_variables=None):
         "Set boundary conditions, dependent on self.options"
@@ -92,18 +95,18 @@ class LOQS(pybamm.LeadAcidBaseModel):
         i_boundary_cc = self.variables["Current collector current density"]
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
+        main_curr_model = pybamm.interface_lead_acid.MainReaction(param)
         pot_model = pybamm.potential.Potential(param)
 
         # Interfacial parameters
-        j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
-        j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)
+        j0_n = main_curr_model.get_exchange_current_densities(c_e, neg)
+        j0_p = main_curr_model.get_exchange_current_densities(c_e, pos)
         ocp_n = param.U_n(c_e)
         ocp_p = param.U_p(c_e)
 
         # Interfacial current density
-        j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
-        j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
+        j_n = main_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
+        j_p = main_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
         self.reactions = {
             "main": {
                 "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n},
@@ -112,15 +115,15 @@ class LOQS(pybamm.LeadAcidBaseModel):
         }
 
         # Potentials
-        eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
-        eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
+        eta_r_n = main_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
+        eta_r_p = main_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
         pot_vars = pot_model.get_all_potentials(
             (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
         )
         self.variables.update(pot_vars)
 
         # Exchange-current density
-        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        j_vars = main_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
 
     def set_interface_and_electrolyte_submodels_capacitance_formulation(self):
@@ -131,19 +134,19 @@ class LOQS(pybamm.LeadAcidBaseModel):
         delta_phi_p = self.variables["Positive electrode surface potential difference"]
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
         pot_model = pybamm.potential.Potential(param)
         self.reactions = {}
 
         # Main reaction
-        j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
-        j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)
+        main_curr_model = pybamm.interface_lead_acid.MainReaction(param)
+        j0_n = main_curr_model.get_exchange_current_densities(c_e, neg)
+        j0_p = main_curr_model.get_exchange_current_densities(c_e, pos)
         ocp_n = param.U_n(c_e)
         ocp_p = param.U_p(c_e)
         eta_r_n = delta_phi_n - ocp_n
         eta_r_p = delta_phi_p - ocp_p
-        j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
-        j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, pos)
+        j_n = main_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
+        j_p = main_curr_model.get_butler_volmer(j0_p, eta_r_p, pos)
         self.reactions["main"] = {
             "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n},
             "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": j_p},
@@ -151,17 +154,33 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         # Oxygen reaction
         if "oxygen" in self.options["side reactions"]:
-            j0_n_Ox = int_curr_model.get_exchange_current_densities(c_e, neg)
-            j0_p_Ox = int_curr_model.get_exchange_current_densities(c_e, pos)
-            ocp_n_Ox = param.U_n(c_e)
-            ocp_p_Ox = param.U_p(c_e)
+            c_ox = self.variables["Oxygen concentration"]
+            oxygen_curr_model = pybamm.interface_lead_acid.OxygenReaction(param)
+            j0a_n_Ox = oxygen_curr_model.get_exchange_current_densities(
+                c_e, c_ox, "forward", neg
+            )
+            j0c_n_Ox = oxygen_curr_model.get_exchange_current_densities(
+                c_e, c_ox, "backward", neg
+            )
+            j0a_p_Ox = oxygen_curr_model.get_exchange_current_densities(
+                c_e, c_ox, "forward", pos
+            )
+            j0c_p_Ox = oxygen_curr_model.get_exchange_current_densities(
+                c_e, c_ox, "backward", pos
+            )
+            ocp_n_Ox = param.U_n_Ox
+            ocp_p_Ox = param.U_p_Ox
             eta_r_n_Ox = delta_phi_n - ocp_n_Ox
             eta_r_p_Ox = delta_phi_p - ocp_p_Ox
-            j_n_Ox = int_curr_model.get_butler_volmer(j0_n_Ox, eta_r_n_Ox, neg)
-            j_p_Ox = int_curr_model.get_butler_volmer(j0_p_Ox, eta_r_p_Ox, pos)
+            j_n_Ox = oxygen_curr_model.get_butler_volmer(
+                j0a_n_Ox, j0c_n_Ox, eta_r_n_Ox, neg
+            )
+            j_p_Ox = oxygen_curr_model.get_butler_volmer(
+                j0a_p_Ox, j0c_p_Ox, eta_r_p_Ox, pos
+            )
             self.reactions["oxygen"] = {
-                "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n_Ox},
-                "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": j_p_Ox},
+                "neg": {"s": -(param.s_plus_Ox + param.t_plus), "aj": j_n_Ox},
+                "pos": {"s": -(param.s_plus_Ox + param.t_plus), "aj": j_p_Ox},
             }
 
         # Electrolyte current
@@ -175,15 +194,11 @@ class LOQS(pybamm.LeadAcidBaseModel):
             self.variables, self.reactions, pos
         )
         self.update(eleclyte_current_model)
-
         pot_vars = pot_model.get_all_potentials(
             (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
         )
-        self.variables.update(pot_vars)
-
-        # Exchange-current density
-        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
-        self.variables.update(j_vars)
+        j_vars = main_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update({**pot_vars, **j_vars})
 
     def set_porosity_submodel(self):
         param = self.set_of_parameters
@@ -195,18 +210,26 @@ class LOQS(pybamm.LeadAcidBaseModel):
         deps_n_dt = self.variables["Negative electrode porosity change"].orphans[0]
         deps_p_dt = self.variables["Positive electrode porosity change"].orphans[0]
         for name, reaction in self.reactions.items():
+            # Only main reaction contributes to porosity change
             if name == "main":
-                reaction["neg"]["deps_dt"] = 0  # deps_n_dt
-                reaction["pos"]["deps_dt"] = 0  # deps_p_dt
+                reaction["neg"]["deps_dt"] = deps_n_dt
+                reaction["pos"]["deps_dt"] = deps_p_dt
             else:
                 reaction["neg"]["deps_dt"] = 0
                 reaction["pos"]["deps_dt"] = 0
 
-    def set_diffusion_submodel(self):
+    def set_diffusion_submodels(self):
         param = self.set_of_parameters
         eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         eleclyte_conc_model.set_leading_order_system(self.variables, self.reactions)
         self.update(eleclyte_conc_model)
+        if "oxygen" in self.options["side reactions"]:
+            c_ox = self.variables["Oxygen concentration"]
+            self.rhs[c_ox] = pybamm.Scalar(0)
+            self.initial_conditions[c_ox] = pybamm.Scalar(0)
+        #     oxygen_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        #     oxygen_conc_model.set_leading_order_system(self.variables, self.reactions)
+        #     self.update(oxygen_conc_model)
 
     def set_current_variables(self):
         param = self.set_of_parameters

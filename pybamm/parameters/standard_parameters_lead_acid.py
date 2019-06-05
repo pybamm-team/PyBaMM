@@ -70,37 +70,42 @@ a_p_dimensional = pybamm.geometric_parameters.a_p_dimensional
 b = pybamm.geometric_parameters.b
 
 # Electrochemical reactions
+# Main
 j0_n_S_ref_dimensional = pybamm.Parameter(
     "Negative electrode reference exchange-current density [A.m-2]"
 )
 j0_p_S_ref_dimensional = pybamm.Parameter(
     "Positive electrode reference exchange-current density [A.m-2]"
 )
+s_plus_n_S_dim = pybamm.Parameter("Negative electrode cation signed stoichiometry")
+s_plus_p_S_dim = pybamm.Parameter("Positive electrode cation signed stoichiometry")
+ne_n_S = pybamm.Parameter("Negative electrode electrons in reaction")
+ne_p_S = pybamm.Parameter("Positive electrode electrons in reaction")
+C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
+# Oxygen
 j0_n_Ox_ref_dimensional = pybamm.Parameter(
     "Negative electrode reference exchange-current density (oxygen) [A.m-2]"
 )
 j0_p_Ox_ref_dimensional = pybamm.Parameter(
     "Positive electrode reference exchange-current density (oxygen) [A.m-2]"
 )
+s_plus_Ox_dim = pybamm.Parameter("Signed stoichiometry of cations (oxygen reaction)")
+s_w_Ox_dim = pybamm.Parameter("Signed stoichiometry of water (oxygen reaction)")
+s_ox_Ox_dim = pybamm.Parameter("Signed stoichiometry of oxygen (oxygen reaction)")
+ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
+c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration [mol.m-3]")
+U_Ox_dim = pybamm.Parameter("Oxygen reference OCP vs SHE [V]")
+# Hydrogen
 j0_n_Hy_ref_dimensional = pybamm.Parameter(
     "Negative electrode reference exchange-current density (hydrogen) [A.m-2]"
 )
 j0_p_Hy_ref_dimensional = pybamm.Parameter(
     "Positive electrode reference exchange-current density (hydrogen) [A.m-2]"
 )
-s_plus_n_S_dim = pybamm.Parameter("Negative electrode cation signed stoichiometry")
-s_plus_p_S_dim = pybamm.Parameter("Positive electrode cation signed stoichiometry")
-ne_n_S = pybamm.Parameter("Negative electrode electrons in reaction")
-ne_p_S = pybamm.Parameter("Positive electrode electrons in reaction")
-s_plus_Ox_dim = pybamm.Parameter("Signed stoichiometry of cations (oxygen reaction)")
-s_w_Ox_dim = pybamm.Parameter("Signed stoichiometry of water (oxygen reaction)")
-s_ox_Ox_dim = pybamm.Parameter("Signed stoichiometry of oxygen (oxygen reaction)")
-ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
-c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration [mol.m-3]")
 s_plus_Hy_dim = pybamm.Parameter("Signed stoichiometry of cations (hydrogen reaction)")
 s_hy_Hy_dim = pybamm.Parameter("Signed stoichiometry of hydrogen (hydrogen reaction)")
 ne_Hy = pybamm.Parameter("Electrons in hydrogen reaction")
-C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
+U_Hy_dim = pybamm.Parameter("Hydrogen reference OCP vs SHE [V]")
 
 
 # Electrolyte properties
@@ -276,13 +281,9 @@ Q_n_max = Q_n_max_dimensional / (c_e_typ * F)
 Q_p_max = Q_p_max_dimensional / (c_e_typ * F)
 
 # Electrochemical reactions
+# Main
 s_plus_n_S = s_plus_n_S_dim / ne_n_S
 s_plus_p_S = s_plus_p_S_dim / ne_p_S
-s_plus_Ox = s_plus_Ox_dim / ne_Ox
-s_w_Ox = s_w_Ox_dim / ne_Ox
-s_ox_Ox = s_ox_Ox_dim / ne_Ox
-s_plus_Hy = s_plus_Hy_dim / ne_Hy
-s_hy_Hy = s_hy_Hy_dim / ne_Hy
 s_n = -(s_plus_n_S + t_plus)  # Dimensionless rection rate (neg)
 s_p = -(s_plus_p_S + t_plus)  # Dimensionless rection rate (pos)
 s = pybamm.Concatenation(
@@ -292,12 +293,6 @@ s = pybamm.Concatenation(
 )
 j0_n_S_ref = j0_n_S_ref_dimensional / interfacial_current_scale_n
 j0_p_S_ref = j0_p_S_ref_dimensional / interfacial_current_scale_p
-m_n = j0_n_S_ref
-m_p = j0_p_S_ref
-j0_n_Ox_ref = j0_n_Ox_ref_dimensional / interfacial_current_scale_n
-j0_p_Ox_ref = j0_p_Ox_ref_dimensional / interfacial_current_scale_p
-j0_n_Hy_ref = j0_n_Hy_ref_dimensional / interfacial_current_scale_n
-j0_p_Hy_ref = j0_p_Hy_ref_dimensional / interfacial_current_scale_p
 C_dl_n = (
     C_dl_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
 )
@@ -306,6 +301,21 @@ C_dl_p = (
 )
 ne_n = ne_n_S
 ne_p = ne_p_S
+# Oxygen
+s_plus_Ox = s_plus_Ox_dim / ne_Ox
+s_w_Ox = s_w_Ox_dim / ne_Ox
+s_ox_Ox = s_ox_Ox_dim / ne_Ox
+j0_n_Ox_ref = j0_n_Ox_ref_dimensional / interfacial_current_scale_n
+j0_p_Ox_ref = j0_p_Ox_ref_dimensional / interfacial_current_scale_p
+U_n_Ox = (U_Ox_dim - U_n_ref) / potential_scale
+U_p_Ox = (U_Ox_dim - U_p_ref) / potential_scale
+# Hydrogen
+s_plus_Hy = s_plus_Hy_dim / ne_Hy
+s_hy_Hy = s_hy_Hy_dim / ne_Hy
+j0_n_Hy_ref = j0_n_Hy_ref_dimensional / interfacial_current_scale_n
+j0_p_Hy_ref = j0_p_Hy_ref_dimensional / interfacial_current_scale_p
+U_n_Hy = (U_Hy_dim - U_n_ref) / potential_scale
+U_p_Hy = (U_Hy_dim - U_p_ref) / potential_scale
 
 # Electrolyte properties
 beta_surf_n = -c_e_typ * DeltaVsurf_n / ne_n_S  # Molar volume change (lead)

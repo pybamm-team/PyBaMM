@@ -258,7 +258,6 @@ class TestSimplify(unittest.TestCase):
         a2 = pybamm.Scalar(1)
         v2 = pybamm.Vector(np.ones(10))
 
-        # for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
         for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
             self.assertIsInstance(expr.simplify(), pybamm.Vector)
             np.testing.assert_array_equal(expr.simplify().entries, np.zeros((10, 1)))
