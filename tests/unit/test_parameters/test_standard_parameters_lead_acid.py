@@ -164,19 +164,23 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         param_eval = pybamm.print_parameters(parameters, parameter_values)
         param_eval = {k: v[0] for k, v in param_eval.items()}
 
-        # Diffusional C-rate should be smaller than C-rate
-        self.assertLess(param_eval["C_e"], param_eval["C_rate"])
+        # Update initial state of charge
+        parameter_values.update({"Initial State of Charge": 0.2})
+        param_eval_update = pybamm.print_parameters(parameters, parameter_values)
+        param_eval_update = {k: v[0] for k, v in param_eval_update.items()}
 
-        # Dimensionless electrode conductivities should be large
-        self.assertGreater(param_eval["sigma_n"], 10)
-        self.assertGreater(param_eval["sigma_p"], 10)
-        # Dimensionless double-layer capacity should be small
-        self.assertLess(param_eval["C_dl_n"], 1e-3)
-        self.assertLess(param_eval["C_dl_p"], 1e-3)
-        # Volume change positive in negative electrode and negative in positive
-        # electrode
-        self.assertLess(param_eval["DeltaVsurf_n"], 0)
-        self.assertGreater(param_eval["DeltaVsurf_p"], 0)
+        # Test that relevant parameters have changed as expected
+        self.assertLess(param_eval_update["q_init"], param_eval["q_init"])
+        self.assertLess(param_eval_update["c_e_init"], param_eval["c_e_init"])
+        self.assertLess(param_eval_update["eps_n_init"], param_eval["eps_n_init"])
+        self.assertEqual(param_eval_update["eps_s_init"], param_eval["eps_s_init"])
+        self.assertLess(param_eval_update["eps_p_init"], param_eval["eps_p_init"])
+        self.assertGreater(
+            param_eval_update["curlyU_n_init"], param_eval["curlyU_n_init"]
+        )
+        self.assertGreater(
+            param_eval_update["curlyU_p_init"], param_eval["curlyU_p_init"]
+        )
 
 
 if __name__ == "__main__":
