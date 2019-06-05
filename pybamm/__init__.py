@@ -75,7 +75,6 @@ from .expression_tree.unary_operators import (
     UnaryOperator,
     Negate,
     AbsoluteValue,
-    Function,
     Index,
     SpatialOperator,
     Gradient,
@@ -91,6 +90,7 @@ from .expression_tree.unary_operators import (
     average,
     boundary_value,
 )
+from .expression_tree.function import Function
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast
 from .expression_tree.scalar import Scalar
