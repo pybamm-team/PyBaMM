@@ -55,65 +55,76 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         constant_symbols[symbol.id] = symbol.evaluate()
         return
 
-    # process children recursivly
+    # process children recursively
     for child in symbol.children:
         find_symbols(child, constant_symbols, variable_symbols)
 
-    # calculate the variable names that will hold the result of calcaulating the
+    # calculate the variable names that will hold the result of calculating the
     # children variables
-    children_vars = [id_to_python_variable(child.id, child.is_constant())
-                     for child in symbol.children]
+    children_vars = [
+        id_to_python_variable(child.id, child.is_constant())
+        for child in symbol.children
+    ]
 
     if isinstance(symbol, pybamm.BinaryOperator):
         # Multiplication and Division need special handling for scipy sparse matrices
         # TODO: we can pass through a dummy y and t to get the type and then hardcode
         # the right line, avoiding these checks
         if isinstance(symbol, pybamm.Multiplication):
-            symbol_str = \
-                "{0}.multiply({1}) if scipy.sparse.issparse({0}) else " \
-                "{1}.multiply({0}) if scipy.sparse.issparse({1}) else " \
+            symbol_str = (
+                "{0}.multiply({1}) if scipy.sparse.issparse({0}) else "
+                "{1}.multiply({0}) if scipy.sparse.issparse({1}) else "
                 "{0} * {1}".format(children_vars[0], children_vars[1])
+            )
         elif isinstance(symbol, pybamm.Division):
-            symbol_str = \
-                "{0}.multiply(1/{1}) if scipy.sparse.issparse({0}) else " \
+            symbol_str = (
+                "{0}.multiply(1/{1}) if scipy.sparse.issparse({0}) else "
                 "{0} / {1}".format(children_vars[0], children_vars[1])
+            )
         elif isinstance(symbol, pybamm.Outer):
-            symbol_str = "np.outer({}, {}).reshape(-1, 1)".format(children_vars[0],
-                                                                  children_vars[1])
+            symbol_str = "np.outer({}, {}).reshape(-1, 1)".format(
+                children_vars[0], children_vars[1]
+            )
         else:
-            symbol_str = children_vars[0] + ' ' + symbol.name + ' ' + children_vars[1]
+            symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 
     elif isinstance(symbol, pybamm.UnaryOperator):
-        # For a Function we create two lines of code, one in constant_symbols that
-        # contains the function handle, the other in variable_symbols that calls that
-        # function on the child variable
-        if isinstance(symbol, pybamm.Function):
-            constant_symbols[symbol.id] = symbol.func
-            funct_var = id_to_python_variable(symbol.id, True)
-            symbol_str = "{}({})".format(funct_var, children_vars[0])
-
         # Index has a different syntax than other univariate operations
-        elif isinstance(symbol, pybamm.Index):
-            symbol_str = "{}[{}:{}]".format(children_vars[0],
-                                            symbol.slice.start,
-                                            symbol.slice.stop)
+        if isinstance(symbol, pybamm.Index):
+            symbol_str = "{}[{}:{}]".format(
+                children_vars[0], symbol.slice.start, symbol.slice.stop
+            )
         else:
             symbol_str = symbol.name + children_vars[0]
+
+    # For a Function we create two lines of code, one in constant_symbols that
+    # contains the function handle, the other in variable_symbols that calls that
+    # function on the children variables
+    elif isinstance(symbol, pybamm.Function):
+        constant_symbols[symbol.id] = symbol.function
+        funct_var = id_to_python_variable(symbol.id, True)
+        children_str = ""
+        for child_var in children_vars:
+            if children_str == "":
+                children_str = child_var
+            else:
+                children_str += ", " + child_var
+        symbol_str = "{}({})".format(funct_var, children_str)
 
     elif isinstance(symbol, pybamm.Concatenation):
 
         # don't bother to concatenate if there is only a single child
         if isinstance(symbol, pybamm.NumpyConcatenation):
             if len(children_vars) > 1:
-                symbol_str = 'np.concatenate(({}))'.format(",".join(children_vars))
+                symbol_str = "np.concatenate(({}))".format(",".join(children_vars))
             else:
-                symbol_str = '{}'.format(",".join(children_vars))
+                symbol_str = "{}".format(",".join(children_vars))
 
         elif isinstance(symbol, pybamm.SparseStack):
             if len(children_vars) > 1:
                 symbol_str = "scipy.sparse.vstack(({}))".format(",".join(children_vars))
             else:
-                symbol_str = '{}'.format(",".join(children_vars))
+                symbol_str = "{}".format(",".join(children_vars))
 
         # DomainConcatenation specifies a particular ordering for the concatenation,
         # which we must follow
@@ -123,14 +134,16 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
             for child_var, slices in zip(children_vars, symbol._children_slices):
                 for child_dom, child_slice in slices.items():
                     slice_starts.append(symbol._slices[child_dom].start)
-                    child_vectors.append("{}[{}:{}]".format(
-                        child_var, child_slice.start, child_slice.stop
-                    ))
+                    child_vectors.append(
+                        "{}[{}:{}]".format(
+                            child_var, child_slice.start, child_slice.stop
+                        )
+                    )
             child_vectors = [v for _, v in sorted(zip(slice_starts, child_vectors))]
             if len(children_vars) > 1:
                 symbol_str = "np.concatenate(({}))".format(",".join(child_vectors))
             else:
-                symbol_str = '{}'.format(",".join(children_vars))
+                symbol_str = "{}".format(",".join(children_vars))
         else:
             raise NotImplementedError
 
@@ -139,7 +152,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         symbol_str = symbol.name
 
     elif isinstance(symbol, pybamm.Time):
-        symbol_str = 't'
+        symbol_str = "t"
 
     else:
         raise NotImplementedError(
@@ -180,25 +193,18 @@ def to_python(symbol, debug=False):
 
     if debug:
         variable_lines = [
-            "print('{}'); ".format(line_format.format(
-                id_to_python_variable(symbol_id, False),
-                symbol_line
-            )) +
-            line_format.format(
-                id_to_python_variable(symbol_id, False),
-                symbol_line
+            "print('{}'); ".format(
+                line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
             )
-            +
-            "; print(type({0}),{0}.shape)".format(
-                id_to_python_variable(symbol_id, False))
+            + line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
+            + "; print(type({0}),{0}.shape)".format(
+                id_to_python_variable(symbol_id, False)
+            )
             for symbol_id, symbol_line in variable_symbols.items()
         ]
     else:
         variable_lines = [
-            line_format.format(
-                id_to_python_variable(symbol_id, False),
-                symbol_line
-            )
+            line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
             for symbol_id, symbol_line in variable_symbols.items()
         ]
 
@@ -225,8 +231,9 @@ class EvaluatorPython:
         # store all the constant symbols in the tree as internal variables of this
         # object
         for symbol_id, value in constants.items():
-            setattr(self, id_to_python_variable(
-                symbol_id, True).replace("self.", ""), value)
+            setattr(
+                self, id_to_python_variable(symbol_id, True).replace("self.", ""), value
+            )
 
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
@@ -234,11 +241,13 @@ class EvaluatorPython:
 
         # compile the generated python code
         self._variable_compiled = compile(
-            self._variable_function, self._result_var, 'exec')
+            self._variable_function, self._result_var, "exec"
+        )
 
         # compile the line that will return the output of `evaluate`
         self._return_compiled = compile(
-            self._result_var, 'return' + self._result_var, 'eval')
+            self._result_var, "return" + self._result_var, "eval"
+        )
 
     def evaluate(self, t=None, y=None, known_evals=None):
         """
