@@ -45,6 +45,7 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
+            - PYBAMM_SCIKITS_ODES=true
           if: type != cron
         - python: "3.6"
           addons:
@@ -61,6 +62,7 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
+            - PYBAMM_SCIKITS_ODES=true
         - python: "3.6"
           addons:
             apt:
@@ -75,6 +77,7 @@ matrix:
                 - python3.6-dev
           env:
             - PYBAMM_UNIT=true
+            - PYBAMM_SCIKITS_ODES=true
           if: type != cron
         - python: "3.7"
           addons:
@@ -91,6 +94,7 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
+            - PYBAMM_SCIKITS_ODES=true
           if: type != cron
         # Unit testing on OS/X
         - os: osx
@@ -144,6 +148,7 @@ matrix:
                 - python3.6-dev
           env:
             - PYBAMM_COVER=true
+            - PYBAMM_SCIKITS_ODES=true
           if: type != cron
           # Cron jobs
         - python: "3.6"
@@ -160,6 +165,7 @@ matrix:
                 - python3.6-dev
           env:
             - PYBAMM_EXAMPLES=true
+            - PYBAMM_SCIKITS_ODES=true
           if: type == cron
 
 # Install graphviz for macs 
@@ -177,7 +183,7 @@ install:
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -e .[docs]; fi;
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
-  - if [[ $TRAVIS_OS_NAME != "osx"]]; then source scripts/install_scikits_odes.sh
+  - if [[ $PYBAMM_SCIKITS_ODES == true ]]; then source scripts/install_scikits_odes.sh
 
 before_script:
 - python --version
