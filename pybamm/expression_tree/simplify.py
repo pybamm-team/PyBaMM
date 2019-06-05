@@ -155,11 +155,18 @@ def simplify_addition_subtraction(myclass, left, right):
         for j, (term_j, typ_j) in enumerate(
             zip(numerator[i + 1 :], numerator_types[i + 1 :])
         ):
+            if isinstance(term_j, pybamm.Multiplication) and isinstance(
+                term_j.left, pybamm.Scalar
+            ):
+                factor = term_j.left.evaluate()
+                term_j = term_j.right
+            else:
+                factor = 1
             if term_i.id == term_j.id:
                 if typ_j == pybamm.Addition:
-                    term_i_count += 1
+                    term_i_count += factor
                 elif typ_j == pybamm.Subtraction:
-                    term_i_count -= 1
+                    term_i_count -= factor
                 del numerator[j + i + 1]
                 del numerator_types[j + i + 1]
 

@@ -121,6 +121,10 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         if sol.flag in [0, 2]:
             # 0 = solved for all t_eval
             # 2 = found root(s)
+            if len(sol.values.t) == 1:
+                raise pybamm.SolverError(
+                    "solver did not progress beyond first time-step"
+                )
             return pybamm.Solution(sol.values.t, np.transpose(sol.values.y))
         else:
             raise pybamm.SolverError(sol.message)

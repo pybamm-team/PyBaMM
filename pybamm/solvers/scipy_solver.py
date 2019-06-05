@@ -76,6 +76,10 @@ class ScipySolver(pybamm.OdeSolver):
         )
 
         if sol.success:
+            if len(sol.t) == 1:
+                raise pybamm.SolverError(
+                    "solver did not progress beyond first time-step"
+                )
             return pybamm.Solution(sol.t, sol.y)
         else:
             raise pybamm.SolverError(sol.message)

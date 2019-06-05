@@ -515,12 +515,12 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
 
         if domain == ["negative electrode"]:
             j_average = i_boundary_cc / param.l_n
-            j = reactions["main"]["neg"]["aj"]
+            j = sum(reaction["neg"]["aj"] for reaction in reactions.values())
             self.initial_conditions[delta_phi] = param.U_n(param.c_n_init)
             C_dl = param.C_dl_n
         elif domain == ["positive electrode"]:
             j_average = -i_boundary_cc / param.l_p
-            j = reactions["main"]["pos"]["aj"]
+            j = sum(reaction["pos"]["aj"] for reaction in reactions.values())
             self.initial_conditions[delta_phi] = param.U_p(param.c_p_init)
             C_dl = param.C_dl_p
         else:

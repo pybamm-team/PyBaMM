@@ -39,7 +39,7 @@ class StefanMaxwell(pybamm.SubModel):
         # if porosity is not provided, use the input parameter
         try:
             epsilon = variables["Porosity"]
-            deps_dt = reactions["main"]["porosity change"]
+            deps_dt = sum(rxn["porosity change"] for rxn in reactions.values())
         except KeyError:
             epsilon = param.epsilon
             deps_dt = pybamm.Scalar(0)
@@ -53,10 +53,17 @@ class StefanMaxwell(pybamm.SubModel):
         N_e = N_e_diff + N_e_conv
 
         # Model
-        j_n = reactions["main"]["neg"]["aj"]
-        j_p = reactions["main"]["pos"]["aj"]
-        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
-        source_terms = param.s / param.gamma_e * j
+        source_terms = (
+            sum(
+                pybamm.Concatenation(
+                    reaction["neg"]["s"] * reaction["neg"]["aj"],
+                    pybamm.Broadcast(0, ["separator"]),
+                    reaction["pos"]["s"] * reaction["pos"]["aj"],
+                )
+                for reaction in reactions.values()
+            )
+            / param.gamma_e
+        )
         self.rhs = {
             c_e: (1 / epsilon)
             * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_dt)
@@ -97,8 +104,8 @@ class StefanMaxwell(pybamm.SubModel):
 
         # Model
         source_terms = sum(
-            param.l_n * rxn["neg"]["s_plus"] * rxn["neg"]["aj"]
-            + param.l_p * rxn["pos"]["s_plus"] * rxn["pos"]["aj"]
+            param.l_n * rxn["neg"]["s"] * rxn["neg"]["aj"]
+            + param.l_p * rxn["pos"]["s"] * rxn["pos"]["aj"]
             for rxn in reactions.values()
         )
         self.rhs = {

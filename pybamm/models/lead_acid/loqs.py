@@ -106,8 +106,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
         self.reactions = {
             "main": {
-                "neg": {"s_plus": param.s_n, "aj": j_n},
-                "pos": {"s_plus": param.s_p, "aj": j_p},
+                "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n},
+                "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": j_p},
             }
         }
 
@@ -145,8 +145,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
         j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, pos)
         self.reactions["main"] = {
-            "neg": {"s_plus": param.s_n, "aj": j_n},
-            "pos": {"s_plus": param.s_p, "aj": j_p},
+            "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n},
+            "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": j_p},
         }
 
         # Oxygen reaction
@@ -160,8 +160,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
             j_n_Ox = int_curr_model.get_butler_volmer(j0_n_Ox, eta_r_n_Ox, neg)
             j_p_Ox = int_curr_model.get_butler_volmer(j0_p_Ox, eta_r_p_Ox, pos)
             self.reactions["oxygen"] = {
-                "neg": {"s_plus": param.s_n, "aj": j_n_Ox},
-                "pos": {"s_plus": param.s_p, "aj": j_p_Ox},
+                "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n_Ox},
+                "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": j_p_Ox},
             }
 
         # Electrolyte current
@@ -196,8 +196,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         deps_p_dt = self.variables["Positive electrode porosity change"].orphans[0]
         for name, reaction in self.reactions.items():
             if name == "main":
-                reaction["neg"]["deps_dt"] = deps_n_dt
-                reaction["pos"]["deps_dt"] = deps_p_dt
+                reaction["neg"]["deps_dt"] = 0  # deps_n_dt
+                reaction["pos"]["deps_dt"] = 0  # deps_p_dt
             else:
                 reaction["neg"]["deps_dt"] = 0
                 reaction["pos"]["deps_dt"] = 0

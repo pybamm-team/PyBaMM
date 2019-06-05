@@ -238,6 +238,20 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr, pybamm.Scalar)
         self.assertEqual(expr.evaluate(), 0)
 
+        # B - (A+A) = B - 2*A (#323)
+        expr = (b - (a + a)).simplify()
+        self.assertIsInstance(expr, pybamm.Subtraction)
+        self.assertIsInstance(expr.right, pybamm.Multiplication)
+        self.assertEqual(expr.right.left.id, pybamm.Scalar(2).id)
+        self.assertEqual(expr.right.right.id, a.id)
+
+        # B - (1*A + 2*A) = B - 3*A (#323)
+        expr = (b - (1 * a + 2 * a)).simplify()
+        self.assertIsInstance(expr, pybamm.Subtraction)
+        self.assertIsInstance(expr.right, pybamm.Multiplication)
+        self.assertEqual(expr.right.left.id, pybamm.Scalar(3).id)
+        self.assertEqual(expr.right.right.id, a.id)
+
     def test_vector_zero_simplify(self):
         a1 = pybamm.Scalar(0)
         v1 = pybamm.Vector(np.zeros(10))
@@ -452,11 +466,12 @@ class TestSimplify(unittest.TestCase):
             )
 
         # subtracting zero
-        for expr in [m1 - m2, - m2 - m1]:
+        for expr in [m1 - m2, -m2 - m1]:
             expr_simp = expr.simplify()
             self.assertIsInstance(expr_simp, pybamm.Matrix)
             np.testing.assert_array_equal(
-                expr_simp.evaluate(y=np.ones(300)), - m2.evaluate())
+                expr_simp.evaluate(y=np.ones(300)), -m2.evaluate()
+            )
 
     def test_domain_concatenation_simplify(self):
         # create discretisation

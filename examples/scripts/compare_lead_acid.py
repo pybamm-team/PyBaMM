@@ -5,9 +5,10 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.Composite(),
-    pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.LOQS(
+        {"capacitance": "differential", "side reactions": ["oxygen"]}
+    ),
+    pybamm.lead_acid.LOQS({"capacitance": "differential"}),
 ]
 
 # create geometry
