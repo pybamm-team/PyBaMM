@@ -149,6 +149,7 @@ from .models.submodels import (
     electrolyte_current,
     electrolyte_diffusion,
     interface,
+    oxygen_diffusion,
     particle,
     porosity,
     potential,

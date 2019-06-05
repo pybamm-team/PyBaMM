@@ -33,6 +33,8 @@ Molar mass of anions [kg.mol-1],0.097,lide1992crc,Hydrogen sulfate anions
 ,,,
 # Other species properties,,,
 Oxygen diffusivity [m2.s-1],2.1e-9,cussler2009diffusion
+Initial oxygen concentration [mol.m-3],0,,
+Typical oxygen concentration [mol.m-3],1000,,
 Hydrogen diffusivity [m2.s-1],4.5e-9,cussler2009diffusion
 Partial molar volume of oxygen molecules [m3.mol-1],3.21E-5,zhou2001partial,
 Partial molar volume of hydrogen molecules [m3.mol-1],2.31E-5,zhou2001partial,

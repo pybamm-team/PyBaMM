@@ -88,7 +88,7 @@ class OxygenReaction(pybamm.interface.InterfacialReaction, pybamm.LeadAcidBaseMo
         """
         param = self.set_of_parameters
 
-        domain = domain or j0.domain
+        domain = domain or j0a.domain
         if domain == ["negative electrode"]:
             forward = j0a * pybamm.Function(np.exp, (param.ne_n / 2) * eta_r)
             backward = j0c * pybamm.Function(np.exp, (param.ne_n / 2) * -eta_r)

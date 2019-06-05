@@ -60,6 +60,10 @@ nu_plus = pybamm.Parameter("Cation stoichiometry")
 nu_minus = pybamm.Parameter("Anion stoichiometry")
 nu = nu_plus + nu_minus
 
+# Other species properties
+c_ox_init_dim = pybamm.Parameter("Initial oxygen concentration [mol.m-3]")
+c_ox_typ = pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
+
 # Electrode properties
 sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
 sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
@@ -267,9 +271,11 @@ gamma_e = pybamm.Scalar(1)
 Re = rho_typ * velocity_scale * L_x / mu_typ
 
 # Other species properties
+# Oxygen
 curlyD_ox = D_ox_dimensional / D_e_typ
-curlyD_hy = D_hy_dimensional / D_e_typ
 omega_c_ox = c_e_typ * M_ox / rho_typ * (1 - M_w * V_ox / V_w * M_ox)
+# Hydrogen
+curlyD_hy = D_hy_dimensional / D_e_typ
 omega_c_hy = c_e_typ * M_hy / rho_typ * (1 - M_w * V_hy / V_w * M_hy)
 
 # Electrode Properties
@@ -351,6 +357,7 @@ capacity = Q_e_max_dimensional * 8 * A_cs * L_x
 # Initial conditions
 q_init = pybamm.Parameter("Initial State of Charge")
 c_e_init = q_init
+c_ox_init = c_ox_init_dim / c_ox_typ
 eps_n_init = eps_n_max - beta_surf_n * Q_e_max / l_n * (1 - q_init)
 eps_s_init = eps_s_max
 eps_p_init = eps_p_max + beta_surf_p * Q_e_max / l_p * (1 - q_init)

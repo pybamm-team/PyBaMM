@@ -179,9 +179,19 @@ class LOQS(pybamm.LeadAcidBaseModel):
                 j0a_p_Ox, j0c_p_Ox, eta_r_p_Ox, pos
             )
             self.reactions["oxygen"] = {
-                "neg": {"s": -(param.s_plus_Ox + param.t_plus), "aj": j_n_Ox},
-                "pos": {"s": -(param.s_plus_Ox + param.t_plus), "aj": j_p_Ox},
+                "neg": {
+                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s_ox": -param.s_ox_Ox,
+                    "aj": j_n_Ox,
+                },
+                "pos": {
+                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s_ox": -param.s_ox_Ox,
+                    "aj": j_p_Ox,
+                },
             }
+            self.reactions["main"]["neg"]["s_ox"] = 0
+            self.reactions["main"]["pos"]["s_ox"] = 0
 
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
@@ -224,12 +234,9 @@ class LOQS(pybamm.LeadAcidBaseModel):
         eleclyte_conc_model.set_leading_order_system(self.variables, self.reactions)
         self.update(eleclyte_conc_model)
         if "oxygen" in self.options["side reactions"]:
-            c_ox = self.variables["Oxygen concentration"]
-            self.rhs[c_ox] = pybamm.Scalar(0)
-            self.initial_conditions[c_ox] = pybamm.Scalar(0)
-        #     oxygen_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        #     oxygen_conc_model.set_leading_order_system(self.variables, self.reactions)
-        #     self.update(oxygen_conc_model)
+            oxygen_conc_model = pybamm.oxygen_diffusion.StefanMaxwell(param)
+            oxygen_conc_model.set_leading_order_system(self.variables, self.reactions)
+            self.update(oxygen_conc_model)
 
     def set_current_variables(self):
         param = self.set_of_parameters
