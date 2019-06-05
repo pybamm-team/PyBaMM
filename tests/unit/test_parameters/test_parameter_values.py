@@ -227,6 +227,20 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_func, pybamm.Function)
         self.assertEqual(processed_func.evaluate(), 3)
 
+    def test_multi_var_function_parameter(self):
+        def D(a, b):
+            return a * np.exp(b)
+
+        parameter_values = pybamm.ParameterValues({"a": 3, "b": 0, "Diffusivity": D})
+
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        func = pybamm.FunctionParameter("Diffusivity", a, b)
+
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.Function)
+        self.assertEqual(processed_func.evaluate(), 3)
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")

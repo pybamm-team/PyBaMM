@@ -48,7 +48,12 @@ class TestSimplify(unittest.TestCase):
         # FunctionParameter
         f = pybamm.FunctionParameter("function", b)
         self.assertIsInstance((f).simplify(), pybamm.FunctionParameter)
-        self.assertEqual((f).simplify().child.id, b.id)
+        self.assertEqual((f).simplify().children[0].id, b.id)
+
+        f = pybamm.FunctionParameter("function", a, b)
+        self.assertIsInstance((f).simplify(), pybamm.FunctionParameter)
+        self.assertEqual((f).simplify().children[0].id, a.id)
+        self.assertEqual((f).simplify().children[1].id, b.id)
 
         # Gradient
         self.assertIsInstance((pybamm.grad(a)).simplify(), pybamm.Scalar)

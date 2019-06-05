@@ -27,7 +27,7 @@ class Parameter(pybamm.Symbol):
         return Parameter(self.name, self.domain)
 
 
-class FunctionParameter(pybamm.UnaryOperator):
+class FunctionParameter(pybamm.Symbol):
     """A node in the expression tree representing a function parameter
 
     This node will be replaced by a :class:`pybamm.Function` node if a callable function
@@ -48,10 +48,10 @@ class FunctionParameter(pybamm.UnaryOperator):
 
     """
 
-    def __init__(self, name, child, diff_variable=None):
+    def __init__(self, name, *children, diff_variable=None):
         # assign diff variable
         self.diff_variable = diff_variable
-        super().__init__(name, child)
+        super().__init__(name, children=children)
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id` """
@@ -65,8 +65,26 @@ class FunctionParameter(pybamm.UnaryOperator):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
-        return FunctionParameter(self.name, self.orphans[0], diff_variable=variable)
+        return FunctionParameter(self.name, *self.orphans, diff_variable=variable)
 
-    def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
-        return FunctionParameter(self.name, child, diff_variable=self.diff_variable)
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        new_children = [None] * len(self.children)
+        for i, child in enumerate(self.children):
+            new_children[i] = child.new_copy()
+        return self._function_parameter_new_copy(new_children)
+
+    def _function_parameter_new_copy(self, children):
+        """Returns a new copy of the function parameter.
+
+        Inputs
+        ------
+        children : : list
+            A list of the children of the function
+           
+        Returns
+        -------
+            : :pybamm.FunctionParameter
+            A new copy of the function parameter
+        """
+        return FunctionParameter(self.name, *children, diff_variable=self.diff_variable)
