@@ -79,13 +79,38 @@ class TestFunction(unittest.TestCase):
         self.assertEqual((func).diff(func).evaluate(), 1)
 
 
-def TestSpecificFunctions(self):
+class TestSpecificFunctions(unittest.TestCase):
     def test_exp(self):
         a = pybamm.Scalar(3)
         fun = pybamm.exp(a)
         self.assertIsInstance(fun, pybamm.Exponential)
-        self.assertEqual(fun.child.id, a.id)
+        self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(), np.exp(3))
+        self.assertEqual(fun.diff(a).evaluate(), np.exp(3))
+
+    def test_sinh(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.sinh(a)
+        self.assertIsInstance(fun, pybamm.Sinh)
+        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.evaluate(), np.sinh(3))
+        self.assertEqual(fun.diff(a).evaluate(), np.cosh(3))
+
+    def test_cosh(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.cosh(a)
+        self.assertIsInstance(fun, pybamm.Cosh)
+        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.evaluate(), np.cosh(3))
+        self.assertEqual(fun.diff(a).evaluate(), np.sinh(3))
+
+    def test_log(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.log(a)
+        self.assertIsInstance(fun, pybamm.Log)
+        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.evaluate(), np.log(3))
+        self.assertEqual(fun.diff(a).evaluate(), 1 / 3)
 
 
 if __name__ == "__main__":

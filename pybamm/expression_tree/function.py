@@ -83,6 +83,7 @@ class Function(pybamm.Symbol):
             return derivative
 
     def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
         return Function(autograd.elementwise_grad(self.function), *children)
 
     def jac(self, variable):
@@ -183,13 +184,61 @@ class Function(pybamm.Symbol):
             return self.__class__(self.function, *simplified_children)
 
 
+class Cosh(Function):
+    """ Hyberbolic cosine function """
+
+    def __init__(self, child):
+        super().__init__(np.cosh, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return Sinh(children[0])
+
+
+def cosh(child):
+    return Cosh(child)
+
+
 class Exponential(Function):
+    """ Exponential function """
+
     def __init__(self, child):
         super().__init__(np.exp, child)
 
-    def _diff(self, variable):
-        return Exponential(self.child)
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return Exponential(children[0])
 
 
 def exp(child):
     return Exponential(child)
+
+
+class Log(Function):
+    """ Logarithmic function """
+
+    def __init__(self, child):
+        super().__init__(np.log, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return 1 / children[0]
+
+
+def log(child):
+    return Log(child)
+
+
+class Sinh(Function):
+    """ Hyperbolic sine function """
+
+    def __init__(self, child):
+        super().__init__(np.sinh, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return Cosh(children[0])
+
+
+def sinh(child):
+    return Sinh(child)
