@@ -21,12 +21,10 @@ class TestQuickPlot(unittest.TestCase):
         disc_spme = pybamm.Discretisation(mesh, spme.default_spatial_methods)
         disc_spm.process_model(spm)
         disc_spme.process_model(spme)
-        solver_spm = spm.default_solver
-        solver_spme = spme.default_solver
         t_eval = np.linspace(0, 2, 100)
-        solver_spm.solve(spm, t_eval)
-        solver_spme.solve(spme, t_eval)
-        quick_plot = pybamm.QuickPlot([spm, spme], mesh, [solver_spm, solver_spme])
+        solution_spm = spm.default_solver.solve(spm, t_eval)
+        solution_spme = spme.default_solver.solve(spme, t_eval)
+        quick_plot = pybamm.QuickPlot([spm, spme], mesh, [solution_spm, solution_spme])
         quick_plot.plot(0)
 
         # update the axis
@@ -46,8 +44,8 @@ class TestQuickPlot(unittest.TestCase):
         # Update parameters, solve, plot again
         param.update({"Typical current [A]": 0})
         param.update_model(spm, disc_spm)
-        solver_spm.solve(spm, t_eval)
-        quick_plot = pybamm.QuickPlot(spm, mesh, solver_spm)
+        solution_spm = spm.default_solver.solve(spm, t_eval)
+        quick_plot = pybamm.QuickPlot(spm, mesh, solution_spm)
         quick_plot.plot(0)
 
         # Test with different output variables
@@ -56,7 +54,7 @@ class TestQuickPlot(unittest.TestCase):
             "Electrolyte concentration",
             "Positive particle surface concentration",
         ]
-        quick_plot = pybamm.QuickPlot(spm, mesh, solver_spm, output_vars)
+        quick_plot = pybamm.QuickPlot(spm, mesh, solution_spm, output_vars)
         self.assertEqual(len(quick_plot.axis), 3)
         quick_plot.plot(0)
 
@@ -84,10 +82,9 @@ class TestQuickPlot(unittest.TestCase):
         disc_loqs = pybamm.Discretisation(mesh, loqs.default_spatial_methods)
         disc_loqs.process_model(loqs)
         t_eval = np.linspace(0, 1, 100)
-        solver_loqs = loqs.default_solver
-        solver_loqs.solve(loqs, t_eval)
+        solution_loqs = loqs.default_solver.solve(loqs, t_eval)
 
-        pybamm.QuickPlot(loqs, mesh, solver_loqs)
+        pybamm.QuickPlot(loqs, mesh, solution_loqs)
 
 
 if __name__ == "__main__":
