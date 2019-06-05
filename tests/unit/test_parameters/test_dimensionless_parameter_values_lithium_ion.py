@@ -1,9 +1,7 @@
 #
-# Tests for the Base Parameter Values class
+# Tests lithium ion parameters load and give expected values
 #
 import pybamm
-
-import os
 
 import unittest
 import numpy as np
