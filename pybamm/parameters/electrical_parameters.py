@@ -1,9 +1,6 @@
 #
-# Geometric Parameters
+# Standard electrical parameters
 #
-"""
-Standard electrical parameters
-"""
 import pybamm
 import numpy as np
 
@@ -16,8 +13,7 @@ def abs_non_zero(x):
 
 
 # --------------------------------------------------------------------------------------
-"Dimensional Parameters"
-# Electrical
+# Dimensional Parameters
 I_typ = pybamm.Parameter("Typical current [A]")
 Q = pybamm.Parameter("Cell capacity [A.h]")
 C_rate = abs(I_typ / Q)
