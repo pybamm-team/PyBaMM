@@ -32,7 +32,7 @@ class TestSimpleODEModel(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         t_eval = np.linspace(0, 1, 50)
         modeltest.test_all(t_eval=t_eval)
-        t, y = modeltest.solver.t, modeltest.solver.y
+        t, y = modeltest.solution.t, modeltest.solution.y
         mesh = modeltest.disc.mesh
 
         # check output

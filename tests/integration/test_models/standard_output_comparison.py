@@ -8,18 +8,18 @@ import numpy as np
 class StandardOutputComparison(object):
     "Calls all the tests comparing standard output variables."
 
-    def __init__(self, models, discs, solvers):
+    def __init__(self, models, discs, solutions):
         # Process variables
         for model in models:
             disc = discs[model]
-            solver = solvers[model]
+            solution = solutions[model]
             model.variables = pybamm.post_process_variables(
-                model.variables, solver.t, solver.y, disc.mesh
+                model.variables, solution.t, solution.y, disc.mesh
             )
 
         self.models = models
         self.discs = discs
-        self.solvers = solvers
+        self.solutions = solutions
 
         if isinstance(self.models[0], pybamm.LithiumIonBaseModel):
             self.chemistry = "Lithium-ion"
@@ -31,17 +31,17 @@ class StandardOutputComparison(object):
 
     def get_output_times(self):
         # Get max time allowed from the simulation, i.e. the smallest end time common
-        # to all the solvers
-        max_t = min([solver.t[-1] for solver in self.solvers.values()])
+        # to all the solutions
+        max_t = min([solution.t[-1] for solution in self.solutions.values()])
 
         # Assign common time
-        solver0 = self.solvers[self.models[0]]
-        max_index = np.where(solver0.t == max_t)[0][0]
-        t_common = solver0.t[:max_index]
+        solution0 = self.solutions[self.models[0]]
+        max_index = np.where(solution0.t == max_t)[0][0]
+        t_common = solution0.t[:max_index]
 
         # Check times
         for model in self.models:
-            np.testing.assert_array_equal(t_common, self.solvers[model].t[:max_index])
+            np.testing.assert_array_equal(t_common, self.solutions[model].t[:max_index])
 
         return t_common
 
@@ -64,7 +64,7 @@ class StandardOutputComparison(object):
             t = self.t[1:]
         else:
             t = self.t
-        tests = ClassName(self.models, t, self.mesh, self.solvers)
+        tests = ClassName(self.models, t, self.mesh, self.solutions)
         tests.test_all()
 
     def test_averages(self, skip_first_timestep=False):
@@ -81,11 +81,23 @@ class StandardOutputComparison(object):
 
 
 class BaseOutputComparison(object):
-    def __init__(self, models, time, mesh, solvers):
+    def __init__(self, models, time, mesh, solutions):
         self.models = models
         self.t = time
         self.mesh = mesh
-        self.solvers = solvers
+        self.solutions = solutions
+
+    def get_vars(self, var):
+        "Helper function to reduce repeated code."
+        return [
+            pybamm.ProcessedVariable(
+                model.variables[var],
+                self.solutions[model].t,
+                self.solutions[model].y,
+                mesh=self.mesh,
+            )
+            for model in self.models
+        ]
 
     def compare(self, var, tol=1e-2):
         "Compare variables from different models"
@@ -115,8 +127,8 @@ class BaseOutputComparison(object):
 class AveragesComparison(BaseOutputComparison):
     "Compare variables whose average value should be the same across all models"
 
-    def __init__(self, models, time, mesh, solvers):
-        super().__init__(models, time, mesh, solvers)
+    def __init__(self, models, time, mesh, solutions):
+        super().__init__(models, time, mesh, solutions)
 
     def test_all(self):
         # Potentials
@@ -131,8 +143,8 @@ class AveragesComparison(BaseOutputComparison):
 class VariablesComparison(BaseOutputComparison):
     "Compare variables across models"
 
-    def __init__(self, models, time, mesh, solvers):
-        super().__init__(models, time, mesh, solvers)
+    def __init__(self, models, time, mesh, solutions):
+        super().__init__(models, time, mesh, solutions)
 
     def test_all(self):
         # Concentrations
@@ -159,8 +171,8 @@ class VariablesComparison(BaseOutputComparison):
 
 
 class ParticleConcentrationComparison(BaseOutputComparison):
-    def __init__(self, models, time, mesh, solvers):
-        super().__init__(models, time, mesh, solvers)
+    def __init__(self, models, time, mesh, solutions):
+        super().__init__(models, time, mesh, solutions)
 
     def test_all(self):
         self.compare("Negative particle concentration")
@@ -170,8 +182,8 @@ class ParticleConcentrationComparison(BaseOutputComparison):
 
 
 class PorosityComparison(BaseOutputComparison):
-    def __init__(self, models, time, mesh, solvers):
-        super().__init__(models, time, mesh, solvers)
+    def __init__(self, models, time, mesh, solutions):
+        super().__init__(models, time, mesh, solutions)
 
     def test_all(self):
         self.compare("Porosity")

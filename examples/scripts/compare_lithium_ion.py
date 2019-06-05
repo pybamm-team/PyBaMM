@@ -26,13 +26,12 @@ for model in models:
     disc.process_model(model)
 
 # solve model
-solvers = [None] * len(models)
+solutions = [None] * len(models)
 t_eval = np.linspace(0, 0.17, 100)
 for i, model in enumerate(models):
-    solver = model.default_solver
-    solver.solve(model, t_eval)
-    solvers[i] = solver
+    solution = model.default_solver.solve(model, t_eval)
+    solutions[i] = solution
 
 # plot
-plot = pybamm.QuickPlot(models, mesh, solvers)
+plot = pybamm.QuickPlot(models, mesh, solutions)
 plot.dynamic_plot()
