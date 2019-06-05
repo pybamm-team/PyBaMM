@@ -469,7 +469,7 @@ class StandardBatteryBaseModel(BaseModel):
             "capacitance": False,
             "convection": False,
             "first-order potential": "linear",
-            "side reactions": None,
+            "side reactions": [],
         }
         if self._extra_options is None:
             options = default_options
@@ -486,7 +486,7 @@ class StandardBatteryBaseModel(BaseModel):
                 raise pybamm.ModelError(
                     "must use capacitance formulation to solve {!s} in 2D".format(self)
                 )
-            if options["side reactions"] is None:
+            if len(options["side reactions"]) > 0:
                 raise pybamm.ModelError(
                     """
                     must use capacitance formulation to solve {!s} with side reactions

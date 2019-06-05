@@ -22,7 +22,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         self.set_model_variables()
         self.set_boundary_conditions(self.variables)
-        self.set_interface_and_electrolyte_submodels()
+        if self.options["capacitance"] is False:
+            self.set_interface_and_electrolyte_submodels_direct_formulation()
+        else:
+            self.set_interface_and_electrolyte_submodels_capacitance_formulation()
         self.set_porosity_submodel()
         self.set_diffusion_submodel()
         self.set_current_variables()
@@ -130,6 +133,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         pos = ["positive electrode"]
         int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
         pot_model = pybamm.potential.Potential(param)
+        self.reactions = {}
 
         # Main reaction
         j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
@@ -140,7 +144,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
         eta_r_p = delta_phi_p - ocp_p
         j_n = int_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
         j_p = int_curr_model.get_butler_volmer(j0_p, eta_r_p, pos)
-
         self.reactions["main"] = {
             "neg": {"s_plus": param.s_n, "aj": j_n},
             "pos": {"s_plus": param.s_p, "aj": j_p},
@@ -191,8 +194,13 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # Update reactions
         deps_n_dt = self.variables["Negative electrode porosity change"].orphans[0]
         deps_p_dt = self.variables["Positive electrode porosity change"].orphans[0]
-        self.reactions["main"]["neg"]["deps_dt"] = deps_n_dt
-        self.reactions["main"]["pos"]["deps_dt"] = deps_p_dt
+        for name, reaction in self.reactions.items():
+            if name == "main":
+                reaction["neg"]["deps_dt"] = deps_n_dt
+                reaction["pos"]["deps_dt"] = deps_p_dt
+            else:
+                reaction["neg"]["deps_dt"] = 0
+                reaction["pos"]["deps_dt"] = 0
 
     def set_diffusion_submodel(self):
         param = self.set_of_parameters

@@ -30,6 +30,18 @@ class TestLeadAcidLOQS(unittest.TestCase):
             pybamm.lead_acid.LOQS(options)
 
 
+class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
+    def test_well_posed(self):
+        options = {"capacitance": "differential", "side reactions": ["oxygen"]}
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
+
+    def test_incompatible_options(self):
+        options = {"side reactions": ["something"]}
+        with self.assertRaises(pybamm.ModelError):
+            pybamm.lead_acid.LOQS(options)
+
+
 class TestLeadAcidLOQSCapacitance(unittest.TestCase):
     def test_well_posed_differential(self):
         options = {"capacitance": "differential"}
