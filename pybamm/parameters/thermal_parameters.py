@@ -70,3 +70,4 @@ lambda_cp = lambda_cp_dim / lambda_eff_dim
 Theta = Delta_T / T_ref
 h = h_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim
 
+T_init = T_init_dim / T_ref

@@ -163,6 +163,7 @@ from .parameters.parameter_values import ParameterValues
 from .parameters import standard_current_functions
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
+from .parameters import thermal_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
 from .parameters.print_parameters import print_parameters, print_evaluated_parameters
 
