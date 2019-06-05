@@ -15,7 +15,7 @@ import pybamm
 
 def root_dir():
     """ return the root directory of the PyBaMM install directory """
-    return pathlib.Path(pybamm.__path__[0]).parent
+    return str(pathlib.Path(pybamm.__path__[0]).parent)
 
 class Timer(object):
     """
