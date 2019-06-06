@@ -116,7 +116,6 @@ matrix:
           env:
             - PYTHON=3.6.5
             - PYBAMM_UNIT=true
-            - PYBAMM_EXAMPLES=true
           if: type != cron
         # Docs, style and cover checking, latest Python version only
         - python: "3.6"
