@@ -203,8 +203,8 @@ before_install:
     pyenv-virtualenv venv;
     source venv/bin/activate;
     # A manual check that the correct version of Python is running.
-    python --version
-  fi
+    python --version;
+    fi
 
 # Install dependencies
 # Note: Use pip (not apt-get) for Python dependencies
