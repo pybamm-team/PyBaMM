@@ -2,7 +2,6 @@
 # Equation classes for a Particle
 #
 import pybamm
-import autograd.numpy as np
 
 
 class Standard(pybamm.SubModel):
@@ -67,10 +66,10 @@ class Standard(pybamm.SubModel):
         c_surf = self.variables[domain.capitalize() + " surface concentration"]
         tol = 0.01
         self.events = [
-            pybamm.Function(np.min, c) - tol,
-            (1 - tol) - pybamm.Function(np.max, c),
-            pybamm.Function(np.min, c_surf) - tol,
-            (1 - tol) - pybamm.Function(np.max, c_surf),
+            pybamm.min(c) - tol,
+            (1 - tol) - pybamm.max(c),
+            pybamm.min(c_surf) - tol,
+            (1 - tol) - pybamm.max(c_surf),
         ]
 
     def get_variables(self, c, N, broadcast):

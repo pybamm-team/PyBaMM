@@ -160,6 +160,28 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(un2_disc, pybamm.AbsoluteValue)
         self.assertIsInstance(un2_disc.children[0], pybamm.Scalar)
 
+        # function of one variable
+        def myfun(x):
+            return np.exp(x)
+        func = pybamm.Function(myfun, var)
+        func_disc = disc.process_symbol(func)
+        self.assertIsInstance(func_disc, pybamm.Function)
+        self.assertIsInstance(func_disc.children[0], pybamm.StateVector)
+
+        func = pybamm.Function(myfun, scal)
+        func_disc = disc.process_symbol(func)
+        self.assertIsInstance(func_disc, pybamm.Function)
+        self.assertIsInstance(func_disc.children[0], pybamm.Scalar)
+
+        # function of multiple variables
+        def myfun(x, y):
+            return np.exp(x) * y
+        func = pybamm.Function(myfun, var, scal)
+        func_disc = disc.process_symbol(func)
+        self.assertIsInstance(func_disc, pybamm.Function)
+        self.assertIsInstance(func_disc.children[0], pybamm.StateVector)
+        self.assertIsInstance(func_disc.children[1], pybamm.Scalar)
+
         # boundary value
         bv_left = pybamm.BoundaryValue(var_vec, "left")
         bv_left_disc = disc.process_symbol(bv_left)

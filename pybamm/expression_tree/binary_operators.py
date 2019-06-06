@@ -164,7 +164,7 @@ class Power(BinaryOperator):
         base, exponent = self.orphans
         return base ** (exponent - 1) * (
             exponent * base.diff(variable)
-            + base * pybamm.Function(np.log, base) * exponent.diff(variable)
+            + base * pybamm.log(base) * exponent.diff(variable)
         )
 
     def jac(self, variable):
@@ -180,12 +180,12 @@ class Power(BinaryOperator):
                 return (exponent * base ** (exponent - 1)) * base.jac(variable)
             elif base.evaluates_to_number():
                 return (
-                    base ** exponent * pybamm.Function(np.log, base)
+                    base ** exponent * pybamm.log(base)
                 ) * exponent.jac(variable)
             else:
                 return (base ** (exponent - 1)) * (
                     exponent * base.jac(variable)
-                    + base * pybamm.Function(np.log, base) * exponent.jac(variable)
+                    + base * pybamm.log(base) * exponent.jac(variable)
                 )
 
     def _binary_evaluate(self, left, right):
