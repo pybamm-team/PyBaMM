@@ -53,6 +53,17 @@ class Geometry(dict):
 
 
 class Geometry1DMacro(Geometry):
+    """
+    A geometry class to store the details features of the macroscopic 1D cell geometry.
+
+    **Extends**: :class:`Geometry`
+
+    Parameters
+    ----------
+
+    custom_geometry : dict containing any extra user defined geometry
+    """
+
     def __init__(self, custom_geometry={}):
         super().__init__()
         var = pybamm.standard_spatial_vars
@@ -72,15 +83,16 @@ class Geometry1DMacro(Geometry):
 
 
 class Geometry3DMacro(Geometry1DMacro):
-    """A geometry class to store the details features of the cell geometry
+    """
+    A geometry class to store the details features of the macroscopic 3D cell geometry.
 
-     **Extends**: :class:`dict`
+    **Extends**: :class:`Geometry1DMacro`
 
-     Parameters
-     ----------
+    Parameters
+    ----------
 
-     custom_geometry : dict containing any extra user defined geometry
-     """
+    custom_geometry : dict containing any extra user defined geometry
+    """
 
     def __init__(self, custom_geometry={}):
         super().__init__()
@@ -98,6 +110,18 @@ class Geometry3DMacro(Geometry1DMacro):
 
 
 class Geometry1DMicro(Geometry):
+    """
+    A geometry class to store the details features of the microscopic 1D particle
+    geometry.
+
+    **Extends**: :class:`Geometry`
+
+    Parameters
+    ----------
+
+    custom_geometry : dict containing any extra user defined geometry
+    """
+
     def __init__(self, custom_geometry={}):
         super().__init__()
 
@@ -114,6 +138,18 @@ class Geometry1DMicro(Geometry):
 
 
 class Geometry1p1DMicro(Geometry):
+    """
+    A geometry class to store the details features of the 1+1D cell geometry.
+    This is the geometry used in the standard DFN or P2D model.
+
+    **Extends**: :class:`Geometry`
+
+    Parameters
+    ----------
+
+    custom_geometry : dict containing any extra user defined geometry
+    """
+
     def __init__(self, custom_geometry={}):
         super().__init__()
 
@@ -134,6 +170,21 @@ class Geometry1p1DMicro(Geometry):
 
 
 class Geometryxp1DMacro(Geometry1DMacro):
+    """
+    A geometry class to store the details features of x+1D macroscopic cell
+    geometry, where x is the dimension of the current collector model.
+
+    **Extends**: :class:`Geometry1DMacro`
+
+    Parameters
+    ----------
+
+    cc_dimension : int, optional
+        the dimension of the current collector model
+    custom_geometry : dict, optional
+        dictionary containing any extra user defined geometry
+    """
+
     def __init__(self, cc_dimension=1, custom_geometry={}):
         super().__init__()
 
@@ -215,6 +266,22 @@ class Geometryxp1DMacro(Geometry1DMacro):
 
 
 class Geometryxp0p1DMicro(Geometry1DMicro):
+    """
+    A geometry class to store the details features of x+0D macroscopic cell
+    geometry, where x is the dimension of the current collector model, along with
+    the microscopic 1D particle geometry.
+
+    **Extends**: :class:`Geometry1DMicro`
+
+    Parameters
+    ----------
+
+    cc_dimension : int, optional
+        the dimension of the current collector model
+    custom_geometry : dict, optional
+        dictionary containing any extra user defined geometry
+    """
+
     def __init__(self, cc_dimension=1, custom_geometry={}):
         super().__init__()
 
@@ -256,6 +323,22 @@ class Geometryxp0p1DMicro(Geometry1DMicro):
 
 
 class Geometryxp1p1DMicro(Geometry1DMicro):
+    """
+    A geometry class to store the details features of x+1D macroscopic cell
+    geometry, where x is the dimension of the current collector model, along with
+    the microscopic 1D particle geometry.
+
+    **Extends**: :class:`Geometry1DMicro`
+
+    Parameters
+    ----------
+
+    cc_dimension : int, optional
+        the dimension of the current collector model
+    custom_geometry : dict, optional
+        dictionary containing any extra user defined geometry
+    """
+
     def __init__(self, cc_dimension=1, custom_geometry={}):
         super().__init__()
 
