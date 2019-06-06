@@ -146,7 +146,8 @@ class Function(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return self._function_new_copy(self.orphans)
+        children_copy = [child.new_copy() for child in self.children]
+        return self._function_new_copy(children_copy)
 
     def _function_new_copy(self, children):
         """Returns a new copy of the function.
@@ -161,7 +162,7 @@ class Function(pybamm.Symbol):
             : :pybamm.Function
             A new copy of the function
         """
-        return self.__class__(self.function, *children)
+        return pybamm.Function(self.function, *children)
 
     def _function_simplify(self, simplified_children):
         """
