@@ -20,7 +20,7 @@ class Function(pybamm.Symbol):
     children : :class:`pybamm.Symbol`
         The children nodes to apply the function to
 
-    **Extends:** :class:`UnaryOperator`
+    **Extends:** :class:`pybamm.Symbol`
     """
 
     def __init__(self, function, *children):
@@ -185,6 +185,19 @@ class Function(pybamm.Symbol):
 
 
 class SpecificFunction(Function):
+    """
+    Parent class for the specific functions, which implement their own `diff`
+    operators directly.
+
+    Parameters
+    ----------
+    function : method
+        Function to be applied to child
+    child : :class:`pybamm.Symbol`
+        The child to apply the function to
+
+    """
+
     def __init__(self, function, child):
         super().__init__(function, child)
 
@@ -209,6 +222,7 @@ class Cos(SpecificFunction):
 
 
 def cos(child):
+    " Returns cosine function of child. "
     return Cos(child)
 
 
@@ -224,6 +238,7 @@ class Cosh(SpecificFunction):
 
 
 def cosh(child):
+    " Returns hyperbolic cosine function of child. "
     return Cosh(child)
 
 
@@ -239,6 +254,7 @@ class Exponential(SpecificFunction):
 
 
 def exp(child):
+    " Returns exponential function of child. "
     return Exponential(child)
 
 
@@ -254,14 +270,17 @@ class Log(SpecificFunction):
 
 
 def log(child):
+    " Returns logarithmic function of child. "
     return Log(child)
 
 
 def max(child):
+    " Returns max function of child. "
     return Function(np.max, child)
 
 
 def min(child):
+    " Returns min function of child. "
     return Function(np.min, child)
 
 
@@ -277,6 +296,7 @@ class Sin(SpecificFunction):
 
 
 def sin(child):
+    " Returns sine function of child. "
     return Sin(child)
 
 
@@ -292,4 +312,5 @@ class Sinh(SpecificFunction):
 
 
 def sinh(child):
+    " Returns hyperbolic sine function of child. "
     return Sinh(child)

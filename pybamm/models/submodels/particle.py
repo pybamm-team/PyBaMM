@@ -2,7 +2,6 @@
 # Equation classes for a Particle
 #
 import pybamm
-import autograd.numpy as np
 
 
 class Standard(pybamm.SubModel):

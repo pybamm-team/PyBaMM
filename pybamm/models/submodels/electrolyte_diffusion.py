@@ -3,8 +3,6 @@
 #
 import pybamm
 
-import numpy as np
-
 
 class StefanMaxwell(pybamm.SubModel):
     """"A class that generates the expression tree for Stefan-Maxwell Diffusion in the
