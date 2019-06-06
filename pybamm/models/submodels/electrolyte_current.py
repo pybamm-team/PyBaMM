@@ -1,7 +1,6 @@
 #
 # Equation classes for the electrolyte current
 #
-import autograd.numpy as np
 import pybamm
 
 
@@ -129,7 +128,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
 
         def first_order_function(c_e):
             if first_order == "composite":
-                return pybamm.Function(np.log, c_e)
+                return pybamm.log(c_e)
             elif first_order == "linear":
                 return c_e
 
