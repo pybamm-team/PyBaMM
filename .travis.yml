@@ -184,8 +184,8 @@ matrix:
           if: type == cron
 
 # Install graphviz for macs 
-before_install:
-  - if [[ $TRAVIS_OS_NAME == "osx" ]]; then 
+before_install: |
+  if [[ $TRAVIS_OS_NAME == "osx" ]]; then 
     brew update;
     # Per the `pyenv homebrew recommendations <https://github.com/yyuu/pyenv/wiki#suggested-build-environment>`_.
     brew install graphviz openssl readline;
@@ -204,7 +204,7 @@ before_install:
     source venv/bin/activate;
     # A manual check that the correct version of Python is running.
     python --version;
-    fi;
+  fi
 
 # Install dependencies
 # Note: Use pip (not apt-get) for Python dependencies
