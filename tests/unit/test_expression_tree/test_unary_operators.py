@@ -5,15 +5,6 @@ import pybamm
 
 import unittest
 import numpy as np
-import autograd.numpy as auto_np
-
-
-def test_function(arg):
-    return arg + arg
-
-
-def test_const_function():
-    return 1
 
 
 class TestUnaryOperators(unittest.TestCase):
@@ -42,30 +33,6 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.Scalar(-4)
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
-
-    def test_function(self):
-        a = pybamm.Symbol("a")
-        funca = pybamm.Function(test_function, a)
-        self.assertEqual(funca.name, "function (test_function)")
-        self.assertEqual(funca.children[0].name, a.name)
-
-        b = pybamm.Scalar(1)
-        sina = pybamm.Function(np.sin, b)
-        self.assertEqual(sina.evaluate(), np.sin(1))
-        self.assertEqual(sina.name, "function ({})".format(np.sin.__name__))
-
-        c = pybamm.Vector(np.linspace(0, 1))
-        cosb = pybamm.Function(np.cos, c)
-        np.testing.assert_array_equal(cosb.evaluate(), np.cos(c.evaluate()))
-
-        var = pybamm.StateVector(slice(0, 100))
-        y = np.linspace(0, 1, 100)[:, np.newaxis]
-        logvar = pybamm.Function(np.log1p, var)
-        np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
-
-        d = pybamm.Scalar(6)
-        funcd = pybamm.Function(test_const_function, d)
-        self.assertEqual(funcd.evaluate(), 1)
 
     def test_gradient(self):
         a = pybamm.Symbol("a")
@@ -111,11 +78,21 @@ class TestUnaryOperators(unittest.TestCase):
     def test_index(self):
         vec = pybamm.Vector(np.array([1, 2, 3, 4, 5]))
         # with integer
-        ind = pybamm.Index(vec, 3)
+        ind = vec[3]
+        self.assertIsInstance(ind, pybamm.Index)
+        self.assertEqual(ind.slice, slice(3, 4))
         self.assertEqual(ind.evaluate(), 4)
         # with slice
-        ind = pybamm.Index(vec, slice(1, 3))
+        ind = vec[1:3]
+        self.assertIsInstance(ind, pybamm.Index)
+        self.assertEqual(ind.slice, slice(1, 3))
         np.testing.assert_array_equal(ind.evaluate(), np.array([[2], [3]]))
+        # with only stop slice
+        ind = vec[:3]
+        self.assertIsInstance(ind, pybamm.Index)
+        self.assertEqual(ind.slice, slice(3))
+        np.testing.assert_array_equal(ind.evaluate(), np.array([[1], [2], [3]]))
+
         # errors
         with self.assertRaisesRegex(TypeError, "index must be integer or slice"):
             pybamm.Index(vec, 0.0)
@@ -132,19 +109,8 @@ class TestUnaryOperators(unittest.TestCase):
 
         # absolute value (not implemented)
         absa = abs(a)
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(pybamm.UndefinedOperationError):
             absa.diff(a)
-
-        # function: use autograd
-        func = pybamm.Function(test_function, a)
-        self.assertEqual((func).diff(a).evaluate(y=y), 2)
-        self.assertEqual((func).diff(func).evaluate(), 1)
-        func = pybamm.Function(auto_np.sin, a)
-        self.assertEqual(func.evaluate(y=y), np.sin(a.evaluate(y=y)))
-        self.assertEqual(func.diff(a).evaluate(y=y), np.cos(a.evaluate(y=y)))
-        func = pybamm.Function(auto_np.exp, a)
-        self.assertEqual(func.evaluate(y=y), np.exp(a.evaluate(y=y)))
-        self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
 
         # spatial operator (not implemented)
         spatial_a = pybamm.SpatialOperator("name", a)

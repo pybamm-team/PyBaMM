@@ -94,6 +94,11 @@ class TestBaseModel(unittest.TestCase):
         model.variables = variables
         self.assertEqual(variables, model.variables)
 
+    def test_jac_set_get(self):
+        model = pybamm.BaseModel()
+        model.jacobian = "test"
+        self.assertEqual(model.jacobian, "test")
+
     def test_model_dict_behaviour(self):
         model = pybamm.BaseModel()
         key = pybamm.Symbol("c")
@@ -236,7 +241,7 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         model.algebraic = {
             c: 1,
-            d: pybamm.StateVector(slice(0, 15)) - pybamm.StateVector(slice(15, 25)),
+            d: pybamm.StateVector(slice(0, 15)) - pybamm.StateVector(slice(15, 30)),
         }
         with self.assertRaisesRegex(
             pybamm.ModelError,

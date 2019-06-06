@@ -36,23 +36,23 @@ class QuickPlot(object):
         The model(s) to plot the outputs of.
     mesh: :class:`pybamm.Mesh`
         The mesh on which the model solved
-    solvers: (iter of) :class:`pybamm.Solver`
-        The numerical solver(s) for the model(s) which contained the solution to the
+    solutions: (iter of) :class:`pybamm.Solver`
+        The numerical solution(s) for the model(s) which contained the solution to the
         model(s).
     output_variables : list of str
         List of variables to plot
     """
 
-    def __init__(self, models, mesh, solvers, output_variables=None):
+    def __init__(self, models, mesh, solutions, output_variables=None):
         if isinstance(models, pybamm.BaseModel):
             models = [models]
         elif not isinstance(models, list):
             raise TypeError("'models' must be 'pybamm.BaseModel' or list")
-        if isinstance(solvers, pybamm.BaseSolver):
-            solvers = [solvers]
-        elif not isinstance(solvers, list):
-            raise TypeError("'solvers' must be 'pybamm.BaseSolver' or list")
-        if len(models) == len(solvers):
+        if isinstance(solutions, pybamm.Solution):
+            solutions = [solutions]
+        elif not isinstance(solutions, list):
+            raise TypeError("'solutions' must be 'pybamm.Solution' or list")
+        if len(models) == len(solutions):
             self.num_models = len(models)
         else:
             raise ValueError("must provide the same number of models and solutions")
@@ -67,7 +67,7 @@ class QuickPlot(object):
             self.time_scale = (vars["Time [h]"] / vars["Time"]).evaluate(t=1)
 
         # Time parameters
-        self.ts = [solver.t for solver in solvers]
+        self.ts = [solution.t for solution in solutions]
         self.min_t = np.min([t[0] for t in self.ts]) * self.time_scale
         self.max_t = np.max([t[-1] for t in self.ts]) * self.time_scale
 
@@ -97,10 +97,10 @@ class QuickPlot(object):
             else:
                 output_variables = models[0].variables
 
-        self.set_output_variables(output_variables, solvers, models, mesh)
+        self.set_output_variables(output_variables, solutions, models, mesh)
         self.reset_axis()
 
-    def set_output_variables(self, output_variables, solvers, models, mesh):
+    def set_output_variables(self, output_variables, solutions, models, mesh):
         # Set up output variables
         self.variables = {}
         self.x_values = {}
@@ -114,7 +114,7 @@ class QuickPlot(object):
         for k, var in enumerate(output_variables):
             self.variables[var] = [
                 pybamm.ProcessedVariable(
-                    models[i].variables[var], solvers[i].t, solvers[i].y, mesh
+                    models[i].variables[var], solutions[i].t, solutions[i].y, mesh
                 )
                 for i in range(len(models))
             ]
@@ -237,7 +237,7 @@ class QuickPlot(object):
             top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
         )
 
-        if not testing:
+        if not testing:  # pragma: no cover
             plt.show()
 
     def update(self, val):

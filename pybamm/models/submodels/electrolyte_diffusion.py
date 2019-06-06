@@ -43,10 +43,9 @@ class StefanMaxwell(pybamm.SubModel):
         except KeyError:
             epsilon = param.epsilon
             deps_dt = pybamm.Scalar(0)
+
         # Use convection velocity if it exists, otherwise set to zero
         v_box = variables.get("Volume-averaged velocity", pybamm.Scalar(0))
-        # # Use variable for div_v_box, to avoid having an extra divergence in rhs
-        # div_v_box = variables.get("div(volume-averaged velocity)", pybamm.Scalar(0))
 
         # Flux
         N_e_diff = -(epsilon ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
@@ -85,10 +84,16 @@ class StefanMaxwell(pybamm.SubModel):
         """
         param = self.set_of_parameters
         c_e = variables["Electrolyte concentration"]
-        epsilon = variables["Porosity"]
+        try:
+            epsilon = variables["Porosity"]
+            deps_n_dt = sum(rxn["neg"]["deps_dt"] for rxn in reactions.values())
+            deps_p_dt = sum(rxn["pos"]["deps_dt"] for rxn in reactions.values())
+        except KeyError:
+            epsilon = param.epsilon
+            deps_n_dt = pybamm.Scalar(0)
+            deps_p_dt = pybamm.Scalar(0)
+
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-        deps_n_dt = sum(rxn["neg"]["deps_dt"] for rxn in reactions.values())
-        deps_p_dt = sum(rxn["pos"]["deps_dt"] for rxn in reactions.values())
 
         # Model
         source_terms = sum(

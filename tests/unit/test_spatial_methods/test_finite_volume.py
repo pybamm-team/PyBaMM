@@ -14,22 +14,47 @@ import unittest
 
 
 class TestFiniteVolume(unittest.TestCase):
-    def test_compute_diffusivity(self):
+    def test_node_to_edge_to_node(self):
         # create discretisation
         mesh = get_mesh_for_testing()
         fin_vol = pybamm.FiniteVolume(mesh)
         n = mesh["negative electrode"][0].npts
 
+        # node to edge
         c = pybamm.Vector(np.ones(n), domain=["negative electrode"])
-        diffusivity_c = fin_vol.compute_diffusivity(c)
+        diffusivity_c = fin_vol.node_to_edge(c)
         np.testing.assert_array_equal(diffusivity_c.evaluate(), np.ones((n + 1, 1)))
 
-        d = pybamm.StateVector(slice(0, n), domain=["negative electrode"])
-        y_test = np.ones(n)
-        diffusivity_d = fin_vol.compute_diffusivity(d)
+        # edge to node
+        d = pybamm.StateVector(slice(0, n + 1), domain=["negative electrode"])
+        y_test = np.ones(n + 1)
+        diffusivity_d = fin_vol.edge_to_node(d)
         np.testing.assert_array_equal(
-            diffusivity_d.evaluate(None, y_test), np.ones((n + 1, 1))
+            diffusivity_d.evaluate(None, y_test), np.ones((n, 1))
         )
+
+        # bad shift key
+        with self.assertRaisesRegex(ValueError, "shift key"):
+            fin_vol.shift(c, "bad shift key")
+
+    def test_concatenation(self):
+        mesh = get_mesh_for_testing()
+        fin_vol = pybamm.FiniteVolume(mesh)
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        edges = [pybamm.Vector(mesh[dom][0].edges, domain=dom) for dom in whole_cell]
+        # Concatenation of edges should get averaged to nodes first, using edge_to_node
+        v_disc = fin_vol.concatenation(edges)
+        np.testing.assert_array_equal(
+            v_disc.evaluate()[:, 0], mesh.combine_submeshes(*whole_cell)[0].nodes
+        )
+
+        # test for bad shape
+        edges = [
+            pybamm.Vector(np.ones(mesh[dom][0].npts + 2), domain=dom)
+            for dom in whole_cell
+        ]
+        with self.assertRaisesRegex(pybamm.ShapeError, "child must have size n_nodes"):
+            fin_vol.concatenation(edges)
 
     def test_extrapolate_left_right(self):
         # create discretisation
@@ -1016,29 +1041,39 @@ class TestFiniteVolume(unittest.TestCase):
         np.testing.assert_array_almost_equal(c_exact, c_approx, decimal=3)
         self.assertEqual(left_boundary_value_disc.evaluate(y=c_exact), 0)
 
-        # ------------
-        # check raises error for variales not on mesh edges
-        phi = pybamm.Variable("phi", domain=["separator", "positive electrode"])
-        no_grad_or_div = phi
-        x = pybamm.SpatialVariable("x", ["separator", "positive electrode"])
-        int_grad_phi = pybamm.IndefiniteIntegral(no_grad_or_div, x)
-        disc.set_variable_slices([phi])
+    def test_indefinite_integral_on_nodes(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        with self.assertRaisesRegex(pybamm.ModelError, "integrated"):
-            disc.process_symbol(int_grad_phi)
+        # input a phi, take grad, then integrate to recover phi approximation
+        # (need to test this way as check evaluated on edges using if has grad
+        # and no div)
+        phi = pybamm.Variable("phi", domain=["negative electrode", "separator"])
 
-        grad_and_div = pybamm.div(pybamm.grad(phi))
-        int_grad_phi = pybamm.IndefiniteIntegral(grad_and_div, x)
+        x = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
+        int_phi = pybamm.IndefiniteIntegral(phi, x)
         disc.set_variable_slices([phi])
-        # Add boundary conditions so that the integrand has the right shape
-        disc._bcs = {
-            phi.id: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            }
-        }
-        with self.assertRaisesRegex(pybamm.ModelError, "integrated"):
-            disc.process_symbol(int_grad_phi)
+        # Set boundary conditions (required for shape but don't matter)
+        int_phi_disc = disc.process_symbol(int_phi)
+
+        combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
+
+        # constant case
+        phi_exact = np.ones((combined_submesh[0].npts, 1))
+        int_phi_exact = combined_submesh[0].edges
+        int_phi_approx = int_phi_disc.evaluate(None, phi_exact)[:, 0]
+        np.testing.assert_array_equal(int_phi_exact, int_phi_approx)
+        # linear case
+        phi_exact = combined_submesh[0].nodes[:, np.newaxis]
+        int_phi_exact = combined_submesh[0].edges[:, np.newaxis] ** 2 / 2
+        int_phi_approx = int_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_array_almost_equal(int_phi_exact, int_phi_approx)
+        # cos case
+        phi_exact = np.cos(combined_submesh[0].nodes[:, np.newaxis])
+        int_phi_exact = np.sin(combined_submesh[0].edges[:, np.newaxis])
+        int_phi_approx = int_phi_disc.evaluate(None, phi_exact)
+        np.testing.assert_array_almost_equal(int_phi_exact, int_phi_approx, decimal=5)
 
     def test_discretise_spatial_variable(self):
         # create discretisation
@@ -1057,10 +1092,6 @@ class TestFiniteVolume(unittest.TestCase):
         np.testing.assert_array_equal(
             x1_disc.evaluate(), disc.mesh["negative electrode"][0].nodes[:, np.newaxis]
         )
-
-        z = pybamm.SpatialVariable("z", ["negative electrode"])
-        with self.assertRaises(NotImplementedError):
-            disc.process_symbol(z)
 
         x2 = pybamm.SpatialVariable("x", ["negative electrode", "separator"])
         x2_disc = disc.process_symbol(x2)
@@ -1200,6 +1231,31 @@ class TestFiniteVolume(unittest.TestCase):
         eqn_disc = disc.process_symbol(eqn)
         eqn_jac = eqn_disc.jac(y)
         eqn_jac.evaluate(y=y_test)
+
+    def test_boundary_value_domain(self):
+        mesh = get_p2d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        # add ghost nodes
+        c_s_n = pybamm.Variable("c_s_n", domain=["negative particle"])
+        c_s_p = pybamm.Variable("c_s_p", domain=["positive particle"])
+
+        disc.set_variable_slices([c_s_n, c_s_p])
+
+        # surface values
+        c_s_n_surf = pybamm.surf(c_s_n)
+        c_s_p_surf = pybamm.surf(c_s_p)
+
+        c_s_n_surf_disc = disc.process_symbol(c_s_n_surf)
+        c_s_p_surf_disc = disc.process_symbol(c_s_p_surf)
+
+        self.assertEqual(c_s_n_surf_disc.domain, ['negative electrode'])
+        self.assertEqual(c_s_p_surf_disc.domain, ['positive electrode'])
 
 
 if __name__ == "__main__":

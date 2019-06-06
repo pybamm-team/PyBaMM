@@ -18,11 +18,11 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[0].name, "a")
         self.assertEqual(conc.children[1].name, "b")
         self.assertEqual(conc.children[2].name, "c")
-        d = pybamm.Scalar(2)
-        e = pybamm.Scalar(1)
-        f = pybamm.Scalar(3)
+        d = pybamm.Vector(np.array([2]))
+        e = pybamm.Vector(np.array([1]))
+        f = pybamm.Vector(np.array([3]))
         conc2 = pybamm.Concatenation(d, e, f)
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(TypeError):
             conc2.evaluate()
 
     def test_concatenation_domains(self):
@@ -160,9 +160,9 @@ class TestConcatenations(unittest.TestCase):
         )
 
     def test_concatenation_orphans(self):
-        a = pybamm.Variable("a")
-        b = pybamm.Variable("b")
-        c = pybamm.Variable("c")
+        a = pybamm.Variable("a", domain=["negative electrode"])
+        b = pybamm.Variable("b", domain=["separator"])
+        c = pybamm.Variable("c", domain=["positive electrode"])
         conc = pybamm.Concatenation(a, b, c)
         a_new, b_new, c_new = conc.orphans
 
@@ -284,8 +284,6 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Symbol("b")
         with self.assertRaisesRegex(pybamm.DomainError, "domain cannot be empty"):
             pybamm.DomainConcatenation([a, b], None)
-
-    # def test_sparse_stack(self):
 
 
 if __name__ == "__main__":

@@ -90,12 +90,25 @@ class ParameterValues(dict):
             processing_function = self.update_scalars
 
         for variable, equation in model.rhs.items():
+            pybamm.logger.debug(
+                "{} parameters for {!r} (rhs)".format(processing.capitalize(), variable)
+            )
             model.rhs[variable] = processing_function(equation)
 
         for variable, equation in model.algebraic.items():
+            pybamm.logger.debug(
+                "{} parameters for {!r} (algebraic)".format(
+                    processing.capitalize(), variable
+                )
+            )
             model.algebraic[variable] = processing_function(equation)
 
         for variable, equation in model.initial_conditions.items():
+            pybamm.logger.debug(
+                "{} parameters for {!r} (initial conditions)".format(
+                    processing.capitalize(), variable
+                )
+            )
             model.initial_conditions[variable] = processing_function(equation)
 
         # Boundary conditions are dictionaries {"left": left bc, "right": right bc}
@@ -105,14 +118,27 @@ class ParameterValues(dict):
             new_boundary_conditions[processed_variable] = {}
             for side in ["left", "right"]:
                 bc, typ = bcs[side]
+                pybamm.logger.debug(
+                    "{} parameters for {!r} ({} bc)".format(
+                        processing.capitalize(), variable, side
+                    )
+                )
                 processed_bc = (processing_function(bc), typ)
                 new_boundary_conditions[processed_variable][side] = processed_bc
         model.boundary_conditions = new_boundary_conditions
 
         for variable, equation in model.variables.items():
+            pybamm.logger.debug(
+                "{} parameters for {!r} (variables)".format(
+                    processing.capitalize(), variable
+                )
+            )
             model.variables[variable] = processing_function(equation)
 
         for idx, equation in enumerate(model.events):
+            pybamm.logger.debug(
+                "{} parameters for event {}".format(processing.capitalize(), idx)
+            )
             model.events[idx] = processing_function(equation)
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
@@ -153,6 +179,7 @@ class ParameterValues(dict):
             for prim_sec, variables in geometry[domain].items():
                 for spatial_variable, spatial_limits in variables.items():
                     for lim, sym in spatial_limits.items():
+                        pybamm.logger.debug("Set parameters for {!r}".format(sym))
                         sym_eval = self.process_symbol(sym).evaluate()
                         geometry[domain][prim_sec][spatial_variable][lim] = sym_eval
 
@@ -171,7 +198,6 @@ class ParameterValues(dict):
             Symbol with Parameter instances replaced by Value
 
         """
-        pybamm.logger.debug("Set parameters for {!s}".format(symbol))
         try:
             return self._processed_symbols[symbol.id]
         except KeyError:
@@ -188,14 +214,14 @@ class ParameterValues(dict):
             return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_child = self.process_symbol(symbol.children[0])
+            new_children = [self.process_symbol(child) for child in symbol.children]
             function_name = self[symbol.name]
 
             if callable(function_name):
-                function = pybamm.Function(function_name, new_child)
+                function = pybamm.Function(function_name, *new_children)
             else:
                 function = pybamm.Function(
-                    pybamm.load_function(function_name), new_child
+                    pybamm.load_function(function_name), *new_children
                 )
 
             if symbol.diff_variable is None:
@@ -214,12 +240,11 @@ class ParameterValues(dict):
             new_symbol.domain = symbol.domain
             return new_symbol
 
+        # Unary operators
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.child)
             if isinstance(symbol, pybamm.Broadcast):
                 new_symbol = pybamm.Broadcast(new_child, symbol.domain)
-            elif isinstance(symbol, pybamm.Function):
-                new_symbol = pybamm.Function(symbol.func, new_child)
             elif isinstance(symbol, pybamm.Integral):
                 new_symbol = symbol.__class__(new_child, symbol.integration_variable)
             elif isinstance(symbol, pybamm.BoundaryOperator):
@@ -230,6 +255,13 @@ class ParameterValues(dict):
             # ensure domain remains the same
             new_symbol.domain = symbol.domain
             return new_symbol
+
+        # Functions
+        elif isinstance(symbol, pybamm.Function):
+            new_children = [None] * len(symbol.children)
+            for i, child in enumerate(symbol.children):
+                new_children[i] = self.process_symbol(child)
+            return pybamm.Function(symbol.function, *new_children)
 
         # Concatenations
         elif isinstance(symbol, pybamm.Concatenation):

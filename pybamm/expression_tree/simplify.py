@@ -553,7 +553,6 @@ class Simplification(object):
         :class:`pybamm.Symbol`
         Simplified symbol
         """
-        pybamm.logger.debug("Simplify {!s}".format(symbol))
         try:
             return self._simplified_symbols[symbol.id]
         except KeyError:
@@ -578,6 +577,14 @@ class Simplification(object):
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.simplify(symbol.child)
             new_symbol = symbol._unary_simplify(new_child)
+            new_symbol.domain = symbol.domain
+            return simplify_if_constant(new_symbol)
+
+        elif isinstance(symbol, pybamm.Function):
+            simplified_children = [None] * len(symbol.children)
+            for i, child in enumerate(symbol.children):
+                simplified_children[i] = self.simplify(child)
+            new_symbol = symbol._function_simplify(simplified_children)
             new_symbol.domain = symbol.domain
             return simplify_if_constant(new_symbol)
 

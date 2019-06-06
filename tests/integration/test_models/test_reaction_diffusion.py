@@ -23,9 +23,11 @@ class TestReactionDiffusionModel(unittest.TestCase):
         simplified = optimtest.evaluate_model(simplify=True)
         using_known_evals = optimtest.evaluate_model(use_known_evals=True)
         simp_and_known = optimtest.evaluate_model(simplify=True, use_known_evals=True)
+        simp_and_python = optimtest.evaluate_model(simplify=True, to_python=True)
         np.testing.assert_array_almost_equal(original, simplified)
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, simp_and_known)
+        np.testing.assert_array_almost_equal(original, simp_and_python)
 
     def test_convergence(self):
         # Convergence of c at x=0.5
@@ -50,8 +52,8 @@ class TestReactionDiffusionModel(unittest.TestCase):
 
             # Discretise and solve
             model_disc = disc.process_model(model, inplace=False)
-            solver.solve(model_disc, t_eval)
-            t, y = solver.t, solver.y
+            solution = solver.solve(model_disc, t_eval)
+            t, y = solution.t, solution.y
             return pybamm.ProcessedVariable(
                 model_disc.variables["Electrolyte concentration"], t, y, mesh=disc.mesh
             )

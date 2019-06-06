@@ -15,3 +15,5 @@ Expression Tree
   concatenations
   broadcasts
   simplify
+  function
+  evaluate

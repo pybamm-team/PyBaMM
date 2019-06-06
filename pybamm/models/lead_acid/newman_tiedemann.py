@@ -24,6 +24,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         self.set_boundary_conditions(None)
         self.set_interfacial_variables()
         self.set_porosity_submodel()
+        self.set_convection_submodel()
         self.set_diffusion_submodel()
         self.set_current_submodels()
 
@@ -116,6 +117,18 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         self.reactions["main"]["porosity change"] = porosity_model.variables[
             "Porosity change"
         ]
+
+    def set_convection_submodel(self):
+        velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
+        if self.options["convection"] is not False:
+            self.variables["Electrolyte pressure"] = pybamm.standard_variables.pressure
+            velocity_model.set_algebraic_system(self.variables)
+            self.update(velocity_model)
+        else:
+            whole_cell = ["negative electrode", "separator", "positive electrode"]
+            v_box = pybamm.Broadcast(0, whole_cell)
+            dVbox_dz = pybamm.Broadcast(0, whole_cell)
+            self.variables.update(velocity_model.get_variables(v_box, dVbox_dz))
 
     def set_diffusion_submodel(self):
         param = self.set_of_parameters
