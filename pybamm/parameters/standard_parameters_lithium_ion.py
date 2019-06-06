@@ -84,6 +84,9 @@ c_p_init_dimensional = pybamm.Parameter(
     "Initial concentration in positive electrode [mol.m-3]"
 )
 
+# thermal
+Delta_T = pybamm.thermal_parameters.Delta_T
+
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
 
@@ -108,14 +111,28 @@ def D_p_dimensional(c_p):
     return pybamm.FunctionParameter("Positive electrode diffusivity", c_p)
 
 
-def U_n_dimensional(c_s_n):
+def U_n_dimensional(sto):
     "Dimensional open-circuit voltage in the negative electrode [V]"
-    return pybamm.FunctionParameter("Negative electrode OCV", c_s_n)
+    return pybamm.FunctionParameter("Negative electrode OCV", sto)
 
 
-def U_p_dimensional(c_s_p):
-    "Dimensional open-circuit voltage of of the positive electrode [V]"
-    return pybamm.FunctionParameter("Positive electrode OCV", c_s_p)
+def U_p_dimensional(sto):
+    "Dimensional open-circuit voltage in the positive electrode [V]"
+    return pybamm.FunctionParameter("Positive electrode OCV", sto)
+
+
+def dUdT_n_dimensional(sto):
+    "Dimensional entropic change of the negative electrode open circuit voltage [V.K-1]"
+    return pybamm.FunctionParameter(
+        "Negative electrode OCV entropic change", sto, c_n_max
+    )
+
+
+def dUdT_p_dimensional(sto):
+    "Dimensional entropic change of the positive electrode open circuit voltage [V.K-1]"
+    return pybamm.FunctionParameter(
+        "Positive electrode OCV entropic change", sto, c_p_max
+    )
 
 
 # can maybe improve ref value at some stage
@@ -152,6 +169,8 @@ tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ)
 tau_diffusion_n = R_n ** 2 / D_n_dimensional(c_n_max)
 tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max)
 
+# Thermal diffusion timescale
+tau_th_yz = pybamm.thermal_parameters.tau_th_yz
 
 # --------------------------------------------------------------------------------------
 "4. Dimensionless Parameters"
@@ -161,8 +180,9 @@ C_p = tau_diffusion_p / tau_discharge
 C_e = tau_diffusion_e / tau_discharge
 C_r_n = tau_r_n / tau_discharge
 C_r_p = tau_r_p / tau_discharge
+C_th = tau_th_yz / tau_discharge
 
-# Concentrtion ratios
+# Concentration ratios
 gamma_e = c_e_typ / c_n_max
 gamma_p = c_p_max / c_n_max
 
@@ -217,10 +237,27 @@ voltage_high_cut = (
     voltage_high_cut_dimensional - (U_p_ref - U_n_ref)
 ) / potential_scale
 
+# Thermal
+rho_cn = pybamm.thermal_parameters.rho_cn
+rho_n = pybamm.thermal_parameters.rho_n
+rho_s = pybamm.thermal_parameters.rho_s
+rho_p = pybamm.thermal_parameters.rho_p
+rho_cp = pybamm.thermal_parameters.rho_cp
+
+lambda_cn = pybamm.thermal_parameters.lambda_cn
+lambda_n = pybamm.thermal_parameters.lambda_n
+lambda_s = pybamm.thermal_parameters.lambda_s
+lambda_p = pybamm.thermal_parameters.lambda_p
+lambda_cp = pybamm.thermal_parameters.lambda_cp
+
+Theta = pybamm.thermal_parameters.Theta
+h = pybamm.thermal_parameters.h
+
 # Initial conditions
 c_e_init = c_e_init_dimensional / c_e_typ
 c_n_init = c_n_init_dimensional / c_n_max
 c_p_init = c_p_init_dimensional / c_p_max
+T_init = pybamm.thermal_parameters.T_init
 
 
 # --------------------------------------------------------------------------------------
@@ -240,25 +277,37 @@ def kappa_e(c_e):
     return kappa_e_dimensional(c_e_dimensional) / kappa_scale
 
 
-def D_n(c_n):
+def D_n(c_s_n):
     "Dimensionless negative particle diffusivity"
-    c_n_dimensional = c_n * c_n_max
-    return D_n_dimensional(c_n_dimensional) / D_n_dimensional(c_n_max)
+    c_s_n_dimensional = c_s_n * c_n_max
+    return D_n_dimensional(c_s_n_dimensional) / D_n_dimensional(c_n_max)
 
 
-def D_p(c_p):
+def D_p(c_s_p):
     "Dimensionless positive particle diffusivity"
-    c_p_dimensional = c_p * c_p_max
-    return D_p_dimensional(c_p_dimensional) / D_p_dimensional(c_p_max)
+    c_s_p_dimensional = c_s_p * c_p_max
+    return D_p_dimensional(c_s_p_dimensional) / D_p_dimensional(c_p_max)
 
 
-def U_n(c_n):
-    "Dimensionless open-circuit sp.potential in the negative electrode"
-    sto = c_n
+def U_n(c_s_n):
+    "Dimensionless open-circuit potential in the negative electrode"
+    sto = c_s_n
     return (U_n_dimensional(sto) - U_n_ref) / potential_scale
 
 
-def U_p(c_p):
-    "Dimensionless open-circuit sp.potential in the positive electrode"
-    sto = c_p
+def U_p(c_s_p):
+    "Dimensionless open-circuit potential in the positive electrode"
+    sto = c_s_p
     return (U_p_dimensional(sto) - U_p_ref) / potential_scale
+
+
+def dUdT_n(c_s_n):
+    "Dimensionless entropic change in negative open-circuit potential"
+    sto = c_s_n
+    return dUdT_n_dimensional(sto) * Delta_T / potential_scale
+
+
+def dUdT_p(c_s_p):
+    "Dimensionless entropic change in positive open-circuit potential"
+    sto = c_s_p
+    return dUdT_p_dimensional(sto) * Delta_T / potential_scale
