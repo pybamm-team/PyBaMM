@@ -114,7 +114,7 @@ matrix:
         - os: osx
           language: generic
           env:
-            - PYTHON=3.6
+            - PYTHON=3.6.5
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
           if: type != cron
