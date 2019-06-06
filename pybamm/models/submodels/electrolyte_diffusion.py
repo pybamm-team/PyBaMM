@@ -3,8 +3,6 @@
 #
 import pybamm
 
-import numpy as np
-
 
 class StefanMaxwell(pybamm.SubModel):
     """"A class that generates the expression tree for Stefan-Maxwell Diffusion in the
@@ -70,7 +68,7 @@ class StefanMaxwell(pybamm.SubModel):
 
         # Cut off if concentration goes too small
         # (open-circuit potential poorly defined)
-        self.events = [pybamm.Function(np.min, c_e) - 0.002]
+        self.events = [pybamm.min(c_e) - 0.002]
 
     def set_leading_order_system(self, variables, reactions):
         """
@@ -123,7 +121,7 @@ class StefanMaxwell(pybamm.SubModel):
 
         # Cut off if concentration goes too small
         # (open-circuit potential poorly defined)
-        self.events = [pybamm.Function(np.min, c_e) - 0.002]
+        self.events = [pybamm.min(c_e) - 0.002]
 
     def get_variables(self, c_e, N_e):
         """

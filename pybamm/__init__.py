@@ -90,7 +90,7 @@ from .expression_tree.unary_operators import (
     average,
     boundary_value,
 )
-from .expression_tree.function import Function
+from .expression_tree.functions import *
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast
 from .expression_tree.scalar import Scalar
@@ -163,6 +163,7 @@ from .parameters.parameter_values import ParameterValues
 from .parameters import standard_current_functions
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
+from .parameters import thermal_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
 from .parameters.print_parameters import print_parameters, print_evaluated_parameters
 

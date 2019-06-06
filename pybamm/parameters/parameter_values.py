@@ -261,8 +261,7 @@ class ParameterValues(dict):
             new_children = [None] * len(symbol.children)
             for i, child in enumerate(symbol.children):
                 new_children[i] = self.process_symbol(child)
-            return pybamm.Function(symbol.function, *new_children)
-
+            return symbol._function_new_copy(new_children)
         # Concatenations
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = []
