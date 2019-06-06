@@ -181,10 +181,38 @@ class Function(pybamm.Symbol):
             # If self.func() takes no parameters then we can always simplify it
             return pybamm.Scalar(self.function())
         else:
-            return self.__class__(self.function, *simplified_children)
+            return pybamm.Function(self.function, *simplified_children)
 
 
-class Cosh(Function):
+class SpecificFunction(Function):
+    def __init__(self, function, child):
+        super().__init__(function, child)
+
+    def _function_new_copy(self, children):
+        """ See :meth:`pybamm.Function._function_new_copy()` """
+        return self.__class__(*children)
+
+    def _function_simplify(self, simplified_children):
+        """ See :meth:`pybamm.Function._function_simplify()` """
+        return self.__class__(*simplified_children)
+
+
+class Cos(SpecificFunction):
+    """ Cosine function """
+
+    def __init__(self, child):
+        super().__init__(np.cos, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return -Sin(children[0])
+
+
+def cos(child):
+    return Cos(child)
+
+
+class Cosh(SpecificFunction):
     """ Hyberbolic cosine function """
 
     def __init__(self, child):
@@ -199,7 +227,7 @@ def cosh(child):
     return Cosh(child)
 
 
-class Exponential(Function):
+class Exponential(SpecificFunction):
     """ Exponential function """
 
     def __init__(self, child):
@@ -214,7 +242,7 @@ def exp(child):
     return Exponential(child)
 
 
-class Log(Function):
+class Log(SpecificFunction):
     """ Logarithmic function """
 
     def __init__(self, child):
@@ -229,7 +257,30 @@ def log(child):
     return Log(child)
 
 
-class Sinh(Function):
+def max(child):
+    return Function(np.max, child)
+
+
+def min(child):
+    return Function(np.min, child)
+
+
+class Sin(SpecificFunction):
+    """ Sine function """
+
+    def __init__(self, child):
+        super().__init__(np.sin, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return Cos(children[0])
+
+
+def sin(child):
+    return Sin(child)
+
+
+class Sinh(SpecificFunction):
     """ Hyperbolic sine function """
 
     def __init__(self, child):

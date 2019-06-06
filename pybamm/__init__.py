@@ -90,17 +90,7 @@ from .expression_tree.unary_operators import (
     average,
     boundary_value,
 )
-from .expression_tree.function import (
-    Function,
-    Cosh,
-    cosh,
-    Exponential,
-    exp,
-    Sinh,
-    sinh,
-    Log,
-    log,
-)
+from .expression_tree.functions import *
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast
 from .expression_tree.scalar import Scalar

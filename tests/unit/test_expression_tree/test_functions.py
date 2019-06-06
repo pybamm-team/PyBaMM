@@ -80,21 +80,13 @@ class TestFunction(unittest.TestCase):
 
 
 class TestSpecificFunctions(unittest.TestCase):
-    def test_exp(self):
+    def test_cos(self):
         a = pybamm.Scalar(3)
-        fun = pybamm.exp(a)
-        self.assertIsInstance(fun, pybamm.Exponential)
+        fun = pybamm.cos(a)
+        self.assertIsInstance(fun, pybamm.Cos)
         self.assertEqual(fun.children[0].id, a.id)
-        self.assertEqual(fun.evaluate(), np.exp(3))
-        self.assertEqual(fun.diff(a).evaluate(), np.exp(3))
-
-    def test_sinh(self):
-        a = pybamm.Scalar(3)
-        fun = pybamm.sinh(a)
-        self.assertIsInstance(fun, pybamm.Sinh)
-        self.assertEqual(fun.children[0].id, a.id)
-        self.assertEqual(fun.evaluate(), np.sinh(3))
-        self.assertEqual(fun.diff(a).evaluate(), np.cosh(3))
+        self.assertEqual(fun.evaluate(), np.cos(3))
+        self.assertEqual(fun.diff(a).evaluate(), -np.sin(3))
 
     def test_cosh(self):
         a = pybamm.Scalar(3)
@@ -104,6 +96,14 @@ class TestSpecificFunctions(unittest.TestCase):
         self.assertEqual(fun.evaluate(), np.cosh(3))
         self.assertEqual(fun.diff(a).evaluate(), np.sinh(3))
 
+    def test_exp(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.exp(a)
+        self.assertIsInstance(fun, pybamm.Exponential)
+        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.evaluate(), np.exp(3))
+        self.assertEqual(fun.diff(a).evaluate(), np.exp(3))
+
     def test_log(self):
         a = pybamm.Scalar(3)
         fun = pybamm.log(a)
@@ -111,6 +111,34 @@ class TestSpecificFunctions(unittest.TestCase):
         self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(), np.log(3))
         self.assertEqual(fun.diff(a).evaluate(), 1 / 3)
+
+    def test_max(self):
+        a = pybamm.Vector(np.array([1, 2, 3]))
+        fun = pybamm.max(a)
+        self.assertIsInstance(fun, pybamm.Function)
+        self.assertEqual(fun.evaluate(), 3)
+
+    def test_min(self):
+        a = pybamm.Vector(np.array([1, 2, 3]))
+        fun = pybamm.min(a)
+        self.assertIsInstance(fun, pybamm.Function)
+        self.assertEqual(fun.evaluate(), 1)
+
+    def test_sin(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.sin(a)
+        self.assertIsInstance(fun, pybamm.Sin)
+        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.evaluate(), np.sin(3))
+        self.assertEqual(fun.diff(a).evaluate(), np.cos(3))
+
+    def test_sinh(self):
+        a = pybamm.Scalar(3)
+        fun = pybamm.sinh(a)
+        self.assertIsInstance(fun, pybamm.Sinh)
+        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.evaluate(), np.sinh(3))
+        self.assertEqual(fun.diff(a).evaluate(), np.cosh(3))
 
 
 if __name__ == "__main__":
