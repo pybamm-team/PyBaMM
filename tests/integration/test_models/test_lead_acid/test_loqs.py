@@ -45,6 +45,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_convection(self):
         model = pybamm.lead_acid.LOQS({"convection": True})
         modeltest = tests.StandardModelTest(model)

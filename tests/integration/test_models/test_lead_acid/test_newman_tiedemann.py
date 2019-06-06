@@ -15,6 +15,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(t_eval=np.linspace(0, 0.6))
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_convection(self):
         model = pybamm.lead_acid.NewmanTiedemann({"convection": True})
         var = pybamm.standard_spatial_vars
