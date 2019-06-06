@@ -192,6 +192,7 @@ l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+delta = pybamm.geometric_parameters.delta
 
 # Microscale geometry
 epsilon_n = pybamm.Parameter("Negative electrode porosity")
@@ -244,14 +245,25 @@ rho_s = pybamm.thermal_parameters.rho_s
 rho_p = pybamm.thermal_parameters.rho_p
 rho_cp = pybamm.thermal_parameters.rho_cp
 
+rho_k = pybamm.thermal_parameters.rho_k
+
 lambda_cn = pybamm.thermal_parameters.lambda_cn
 lambda_n = pybamm.thermal_parameters.lambda_n
 lambda_s = pybamm.thermal_parameters.lambda_s
 lambda_p = pybamm.thermal_parameters.lambda_p
 lambda_cp = pybamm.thermal_parameters.lambda_cp
 
+lambda_k = pybamm.thermal_parameters.lambda_k
+
 Theta = pybamm.thermal_parameters.Theta
 h = pybamm.thermal_parameters.h
+B = (
+    i_typ
+    * R
+    * T_ref
+    * tau_th_yz
+    / (pybamm.thermal_parameters.rho_eff_dim * F * Delta_T * L_x)
+)
 
 # Initial conditions
 c_e_init = c_e_init_dimensional / c_e_typ

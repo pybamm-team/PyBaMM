@@ -33,3 +33,5 @@ l_s = L_s / L_x
 l_p = L_p / L_x
 l_y = L_y / L_z
 l_z = L_z / L_z
+
+delta = L_x / L_z
