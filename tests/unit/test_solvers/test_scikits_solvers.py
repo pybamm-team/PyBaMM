@@ -388,8 +388,8 @@ class TestScikitsSolvers(unittest.TestCase):
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
         model.events = [
-            pybamm.Function(np.min, 2 * var - 2.5),
-            pybamm.Function(np.min, var - 1.5),
+            pybamm.min(2 * var - 2.5),
+            pybamm.min(var - 1.5),
         ]
         disc = get_discretisation_for_testing()
         disc.process_model(model)
@@ -509,8 +509,8 @@ class TestScikitsSolvers(unittest.TestCase):
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.events = [
-            pybamm.Function(np.min, var1 - 1.5),
-            pybamm.Function(np.min, var2 - 2.5),
+            pybamm.min(var1 - 1.5),
+            pybamm.min(var2 - 2.5),
         ]
         disc = get_discretisation_for_testing()
         disc.process_model(model)

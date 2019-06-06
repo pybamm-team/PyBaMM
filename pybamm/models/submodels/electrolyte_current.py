@@ -1,7 +1,6 @@
 #
 # Equation classes for the electrolyte current
 #
-import numpy as np
 import pybamm
 
 
@@ -170,9 +169,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             -ocp_n_av
             - eta_r_n_av
             + phi_s_n_av
-            - 2
-            * (1 - param.t_plus)
-            * pybamm.average(pybamm.Function(np.log, c_e_n / c_e_0))
+            - 2 * (1 - param.t_plus) * pybamm.average(pybamm.log(c_e_n / c_e_0))
             - i_boundary_cc
             * param.C_e
             * l_n
@@ -182,20 +179,20 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
 
         phi_e_n = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_n / c_e_0)
+            + 2 * (1 - param.t_plus) * pybamm.log(c_e_n / c_e_0)
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
         )
 
         phi_e_s = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_s / c_e_0)
+            + 2 * (1 - param.t_plus) * pybamm.log(c_e_s / c_e_0)
             - (i_boundary_cc * param.C_e / param.gamma_e) * (x_s / kappa_s)
         )
 
         phi_e_p = (
             phi_e_const
-            + 2 * (1 - param.t_plus) * pybamm.Function(np.log, c_e_p / c_e_0)
+            + 2 * (1 - param.t_plus) * pybamm.log(c_e_p / c_e_0)
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * (
                 (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
@@ -217,8 +214,8 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             2
             * (1 - param.t_plus)
             * (
-                pybamm.average(pybamm.Function(np.log, c_e_p / c_e_0))
-                - pybamm.average(pybamm.Function(np.log, c_e_n / c_e_0))
+                pybamm.average(pybamm.log(c_e_p / c_e_0))
+                - pybamm.average(pybamm.log(c_e_n / c_e_0))
             )
         )
 

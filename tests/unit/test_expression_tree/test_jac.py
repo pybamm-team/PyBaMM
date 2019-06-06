@@ -9,6 +9,10 @@ import unittest
 from scipy.sparse import eye
 
 
+def test_multi_var_function(arg1, arg2):
+    return arg1 + arg2
+
+
 class TestJacobian(unittest.TestCase):
     def test_linear(self):
         y = pybamm.StateVector(slice(0, 4))
@@ -156,6 +160,12 @@ class TestJacobian(unittest.TestCase):
         # when child evaluates to number
         func = pybamm.Function(auto_np.sin, const)
         jacobian = np.array([[0, 0, 0, 0]])
+        dfunc_dy = func.jac(y).evaluate(y=y0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        # several children
+        func = pybamm.Function(test_multi_var_function, 2 * y, 3 * y)
+        jacobian = np.diag(5 * np.ones(4))
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 

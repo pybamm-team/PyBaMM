@@ -30,11 +30,9 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         y = np.array([5, 3])
 
         #
-        func = a * pybamm.Function(np.exp, b)
+        func = a * pybamm.exp(b)
         self.assertAlmostEqual(func.diff(a).evaluate(y=y)[0], np.exp(3))
-        func = pybamm.Function(np.exp, a + 2 * b + a * b) + a * pybamm.Function(
-            np.exp, b
-        )
+        func = pybamm.exp(a + 2 * b + a * b) + a * pybamm.exp(b)
         self.assertEqual(
             func.diff(a).evaluate(y=y), (4 * np.exp(3 * 5 + 5 + 2 * 3) + np.exp(3))
         )
@@ -42,9 +40,7 @@ class TestSymbolicDifferentiation(unittest.TestCase):
             func.diff(b).evaluate(y=y), np.exp(3) * (7 * np.exp(3 * 5 + 5 + 3) + 5)
         )
         #
-        func = pybamm.Function(
-            np.sin, pybamm.Function(np.cos, a * 4) / 2
-        ) * pybamm.Function(np.cos, 4 * pybamm.Function(np.exp, b / 3))
+        func = pybamm.sin(pybamm.cos(a * 4) / 2) * pybamm.cos(4 * pybamm.exp(b / 3))
         self.assertEqual(
             func.diff(a).evaluate(y=y),
             -2 * np.sin(20) * np.cos(np.cos(20) / 2) * np.cos(4 * np.exp(1)),
@@ -54,7 +50,7 @@ class TestSymbolicDifferentiation(unittest.TestCase):
             -4 / 3 * np.exp(1) * np.sin(4 * np.exp(1)) * np.sin(np.cos(20) / 2),
         )
         #
-        func = pybamm.Function(np.sin, a * b)
+        func = pybamm.sin(a * b)
         self.assertEqual(func.diff(a).evaluate(y=y), 3 * np.cos(15))
 
     def test_diff_zero(self):
