@@ -5,8 +5,10 @@ pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS({"capacitance": "algebraic", "side reactions": ["oxygen"]}),
-    # pybamm.lead_acid.LOQS({"capacitance": "differential"}),
+    pybamm.lead_acid.LOQS(
+        {"capacitance": "differential", "side reactions": ["oxygen"]}
+    ),
+    pybamm.lead_acid.LOQS({"capacitance": "differential"}),
 ]
 
 # create geometry
@@ -46,10 +48,10 @@ for i, model in enumerate(models):
 # plot
 output_variables = [
     "Interfacial current density [A.m-2]",
-    "Oxygen concentration [mol.m-3]",
+    "Average electrolyte concentration [mol.m-3]",
     "Volume-averaged velocity",
     "Electrolyte current density [A.m-2]",
-    "Electrolyte potential [V]",
+    "Average electrolyte potential [V]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
