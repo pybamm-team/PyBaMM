@@ -20,7 +20,7 @@ Functions
 .. autofunction:: pybamm.exp
 
 .. autoclass:: pybamm.Log
-:members:
+  :members:
 
 .. autofunction:: pybamm.log
 
@@ -29,11 +29,11 @@ Functions
 .. autofunction:: pybamm.min
 
 .. autoclass:: pybamm.Sin
-:members:
+  :members:
 
 .. autofunction:: pybamm.sin
 
 .. autoclass:: pybamm.Sinh
-:members:
+  :members:
 
 .. autofunction:: pybamm.sinh

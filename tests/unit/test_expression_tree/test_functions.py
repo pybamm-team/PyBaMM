@@ -46,18 +46,27 @@ class TestFunction(unittest.TestCase):
         logvar = pybamm.Function(np.log1p, var)
         np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
 
+        # use known_evals
+        np.testing.assert_array_equal(
+            logvar.evaluate(y=y, known_evals={})[0], np.log1p(y)
+        )
+
     def test_with_autograd(self):
         a = pybamm.StateVector(slice(0, 1))
         y = np.array([5])
         func = pybamm.Function(test_function, a)
-        self.assertEqual((func).diff(a).evaluate(y=y), 2)
-        self.assertEqual((func).diff(func).evaluate(), 1)
+        self.assertEqual(func.diff(a).evaluate(y=y), 2)
+        self.assertEqual(func.diff(func).evaluate(), 1)
         func = pybamm.Function(auto_np.sin, a)
         self.assertEqual(func.evaluate(y=y), np.sin(a.evaluate(y=y)))
         self.assertEqual(func.diff(a).evaluate(y=y), np.cos(a.evaluate(y=y)))
         func = pybamm.Function(auto_np.exp, a)
         self.assertEqual(func.evaluate(y=y), np.exp(a.evaluate(y=y)))
         self.assertEqual(func.diff(a).evaluate(y=y), np.exp(a.evaluate(y=y)))
+
+        # multiple variables
+        func = pybamm.Function(test_multi_var_function, 4 * a, 3 * a)
+        self.assertEqual(func.diff(a).evaluate(y=y), 7)
 
     def test_function_of_multiple_variables(self):
         a = pybamm.Variable("a")
@@ -74,9 +83,15 @@ class TestFunction(unittest.TestCase):
         func = pybamm.Function(test_multi_var_function, a, b)
 
         self.assertEqual(func.evaluate(y=y), 7)
-        self.assertEqual((func).diff(a).evaluate(y=y), 1)
-        self.assertEqual((func).diff(b).evaluate(y=y), 1)
-        self.assertEqual((func).diff(func).evaluate(), 1)
+        self.assertEqual(func.diff(a).evaluate(y=y), 1)
+        self.assertEqual(func.diff(b).evaluate(y=y), 1)
+        self.assertEqual(func.diff(func).evaluate(), 1)
+
+    def test_exceptions(self):
+        a = pybamm.Variable("a", domain="something")
+        b = pybamm.Variable("b", domain="something else")
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.Function(test_multi_var_function, a, b)
 
 
 class TestSpecificFunctions(unittest.TestCase):
@@ -87,6 +102,11 @@ class TestSpecificFunctions(unittest.TestCase):
         self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(), np.cos(3))
         self.assertEqual(fun.diff(a).evaluate(), -np.sin(3))
+
+        # test simplify
+        y = pybamm.StateVector(slice(0, 1))
+        fun = pybamm.cos(y)
+        self.assertEqual(fun.id, fun.simplify().id)
 
     def test_cosh(self):
         a = pybamm.Scalar(3)
