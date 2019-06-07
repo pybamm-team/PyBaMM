@@ -124,7 +124,17 @@ class Thermal(pybamm.Submodel):
 
     def set_x_lumped_differential_system(self, variables, reactions):
 
+        # Scott: I have left the current collectors out of this for now rob
+
+        param = self.set_of_parameters
         T_k, Q_ohm, Q_rxn, Q_rev = self.unpack(variables, reactions)
+
+        Q = Q_ohm + Q_rxn + Q_rev
+        Q_av = pybamm.average(Q)
+        self.rhs = {
+            T_k: (param.B * Q_av - 2 * param.h / (param.delta ** 2) * T_k)
+            / (param.C_th * param.rho)
+        }
 
     def get_variables(self, T_k, q, Q_ohm, Q_rxn, Q_rev):
 
