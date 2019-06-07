@@ -1,4 +1,4 @@
-# Results: Valentin Sulzer's Thesis
+# Results: "2plus1D" models
 
 This folder contains the scripts used to generate results for the "2plus1D" papers:
 
