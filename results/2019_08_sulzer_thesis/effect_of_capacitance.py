@@ -8,7 +8,7 @@ import pickle
 import pybamm
 from config import OUTPUT_DIR
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from shared import model_comparison
+from shared import model_comparison, convergence_study
 
 
 def plot_voltages(all_variables, t_eval, Crates):
@@ -109,19 +109,10 @@ def plot_errors(all_variables, t_eval, Crates):
     plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
-    args = parser.parse_args()
-    t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)])
+def compare_voltages(args, models):
+    t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
     if args.compute:
-        pybamm.set_logging_level("INFO")
-        models = [
-            pybamm.lead_acid.NewmanTiedemann(),
-            pybamm.lead_acid.NewmanTiedemann({"capacitance": "differential"}),
-            pybamm.lead_acid.NewmanTiedemann({"capacitance": "algebraic"}),
-        ]
-        Crates = [0.1, 0.5, 1, 2]
+        Crates = [0.1]  # , 0.5, 1, 2]
         all_variables, t_eval = model_comparison(models, Crates, t_eval)
         with open("capacitance_data.pickle", "wb") as f:
             data = (all_variables, t_eval)
@@ -131,3 +122,36 @@ if __name__ == "__main__":
         (all_variables, t_eval) = pickle.load(f)
     plot_voltages(all_variables, t_eval, [1])
     plot_errors(all_variables, t_eval, [0.1, 0.5, 1, 2])
+
+
+def convergence_studies(args, models):
+    t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
+    if args.compute:
+        all_npts = [50]
+        all_variables, t_eval = convergence_study(models, 1, t_eval, all_npts)
+        with open("capacitance_convergence_study.pickle", "wb") as f:
+            data = (all_variables, t_eval)
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+
+    with open("capacitance_convergence_study.pickle", "rb") as f:
+        (all_variables, t_eval) = pickle.load(f)
+    print(
+        [
+            [x for x in all_variables[all_npts[0]].values()][i]["solution"].solve_time
+            for i in range(len(models))
+        ]
+    )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
+    args = parser.parse_args()
+    pybamm.set_logging_level("DEBUG")
+    models = [
+        # pybamm.lead_acid.NewmanTiedemann(),
+        pybamm.lead_acid.NewmanTiedemann({"capacitance": "differential"}),
+        # pybamm.lead_acid.NewmanTiedemann({"capacitance": "algebraic"}),
+    ]
+    # compare_voltages(args, models)
+    convergence_studies(args, models)

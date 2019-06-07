@@ -416,7 +416,7 @@ class StandardBatteryBaseModel(BaseModel):
                 ),
                 "Positive electrode OCV entropic change": os.path.join(
                     input_path, "lico2_entropic_change_Moura.py"
-                )
+                ),
             },
         )
 
