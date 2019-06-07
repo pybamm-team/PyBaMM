@@ -8,6 +8,7 @@ import unittest
 
 
 class TestSPM(unittest.TestCase):
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):
         model = pybamm.lithium_ion.SPM()
         modeltest = tests.StandardModelTest(model)
@@ -27,6 +28,7 @@ class TestSPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_known)
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_charge(self):
         model = pybamm.lithium_ion.SPM()
         parameter_values = model.default_parameter_values
@@ -34,6 +36,7 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_zero_current(self):
         model = pybamm.lithium_ion.SPM()
         parameter_values = model.default_parameter_values
