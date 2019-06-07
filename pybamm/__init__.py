@@ -154,6 +154,7 @@ from .models.submodels import (
     potential,
     velocity,
     vertical,
+    thermal,
 )
 
 #

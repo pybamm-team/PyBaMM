@@ -4,7 +4,7 @@
 import pybamm
 
 
-class Thermal(pybamm.Submodel):
+class Thermal(pybamm.SubModel):
     """Thermal effects by conservation of energy across the whole cell.
 
     Parameters
@@ -33,9 +33,9 @@ class Thermal(pybamm.Submodel):
         param = self.set_of_parameters
 
         T_n = variables.get("Negative electrode temperature")
-        T_s = variables.get("Separator temperature")
         T_p = variables.get("Positive electrode temperature")
-        T_k = variables.get("Cell temperature")
+        T = variables.get("Cell temperature")
+        T_av = variables.get("Average cell temperature")
         # can maybe split this out to Internal cell temperature,
         # Negative current collector cell temperature and
         # Positive current collector cell temperature
@@ -102,39 +102,49 @@ class Thermal(pybamm.Submodel):
     def set_full_differential_system(self, variables, reactions):
 
         param = self.set_of_parameters
-        T_k, Q_ohm, Q_rxn, Q_rev = self.unpack(variables, reactions)
-        q = -param.lambda_k * pybamm.grad(T_k)
+        T, _, Q_ohm, Q_rxn, Q_rev = self.unpack(variables, reactions)
+        q = -param.lambda_k * pybamm.grad(T)
 
         self.rhs = {
-            T_k: (-pybamm.div(q) + param.delta ** 2 * param.B * (Q_ohm + Q_rxn + Q_rev))
+            T: (-pybamm.div(q) + param.delta ** 2 * param.B * (Q_ohm + Q_rxn + Q_rev))
             / (param.delta ** 2 * param.C_th * param.rho_k)
         }
         self.algebraic = {}
 
-        T_n_left = pybamm.boundary_value(T_k, "left")
-        T_p_right = pybamm.boundary_value(T_k, "right")
+        T_n_left = pybamm.boundary_value(T, "left")
+        T_p_right = pybamm.boundary_value(T, "right")
         self.boundary_conditions = {
-            T_k: {
+            T: {
                 "left": (param.h * T_n_left / param.lambda_k, "Neumann"),
                 "right": (param.h * T_p_right / param.lambda_k, "Neumann"),
             }
         }
-        self.initial_conditions = {T_k: param.T_init}
-        self.variables = self.get_variables(T_k, q, Q_ohm, Q_rxn, Q_rev)
+        self.initial_conditions = {T: param.T_init}
+        self.variables = self.get_variables(T, q, Q_ohm, Q_rxn, Q_rev)
 
     def set_x_lumped_differential_system(self, variables, reactions):
 
-        # Scott: I have left the current collectors out of this for now rob
-
         param = self.set_of_parameters
-        T_k, Q_ohm, Q_rxn, Q_rev = self.unpack(variables, reactions)
+        _, T_av, Q_ohm, Q_rxn, Q_rev = self.unpack(variables, reactions)
 
         Q = Q_ohm + Q_rxn + Q_rev
         Q_av = pybamm.average(Q)
         self.rhs = {
-            T_k: (param.B * Q_av - 2 * param.h / (param.delta ** 2) * T_k)
+            T_av: (param.B * Q_av - 2 * param.h / (param.delta ** 2) * T_av)
             / (param.C_th * param.rho)
         }
+        self.algebraic = {}
+        self.boundary_conditions = {}
+        self.initial_conditions = {T_av: param.T_init}
+
+        T_n = pybamm.Broadcast(T_av, ["negative electrode"])
+        T_s = pybamm.Broadcast(T_av, ["separator"])
+        T_p = pybamm.Broadcast(T_av, ["positive electrode"])
+
+        T = pybamm.Concatenation([T_n, T_s, T_p])
+        q = -param.lambda_k * pybamm.grad(T)
+
+        self.variables = self.get_variables(T, q, Q_ohm, Q_rxn, Q_rev)
 
     def get_variables(self, T_k, q, Q_ohm, Q_rxn, Q_rev):
 

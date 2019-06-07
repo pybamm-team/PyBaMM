@@ -73,6 +73,13 @@ class DFN(pybamm.LithiumIonBaseModel):
         electrode_current_model.set_algebraic_system(self.variables, reactions, neg)
         electrode_current_model.set_algebraic_system(self.variables, reactions, pos)
 
+        # Thermal model
+        thermal_model = pybamm.thermal.Thermal(param)  # initialise empty submodel
+        if self.options["Full thermal"]:
+            thermal_model.set_full_differential_system()
+        elif self.options["Lumped thermal"]:
+            thermal_model.set_x_lumped_differential_system()
+
         "-----------------------------------------------------------------------------"
         "Combine Submodels"
         self.update(
@@ -81,12 +88,13 @@ class DFN(pybamm.LithiumIonBaseModel):
             electrolyte_diffusion_model,
             eleclyte_current_model,
             electrode_current_model,
+            thermal_model,
         )
 
         "-----------------------------------------------------------------------------"
         "Post-process"
 
-        # Excahnge-current density
+        # Exchange-current density
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
 
@@ -131,6 +139,13 @@ class DFN(pybamm.LithiumIonBaseModel):
                 "Positive electrode surface potential difference": delta_phi_p,
             }
         )
+
+        if self.options["thermal"] == "full":
+            self.variables.update({"Cell temperature": pybamm.standard_variables.T})
+        if self.options["thermal"] == "lumped":
+            self.variables.update(
+                {"Average cell temperature": pybamm.standard_variables.T_av}
+            )
 
     @property
     def default_geometry(self):

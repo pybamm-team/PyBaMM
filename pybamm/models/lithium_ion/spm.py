@@ -9,8 +9,8 @@ class SPM(pybamm.LithiumIonBaseModel):
     **Extends:** :class:`pybamm.LithiumIonBaseModel`
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, options=None):
+        super().__init__(options)
         self.name = "Single Particle Model"
 
         "-----------------------------------------------------------------------------"
@@ -24,6 +24,20 @@ class SPM(pybamm.LithiumIonBaseModel):
 
         c_s_n = pybamm.standard_variables.c_s_n
         c_s_p = pybamm.standard_variables.c_s_p
+
+        self.variables.update(
+            {
+                "Negative particle concentration": c_s_n,
+                "Positive particle concentration": c_s_p,
+            }
+        )
+
+        if self.options["thermal"] == "full":
+            self.variables.update({"Cell temperature": pybamm.standard_variables.T})
+        if self.options["thermal"] == "lumped":
+            self.variables.update(
+                {"Average cell temperature": pybamm.standard_variables.T_av}
+            )
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -41,6 +55,14 @@ class SPM(pybamm.LithiumIonBaseModel):
         positive_particle_model = pybamm.particle.Standard(param)
         positive_particle_model.set_differential_system(c_s_p, j_p, broadcast=True)
         self.update(negative_particle_model, positive_particle_model)
+
+        # Thermal model
+        thermal_model = pybamm.thermal.Thermal(param)  # initialise empty submodel
+        if self.options["thermal"] == "full":
+            thermal_model.set_full_differential_system()
+        elif self.options["thermal"] == "lumped":
+            thermal_model.set_x_lumped_differential_system()
+        self.update(thermal_model)
 
         "-----------------------------------------------------------------------------"
         "Post-Processing"

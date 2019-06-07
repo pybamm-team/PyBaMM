@@ -52,3 +52,10 @@ pressure_n = pybamm.Variable("Negative electrolyte pressure", ["negative electro
 pressure_s = pybamm.Variable("Separator electrolyte pressure", ["separator"])
 pressure_p = pybamm.Variable("Positive electrolyte pressure", ["positive electrode"])
 pressure = pybamm.Concatenation(pressure_n, pressure_s, pressure_p)
+
+# Temperature
+T_n = pybamm.Variable("Negative electrode temperature", ["negative electrode"])
+T_s = pybamm.Variable("Separator temperature", ["separator"])
+T_p = pybamm.Variable("Positive electrode temperature", ["positive electrode"])
+T = pybamm.Concatenation(T_n, T_s, T_p)
+T_av = pybamm.Variable("Average cell temperature")

@@ -416,7 +416,7 @@ class StandardBatteryBaseModel(BaseModel):
                 ),
                 "Positive electrode OCV entropic change": os.path.join(
                     input_path, "lico2_entropic_change_Moura.py"
-                )
+                ),
             },
         )
 
@@ -474,6 +474,7 @@ class StandardBatteryBaseModel(BaseModel):
             "bc_options": {"dimensionality": 0},
             "capacitance": False,
             "convection": False,
+            "thermal": False,
         }
         if self._extra_options is None:
             options = default_options
@@ -695,8 +696,8 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
 
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, options=None):
+        super().__init__(options)
 
     def set_standard_output_variables(self):
         super().set_standard_output_variables()

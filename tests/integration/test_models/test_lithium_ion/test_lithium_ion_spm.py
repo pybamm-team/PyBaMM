@@ -41,6 +41,11 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
+    def test_thermal(self):
+        options = {"thermal": "lumped"}
+        model = pybamm.lithium_ion.SPM(options)
+        parameter_values = model.default_parameter_values
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
