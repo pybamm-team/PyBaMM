@@ -30,7 +30,6 @@ class InterfacialCurrent(pybamm.SubModel):
             The current in the current collectors (can be 0D, 1D or 2D)
         domain : iter of str
             The domain(s) in which to compute the interfacial current.
-
         Returns
         -------
         :class:`pybamm.Symbol`
@@ -70,9 +69,9 @@ class InterfacialCurrent(pybamm.SubModel):
 
         domain = domain or j0.domain
         if domain == ["negative electrode"]:
-            return 2 * j0 * pybamm.Function(np.sinh, (param.ne_n / 2) * eta_r)
+            return 2 * j0 * pybamm.sinh((param.ne_n / 2) * eta_r)
         elif domain == ["positive electrode"]:
-            return 2 * j0 * pybamm.Function(np.sinh, (param.ne_p / 2) * eta_r)
+            return 2 * j0 * pybamm.sinh((param.ne_p / 2) * eta_r)
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 

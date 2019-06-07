@@ -20,7 +20,7 @@ class Function(pybamm.Symbol):
     children : :class:`pybamm.Symbol`
         The children nodes to apply the function to
 
-    **Extends:** :class:`UnaryOperator`
+    **Extends:** :class:`pybamm.Symbol`
     """
 
     def __init__(self, function, *children):
@@ -71,9 +71,7 @@ class Function(pybamm.Symbol):
                 # if variable appears in the function,use autograd to differentiate
                 # function, and apply chain rule
                 if variable.id in [symbol.id for symbol in child.pre_order()]:
-                    partial_derivatives[i] = child.diff(variable) * Function(
-                        autograd.grad(self.function), *children
-                    )
+                    partial_derivatives[i] = child.diff(variable) * self._diff(children)
 
             # remove None entries
             partial_derivatives = list(filter(None, partial_derivatives))
@@ -83,6 +81,10 @@ class Function(pybamm.Symbol):
                 derivative = pybamm.Scalar(0)
 
             return derivative
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return Function(autograd.elementwise_grad(self.function), *children)
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -103,9 +105,7 @@ class Function(pybamm.Symbol):
             children = self.orphans
             for child in children:
                 if not child.evaluates_to_number():
-                    jac_fun = Function(
-                        autograd.elementwise_grad(self.function), *children
-                    ) * child.jac(variable)
+                    jac_fun = self._diff(children) * child.jac(variable)
 
                     jac_fun.domain = self.domain
                     if jacobian is None:
@@ -146,7 +146,8 @@ class Function(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return self._function_new_copy(self.orphans)
+        children_copy = [child.new_copy() for child in self.children]
+        return self._function_new_copy(children_copy)
 
     def _function_new_copy(self, children):
         """Returns a new copy of the function.
@@ -183,3 +184,134 @@ class Function(pybamm.Symbol):
         else:
             return pybamm.Function(self.function, *simplified_children)
 
+
+class SpecificFunction(Function):
+    """
+    Parent class for the specific functions, which implement their own `diff`
+    operators directly.
+
+    Parameters
+    ----------
+    function : method
+        Function to be applied to child
+    child : :class:`pybamm.Symbol`
+        The child to apply the function to
+
+    """
+
+    def __init__(self, function, child):
+        super().__init__(function, child)
+
+    def _function_new_copy(self, children):
+        """ See :meth:`pybamm.Function._function_new_copy()` """
+        return self.__class__(*children)
+
+    def _function_simplify(self, simplified_children):
+        """ See :meth:`pybamm.Function._function_simplify()` """
+        return self.__class__(*simplified_children)
+
+
+class Cos(SpecificFunction):
+    """ Cosine function """
+
+    def __init__(self, child):
+        super().__init__(np.cos, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return -Sin(children[0])
+
+
+def cos(child):
+    " Returns cosine function of child. "
+    return Cos(child)
+
+
+class Cosh(SpecificFunction):
+    """ Hyberbolic cosine function """
+
+    def __init__(self, child):
+        super().__init__(np.cosh, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return Sinh(children[0])
+
+
+def cosh(child):
+    " Returns hyperbolic cosine function of child. "
+    return Cosh(child)
+
+
+class Exponential(SpecificFunction):
+    """ Exponential function """
+
+    def __init__(self, child):
+        super().__init__(np.exp, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return Exponential(children[0])
+
+
+def exp(child):
+    " Returns exponential function of child. "
+    return Exponential(child)
+
+
+class Log(SpecificFunction):
+    """ Logarithmic function """
+
+    def __init__(self, child):
+        super().__init__(np.log, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return 1 / children[0]
+
+
+def log(child):
+    " Returns logarithmic function of child. "
+    return Log(child)
+
+
+def max(child):
+    " Returns max function of child. "
+    return Function(np.max, child)
+
+
+def min(child):
+    " Returns min function of child. "
+    return Function(np.min, child)
+
+
+class Sin(SpecificFunction):
+    """ Sine function """
+
+    def __init__(self, child):
+        super().__init__(np.sin, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return Cos(children[0])
+
+
+def sin(child):
+    " Returns sine function of child. "
+    return Sin(child)
+
+
+class Sinh(SpecificFunction):
+    """ Hyperbolic sine function """
+
+    def __init__(self, child):
+        super().__init__(np.sinh, child)
+
+    def _diff(self, children):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return Cosh(children[0])
+
+
+def sinh(child):
+    " Returns hyperbolic sine function of child. "
+    return Sinh(child)

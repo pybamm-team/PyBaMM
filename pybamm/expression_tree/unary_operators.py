@@ -260,6 +260,40 @@ class Divergence(SpatialOperator):
         super().__init__("div", child)
 
 
+class Laplacian(SpatialOperator):
+    """A node in the expression tree representing a laplacian operator. This is
+    currently only implemeted in the weak form for finite element formulations.
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("laplacian", child)
+
+
+class Mass(SpatialOperator):
+    """Returns the mass matrix for a given symbol, accounting for boundary conditions
+    where necessary (e.g. in the finite element formualtion)
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("mass", child)
+
+    def evaluate_for_shape(self):
+        """
+        Return a matrix of the appropriate shape, based on the domain.
+        Domain 'sizes' can clash, but are unlikely to, and won't cause failures
+        if they do.
+        """
+        if self.domain == []:
+            size = 1
+        else:
+            size = sum(hash(dom) % 100 for dom in self.domain)
+        return np.nan * np.ones((size, size))
+
+
 class Integral(SpatialOperator):
     """A node in the expression tree representing an integral operator
 
@@ -281,22 +315,29 @@ class Integral(SpatialOperator):
     """
 
     def __init__(self, child, integration_variable):
-        if isinstance(integration_variable, pybamm.SpatialVariable):
-            # Check that child and integration_variable domains agree
-            if child.domain != integration_variable.domain:
-                raise pybamm.DomainError(
-                    """child and integration_variable must have the same domain"""
+        if not isinstance(integration_variable, list):
+            integration_variable = [integration_variable]
+
+        name = "integral"
+        for var in integration_variable:
+            if isinstance(var, pybamm.SpatialVariable):
+                # Check that child and integration_variable domains agree
+                if child.domain != var.domain:
+                    raise pybamm.DomainError(
+                        "child and integration_variable must have the same domain"
+                    )
+            elif not isinstance(var, pybamm.IndependentVariable):
+                raise ValueError(
+                    """integration_variable must be of type pybamm.IndependentVariable,
+                           not {}""".format(
+                        type(var)
+                    )
                 )
-        elif not isinstance(integration_variable, pybamm.IndependentVariable):
-            raise ValueError(
-                """integration_variable must be of type pybamm.IndependentVariable,
-                   not {}""".format(
-                    type(integration_variable)
-                )
-            )
-        name = "integral d{}".format(integration_variable.name)
-        if isinstance(integration_variable, pybamm.SpatialVariable):
-            name += " {}".format(integration_variable.domain)
+            name += " d{}".format(var.name)
+
+        if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
+            name += " {}".format(child.domain)
+
         self._integration_variable = integration_variable
         super().__init__(name, child)
         # integrating removes the domain
@@ -308,13 +349,17 @@ class Integral(SpatialOperator):
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
+        if not isinstance(self.integration_variable, list):
+            self.integration_variable = [self.integration_variable]
         self._id = hash(
-            (
-                self.__class__,
-                self.name,
-                self.integration_variable.id,
-                self.children[0].id,
+            (self.__class__, self.name)
+            + tuple(
+                [
+                    integration_variable.id
+                    for integration_variable in self.integration_variable
+                ]
             )
+            + (self.children[0].id,)
             + tuple(self.domain)
         )
 
@@ -353,6 +398,13 @@ class IndefiniteIntegral(Integral):
     """
 
     def __init__(self, child, integration_variable):
+        if isinstance(integration_variable, list):
+            if len(integration_variable) > 1:
+                raise NotImplementedError(
+                    "Indefinite integral only implemeted w.r.t. one variable"
+                )
+            else:
+                integration_variable = integration_variable[0]
         super().__init__(child, integration_variable)
         # Overwrite the name
         self.name = "{} integrated w.r.t {}".format(
@@ -484,6 +536,25 @@ def div(expression):
     """
 
     return Divergence(expression)
+
+
+def laplacian(expression):
+    """convenience function for creating a :class:`Laplacian`
+
+    Parameters
+    ----------
+
+    expression : :class:`Symbol`
+        the laplacian will be performed on this sub-expression
+
+    Returns
+    -------
+
+    :class:`Laplacian`
+        the laplacian of ``expression``
+    """
+
+    return Laplacian(expression)
 
 
 #
