@@ -1,5 +1,5 @@
 #
-# Root of the lead-acid models module.
+# Root of the lithium-ion models module.
 #
 from .spm import SPM
 from .spme import SPMe

@@ -30,7 +30,6 @@ class InterfacialCurrent(pybamm.SubModel):
             The current in the current collectors (can be 0D, 1D or 2D)
         domain : iter of str
             The domain(s) in which to compute the interfacial current.
-
         Returns
         -------
         :class:`pybamm.Symbol`

@@ -33,13 +33,22 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         return mass_matrix
 
 
-def get_mesh_for_testing(xpts=None, rpts=10, zpts=15, geometry=None):
+def get_mesh_for_testing(
+    xpts=None, rpts=10, ypts=15, zpts=15, geometry=None, cc_submesh=None
+):
     param = pybamm.ParameterValues(
         base_parameters={
+            "Electrode depth [m]": 0.4,
+            "Electrode height [m]": 0.5,
+            "Negative tab width [m]": 0.1,
+            "Negative tab centre y-coordinate [m]": 0.1,
+            "Negative tab centre z-coordinate [m]": 0.5,
+            "Positive tab width [m]": 0.1,
+            "Positive tab centre y-coordinate [m]": 0.3,
+            "Positive tab centre z-coordinate [m]": 0.5,
             "Negative electrode width [m]": 0.3,
             "Separator width [m]": 0.3,
             "Positive electrode width [m]": 0.3,
-            "Electrode height [m]": 0.5,
         }
     )
 
@@ -55,6 +64,8 @@ def get_mesh_for_testing(xpts=None, rpts=10, zpts=15, geometry=None):
         "positive particle": pybamm.Uniform1DSubMesh,
         "current collector": pybamm.Uniform1DSubMesh,
     }
+    if cc_submesh:
+        submesh_types["current collector"] = cc_submesh
 
     if xpts is None:
         xn_pts, xs_pts, xp_pts = 40, 25, 35
@@ -67,6 +78,7 @@ def get_mesh_for_testing(xpts=None, rpts=10, zpts=15, geometry=None):
         var.x_p: xp_pts,
         var.r_n: rpts,
         var.r_p: rpts,
+        var.y: ypts,
         var.z: zpts,
     }
 

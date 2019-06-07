@@ -99,7 +99,8 @@ class Standard(pybamm.SubModel):
             domain = "Positive particle"
             broadcast_domain = ["positive electrode"]
 
-        c_surf = pybamm.surf(c)
+        c_surf = pybamm.surf(c, set_domain=True)
+
         if broadcast:
             c_surf = pybamm.Broadcast(c_surf, broadcast_domain)
 

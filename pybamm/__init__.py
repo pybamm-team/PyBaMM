@@ -62,6 +62,7 @@ from .expression_tree.binary_operators import (
     Division,
     Outer,
     outer,
+    source,
 )
 from .expression_tree.concatenations import (
     Concatenation,
@@ -79,6 +80,8 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
+    Laplacian,
+    Mass,
     BoundaryOperator,
     BoundaryValue,
     BoundaryFlux,
@@ -86,6 +89,7 @@ from .expression_tree.unary_operators import (
     IndefiniteIntegral,
     grad,
     div,
+    laplacian,
     surf,
     average,
     boundary_value,
@@ -145,6 +149,7 @@ from .models import lithium_ion
 # Submodel classes
 #
 from .models.submodels import (
+    current_collector,
     electrode,
     electrolyte_current,
     electrolyte_diffusion,
@@ -174,9 +179,11 @@ from .geometry.geometry import (
     Geometry,
     Geometry1DMacro,
     Geometry3DMacro,
-    Geometry1p1DMacro,
     Geometry1DMicro,
     Geometry1p1DMicro,
+    Geometryxp1DMacro,
+    Geometryxp0p1DMicro,
+    Geometryxp1p1DMicro,
 )
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS

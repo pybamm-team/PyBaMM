@@ -134,7 +134,6 @@ class ParameterValues(dict):
                 )
             )
             model.variables[variable] = processing_function(equation)
-
         for idx, equation in enumerate(model.events):
             pybamm.logger.debug(
                 "{} parameters for event {}".format(processing.capitalize(), idx)
@@ -174,14 +173,23 @@ class ParameterValues(dict):
         geometry : :class:`pybamm.Geometry`
                 Geometry specs to assign parameter values to
         """
-
         for domain in geometry:
-            for prim_sec, variables in geometry[domain].items():
-                for spatial_variable, spatial_limits in variables.items():
-                    for lim, sym in spatial_limits.items():
-                        pybamm.logger.debug("Set parameters for {!r}".format(sym))
-                        sym_eval = self.process_symbol(sym).evaluate()
-                        geometry[domain][prim_sec][spatial_variable][lim] = sym_eval
+            for prim_sec_tabs, variables in geometry[domain].items():
+                # process tab information if using 2D current collectors
+                if prim_sec_tabs == "tabs":
+                    for tab, position_size in variables.items():
+                        for position_size, sym in position_size.items():
+                            sym_eval = self.process_symbol(sym).evaluate()
+                            geometry[domain][prim_sec_tabs][tab][
+                                position_size
+                            ] = sym_eval
+                else:
+                    for spatial_variable, spatial_limits in variables.items():
+                        for lim, sym in spatial_limits.items():
+                            sym_eval = self.process_symbol(sym).evaluate()
+                            geometry[domain][prim_sec_tabs][spatial_variable][
+                                lim
+                            ] = sym_eval
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.

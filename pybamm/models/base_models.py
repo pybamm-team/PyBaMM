@@ -433,6 +433,7 @@ class StandardBatteryBaseModel(BaseModel):
             var.x_p: 35,
             var.r_n: 10,
             var.r_p: 10,
+            var.y: 10,
             var.z: 10,
         }
 
@@ -695,8 +696,9 @@ class LithiumIonBaseModel(StandardBatteryBaseModel):
 
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, options=None):
+        super().__init__(options)
+        self._set_of_parameters = pybamm.standard_parameters_lithium_ion
 
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
