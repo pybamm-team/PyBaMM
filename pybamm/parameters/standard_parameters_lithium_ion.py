@@ -57,6 +57,11 @@ sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]"
 # Microscale geometry
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
+a_k_dim = pybamm.Concatenation(
+    pybamm.Broadcast(a_n_dim, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(a_p_dim, ["positive electrode"]),
+)
 R_n = pybamm.geometric_parameters.R_n
 R_p = pybamm.geometric_parameters.R_p
 b = pybamm.geometric_parameters.b

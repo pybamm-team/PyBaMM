@@ -135,17 +135,31 @@ class Thermal(pybamm.Submodel):
 
         return {
             "Negative electrode temperature": T_n,
+            "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
             "Separator temperature": T_s,
+            "Separator temperature [K]": param.Delta_T * T_s + param.T_ref,
             "Positive electrode temperature": T_p,
+            "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
             "Cell temperature": T_k,
+            "Cell temperature [K]": param.Delta_T * T_k + param.T_ref,
             "Average cell temperature": T_k_av,
+            "Average cell temperature [K]": param.Delta_T * T_k_av + param.T_ref,
             "Heat flux": q,
+            "Heat flux [W.m-2]": q,
             "Ohmic heating": Q_ohm,
+            "Ohmic heating [A.V.m-3]": param.i_typ
+            * param.potential_scale
+            * Q_ohm
+            / param.L_x,
             "Irreversible electrochemical heating": Q_rxn,
+            "Irreversible electrochemical heating [A.V.m-3]": param.i_typ
+            * param.potential_scale
+            * Q_rxn
+            / param.L_x,
             "Reversible heating": Q_rev,
+            "Reversible heating [A.V.m-3]": param.i_typ
+            * param.potential_scale
+            * Q_rev
+            / param.L_x,
         }
-
-    def rescale_temp(self, T):
-        param = self.set_of_parameters
-        return param.Delta_T * T + param.T_ref
 
