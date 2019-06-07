@@ -160,7 +160,8 @@ install:
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
   - source scripts/install_scikits_odes.sh
-
+  - source scripts/install_dolfin.sh
+  
 before_script:
 - python --version
 
