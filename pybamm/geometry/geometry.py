@@ -72,7 +72,7 @@ class Geometry1DMacro(Geometry):
 
 
 class Geometry3DMacro(Geometry1DMacro):
-    """A geometry class to store the details features of the cell geometry
+    """A geometry class to store the details features of the macroscopic 3D cell geometry.
 
      **Extends**: :class:`dict`
 
