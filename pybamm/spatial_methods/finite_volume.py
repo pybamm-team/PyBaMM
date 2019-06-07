@@ -500,20 +500,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         # issue
         matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
-        # Return boundary value with domain removed
+        # Return boundary value with domain given by symbol
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
-
-        if sec_pts > 1:
-            if discretised_child.domain == ["negative particle"]:
-                boundary_value.domain = ["negative electrode"]
-            elif discretised_child.domain == ["positive particle"]:
-                boundary_value.domain = ["positive electrode"]
-            elif (
-                "negative electrode" or "separator" or "positive electrode"
-            ) in discretised_child.domain:
-                boundary_value.domain = ["current collector"]
-        else:
-            boundary_value.domain = []
+        boundary_value.domain = symbol.domain
 
         return boundary_value
 

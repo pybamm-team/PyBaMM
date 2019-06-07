@@ -47,7 +47,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta.name, "integral dtime")
         # self.assertTrue(inta.definite)
         self.assertEqual(inta.children[0].name, a.name)
-        self.assertEqual(inta.integration_variable, t)
+        self.assertEqual(inta.integration_variable[0], t)
         self.assertEqual(inta.domain, [])
 
         # space integral
@@ -56,20 +56,32 @@ class TestUnaryOperators(unittest.TestCase):
         inta = pybamm.Integral(a, x)
         self.assertEqual(inta.name, "integral dx ['negative electrode']")
         self.assertEqual(inta.children[0].name, a.name)
-        self.assertEqual(inta.integration_variable, x)
+        self.assertEqual(inta.integration_variable[0], x)
+        self.assertEqual(inta.domain, [])
+
+        # space integral over two variables
+        b = pybamm.Symbol("b", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+        inta = pybamm.Integral(b, [y, z])
+        self.assertEqual(inta.name, "integral dy dz ['current collector']")
+        self.assertEqual(inta.children[0].name, b.name)
+        self.assertEqual(inta.integration_variable[0], y)
+        self.assertEqual(inta.integration_variable[1], z)
         self.assertEqual(inta.domain, [])
 
         # Indefinite
         inta = pybamm.IndefiniteIntegral(a, x)
         self.assertEqual(inta.name, "a integrated w.r.t x on ['negative electrode']")
         self.assertEqual(inta.children[0].name, a.name)
-        self.assertEqual(inta.integration_variable, x)
+        self.assertEqual(inta.integration_variable[0], x)
         self.assertEqual(inta.domain, ["negative electrode"])
 
         # expected errors
         a = pybamm.Symbol("a", domain=["negative electrode"])
         x = pybamm.SpatialVariable("x", ["separator"])
         y = pybamm.Variable("y")
+        z = pybamm.SpatialVariable("z", ["negative electrode"])
         with self.assertRaises(pybamm.DomainError):
             pybamm.Integral(a, x)
         with self.assertRaises(ValueError):
@@ -188,7 +200,7 @@ class TestUnaryOperators(unittest.TestCase):
             av_a = pybamm.average(a)
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
-            self.assertEqual(av_a.children[0].integration_variable.domain, x.domain)
+            self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
             self.assertEqual(av_a.domain, [])
 
         a = pybamm.Symbol("a", domain="bad domain")

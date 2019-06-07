@@ -557,3 +557,22 @@ def outer(left, right):
         return left * right
     except pybamm.DomainError:
         return pybamm.Outer(left, right)
+
+
+def source(left, right):
+    """A convinience function for creating (part of) an expression tree representing
+    a source term in the (weak) finite element formulation. The left child is the
+    symbol representing the source term and the right child is the symbol of the
+    equation variable (key). The method returns the matrix-vector product of the
+    mass matrix (adjusted to account for the boundary conditions imposed the the
+    right symbol) and the discretised left symbol.
+    """
+
+    if left.domain != ["current collector"] or right.domain != ["current collector"]:
+        raise pybamm.DomainError(
+            """finite element method only implemented in the 'current collector' domain,
+            but symbols have domains {} and {}""".format(
+                left.domain, right.domain
+            )
+        )
+    return pybamm.Mass(right) @ left

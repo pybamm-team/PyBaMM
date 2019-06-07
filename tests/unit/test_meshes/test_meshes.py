@@ -247,12 +247,13 @@ class TestMesh(unittest.TestCase):
                 "Separator width [m]": 0.2,
                 "Positive electrode width [m]": 0.3,
                 "Electrode height [m]": 0.4,
+                "Negative tab centre z-coordinate [m]": 0.2,
+                "Positive tab centre z-coordinate [m]": 0.2,
             }
         )
 
         geometry = pybamm.Geometry("1+1D macro")
         param.process_geometry(geometry)
-
         # provide mesh properties
 
         var = pybamm.standard_spatial_vars

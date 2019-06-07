@@ -32,18 +32,22 @@ class Mesh(dict):
         submesh_pts = {}
         for domain in geometry:
             submesh_pts[domain] = {}
-            if len(list(geometry[domain]["primary"].keys())) > 1:
+            if len(list(geometry[domain]["primary"].keys())) > 2:
                 raise pybamm.GeometryError
             for prim_sec in list(geometry[domain].keys()):
-                for var in list(geometry[domain][prim_sec].keys()):
-                    if var.id not in var_id_pts.keys():
-                        if var.domain[0] in geometry.keys():
-                            raise KeyError(
-                                "Points not given for a variable in domain {}".format(
-                                    domain
+                # skip over tabs key
+                if prim_sec != "tabs":
+                    for var in list(geometry[domain][prim_sec].keys()):
+                        if var.id not in var_id_pts.keys():
+                            if var.domain[0] in geometry.keys():
+                                raise KeyError(
+                                    """
+                                    Points not given for a variable in domain {}
+                                    """.format(
+                                        domain
+                                    )
                                 )
-                            )
-                    submesh_pts[domain][var.id] = var_id_pts[var.id]
+                        submesh_pts[domain][var.id] = var_id_pts[var.id]
         self.submesh_pts = submesh_pts
 
         # Input domain order manually
@@ -59,12 +63,15 @@ class Mesh(dict):
 
         for domain in geometry:
             if "secondary" in geometry[domain].keys():
+                repeats = 1
                 for var in geometry[domain]["secondary"].keys():
-                    repeats = submesh_pts[domain][var.id]  # note (specific to FV)
+                    repeats *= submesh_pts[domain][var.id]  # note (specific to FV)
             else:
                 repeats = 1
             self[domain] = [
-                submesh_types[domain](geometry[domain]["primary"], submesh_pts[domain])
+                submesh_types[domain](
+                    geometry[domain]["primary"], submesh_pts[domain]
+                )
             ] * repeats
 
         # add ghost meshes
