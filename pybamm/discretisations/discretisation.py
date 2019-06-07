@@ -211,6 +211,7 @@ class Discretisation(object):
             processed_bcs[key.id] = {}
             for side, bc in bcs.items():
                 eqn, typ = bc
+                pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
                 processed_eqn = self.process_symbol(eqn)
                 processed_bcs[key.id][side] = (processed_eqn, typ)
 
@@ -235,8 +236,8 @@ class Discretisation(object):
         """
         # Discretise right-hand sides, passing domain from variable
         processed_rhs = self.process_dict(model.rhs)
-        # Concatenate rhs into a single state vector
 
+        # Concatenate rhs into a single state vector
         # Need to concatenate in order as the ordering of equations could be different
         # in processed_rhs and model.rhs (for Python Version <= 3.5)
         processed_concatenated_rhs = self._concatenate_in_order(processed_rhs)
@@ -342,7 +343,7 @@ class Discretisation(object):
 
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
-            pybamm.logger.debug("**Discretise {!s}".format(eqn_key))
+            pybamm.logger.debug("Discretise {!r}".format(eqn_key))
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
         return new_var_eqn_dict
 
@@ -385,6 +386,7 @@ class Discretisation(object):
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )
+
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)
@@ -424,6 +426,10 @@ class Discretisation(object):
 
             else:
                 return symbol._unary_new_copy(disc_child)
+
+        elif isinstance(symbol, pybamm.Function):
+            disc_children = [self.process_symbol(child) for child in symbol.children]
+            return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.Variable):
             return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)

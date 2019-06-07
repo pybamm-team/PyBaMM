@@ -76,7 +76,6 @@ from .expression_tree.unary_operators import (
     UnaryOperator,
     Negate,
     AbsoluteValue,
-    Function,
     Index,
     SpatialOperator,
     Gradient,
@@ -95,6 +94,7 @@ from .expression_tree.unary_operators import (
     average,
     boundary_value,
 )
+from .expression_tree.functions import *
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast
 from .expression_tree.scalar import Scalar
@@ -168,6 +168,7 @@ from .parameters.parameter_values import ParameterValues
 from .parameters import standard_current_functions
 from .parameters import geometric_parameters
 from .parameters import electrical_parameters
+from .parameters import thermal_parameters
 from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
 from .parameters.print_parameters import print_parameters, print_evaluated_parameters
 
@@ -194,18 +195,17 @@ from .geometry import standard_spatial_vars
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
-from .meshes.fenics_submeshes import FenicsMesh2D
 
 #
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
-from .spatial_methods.finite_element_fenics import FiniteElementFenics
 
 #
 # Solver classes
 #
+from .solvers.solution import Solution
 from .solvers.base_solver import BaseSolver
 from .solvers.ode_solver import OdeSolver
 from .solvers.dae_solver import DaeSolver

@@ -30,7 +30,12 @@ class OdeSolver(pybamm.BaseSolver):
 
         """
         pybamm.logger.info("Start solving {}".format(model.name))
+
+        # Set up
+        timer = pybamm.Timer()
+        start_time = timer.time()
         concatenated_rhs, y0, events, jac_rhs = self.set_up(model)
+        set_up_time = timer.time() - start_time
 
         # Create function to evaluate rhs
         def dydt(t, y):
@@ -50,13 +55,17 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Create function to evaluate jacobian
         if jac_rhs is not None:
+
             def jacobian(t, y):
                 return jac_rhs.evaluate(t, y, known_evals={})[0]
 
         else:
             jacobian = None
 
-        self.t, self.y = self.integrate(
+        # Solve
+        solve_start_time = timer.time()
+        pybamm.logger.info("Calling ODE solver")
+        solution = self.integrate(
             dydt,
             y0,
             t_eval,
@@ -65,7 +74,13 @@ class OdeSolver(pybamm.BaseSolver):
             jacobian=jacobian,
         )
 
+        # Assign times
+        solution.solve_time = timer.time() - solve_start_time
+        solution.total_time = timer.time() - start_time
+        solution.set_up_time = set_up_time
+
         pybamm.logger.info("Finish solving {}".format(model.name))
+        return solution
 
     def set_up(self, model):
         """Unpack model, perform checks, simplify and calculate jacobian.
@@ -105,7 +120,9 @@ class OdeSolver(pybamm.BaseSolver):
             # set up simplification object, for re-use of dict
             simp = pybamm.Simplification()
             # create simplified rhs and event expressions
+            pybamm.logger.info("Simplifying RHS")
             concatenated_rhs = simp.simplify(concatenated_rhs)
+            pybamm.logger.info("Simplifying events")
             events = [simp.simplify(event) for event in events]
 
         y0 = model.concatenated_initial_conditions[:, 0]
@@ -113,8 +130,10 @@ class OdeSolver(pybamm.BaseSolver):
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))
+            pybamm.logger.info("Calculating jacobian")
             jac_rhs = concatenated_rhs.jac(y)
             if model.use_simplify:
+                pybamm.logger.info("Simplifying jacobian")
                 jac_rhs = simp.simplify(jac_rhs)
 
             if model.use_to_python:

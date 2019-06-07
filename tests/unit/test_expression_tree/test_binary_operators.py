@@ -65,6 +65,9 @@ class TestBinaryOperators(unittest.TestCase):
         outer = pybamm.Outer(v, w)
         np.testing.assert_array_equal(outer.evaluate(), 2 * np.ones((15, 1)))
         self.assertEqual(outer.domain, w.domain)
+        self.assertEqual(
+            str(outer), "outer(Column vector of length 5, Column vector of length 3)"
+        )
 
         # outer function
         # if there is no domain clash, normal multiplication is retured

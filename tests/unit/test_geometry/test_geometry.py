@@ -108,18 +108,19 @@ class TestGeometry2p1DMacro(unittest.TestCase):
             if key != "current collector":
                 self.assertIn("secondary", prim_sec_vars.keys())
                 var = pybamm.standard_spatial_vars
-                self.assertEqual(
-                    list(prim_sec_vars["secondary"].keys())[0].id, var.y.id
-                )
-                self.assertEqual(
-                    list(prim_sec_vars["secondary"].keys())[1].id, var.z.id
-                )
+                self.assertIn(var.y, prim_sec_vars["secondary"].keys())
+                self.assertIn(var.z, prim_sec_vars["secondary"].keys())
+
             for spatial_vars in prim_sec_vars.values():
                 all(
                     self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
                     for spatial_var in spatial_vars.keys()
                     if spatial_var not in ["negative", "positive"]
                 )
+
+        def test_init_failure(self):
+            with self.assertRaises(pybamm.GeometryError):
+                pybamm.Geometryxp1DMacro(cc_dimension=3)
 
 
 class TestGeometry1p1DMicro(unittest.TestCase):
@@ -133,48 +134,36 @@ class TestGeometry1p1DMicro(unittest.TestCase):
                 )
 
 
-class TestGeometry1p0p1DMicro(unittest.TestCase):
+class TestGeometryxp0p1DMicro(unittest.TestCase):
     def test_geometry_keys(self):
-        geometry = pybamm.Geometryxp0p1DMicro(cc_dimension=1)
-        for prim_sec_vars in geometry.values():
-            for spatial_vars in prim_sec_vars.values():
-                all(
-                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
-                    for spatial_var in spatial_vars.keys()
-                )
+        for cc_dimension in [1, 2]:
+            geometry = pybamm.Geometryxp0p1DMicro(cc_dimension=cc_dimension)
+            for prim_sec_vars in geometry.values():
+                for spatial_vars in prim_sec_vars.values():
+                    all(
+                        self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
+                        for spatial_var in spatial_vars.keys()
+                    )
+
+    def test_init_failure(self):
+        with self.assertRaises(pybamm.GeometryError):
+            pybamm.Geometryxp0p1DMicro(cc_dimension=3)
 
 
-class TestGeometry1p1p1DMicro(unittest.TestCase):
+class TestGeometryxp1p1DMicro(unittest.TestCase):
     def test_geometry_keys(self):
-        geometry = pybamm.Geometryxp1p1DMicro(cc_dimension=1)
-        for prim_sec_vars in geometry.values():
-            for spatial_vars in prim_sec_vars.values():
-                all(
-                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
-                    for spatial_var in spatial_vars.keys()
-                )
+        for cc_dimension in [1, 2]:
+            geometry = pybamm.Geometryxp1p1DMicro(cc_dimension=cc_dimension)
+            for prim_sec_vars in geometry.values():
+                for spatial_vars in prim_sec_vars.values():
+                    all(
+                        self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
+                        for spatial_var in spatial_vars.keys()
+                    )
 
-
-class TestGeometry2p0p1DMicro(unittest.TestCase):
-    def test_geometry_keys(self):
-        geometry = pybamm.Geometryxp0p1DMicro(cc_dimension=2)
-        for prim_sec_vars in geometry.values():
-            for spatial_vars in prim_sec_vars.values():
-                all(
-                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
-                    for spatial_var in spatial_vars.keys()
-                )
-
-
-class TestGeometry2p1p1DMicro(unittest.TestCase):
-    def test_geometry_keys(self):
-        geometry = pybamm.Geometryxp1p1DMicro(cc_dimension=2)
-        for prim_sec_vars in geometry.values():
-            for spatial_vars in prim_sec_vars.values():
-                all(
-                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
-                    for spatial_var in spatial_vars.keys()
-                )
+    def test_init_failure(self):
+        with self.assertRaises(pybamm.GeometryError):
+            pybamm.Geometryxp0p1DMicro(cc_dimension=3)
 
 
 class TestGeometry(unittest.TestCase):

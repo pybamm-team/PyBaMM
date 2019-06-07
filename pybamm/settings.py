@@ -4,7 +4,7 @@
 
 
 class Settings(object):
-    _debug_mode = True
+    _debug_mode = False
 
     @property
     def debug_mode(self):

@@ -62,30 +62,17 @@ class Mesh(dict):
                 self.domain_order.append(domain)
 
         for domain in geometry:
-            # need to pass tab information if primary domian is 2D current collector
-            if (
-                domain == "current collector"
-                and submesh_types[domain] == pybamm.FenicsMesh2D
-            ):
-                self[domain] = [
-                    submesh_types[domain](
-                        geometry[domain]["primary"],
-                        submesh_pts[domain],
-                        geometry[domain]["tabs"],
-                    )
-                ]
+            if "secondary" in geometry[domain].keys():
+                repeats = 1
+                for var in geometry[domain]["secondary"].keys():
+                    repeats *= submesh_pts[domain][var.id]  # note (specific to FV)
             else:
-                if "secondary" in geometry[domain].keys():
-                    repeats = 1
-                    for var in geometry[domain]["secondary"].keys():
-                        repeats *= submesh_pts[domain][var.id]  # note (specific to FV)
-                else:
-                    repeats = 1
-                self[domain] = [
-                    submesh_types[domain](
-                        geometry[domain]["primary"], submesh_pts[domain]
-                    )
-                ] * repeats
+                repeats = 1
+            self[domain] = [
+                submesh_types[domain](
+                    geometry[domain]["primary"], submesh_pts[domain]
+                )
+            ] * repeats
 
         # add ghost meshes
         self.add_ghost_meshes()
@@ -139,12 +126,10 @@ class Mesh(dict):
         This will be useful for calculating the gradient with Dirichlet BCs.
         """
         # Get all submeshes relating to space (i.e. exclude time)
-        # NOTE: we exclude fenics submeshes as boundary conditions are accounted
-        # for during weak formulation
         submeshes = [
             (domain, submesh_list)
             for domain, submesh_list in self.items()
-            if domain != "time" and not isinstance(submesh_list[0], pybamm.FenicsMesh2D)
+            if domain != "time"
         ]
         for domain, submesh_list in submeshes:
 

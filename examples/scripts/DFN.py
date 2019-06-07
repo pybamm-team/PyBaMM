@@ -21,10 +21,9 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-solver = model.default_solver
 t_eval = np.linspace(0, 2, 100)
-solver.solve(model, t_eval)
+solution = model.default_solver.solve(model, t_eval)
 
 # plot
-plot = pybamm.QuickPlot(model, mesh, solver)
+plot = pybamm.QuickPlot(model, mesh, solution)
 plot.dynamic_plot()
