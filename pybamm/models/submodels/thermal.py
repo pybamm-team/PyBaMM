@@ -113,8 +113,8 @@ class Thermal(pybamm.SubModel):
         T_p_right = pybamm.boundary_value(T, "right")
         self.boundary_conditions = {
             T: {
-                "left": (param.h * T_n_left / param.lambda_k, "Neumann"),
-                "right": (param.h * T_p_right / param.lambda_k, "Neumann"),
+                "left": (-param.h * T_n_left / param.lambda_k, "Neumann"),
+                "right": (-param.h * T_p_right / param.lambda_k, "Neumann"),
             }
         }
         self.initial_conditions = {T: param.T_init}

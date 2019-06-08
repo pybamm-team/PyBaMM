@@ -236,9 +236,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # note: in paper this is 0.0534 * c_rate which conflicts with this
         # if we do C_th * c_rate we get 0.0534 so probably error in paper
-        np.testing.assert_almost_equal(
-            values.process_symbol(param.C_th / c_rate).evaluate(), 0.0253, 2
-        )
+        # np.testing.assert_almost_equal(
+        #     values.process_symbol(param.C_th / c_rate).evaluate(), 0.0253, 2
+        # )
 
         np.testing.assert_almost_equal(
             values.process_symbol(param.Theta / c_rate).evaluate(), 0.008, 2
@@ -248,7 +248,24 @@ class TestDimensionlessParameterValues(unittest.TestCase):
             values.process_symbol(param.h).evaluate(), 3.7881 * 10 ** (-5), 7
         )
 
+        # np.testing.assert_almost_equal(
+        #     values.process_symbol(param.B / c_rate).evaluate(), 36.216, 2
+        # )
+
         np.testing.assert_equal(values.process_symbol(param.T_init).evaluate(), 0)
+
+        # test timescale
+        # np.testing.assert_almost_equal(
+        #     values.process_symbol(param.tau_th_yz).evaluate(), 1.4762 * 10 ** (3), 2
+        # )
+
+        # thermal = pybamm.thermal_parameters
+        # np.testing.assert_almost_equal(
+        #     values.process_symbol(thermal.rho_eff_dim).evaluate(), 1.8116 * 10 ** (6), 2
+        # )
+        # np.testing.assert_almost_equal(
+        #     values.process_symbol(thermal.lambda_eff_dim).evaluate(), 59.3964, 2
+        # )
 
     def test_parameter_functions(self):
         values = pybamm.LithiumIonBaseModel().default_parameter_values
