@@ -41,6 +41,7 @@ class TestSimplify(unittest.TestCase):
 
         def myfunction(x, y):
             return x * y
+
         f = pybamm.Function(myfunction, a, b)
         self.assertIsInstance((f).simplify(), pybamm.Scalar)
         self.assertEqual((f).simplify().evaluate(), 0)
@@ -152,10 +153,11 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (e + (e - c)).simplify()
-        self.assertIsInstance(expr, pybamm.Subtraction)
+        self.assertIsInstance(expr, pybamm.Addition)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 4.0)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+        self.assertIsInstance(expr.children[1], pybamm.Negate)
+        self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
 
         expr = ((2 + c) + (c + 2)).simplify()
         self.assertIsInstance(expr, pybamm.Addition)
@@ -249,13 +251,35 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr, pybamm.Scalar)
         self.assertEqual(expr.evaluate(), 0)
 
+        # B - (A+A) = B - 2*A (#323)
+        expr = (b - (a + a)).simplify()
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.right, pybamm.Negate)
+        self.assertIsInstance(expr.right.child, pybamm.Multiplication)
+        self.assertEqual(expr.right.child.left.id, pybamm.Scalar(2).id)
+        self.assertEqual(expr.right.child.right.id, a.id)
+
+        # B - (1*A + 2*A) = B - 3*A (#323)
+        expr = (b - (1 * a + 2 * a)).simplify()
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.right, pybamm.Negate)
+        self.assertIsInstance(expr.right.child, pybamm.Multiplication)
+        self.assertEqual(expr.right.child.left.id, pybamm.Scalar(3).id)
+        self.assertEqual(expr.right.child.right.id, a.id)
+
+        # B - (A + C) = B - (A + C) (not B - (A - C))
+        expr = (b - (a + c)).simplify()
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.right, pybamm.Subtraction)
+        self.assertEqual(expr.right.left.id, (-a).id)
+        self.assertEqual(expr.right.right.id, c.id)
+
     def test_vector_zero_simplify(self):
         a1 = pybamm.Scalar(0)
         v1 = pybamm.Vector(np.zeros(10))
         a2 = pybamm.Scalar(1)
         v2 = pybamm.Vector(np.ones(10))
 
-        # for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
         for expr in [a1 * v1, v1 * a1, a2 * v1, v1 * a2, a1 * v2, v2 * a1, v1 * v2]:
             self.assertIsInstance(expr.simplify(), pybamm.Vector)
             np.testing.assert_array_equal(expr.simplify().entries, np.zeros((10, 1)))
@@ -463,11 +487,12 @@ class TestSimplify(unittest.TestCase):
             )
 
         # subtracting zero
-        for expr in [m1 - m2, - m2 - m1]:
+        for expr in [m1 - m2, -m2 - m1]:
             expr_simp = expr.simplify()
             self.assertIsInstance(expr_simp, pybamm.Matrix)
             np.testing.assert_array_equal(
-                expr_simp.evaluate(y=np.ones(300)), - m2.evaluate())
+                expr_simp.evaluate(y=np.ones(300)), -m2.evaluate()
+            )
 
     def test_domain_concatenation_simplify(self):
         # create discretisation
