@@ -90,12 +90,14 @@ class OxygenReaction(pybamm.interface.InterfacialReaction, pybamm.LeadAcidBaseMo
 
         domain = domain or j0a.domain
         if domain == ["negative electrode"]:
+            # Only backward reaction really contributes (eta_r << 0)
             forward = j0a * pybamm.exp((param.ne_n / 2) * eta_r)
             backward = j0c * pybamm.exp((param.ne_n / 2) * -eta_r)
             return forward - backward
         elif domain == ["positive electrode"]:
-            forward = j0a * pybamm.exp((param.ne_p / 2) * eta_r)
-            backward = j0c * pybamm.exp((param.ne_p / 2) * -eta_r)
+            # Only forward reaction really contributes (eta_r >> 0)
+            forward = j0a * pybamm.exp((param.ne_Ox / 2) * eta_r)
+            backward = j0c * pybamm.exp((param.ne_Ox / 2) * -eta_r)
             return forward - backward
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
