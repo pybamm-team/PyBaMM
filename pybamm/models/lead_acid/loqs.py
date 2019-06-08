@@ -180,12 +180,12 @@ class LOQS(pybamm.LeadAcidBaseModel):
             )
             self.reactions["oxygen"] = {
                 "neg": {
-                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s": 0,  # -(param.s_plus_Ox + param.t_plus),
                     "s_ox": -param.s_ox_Ox,
                     "aj": j_n_Ox,
                 },
                 "pos": {
-                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s": 0,  # -(param.s_plus_Ox + param.t_plus),
                     "s_ox": -param.s_ox_Ox,
                     "aj": j_p_Ox,
                 },
