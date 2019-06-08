@@ -61,7 +61,8 @@ class Thermal(pybamm.SubModel):
         eta_r_p = variables.get("Positive reaction overpotential")
 
         # Q_ohm = -i_s * pybamm.grad(phi_s) - i_e * pybamm.grad(phi_e)
-        Q_ohm = pybamm.Scalar(0)
+        Q_ohm = -pybamm.inner(i_e, pybamm.grad(phi_e))
+        # Q_ohm = pybamm.Scalar(0)
 
         Q_rxn_n = j_n * eta_r_n
         Q_rxn_p = j_p * eta_r_p

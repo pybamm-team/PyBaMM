@@ -544,13 +544,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         left_evaluates_on_edges = left.evaluates_on_edges()
         right_evaluates_on_edges = right.evaluates_on_edges()
 
-        # If doing a multiplication and both terms are fluxes, then do edges -> nodes
-        # to represent inner product
-        if (
-            isinstance(bin_op, pybamm.Multiplication)
-            and left_evaluates_on_edges
-            and right_evaluates_on_edges
-        ):
+        # inner product takes fluxes from edges to nodes
+        if isinstance(bin_op, pybamm.Inner):
             disc_left = self.edge_to_node(disc_left)
             disc_right = self.edge_to_node(disc_right)
         # If neither child evaluates on edges, or both children have gradients,
@@ -674,6 +669,10 @@ class FiniteVolume(pybamm.SpatialMethod):
             # issue
             matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
 
+            try:
+                pybamm.Matrix(matrix) @ array
+            except:
+                pybamm.Matrix(matrix) @ array
             return pybamm.Matrix(matrix) @ array
 
         # If discretised_symbol evaluates to number there is no need to average

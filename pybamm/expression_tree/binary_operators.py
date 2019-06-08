@@ -343,16 +343,6 @@ class Multiplication(BinaryOperator):
             else:
                 return right * left.jac(variable) + left * right.jac(variable)
 
-    def evaluate_for_shape(self, t=None, y=None):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape()`. """
-        left = self.children[0].evaluate_for_shape()
-        right = self.children[1].evaluate_for_shape()
-        if isinstance(left, np.ndarray) and isinstance(right, np.ndarray):
-            if len(left) != len(right) and len(left) != 1 and len(right) != 1:
-                print("hello")
-
-        return self._binary_evaluate(left, right)
-
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
 
@@ -502,6 +492,89 @@ class Division(BinaryOperator):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
+
+
+class Inner(BinaryOperator):
+    """
+    A node in the expression tree which represents the inner (or dot) product.
+
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        super().__init__("inner product", left, right)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        # apply product rule
+        left, right = self.orphans
+        return left.diff(variable) * right + left * right.diff(variable)
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # apply product rule
+            left, right = self.orphans
+            if left.evaluates_to_number() and right.evaluates_to_number():
+                return pybamm.Scalar(0)
+            elif left.evaluates_to_number():
+                return left * right.jac(variable)
+            elif right.evaluates_to_number():
+                return right * left.jac(variable)
+            else:
+                return right * left.jac(variable) + left * right.jac(variable)
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+
+        if issparse(left):
+            return left.multiply(right)
+        elif issparse(right):
+            # Hadamard product is commutative, so we can switch right and left
+            return right.multiply(left)
+        else:
+            return left * right
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+
+        # anything multiplied by a scalar zero returns a scalar zero
+        if is_scalar_zero(left):
+            if isinstance(right, pybamm.Array):
+                return pybamm.Array(np.zeros(right.shape))
+            else:
+                return pybamm.Scalar(0)
+        if is_scalar_zero(right):
+            if isinstance(left, pybamm.Array):
+                return pybamm.Array(np.zeros(left.shape))
+            else:
+                return pybamm.Scalar(0)
+
+        # if one of the children is a zero matrix, we have to be careful about shapes
+        if is_matrix_zero(left) or is_matrix_zero(right):
+            shape = (left * right).shape
+            if len(shape) == 1 or shape[1] == 1:
+                return pybamm.Vector(np.zeros(shape))
+            else:
+                return pybamm.Matrix(csr_matrix(shape))
+
+        # anything multiplied by a scalar one returns itself
+        if is_one(left):
+            return right
+        if is_one(right):
+            return left
+
+        return pybamm.simplify_multiplication_division(self.__class__, left, right)
+
+
+def inner(left, right):
+    """
+    Return inner product of two symbols.
+    """
+    return pybamm.Inner(left, right)
 
 
 class Outer(BinaryOperator):
