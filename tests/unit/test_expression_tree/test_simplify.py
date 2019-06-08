@@ -153,10 +153,11 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (e + (e - c)).simplify()
-        self.assertIsInstance(expr, pybamm.Subtraction)
+        self.assertIsInstance(expr, pybamm.Addition)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 4.0)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+        self.assertIsInstance(expr.children[1], pybamm.Negate)
+        self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
 
         expr = ((2 + c) + (c + 2)).simplify()
         self.assertIsInstance(expr, pybamm.Addition)
@@ -252,17 +253,26 @@ class TestSimplify(unittest.TestCase):
 
         # B - (A+A) = B - 2*A (#323)
         expr = (b - (a + a)).simplify()
-        self.assertIsInstance(expr, pybamm.Subtraction)
-        self.assertIsInstance(expr.right, pybamm.Multiplication)
-        self.assertEqual(expr.right.left.id, pybamm.Scalar(2).id)
-        self.assertEqual(expr.right.right.id, a.id)
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.right, pybamm.Negate)
+        self.assertIsInstance(expr.right.child, pybamm.Multiplication)
+        self.assertEqual(expr.right.child.left.id, pybamm.Scalar(2).id)
+        self.assertEqual(expr.right.child.right.id, a.id)
 
         # B - (1*A + 2*A) = B - 3*A (#323)
         expr = (b - (1 * a + 2 * a)).simplify()
-        self.assertIsInstance(expr, pybamm.Subtraction)
-        self.assertIsInstance(expr.right, pybamm.Multiplication)
-        self.assertEqual(expr.right.left.id, pybamm.Scalar(3).id)
-        self.assertEqual(expr.right.right.id, a.id)
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.right, pybamm.Negate)
+        self.assertIsInstance(expr.right.child, pybamm.Multiplication)
+        self.assertEqual(expr.right.child.left.id, pybamm.Scalar(3).id)
+        self.assertEqual(expr.right.child.right.id, a.id)
+
+        # B - (A + C) = B - (A + C) (not B - (A - C))
+        expr = (b - (a + c)).simplify()
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.right, pybamm.Subtraction)
+        self.assertEqual(expr.right.left.id, (-a).id)
+        self.assertEqual(expr.right.right.id, c.id)
 
     def test_vector_zero_simplify(self):
         a1 = pybamm.Scalar(0)

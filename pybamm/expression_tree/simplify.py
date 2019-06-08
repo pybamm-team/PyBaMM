@@ -131,7 +131,10 @@ def simplify_addition_subtraction(myclass, left, right):
         """
         ret = None
         if len(array) > 0:
-            ret = array[0]
+            if types[0] in [None, pybamm.Addition]:
+                ret = array[0]
+            elif types[0] == pybamm.Subtraction:
+                ret = -array[0]
             for child, typ in zip(array[1:], types[1:]):
                 if typ == pybamm.Addition:
                     ret += child
@@ -195,15 +198,7 @@ def simplify_addition_subtraction(myclass, left, right):
     else:
         # or mix of both
         constant_expr = pybamm.simplify_if_constant(constant_expr)
-        if constant_types[0] is None and nonconstant_types[0] == pybamm.Addition:
-            new_expression = constant_expr + nonconstant_expr
-        elif constant_types[0] is None and nonconstant_types[0] == pybamm.Subtraction:
-            new_expression = constant_expr - nonconstant_expr
-        elif nonconstant_types[0] is None and constant_types[0] == pybamm.Addition:
-            new_expression = nonconstant_expr + constant_expr
-        else:
-            assert constant_types[0] == pybamm.Subtraction
-            new_expression = nonconstant_expr - constant_expr
+        new_expression = constant_expr + nonconstant_expr
 
     return new_expression
 
