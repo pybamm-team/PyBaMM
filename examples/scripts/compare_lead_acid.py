@@ -8,13 +8,9 @@ models = [
     pybamm.lead_acid.LOQS(
         {"capacitance": "differential", "side reactions": ["oxygen"]}
     ),
-    pybamm.lead_acid.LOQS(
-        {"capacitance": "differential", "side reactions": ["oxygen"]}
-    ),
-    # pybamm.lead_acid.LOQS({"capacitance": "differential"}),
+    pybamm.lead_acid.LOQS({"capacitance": "differential"}),
 ]
-models[0].use_simplify = False
-models[0].use_to_python = False
+
 # create geometry
 geometry = models[-1].default_geometry
 
@@ -44,7 +40,7 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 0.14, 100)
+t_eval = np.linspace(0, 1, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution

@@ -285,6 +285,8 @@ delta_pore_n = 1 / (a_n_dimensional * L_x)
 delta_pore_p = 1 / (a_p_dimensional * L_x)
 Q_n_max = Q_n_max_dimensional / (c_e_typ * F)
 Q_p_max = Q_p_max_dimensional / (c_e_typ * F)
+beta_U_n = 1 / Q_n_max
+beta_U_p = -1 / Q_p_max
 
 # Electrochemical reactions
 # Main

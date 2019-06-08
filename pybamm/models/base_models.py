@@ -416,7 +416,7 @@ class StandardBatteryBaseModel(BaseModel):
                 ),
                 "Positive electrode OCV entropic change": os.path.join(
                     input_path, "lico2_entropic_change_Moura.py"
-                )
+                ),
             },
         )
 
@@ -477,6 +477,7 @@ class StandardBatteryBaseModel(BaseModel):
             "convection": False,
             "first-order potential": "linear",
             "side reactions": [],
+            "interfacial surface area": "constant",
         }
         if self._extra_options is None:
             options = default_options

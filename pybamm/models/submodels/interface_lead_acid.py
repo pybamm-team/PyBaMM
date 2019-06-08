@@ -136,3 +136,37 @@ class OxygenReaction(pybamm.interface.InterfacialReaction, pybamm.LeadAcidBaseMo
         :meth:`pybamm.interface.InterfacialReaction.get_derived_interfacial_currents`
         """
         return super().get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p, "oxygen")
+
+
+class InterfacialSurfaceArea(pybamm.SubModel):
+    """
+    Base class for interfacial surface area
+
+    Parameters
+    ----------
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
+
+    *Extends:* :class:`pybamm.SubModel`
+    """
+
+    def __init__(self, set_of_parameters):
+        super().__init__(set_of_parameters)
+
+    def set_differential_system(self, curlyU, j, domain=None):
+        param = self.set_of_parameters
+        domain = domain or j.domain
+        if domain == ["negative electrode"]:
+            beta_U = param.beta_U_n
+            curlyU_init = param.curlyU_n_init
+        elif domain == ["negative electrode"]:
+            beta_U = param.beta_U_p
+            curlyU_init = param.curlyU_p_init
+
+        # Create model
+        self.rhs = {curlyU: beta_U * j}
+        self.initial_conditions = {curlyU: curlyU_init}
+
+        # Events: cut off if curlyU hits zero or one, with some tolerance for the
+        # fact that the initial conditions can be curlyU = 0
+        self.events = [pybamm.min(curlyU) + 0.0001, pybamm.max(curlyU) - 1]

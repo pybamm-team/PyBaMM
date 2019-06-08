@@ -22,10 +22,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         self.set_model_variables()
         self.set_boundary_conditions(self.variables)
-        if self.options["capacitance"] is False:
-            self.set_interface_and_electrolyte_submodels_direct_formulation()
-        else:
-            self.set_interface_and_electrolyte_submodels_capacitance_formulation()
+        self.set_interface_submodel()
+        # self.set_electrolyte_current_submodel()
         self.set_porosity_submodel()
         self.set_diffusion_submodels()
         self.set_current_variables()
@@ -88,7 +86,15 @@ class LOQS(pybamm.LeadAcidBaseModel):
             current_collector_model.set_leading_order_vertical_current(bc_variables)
             self.update(current_collector_model)
 
-    def set_interface_and_electrolyte_submodels_direct_formulation(self):
+    def set_interface_submodel(self):
+        if self.options["capacitance"] is False:
+            self.set_interface_direct_formulation()
+        else:
+            self.set_interface_capacitance_formulation()
+        # self.set_interfacial_surface_area_submodel()
+        # self.set_reactions()
+
+    def set_interface_direct_formulation(self):
         # Set up
         param = self.set_of_parameters
         c_e = self.variables["Electrolyte concentration"]
@@ -126,7 +132,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         j_vars = main_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
 
-    def set_interface_and_electrolyte_submodels_capacitance_formulation(self):
+    def set_interface_capacitance_formulation(self):
         # Set up
         param = self.set_of_parameters
         c_e = self.variables["Electrolyte concentration"]
@@ -200,6 +206,19 @@ class LOQS(pybamm.LeadAcidBaseModel):
         )
         j_vars = main_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update({**pot_vars, **j_vars})
+
+    def set_interfacial_surface_area_submodel(self):
+        param = self.set_of_parameters
+        surface_area_model = pybamm.interface_lead_acid.InterfacialSurfaceArea(param)
+        if self.options["interfacial surface area"] == "variable":
+            neg = ["negative electrode"]
+            pos = ["positive electrode"]
+            surface_area_model.set_differential_system(self.variables, neg)
+            surface_area_model.set_differential_system(self.variables, pos)
+            self.update(surface_area_model)
+        else:
+            surface_area_vars = surface_area_model.get_variables(0)
+            self.variables.update(surface_area_vars)
 
     def set_porosity_submodel(self):
         param = self.set_of_parameters
