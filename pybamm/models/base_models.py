@@ -332,7 +332,12 @@ class BaseModel(object):
 
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_symbol_of_class((pybamm.Gradient, pybamm.Divergence)):
+            if eqn.has_symbol_of_class(
+                (pybamm.Gradient, pybamm.Divergence)
+            ) and not eqn.has_symbol_of_class(pybamm.Integral):
+                # I have relaxed this check for now so that the lumped temperature
+                # equation doesn't raise errors (this has and average in it)
+
                 # Variable must be in the boundary conditions
                 if not any(
                     var.id == x.id
@@ -341,7 +346,7 @@ class BaseModel(object):
                 ):
                     raise pybamm.ModelError(
                         """
-                        no boundary condition given for variable '{}' with equation '{}'
+                        no boundary condition given for variable '{}' with equation '{}'. Might be okay if equation has been averaged.
                         """.format(
                             var, eqn
                         )

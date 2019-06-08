@@ -669,10 +669,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             # issue
             matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
 
-            try:
-                pybamm.Matrix(matrix) @ array
-            except:
-                pybamm.Matrix(matrix) @ array
             return pybamm.Matrix(matrix) @ array
 
         # If discretised_symbol evaluates to number there is no need to average

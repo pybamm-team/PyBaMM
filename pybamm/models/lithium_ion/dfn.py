@@ -149,8 +149,13 @@ class DFN(pybamm.LithiumIonBaseModel):
         if self.options["thermal"] == "full":
             self.variables.update({"Cell temperature": pybamm.standard_variables.T})
         if self.options["thermal"] == "lumped":
+            T_av = pybamm.standard_variables.T_av
+            T_n = pybamm.Broadcast(T_av, ["negative electrode"])
+            T_s = pybamm.Broadcast(T_av, ["separator"])
+            T_p = pybamm.Broadcast(T_av, ["positive electrode"])
+            T = pybamm.Concatenation(T_n, T_s, T_p)
             self.variables.update(
-                {"Average cell temperature": pybamm.standard_variables.T_av}
+                {"Average cell temperature": T_av, "Cell temperature": T}
             )
 
     @property

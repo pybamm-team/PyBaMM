@@ -60,9 +60,9 @@ class Thermal(pybamm.SubModel):
         eta_r_n = variables.get("Negative reaction overpotential")
         eta_r_p = variables.get("Positive reaction overpotential")
 
+        # TODO: add ohmic heating from solid
         # Q_ohm = -i_s * pybamm.grad(phi_s) - i_e * pybamm.grad(phi_e)
         Q_ohm = -pybamm.inner(i_e, pybamm.grad(phi_e))
-        # Q_ohm = pybamm.Scalar(0)
 
         Q_rxn_n = j_n * eta_r_n
         Q_rxn_p = j_p * eta_r_p
@@ -139,8 +139,10 @@ class Thermal(pybamm.SubModel):
         T_s = pybamm.Broadcast(T_av, ["separator"])
         T_p = pybamm.Broadcast(T_av, ["positive electrode"])
 
-        T = pybamm.Concatenation([T_n, T_s, T_p])
-        q = -param.lambda_k * pybamm.grad(T)
+        T = pybamm.Concatenation(T_n, T_s, T_p)
+        q = pybamm.Broadcast(
+            pybamm.Scalar(0), ["negative electrode", "separator", "positive electrode"]
+        )
 
         self.variables = self.get_variables(T, q, Q_ohm, Q_rxn, Q_rev)
 
