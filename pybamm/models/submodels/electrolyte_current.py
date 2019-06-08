@@ -117,8 +117,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         ----------
         variables : dict
             Dictionary of symbols to use in the model
-
-        Returns
+_Returns
         -------
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
@@ -235,7 +234,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
 
         return variables
 
-    def get_variables(self, phi_e, i_e, eta_e_av):
+    def get_variables(self, phi_e, i_e, i_e_n, i_e_s, i_e_p, eta_e_av):
         """
         Calculate dimensionless and dimensional variables for the electrolyte current
         submodel
@@ -268,12 +267,18 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             "Positive electrolyte potential": phi_e_p,
             "Electrolyte potential": phi_e,
             "Electrolyte current density": i_e,
+            # "Negative electrolyte current density": i_e_n,
+            # "Separator electrolyte current density": i_e_s,
+            # "Positive electrolyte current density": i_e_p,
             "Average electrolyte overpotential": eta_e_av,
             "Negative electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_n,
             "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_s,
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
             "Electrolyte current density [A.m-2]": param.i_typ * i_e,
+            # "Negative electrolyte current density [A.m-2]": param.i_typ * i_e_n,
+            # "Separator electrolyte current density [A.m-2]": param.i_typ * i_e_s,
+            # "Positive electrolyte current density [A.m-2]": param.i_typ * i_e_p,
             "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
         }
 
@@ -321,11 +326,14 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
 
         # Unpack variables
         phi_e = variables["Electrolyte potential"]
+        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
         c_e = variables["Electrolyte concentration"]
+        c_e_n, c_e_s, c_e_p = c_e.orphans
         try:
             epsilon = variables["Porosity"]
         except KeyError:
             epsilon = param.epsilon
+        epsilon_n, epsilon_s, epsilon_p = epsilon.orphans
 
         # Unpack variables
         j_n = reactions["main"]["neg"]["aj"]
@@ -337,14 +345,12 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
             param.kappa_e(c_e) * (epsilon ** param.b) * param.gamma_e / param.C_e
         ) * (param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e))
 
-        # Equations (algebraic only)
+        self.rhs = {}
         self.algebraic = {phi_e: pybamm.div(i_e) - j}
         self.boundary_conditions = {
             phi_e: {"left": (0, "Neumann"), "right": (0, "Neumann")}
         }
         self.initial_conditions = {phi_e: -param.U_n(param.c_n_init)}
-        # no differential equations
-        self.rhs = {}
 
         # Variables
         # average electrolyte overpotential (ohmic + concentration overpotential)
@@ -353,7 +359,17 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         phi_e_p_av = pybamm.average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
 
-        self.variables = self.get_variables(phi_e, i_e, eta_e_av)
+        i_e_n = (
+            param.kappa_e(c_e_n) * (epsilon_n ** param.b) * param.gamma_e / param.C_e
+        ) * (param.chi(c_e_n) * pybamm.grad(c_e_n) / c_e_n - pybamm.grad(phi_e_n))
+        i_e_s = (
+            param.kappa_e(c_e_s) * (epsilon_s ** param.b) * param.gamma_e / param.C_e
+        ) * (param.chi(c_e_s) * pybamm.grad(c_e_s) / c_e_s - pybamm.grad(phi_e_s))
+        i_e_p = (
+            param.kappa_e(c_e_p) * (epsilon_p ** param.b) * param.gamma_e / param.C_e
+        ) * (param.chi(c_e_p) * pybamm.grad(c_e_p) / c_e_p - pybamm.grad(phi_e_p))
+
+        self.variables = self.get_variables(phi_e, i_e, i_e_n, i_e_s, i_e_p, eta_e_av)
 
     @property
     def default_solver(self):

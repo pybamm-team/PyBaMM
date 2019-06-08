@@ -303,9 +303,12 @@ class BaseModel(object):
         if not post_discretisation:
             # After the model has been defined, each algebraic equation key should
             # appear in that algebraic equation
+            # this has been relaxed for concatenations for now
             for var, eqn in self.algebraic.items():
-                if not any(x.id == var.id for x in eqn.pre_order()):
-                    raise pybamm.ModelError(
+                if not any(x.id == var.id for x in eqn.pre_order()) and not isinstance(
+                    var, pybamm.Concatenation
+                ):
+                    raise UserWarning(
                         "each variable in the algebraic eqn keys must appear in the eqn"
                     )
         else:

@@ -32,9 +32,8 @@ class Thermal(pybamm.SubModel):
 
         param = self.set_of_parameters
 
-        T_n = variables.get("Negative electrode temperature")
-        T_p = variables.get("Positive electrode temperature")
         T = variables.get("Cell temperature")
+        T_n, _, T_p = T.orphans
         T_av = variables.get("Average cell temperature")
         # can maybe split this out to Internal cell temperature,
         # Negative current collector cell temperature and
@@ -83,7 +82,7 @@ class Thermal(pybamm.SubModel):
             *[Q_rev_n, pybamm.Broadcast(0, ["separator"]), Q_rev_p]
         )
 
-        return T_k, Q_ohm, Q_rxn, Q_rev
+        return T, T_av, Q_ohm, Q_rxn, Q_rev
 
     def unpack_post(self, variables):
         """ Unpack variables for post-processing """
