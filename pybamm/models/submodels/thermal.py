@@ -41,18 +41,18 @@ class Thermal(pybamm.SubModel):
         # in the 2D case
 
         i_s_n = variables.get("Negative electrode current density")
+        i_s_s = pybamm.Broadcast(0, ["separator"])
         i_s_p = variables.get("Positive electrode current density")
+        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
-        i_e_n = variables.get("Negative electrolyte current density")
-        i_e_s = variables.get("Separator electrolyte current density")
-        i_e_p = variables.get("Positive electrolyte current density")
+        i_e = variables.get("Electrolyte current density")
 
         phi_s_n = variables.get("Negative electrode potential")
+        phi_s_s = pybamm.Broadcast(0, ["separator"])
         phi_s_p = variables.get("Positive electrode potential")
+        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
 
-        phi_e_n = variables.get("Negative electrolyte potential")
-        phi_e_s = variables.get("Separator electrolyte potential")
-        phi_e_p = variables.get("Positive electrolyte potential")
+        phi_e = variables.get("Electrolyte potential")
 
         j_n = reactions["main"]["neg"]["aj"]
         j_p = reactions["main"]["pos"]["aj"]
@@ -60,10 +60,8 @@ class Thermal(pybamm.SubModel):
         eta_r_n = variables.get("Negative reaction overpotential")
         eta_r_p = variables.get("Positive reaction overpotential")
 
-        Q_ohm_n = -i_s_n * pybamm.grad(phi_s_n) - i_e_n * pybamm.grad(phi_e_n)
-        Q_ohm_s = -i_e_s * pybamm.grad(phi_e_s)
-        Q_ohm_p = -i_s_p * pybamm.grad(phi_s_p) - i_e_p * pybamm.grad(phi_e_p)
-        Q_ohm = pybamm.Concatenation(Q_ohm_n, Q_ohm_s, Q_ohm_p)
+        # Q_ohm = -i_s * pybamm.grad(phi_s) - i_e * pybamm.grad(phi_e)
+        Q_ohm = pybamm.Scalar(0)
 
         Q_rxn_n = j_n * eta_r_n
         Q_rxn_p = j_p * eta_r_p

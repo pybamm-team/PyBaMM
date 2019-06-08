@@ -234,7 +234,7 @@ _Returns
 
         return variables
 
-    def get_variables(self, phi_e, i_e, i_e_n, i_e_s, i_e_p, eta_e_av):
+    def get_variables(self, phi_e, i_e, eta_e_av):
         """
         Calculate dimensionless and dimensional variables for the electrolyte current
         submodel
@@ -267,18 +267,12 @@ _Returns
             "Positive electrolyte potential": phi_e_p,
             "Electrolyte potential": phi_e,
             "Electrolyte current density": i_e,
-            # "Negative electrolyte current density": i_e_n,
-            # "Separator electrolyte current density": i_e_s,
-            # "Positive electrolyte current density": i_e_p,
             "Average electrolyte overpotential": eta_e_av,
             "Negative electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_n,
             "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_s,
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
             "Electrolyte current density [A.m-2]": param.i_typ * i_e,
-            # "Negative electrolyte current density [A.m-2]": param.i_typ * i_e_n,
-            # "Separator electrolyte current density [A.m-2]": param.i_typ * i_e_s,
-            # "Positive electrolyte current density [A.m-2]": param.i_typ * i_e_p,
             "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
         }
 
@@ -359,17 +353,7 @@ class MacInnesStefanMaxwell(ElectrolyteCurrentBaseModel):
         phi_e_p_av = pybamm.average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
 
-        i_e_n = (
-            param.kappa_e(c_e_n) * (epsilon_n ** param.b) * param.gamma_e / param.C_e
-        ) * (param.chi(c_e_n) * pybamm.grad(c_e_n) / c_e_n - pybamm.grad(phi_e_n))
-        i_e_s = (
-            param.kappa_e(c_e_s) * (epsilon_s ** param.b) * param.gamma_e / param.C_e
-        ) * (param.chi(c_e_s) * pybamm.grad(c_e_s) / c_e_s - pybamm.grad(phi_e_s))
-        i_e_p = (
-            param.kappa_e(c_e_p) * (epsilon_p ** param.b) * param.gamma_e / param.C_e
-        ) * (param.chi(c_e_p) * pybamm.grad(c_e_p) / c_e_p - pybamm.grad(phi_e_p))
-
-        self.variables = self.get_variables(phi_e, i_e, i_e_n, i_e_s, i_e_p, eta_e_av)
+        self.variables = self.get_variables(phi_e, i_e, eta_e_av)
 
     @property
     def default_solver(self):

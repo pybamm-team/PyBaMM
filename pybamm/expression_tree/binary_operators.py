@@ -343,6 +343,16 @@ class Multiplication(BinaryOperator):
             else:
                 return right * left.jac(variable) + left * right.jac(variable)
 
+    def evaluate_for_shape(self, t=None, y=None):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape()`. """
+        left = self.children[0].evaluate_for_shape()
+        right = self.children[1].evaluate_for_shape()
+        if isinstance(left, np.ndarray) and isinstance(right, np.ndarray):
+            if len(left) != len(right) and len(left) != 1 and len(right) != 1:
+                print("hello")
+
+        return self._binary_evaluate(left, right)
+
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
 
