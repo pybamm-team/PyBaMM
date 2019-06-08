@@ -8,9 +8,13 @@ models = [
     pybamm.lead_acid.LOQS(
         {"capacitance": "differential", "side reactions": ["oxygen"]}
     ),
-    pybamm.lead_acid.LOQS({"capacitance": "differential"}),
+    pybamm.lead_acid.LOQS(
+        {"capacitance": "differential", "side reactions": ["oxygen"]}
+    ),
+    # pybamm.lead_acid.LOQS({"capacitance": "differential"}),
 ]
-
+models[0].use_simplify = False
+models[0].use_to_python = False
 # create geometry
 geometry = models[-1].default_geometry
 
@@ -40,17 +44,17 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 0.16, 100)
+t_eval = np.linspace(0, 0.14, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
 
 # plot
 output_variables = [
-    "Interfacial current density [A.m-2]",
+    "Interfacial current density",
+    "Oxygen interfacial current density",
     "Average electrolyte concentration [mol.m-3]",
-    "Volume-averaged velocity",
-    "Electrolyte current density [A.m-2]",
+    "Average oxygen concentration [mol.m-3]",
     "Average electrolyte potential [V]",
     "Terminal voltage [V]",
 ]

@@ -134,7 +134,7 @@ class InterfacialReaction(pybamm.SubModel):
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
-    def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p):
+    def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p, reaction="main"):
         """
         Calculate dimensionless and dimensional variables for the interfacial current
         submodel
@@ -149,6 +149,8 @@ class InterfacialReaction(pybamm.SubModel):
             Exchange-current density in the negative electrode
         j0_p : :class:`pybamm.Symbol`
             Exchange-current density in the positive electrode
+        reaction : str, optional
+            Name of the reaction to set interfacial currents for (default "main")
 
         Returns
         -------
@@ -183,25 +185,30 @@ class InterfacialReaction(pybamm.SubModel):
         j_n_bar = pybamm.average(j_n)
         j_p_bar = pybamm.average(j_p)
 
+        if reaction == "main":
+            name = "interfacial current density"
+            ecd_name = "exchange-current density"
+        elif reaction == "oxygen":
+            name = "oxygen interfacial current density"
+            ecd_name = "oxygen exchange-current density"
+
         return {
-            "Negative electrode interfacial current density": j_n,
-            "Positive electrode interfacial current density": j_p,
-            "Average negative electrode interfacial current density": j_n_bar,
-            "Average positive electrode interfacial current density": j_p_bar,
-            "Interfacial current density": j,
-            "Negative electrode exchange-current density": j0_n,
-            "Positive electrode exchange-current density": j0_p,
-            "Exchange-current density": j0,
-            "Negative electrode interfacial current density [A.m-2]": j_n_scale * j_n,
-            "Positive electrode interfacial current density [A.m-2]": j_p_scale * j_p,
-            "Average negative electrode interfacial current density [A.m-2]": j_n_scale
-            * j_n_bar,
-            "Average positive electrode interfacial current density [A.m-2]": j_p_scale
-            * j_p_bar,
-            "Interfacial current density [A.m-2]": j_dimensional,
-            "Negative electrode exchange-current density [A.m-2]": j_n_scale * j0_n,
-            "Positive electrode exchange-current density [A.m-2]": j_p_scale * j0_p,
-            "Exchange-current density [A.m-2]": j0_dimensional,
+            "Negative electrode " + name: j_n,
+            "Positive electrode " + name: j_p,
+            "Average negative electrode " + name: j_n_bar,
+            "Average positive electrode " + name: j_p_bar,
+            name.capitalize(): j,
+            "Negative electrode " + ecd_name: j0_n,
+            "Positive electrode " + ecd_name: j0_p,
+            ecd_name.capitalize(): j0,
+            "Negative electrode " + name + " [A.m-2]": j_n_scale * j_n,
+            "Positive electrode " + name + " [A.m-2]": j_p_scale * j_p,
+            "Average negative electrode " + name + " [A.m-2]": j_n_scale * j_n_bar,
+            "Average positive electrode " + name + " [A.m-2]": j_p_scale * j_p_bar,
+            name.capitalize() + " [A.m-2]": j_dimensional,
+            "Negative electrode " + ecd_name + " [A.m-2]": j_n_scale * j0_n,
+            "Positive electrode " + ecd_name + " [A.m-2]": j_p_scale * j0_p,
+            ecd_name.capitalize() + " [A.m-2]": j0_dimensional,
         }
 
     def get_first_order_butler_volmer(

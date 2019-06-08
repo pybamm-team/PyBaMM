@@ -37,6 +37,9 @@ class Standard(pybamm.SubModel):
 
         self.variables = {"Porosity": epsilon, "Porosity change": deps_dt}
 
+        # Terminate if porosity reaches zero or one
+        self.events = [pybamm.min(epsilon), pybamm.max(epsilon) - 1]
+
     def set_leading_order_system(self, variables):
         """
         ODE system for the leading-order change in porosity due to reactions
@@ -70,6 +73,8 @@ class Standard(pybamm.SubModel):
                     Domain + " porosity change": pybamm.Broadcast(deps_dt, domain),
                 }
             )
+            # Terminate if porosity reaches zero or one
+            self.events.extend([pybamm.min(eps), pybamm.max(eps) - 1])
 
         deps_dt = pybamm.Concatenation(
             self.variables["Negative electrode porosity change"],
