@@ -329,11 +329,11 @@ class TestBaseModel(unittest.TestCase):
         }
 
         # Check warning raised
-        # self.assertWarns(pybamm.ModelWarning, model.check_well_posedness())
-        #
+        self.assertWarns(pybamm.ModelWarning, model.check_well_posedness())
+
         # # Check None entries have been removed from the variables dictionary
-        # for key, item in model._variables.items():
-        #     self.assertIsNotNone(item)
+        for key, item in model._variables.items():
+            self.assertIsNotNone(item)
 
         # check error raised if undefined variable in list of Variables
         model = pybamm.BaseModel()
