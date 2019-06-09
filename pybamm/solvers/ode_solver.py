@@ -34,7 +34,7 @@ class OdeSolver(pybamm.BaseSolver):
         # Set up
         timer = pybamm.Timer()
         start_time = timer.time()
-        concatenated_rhs, y0, events, jac_rhs = self.set_up(model)
+        concatenated_rhs, y0, model_events, jac_rhs = self.set_up(model)
         set_up_time = timer.time() - start_time
 
         # Create function to evaluate rhs
@@ -51,7 +51,7 @@ class OdeSolver(pybamm.BaseSolver):
 
             return eval_event
 
-        events = [event_fun(event) for event in events]
+        events = [event_fun(event) for event in model_events.values()]
 
         # Create function to evaluate jacobian
         if jac_rhs is not None:
@@ -79,7 +79,10 @@ class OdeSolver(pybamm.BaseSolver):
         solution.total_time = timer.time() - start_time
         solution.set_up_time = set_up_time
 
-        pybamm.logger.info("Finish solving {}".format(model.name))
+        # Identify the event that caused termination
+        termination = self.get_termination_reason(solution, model_events)
+
+        pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         return solution
 
     def set_up(self, model):
@@ -97,8 +100,8 @@ class OdeSolver(pybamm.BaseSolver):
             Right-hand side of differential equations
         y0 : :class:`numpy.array`
             Vector of initial conditions
-        events : list of :class:`pybamm.Symbol`
-            List of events at which the model should terminate
+        events : dict
+            Dictionary of events at which the model should terminate
         jac_rhs : :class:`pybamm.SparseStack`
             Jacobian matrix for the differential equations
 
@@ -123,7 +126,7 @@ class OdeSolver(pybamm.BaseSolver):
             pybamm.logger.info("Simplifying RHS")
             concatenated_rhs = simp.simplify(concatenated_rhs)
             pybamm.logger.info("Simplifying events")
-            events = [simp.simplify(event) for event in events]
+            events = {name: simp.simplify(event) for name, event in events.items()}
 
         y0 = model.concatenated_initial_conditions[:, 0]
 
@@ -147,7 +150,9 @@ class OdeSolver(pybamm.BaseSolver):
             pybamm.logger.info("Converting RHS to python")
             concatenated_rhs = pybamm.EvaluatorPython(concatenated_rhs)
             pybamm.logger.info("Converting events to python")
-            events = [pybamm.EvaluatorPython(event) for event in events]
+            events = {
+                name: pybamm.EvaluatorPython(event) for name, event in events.items()
+            }
 
         return concatenated_rhs, y0, events, jac_rhs
 
