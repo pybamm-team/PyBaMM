@@ -512,7 +512,8 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             Domain in which to set the system
         """
         param = self.set_of_parameters
-        (i_boundary_cc, delta_phi, *rest) = self.unpack(variables, domain)
+        (i_boundary_cc, delta_phi_broad, *rest) = self.unpack(variables, domain)
+        delta_phi = delta_phi_broad.child
 
         if domain == ["negative electrode"]:
             j_average = i_boundary_cc / param.l_n

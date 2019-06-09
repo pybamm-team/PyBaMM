@@ -23,7 +23,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.set_model_variables()
         self.set_boundary_conditions(self.variables)
         self.set_interface_submodel()
-        # self.set_electrolyte_current_submodel()
+        self.set_electrolyte_current_submodel()
         self.set_porosity_submodel()
         self.set_diffusion_submodels()
         self.set_current_variables()
@@ -191,21 +191,25 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.variables.update(j_Ox_vars)
 
         # Electrolyte current
-        eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
-            param, self.options["capacitance"]
-        )
-        eleclyte_current_model.set_leading_order_system(
-            self.variables, self.reactions, neg
-        )
-        eleclyte_current_model.set_leading_order_system(
-            self.variables, self.reactions, pos
-        )
-        self.update(eleclyte_current_model)
+        j_vars = main_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
         pot_vars = pot_model.get_all_potentials(
             (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
         )
-        j_vars = main_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
-        self.variables.update({**pot_vars, **j_vars})
+        self.variables.update(pot_vars)
+
+    def set_electrolyte_current_submodel(self):
+        if self.options["capacitance"] is not False:
+            eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
+                self.set_of_parameters, self.options["capacitance"]
+            )
+            eleclyte_current_model.set_leading_order_system(
+                self.variables, self.reactions, ["negative electrode"]
+            )
+            eleclyte_current_model.set_leading_order_system(
+                self.variables, self.reactions, ["positive electrode"]
+            )
+            self.update(eleclyte_current_model)
 
     def set_interfacial_surface_area_submodel(self):
         param = self.set_of_parameters
