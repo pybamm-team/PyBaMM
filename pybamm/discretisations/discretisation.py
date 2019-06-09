@@ -113,9 +113,10 @@ class Discretisation(object):
         model_disc.variables = self.process_dict(model.variables)
 
         # Process events
-        processed_events = [None] * len(model.events)
-        for idx, event in enumerate(model.events):
-            processed_events[idx] = self.process_symbol(event)
+        processed_events = {}
+        for event, equation in model.events.items():
+            pybamm.logger.debug("Discretise event '{}'".format(event))
+            processed_events[event] = self.process_symbol(equation)
         model_disc.events = processed_events
 
         # Create mass matrix

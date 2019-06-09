@@ -123,12 +123,19 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
 
         # return solution, we need to tranpose y to match scipy's ivp interface
         if sol.flag in [0, 2]:
-            # 0 = solved for all t_eval
-            # 2 = found root(s)
             if len(sol.values.t) == 1:
                 raise pybamm.SolverError(
                     "solver did not progress beyond first time-step"
                 )
-            return pybamm.Solution(sol.values.t, np.transpose(sol.values.y))
+            else:
+                # 0 = solved for all t_eval
+                if sol.flag == 0:
+                    termination = "final time"
+                # 2 = found root(s)
+                elif sol.flag == 2:
+                    termination = "event"
+                return pybamm.Solution(
+                    sol.values.t, np.transpose(sol.values.y), termination
+                )
         else:
             raise pybamm.SolverError(sol.message)

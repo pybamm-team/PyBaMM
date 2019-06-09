@@ -119,7 +119,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events.append(voltage - param.voltage_low_cut)
+        self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     @property
     def default_geometry(self):

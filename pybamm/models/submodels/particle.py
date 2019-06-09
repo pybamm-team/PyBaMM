@@ -65,12 +65,12 @@ class Standard(pybamm.SubModel):
 
         c_surf = self.variables[domain.capitalize() + " surface concentration"]
         tol = 0.01
-        self.events = [
-            pybamm.min(c) - tol,
-            (1 - tol) - pybamm.max(c),
-            pybamm.min(c_surf) - tol,
-            (1 - tol) - pybamm.max(c_surf),
-        ]
+        self.events = {
+            "Minimum particle concentration cut-off": pybamm.min(c) - tol,
+            "Maximum particle concentration cut-off": (1 - tol) - pybamm.max(c),
+            "Minimum surface concentration cut-off": pybamm.min(c_surf) - tol,
+            "Maximum surface concentration cut-off": (1 - tol) - pybamm.max(c_surf),
+        }
 
     def get_variables(self, c, N, broadcast):
         """

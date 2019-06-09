@@ -108,7 +108,7 @@ class DFN(pybamm.LithiumIonBaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events.append(voltage - param.voltage_low_cut)
+        self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     def set_model_variables(self):
         c_s_n = pybamm.standard_variables.c_s_n
