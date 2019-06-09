@@ -40,7 +40,7 @@ class Standard(pybamm.SubModel):
         # Terminate if porosity reaches zero or one
         self.events = {
             "Minimum porosity cut-off": pybamm.min(epsilon),
-            "Maximum porosity cut-off": pybamm.max(epsilon) - 1,
+            # "Maximum porosity cut-off": pybamm.max(epsilon) - 1,
         }
 
     def set_leading_order_system(self, variables):
@@ -77,10 +77,11 @@ class Standard(pybamm.SubModel):
                 }
             )
             # Terminate if porosity reaches zero or one
+            cutoff = "porosity cut-off (" + domain + ")"
             self.events.update(
                 {
-                    "Minimum porosity cut-off": pybamm.min(epsilon),
-                    "Maximum porosity cut-off": pybamm.max(epsilon) - 1,
+                    "Minimum " + cutoff: pybamm.min(epsilon),
+                    # "Maximum " + cutoff: pybamm.max(epsilon) - 1,
                 }
             )
 

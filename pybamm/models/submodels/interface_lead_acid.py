@@ -153,10 +153,73 @@ class InterfacialSurfaceArea(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
+    def get_variables(self, curlyU_n, curlyU_p):
+        param = self.set_of_parameters
+
+        # Broadcast if necessary
+        if curlyU_n.domain in [[], ["current collector"]]:
+            curlyU_n = pybamm.Broadcast(curlyU_n, ["negative electrode"])
+        if curlyU_p.domain in [[], ["current collector"]]:
+            curlyU_p = pybamm.Broadcast(curlyU_p, ["positive electrode"])
+
+        a_n_S = self.get_interfacial_surface_area(curlyU_n, "main")
+        a_p_S = self.get_interfacial_surface_area(curlyU_p, "main")
+        a_n_Ox = self.get_interfacial_surface_area(curlyU_n, "oxygen")
+        a_p_Ox = self.get_interfacial_surface_area(curlyU_p, "oxygen")
+
+        soc = "electrode utilisation"
+        sa = "electrode surface area density"
+        return {
+            "Negative " + soc: curlyU_n,
+            "Positive " + soc: curlyU_p,
+            "Average negative " + soc: pybamm.average(curlyU_n),
+            "Average positive " + soc: pybamm.average(curlyU_p),
+            "Negative " + sa + " (main reaction)": a_n_S,
+            "Positive " + sa + " (main reaction)": a_p_S,
+            "Average negative " + sa + " (main reaction)": pybamm.average(a_n_S),
+            "Average positive " + sa + " (main reaction)": pybamm.average(a_p_S),
+            "Negative " + sa + " (oxygen reaction)": a_n_Ox,
+            "Positive " + sa + " (oxygen reaction)": a_p_Ox,
+            "Average negative " + sa + " (oxygen reaction)": pybamm.average(a_n_Ox),
+            "Average positive " + sa + " (oxygen reaction)": pybamm.average(a_p_Ox),
+            "Negative " + sa + " (main reaction) [m-1]": param.a_n_dim * a_n_S,
+            "Positive " + sa + " (main reaction) [m-1]": param.a_p_dim * a_p_S,
+            "Average negative "
+            + sa
+            + " (main reaction) [m-1]": param.a_n_dim * pybamm.average(a_n_S),
+            "Average positive "
+            + sa
+            + " (main reaction) [m-1]": param.a_p_dim * pybamm.average(a_p_S),
+            "Negative " + sa + " (oxygen reaction) [m-1]": param.a_n_dim * a_n_Ox,
+            "Positive " + sa + " (oxygen reaction) [m-1]": param.a_p_dim * a_p_Ox,
+            "Average negative "
+            + sa
+            + " (oxygen reaction) [m-1]": param.a_n_dim * pybamm.average(a_n_Ox),
+            "Average positive "
+            + sa
+            + " (oxygen reaction) [m-1]": param.a_p_dim * pybamm.average(a_p_Ox),
+        }
+
+
+class VaryingSurfaceArea(InterfacialSurfaceArea):
+    """
+    Varying interfacial surface area
+
+    Parameters
+    ----------
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
+
+    *Extends:* :class:`pybamm.interface_lead_acid.InterfacialSurfaceArea`
+    """
+
+    def __init__(self, set_of_parameters):
+        super().__init__(set_of_parameters)
+
     def set_differential_system(self, variables, domain, leading_order=False):
         param = self.set_of_parameters
-        curlyU_n = variables["Negative electrode State of Charge"]
-        curlyU_p = variables["Positive electrode State of Charge"]
+        curlyU_n = variables["Negative electrode utilisation"]
+        curlyU_p = variables["Positive electrode utilisation"]
         self.variables = self.get_variables(curlyU_n, curlyU_p)
         if domain == ["negative electrode"]:
             curlyU = curlyU_n
@@ -187,55 +250,21 @@ class InterfacialSurfaceArea(pybamm.SubModel):
         elif reaction == "oxygen":
             return 1 - curlyU ** param.xi
 
-    def get_variables(self, curlyU_n, curlyU_p):
-        param = self.set_of_parameters
 
-        # Broadcast if necessary
-        if curlyU_n.domain in [[], ["current collector"]]:
-            curlyU_n = pybamm.Broadcast(curlyU_n, ["negative electrode"])
-        if curlyU_p.domain in [[], ["current collector"]]:
-            curlyU_p = pybamm.Broadcast(curlyU_p, ["positive electrode"])
+class ConstantSurfaceArea(InterfacialSurfaceArea):
+    """
+    Constant interfacial surface area
 
-        a_n_S = self.get_interfacial_surface_area(curlyU_n, "main")
-        a_p_S = self.get_interfacial_surface_area(curlyU_p, "main")
-        a_n_Ox = self.get_interfacial_surface_area(curlyU_n, "oxygen")
-        a_p_Ox = self.get_interfacial_surface_area(curlyU_p, "oxygen")
+    Parameters
+    ----------
+    set_of_parameters : parameter class
+        The parameters to use for this submodel
 
-        soc = "electrode State of Charge"
-        sa = "electrode surface area density"
-        return {
-            "Negative " + soc: curlyU_n,
-            "Positive " + soc: curlyU_p,
-            "Average negative " + soc: pybamm.average(curlyU_n),
-            "Average positive " + soc: pybamm.average(curlyU_p),
-            "Negative " + sa + " (main reaction)": a_n_S,
-            "Positive " + sa + " (main reaction)": a_p_S,
-            "Average negative " + sa + " (main reaction)": pybamm.average(a_n_S),
-            "Average positive " + sa + " (main reaction)": pybamm.average(a_p_S),
-            "Negative " + sa + " (oxygen reaction)": a_n_Ox,
-            "Positive " + sa + " (oxygen reaction)": a_p_Ox,
-            "Average negative " + sa + " (oxygen reaction)": pybamm.average(a_n_Ox),
-            "Average positive " + sa + " (oxygen reaction)": pybamm.average(a_p_Ox),
-            "Negative " + sa + " (main reaction) [m-1]": param.a_n_dimensional * a_n_S,
-            "Positive " + sa + " (main reaction) [m-1]": param.a_p_dimensional * a_p_S,
-            "Average negative "
-            + sa
-            + " (main reaction) [m-1]": param.a_n_dimensional * pybamm.average(a_n_S),
-            "Average positive "
-            + sa
-            + " (main reaction) [m-1]": param.a_p_dimensional * pybamm.average(a_p_S),
-            "Negative "
-            + sa
-            + " (oxygen reaction) [m-1]": param.a_n_dimensional * a_n_Ox,
-            "Positive "
-            + sa
-            + " (oxygen reaction) [m-1]": param.a_p_dimensional * a_p_Ox,
-            "Average negative "
-            + sa
-            + " (oxygen reaction) [m-1]": param.a_n_dimensional
-            * pybamm.average(a_n_Ox),
-            "Average positive "
-            + sa
-            + " (oxygen reaction) [m-1]": param.a_p_dimensional
-            * pybamm.average(a_p_Ox),
-        }
+    *Extends:* :class:`pybamm.interface_lead_acid.InterfacialSurfaceArea`
+    """
+
+    def __init__(self, set_of_parameters):
+        super().__init__(set_of_parameters)
+
+    def get_interfacial_surface_area(self, curlyU=None, reaction=None):
+        return pybamm.Scalar(1)

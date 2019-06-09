@@ -175,11 +175,11 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
     def set_interfacial_surface_area_submodel(self):
         param = self.set_of_parameters
-        surface_area_model = pybamm.interface_lead_acid.InterfacialSurfaceArea(param)
-        if self.options["interfacial surface area"] == "variable":
+        if self.options["interfacial surface area"] == "varying":
+            surface_area_model = pybamm.interface_lead_acid.VaryingSurfaceArea(param)
             for dom in ["Negative electrode", "Positive electrode"]:
-                self.variables[dom + " State of Charge"] = pybamm.Variable(
-                    dom + " State of Charge", self.curr_coll_domain
+                self.variables[dom + " utilisation"] = pybamm.Variable(
+                    dom + " utilisation", self.curr_coll_domain
                 )
             neg = ["negative electrode"]
             pos = ["positive electrode"]
@@ -187,7 +187,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
             surface_area_model.set_differential_system(self.variables, pos, True)
             self.update(surface_area_model)
         else:
-            zero = pybamm.Scalar(0.1)
+            surface_area_model = pybamm.interface_lead_acid.ConstantSurfaceArea(param)
+            zero = pybamm.Scalar(0)
             surface_area_vars = surface_area_model.get_variables(zero, zero)
             self.variables.update(surface_area_vars)
 
@@ -215,12 +216,12 @@ class LOQS(pybamm.LeadAcidBaseModel):
                 "neg": {
                     "s": -(param.s_plus_Ox + param.t_plus),
                     "s_ox": -param.s_ox_Ox,
-                    "aj": a_n_Ox * j_n_Ox,
+                    "aj": j_n_Ox,
                 },
                 "pos": {
                     "s": -(param.s_plus_Ox + param.t_plus),
                     "s_ox": -param.s_ox_Ox,
-                    "aj": a_p_Ox * j_p_Ox,
+                    "aj": j_p_Ox,
                 },
             }
             self.reactions["main"]["neg"]["s_ox"] = 0

@@ -9,15 +9,15 @@ models = [
         {
             "capacitance": "differential",
             "side reactions": ["oxygen"],
-            "interfacial surface area": "variable",
+            "interfacial surface area": "varying",
         }
     ),
     pybamm.lead_acid.LOQS(
         {"capacitance": "differential", "side reactions": ["oxygen"]}
     ),
-    # pybamm.lead_acid.LOQS(
-    #     {"capacitance": "differential"}  # , "interfacial surface area": "variable"}
-    # ),
+    pybamm.lead_acid.LOQS(
+        {"capacitance": "differential"}  # , "interfacial surface area": "varying"}
+    ),
 ]
 
 # create geometry
@@ -50,7 +50,7 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 1, 100)
+t_eval = np.linspace(0, 0.35, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
@@ -62,11 +62,12 @@ output_variables = [
     "Average negative electrode oxygen interfacial current density",
     "Average positive electrode oxygen interfacial current density",
     "Average electrolyte concentration [mol.m-3]",
-    "Average negative electrode State of Charge",
-    "Average positive electrode State of Charge",
+    "Average negative electrode surface area density (main reaction)",
+    "Average positive electrode surface area density (main reaction)",
     "Average oxygen concentration [mol.m-3]",
     "Average electrolyte potential [V]",
     "Terminal voltage [V]",
+    "Porosity",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
 plot.dynamic_plot()
