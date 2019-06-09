@@ -108,10 +108,12 @@ class SPM(pybamm.LithiumIonBaseModel):
         # TO DO: get terminal voltage in 2D
         if self.options["bc_options"]["dimensionality"] == 0:
             voltage = self.variables["Terminal voltage"]
-            self.events.append(voltage - param.voltage_low_cut)
+            self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
         elif self.options["bc_options"]["dimensionality"] == 2:
             voltage = self.variables["Terminal voltage"]
-            self.events.append(pybamm.Function(np.min, voltage) - param.voltage_low_cut)
+            self.events["Minimum voltage cut-off"] = (
+                pybamm.min(voltage) - param.voltage_low_cut
+            )
 
     @property
     def default_geometry(self):

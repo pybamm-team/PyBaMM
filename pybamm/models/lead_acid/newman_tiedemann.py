@@ -106,7 +106,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         voltage = pybamm.BoundaryValue(delta_phi_p, "right") - pybamm.BoundaryValue(
             delta_phi_n, "left"
         )
-        self.events.append(voltage - param.voltage_low_cut)
+        self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     def set_porosity_submodel(self):
         porosity_model = pybamm.porosity.Standard(self.set_of_parameters)

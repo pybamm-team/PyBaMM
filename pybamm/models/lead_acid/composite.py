@@ -162,7 +162,7 @@ class Composite(pybamm.LeadAcidBaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events.append(voltage - param.voltage_low_cut)
+        self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     def set_convection_variables(self):
         velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)

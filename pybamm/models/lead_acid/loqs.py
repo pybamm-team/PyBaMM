@@ -195,7 +195,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         if self.options["bc_options"]["dimensionality"] == 1:
             voltage.domain = "current collector"
             voltage = pybamm.boundary_value(voltage, "right")
-        self.events.append(voltage - param.voltage_low_cut)
+        self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     def set_convection_variables(self):
         velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
