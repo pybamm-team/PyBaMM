@@ -11,8 +11,6 @@ setup(
     name="pybamm",
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
-    author="Valentin Sulzer",
-    author_email="valentinsulzer@hotmail.com",
     url="https://github.com/pybamm-team/PyBaMM",
     include_package_data=True,
     # List of dependencies
