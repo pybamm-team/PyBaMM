@@ -255,8 +255,12 @@ class DaeSolver(pybamm.BaseSolver):
             )
         else:
             raise pybamm.SolverError(
-                "Could not find consistent initial conditions: "
-                + "solver terminated successfully, but solution above tolerance"
+                """
+                Could not find consistent initial conditions: solver terminated
+                successfully, but maximum solution error ({}) above tolerance ({})
+                """.format(
+                    np.max(sol.fun), self.root_tol * len(sol.x)
+                )
             )
 
     def integrate(
