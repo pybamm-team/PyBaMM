@@ -155,14 +155,15 @@ from .models.submodels import (
     electrolyte_current,
     electrolyte_diffusion,
     interface,
-    oxygen_diffusion,
     particle,
     porosity,
     potential,
     velocity,
     vertical,
 )
-from .models.submodels import interface_lead_acid
+
+# Derived submodel classes
+from .models.submodels import interface_lead_acid, oxygen_diffusion
 
 #
 # Parameters class and methods

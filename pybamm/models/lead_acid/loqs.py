@@ -92,7 +92,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         else:
             self.set_interface_capacitance_formulation()
         # self.set_interfacial_surface_area_submodel()
-        # self.set_reactions()
+        self.set_reactions()
 
     def set_interface_direct_formulation(self):
         # Set up
@@ -113,12 +113,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # Interfacial current density
         j_n = main_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
         j_p = main_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
-        self.reactions = {
-            "main": {
-                "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n},
-                "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": j_p},
-            }
-        }
 
         # Potentials
         eta_r_n = main_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
@@ -128,7 +122,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         )
         self.variables.update(pot_vars)
 
-        # Exchange-current density
+        # Update variables
         j_vars = main_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
 
@@ -153,10 +147,14 @@ class LOQS(pybamm.LeadAcidBaseModel):
         eta_r_p = delta_phi_p - ocp_p
         j_n = main_curr_model.get_butler_volmer(j0_n, eta_r_n, neg)
         j_p = main_curr_model.get_butler_volmer(j0_p, eta_r_p, pos)
-        self.reactions["main"] = {
-            "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n},
-            "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": j_p},
-        }
+
+        # Update variables
+        j_vars = main_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
+        self.variables.update(j_vars)
+        pot_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
+        )
+        self.variables.update(pot_vars)
 
         # Oxygen reaction
         oxygen_curr_model = pybamm.interface_lead_acid.OxygenReaction(param)
@@ -167,6 +165,32 @@ class LOQS(pybamm.LeadAcidBaseModel):
             eta_r_p_Ox = delta_phi_p - ocp_p_Ox
             j_p_Ox = oxygen_curr_model.get_tafel(j0_p_Ox, eta_r_p_Ox, pos)
             j_n_Ox = -j_p_Ox * param.l_p / param.l_n
+            # Update variables
+            j_Ox_vars = oxygen_curr_model.get_derived_interfacial_currents(
+                j_n_Ox, j_p_Ox, pybamm.Scalar(0), j0_p_Ox
+            )
+        else:
+            z = pybamm.Scalar(0)
+            j_Ox_vars = oxygen_curr_model.get_derived_interfacial_currents(z, z, z, z)
+        self.variables.update(j_Ox_vars)
+
+    def set_reactions(self):
+        param = self.set_of_parameters
+        j_n = self.variables["Negative electrode interfacial current density"]
+        j_p = self.variables["Positive electrode interfacial current density"]
+        self.reactions = {
+            "main": {
+                "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n},
+                "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": j_p},
+            }
+        }
+        if "oxygen" in self.options["side reactions"]:
+            j_n_Ox = self.variables[
+                "Negative electrode oxygen interfacial current density"
+            ]
+            j_p_Ox = self.variables[
+                "Positive electrode oxygen interfacial current density"
+            ]
             # Update reactions and variables
             self.reactions["oxygen"] = {
                 "neg": {
@@ -182,21 +206,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
             }
             self.reactions["main"]["neg"]["s_ox"] = 0
             self.reactions["main"]["pos"]["s_ox"] = 0
-            j_Ox_vars = oxygen_curr_model.get_derived_interfacial_currents(
-                j_n_Ox, j_p_Ox, pybamm.Scalar(0), j0_p_Ox
-            )
-        else:
-            z = pybamm.Scalar(0)
-            j_Ox_vars = oxygen_curr_model.get_derived_interfacial_currents(z, z, z, z)
-        self.variables.update(j_Ox_vars)
-
-        # Electrolyte current
-        j_vars = main_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
-        self.variables.update(j_vars)
-        pot_vars = pot_model.get_all_potentials(
-            (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
-        )
-        self.variables.update(pot_vars)
 
     def set_electrolyte_current_submodel(self):
         if self.options["capacitance"] is not False:

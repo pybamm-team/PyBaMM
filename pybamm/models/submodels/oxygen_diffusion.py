@@ -4,7 +4,7 @@
 import pybamm
 
 
-class StefanMaxwell(pybamm.SubModel):
+class StefanMaxwell(pybamm.electrolyte_diffusion.StefanMaxwell):
     """"Stefan-Maxwell Diffusion of oxygen in the oxygen.
 
     Parameters
@@ -97,8 +97,8 @@ class StefanMaxwell(pybamm.SubModel):
 
         # Model
         source_terms = sum(
-            param.l_n * rxn["neg"]["s_ox"] * rxn["neg"]["aj"]
-            + param.l_p * rxn["pos"]["s_ox"] * rxn["pos"]["aj"]
+            param.l_n * rxn["neg"]["s_ox"] * rxn["neg"]["aj"].orphans[0]
+            + param.l_p * rxn["pos"]["s_ox"] * rxn["pos"]["aj"].orphans[0]
             for rxn in reactions.values()
         )
         self.rhs = {
@@ -122,49 +122,5 @@ class StefanMaxwell(pybamm.SubModel):
         }
 
     def get_variables(self, c_ox, N_ox):
-        """
-        Calculate dimensionless and dimensional variables for the oxygen diffusion
-        submodel
-
-        Parameters
-        ----------
-        c_ox : :class:`pybamm.Concatenation`
-            Oxygen concentration
-        N_ox : :class:`pybamm.Symbol`
-            Flux of oxygen molecules
-
-        Returns
-        -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
-        """
-        c_ox_typ = self.set_of_parameters.c_ox_typ
-
-        if c_ox.domain == []:
-            c_ox_n = pybamm.Broadcast(c_ox, domain=["negative electrode"])
-            c_ox_s = pybamm.Broadcast(c_ox, domain=["separator"])
-            c_ox_p = pybamm.Broadcast(c_ox, domain=["positive electrode"])
-            c_ox = pybamm.Concatenation(c_ox_n, c_ox_s, c_ox_p)
-        if N_ox.domain == []:
-            N_ox_n = pybamm.Broadcast(N_ox, domain=["negative electrode"])
-            N_ox_s = pybamm.Broadcast(N_ox, domain=["separator"])
-            N_ox_p = pybamm.Broadcast(N_ox, domain=["positive electrode"])
-            N_ox = pybamm.Concatenation(N_ox_n, N_ox_s, N_ox_p)
-
-        c_ox_n, c_ox_s, c_ox_p = c_ox.orphans
-
-        c_ox_av = pybamm.average(c_ox)
-
-        return {
-            "Oxygen concentration": c_ox,
-            "Average oxygen concentration": c_ox_av,
-            "Negative oxygen concentration": c_ox_n,
-            "Separator oxygen concentration": c_ox_s,
-            "Positive oxygen concentration": c_ox_p,
-            "Reduced oxygen flux": N_ox,
-            "Oxygen concentration [mol.m-3]": c_ox_typ * c_ox,
-            "Average oxygen concentration [mol.m-3]": c_ox_typ * c_ox_av,
-            "Negative oxygen concentration [mol.m-3]": c_ox_typ * c_ox_n,
-            "Separator oxygen concentration [mol.m-3]": c_ox_typ * c_ox_s,
-            "Positive oxygen concentration [mol.m-3]": c_ox_typ * c_ox_p,
-        }
+        """ See :meth:`pybamm.electrolyte_diffusion.StefanMaxwell.get_variables`. """
+        return super().get_variables(c_ox, N_ox, species="oxygen")
