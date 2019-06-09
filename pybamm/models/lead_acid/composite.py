@@ -184,4 +184,4 @@ class Composite(pybamm.LeadAcidBaseModel):
         if self.options["capacitance"] == "algebraic":
             return pybamm.ScikitsDaeSolver()
         else:
-            return pybamm.ScikitsOdeSolver()
+            return pybamm.ScipySolver()

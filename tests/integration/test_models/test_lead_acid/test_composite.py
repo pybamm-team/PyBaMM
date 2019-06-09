@@ -9,13 +9,11 @@ import numpy as np
 
 
 class TestLeadAcidComposite(unittest.TestCase):
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):
         model = pybamm.lead_acid.Composite()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_convection(self):
         model = pybamm.lead_acid.Composite({"convection": True})
         modeltest = tests.StandardModelTest(model)
@@ -37,7 +35,6 @@ class TestLeadAcidComposite(unittest.TestCase):
 
 
 class TestLeadAcidCompositeCapacitance(unittest.TestCase):
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_differential(self):
         options = {"capacitance": "differential"}
         model = pybamm.lead_acid.Composite(options)
