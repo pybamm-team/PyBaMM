@@ -8,6 +8,13 @@ import importlib
 import os
 import sys
 import timeit
+import pathlib
+import pybamm
+
+
+def root_dir():
+    """ return the root directory of the PyBaMM install directory """
+    return str(pathlib.Path(pybamm.__path__[0]).parent)
 
 
 class Timer(object):
@@ -101,7 +108,8 @@ def load_function(filename):
 
     # Else, search in the whole PyBaMM directory for matches
     else:
-        search_path = os.path.commonpath([pth for pth in sys.path if "PyBaMM" in pth])
+        search_path = pybamm.root_dir()
+
         head, tail = os.path.split(filename)
 
         matching_files = []

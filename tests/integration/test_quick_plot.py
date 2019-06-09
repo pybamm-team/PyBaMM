@@ -8,6 +8,7 @@ class TestQuickPlot(unittest.TestCase):
     Tests that QuickPlot is created correctly
     """
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_plot_lithium_ion(self):
         spm = pybamm.lithium_ion.SPM()
         spme = pybamm.lithium_ion.SPMe()
@@ -72,6 +73,7 @@ class TestQuickPlot(unittest.TestCase):
 
         quick_plot.update(0.01)
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_plot_lead_acid(self):
         loqs = pybamm.lead_acid.LOQS()
         geometry = loqs.default_geometry

@@ -63,7 +63,7 @@ class UnaryOperator(pybamm.Symbol):
             child = self.child.evaluate(t, y)
             return self._unary_evaluate(child)
 
-    def evaluate_for_shape(self, t=None, y=None):
+    def evaluate_for_shape(self):
         """
         Default behaviour: unary operator has same shape as child
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
