@@ -412,7 +412,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
         """
         # Different solver depending on whether we solve ODEs or DAEs
         if self._capacitance_options == "differential":
-            default_solver = pybamm.ScikitsOdeSolver()
+            default_solver = pybamm.ScipySolver()
         else:
             default_solver = pybamm.ScikitsDaeSolver()
 
