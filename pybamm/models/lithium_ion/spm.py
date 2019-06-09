@@ -164,6 +164,6 @@ class SPM(pybamm.LithiumIonBaseModel):
         # Different solver depending on whether we solve ODEs or DAEs
         dimensionality = self.options["bc_options"]["dimensionality"]
         if dimensionality == 0:
-            return pybamm.ScikitsOdeSolver()
+            return pybamm.ScipySolver()
         else:
             return pybamm.ScikitsDaeSolver()

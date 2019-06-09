@@ -379,7 +379,8 @@ class StandardBatteryBaseModel(BaseModel):
     def default_parameter_values(self):
         # Default parameter values, geometry, submesh, spatial methods and solver
         # Lion parameters left as default parameter set for tests
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
+        pybamm_path = pybamm.root_dir()
+        input_path = os.path.join(pybamm_path, "input", "parameters", "lithium-ion")
         return pybamm.ParameterValues(
             os.path.join(
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
@@ -387,7 +388,7 @@ class StandardBatteryBaseModel(BaseModel):
             {
                 "Typical current [A]": 1,
                 "Current function": os.path.join(
-                    os.getcwd(),
+                    pybamm_path,
                     "pybamm",
                     "parameters",
                     "standard_current_functions",
@@ -646,13 +647,14 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
 
     @property
     def default_parameter_values(self):
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
+        pybamm_path = pybamm.root_dir()
+        input_path = os.path.join(pybamm_path, "input", "parameters", "lead-acid")
         return pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current [A]": 1,
                 "Current function": os.path.join(
-                    os.getcwd(),
+                    pybamm_path,
                     "pybamm",
                     "parameters",
                     "standard_current_functions",

@@ -16,8 +16,10 @@ class TestSimplify(unittest.TestCase):
     def test_symbol_simplify(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
+        c = pybamm.Parameter("c")
         d = pybamm.Scalar(-1)
         e = pybamm.Scalar(2)
+        g = pybamm.Variable("g")
 
         # negate
         self.assertIsInstance((-a).simplify(), pybamm.Scalar)
@@ -103,7 +105,6 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual((a * a).simplify().evaluate(), 0)
 
         # test when other node is a parameter
-        c = pybamm.Parameter("c")
         self.assertIsInstance((a + c).simplify(), pybamm.Parameter)
         self.assertIsInstance((c + a).simplify(), pybamm.Parameter)
         self.assertIsInstance((c + b).simplify(), pybamm.Addition)
@@ -158,6 +159,14 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(expr.children[0].evaluate(), 4.0)
         self.assertIsInstance(expr.children[1], pybamm.Negate)
         self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
+
+        expr = (e + (g - c)).simplify()
+        self.assertIsInstance(expr, pybamm.Addition)
+        self.assertIsInstance(expr.children[0], pybamm.Scalar)
+        self.assertEqual(expr.children[0].evaluate(), 2.0)
+        self.assertIsInstance(expr.children[1], pybamm.Subtraction)
+        self.assertIsInstance(expr.children[1].children[0], pybamm.Variable)
+        self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
 
         expr = ((2 + c) + (c + 2)).simplify()
         self.assertIsInstance(expr, pybamm.Addition)
