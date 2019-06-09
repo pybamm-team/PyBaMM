@@ -49,7 +49,7 @@ class BaseModel(object):
         self._initial_conditions = {}
         self._boundary_conditions = {}
         self._variables = {}
-        self._events = []
+        self._events = {}
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
@@ -218,7 +218,7 @@ class BaseModel(object):
                 self._boundary_conditions, submodel.boundary_conditions
             )
             self.variables.update(submodel.variables)  # keys are strings so no check
-            self._events.extend(submodel.events)
+            self._events.update(submodel.events)  # keys are strings so no check
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
@@ -417,7 +417,7 @@ class StandardBatteryBaseModel(BaseModel):
                 ),
                 "Positive electrode OCV entropic change": os.path.join(
                     input_path, "lico2_entropic_change_Moura.py"
-                )
+                ),
             },
         )
 
