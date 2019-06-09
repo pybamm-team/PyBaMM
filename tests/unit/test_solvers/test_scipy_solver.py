@@ -32,6 +32,7 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         solution = solver.integrate(exponential_decay, y0, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+        self.assertEqual(solution.termination, "final time")
 
     def test_integrate_failure(self):
         # Turn off warnings to ignore sqrt error
@@ -65,6 +66,7 @@ class TestScipySolver(unittest.TestCase):
         solution = solver.integrate(constant_growth, y0, t_eval, events=[y_eq_2])
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
+        self.assertEqual(solution.termination, "event")
 
         # Exponential decay
         solver = pybamm.ScipySolver(tol=1e-8, method="BDF")
