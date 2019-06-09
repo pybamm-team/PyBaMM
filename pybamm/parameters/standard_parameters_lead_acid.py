@@ -72,6 +72,7 @@ sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]"
 a_n_dimensional = pybamm.geometric_parameters.a_n_dimensional
 a_p_dimensional = pybamm.geometric_parameters.a_p_dimensional
 b = pybamm.geometric_parameters.b
+xi = pybamm.Parameter("Electrode morphological parameter")
 
 # Electrochemical reactions
 # Main

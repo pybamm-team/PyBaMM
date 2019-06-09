@@ -187,38 +187,40 @@ class LOQS(pybamm.LeadAcidBaseModel):
             surface_area_model.set_differential_system(self.variables, pos, True)
             self.update(surface_area_model)
         else:
-            zero = pybamm.Scalar(0)
+            zero = pybamm.Scalar(0.1)
             surface_area_vars = surface_area_model.get_variables(zero, zero)
             self.variables.update(surface_area_vars)
 
     def set_reactions(self):
         param = self.set_of_parameters
-        j_n = self.variables["Negative electrode interfacial current density"]
-        j_p = self.variables["Positive electrode interfacial current density"]
+        icd = "interfacial current density"
+        sa = "electrode surface area"
+        j_n = self.variables["Negative electrode " + icd].orphans[0]
+        j_p = self.variables["Positive electrode " + icd].orphans[0]
+        a_n_S = self.variables["Average negative " + sa + " (main reaction)"]
+        a_p_S = self.variables["Average positive " + sa + " (main reaction)"]
         self.reactions = {
             "main": {
-                "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": j_n},
-                "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": j_p},
+                "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": a_n_S * j_n},
+                "pos": {"s": -(param.s_plus_p_S + param.t_plus), "aj": a_p_S * j_p},
             }
         }
         if "oxygen" in self.options["side reactions"]:
-            j_n_Ox = self.variables[
-                "Negative electrode oxygen interfacial current density"
-            ]
-            j_p_Ox = self.variables[
-                "Positive electrode oxygen interfacial current density"
-            ]
+            j_n_Ox = self.variables["Negative electrode oxygen " + icd].orphans[0]
+            j_p_Ox = self.variables["Positive electrode oxygen " + icd].orphans[0]
+            a_n_Ox = self.variables["Average negative " + sa + " (oxygen reaction)"]
+            a_p_Ox = self.variables["Average positive " + sa + " (oxygen reaction)"]
             # Update reactions and variables
             self.reactions["oxygen"] = {
                 "neg": {
                     "s": -(param.s_plus_Ox + param.t_plus),
                     "s_ox": -param.s_ox_Ox,
-                    "aj": j_n_Ox,
+                    "aj": a_n_Ox * j_n_Ox,
                 },
                 "pos": {
                     "s": -(param.s_plus_Ox + param.t_plus),
                     "s_ox": -param.s_ox_Ox,
-                    "aj": j_p_Ox,
+                    "aj": a_p_Ox * j_p_Ox,
                 },
             }
             self.reactions["main"]["neg"]["s_ox"] = 0

@@ -102,8 +102,8 @@ class StefanMaxwell(pybamm.SubModel):
 
         # Model
         source_terms = sum(
-            param.l_n * rxn["neg"]["s"] * rxn["neg"]["aj"].orphans[0]
-            + param.l_p * rxn["pos"]["s"] * rxn["pos"]["aj"].orphans[0]
+            param.l_n * rxn["neg"]["s"] * rxn["neg"]["aj"]
+            + param.l_p * rxn["pos"]["s"] * rxn["pos"]["aj"]
             for rxn in reactions.values()
         )
         self.rhs = {

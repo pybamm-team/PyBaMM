@@ -158,6 +158,7 @@ class InterfacialSurfaceArea(pybamm.SubModel):
         domain = domain or j.domain
         curlyU_n = variables["Negative electrode State of Charge"]
         curlyU_p = variables["Positive electrode State of Charge"]
+        self.variables = self.get_variables(curlyU_n, curlyU_p)
         if domain == ["negative electrode"]:
             curlyU = curlyU_n
             j = variables["Negative electrode interfacial current density"]
@@ -173,12 +174,19 @@ class InterfacialSurfaceArea(pybamm.SubModel):
             j = j.orphans[0]
 
         # Create model
-        self.rhs[curlyU] = beta_U * j
+        a = self.get_interfacial_surface_area(curlyU, "main")
+        self.rhs[curlyU] = beta_U * a * j
         self.initial_conditions[curlyU] = curlyU_init
-        self.variables = self.get_variables(curlyU_n, curlyU_p)
         # Events: cut off if curlyU hits zero or one, with some tolerance for the
         # fact that the initial conditions can be curlyU = 0
         # self.events = [pybamm.min(curlyU) + 0.0001, pybamm.max(curlyU) - 1]
+
+    def get_interfacial_surface_area(self, curlyU, reaction):
+        param = self.set_of_parameters
+        if reaction == "main":
+            return curlyU ** param.xi
+        elif reaction == "oxygen":
+            return 1 - curlyU ** param.xi
 
     def get_variables(self, curlyU_n, curlyU_p):
         param = self.set_of_parameters
@@ -189,9 +197,24 @@ class InterfacialSurfaceArea(pybamm.SubModel):
         if curlyU_p.domain in [[], ["current collector"]]:
             curlyU_p = pybamm.Broadcast(curlyU_p, ["positive electrode"])
 
+        a_n_S = self.get_interfacial_surface_area(curlyU_n, "main")
+        a_p_S = self.get_interfacial_surface_area(curlyU_p, "main")
+        a_n_Ox = self.get_interfacial_surface_area(curlyU_n, "oxygen")
+        a_p_Ox = self.get_interfacial_surface_area(curlyU_p, "oxygen")
+
+        soc = "electrode State of Charge"
+        sa = "electrode surface area"
         return {
-            "Negative electrode State of Charge": curlyU_n,
-            "Average negative electrode State of Charge": pybamm.average(curlyU_n),
-            "Positive electrode State of Charge": curlyU_p,
-            "Average positive electrode State of Charge": pybamm.average(curlyU_p),
+            "Negative " + soc: curlyU_n,
+            "Positive " + soc: curlyU_p,
+            "Average negative " + soc: pybamm.average(curlyU_n),
+            "Average positive " + soc: pybamm.average(curlyU_p),
+            "Negative " + sa + " (main reaction)": a_n_S,
+            "Positive " + sa + " (main reaction)": a_p_S,
+            "Average negative " + sa + " (main reaction)": pybamm.average(a_n_S),
+            "Average positive " + sa + " (main reaction)": pybamm.average(a_p_S),
+            "Negative " + sa + " (oxygen reaction)": a_n_Ox,
+            "Positive " + sa + " (oxygen reaction)": a_p_Ox,
+            "Average negative " + sa + " (oxygen reaction)": pybamm.average(a_n_Ox),
+            "Average positive " + sa + " (oxygen reaction)": pybamm.average(a_p_Ox),
         }
