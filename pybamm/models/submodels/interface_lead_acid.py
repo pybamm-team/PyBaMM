@@ -153,24 +153,45 @@ class InterfacialSurfaceArea(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_differential_system(self, variables, domain=None):
+    def set_differential_system(self, variables, domain=None, leading_order=False):
         param = self.set_of_parameters
         domain = domain or j.domain
+        curlyU_n = variables["Negative electrode State of Charge"]
+        curlyU_p = variables["Positive electrode State of Charge"]
         if domain == ["negative electrode"]:
-            curlyU = self.variables["Negative electrode State of Charge"]
-            j = self.variables["Negative electrode interfacial current density"]
+            curlyU = curlyU_n
+            j = variables["Negative electrode interfacial current density"]
             beta_U = param.beta_U_n
             curlyU_init = param.curlyU_n_init
-        elif domain == ["negative electrode"]:
-            curlyU = self.variables["Positive electrode State of Charge"]
-            j = self.variables["Positive electrode interfacial current density"]
+        elif domain == ["positive electrode"]:
+            curlyU = curlyU_p
+            j = variables["Positive electrode interfacial current density"]
             beta_U = param.beta_U_p
             curlyU_init = param.curlyU_p_init
 
-        # Create model
-        self.rhs = {curlyU: beta_U * j}
-        self.initial_conditions = {curlyU: curlyU_init}
+        if leading_order:
+            j = j.orphans[0]
 
+        # Create model
+        self.rhs[curlyU] = beta_U * j
+        self.initial_conditions[curlyU] = curlyU_init
+        self.variables = self.get_variables(curlyU_n, curlyU_p)
         # Events: cut off if curlyU hits zero or one, with some tolerance for the
         # fact that the initial conditions can be curlyU = 0
-        self.events = [pybamm.min(curlyU) + 0.0001, pybamm.max(curlyU) - 1]
+        # self.events = [pybamm.min(curlyU) + 0.0001, pybamm.max(curlyU) - 1]
+
+    def get_variables(self, curlyU_n, curlyU_p):
+        param = self.set_of_parameters
+
+        # Broadcast if necessary
+        if curlyU_n.domain in [[], ["current collector"]]:
+            curlyU_n = pybamm.Broadcast(curlyU_n, ["negative electrode"])
+        if curlyU_p.domain in [[], ["current collector"]]:
+            curlyU_p = pybamm.Broadcast(curlyU_p, ["positive electrode"])
+
+        return {
+            "Negative electrode State of Charge": curlyU_n,
+            "Average negative electrode State of Charge": pybamm.average(curlyU_n),
+            "Positive electrode State of Charge": curlyU_p,
+            "Average positive electrode State of Charge": pybamm.average(curlyU_p),
+        }

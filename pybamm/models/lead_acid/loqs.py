@@ -38,6 +38,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
             curr_coll_domain = []
         elif self.options["bc_options"]["dimensionality"] == 1:
             curr_coll_domain = ["current collector"]
+        self.curr_coll_domain = curr_coll_domain
 
         c_e = pybamm.Variable("Electrolyte concentration", curr_coll_domain)
 
@@ -69,9 +70,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
                     "Positive electrode surface potential difference": delta_phi_p,
                 }
             )
-        if "oxygen" in self.options["side reactions"]:
-            c_ox = pybamm.Variable("Oxygen concentration", curr_coll_domain)
-            self.variables["Oxygen concentration"] = c_ox
 
     def set_boundary_conditions(self, bc_variables=None):
         "Set boundary conditions, dependent on self.options"
@@ -159,7 +157,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         # Oxygen reaction
         oxygen_curr_model = pybamm.interface_lead_acid.OxygenReaction(param)
         if "oxygen" in self.options["side reactions"]:
-            c_ox = self.variables["Oxygen concentration"]
+            c_ox = pybamm.Variable("Oxygen concentration", self.curr_coll_domain)
+            self.variables["Oxygen concentration"] = c_ox
             j0_p_Ox = oxygen_curr_model.get_exchange_current_densities(c_e, c_ox, pos)
             ocp_p_Ox = param.U_p_Ox
             eta_r_p_Ox = delta_phi_p - ocp_p_Ox
@@ -178,14 +177,19 @@ class LOQS(pybamm.LeadAcidBaseModel):
         param = self.set_of_parameters
         surface_area_model = pybamm.interface_lead_acid.InterfacialSurfaceArea(param)
         if self.options["interfacial surface area"] == "variable":
+            for dom in ["Negative electrode", "Positive electrode"]:
+                self.variables[dom + " State of Charge"] = pybamm.Variable(
+                    dom + " State of Charge", self.curr_coll_domain
+                )
             neg = ["negative electrode"]
             pos = ["positive electrode"]
-            surface_area_model.set_differential_system(self.variables, neg)
-            surface_area_model.set_differential_system(self.variables, pos)
+            surface_area_model.set_differential_system(self.variables, neg, True)
+            surface_area_model.set_differential_system(self.variables, pos, True)
             self.update(surface_area_model)
-        # else:
-        #     surface_area_vars = surface_area_model.get_variables(0)
-        #     self.variables.update(surface_area_vars)
+        else:
+            zero = pybamm.Scalar(0)
+            surface_area_vars = surface_area_model.get_variables(zero, zero)
+            self.variables.update(surface_area_vars)
 
     def set_reactions(self):
         param = self.set_of_parameters
