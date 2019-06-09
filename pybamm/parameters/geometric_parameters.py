@@ -32,8 +32,8 @@ A_tab_p = L_tab_p * L_cp  # Area of negative tab
 
 
 # Microscale geometry
-a_n_dimensional = pybamm.Parameter("Negative electrode surface area density [m-1]")
-a_p_dimensional = pybamm.Parameter("Positive electrode surface area density [m-1]")
+a_n_dim = pybamm.Parameter("Negative electrode surface area density [m-1]")
+a_p_dim = pybamm.Parameter("Positive electrode surface area density [m-1]")
 R_n = pybamm.Parameter("Negative particle radius [m]")
 R_p = pybamm.Parameter("Positive particle radius [m]")
 b = pybamm.Parameter("Bruggeman coefficient")

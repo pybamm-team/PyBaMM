@@ -65,12 +65,12 @@ c_ox_init_dim = pybamm.Parameter("Initial oxygen concentration [mol.m-3]")
 c_ox_typ = pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
 # Electrode properties
-sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
-sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
+sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 
 # Microstructure
-a_n_dimensional = pybamm.geometric_parameters.a_n_dimensional
-a_p_dimensional = pybamm.geometric_parameters.a_p_dimensional
+a_n_dim = pybamm.geometric_parameters.a_n_dim
+a_p_dim = pybamm.geometric_parameters.a_p_dim
 b = pybamm.geometric_parameters.b
 xi = pybamm.Parameter("Electrode morphological parameter")
 
@@ -232,8 +232,8 @@ electrolyte_concentration_scale = c_e_typ
 # electrical
 potential_scale = R * T_ref / F
 current_scale = i_typ
-interfacial_current_scale_n = i_typ / (a_n_dimensional * L_x)
-interfacial_current_scale_p = i_typ / (a_p_dimensional * L_x)
+interfacial_current_scale_n = i_typ / (a_n_dim * L_x)
+interfacial_current_scale_p = i_typ / (a_p_dim * L_x)
 
 velocity_scale = i_typ / (c_e_typ * F)  # Reaction velocity scale
 
@@ -242,8 +242,8 @@ tau_discharge = F * c_e_typ * L_x / i_typ
 
 # Reaction timescales
 # should this be * F?
-tau_r_n = 1 / (j0_n_S_ref_dimensional * a_n_dimensional * c_e_typ ** 0.5)
-tau_r_p = 1 / (j0_p_S_ref_dimensional * a_p_dimensional * c_e_typ ** 0.5)
+tau_r_n = 1 / (j0_n_S_ref_dimensional * a_n_dim * c_e_typ ** 0.5)
+tau_r_p = 1 / (j0_p_S_ref_dimensional * a_p_dim * c_e_typ ** 0.5)
 
 # Electrolyte diffusion timescale
 tau_diffusion_e = L_x ** 2 / D_e_typ
@@ -280,10 +280,10 @@ curlyD_hy = D_hy_dimensional / D_e_typ
 omega_c_hy = c_e_typ * M_hy / rho_typ * (1 - M_w * V_hy / V_w * M_hy)
 
 # Electrode Properties
-sigma_n = sigma_n_dimensional * potential_scale / current_scale / L_x
-sigma_p = sigma_p_dimensional * potential_scale / current_scale / L_x
-delta_pore_n = 1 / (a_n_dimensional * L_x)
-delta_pore_p = 1 / (a_p_dimensional * L_x)
+sigma_n = sigma_n_dim * potential_scale / current_scale / L_x
+sigma_p = sigma_p_dim * potential_scale / current_scale / L_x
+delta_pore_n = 1 / (a_n_dim * L_x)
+delta_pore_p = 1 / (a_p_dim * L_x)
 Q_n_max = Q_n_max_dimensional / (c_e_typ * F)
 Q_p_max = Q_p_max_dimensional / (c_e_typ * F)
 beta_U_n = 1 / Q_n_max
