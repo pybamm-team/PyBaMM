@@ -329,11 +329,31 @@ class TestBaseModel(unittest.TestCase):
         }
 
         # Check warning raised
-        self.assertWarns(pybamm.ModelWarning, model.check_well_posedness())
+        # self.assertWarns(pybamm.ModelWarning, model.check_well_posedness())
+        #
+        # # Check None entries have been removed from the variables dictionary
+        # for key, item in model._variables.items():
+        #     self.assertIsNotNone(item)
 
-        # Check None entries have been removed from the variables dictionary
-        for key, item in model._variables.items():
-            self.assertIsNotNone(item)
+        # check error raised if undefined variable in list of Variables
+        model = pybamm.BaseModel()
+        model.rhs = {c: -c}
+        model.initial_conditions = {c: 1}
+        model.variables = {"d": d}
+        with self.assertRaisesRegex(pybamm.ModelError, "No key set for variable"):
+            model.check_well_posedness()
+
+        # check error is raised even if some modified form of d is in model.rhs
+        two_d = 2 * d
+        model.rhs[two_d] = -d
+        model.initial_conditions[two_d] = 1
+        with self.assertRaisesRegex(pybamm.ModelError, "No key set for variable"):
+            model.check_well_posedness()
+
+        # add d to rhs, fine
+        model.rhs[d] = -d
+        model.initial_conditions[d] = 1
+        model.check_well_posedness()
 
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
