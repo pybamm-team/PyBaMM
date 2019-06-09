@@ -67,15 +67,15 @@ c_p_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3
 sigma_cn_dimensional = pybamm.Parameter(
     "Negative current collector conductivity [S.m-1]"
 )
-sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
-sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
+sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 sigma_cp_dimensional = pybamm.Parameter(
     "Positive current collector conductivity [S.m-1]"
 )
 
 # Microscale geometry
-a_n_dimensional = pybamm.geometric_parameters.a_n_dimensional
-a_p_dimensional = pybamm.geometric_parameters.a_p_dimensional
+a_n_dim = pybamm.geometric_parameters.a_n_dim
+a_p_dim = pybamm.geometric_parameters.a_p_dim
 R_n = pybamm.geometric_parameters.R_n
 R_p = pybamm.geometric_parameters.R_p
 b = pybamm.geometric_parameters.b
@@ -171,15 +171,15 @@ positive_particle_concentration_scale = c_n_max
 # electrical
 potential_scale = R * T_ref / F
 current_scale = i_typ
-interfacial_current_scale_n = i_typ / (a_n_dimensional * L_x)
-interfacial_current_scale_p = i_typ / (a_p_dimensional * L_x)
+interfacial_current_scale_n = i_typ / (a_n_dim * L_x)
+interfacial_current_scale_p = i_typ / (a_p_dim * L_x)
 
 # Discharge timescale
 tau_discharge = F * c_n_max * L_x / i_typ
 
 # Reaction timescales
-tau_r_n = F / (m_n_dimensional * a_n_dimensional * c_e_typ ** 0.5)
-tau_r_p = F / (m_p_dimensional * a_p_dimensional * c_e_typ ** 0.5)
+tau_r_n = F / (m_n_dimensional * a_n_dim * c_e_typ ** 0.5)
+tau_r_p = F / (m_p_dimensional * a_p_dim * c_e_typ ** 0.5)
 
 # Electrolyte diffusion timescale
 tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ)
@@ -232,13 +232,13 @@ epsilon = pybamm.Concatenation(
     pybamm.Broadcast(epsilon_s, ["separator"]),
     pybamm.Broadcast(epsilon_p, ["positive electrode"]),
 )
-a_n = a_n_dimensional * R_n
-a_p = a_p_dimensional * R_p
+a_n = a_n_dim * R_n
+a_p = a_p_dim * R_p
 
 # Electrode Properties
 sigma_cn = sigma_cn_dimensional * potential_scale / i_typ / L_x
-sigma_n = sigma_n_dimensional * potential_scale / i_typ / L_x
-sigma_p = sigma_p_dimensional * potential_scale / i_typ / L_x
+sigma_n = sigma_n_dim * potential_scale / i_typ / L_x
+sigma_p = sigma_p_dim * potential_scale / i_typ / L_x
 sigma_cp = sigma_cp_dimensional * potential_scale / i_typ / L_x
 
 # should rename this to avoid confusion with Butler-Volmer

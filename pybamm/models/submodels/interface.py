@@ -156,8 +156,8 @@ class InterfacialCurrent(pybamm.SubModel):
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
         param = self.set_of_parameters
-        j_n_scale = param.i_typ / (param.a_n_dimensional * param.L_x)
-        j_p_scale = param.i_typ / (param.a_p_dimensional * param.L_x)
+        j_n_scale = param.i_typ / (param.a_n_dim * param.L_x)
+        j_p_scale = param.i_typ / (param.a_p_dim * param.L_x)
 
         # Broadcast if necessary
         if j_n.domain in [[], ["current collector"]]:
