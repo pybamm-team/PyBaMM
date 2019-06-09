@@ -98,8 +98,8 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         # Reactions
         self.reactions = {
             "main": {
-                "neg": {"s_plus": param.s_n, "aj": j_n},
-                "pos": {"s_plus": param.s_p, "aj": j_p},
+                "neg": {"s": param.s_n, "aj": j_n},
+                "pos": {"s": param.s_p, "aj": j_p},
             }
         }
 

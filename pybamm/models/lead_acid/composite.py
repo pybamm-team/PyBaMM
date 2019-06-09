@@ -69,8 +69,8 @@ class Composite(pybamm.LeadAcidBaseModel):
         j_p_0 = self.variables["Positive electrode interfacial current density"]
         self.reactions = {
             "main": {
-                "neg": {"s_plus": param.s_n, "aj": j_n_0},
-                "pos": {"s_plus": param.s_p, "aj": j_p_0},
+                "neg": {"s": param.s_n, "aj": j_n_0},
+                "pos": {"s": param.s_p, "aj": j_p_0},
                 "porosity change": self.variables["Porosity change"],
             }
         }

@@ -91,7 +91,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
             self.set_interface_direct_formulation()
         else:
             self.set_interface_capacitance_formulation()
-        # self.set_interfacial_surface_area_submodel()
+        self.set_interfacial_surface_area_submodel()
         self.set_reactions()
 
     def set_interface_direct_formulation(self):
@@ -174,6 +174,19 @@ class LOQS(pybamm.LeadAcidBaseModel):
             j_Ox_vars = oxygen_curr_model.get_derived_interfacial_currents(z, z, z, z)
         self.variables.update(j_Ox_vars)
 
+    def set_interfacial_surface_area_submodel(self):
+        param = self.set_of_parameters
+        surface_area_model = pybamm.interface_lead_acid.InterfacialSurfaceArea(param)
+        if self.options["interfacial surface area"] == "variable":
+            neg = ["negative electrode"]
+            pos = ["positive electrode"]
+            surface_area_model.set_differential_system(self.variables, neg)
+            surface_area_model.set_differential_system(self.variables, pos)
+            self.update(surface_area_model)
+        # else:
+        #     surface_area_vars = surface_area_model.get_variables(0)
+        #     self.variables.update(surface_area_vars)
+
     def set_reactions(self):
         param = self.set_of_parameters
         j_n = self.variables["Negative electrode interfacial current density"]
@@ -219,19 +232,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
                 self.variables, self.reactions, ["positive electrode"]
             )
             self.update(eleclyte_current_model)
-
-    def set_interfacial_surface_area_submodel(self):
-        param = self.set_of_parameters
-        surface_area_model = pybamm.interface_lead_acid.InterfacialSurfaceArea(param)
-        if self.options["interfacial surface area"] == "variable":
-            neg = ["negative electrode"]
-            pos = ["positive electrode"]
-            surface_area_model.set_differential_system(self.variables, neg)
-            surface_area_model.set_differential_system(self.variables, pos)
-            self.update(surface_area_model)
-        else:
-            surface_area_vars = surface_area_model.get_variables(0)
-            self.variables.update(surface_area_vars)
 
     def set_porosity_submodel(self):
         param = self.set_of_parameters

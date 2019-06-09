@@ -6,9 +6,15 @@ pybamm.set_logging_level("DEBUG")
 # load models
 models = [
     pybamm.lead_acid.LOQS(
-        {"capacitance": "differential", "side reactions": ["oxygen"]}
+        {
+            "capacitance": "differential",
+            "side reactions": ["oxygen"],
+            "interfacial surface area": "variable",
+        }
     ),
-    pybamm.lead_acid.LOQS({"capacitance": "differential"}),
+    pybamm.lead_acid.LOQS(
+        {"capacitance": "differential"}  # , "interfacial surface area": "variable"}
+    ),
 ]
 
 # create geometry

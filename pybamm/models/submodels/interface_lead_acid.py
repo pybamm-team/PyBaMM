@@ -153,13 +153,17 @@ class InterfacialSurfaceArea(pybamm.SubModel):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_differential_system(self, curlyU, j, domain=None):
+    def set_differential_system(self, variables, domain=None):
         param = self.set_of_parameters
         domain = domain or j.domain
         if domain == ["negative electrode"]:
+            curlyU = self.variables["Negative electrode State of Charge"]
+            j = self.variables["Negative electrode interfacial current density"]
             beta_U = param.beta_U_n
             curlyU_init = param.curlyU_n_init
         elif domain == ["negative electrode"]:
+            curlyU = self.variables["Positive electrode State of Charge"]
+            j = self.variables["Positive electrode interfacial current density"]
             beta_U = param.beta_U_p
             curlyU_init = param.curlyU_p_init
 

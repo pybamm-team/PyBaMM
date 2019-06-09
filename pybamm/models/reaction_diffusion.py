@@ -43,8 +43,8 @@ class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
         self.variables = {"Electrolyte concentration": c_e, "Porosity": epsilon}
         reactions = {
             "main": {
-                "neg": {"s_plus": 1, "aj": j_n},
-                "pos": {"s_plus": 1, "aj": j_p},
+                "neg": {"s": 1, "aj": j_n},
+                "pos": {"s": 1, "aj": j_p},
                 "porosity change": 0,
             }
         }
