@@ -116,19 +116,6 @@ class TestBinaryOperators(unittest.TestCase):
             expr2.evaluate(known_evals={})[1][(a @ b).id], (a @ b).evaluate()
         )
 
-        # Expect using known evals to be faster than not
-        timer = pybamm.Timer()
-        start = timer.time()
-        for _ in range(2000):
-            expr2.evaluate()
-        end = timer.time()
-        start_known_evals = timer.time()
-        for _ in range(2000):
-            expr2.evaluate(known_evals={})
-        end_known_evals = timer.time()
-        self.assertLess(end_known_evals - start_known_evals, 1.2 * (end - start))
-        self.assertGreater(end - start, (end_known_evals - start_known_evals))
-
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))

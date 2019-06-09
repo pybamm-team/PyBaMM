@@ -322,8 +322,6 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing
         )
-        broadcast2 = pybamm.Broadcast(0, domain="separator")
-        self.assertNotEqual(var.shape_for_testing, broadcast2.shape_for_testing)
 
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):

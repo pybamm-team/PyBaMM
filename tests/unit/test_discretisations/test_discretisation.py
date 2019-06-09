@@ -163,6 +163,7 @@ class TestDiscretise(unittest.TestCase):
         # function of one variable
         def myfun(x):
             return np.exp(x)
+
         func = pybamm.Function(myfun, var)
         func_disc = disc.process_symbol(func)
         self.assertIsInstance(func_disc, pybamm.Function)
@@ -176,6 +177,7 @@ class TestDiscretise(unittest.TestCase):
         # function of multiple variables
         def myfun(x, y):
             return np.exp(x) * y
+
         func = pybamm.Function(myfun, var, scal)
         func_disc = disc.process_symbol(func)
         self.assertIsInstance(func_disc, pybamm.Function)
@@ -752,17 +754,17 @@ class TestDiscretise(unittest.TestCase):
         # check raises error if different sized key and output var
         model.variables = {c_n.name: c_s}
         with self.assertRaisesRegex(pybamm.ModelError, "variable and its eqn"):
-            disc.process_model(model, inplace=False)
+            disc.process_model(model)
 
         # check doesn't raise if concatenation
         model.variables = {c_n.name: pybamm.Concatenation(c_n, c_s)}
-        disc.process_model(model, inplace=False)
+        disc.process_model(model)
 
         # check doesn't raise if broadcast
         model.variables = {
             c_n.name: pybamm.Broadcast(pybamm.Scalar(2), ["negative electrode"])
         }
-        disc.process_model(model, inplace=False)
+        disc.process_model(model)
 
 
 if __name__ == "__main__":
