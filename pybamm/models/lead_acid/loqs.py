@@ -232,4 +232,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         if self.options["capacitance"] == "algebraic":
             return pybamm.ScikitsDaeSolver()
         else:
-            return pybamm.ScipySolver()
+            # Scipy is better for 1D problems (0D bcs), scikits better for 2D (1D bcs)
+            if self.options["bc_options"]["dimensionality"] == 0:
+                return pybamm.ScipySolver()
+            elif self.options["bc_options"]["dimensionality"] == 1:
+                return pybamm.ScikitsOdeSolver()

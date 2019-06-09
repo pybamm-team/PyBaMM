@@ -2,7 +2,6 @@
 # Single Particle Model (SPM)
 #
 import pybamm
-import autograd.numpy as np
 
 
 class SPM(pybamm.LithiumIonBaseModel):

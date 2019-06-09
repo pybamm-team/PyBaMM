@@ -83,7 +83,3 @@ class Array(pybamm.Symbol):
     def _base_evaluate(self, t=None, y=None):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._entries
-
-    def __getitem__(self, key):
-        """return a :class:`Index` object"""
-        return pybamm.Index(self, key)
