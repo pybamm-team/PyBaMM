@@ -24,6 +24,18 @@ def ax_max(data):
         return 1.1 * data_max
 
 
+def split_long_string(title, max_words=4):
+    "Get title in a nice format"
+    words = title.split()
+    # Don't split if fits on one line, don't split just for units
+    if len(words) <= max_words or words[max_words].startswith("["):
+        return title
+    else:
+        first_line = (" ").join(words[:max_words])
+        second_line = (" ").join(words[max_words:])
+        return first_line + "\n" + second_line
+
+
 class QuickPlot(object):
     """
     Generates a quick plot of a subset of key outputs of the model so that the model
@@ -143,7 +155,8 @@ class QuickPlot(object):
             for variable in self.variables[key][0]:
                 assert variable.domain == domain
                 assert variable.dimensions == dim
-            # Set the x-dimensions for
+
+            # Set the x variable for any two-dimensional variables
             if dim == 2:
                 self.x_values[key] = mesh.combine_submeshes(*domain)[0].edges
 
@@ -157,49 +170,40 @@ class QuickPlot(object):
     def reset_axis(self):
         """
         Reset the axis limits to the default values.
+        These are calculated to fit around the minimum and maximum values of all the
+        variables in each subplot
         """
         self.axis = {}
         for key, variable_lists in self.variables.items():
             if variable_lists[0][0].dimensions == 1:
-                y_min = np.min(
-                    [
-                        ax_min(var(self.ts[i]))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
-                y_max = np.max(
-                    [
-                        ax_max(var(self.ts[i]))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
-                if y_min == y_max:
-                    y_min -= 1
-                    y_max += 1
-                self.axis[key] = [self.min_t, self.max_t, y_min, y_max]
+                x = None
+                x_min = self.min_t
+                x_max = self.max_t
             elif variable_lists[0][0].dimensions == 2:
                 x = self.x_values[key]
                 x_scaled = x * self.x_scale
-                y_min = np.min(
-                    [
-                        ax_min(var(self.ts[i], x))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
-                y_max = np.max(
-                    [
-                        ax_max(var(self.ts[i], x))
-                        for i, variable_list in enumerate(variable_lists)
-                        for var in variable_list
-                    ]
-                )
-                if y_min == y_max:
-                    y_min -= 1
-                    y_max += 1
-                self.axis[key] = [x_scaled[0], x_scaled[-1], y_min, y_max]
+                x_min = x_scaled[0]
+                x_max = x_scaled[-1]
+
+            # Get min and max y values
+            y_min = np.min(
+                [
+                    ax_min(var(self.ts[i], x))
+                    for i, variable_list in enumerate(variable_lists)
+                    for var in variable_list
+                ]
+            )
+            y_max = np.max(
+                [
+                    ax_max(var(self.ts[i], x))
+                    for i, variable_list in enumerate(variable_lists)
+                    for var in variable_list
+                ]
+            )
+            if y_min == y_max:
+                y_min -= 1
+                y_max += 1
+            self.axis[key] = [x_min, x_max, y_min, y_max]
 
     def plot(self, t):
         """Produces a quick plot with the internal states at time t.
@@ -219,9 +223,11 @@ class QuickPlot(object):
         self.plots = {}
         self.time_lines = {}
 
+        colors = ["r", "b", "k", "g"]
+        linestyles = ["-", ":", "--", "-."]
+
         for k, (key, variable_lists) in enumerate(self.variables.items()):
             plt.subplot(*self.subplot_positions[key])
-            plt.ylabel(key, fontsize=14)
             plt.axis(self.axis[key])
             self.plots[key] = defaultdict(dict)
             # Set labels for the first subplot only (avoid repetition)
@@ -235,11 +241,17 @@ class QuickPlot(object):
                 x_value = self.x_values[key]
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
+                        if j == 0:
+                            label = labels[i]
+                        else:
+                            label = None
                         self.plots[key][i][j], = plt.plot(
                             x_value * self.x_scale,
                             variable(t, x_value),
                             lw=2,
-                            label=labels[i],
+                            color=colors[i],
+                            linestyle=linestyles[j],
+                            label=label,
                         )
             else:
                 # 1D plot: plot as a function of time, indicating time t with a line
@@ -247,18 +259,33 @@ class QuickPlot(object):
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         full_t = self.ts[i]
+                        if j == 0:
+                            label = labels[i]
+                        else:
+                            label = None
                         self.plots[key][i][j], = plt.plot(
                             full_t * self.time_scale,
                             variable(full_t),
                             lw=2,
-                            label=labels[i],
+                            color=colors[i],
+                            linestyle=linestyles[j],
+                            label=label,
                         )
-                        y_min, y_max = self.axis[key][2:]
-                        self.time_lines[key], = plt.plot(
-                            [t * self.time_scale, t * self.time_scale],
-                            [y_min, y_max],
-                            "k--",
-                        )
+                y_min, y_max = self.axis[key][2:]
+                self.time_lines[key], = plt.plot(
+                    [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
+                )
+            # Set either y label or legend entries
+            if len(key) == 1:
+                title = split_long_string(key[0])
+                plt.title(title, fontsize=14)
+            else:
+                plt.legend(
+                    [split_long_string(s, 6) for s in key],
+                    bbox_to_anchor=(0.5, 1.2),
+                    fontsize=8,
+                    loc="upper center",
+                )
         self.fig.legend(loc="lower right")
 
     def dynamic_plot(self, testing=False):
@@ -292,7 +319,7 @@ class QuickPlot(object):
         t = self.sfreq.val
         t_dimensionless = t / self.time_scale
         for key, plot in self.plots.items():
-            if self.variables[key][0].dimensions == 2:
+            if self.variables[key][0][0].dimensions == 2:
                 x = self.x_values[key]
                 for i, variable_lists in enumerate(self.variables[key]):
                     for j, variable in enumerate(variable_lists):
