@@ -130,22 +130,21 @@ from .expression_tree.evaluate import (
 #
 # Model classes
 #
+from .models.base_model import BaseModel
 from .models import standard_variables
-from .models.base_models import (
-    BaseModel,
-    StandardBatteryBaseModel,
-    SubModel,
-    LeadAcidBaseModel,
-    LithiumIonBaseModel,
-)
+
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
-from .models import lead_acid
-from .models import lithium_ion
+
+# full battery models
+from .models.full_battery_models import base_full_battery_model
+from .models.full_battery_models import lead_acid
+from .models.full_battery_models import lithium_ion
 
 #
 # Submodel classes
 #
+from .models.submodels.base_submodel import BaseSubModel
 from .models.submodels import (
     electrode,
     electrolyte_current,
