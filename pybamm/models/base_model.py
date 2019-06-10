@@ -4,7 +4,6 @@
 import pybamm
 
 import numbers
-import os
 import warnings
 
 
