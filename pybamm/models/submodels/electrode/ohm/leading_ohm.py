@@ -33,11 +33,11 @@ class LeadingOhm(pybamm.BaseOhm):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        if self._domain == "Negative electrode":
+        if self._domain == "Negative":
             phi_s = pybamm.Broadcast(0, ["negative electrode"])
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
-        elif self._domain == "Positive electrode":
+        elif self._domain == "Positive":
             ocp_p_av = variables["Average positive open circuit potential"]
             eta_r_p_av = variables["Average positive overpotential"]
             phi_e_p_av = variables["Average positive electrolyte potential"]
@@ -48,14 +48,14 @@ class LeadingOhm(pybamm.BaseOhm):
             i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 
         else:
-            pybamm.DomainError(
-                "Domain must be either: 'Negative electrode' or 'Positive electode'"
-            )
+            pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
 
         derived_variables = {
-            self._domain + " potential": phi_s,
-            self._domain + " current density": i_s,
+            self._domain + " electrode potential": phi_s,
+            self._domain + " electrode current density": i_s,
         }
+
+        derived_variables = self.get_standard_derived_variables(derived_variables)
 
         return derived_variables
 

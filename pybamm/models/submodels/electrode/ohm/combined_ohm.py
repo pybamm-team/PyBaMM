@@ -61,9 +61,11 @@ class CombinedOhm(pybamm.BaseOhm):
             raise pybamm.DomainError
 
         derived_variables = {
-            self._domain + " potential": phi_s,
-            self._domain + " current density": i_s,
+            self._domain + " electrode potential": phi_s,
+            self._domain + " electrode current density": i_s,
         }
+
+        derived_variables = self.standard_derived_variables(derived_variables)
 
         # delta_phi_s_av = -i_boundary_cc / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
         return derived_variables

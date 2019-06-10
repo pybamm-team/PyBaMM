@@ -19,6 +19,18 @@ class BaseElectrode(pybamm.BaseSubModel):
         super().__init__(param)
         self._domain = domain
 
+    def get_standard_derived_variables(self, derived_variables):
+
+        if self._domain == "Positive":
+            phi_s = derived_variables["Positive electrode potential"]
+            V = pybamm.boundary_value(phi_s, "right")
+            derived_variables.update({"Voltage": V})
+
+        derived_variables = self.get_average_variables(derived_variables)
+        derived_variables = self.get_dimensional_variables(derived_variables)
+
+        return derived_variables
+
     def get_average_variables(self, variables):
         """
         Calculates averaged variables.
@@ -35,15 +47,27 @@ class BaseElectrode(pybamm.BaseSubModel):
             A dictionary with all the average variables.
         """
 
-        phi_s = variables[self._domain + " potential"]
-        i_s = variables[self._domain + " current density"]
+        phi_s = variables[self._domain + " electrode potential"]
+        i_s = variables[self._domain + " electrode current density"]
+
+        if self._domain == "Negative":
+            delta_phi_av = pybamm.average(phi_s)
+
+        elif self._domain == "Positive":
+            V = variables["Voltage"]
+            delta_phi_av = pybamm.average(phi_s - V)
 
         average_variables = {
-            "Average " + self._domain.lower() + " potential": pybamm.average(phi_s),
-            "Average " + self._domain.lower() + " current density": pybamm.average(i_s),
+            "Average "
+            + self._domain.lower()
+            + " electrode potential": pybamm.average(phi_s),
+            "Average "
+            + self._domain.lower()
+            + " electrode current density": pybamm.average(i_s),
+            "Average " + self._domain.lower() + " electrode ohmic losses": delta_phi_av,
         }
 
-        return average_variables
+        return variables.update(average_variables)
 
     def get_dimensional_variables(self, variables):
         """
@@ -62,29 +86,41 @@ class BaseElectrode(pybamm.BaseSubModel):
         """
         param = self.param
 
-        phi_s = variables[self._domain + " potential"]
-        i_s = variables[self._domain + " current density"]
-        phi_s_av = variables["Average " + self._domain.lower() + " potential"]
-        i_s_av = variables["Average " + self._domain.lower() + " current density"]
+        phi_s = variables[self._domain + " electrode potential"]
+        i_s = variables[self._domain + " electrode current density"]
+        phi_s_av = variables["Average " + self._domain.lower() + " electrode potential"]
+        i_s_av = variables[
+            "Average " + self._domain.lower() + " electrode current density"
+        ]
 
-        if self._domain == "Negative electrode":
+        if self._domain == "Negative":
             phi_s_dim = param.potential_scale * phi_s
             phi_s_av_dim = param.potential_scale * phi_s_av
-        elif self._domain == "Positive electrode":
+
+        elif self._domain == "Positive":
             phi_s_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s
             phi_s_av_dim = (
                 param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_av
             )
+            V = variables["Voltage"]
+            V_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * V
 
         i_s_dim = param.i_typ * i_s
         i_s_av_dim = param.i_typ * i_s_av
 
         dimensional_variables = {
-            self._domain + " potential [V]": phi_s_dim,
-            self._domain + " current density [A.m-2]": i_s_dim,
-            "Average " + self._domain.lower() + " potential [V]": phi_s_av_dim,
-            "Average " + self._domain.lower() + " current density [A.m-2]": i_s_av_dim,
+            self._domain + " electrode potential [V]": phi_s_dim,
+            self._domain + " electrode current density [A.m-2]": i_s_dim,
+            "Average "
+            + self._domain.lower()
+            + " electrode potential [V]": phi_s_av_dim,
+            "Average "
+            + self._domain.lower()
+            + " electrode current density [A.m-2]": i_s_av_dim,
         }
+
+        if self._domain == "Positive":
+            dimensional_variables.update({"Voltage": V_dim})
 
         return dimensional_variables
 

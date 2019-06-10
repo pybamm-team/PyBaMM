@@ -26,16 +26,14 @@ class FullOhm(pybamm.BaseOhm):
         Returns the variables in the submodel for which a PDE must be solved to obtains
         """
 
-        if self._domain == "Negative electrode":
+        if self._domain == "Negative":
             phi_s = pybamm.standard_variables.phi_s_n
-        elif self._domain == "Positive electrode":
+        elif self._domain == "Positive":
             phi_s = pybamm.standard_variables.phi_s_p
         else:
-            pybamm.DomainError(
-                "Domain must be either: 'Negative electrode' or 'Positive electode'"
-            )
+            pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
 
-        fundamental_variables = {self._domain + " potential": phi_s}
+        fundamental_variables = {self._domain + " electrode potential": phi_s}
 
         return fundamental_variables
 
@@ -44,21 +42,23 @@ class FullOhm(pybamm.BaseOhm):
         Returns variables which are derived from the fundamental variables in the model.
         """
 
-        phi_s = variables[self._domain + " potential"]
-        eps = variables[self._domain + " porosity"]
+        phi_s = variables[self._domain + " electrode potential"]
+        eps = variables[self._domain + " electrode porosity"]
 
-        if self._domain == "Negative electrode":
+        if self._domain == "Negative":
             sigma = self.param.sigma_n
-        elif self._domain == "Positive electrode":
+        elif self._domain == "Positive":
             sigma = self.param.sigma_p
 
-        sigma_eff = sigma * (1 - eps) ** self.param.b
+        sigma_eff = sigma * (1 - eps)
         i_s = -sigma_eff * pybamm.grad(phi_s)
 
         derived_variables = {
-            self._domain + " current density": i_s,
-            self._domain + " effective conductivity": sigma_eff,
+            self._domain + " electrode current density": i_s,
+            self._domain + " electrode effective conductivity": sigma_eff,
         }
+
+        derived_variables = self.standard_derived_variables(derived_variables)
 
         return derived_variables
 
@@ -71,8 +71,8 @@ class FullOhm(pybamm.BaseOhm):
         variables : dict
             Dictionary of symbols to use in the model
         """
-        phi_s = variables[self._domain + " potential"]
-        i_s = variables[self._domain + " current density"]
+        phi_s = variables[self._domain + " electrode potential"]
+        i_s = variables[self._domain + " electrode current density"]
         j = variables[self._domain + " interfacial current density"]
 
         self.algebraic[phi_s] = pybamm.div(i_s) + j
@@ -86,18 +86,19 @@ class FullOhm(pybamm.BaseOhm):
         variables : dict
             Dictionary of symbols to use in the model
         """
-        phi_s = variables[self._domain + " potential"]
-        sigma_eff = variables[self._domain + " effective conductivity"]
+        phi_s = variables[self._domain + " electrode potential"]
+        sigma_eff = variables[self._domain + " electrode effective conductivity"]
         i_boundary_cc = variables["Current collector current density"]
 
-        if self._domain == ["Negative electrode"]:
+        if self._domain == "Negative":
             lbc = (pybamm.Scalar(0), "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
-        elif self._domain == ["Positive electrode"]:
+        elif self._domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
             rbc = (
-                i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
+                i_boundary_cc
+                / pybamm.boundary_value(-sigma_eff ** self.param.b, "right"),
                 "Neumann",
             )
 
@@ -112,11 +113,11 @@ class FullOhm(pybamm.BaseOhm):
         variables : dict
             Dictionary of symbols to use in the model
         """
-        phi_s = variables[self._domain + " potential"]
+        phi_s = variables[self._domain + " electrode potential"]
 
-        if self._domain == "Negative electrode":
+        if self._domain == "Negative":
             phi_s_init = pybamm.Scalar(0)
-        elif self._domain == "Positive electrode":
+        elif self._domain == "Positive":
             phi_s_init = self.param.U_p(self.param.c_p_init) - self.param.U_n(
                 self.param.c_n_init
             )
