@@ -126,8 +126,8 @@ class QuickPlot(object):
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
-        n = int(len(output_variables) // np.sqrt(len(output_variables)))
-        m = np.ceil(len(output_variables) / n)
+        self.rows = int(len(output_variables) // np.sqrt(len(output_variables)))
+        self.cols = int(np.ceil(len(output_variables) / self.rows))
 
         # Process output variables into a form that can be plotted
         for k, variable_list in enumerate(output_variables):
@@ -165,7 +165,7 @@ class QuickPlot(object):
                 raise NotImplementedError("cannot plot 3D variables")
 
             # Define subplot position
-            self.subplot_positions[key] = (n, m, k + 1)
+            self.subplot_positions[key] = (self.rows, self.cols, k + 1)
 
     def reset_axis(self):
         """
@@ -217,7 +217,7 @@ class QuickPlot(object):
         import matplotlib.pyplot as plt
 
         t /= self.time_scale
-        self.fig, self.ax = plt.subplots(figsize=(15, 8))
+        self.fig, self.ax = plt.subplots(self.rows, self.cols, figsize=(15, 8))
         plt.tight_layout()
         plt.subplots_adjust(left=-0.1)
         self.plots = {}
@@ -225,10 +225,14 @@ class QuickPlot(object):
 
         colors = ["r", "b", "k", "g"]
         linestyles = ["-", ":", "--", "-."]
+        fontsize = 42 // self.cols
 
         for k, (key, variable_lists) in enumerate(self.variables.items()):
-            plt.subplot(*self.subplot_positions[key])
-            plt.axis(self.axis[key])
+            ax = self.ax.flat[k]
+            # plt.subplot(*self.subplot_positions[key])
+            ax.set_xlim(self.axis[key][:2])
+            ax.set_ylim(self.axis[key][2:])
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             self.plots[key] = defaultdict(dict)
             # Set labels for the first subplot only (avoid repetition)
             if k == 0:
@@ -237,7 +241,8 @@ class QuickPlot(object):
                 labels = [None] * len(self.labels)
             if variable_lists[0][0].dimensions == 2:
                 # 2D plot: plot as a function of x at time t
-                plt.xlabel("Position [m]", fontsize=14)
+                ax.set_xlabel("Position [m]", fontsize=fontsize)
+                # plt.tick_params(axis="both", which="major", pad=10)
                 x_value = self.x_values[key]
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
@@ -245,7 +250,7 @@ class QuickPlot(object):
                             label = labels[i]
                         else:
                             label = None
-                        self.plots[key][i][j], = plt.plot(
+                        self.plots[key][i][j], = ax.plot(
                             x_value * self.x_scale,
                             variable(t, x_value),
                             lw=2,
@@ -255,7 +260,7 @@ class QuickPlot(object):
                         )
             else:
                 # 1D plot: plot as a function of time, indicating time t with a line
-                plt.xlabel("Time [h]", fontsize=14)
+                ax.set_xlabel("Time [h]", fontsize=fontsize)
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         full_t = self.ts[i]
@@ -263,7 +268,7 @@ class QuickPlot(object):
                             label = labels[i]
                         else:
                             label = None
-                        self.plots[key][i][j], = plt.plot(
+                        self.plots[key][i][j], = ax.plot(
                             full_t * self.time_scale,
                             variable(full_t),
                             lw=2,
@@ -272,15 +277,15 @@ class QuickPlot(object):
                             label=label,
                         )
                 y_min, y_max = self.axis[key][2:]
-                self.time_lines[key], = plt.plot(
+                self.time_lines[key], = ax.plot(
                     [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
                 )
             # Set either y label or legend entries
             if len(key) == 1:
                 title = split_long_string(key[0])
-                plt.title(title, fontsize=14)
+                ax.set_title(title, fontsize=fontsize)
             else:
-                plt.legend(
+                ax.legend(
                     [split_long_string(s, 6) for s in key],
                     bbox_to_anchor=(0.5, 1.2),
                     fontsize=8,
