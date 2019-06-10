@@ -32,7 +32,7 @@ class TestReactionDiffusionModel(unittest.TestCase):
     def test_convergence(self):
         # Convergence of c at x=0.5
         model = pybamm.ReactionDiffusionModel()
-        # # Make ln and lp nicer for testing
+        # Make ln and lp nicer for testing
         param = model.default_parameter_values
         # Process model and geometry
         param.process_model(model)
