@@ -39,11 +39,14 @@ class QuickPlot(object):
     solutions: (iter of) :class:`pybamm.Solver`
         The numerical solution(s) for the model(s) which contained the solution to the
         model(s).
-    output_variables : list of str
+    output_variables : list of str, optional
         List of variables to plot
+    labels : list of str, optional
+        Labels for the different models. Defaults to model names
     """
 
-    def __init__(self, models, mesh, solutions, output_variables=None):
+    def __init__(self, models, mesh, solutions, output_variables=None, labels=None):
+        # Pre-process models and solutions
         if isinstance(models, pybamm.BaseModel):
             models = [models]
         elif not isinstance(models, list):
@@ -57,14 +60,17 @@ class QuickPlot(object):
         else:
             raise ValueError("must provide the same number of models and solutions")
 
+        # Set labels
+        self.labels = labels or [model.name for model in models]
+
         # Scales (default to 1 if information not in model)
-        vars = models[0].variables
+        variables = models[0].variables
         self.x_scale = 1
         self.time_scale = 1
-        if "x [m]" and "x" in vars:
-            self.x_scale = (vars["x [m]"] / vars["x"]).evaluate()[-1]
-        if "Time [m]" and "Time" in vars:
-            self.time_scale = (vars["Time [h]"] / vars["Time"]).evaluate(t=1)
+        if "x [m]" and "x" in variables:
+            self.x_scale = (variables["x [m]"] / variables["x"]).evaluate()[-1]
+        if "Time [m]" and "Time" in variables:
+            self.time_scale = (variables["Time [h]"] / variables["Time"]).evaluate(t=1)
 
         # Time parameters
         self.ts = [solution.t for solution in solutions]
@@ -123,9 +129,6 @@ class QuickPlot(object):
                 self.x_values[var] = mesh.combine_submeshes(*domain)[0].edges
             self.subplot_positions[var] = (n, m, k + 1)
 
-        # Set labels
-        self.labels = [model.name for model in models]
-
         # Don't allow 3D variables
         if self.variables[var][0].dimensions == 3:
             raise NotImplementedError("cannot plot 3D variables")
@@ -181,7 +184,7 @@ class QuickPlot(object):
             plt.ylabel(name, fontsize=14)
             plt.axis(self.axis[name])
             self.plots[name] = [None] * self.num_models
-            # Set labels
+            # Set labels for the first subplot only (avoid repetition)
             if k == 0:
                 labels = self.labels
             else:

@@ -9,6 +9,7 @@ models = [
     pybamm.lead_acid.Composite(),
     pybamm.lead_acid.NewmanTiedemann(),
 ]
+labels = ["a", "b", "c"]
 
 # create geometry
 geometry = models[-1].default_geometry
@@ -53,5 +54,5 @@ output_variables = [
     "Electrolyte potential [V]",
     "Terminal voltage [V]",
 ]
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+plot = pybamm.QuickPlot(models, mesh, solutions, output_variables, labels)
 plot.dynamic_plot()
