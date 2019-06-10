@@ -142,6 +142,9 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_less(-self.eta_n(t, x_n), tol)
             np.testing.assert_array_less(self.eta_p(t, x_p), tol)
         elif self.operating_condition == "charge":
+            import ipdb
+
+            ipdb.set_trace()
             np.testing.assert_array_less(self.eta_n(t, x_n), tol)
             np.testing.assert_array_less(-self.eta_p(t, x_p), tol)
         elif self.operating_condition == "off":
@@ -367,7 +370,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         during a discharge."""
 
         # TODO: uncomment when have average concentrations
-        # # small number so that can use array less
+        # small number so that can use array less
         # epsilon = 0.001
 
         # if self.operating_condition == "discharge":
