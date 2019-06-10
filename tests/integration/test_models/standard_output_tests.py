@@ -363,7 +363,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         during a discharge."""
 
         # TODO: uncomment when have average concentrations
-        # # small number so that can use array less
+        # small number so that can use array less
         # epsilon = 0.001
 
         # if self.operating_condition == "discharge":

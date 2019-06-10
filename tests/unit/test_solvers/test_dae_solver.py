@@ -43,10 +43,17 @@ class TestDaeSolver(unittest.TestCase):
 
         solver = pybamm.DaeSolver(root_method="hybr")
         y0 = np.array([2])
-        with self.assertRaises(pybamm.SolverError):
+
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            "Could not find consistent initial conditions: The iteration is not making",
+        ):
             solver.calculate_consistent_initial_conditions(rhs, algebraic, y0)
         solver = pybamm.DaeSolver()
-        with self.assertRaises(pybamm.SolverError):
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            "Could not find consistent initial conditions: solver terminated",
+        ):
             solver.calculate_consistent_initial_conditions(rhs, algebraic, y0)
 
 
