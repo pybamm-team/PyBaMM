@@ -33,6 +33,9 @@ class FiniteElementFenics(pybamm.SpatialMethod):
     """
 
     def __init__(self, mesh):
+        if dolfin_spec is None:
+            raise ImportError("dolfin is not installed")
+
         super().__init__(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
@@ -289,8 +292,8 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         mass = dolfin.assemble(mass_form)
 
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
-        lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
-        rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
+        _, lbc_type = boundary_conditions[symbol.id]["left"]
+        _, rbc_type = boundary_conditions[symbol.id]["right"]
 
         if lbc_type == "Dirichlet":
             # set source terms to zero on boundary

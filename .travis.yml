@@ -57,7 +57,10 @@ matrix:
                 - gcc
                 - libopenblas-dev
                 - liblapack-dev
-                - libboost-all-dev                
+                - libboost-all-dev
+                - libeigen3-dev
+                - pkg-config
+                - petsc-dev            
                 - graphviz
                 - python3.6-dev
           env:

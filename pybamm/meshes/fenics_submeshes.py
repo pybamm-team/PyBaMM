@@ -30,6 +30,8 @@ class FenicsMesh2D:
         """
 
     def __init__(self, lims, npts, tabs):
+        if dolfin_spec is None:
+            raise ImportError("dolfin is not installed")
 
         # get spatial variables
         spatial_vars = list(lims.keys())
