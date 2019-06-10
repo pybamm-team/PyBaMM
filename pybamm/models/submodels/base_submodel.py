@@ -16,17 +16,23 @@ class BaseSubModel(pybamm.BaseFullBatteryModel):
         """
         Returns the variables in the submodel for which a PDE must be solved to obtains
         """
-        raise NotImplementedError
+        return {}
 
-    def get_derived_variables(self):
+    def get_derived_variables(self, variables):
         """
         Returns variables which are derived from the fundamental variables in the model.
         """
-        raise NotImplementedError
+        return {}
 
-    def set_equations(self):
-        """
-        Sets the governing equations in the model.
-        """
+    def set_rhs(self, variables):
+        return {}
 
-        raise NotImplementedError
+    def set_algebraic(self, variables):
+        return {}
+
+    def set_boundary_conditions(self, variables):
+        return {}
+
+    def set_initial_conditions(self, variables):
+        return {}
+

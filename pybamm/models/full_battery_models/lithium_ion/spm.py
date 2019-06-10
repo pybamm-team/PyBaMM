@@ -56,7 +56,10 @@ class SPM(pybamm.BaseLithiumIonModel):
 
         # Set model equations
         for submodel in self.submodels.values():
-            submodel.set_equations(self.variables)
+            submodel.set_rhs(self.variables)
+            submodel.set_algebraic(self.variables)
+            submodel.set_boundary_conditions(self.variables)
+            submodel.set_initial_conditions(self.variables)
             self.update(submodel)
 
     def set_thermal_model(self):
