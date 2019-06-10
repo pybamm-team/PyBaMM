@@ -142,6 +142,9 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_less(-self.eta_n(t, x_n), tol)
             np.testing.assert_array_less(self.eta_p(t, x_p), tol)
         elif self.operating_condition == "charge":
+            import ipdb
+
+            ipdb.set_trace()
             np.testing.assert_array_less(self.eta_n(t, x_n), tol)
             np.testing.assert_array_less(-self.eta_p(t, x_p), tol)
         elif self.operating_condition == "off":
