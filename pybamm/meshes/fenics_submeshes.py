@@ -109,55 +109,58 @@ class FenicsMesh2D:
         ]
 
 
-class Tab(dolfin.SubDomain):
-    """
-    A class to generate the subdomains for the tabs.
-    """
+# Create instance of dolfin.Subdomain class for the tabs
+if dolfin_spec is not None:
 
-    def __init__(self, y_lims, z_lims, tab):
-        self.l_y = y_lims["max"]
-        self.l_z = z_lims["max"]
-        self.tab_location = [tab["y_centre"], tab["z_centre"]]
-        self.tab_width = tab["width"]
+    class Tab(dolfin.SubDomain):
+        """
+        A class to generate the subdomains for the tabs.
+        """
 
-        super().__init__()
+        def __init__(self, y_lims, z_lims, tab):
+            self.l_y = y_lims["max"]
+            self.l_z = z_lims["max"]
+            self.tab_location = [tab["y_centre"], tab["z_centre"]]
+            self.tab_width = tab["width"]
 
-    def inside(self, x, on_boundary):
-        if dolfin.near(self.tab_location[1], self.l_z):
-            # tab on top
-            return dolfin.near(x[1], self.l_z) and dolfin.between(
-                x[0],
-                (
-                    self.tab_location[0] - self.tab_width / 2,
-                    self.tab_location[0] + self.tab_width / 2,
-                ),
-            )
-        elif dolfin.near(self.tab_location[1], 0.0):
-            # tab on bottom
-            return dolfin.near(x[1], 0.0) and dolfin.between(
-                x[0],
-                (
-                    self.tab_location[0] - self.tab_width / 2,
-                    self.tab_location[0] + self.tab_width / 2,
-                ),
-            )
-        elif dolfin.near(self.tab_location[0], 0.0):
-            # tab on left
-            return dolfin.near(x[0], 0.0) and dolfin.between(
-                x[1],
-                (
-                    self.tab_location[1] - self.tab_width / 2,
-                    self.tab_location[1] + self.tab_width / 2,
-                ),
-            )
-        elif dolfin.near(self.tab_location[0], self.l_y):
-            # tab on right
-            return dolfin.near(x[0], self.l_y) and dolfin.between(
-                x[1],
-                (
-                    self.tab_location[1] - self.tab_width / 2,
-                    self.tab_location[1] + self.tab_width / 2,
-                ),
-            )
-        else:
-            raise pybamm.ModelError("tab location not valid")
+            super().__init__()
+
+        def inside(self, x, on_boundary):
+            if dolfin.near(self.tab_location[1], self.l_z):
+                # tab on top
+                return dolfin.near(x[1], self.l_z) and dolfin.between(
+                    x[0],
+                    (
+                        self.tab_location[0] - self.tab_width / 2,
+                        self.tab_location[0] + self.tab_width / 2,
+                    ),
+                )
+            elif dolfin.near(self.tab_location[1], 0.0):
+                # tab on bottom
+                return dolfin.near(x[1], 0.0) and dolfin.between(
+                    x[0],
+                    (
+                        self.tab_location[0] - self.tab_width / 2,
+                        self.tab_location[0] + self.tab_width / 2,
+                    ),
+                )
+            elif dolfin.near(self.tab_location[0], 0.0):
+                # tab on left
+                return dolfin.near(x[0], 0.0) and dolfin.between(
+                    x[1],
+                    (
+                        self.tab_location[1] - self.tab_width / 2,
+                        self.tab_location[1] + self.tab_width / 2,
+                    ),
+                )
+            elif dolfin.near(self.tab_location[0], self.l_y):
+                # tab on right
+                return dolfin.near(x[0], self.l_y) and dolfin.between(
+                    x[1],
+                    (
+                        self.tab_location[1] - self.tab_width / 2,
+                        self.tab_location[1] + self.tab_width / 2,
+                    ),
+                )
+            else:
+                raise pybamm.ModelError("tab location not valid")
