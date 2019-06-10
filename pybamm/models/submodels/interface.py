@@ -181,10 +181,6 @@ class InterfacialReaction(pybamm.SubModel):
             *[j_n_scale * j0_n, pybamm.Broadcast(0, ["separator"]), j_p_scale * j0_p]
         )
 
-        # Averages
-        j_n_bar = pybamm.average(j_n)
-        j_p_bar = pybamm.average(j_p)
-
         if reaction == "main":
             name = "interfacial current density"
             ecd_name = "exchange-current density"
@@ -192,24 +188,27 @@ class InterfacialReaction(pybamm.SubModel):
             name = "oxygen interfacial current density"
             ecd_name = "oxygen exchange-current density"
 
-        return {
-            "Negative electrode " + name: j_n,
-            "Positive electrode " + name: j_p,
-            "Average negative electrode " + name: j_n_bar,
-            "Average positive electrode " + name: j_p_bar,
+        variables = {
             name.capitalize(): j,
-            "Negative electrode " + ecd_name: j0_n,
-            "Positive electrode " + ecd_name: j0_p,
             ecd_name.capitalize(): j0,
-            "Negative electrode " + name + " [A.m-2]": j_n_scale * j_n,
-            "Positive electrode " + name + " [A.m-2]": j_p_scale * j_p,
-            "Average negative electrode " + name + " [A.m-2]": j_n_scale * j_n_bar,
-            "Average positive electrode " + name + " [A.m-2]": j_p_scale * j_p_bar,
             name.capitalize() + " [A.m-2]": j_dimensional,
-            "Negative electrode " + ecd_name + " [A.m-2]": j_n_scale * j0_n,
-            "Positive electrode " + ecd_name + " [A.m-2]": j_p_scale * j0_p,
             ecd_name.capitalize() + " [A.m-2]": j0_dimensional,
         }
+        for domain, j, j0, j_scale in [
+            ["negative electrode", j_n, j0_n, j_n_scale],
+            ["positive electrode", j_p, j0_p, j_p_scale],
+        ]:
+            j_bar = pybamm.average(j)
+            domain_variables = {
+                domain.capitalize() + " " + name: j,
+                "Average " + domain + " " + name: j_bar,
+                domain.capitalize() + " " + ecd_name: j0,
+                domain.capitalize() + " " + name + " [A.m-2]": j_scale * j,
+                "Average " + domain + " " + name + " [A.m-2]": j_scale * j_bar,
+                domain.capitalize() + " " + ecd_name + " [A.m-2]": j_scale * j0,
+            }
+            variables.update(domain_variables)
+        return variables
 
     def get_first_order_butler_volmer(
         self, c_e, delta_phi, c_e_0, delta_phi_0, domain=None

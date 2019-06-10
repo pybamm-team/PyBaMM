@@ -167,71 +167,60 @@ class InterfacialSurfaceArea(pybamm.SubModel):
         a_n_Ox = self.get_interfacial_surface_area(curlyU_n, "oxygen")
         a_p_Ox = self.get_interfacial_surface_area(curlyU_p, "oxygen")
 
-        soc = "electrode utilisation"
-        sa = "electrode surface area density"
-        return {
-            "Negative " + soc: curlyU_n,
-            "Positive " + soc: curlyU_p,
-            "Average negative " + soc: pybamm.average(curlyU_n),
-            "Average positive " + soc: pybamm.average(curlyU_p),
-            "Negative " + sa + " (main reaction)": a_n_S,
-            "Positive " + sa + " (main reaction)": a_p_S,
-            "Average negative " + sa + " (main reaction)": pybamm.average(a_n_S),
-            "Average positive " + sa + " (main reaction)": pybamm.average(a_p_S),
-            "Negative " + sa + " (oxygen reaction)": a_n_Ox,
-            "Positive " + sa + " (oxygen reaction)": a_p_Ox,
-            "Average negative " + sa + " (oxygen reaction)": pybamm.average(a_n_Ox),
-            "Average positive " + sa + " (oxygen reaction)": pybamm.average(a_p_Ox),
-            "Negative " + sa + " (main reaction) [m-1]": param.a_n_dim * a_n_S,
-            "Positive " + sa + " (main reaction) [m-1]": param.a_p_dim * a_p_S,
-            "Average negative "
-            + sa
-            + " (main reaction) [m-1]": param.a_n_dim * pybamm.average(a_n_S),
-            "Average positive "
-            + sa
-            + " (main reaction) [m-1]": param.a_p_dim * pybamm.average(a_p_S),
-            "Negative " + sa + " (oxygen reaction) [m-1]": param.a_n_dim * a_n_Ox,
-            "Positive " + sa + " (oxygen reaction) [m-1]": param.a_p_dim * a_p_Ox,
-            "Average negative "
-            + sa
-            + " (oxygen reaction) [m-1]": param.a_n_dim * pybamm.average(a_n_Ox),
-            "Average positive "
-            + sa
-            + " (oxygen reaction) [m-1]": param.a_p_dim * pybamm.average(a_p_Ox),
-        }
+        soc = " utilisation"
+        main_area = " surface area density (main reaction)"
+        ox_area = " surface area density (oxygen reaction)"
+        variables = {}
+        for domain, curlyU, a_S, a_Ox, a_scale in [
+            ["negative electrode", curlyU_n, a_n_S, a_n_Ox, param.a_n_dim],
+            ["positive electrode", curlyU_p, a_p_S, a_p_Ox, param.a_p_dim],
+        ]:
+            domain_variables = {
+                domain.capitalize() + soc: curlyU,
+                "Average " + domain + soc: pybamm.average(curlyU),
+                domain.capitalize() + main_area: a_S,
+                "Average " + domain + main_area: pybamm.average(a_S),
+                domain.capitalize() + ox_area: a_Ox,
+                "Average " + domain + ox_area: pybamm.average(a_Ox),
+                domain.capitalize() + main_area + " [m-1]": a_scale * a_S,
+                "Average "
+                + domain
+                + main_area
+                + " [m-1]": a_scale * pybamm.average(a_S),
+                domain.capitalize() + ox_area + " [m-1]": a_scale * a_Ox,
+                "Average "
+                + domain
+                + ox_area
+                + " [m-1]": a_scale * pybamm.average(a_Ox),
+            }
+            variables.update(domain_variables)
+        return variables
 
     def get_current_variables(self, variables):
 
-        main_name = " interfacial current density per volume"
-        ox_name = " oxygen interfacial current density per volume"
+        main_current_per_volume = " interfacial current density per volume"
+        main_current = " interfacial current density"
+        main_area = " surface area density (main reaction)"
+        ox_current_per_volume = " oxygen interfacial current density per volume"
+        ox_current = " oxygen interfacial current density"
+        ox_area = " surface area density (oxygen reaction)"
         new_variables = {}
         for domain in ["negative electrode", "positive electrode"]:
-            j = variables[domain.capitalize() + " interfacial current density"]
-            a_S = variables[
-                domain.capitalize() + " surface area density (main reaction)"
-            ]
-            j_bar = variables["Average " + domain + " interfacial current density"]
-            a_S_bar = variables[
-                "Average " + domain + " surface area density (main reaction)"
-            ]
-            j_Ox = variables[
-                domain.capitalize() + " oxygen interfacial current density"
-            ]
-            a_Ox = variables[
-                domain.capitalize() + " surface area density (oxygen reaction)"
-            ]
-            j_Ox_bar = variables[
-                "Average " + domain + " oxygen interfacial current density"
-            ]
-            a_Ox_bar = variables[
-                "Average " + domain + " surface area density (oxygen reaction)"
-            ]
+            j = variables[domain.capitalize() + main_current]
+            a_S = variables[domain.capitalize() + main_area]
+            j_bar = variables["Average " + domain + main_current]
+            a_S_bar = variables["Average " + domain + main_area]
+            # Get variables for oxygen if they exist, otherwise set to zero
+            j_Ox = variables.get(domain.capitalize() + ox_current, pybamm.Scalar(0))
+            a_Ox = variables.get(domain.capitalize() + ox_area, pybamm.Scalar(0))
+            j_Ox_bar = variables.get("Average " + domain + ox_current, pybamm.Scalar(0))
+            a_Ox_bar = variables.get("Average " + domain + ox_area, pybamm.Scalar(0))
 
             domain_variables = {
-                domain.capitalize() + main_name: a_S * j,
-                "Average " + domain + main_name: a_S_bar * j_bar,
-                domain.capitalize() + ox_name: a_Ox * j_Ox,
-                "Average " + domain + ox_name: a_Ox_bar * j_Ox_bar,
+                domain.capitalize() + main_current_per_volume: a_S * j,
+                "Average " + domain + main_current_per_volume: a_S_bar * j_bar,
+                domain.capitalize() + ox_current_per_volume: a_Ox * j_Ox,
+                "Average " + domain + ox_current_per_volume: a_Ox_bar * j_Ox_bar,
             }
             new_variables.update(domain_variables)
         return new_variables
