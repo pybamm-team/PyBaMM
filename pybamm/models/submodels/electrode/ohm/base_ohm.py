@@ -15,8 +15,8 @@ class BaseOhm(pybamm.BaseElectrode):
     *Extends:* :class:`pybamm.SubModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
     @property
     def default_solver(self):

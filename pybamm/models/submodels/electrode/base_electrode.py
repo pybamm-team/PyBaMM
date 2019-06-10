@@ -224,7 +224,27 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
 
-    def get_variables(self, phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av=None):
+    def get_output_variables(self, variables):
+        """
+        Calculates dimensional variables and other useful quantities.
+
+        Parameters
+        ----------
+        variables : dict
+            A dictionary containing all the dimensionless variables in the
+            model
+        
+        Returns
+        -------
+        dict
+            A dictionary with all the dimensionless variables, dimensional
+            variables, and other relevant variables.
+        """
+        param = self.param
+
+    def get_output_variables_old(
+        self, phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av=None
+    ):
         """
         Calculate dimensionless and dimensional variables for the electrode submodel
 

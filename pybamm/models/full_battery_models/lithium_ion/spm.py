@@ -62,6 +62,10 @@ class SPM(pybamm.BaseLithiumIonModel):
             submodel.set_initial_conditions(self.variables)
             self.update(submodel)
 
+        # Set all output variables
+        for submodel in self.submodel.values():
+            self.variables.update(submodel.get_output_variables(self.variables))
+
     def set_thermal_model(self):
         # TODO: put into base model
 
