@@ -52,7 +52,7 @@ class SPM(pybamm.BaseLithiumIonModel):
 
         # Set presolved variables
         for submodel in self.submodels.values():
-            self.variables.update(submodel.get_presolved_variables(self.variables))
+            self.variables.update(submodel.get_derived_variables(self.variables))
 
         # Set model equations
         for submodel in self.submodels.values():
