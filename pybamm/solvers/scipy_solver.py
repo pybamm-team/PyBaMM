@@ -76,6 +76,11 @@ class ScipySolver(pybamm.OdeSolver):
         )
 
         if sol.success:
-            return pybamm.Solution(sol.t, sol.y)
+            # Set the reason for termination
+            if sol.message == "A termination event occurred.":
+                termination = "event"
+            elif sol.message.startswith("The solver successfully reached the end"):
+                termination = "final time"
+            return pybamm.Solution(sol.t, sol.y, termination)
         else:
             raise pybamm.SolverError(sol.message)

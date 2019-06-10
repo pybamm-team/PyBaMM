@@ -15,12 +15,15 @@ class Solution(object):
     y : :class:`numpy.array`, size (m, n)
         A two-dimensional array containing the values of the solution. y[i, :] is the
         vector of solutions at time t[i].
+    termination : str
+        String to indicate why the solution terminated
 
     """
 
-    def __init__(self, t, y):
+    def __init__(self, t, y, termination):
         self.t = t
         self.y = y
+        self.termination = termination
 
     @property
     def t(self):
@@ -41,3 +44,13 @@ class Solution(object):
     def y(self, value):
         "Updates the solution values"
         self._y = value
+
+    @property
+    def termination(self):
+        "Reason for termination"
+        return self._termination
+
+    @termination.setter
+    def termination(self, value):
+        "Updates the reason for termination"
+        self._termination = value
