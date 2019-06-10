@@ -200,6 +200,42 @@ class InterfacialSurfaceArea(pybamm.SubModel):
             + " (oxygen reaction) [m-1]": param.a_p_dim * pybamm.average(a_p_Ox),
         }
 
+    def get_current_variables(self, variables):
+
+        main_name = " interfacial current density per volume"
+        ox_name = " oxygen interfacial current density per volume"
+        new_variables = {}
+        for domain in ["negative electrode", "positive electrode"]:
+            j = variables[domain.capitalize() + " interfacial current density"]
+            a_S = variables[
+                domain.capitalize() + " surface area density (main reaction)"
+            ]
+            j_bar = variables["Average " + domain + " interfacial current density"]
+            a_S_bar = variables[
+                "Average " + domain + " surface area density (main reaction)"
+            ]
+            j_Ox = variables[
+                domain.capitalize() + " oxygen interfacial current density"
+            ]
+            a_Ox = variables[
+                domain.capitalize() + " surface area density (oxygen reaction)"
+            ]
+            j_Ox_bar = variables[
+                "Average " + domain + " oxygen interfacial current density"
+            ]
+            a_Ox_bar = variables[
+                "Average " + domain + " surface area density (oxygen reaction)"
+            ]
+
+            domain_variables = {
+                domain.capitalize() + main_name: a_S * j,
+                "Average " + domain + main_name: a_S_bar * j_bar,
+                domain.capitalize() + ox_name: a_Ox * j_Ox,
+                "Average " + domain + ox_name: a_Ox_bar * j_Ox_bar,
+            }
+            new_variables.update(domain_variables)
+        return new_variables
+
 
 class VaryingSurfaceArea(InterfacialSurfaceArea):
     """

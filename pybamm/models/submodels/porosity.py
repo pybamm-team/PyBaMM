@@ -55,9 +55,13 @@ class Standard(pybamm.SubModel):
         param = self.set_of_parameters
         epsilon = variables["Porosity"]
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-        j_n = variables["Negative electrode interfacial current density"].orphans[0]
+        j_n = variables[
+            "Average negative electrode interfacial current density per volume"
+        ]
         j_s = pybamm.Scalar(0)
-        j_p = variables["Positive electrode interfacial current density"].orphans[0]
+        j_p = variables[
+            "Average positive electrode interfacial current density per volume"
+        ]
 
         for (eps, j, beta_surf, eps_init, domain) in [
             (eps_n, j_n, param.beta_surf_n, param.eps_n_init, "negative electrode"),
