@@ -5,13 +5,13 @@ pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
-    # pybamm.lead_acid.LOQS(
-    #     {
-    #         "capacitance": "differential",
-    #         "side reactions": ["oxygen"],
-    #         "interfacial surface area": "varying",
-    #     }
-    # ),
+    pybamm.lead_acid.LOQS(
+        {
+            "capacitance": "differential",
+            "side reactions": ["oxygen"],
+            "interfacial surface area": "varying",
+        }
+    ),
     pybamm.lead_acid.LOQS(
         {"capacitance": "differential", "side reactions": ["oxygen"]}
     ),
@@ -50,7 +50,7 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 0.5, 100)
+t_eval = np.linspace(0, 1, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution

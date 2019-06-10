@@ -172,9 +172,6 @@ class LOQS(pybamm.LeadAcidBaseModel):
             z = pybamm.Scalar(0)
             j_Ox_vars = oxygen_curr_model.get_derived_interfacial_currents(z, z, z, z)
         self.variables.update(j_Ox_vars)
-        import ipdb
-
-        ipdb.set_trace()
 
     def set_interfacial_surface_area_submodel(self):
         param = self.set_of_parameters
@@ -200,8 +197,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
     def set_reactions(self):
         param = self.set_of_parameters
         icd = "interfacial current density per volume"
-        aj_n = self.variables["Negative electrode " + icd].orphans[0]
-        aj_p = self.variables["Positive electrode " + icd].orphans[0]
+        aj_n = self.variables["Average negative electrode " + icd]
+        aj_p = self.variables["Average positive electrode " + icd]
         self.reactions = {
             "main": {
                 "neg": {"s": -(param.s_plus_n_S + param.t_plus), "aj": aj_n},
@@ -209,8 +206,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
             }
         }
         if "oxygen" in self.options["side reactions"]:
-            aj_n_Ox = self.variables["Negative electrode oxygen " + icd].orphans[0]
-            aj_p_Ox = self.variables["Positive electrode oxygen " + icd].orphans[0]
+            aj_n_Ox = self.variables["Average negative electrode oxygen " + icd]
+            aj_p_Ox = self.variables["Average positive electrode oxygen " + icd]
             # Update reactions
             self.reactions["oxygen"] = {
                 "neg": {

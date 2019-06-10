@@ -369,8 +369,8 @@ eps_init = pybamm.Concatenation(
     pybamm.Broadcast(eps_s_init, ["separator"]),
     pybamm.Broadcast(eps_p_init, ["positive electrode"]),
 )
-curlyU_n_init = Q_e_max * (1 - q_init) / (Q_n_max * l_n)
-curlyU_p_init = Q_e_max * (1 - q_init) / (Q_p_max * l_p)
+curlyU_n_init = Q_e_max * (1.2 - q_init) / (Q_n_max * l_n)
+curlyU_p_init = Q_e_max * (1.2 - q_init) / (Q_p_max * l_p)
 
 
 # hack to make consistent ic with lithium-ion

@@ -96,12 +96,9 @@ class StefanMaxwell(pybamm.electrolyte_diffusion.StefanMaxwell):
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 
         # Model
-        import ipdb
-
-        ipdb.set_trace()
         source_terms = sum(
-            param.l_n * rxn["neg"]["s_ox"] * rxn["neg"]["aj"].orphans[0]
-            + param.l_p * rxn["pos"]["s_ox"] * rxn["pos"]["aj"].orphans[0]
+            param.l_n * rxn["neg"]["s_ox"] * rxn["neg"]["aj"]
+            + param.l_p * rxn["pos"]["s_ox"] * rxn["pos"]["aj"]
             for rxn in reactions.values()
         )
         self.rhs = {
