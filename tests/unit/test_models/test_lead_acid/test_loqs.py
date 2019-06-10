@@ -51,6 +51,9 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
         options = {"capacitance": "differential"}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
+        options = {"capacitance": "differential", "bc_options": {"dimensionality": 1}}
+        model = pybamm.lead_acid.LOQS(options)
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
         options = {"capacitance": "algebraic"}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
