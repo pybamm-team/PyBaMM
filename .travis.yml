@@ -59,6 +59,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.6-dev
+                - python-setuptools
                 - libboost-all-dev
                 - libeigen3-dev
                 - pkg-config
@@ -110,6 +111,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
+                - python-setuptools
                 - libboost-all-dev
                 - libeigen3-dev
                 - pkg-config
@@ -170,6 +172,7 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.6-dev
+                - python-setuptools
                 - libboost-all-dev
                 - libeigen3-dev
                 - pkg-config
