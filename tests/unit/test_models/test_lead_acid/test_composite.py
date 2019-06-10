@@ -26,10 +26,11 @@ class TestLeadAcidCompositeCapacitance(unittest.TestCase):
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
         options = {"capacitance": "differential"}
         model = pybamm.lead_acid.Composite(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
+        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
         options = {"capacitance": "algebraic"}
         model = pybamm.lead_acid.Composite(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)

@@ -184,6 +184,6 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         """
         # Different solver depending on whether we solve ODEs or DAEs
         if self.options["capacitance"] == "differential":
-            return pybamm.ScikitsOdeSolver()
+            return pybamm.ScipySolver()
         else:
             return pybamm.ScikitsDaeSolver()

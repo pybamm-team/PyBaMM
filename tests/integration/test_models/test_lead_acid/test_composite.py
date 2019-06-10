@@ -3,7 +3,6 @@
 #
 import pybamm
 import tests
-from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 
 import unittest
 import numpy as np
@@ -42,7 +41,7 @@ class TestLeadAcidCompositeCapacitance(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
         options = {"capacitance": "algebraic"}
         model = pybamm.lead_acid.Composite(options)

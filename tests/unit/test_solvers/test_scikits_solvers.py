@@ -6,11 +6,10 @@ import numpy as np
 import scipy.sparse as sparse
 import unittest
 import warnings
-from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 
 
-@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
     def test_ode_integrate(self):
         # Constant

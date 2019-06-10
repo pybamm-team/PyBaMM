@@ -137,7 +137,7 @@ class BinaryOperator(pybamm.Symbol):
             right = self.right.evaluate(t, y)
             return self._binary_evaluate(left, right)
 
-    def evaluate_for_shape(self, t=None, y=None):
+    def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape()`. """
         left = self.children[0].evaluate_for_shape()
         right = self.children[1].evaluate_for_shape()
