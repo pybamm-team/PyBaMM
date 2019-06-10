@@ -53,15 +53,16 @@ matrix:
               sources:
                 - deadsnakes
               packages:
+                - gcc                
                 - gfortran
-                - gcc
-                - libopenblas-dev
-                - liblapack-dev
+                - graphviz
                 - libboost-all-dev
                 - libeigen3-dev
+                - liblapack-dev
+                - libopenblas-dev
+                - petsc-dev
                 - pkg-config
-                - petsc-dev            
-                - graphviz
+                - pybind11-dev
                 - python3.6-dev
           env:
             - PYBAMM_UNIT=true

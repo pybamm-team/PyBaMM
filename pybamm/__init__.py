@@ -7,6 +7,12 @@
 #
 import sys
 import os
+import importlib
+
+dolfin_spec = importlib.util.find_spec("dolfin")
+if dolfin_spec is not None:
+    dolfin = importlib.util.module_from_spec(dolfin_spec)
+    dolfin_spec.loader.exec_module(dolfin)
 
 #
 # Version info: Remember to keep this in sync with setup.py!
@@ -196,7 +202,8 @@ from .geometry import standard_spatial_vars
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
-from .meshes.fenics_submeshes import FenicsMesh2D
+if dolfin_spec is not None:
+    from .meshes.fenics_submeshes import FenicsMesh2D
 
 #
 # Spatial Methods

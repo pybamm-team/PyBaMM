@@ -191,8 +191,8 @@ class FiniteElementFenics(pybamm.SpatialMethod):
         stiffness = dolfin.assemble(stiffness_form)
 
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
-        lbc_value, lbc_type = boundary_conditions[symbol.id]["left"]
-        rbc_value, rbc_type = boundary_conditions[symbol.id]["right"]
+        _, lbc_type = boundary_conditions[symbol.id]["left"]
+        _, rbc_type = boundary_conditions[symbol.id]["right"]
 
         if lbc_type == "Dirichlet":
             bc = dolfin.DirichletBC(
