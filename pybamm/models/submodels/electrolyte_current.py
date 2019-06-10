@@ -117,7 +117,8 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         ----------
         variables : dict
             Dictionary of symbols to use in the model
-_Returns
+
+        Returns
         -------
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables

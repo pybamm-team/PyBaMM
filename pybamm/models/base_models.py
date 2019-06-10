@@ -308,7 +308,7 @@ class BaseModel(object):
                 if not any(x.id == var.id for x in eqn.pre_order()) and not isinstance(
                     var, pybamm.Concatenation
                 ):
-                    raise UserWarning(
+                    raise pybamm.ModelError(
                         "each variable in the algebraic eqn keys must appear in the eqn"
                     )
         else:
@@ -346,7 +346,8 @@ class BaseModel(object):
                 ):
                     raise pybamm.ModelError(
                         """
-                        no boundary condition given for variable '{}' with equation '{}'. Might be okay if equation has been averaged.
+                        no boundary condition given for
+                        variable '{}' with equation '{}'.
                         """.format(
                             var, eqn
                         )

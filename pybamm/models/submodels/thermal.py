@@ -40,17 +40,17 @@ class Thermal(pybamm.SubModel):
         # Positive current collector cell temperature
         # in the 2D case
 
-        i_s_n = variables.get("Negative electrode current density")
-        i_s_s = pybamm.Broadcast(0, ["separator"])
-        i_s_p = variables.get("Positive electrode current density")
-        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
+        # i_s_n = variables.get("Negative electrode current density")
+        # i_s_s = pybamm.Broadcast(0, ["separator"])
+        # i_s_p = variables.get("Positive electrode current density")
+        # i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
         i_e = variables.get("Electrolyte current density")
 
-        phi_s_n = variables.get("Negative electrode potential")
-        phi_s_s = pybamm.Broadcast(0, ["separator"])
-        phi_s_p = variables.get("Positive electrode potential")
-        phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+        # phi_s_n = variables.get("Negative electrode potential")
+        # phi_s_s = pybamm.Broadcast(0, ["separator"])
+        # phi_s_p = variables.get("Positive electrode potential")
+        # phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
 
         phi_e = variables.get("Electrolyte potential")
 
