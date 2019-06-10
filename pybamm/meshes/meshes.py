@@ -58,6 +58,11 @@ class Mesh(dict):
                 self.domain_order.append(domain)
         # Then the remaining domains
         for domain in geometry:
+            if domain not in ["negative electrode", "separator", "positive electrode"]:
+                self.domain_order.append(domain)
+
+        # Create submeshes
+        for domain in geometry:
             # need to pass tab information if primary domian is 2D current collector
             if (
                 domain == "current collector"
