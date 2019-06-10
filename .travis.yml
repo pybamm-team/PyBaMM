@@ -110,10 +110,15 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.7-dev
+                - libboost-all-dev
+                - libeigen3-dev
+                - pkg-config
+                - petsc-dev
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
             - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_DOLFIN=true
           if: type != cron
         # Unit testing on OS/X
         - os: osx
@@ -165,9 +170,14 @@ matrix:
                 - liblapack-dev
                 - graphviz
                 - python3.6-dev
+                - libboost-all-dev
+                - libeigen3-dev
+                - pkg-config
+                - petsc-dev
           env:
             - PYBAMM_COVER=true
             - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_DOLFIN=true
           if: type != cron
           # Cron jobs
         - python: "3.6"
