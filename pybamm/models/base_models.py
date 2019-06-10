@@ -505,6 +505,7 @@ class StandardBatteryBaseModel(BaseModel):
             "bc_options": {"dimensionality": 0},
             "capacitance": False,
             "convection": False,
+            "first-order potential": "linear",
         }
         if self._extra_options is None:
             options = default_options
@@ -574,10 +575,10 @@ class StandardBatteryBaseModel(BaseModel):
         # Overpotentials
         self.variables.update(
             {
-                "Negative reaction overpotential": None,
-                "Positive reaction overpotential": None,
-                "Average negative reaction overpotential": None,
-                "Average positive reaction overpotential": None,
+                "Negative electrode reaction overpotential": None,
+                "Positive electrode reaction overpotential": None,
+                "Average negative electrode reaction overpotential": None,
+                "Average positive electrode reaction overpotential": None,
                 "Average reaction overpotential": None,
                 "Average electrolyte overpotential": None,
                 "Average solid phase ohmic losses": None,
@@ -586,10 +587,10 @@ class StandardBatteryBaseModel(BaseModel):
 
         self.variables.update(
             {
-                "Negative reaction overpotential [V]": None,
-                "Positive reaction overpotential [V]": None,
-                "Average negative reaction overpotential [V]": None,
-                "Average positive reaction overpotential [V]": None,
+                "Negative electrode reaction overpotential [V]": None,
+                "Positive electrode reaction overpotential [V]": None,
+                "Average negative electrode reaction overpotential [V]": None,
+                "Average positive electrode reaction overpotential [V]": None,
                 "Average reaction overpotential [V]": None,
                 "Average electrolyte overpotential [V]": None,
                 "Average solid phase ohmic losses [V]": None,

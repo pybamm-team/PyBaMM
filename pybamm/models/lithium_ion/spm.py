@@ -81,9 +81,10 @@ class SPM(pybamm.LithiumIonBaseModel):
         eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
         eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
+        pot_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
+        )
+        self.variables.update(pot_vars)
 
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)

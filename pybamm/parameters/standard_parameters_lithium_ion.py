@@ -67,8 +67,8 @@ c_p_max = pybamm.Parameter("Maximum concentration in positive electrode [mol.m-3
 sigma_cn_dimensional = pybamm.Parameter(
     "Negative current collector conductivity [S.m-1]"
 )
-sigma_n_dimensional = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
-sigma_p_dimensional = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
+sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 sigma_cp_dimensional = pybamm.Parameter(
     "Positive current collector conductivity [S.m-1]"
 )
@@ -237,8 +237,8 @@ a_p = a_p_dim * R_p
 
 # Electrode Properties
 sigma_cn = sigma_cn_dimensional * potential_scale / i_typ / L_x
-sigma_n = sigma_n_dimensional * potential_scale / i_typ / L_x
-sigma_p = sigma_p_dimensional * potential_scale / i_typ / L_x
+sigma_n = sigma_n_dim * potential_scale / i_typ / L_x
+sigma_p = sigma_p_dim * potential_scale / i_typ / L_x
 sigma_cp = sigma_cp_dimensional * potential_scale / i_typ / L_x
 
 # should rename this to avoid confusion with Butler-Volmer

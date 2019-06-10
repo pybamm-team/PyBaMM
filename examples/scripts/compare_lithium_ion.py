@@ -8,7 +8,8 @@ models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.SPMe(), pybamm.lithium_io
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current [A]": 5})
+pybamm.set_logging_level("INFO")
+param.update({"Typical current [A]": 1})
 for model in models:
     param.process_model(model)
 

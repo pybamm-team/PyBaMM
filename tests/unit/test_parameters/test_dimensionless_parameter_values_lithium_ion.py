@@ -171,7 +171,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         "electrode conductivities"
         # neg dimensional
         np.testing.assert_almost_equal(
-            values.process_symbol(param.sigma_n_dimensional).evaluate(None, None),
+            values.process_symbol(param.sigma_n_dim).evaluate(None, None),
             100,
             3,
         )
@@ -184,7 +184,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # neg dimensional
         np.testing.assert_almost_equal(
-            values.process_symbol(param.sigma_p_dimensional).evaluate(None, None), 10, 3
+            values.process_symbol(param.sigma_p_dim).evaluate(None, None), 10, 3
         )
 
         # neg dimensionless (old sigma_n / old_Lambda ) (this is different to values in

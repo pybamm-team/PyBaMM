@@ -236,7 +236,7 @@ class ParameterValues(dict):
                 return function
             else:
                 # return differentiated function
-                new_diff_variable = self.process_symbol(symbol.children[0])
+                new_diff_variable = self.process_symbol(symbol.diff_variable)
                 return function.diff(new_diff_variable)
 
         elif isinstance(symbol, pybamm.BinaryOperator):
