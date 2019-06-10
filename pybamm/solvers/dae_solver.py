@@ -253,7 +253,7 @@ class DaeSolver(pybamm.BaseSolver):
         # Return full set of consistent initial conditions (y0_diff unchanged)
         y0_consistent = np.concatenate([y0_diff, sol.x])
 
-        if sol.success and np.all(sol.fun < self.root_tol):
+        if sol.success and np.all(sol.fun < self.root_tol * len(sol.x)):
             pybamm.logger.info("Finish calculating consistent initial conditions")
             return y0_consistent
         elif not sol.success:
@@ -262,8 +262,12 @@ class DaeSolver(pybamm.BaseSolver):
             )
         else:
             raise pybamm.SolverError(
-                "Could not find consistent initial conditions: "
-                + "solver terminated successfully, but solution above tolerance"
+                """
+                Could not find consistent initial conditions: solver terminated
+                successfully, but maximum solution error ({}) above tolerance ({})
+                """.format(
+                    np.max(sol.fun), self.root_tol * len(sol.x)
+                )
             )
 
     def integrate(
