@@ -21,6 +21,23 @@ class BaseInterface(pybamm.BaseSubModel):
         super().__init__(param)
         self._domain = domain
 
+    def get_standard_derived_variables(self, derived_variables):
+        derived_variables = self.get_average_variables(derived_variables)
+        derived_variables = self.get_dimensional_variables(derived_variables)
+
+        return derived_variables
+
+    def get_average_variables(self, variables):
+
+        averaged_variables = {}
+
+        return variables.updated(averaged_variables)
+
+    def get_dimensional_variables(self, variables):
+        dimensional_variables = {}
+
+        return variables.updated(dimensional_variables)
+
     def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p):
         """
         Calculate dimensionless and dimensional variables for the interfacial current

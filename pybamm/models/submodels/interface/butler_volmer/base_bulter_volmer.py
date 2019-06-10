@@ -52,9 +52,9 @@ class BaseButlerVolmer(pybamm.BaseInterface):
         j = 2 * j0 * pybamm.Function(np.sinh, (ne / 2) * eta_r)
 
         derived_variables = {
-            self._domain + " overpotential": eta_r,
-            self._domain + " exchange current density": j0,
-            self._domain + " interfacial current density": j,
+            self._domain + " electrode exchange current density": j0,
+            self._domain + " electrode interfacial current density": j,
+            self._domain + " reaction overpotential": eta_r,
         }
 
         return derived_variables

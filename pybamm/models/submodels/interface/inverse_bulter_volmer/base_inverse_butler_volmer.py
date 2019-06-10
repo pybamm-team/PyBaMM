@@ -30,7 +30,8 @@ class BaseInverseButlerVolmer(pybamm.BaseInterface):
         """
 
         j0 = self._get_exchange_current_density(variables)
-        j = self._get_interfacial_current_density(variables)
+        j_av = self._get_average_interfacial_current_density(variables)
+        j = pybamm.Broadcast(j_av, [self._domain.lower()])
 
         if self._domain == "Negative":
             ne = self.param.ne_n
@@ -42,8 +43,8 @@ class BaseInverseButlerVolmer(pybamm.BaseInterface):
         eta_r = (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
 
         derived_variables = {
-            self._domain + " exchange current density": j0,
-            self._domain + " interfacial current density": j,
+            self._domain + " electrode exchange current density": j0,
+            self._domain + " electrode interfacial current density": j,
             self._domain + " reaction overpotential": eta_r,
         }
 
@@ -52,11 +53,13 @@ class BaseInverseButlerVolmer(pybamm.BaseInterface):
     def _get_exchange_current_density(self, variables):
         raise NotImplementedError
 
-    def _get_interfacial_current_density(self, variables):
+    def _get_average_interfacial_current_density(self, variables):
 
         i_boundary_cc = variables["Current collector current density"]
 
         if self._domain == "Negative":
-            j = i_boundary_cc / pybamm.geometric_parameters.l_n
+            j_av = i_boundary_cc / pybamm.geometric_parameters.l_n
         elif self._domain == "Positive":
-            j - i_boundary_cc / pybamm.geometric_parameters.l_p
+            j_av - i_boundary_cc / pybamm.geometric_parameters.l_p
+
+        return j_av
