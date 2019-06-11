@@ -150,18 +150,17 @@ class QuickPlot(object):
                 ]
 
             # Make sure variables have the same dimensions and domain
-            dim = self.variables[key][0][0].dimensions
             domain = self.variables[key][0][0].domain
             for variable in self.variables[key][0]:
-                assert variable.domain == domain
-                assert variable.dimensions == dim
+                if variable.domain != domain:
+                    raise ValueError("mismatching variable domains")
 
             # Set the x variable for any two-dimensional variables
-            if dim == 2:
+            if self.variables[key][0][0].dimensions == 2:
                 self.x_values[key] = mesh.combine_submeshes(*domain)[0].edges
 
             # Don't allow 3D variables
-            elif dim == 3:
+            elif any(var.dimensions == 3 for var in self.variables[key][0]):
                 raise NotImplementedError("cannot plot 3D variables")
 
             # Define subplot position

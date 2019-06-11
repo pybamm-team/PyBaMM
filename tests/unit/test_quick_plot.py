@@ -66,10 +66,10 @@ class TestQuickPlot(unittest.TestCase):
         model.variables["Variable with a very long name"] = model.variables["a"]
         quick_plot = pybamm.QuickPlot(model, mesh, solution)
         quick_plot.plot(0)
-        self.assertTrue("\n" in quick_plot.ax[1][1].get_title())
 
-        # Test
-
+        # Test errors
+        with self.assertRaisesRegex(ValueError, "mismatching variable domains"):
+            pybamm.QuickPlot(model, mesh, solution, [["a", "b broadcasted"]])
         model.variables["3D variable"] = disc.process_symbol(
             pybamm.Broadcast(1, ["negative particle"])
         )

@@ -53,9 +53,8 @@ tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 time = comsol_variables["time"] / tau.evaluate(0)
 solution = pybamm_model.default_solver.solve(pybamm_model, time)
 
-"-----------------------------------------------------------------------------"
-"Make Comsol 'model' for comparison"
 
+# Make Comsol 'model' for comparison
 whole_cell = ["negative electrode", "separator", "positive electrode"]
 comsol_t = comsol_variables["time"]
 L_x = param.process_symbol(pybamm.standard_parameters_lithium_ion.L_x).evaluate()
