@@ -50,14 +50,10 @@ class LeadingOhm(pybamm.BaseOhm):
         else:
             pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
 
-        derived_variables = {
-            self._domain + " electrode potential": phi_s,
-            self._domain + " electrode current density": i_s,
-        }
+        variables.update(self._get_standard_potential_variables(phi_s))
+        variables.update(self._get_standard_current_variables(i_s))
 
-        derived_variables = self.get_standard_derived_variables(derived_variables)
-
-        return derived_variables
+        return variables
 
     @property
     def default_solver(self):

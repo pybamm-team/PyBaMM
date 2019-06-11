@@ -14,13 +14,14 @@ class BaseSubModel(pybamm.BaseFullBatteryModel):
 
     def get_fundamental_variables(self):
         """
-        Returns the variables in the submodel for which a PDE must be solved to obtains
+        Returns the variables in the submodel for which can be obtained with reference
+        to any other submodels
         """
         return {}
 
-    def get_derived_variables(self, variables):
+    def get_coupled_variables(self, variables):
         """
-        Returns variables which are derived from the fundamental variables in the model.
+        Returns variables which are derived from the coupled components of the model
         """
         return {}
 

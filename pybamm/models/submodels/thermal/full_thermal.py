@@ -1,5 +1,5 @@
 #
-# Class for full thermal submode
+# Class for full thermal submodel
 #
 import pybamm
 
@@ -26,8 +26,8 @@ class ThermalFull(pybamm.BaseThermal):
         variables = self._get_standard_fundamental_variables(T, T_av)
         return variables
 
-    def get_derived_variables(self, variables):
-        variables.update(self._get_standard_derived_variables(variables))
+    def get_coupled_variables(self, variables):
+        variables.update(self._get_standard_coupled_variables(variables))
         return variables
 
     def _flux_law(self, T):

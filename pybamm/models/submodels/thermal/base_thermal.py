@@ -22,6 +22,8 @@ class BaseThermal(pybamm.BaseSubModel):
         param = self.param
         T_n, T_s, T_p = T.orphans
 
+        q = self._flux_law(T)
+
         variables = {
             "Negative electrode temperature": T_n,
             "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
@@ -33,11 +35,13 @@ class BaseThermal(pybamm.BaseSubModel):
             "Cell temperature [K]": param.Delta_T * T + param.T_ref,
             "Average cell temperature": T_av,
             "Average cell temperature [K]": param.Delta_T * T_av + param.T_ref,
+            "Heat flux": q,
+            "Heat flux [W.m-2]": q,
         }
 
         return variables
 
-    def _get_standard_derived_variables(self, variables):
+    def _get_standard_coupled_variables(self, variables):
 
         param = self.param
 
@@ -60,8 +64,6 @@ class BaseThermal(pybamm.BaseSubModel):
         # phi_s_s = pybamm.Broadcast(0, ["separator"])
         # phi_s_p = variables["Positive electrode potential"]
         # phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
-
-        q = self._flux_law(T)
 
         # TODO: add ohmic heating from solid
         # Q_ohm = -i_s * pybamm.grad(phi_s) - i_e * pybamm.grad(phi_e)
@@ -109,8 +111,6 @@ class BaseThermal(pybamm.BaseSubModel):
                 * param.potential_scale
                 * Q_av
                 / param.L_x,
-                "Heat flux": q,
-                "Heat flux [W.m-2]": q,
             }
         )
 

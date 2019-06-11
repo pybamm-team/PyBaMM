@@ -23,7 +23,8 @@ class FullOhm(pybamm.BaseOhm):
 
     def get_fundamental_variables(self):
         """
-        Returns the variables in the submodel for which a PDE must be solved to obtain.
+        Returns the variables in the submodel which can be stated independent of 
+        variables stated in other submodels
         """
 
         if self._domain == "Negative":
@@ -33,13 +34,13 @@ class FullOhm(pybamm.BaseOhm):
         else:
             pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
 
-        fundamental_variables = {self._domain + " electrode potential": phi_s}
+        variables = self._get_standard_potential_variables(phi_s)
 
-        return fundamental_variables
+        return variables
 
-    def get_derived_variables(self, variables):
+    def get_coupled_variables(self, variables):
         """
-        Returns variables which are derived from the fundamental variables in the model.
+        Returns variables which are coupled to other submodels
         """
 
         phi_s = variables[self._domain + " electrode potential"]
@@ -53,14 +54,13 @@ class FullOhm(pybamm.BaseOhm):
         sigma_eff = sigma * (1 - eps)
         i_s = -sigma_eff * pybamm.grad(phi_s)
 
-        derived_variables = {
-            self._domain + " electrode current density": i_s,
-            self._domain + " electrode effective conductivity": sigma_eff,
-        }
+        variables.update(
+            {self._domain + " electrode effective conductivity": sigma_eff}
+        )
 
-        derived_variables = self.standard_derived_variables(derived_variables)
+        variables.update(self._get_standard_current_variables(i_s))
 
-        return derived_variables
+        return variables
 
     def set_algebraic(self, variables):
         """
@@ -87,7 +87,7 @@ class FullOhm(pybamm.BaseOhm):
             Dictionary of symbols to use in the model
         """
         phi_s = variables[self._domain + " electrode potential"]
-        sigma_eff = variables[self._domain + " electrode effective conductivity"]
+        eps = variables[self._domain + " electrode porosity"]
         i_boundary_cc = variables["Current collector current density"]
 
         if self._domain == "Negative":
@@ -96,6 +96,7 @@ class FullOhm(pybamm.BaseOhm):
 
         elif self._domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
+            sigma_eff = self.param.sigma_p * (1 - eps)
             rbc = (
                 i_boundary_cc
                 / pybamm.boundary_value(-sigma_eff ** self.param.b, "right"),

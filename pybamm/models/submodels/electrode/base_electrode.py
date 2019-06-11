@@ -19,117 +19,68 @@ class BaseElectrode(pybamm.BaseSubModel):
         super().__init__(param)
         self._domain = domain
 
-    def get_standard_derived_variables(self, derived_variables):
+    def _get_standard_potential_variables(self, phi_s):
 
-        if self._domain == "Positive":
-            phi_s = derived_variables["Positive electrode potential"]
-            V = pybamm.boundary_value(phi_s, "right")
-            derived_variables.update({"Voltage": V})
-
-        derived_variables.update(self.get_average_variables(derived_variables))
-        derived_variables.update(self.get_dimensional_variables(derived_variables))
-
-        return derived_variables
-
-    def get_average_variables(self, variables):
-        """
-        Calculates averaged variables.
-
-        Parameters
-        ----------
-        variables : dict
-            A dictionary containing all the dimensionless variables in the
-            model
-        
-        Returns
-        -------
-        dict
-            A dictionary with all the average variables.
-        """
-
-        phi_s = variables[self._domain + " electrode potential"]
-        i_s = variables[self._domain + " electrode current density"]
-
-        if self._domain == "Negative":
-            delta_phi_av = pybamm.average(phi_s)
-
-        elif self._domain == "Positive":
-            V = variables["Voltage"]
-            delta_phi_av = pybamm.average(phi_s - V)
-
-        average_variables = {
-            "Average "
-            + self._domain.lower()
-            + " electrode potential": pybamm.average(phi_s),
-            "Average "
-            + self._domain.lower()
-            + " electrode current density": pybamm.average(i_s),
-            "Average " + self._domain.lower() + " electrode ohmic losses": delta_phi_av,
-        }
-
-        return average_variables
-
-    def get_dimensional_variables(self, variables):
-        """
-        Calculates dimensional variables.
-
-        Parameters
-        ----------
-        variables : dict
-            A dictionary containing all the dimensionless variables in the
-            model
-        
-        Returns
-        -------
-        dict
-            A dictionary with all the dimensional variables.
-        """
         param = self.param
-
-        phi_s = variables[self._domain + " electrode potential"]
-        i_s = variables[self._domain + " electrode current density"]
-        phi_s_av = variables["Average " + self._domain.lower() + " electrode potential"]
-        i_s_av = variables[
-            "Average " + self._domain.lower() + " electrode current density"
-        ]
-        delta_phi_av = variables[
-            "Average " + self._domain.lower() + " electrode ohmic losses"
-        ]
+        phi_s_av = pybamm.average(phi_s)
 
         if self._domain == "Negative":
             phi_s_dim = param.potential_scale * phi_s
             phi_s_av_dim = param.potential_scale * phi_s_av
+            delta_phi_s = phi_s
 
         elif self._domain == "Positive":
             phi_s_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s
             phi_s_av_dim = (
                 param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_av
             )
-            V = variables["Voltage"]
+            V = pybamm.BoundaryValue(phi_s, "right")
             V_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * V
+            delta_phi_s = delta_phi_s - V
 
-        i_s_dim = param.i_typ * i_s
-        i_s_av_dim = param.i_typ * i_s_av
-        delta_phi_av_dim = param.potential_scale * delta_phi_av
+        delta_phi_s_av = pybamm.average(delta_phi_s)
+        delta_phi_s_dim = delta_phi_s * param.potential_scale
+        delta_phi_s_av_dim = delta_phi_s_av * param.potential_scale
 
-        dimensional_variables = {
+        variables = {
+            self._domain + " electrode potential": phi_s,
             self._domain + " electrode potential [V]": phi_s_dim,
-            self._domain + " electrode current density [A.m-2]": i_s_dim,
+            "Average " + self._domain.lower() + " electrode potential": phi_s_av,
             "Average "
             + self._domain.lower()
             + " electrode potential [V]": phi_s_av_dim,
+            self._domain + " electrode ohmic losses": delta_phi_s,
+            self._domain + " electrode ohmic losses [V]": delta_phi_s_dim,
             "Average "
             + self._domain.lower()
-            + " electrode current density [A.m-2]": i_s_av_dim,
+            + " electrode ohmic losses": delta_phi_s_av,
             "Average "
             + self._domain.lower()
-            + " electrode ohmic losses [V]": delta_phi_av_dim,
+            + " electrode ohmic losses [V]": delta_phi_s_av_dim,
         }
 
         if self._domain == "Positive":
-            dimensional_variables.update({"Voltage": V_dim})
+            variables.update({"Voltage": V_dim})
 
-        return dimensional_variables
+        return variables
+
+    def _get_standard_current_variables(self, i_s):
+        param = self.param
+        i_s_av = pybamm.average(i_s)
+
+        i_s_dim = param.i_typ * i_s
+        i_s_av_dim = param.i_typ * i_s_av
+
+        variables = {
+            self._domain + " electrode current density": i_s,
+            "Average " + self._domain.lower() + " electrode current density": i_s_av,
+            self._domain + " electrode current density [A.m-2]": i_s_dim,
+            "Average "
+            + self._domain.lower()
+            + " electrode current density [A.m-2]": i_s_av_dim,
+        }
+
+        return variables
 
     @property
     def default_solver(self):
