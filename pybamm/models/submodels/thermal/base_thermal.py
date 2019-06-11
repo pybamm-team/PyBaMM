@@ -80,6 +80,7 @@ class BaseThermal(pybamm.BaseSubModel):
         )
 
         Q = Q_ohm + Q_rxn + Q_rev
+        Q_av = pybamm.average(Q)
 
         variables.update(
             {
@@ -102,6 +103,11 @@ class BaseThermal(pybamm.BaseSubModel):
                 "Total heating [A.V.m-3]": param.i_typ
                 * param.potential_scale
                 * Q
+                / param.L_x,
+                "Average total heating": Q_av,
+                "Average total heating [A.V.m-3]": param.i_typ
+                * param.potential_scale
+                * Q_av
                 / param.L_x,
                 "Heat flux": q,
                 "Heat flux [W.m-2]": q,
