@@ -512,7 +512,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             Domain in which to set the system
         """
         param = self.set_of_parameters
-        (i_boundary_cc, delta_phi_broad, *rest) = self.unpack(variables, domain)
+        i_boundary_cc, delta_phi_broad = self.unpack(variables, domain)[:2]
 
         if domain == ["negative electrode"]:
             delta_phi = delta_phi_broad.child

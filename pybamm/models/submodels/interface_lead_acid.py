@@ -130,12 +130,12 @@ class OxygenReaction(pybamm.interface.InterfacialReaction, pybamm.LeadAcidBaseMo
         elif domain == ["positive electrode"]:
             return param.j0_p_Ox_ref * c_e  # ** param.exponent_e_Ox
 
-    def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p):
+    def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p, reaction="oxygen"):
         """
         See
         :meth:`pybamm.interface.InterfacialReaction.get_derived_interfacial_currents`
         """
-        return super().get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p, "oxygen")
+        return super().get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p, reaction)
 
 
 class InterfacialSurfaceArea(pybamm.SubModel):

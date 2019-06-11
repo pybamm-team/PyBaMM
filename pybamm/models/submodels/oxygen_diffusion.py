@@ -121,6 +121,6 @@ class StefanMaxwell(pybamm.electrolyte_diffusion.StefanMaxwell):
             "Average oxygen concentration": c_ox,
         }
 
-    def get_variables(self, c_ox, N_ox):
+    def get_variables(self, c, N, species="oxygen"):
         """ See :meth:`pybamm.electrolyte_diffusion.StefanMaxwell.get_variables`. """
-        return super().get_variables(c_ox, N_ox, species="oxygen")
+        return super().get_variables(c, N, species)

@@ -46,8 +46,10 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         j0_n = parameter_values.process_symbol(j0_n)
         j0_p = parameter_values.process_symbol(j0_p)
         # Test
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_n.pre_order()]
-        [self.assertNotIsInstance(x, pybamm.Parameter) for x in j0_p.pre_order()]
+        for x in j0_n.pre_order():
+            self.assertNotIsInstance(x, pybamm.Parameter)
+        for x in j0_p.pre_order():
+            self.assertNotIsInstance(x, pybamm.Parameter)
 
     def test_discretisation_main_reaction(self):
         # With intercalation
