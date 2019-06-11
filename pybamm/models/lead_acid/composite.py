@@ -39,6 +39,7 @@ class Composite(pybamm.LeadAcidBaseModel):
         # Leading order model and variables
         leading_order_model = pybamm.lead_acid.LOQS(options)
         self.update(leading_order_model)
+        self.reactions = leading_order_model.reactions
         self.leading_order_variables = leading_order_model.variables
 
         # Model variables
@@ -67,14 +68,9 @@ class Composite(pybamm.LeadAcidBaseModel):
         param = self.set_of_parameters
         j_n_0 = self.variables["Negative electrode interfacial current density"]
         j_p_0 = self.variables["Positive electrode interfacial current density"]
-        self.reactions = {
-            "main": {
-                "neg": {"s": param.s_n, "aj": j_n_0},
-                "pos": {"s": param.s_p, "aj": j_p_0},
-                "porosity change": self.variables["Porosity change"],
-            }
-        }
-
+        self.reactions["main"]["neg"]["aj"] = j_n_0
+        self.reactions["main"]["pos"]["aj"] = j_p_0
+        self.reactions["main"]["porosity change"] = self.variables["Porosity change"]
         electrolyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         electrolyte_conc_model.set_differential_system(self.variables, self.reactions)
         self.update(electrolyte_conc_model)

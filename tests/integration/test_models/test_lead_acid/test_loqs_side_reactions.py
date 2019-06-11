@@ -13,6 +13,7 @@ class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_discharge_algebraic(self):
         options = {"capacitance": "algebraic", "side reactions": ["oxygen"]}
         model = pybamm.lead_acid.LOQS(options)

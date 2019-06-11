@@ -22,9 +22,7 @@ class TestMacInnesStefanMaxwell(unittest.TestCase):
         variables = {"Electrolyte concentration": c_e, "Electrolyte potential": phi_e}
         onen = pybamm.Broadcast(1, ["negative electrode"])
         onep = pybamm.Broadcast(1, ["positive electrode"])
-        reactions = {
-            "main": {"neg": {"s": 1, "aj": onen}, "pos": {"s": 1, "aj": onep}}
-        }
+        reactions = {"main": {"neg": {"s": 1, "aj": onen}, "pos": {"s": 1, "aj": onep}}}
 
         # Set up model
         model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
@@ -229,8 +227,12 @@ class TestMacInnesCapacitance(unittest.TestCase):
         c_s_n_surf = pybamm.Scalar(0.8)
         c_s_p_surf = pybamm.Scalar(0.8)
         variables = {
-            "Negative electrode surface potential difference": delta_phi_n,
-            "Positive electrode surface potential difference": delta_phi_p,
+            "Negative electrode surface potential difference": pybamm.Broadcast(
+                delta_phi_n, "negative electrode"
+            ),
+            "Positive electrode surface potential difference": pybamm.Broadcast(
+                delta_phi_p, "positive electrode"
+            ),
             "Current collector current density": param.current_with_time,
         }
 
