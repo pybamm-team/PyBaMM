@@ -25,7 +25,7 @@ class LeadingStefanMaxwellConductivity(pybamm.BaseStefanMaxwellConductivity):
 
         ocp_n_av = variables["Average negative electrode open circuit potential"]
         eta_r_n_av = variables["Average negative reaction overpotential"]
-        delta_phi_n_av = variables["Average negative electrode ohmic losses"]
+        phi_s_n_av = variables["Average negative electrode potential"]
         i_boundary_cc = variables["Current collector current density"]
 
         param = self.param
@@ -34,7 +34,7 @@ class LeadingStefanMaxwellConductivity(pybamm.BaseStefanMaxwellConductivity):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        phi_e_av = delta_phi_n_av - eta_r_n_av - ocp_n_av
+        phi_e_av = phi_s_n_av - eta_r_n_av - ocp_n_av
         phi_e_n = pybamm.Broadcast(phi_e_av, ["negative electrode"])
         phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"])
         phi_e_p = pybamm.Broadcast(phi_e_av, ["positive electrode"])
