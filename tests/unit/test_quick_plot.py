@@ -21,12 +21,12 @@ class TestQuickPlot(unittest.TestCase):
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
-        quick_plot.axis.update({"a": new_axis})
-        self.assertEqual(quick_plot.axis["a"], new_axis)
+        quick_plot.axis.update({("a",): new_axis})
+        self.assertEqual(quick_plot.axis[("a",)], new_axis)
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis["a"], new_axis)
+        self.assertNotEqual(quick_plot.axis[("a",)], new_axis)
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
@@ -42,13 +42,13 @@ class TestQuickPlot(unittest.TestCase):
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
-        var = "c broadcasted"
-        quick_plot.axis.update({var: new_axis})
-        self.assertEqual(quick_plot.axis[var], new_axis)
+        var_key = ("c broadcasted",)
+        quick_plot.axis.update({var_key: new_axis})
+        self.assertEqual(quick_plot.axis[var_key], new_axis)
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis[var], new_axis)
+        self.assertNotEqual(quick_plot.axis[var_key], new_axis)
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
