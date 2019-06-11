@@ -17,9 +17,8 @@ class BaseStefanMaxwellDiffusion(pybamm.BaseSubModel):
     *Extends:* :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param):
         super().__init__(param)
-        self._domain = domain
 
     def _get_standard_concentration_variables(self, c_e, c_e_av):
 
@@ -41,7 +40,7 @@ class BaseStefanMaxwellDiffusion(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_standard_flux_variables(self, N_e, N_e_av):
+    def _get_standard_flux_variables(self, N_e):
 
         param = self.param
         D_e_typ = param.D_e(param.c_e_typ)
