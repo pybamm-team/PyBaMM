@@ -21,11 +21,17 @@ class ThermalFull(pybamm.BaseThermal):
     def get_fundamental_variables(self):
 
         T = pybamm.standard_variables.T
+        T_av = pybamm.average(T)
 
-        variables = {"Cell temperature": T}
-
+        variables = self.get_standard_fundamental_variables(T, T_av)
         return variables
 
-    def get_derived_variables(self):
+    def get_derived_variables(self, variables):
+        variables.update(self.get_standard_derived_variables(variables))
+        return variables
 
-        
+    def _flux_law(self, T):
+        """Fourier's law for heat transfer"""
+        q = -self.param.lambda_k * pybamm.grad(T)
+        return q
+

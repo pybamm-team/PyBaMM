@@ -36,14 +36,17 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if self._domain == "Negative":
             ocp = self.param.U_n(c_s_surf)
+            dudT = self.param.dUdT_n(c_s_surf)
 
         elif self._domain == "Positive":
             ocp = self.param.U_p(c_s_surf)
+            dudT = self.param.dUdT_p(c_s_surf)
 
         else:
             pybamm.DomainError
 
         ocp_av = pybamm.average(ocp)
+        dudT_av = pybamm.average(dudT)
 
         variables.update(
             {
@@ -55,6 +58,8 @@ class BaseParticle(pybamm.BaseSubModel):
                 + " particle surface concentration": c_s_surf_av,
                 self._domain + " open circuit potential": ocp,
                 "Average " + self._domain.lower() + " open circuit potential": ocp_av,
+                self._domain + " entropic change": dudT,
+                "Average " + self._domain.lower() + " entropic change": dudT_av,
             }
         )
 
