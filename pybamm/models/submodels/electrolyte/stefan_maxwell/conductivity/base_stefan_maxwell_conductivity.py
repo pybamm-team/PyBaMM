@@ -2,7 +2,6 @@
 # Base class for electrolyte conductivity employing stefan-maxwell
 #
 import pybamm
-import numpy as np
 
 
 class BaseStefanMaxwellConductivity(pybamm.BaseSubModel):
@@ -54,3 +53,15 @@ class BaseStefanMaxwellConductivity(pybamm.BaseSubModel):
         }
 
         return variables
+
+    def _get_split_overpotential(self, eta_c_av, delta_phi_e_av):
+
+        param = self.param
+        pot_scale = param.potential_scale
+
+        return {
+            "Average concentration overpotential": eta_c_av,
+            "Average electrolyte ohmic losses": delta_phi_e_av,
+            "Average concentration overpotential [V]": pot_scale * eta_c_av,
+            "Average electrolyte ohmic losses [V]": pot_scale * delta_phi_e_av,
+        }

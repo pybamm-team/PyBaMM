@@ -43,7 +43,7 @@ class FullStefanMaxwellConductivity(pybamm.BaseStefanMaxwellConductivity):
             param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
 
-        variables.update(self.get_standard_current_variables(i_e))
+        variables.update(self._get_standard_current_variables(i_e))
 
     def set_algebraic(self, variables):
 
