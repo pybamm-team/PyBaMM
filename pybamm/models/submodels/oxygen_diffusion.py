@@ -18,60 +18,6 @@ class StefanMaxwell(pybamm.electrolyte_diffusion.StefanMaxwell):
     def __init__(self, set_of_parameters):
         super().__init__(set_of_parameters)
 
-    def set_differential_system(self, variables, reactions):
-        """
-        PDE system for Stefan-Maxwell diffusion in the oxygen
-
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of symbols to use in the model
-        reactions : dict
-            Dictionary of reaction variables
-        """
-        # unpack variables
-        c_ox = variables["Oxygen concentration"]
-        param = self.set_of_parameters
-
-        # if porosity is not provided, use the input parameter
-        try:
-            epsilon = variables["Porosity"]
-            deps_dt = sum(rxn["porosity change"] for rxn in reactions.values())
-        except KeyError:
-            epsilon = param.epsilon
-            deps_dt = pybamm.Scalar(0)
-
-        # Use convection velocity if it exists, otherwise set to zero
-        v_box = variables.get("Volume-averaged velocity", pybamm.Scalar(0))
-
-        # Flux
-        N_ox_diff = -(epsilon ** param.b) * param.D_ox(c_ox) * pybamm.grad(c_ox)
-        N_ox_conv = c_ox * v_box
-        N_ox = N_ox_diff + N_ox_conv
-
-        # Model
-        source_terms = (
-            sum(
-                pybamm.Concatenation(
-                    reaction["neg"]["s_ox"] * reaction["neg"]["aj"],
-                    pybamm.Broadcast(0, ["separator"]),
-                    reaction["pos"]["s_ox"] * reaction["pos"]["aj"],
-                )
-                for reaction in reactions.values()
-            )
-            / param.gamma_ox
-        )
-        self.rhs = {
-            c_ox: (1 / epsilon)
-            * (-pybamm.div(N_ox) / param.C_e + source_terms - c_ox * deps_dt)
-        }
-
-        self.initial_conditions = {c_ox: param.c_ox_init}
-        self.boundary_conditions = {
-            c_ox: {"left": (0, "Neumann"), "right": (0, "Neumann")}
-        }
-        self.variables = self.get_variables(c_ox, N_ox)
-
     def set_leading_order_system(self, variables, reactions):
         """
         ODE system for leading-order Stefan-Maxwell diffusion in the oxygen
@@ -84,14 +30,9 @@ class StefanMaxwell(pybamm.electrolyte_diffusion.StefanMaxwell):
         """
         param = self.set_of_parameters
         c_ox = variables["Oxygen concentration"]
-        try:
-            epsilon = variables["Porosity"]
-            deps_n_dt = sum(rxn["neg"]["deps_dt"] for rxn in reactions.values())
-            deps_p_dt = sum(rxn["pos"]["deps_dt"] for rxn in reactions.values())
-        except KeyError:
-            epsilon = param.epsilon
-            deps_n_dt = pybamm.Scalar(0)
-            deps_p_dt = pybamm.Scalar(0)
+        epsilon = variables["Porosity"]
+        deps_n_dt = sum(rxn["neg"]["deps_dt"] for rxn in reactions.values())
+        deps_p_dt = sum(rxn["pos"]["deps_dt"] for rxn in reactions.values())
 
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 

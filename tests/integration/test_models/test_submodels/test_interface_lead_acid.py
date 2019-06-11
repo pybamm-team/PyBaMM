@@ -1,5 +1,5 @@
 #
-# Tests for the electrode-electrolyte interface equations
+# Tests for the electrode-electrolyte interface equations for lead-acid models
 #
 import pybamm
 from tests import get_discretisation_for_testing
@@ -7,7 +7,7 @@ from tests import get_discretisation_for_testing
 import unittest
 
 
-class TestExchangeCurrentDensity(unittest.TestCase):
+class TestMainReaction(unittest.TestCase):
     def setUp(self):
         self.c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
         self.c_e_s = pybamm.Variable("concentration", domain=["separator"])

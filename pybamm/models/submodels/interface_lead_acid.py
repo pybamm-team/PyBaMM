@@ -64,9 +64,7 @@ class OxygenReaction(pybamm.interface.InterfacialReaction, pybamm.LeadAcidBaseMo
         super().__init__(set_of_parameters)
 
     def get_butler_volmer(self, j0, eta_r, domain=None):
-        raise NotImplementedError(
-            "Oxygen reaction uses Tafel kinetics instead of Butler-Volmer"
-        )
+        raise ValueError("Oxygen reaction uses Tafel kinetics instead of Butler-Volmer")
 
     def get_tafel(self, j0, eta_r, domain=None):
         """
@@ -91,17 +89,9 @@ class OxygenReaction(pybamm.interface.InterfacialReaction, pybamm.LeadAcidBaseMo
         param = self.set_of_parameters
 
         domain = domain or j0.domain
-        if domain == ["negative electrode"]:
-            # Only backward reaction really contributes (eta_r << 0)
-            return -j0 * pybamm.exp((param.ne_n / 2) * -eta_r)
-        elif domain == ["positive electrode"]:
+        if domain == ["positive electrode"]:
             # Only forward reaction really contributes (eta_r >> 0)
             return j0 * pybamm.exp((param.ne_Ox / 2) * eta_r)
-        else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
-
-    def get_mass_transfer_limited(self, c_ox):
-        return -c_ox
 
     def get_exchange_current_densities(self, c_e, c_ox, domain=None):
         """The exchange current-density as a function of concentrations
@@ -125,9 +115,7 @@ class OxygenReaction(pybamm.interface.InterfacialReaction, pybamm.LeadAcidBaseMo
         param = self.set_of_parameters
         domain = domain or c_e.domain
 
-        if domain == ["negative electrode"]:
-            return param.j0_n_Ox_ref * c_e
-        elif domain == ["positive electrode"]:
+        if domain == ["positive electrode"]:
             return param.j0_p_Ox_ref * c_e  # ** param.exponent_e_Ox
 
     def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p, reaction="oxygen"):

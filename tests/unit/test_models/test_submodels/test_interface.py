@@ -29,6 +29,13 @@ class TestInterfaceLeadAcid(unittest.TestCase):
             lead_acid_model.get_exchange_current_densities(c, "not a domain")
 
 
+class TestOxygenReaction(self):
+    def test_butler_volmer_failure(self):
+        interface = pybamm.interface_lead_acid.OxygenReaction(None)
+        with self.assertRaises(ValueError):
+            interface.get_butler_volmer(None, None)
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

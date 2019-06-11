@@ -36,6 +36,15 @@ class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
+    def test_varying_surface_area(self):
+        options = {
+            "capacitance": "differential",
+            "side reactions": ["oxygen"],
+            "interfacial surface area": "varying",
+        }
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
+
     def test_incompatible_options(self):
         options = {"side reactions": ["something"]}
         with self.assertRaises(pybamm.ModelError):
