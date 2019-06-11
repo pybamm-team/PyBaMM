@@ -23,11 +23,11 @@ class ThermalFull(pybamm.BaseThermal):
         T = pybamm.standard_variables.T
         T_av = pybamm.average(T)
 
-        variables = self.get_standard_fundamental_variables(T, T_av)
+        variables = self._get_standard_fundamental_variables(T, T_av)
         return variables
 
     def get_derived_variables(self, variables):
-        variables.update(self.get_standard_derived_variables(variables))
+        variables.update(self._get_standard_derived_variables(variables))
         return variables
 
     def _flux_law(self, T):
@@ -35,3 +35,28 @@ class ThermalFull(pybamm.BaseThermal):
         q = -self.param.lambda_k * pybamm.grad(T)
         return q
 
+    def _unpack(self, variables):
+        T = variables["Cell temperature"]
+        q = variables["Heat flux"]
+        Q = variables["Total heating"]
+        return T, q, Q
+
+    def set_rhs(self, variables):
+        T, q, Q = self._unpack(variables)
+
+        self.rhs = {
+            T: (-pybamm.div(q) + self.param.delta ** 2 * self.param.B * Q)
+            / (self.param.delta ** 2 * self.param.C_th * self.param.rho_k)
+        }
+
+    def set_boundary_conditions(self, variables):
+        T, _, _ = self._unpack(variables)
+        T_n_left = pybamm.boundary_value(T, "left")
+        T_p_right = pybamm.boundary_value(T, "right")
+
+        self.boundary_conditions = {
+            T: {
+                "left": (-self.param.h * T_n_left / self.param.lambda_k, "Neumann"),
+                "right": (-self.param.h * T_p_right / self.param.lambda_k, "Neumann"),
+            }
+        }

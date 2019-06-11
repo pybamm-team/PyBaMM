@@ -37,7 +37,7 @@ class BaseThermal(pybamm.BaseSubModel):
 
         return variables
 
-    def get_standard_derived_variables(self, variables):
+    def _get_standard_derived_variables(self, variables):
 
         param = self.param
 
@@ -110,7 +110,6 @@ class BaseThermal(pybamm.BaseSubModel):
 
         # TODO: add units for heat flux
 
-        variables.update(self.get_dimensional_variables(variables))
         return variables
 
     def _flux_law(self, T):
@@ -119,52 +118,11 @@ class BaseThermal(pybamm.BaseSubModel):
     def _unpack(self, variables):
         raise NotImplementedError
 
-    def get_dimensional_variables(self, variables):
-
-        c_s = variables[self._domain + " particle concentration"]
-        c_s_xav = variables[
-            "X-average " + self._domain.lower() + " particle concentration"
-        ]
-        c_s_surf = variables[self._domain + " particle surface concentration"]
-        c_s_surf_av = variables[
-            "Average " + self._domain.lower() + " particle surface concentration"
-        ]
-
-        if self._domain == "Negative":
-            c_scale = self.param.c_n_max
-        elif self._domain == "Positive":
-            c_scale = self.param.c_p_max
-
-        variables.update(
-            {
-                self._domain + " particle concentration [mol.m-3]": c_scale * c_s,
-                "X-average "
-                + self._domain.lower()
-                + " particle concentration [mol.m-3]": c_scale * c_s_xav,
-                self._domain
-                + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
-                "Average "
-                + self._domain.lower()
-                + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
-            }
-        )
-
-        return variables
-
     def _initial_conditions(self, variables):
 
-        c, _, _ = self._unpack(variables)
+        T = self._unpack(variables)
 
-        if self._domain == "Negative":
-            c_init = self.param.c_n_init
-
-        elif self._domain == "Positive":
-            c_init = self.param.c_p_init
-
-        else:
-            pybamm.DomainError
-
-        initial_conditions = {c: c_init}
+        initial_conditions = {T: self.param.T_init}
 
         return initial_conditions
 
