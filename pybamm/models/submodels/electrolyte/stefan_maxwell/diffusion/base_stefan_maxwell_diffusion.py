@@ -20,12 +20,38 @@ class BaseStefanMaxwellDiffusion(pybamm.BaseSubModel):
         super().__init__(param)
         self._domain = domain
 
-    def _flux_law(self, epsilon, c_e, i_e, v_box):
+    def _get_standard_concentration_variables(self, c_e, c_e_av):
+
+        c_e_typ = self.param.c_e_typ
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+
+        variables = {
+            "Electrolyte concentration": c_e,
+            "Electrolyte concentration [mol.m-3]": c_e_typ * c_e,
+            "Average electrolyte concentration": c_e_av,
+            "Average electrolyte concentration [mol.m-3]": c_e_typ * c_e_av,
+            "Negative electrolyte concentration": c_e_n,
+            "Negative electrolyte concentration [mol.m-3]": c_e_typ * c_e_n,
+            "Separator electrolyte concentration": c_e_s,
+            "Separator electrolyte concentration [mol.m-3]": c_e_typ * c_e_s,
+            "Positive electrolyte concentration": c_e_p,
+            "Positive electrolyte concentration [mol.m-3]": c_e_typ * c_e_p,
+        }
+
+        return variables
+
+    def _get_standard_flux_variables(self, N_e, N_e_av):
+
         param = self.param
+        D_e_typ = param.D_e(param.c_e_typ)
+        flux_scale = D_e_typ * param.c_e_typ / param.L_x
 
-        N_e_diffusion = -(epsilon ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
-        N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
-        N_e_convection = c_e * v_box
+        variables = {
+            "Electrolyte flux": N_e,
+            "Electrolyte flux [mol.m-2.s-1]": N_e * flux_scale,
+            "Average electrolyte flux": pybamm.average(N_e),
+            "Average electrolyte flux [mol.m-2.s-1]": pybamm.average(N_e) * flux_scale,
+        }
 
-        return N_e_diffusion + N_e_migration + N_e_convection
+        return variables
 
