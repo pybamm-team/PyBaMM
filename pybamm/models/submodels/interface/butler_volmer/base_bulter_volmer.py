@@ -55,20 +55,11 @@ class BaseButlerVolmer(pybamm.BaseInterface):
         j_av = pybamm.average(j)
         eta_r_av = pybamm.average(eta_r)
 
-        derived_variables = {
-            self._domain + " electrode exchange current density": j0,
-            self._domain + " electrode interfacial current density": j,
-            self._domain + " reaction overpotential": eta_r,
-            "Average "
-            + self._domain.lower()
-            + " electrode exchange current density": j0_av,
-            "Average "
-            + self._domain.lower()
-            + " electrode interfacial current density": j_av,
-            "Average " + self._domain.lower() + " reaction overpotential": eta_r_av,
-        }
+        variables.update(self._get_standard_interfacial_current_variables(j, j_av))
+        variables.update(self._get_standard_exchange_current_variables(j0, j0_av))
+        variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
 
-        return derived_variables
+        return variables
 
     def _get_overpotential(self, variables):
 

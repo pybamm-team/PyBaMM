@@ -21,76 +21,51 @@ class BaseInterface(pybamm.BaseSubModel):
         super().__init__(param)
         self._domain = domain
 
-    def get_standard_derived_variables(self, derived_variables):
-        derived_variables.update(self.get_average_variables(derived_variables))
-        derived_variables.update(self.get_dimensional_variables(derived_variables))
+    def _get_standard_interfacial_current_variables(self, j, j_av):
 
-        return derived_variables
+        i_typ = self.param.i_typ
 
-    def get_dimensional_variables(self, variables):
-        dimensional_variables = {}
-
-        return dimensional_variables
-
-    def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p):
-        """
-        Calculate dimensionless and dimensional variables for the interfacial current
-        submodel
-
-        Parameters
-        ----------
-        j_n : :class:`pybamm.Symbol`
-            Interfacial current density in the negative electrode
-        j_p : :class:`pybamm.Symbol`
-            Interfacial current density in the positive electrode
-        j0_n : :class:`pybamm.Symbol`
-            Exchange-current density in the negative electrode
-        j0_p : :class:`pybamm.Symbol`
-            Exchange-current density in the positive electrode
-
-        Returns
-        -------
-        dict
-            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
-        """
-        i_typ = self.set_of_parameters.i_typ
-
-        # Broadcast if necessary
-        if j_n.domain in [[], ["current collector"]]:
-            j_n = pybamm.Broadcast(j_n, ["negative electrode"])
-        if j_p.domain in [[], ["current collector"]]:
-            j_p = pybamm.Broadcast(j_p, ["positive electrode"])
-        if j0_n.domain in [[], ["current collector"]]:
-            j0_n = pybamm.Broadcast(j0_n, ["negative electrode"])
-        if j0_p.domain in [[], ["current collector"]]:
-            j0_p = pybamm.Broadcast(j0_p, ["positive electrode"])
-
-        # Concatenations
-        j = pybamm.Concatenation(*[j_n, pybamm.Broadcast(0, ["separator"]), j_p])
-        j0 = pybamm.Concatenation(*[j0_n, pybamm.Broadcast(0, ["separator"]), j0_p])
-
-        # Averages
-        j_n_av = pybamm.average(j_n)
-        j_p_av = pybamm.average(j_p)
-
-        return {
-            "Negative electrode interfacial current density": j_n,
-            "Positive electrode interfacial current density": j_p,
-            "Average negative electrode interfacial current density": j_n_av,
-            "Average positive electrode interfacial current density": j_p_av,
-            "Interfacial current density": j,
-            "Negative electrode exchange-current density": j0_n,
-            "Positive electrode exchange-current density": j0_p,
-            "Exchange-current density": j0,
-            "Negative electrode interfacial current density [A.m-2]": i_typ * j_n,
-            "Positive electrode interfacial current density [A.m-2]": i_typ * j_p,
-            "Average negative electrode interfacial current density [A.m-2]": i_typ
-            * j_n_av,
-            "Average positive electrode interfacial current density [A.m-2]": i_typ
-            * j_p_av,
-            "Interfacial current density [A.m-2]": i_typ * j,
-            "Negative electrode exchange-current density [A.m-2]": i_typ * j0_n,
-            "Positive electrode exchange-current density [A.m-2]": i_typ * j0_p,
-            "Exchange-current density [A.m-2]": i_typ * j0,
+        variables = {
+            self._domain + " electrode interfacial current density": j,
+            "Average "
+            + self._domain.lower()
+            + " electrode interfacial current density": j_av,
+            self._domain + " interfacial current density [A.m-2]": i_typ * j,
+            "Average "
+            + self._domain.lower()
+            + " electrode interfacial current density [A.m-2]": i_typ * j_av,
         }
 
+        return variables
+
+    def _get_standard_exchange_current_variables(self, j0, j0_av):
+
+        i_typ = self.param.i_typ
+
+        variables = {
+            self._domain + " electrode exchange current density": j0,
+            "Average "
+            + self._domain.lower()
+            + " electrode exchange current density": j0_av,
+            self._domain + " exchange current density [A.m-2]": i_typ * j0,
+            "Average "
+            + self._domain.lower()
+            + " electrode exchange current density [A.m-2]": i_typ * j0_av,
+        }
+
+        return variables
+
+    def _get_standard_overpotential_variables(self, eta_r, eta_r_av):
+
+        pot_scale = self.param.potential_scale
+
+        variables = {
+            self._domain + " reaction overpotential": eta_r,
+            "Average " + self._domain.lower() + " reaction overpotential": eta_r_av,
+            self._domain + " reaction overpotential [V]": eta_r * pot_scale,
+            "Average "
+            + self._domain.lower()
+            + " reaction overpotential [V]": eta_r_av * pot_scale,
+        }
+
+        return variables
