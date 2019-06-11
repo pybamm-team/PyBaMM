@@ -25,7 +25,10 @@ class Function(pybamm.Symbol):
 
     def __init__(self, function, *children):
 
-        name = "function ({})".format(function.__name__)
+        try:
+            name = "function ({})".format(function.__name__)
+        except AttributeError:
+            name = "function ({!r})".format(function)
         children_list = list(children)
         domain = self.get_children_domains(children_list)
 

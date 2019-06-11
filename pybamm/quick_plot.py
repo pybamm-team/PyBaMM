@@ -126,8 +126,8 @@ class QuickPlot(object):
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
-        self.rows = int(len(output_variables) // np.sqrt(len(output_variables)))
-        self.cols = int(np.ceil(len(output_variables) / self.rows))
+        self.n_rows = int(len(output_variables) // np.sqrt(len(output_variables)))
+        self.n_cols = int(np.ceil(len(output_variables) / self.n_rows))
 
         # Process output variables into a form that can be plotted
         for k, variable_list in enumerate(output_variables):
@@ -165,7 +165,7 @@ class QuickPlot(object):
                 raise NotImplementedError("cannot plot 3D variables")
 
             # Define subplot position
-            self.subplot_positions[key] = (self.rows, self.cols, k + 1)
+            self.subplot_positions[key] = (self.n_rows, self.n_cols, k + 1)
 
     def reset_axis(self):
         """
@@ -217,7 +217,7 @@ class QuickPlot(object):
         import matplotlib.pyplot as plt
 
         t /= self.time_scale
-        self.fig, self.ax = plt.subplots(self.rows, self.cols, figsize=(15, 8))
+        self.fig, self.ax = plt.subplots(self.n_rows, self.n_cols, figsize=(15, 8))
         plt.tight_layout()
         plt.subplots_adjust(left=-0.1)
         self.plots = {}
@@ -225,10 +225,13 @@ class QuickPlot(object):
 
         colors = ["r", "b", "k", "g"]
         linestyles = ["-", ":", "--", "-."]
-        fontsize = 42 // self.cols
+        fontsize = 42 // self.n_cols
 
         for k, (key, variable_lists) in enumerate(self.variables.items()):
-            ax = self.ax.flat[k]
+            if len(self.variables) == 1:
+                ax = self.ax
+            else:
+                ax = self.ax.flat[k]
             # plt.subplot(*self.subplot_positions[key])
             ax.set_xlim(self.axis[key][:2])
             ax.set_ylim(self.axis[key][2:])
