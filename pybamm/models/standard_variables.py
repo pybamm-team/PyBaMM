@@ -30,6 +30,12 @@ delta_phi_p = pybamm.Variable(
 # Particle concentration
 c_s_n = pybamm.Variable("Negative particle concentration", ["negative particle"])
 c_s_p = pybamm.Variable("Positive particle concentration", ["positive particle"])
+c_s_n_xav = pybamm.Variable(
+    "X-average negative particle concentration", ["negative particle"]
+)
+c_s_p_xav = pybamm.Variable(
+    "X-average positive particle concentration", ["positive particle"]
+)
 
 # Porosity
 eps_n = pybamm.Variable("Negative electrode porosity", domain=["negative electrode"])

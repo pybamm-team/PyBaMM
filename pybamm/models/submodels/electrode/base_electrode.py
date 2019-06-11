@@ -26,8 +26,8 @@ class BaseElectrode(pybamm.BaseSubModel):
             V = pybamm.boundary_value(phi_s, "right")
             derived_variables.update({"Voltage": V})
 
-        derived_variables = self.get_average_variables(derived_variables)
-        derived_variables = self.get_dimensional_variables(derived_variables)
+        derived_variables.update(self.get_average_variables(derived_variables))
+        derived_variables.update(self.get_dimensional_variables(derived_variables))
 
         return derived_variables
 
@@ -67,7 +67,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Average " + self._domain.lower() + " electrode ohmic losses": delta_phi_av,
         }
 
-        return variables.update(average_variables)
+        return average_variables
 
     def get_dimensional_variables(self, variables):
         """
@@ -129,7 +129,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         if self._domain == "Positive":
             dimensional_variables.update({"Voltage": V_dim})
 
-        return variables.update(dimensional_variables)
+        return dimensional_variables
 
     @property
     def default_solver(self):

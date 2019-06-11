@@ -23,7 +23,7 @@ class FullOhm(pybamm.BaseOhm):
 
     def get_fundamental_variables(self):
         """
-        Returns the variables in the submodel for which a PDE must be solved to obtains
+        Returns the variables in the submodel for which a PDE must be solved to obtain.
         """
 
         if self._domain == "Negative":
