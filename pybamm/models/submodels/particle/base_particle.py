@@ -24,9 +24,15 @@ class BaseParticle(pybamm.BaseSubModel):
     def get_standard_derived_variables(self, variables):
 
         c_s = variables[self._domain + " particle concentration"]
+        c_s_xav = variables[
+            "X-average " + self._domain.lower() + " particle concentration"
+        ]
 
         c_s_surf = pybamm.surf(c_s)
         c_s_surf_av = pybamm.average(c_s_surf)
+
+        N_s = self._ficks_law(c_s)
+        N_s_xav = self._ficks_law(c_s_xav)
 
         if self._domain == "Negative":
             ocp = self.param.U_n(c_s_surf)
@@ -41,6 +47,8 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables.update(
             {
+                self._domain + " particle flux": N_s,
+                "X-average " + self._domain.lower() + " particle flux": N_s_xav,
                 self._domain + " particle surface concentration": c_s_surf,
                 "Average "
                 + self._domain.lower()
@@ -53,15 +61,19 @@ class BaseParticle(pybamm.BaseSubModel):
         variables.update(self.get_dimensional_variables(variables))
         return variables
 
+    def _flux_law(self, c):
+        raise NotImplementedError
+
+    def _unpack(self, variables):
+        raise NotImplementedError
+
     def get_dimensional_variables(self, variables):
 
         c_s = variables[self._domain + " particle concentration"]
         c_s_xav = variables[
-            "X-average " + self._domain.lower() + " particle concentration" : c_s_xav
+            "X-average " + self._domain.lower() + " particle concentration"
         ]
-        c_s_surf = variables[
-            self._domain + " particle surface concentration" : c_s_surf
-        ]
+        c_s_surf = variables[self._domain + " particle surface concentration"]
         c_s_surf_av = variables[
             "Average " + self._domain.lower() + " particle surface concentration"
         ]
@@ -71,9 +83,25 @@ class BaseParticle(pybamm.BaseSubModel):
         elif self._domain == "Positive":
             c_scale = self.param.c_p_max
 
-        c_s * c_scale
+        variables.update(
+            {
+                self._domain + " particle concentration [mol.m-3]": c_scale * c_s,
+                "X-average "
+                + self._domain.lower()
+                + " particle concentration [mol.m-3]": c_scale * c_s_xav,
+                self._domain
+                + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
+                "Average "
+                + self._domain.lower()
+                + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
+            }
+        )
 
-    def _initial_conditions(self, c):
+        return variables
+
+    def _initial_conditions(self, variables):
+
+        c, _, _ = self._unpack(variables)
 
         if self._domain == "Negative":
             c_init = self.param.c_n_init

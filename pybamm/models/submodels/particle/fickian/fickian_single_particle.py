@@ -1,10 +1,10 @@
 #
-# Base class for particles with Fickian diffusion
+# Class for a single particle with Fickian diffusion
 #
 import pybamm
 
 
-class FickianSingleParticle(pybamm.BaseSubModel):
+class FickianSingleParticle(pybamm.BaseFickianParticle):
     """Base class for molar conservation in a single x-averaged particle which employs
     Fick's law.
 
@@ -15,7 +15,7 @@ class FickianSingleParticle(pybamm.BaseSubModel):
     domain : str
         The domain of the model either 'Negative' or 'Positive'
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+    *Extends:* :class:`pybamm.BaseFickianParticle`
     """
 
     def __init__(self, param, domain):
@@ -56,3 +56,13 @@ class FickianSingleParticle(pybamm.BaseSubModel):
 
         return variables
 
+    def _unpack(self, variables):
+        c_s_xav = variables[
+            "X-average " + self._domain.lower() + " particle concentration"
+        ]
+        N_s_xav = variables["X-average " + self._domain.lower() + " particle flux"]
+        j_av = variables[
+            "Average " + self._domain.lower() + " electrode interfacial current density"
+        ]
+
+        return c_s_xav, N_s_xav, j_av

@@ -4,7 +4,7 @@
 import pybamm
 
 
-class BaseFickianParticle(pybamm.BaseSubModel):
+class BaseFickianParticle(pybamm.BaseParticle):
     """Base class for molar conservation in particles which employ Fick's law.
 
     Parameters
@@ -21,23 +21,28 @@ class BaseFickianParticle(pybamm.BaseSubModel):
         super().__init__(param)
         self._domain = domain
 
-    def _ficks_law(self, c):
+    def _flux_law(self, c):
         return pybamm.grad(c)
 
-    def _conservation_of_mass(self, c, N):
+    def _unpack():
+        raise NotImplementedError
+
+    def set_rhs(self, variables):
+
+        c, N, _ = self._unpack(variables)
 
         if self._domain == "Negative":
-            rhs = {c: -(1 / self.param.C_n) * pybamm.div(N)}
+            self.rhs = {c: -(1 / self.param.C_n) * pybamm.div(N)}
 
         elif self._domain == "Positive":
-            rhs = {c: -(1 / self.param.C_p) * pybamm.div(N)}
+            self.rhs = {c: -(1 / self.param.C_p) * pybamm.div(N)}
 
         else:
             raise pybamm.DomainError("Invalid particle domain")
 
-        return rhs
+    def set_boundary_conditions(self, variables):
 
-    def _boundary_conditions(self, c, j):
+        c, _, j = self._unpack(variables)
 
         if self._domain == "Negative":
             rbc = -self.param.C_n * j / self.param.a_n
@@ -48,7 +53,7 @@ class BaseFickianParticle(pybamm.BaseSubModel):
         else:
             raise pybamm.DomainError("Invalid particle domain")
 
-        boundary_conditions = {c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}}
-
-        return boundary_conditions
+        self.boundary_conditions = {
+            c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
+        }
 
