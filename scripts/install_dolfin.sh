@@ -1,5 +1,6 @@
 #!/bin/bash
 
+pip install --prefix=$VIRTUAL_ENV wheel --upgrade
 pip install --prefix=$VIRTUAL_ENV fenics-ffc --upgrade
 pip install --prefix=$VIRTUAL_ENV numpy mpi4py
 pip install --prefix=$VIRTUAL_ENV petsc petsc4py
