@@ -29,7 +29,7 @@ class TestInterfaceLeadAcid(unittest.TestCase):
             lead_acid_model.get_exchange_current_densities(c, "not a domain")
 
 
-class TestOxygenReaction(self):
+class TestOxygenReaction(unittest.TestCase):
     def test_butler_volmer_failure(self):
         interface = pybamm.interface_lead_acid.OxygenReaction(None)
         with self.assertRaises(ValueError):

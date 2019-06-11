@@ -110,7 +110,9 @@ class SPMe(pybamm.LithiumIonBaseModel):
             - self.variables["Positive electrolyte potential"]
         )
         pot_vars = pot_model.get_all_potentials(
-            (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
+            (ocp_n, ocp_p),
+            delta_phi=(delta_phi_n, delta_phi_p),
+            eta_r=(eta_r_n, eta_r_p),
         )
         self.variables.update(pot_vars)
 
