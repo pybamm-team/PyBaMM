@@ -108,8 +108,8 @@ class VoltageTests(BaseOutputTest):
         super().__init__(model, param, disc, solution, operating_condition)
         variables = self.model.variables
 
-        self.eta_n = variables["Negative electrode reaction overpotential [V]"]
-        self.eta_p = variables["Positive electrode reaction overpotential [V]"]
+        self.eta_r_n = variables["Negative electrode reaction overpotential [V]"]
+        self.eta_r_p = variables["Positive electrode reaction overpotential [V]"]
         self.eta_r_n_av = variables[
             "Average negative electrode reaction overpotential [V]"
         ]
@@ -132,21 +132,21 @@ class VoltageTests(BaseOutputTest):
 
     def test_each_reaction_overpotential(self):
         """Testing that:
-            - discharge: eta_n > 0, eta_p < 0
-            - charge: eta_n < 0, eta_p > 0
-            - off: eta_n == 0, eta_p == 0
+            - discharge: eta_r_n > 0, eta_r_p < 0
+            - charge: eta_r_n < 0, eta_r_p > 0
+            - off: eta_r_n == 0, eta_r_p == 0
             """
         tol = 0.001
         t, x_n, x_p = self.t, self.x_n, self.x_p
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(-self.eta_n(t, x_n), tol)
-            np.testing.assert_array_less(self.eta_p(t, x_p), tol)
+            np.testing.assert_array_less(-self.eta_r_n(t, x_n), tol)
+            np.testing.assert_array_less(self.eta_r_p(t, x_p), tol)
         elif self.operating_condition == "charge":
-            np.testing.assert_array_less(self.eta_n(t, x_n), tol)
-            np.testing.assert_array_less(-self.eta_p(t, x_p), tol)
+            np.testing.assert_array_less(self.eta_r_n(t, x_n), tol)
+            np.testing.assert_array_less(-self.eta_r_p(t, x_p), tol)
         elif self.operating_condition == "off":
-            np.testing.assert_array_equal(self.eta_n(t, x_n), 0)
-            np.testing.assert_array_equal(-self.eta_p(t, x_p), 0)
+            np.testing.assert_array_equal(self.eta_r_n(t, x_n), 0)
+            np.testing.assert_array_equal(-self.eta_r_p(t, x_p), 0)
 
     def test_overpotentials(self):
         """Testing that all are:
