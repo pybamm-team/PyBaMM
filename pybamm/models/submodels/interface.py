@@ -75,6 +75,35 @@ class InterfacialCurrent(pybamm.SubModel):
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
+    def get_butler_volmer_from_variables(self, c_e, delta_phi, domain=None):
+        """
+        Butler-Volmer reactions, using the variables directly
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            Electrolyte concentration
+        delta_phi : :class:`pybamm.Symbol`
+            Surface potential difference
+        domain : iter of str, optional
+            The domain(s) in which to compute the interfacial current. Default is None,
+            in which case c_e.domain is used.
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            Interfacial current density
+
+        """
+        domain = domain or c_e.domain
+        if domain == ["negative electrode"]:
+            ocp = self.set_of_parameters.U_n
+        if domain == ["positive electrode"]:
+            ocp = self.set_of_parameters.U_p
+
+        j0 = self.get_exchange_current_densities(c_e, domain)
+        return self.get_butler_volmer(j0, delta_phi - ocp(c_e), domain)
+
     def get_inverse_butler_volmer(self, j, j0, domain=None):
         """
         Inverts the Butler-Volmer relation to solve for the reaction overpotential.
@@ -126,7 +155,9 @@ class InterfacialCurrent(pybamm.SubModel):
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
-        i_typ = self.set_of_parameters.i_typ
+        param = self.set_of_parameters
+        j_n_scale = param.i_typ / (param.a_n_dim * param.L_x)
+        j_p_scale = param.i_typ / (param.a_p_dim * param.L_x)
 
         # Broadcast if necessary
         if j_n.domain in [[], ["current collector"]]:
@@ -141,31 +172,185 @@ class InterfacialCurrent(pybamm.SubModel):
         # Concatenations
         j = pybamm.Concatenation(*[j_n, pybamm.Broadcast(0, ["separator"]), j_p])
         j0 = pybamm.Concatenation(*[j0_n, pybamm.Broadcast(0, ["separator"]), j0_p])
+        j_dimensional = pybamm.Concatenation(
+            *[j_n_scale * j_n, pybamm.Broadcast(0, ["separator"]), j_p_scale * j_p]
+        )
+        j0_dimensional = pybamm.Concatenation(
+            *[j_n_scale * j0_n, pybamm.Broadcast(0, ["separator"]), j_p_scale * j0_p]
+        )
 
         # Averages
-        j_n_av = pybamm.average(j_n)
-        j_p_av = pybamm.average(j_p)
+        j_n_bar = pybamm.average(j_n)
+        j_p_bar = pybamm.average(j_p)
 
         return {
             "Negative electrode interfacial current density": j_n,
             "Positive electrode interfacial current density": j_p,
-            "Average negative electrode interfacial current density": j_n_av,
-            "Average positive electrode interfacial current density": j_p_av,
+            "Average negative electrode interfacial current density": j_n_bar,
+            "Average positive electrode interfacial current density": j_p_bar,
             "Interfacial current density": j,
             "Negative electrode exchange-current density": j0_n,
             "Positive electrode exchange-current density": j0_p,
             "Exchange-current density": j0,
-            "Negative electrode interfacial current density [A.m-2]": i_typ * j_n,
-            "Positive electrode interfacial current density [A.m-2]": i_typ * j_p,
-            "Average negative electrode interfacial current density [A.m-2]": i_typ
-            * j_n_av,
-            "Average positive electrode interfacial current density [A.m-2]": i_typ
-            * j_p_av,
-            "Interfacial current density [A.m-2]": i_typ * j,
-            "Negative electrode exchange-current density [A.m-2]": i_typ * j0_n,
-            "Positive electrode exchange-current density [A.m-2]": i_typ * j0_p,
-            "Exchange-current density [A.m-2]": i_typ * j0,
+            "Negative electrode interfacial current density [A.m-2]": j_n_scale * j_n,
+            "Positive electrode interfacial current density [A.m-2]": j_p_scale * j_p,
+            "Average negative electrode interfacial current density [A.m-2]": j_n_scale
+            * j_n_bar,
+            "Average positive electrode interfacial current density [A.m-2]": j_p_scale
+            * j_p_bar,
+            "Interfacial current density [A.m-2]": j_dimensional,
+            "Negative electrode exchange-current density [A.m-2]": j_n_scale * j0_n,
+            "Positive electrode exchange-current density [A.m-2]": j_p_scale * j0_p,
+            "Exchange-current density [A.m-2]": j0_dimensional,
         }
+
+    def get_first_order_butler_volmer(
+        self, c_e, delta_phi, c_e_0, delta_phi_0, domain=None
+    ):
+        """
+        First-order correction for the Butler-Volmer reactions
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            Electrolyte concentration
+        delta_phi : :class:`pybamm.Symbol`
+            Surface potential difference
+        c_e_0 : :class:`pybamm.Symbol`
+            Leading-order electrolyte concentration
+        delta_phi_0 : :class:`pybamm.Symbol`
+            Leading-order surface potential difference
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            Interfacial current density
+
+        """
+        param = self.set_of_parameters
+        # Take 1 * c_e_0 as a hack for differentiation
+        c_e_0 *= 1
+        domain = domain or c_e.domain
+        j_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_0, domain)
+        c_e_1 = (c_e - c_e_0) / param.C_e
+        delta_phi_1 = (delta_phi - delta_phi_0) / param.C_e
+
+        j_1 = j_0.diff(c_e_0) * c_e_1 + j_0.diff(delta_phi_0) * delta_phi_1
+        return j_0 + param.C_e * j_1
+
+    def get_first_order_potential_differences(self, variables, leading_order_vars):
+        """
+        Calculates surface potential difference using the linear first-order correction
+        to the Butler-Volmer, and then calculates derived potentials.
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of symbols to use in the model
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        param = self.set_of_parameters
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        delta_phi_n_0 = pybamm.average(
+            leading_order_vars["Negative electrode surface potential difference"]
+        )
+        delta_phi_p_0 = pybamm.average(
+            leading_order_vars["Positive electrode surface potential difference"]
+        )
+
+        # Take 1 * c_e_0 so that it doesn't appear in delta_phi_n_0 and delta_phi_p_0
+        c_e_0 = 1 * leading_order_vars["Average electrolyte concentration"]
+
+        j_n_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_n_0, neg)
+        j_p_0 = self.get_butler_volmer_from_variables(c_e_0, delta_phi_p_0, pos)
+
+        c_e = variables["Electrolyte concentration"]
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        c_e_n_1_bar = (pybamm.average(c_e_n) - c_e_0) / param.C_e
+        c_e_p_1_bar = (pybamm.average(c_e_p) - c_e_0) / param.C_e
+        delta_phi_n_1_bar = -j_n_0.diff(c_e_0) * c_e_n_1_bar / j_n_0.diff(delta_phi_n_0)
+        delta_phi_p_1_bar = -j_p_0.diff(c_e_0) * c_e_p_1_bar / j_p_0.diff(delta_phi_p_0)
+
+        delta_phi_n = delta_phi_n_0 + param.C_e * delta_phi_n_1_bar
+        delta_phi_p = delta_phi_p_0 + param.C_e * delta_phi_p_1_bar
+        ocp_n = param.U_n(c_e_n)
+        ocp_p = param.U_p(c_e_p)
+
+        pot_model = pybamm.potential.Potential(param)
+        return pot_model.get_all_potentials(
+            (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
+        )
+
+    def get_average_potential_differences(self, variables):
+        """
+        Calculates surface potential difference using the average Butler-Volmer, and
+        then calculates derived potentials.
+
+        Parameters
+        ----------
+        variables : dict
+            Dictionary of symbols to use in the model
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        # Set up
+        param = self.set_of_parameters
+        neg = ["negative electrode"]
+        pos = ["positive electrode"]
+        # Unpack and average variables
+        i_bnd_cc = variables["Current collector current density"]
+        c_e = variables["Electrolyte concentration"]
+        c_e_n, _, c_e_p = c_e.orphans
+        c_e_n_bar = pybamm.average(c_e_n)
+        c_e_p_bar = pybamm.average(c_e_p)
+
+        # Calculate reaction overpotentials
+        j0_n_bar = self.get_exchange_current_densities(c_e_n_bar, neg)
+        j0_p_bar = self.get_exchange_current_densities(c_e_p_bar, pos)
+        j_n_bar = self.get_homogeneous_interfacial_current(i_bnd_cc, neg)
+        j_p_bar = self.get_homogeneous_interfacial_current(i_bnd_cc, pos)
+        eta_r_n_bar = self.get_inverse_butler_volmer(j_n_bar, j0_n_bar, neg)
+        eta_r_p_bar = self.get_inverse_butler_volmer(j_p_bar, j0_p_bar, pos)
+
+        # Set derived potential
+        ocp_n_bar = param.U_n(c_e_n_bar)
+        ocp_p_bar = param.U_p(c_e_p_bar)
+        pot_model = pybamm.potential.Potential(param)
+        return pot_model.get_all_potentials(
+            (ocp_n_bar, ocp_p_bar), eta_r=(eta_r_n_bar, eta_r_p_bar)
+        )
+
+    def get_current_from_current_densities(self, variables):
+        param = self.set_of_parameters
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
+        j_n = variables["Negative electrode interfacial current density"]
+        j_p = variables["Positive electrode interfacial current density"]
+        i_boundary_cc = variables["Current collector current density"]
+
+        # Electrolyte current
+        i_e_n = pybamm.IndefiniteIntegral(j_n, x_n)
+        # Shift i_e_p to be equal to 0 at x_p = 1
+        i_e_p = pybamm.IndefiniteIntegral(j_p, x_p) - pybamm.Integral(j_p, x_p)
+        eleclyte_model = pybamm.electrolyte_current.ElectrolyteCurrentBaseModel(param)
+        eleclyte_variables = eleclyte_model.get_current_variables(
+            (i_e_n, i_e_p), i_boundary_cc
+        )
+
+        # Electrode current
+        i_s_n = i_boundary_cc - i_e_n
+        i_s_p = i_boundary_cc - i_e_p
+        electrode_model = pybamm.electrode.Ohm(param)
+        electrode_variables = electrode_model.get_current_variables(i_s_n, i_s_p)
+        return {**eleclyte_variables, **electrode_variables}
 
 
 class LeadAcidReaction(InterfacialCurrent, pybamm.LeadAcidBaseModel):

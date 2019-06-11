@@ -62,7 +62,9 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot(pybamm.BaseModel(), None, 1)
         with self.assertRaisesRegex(ValueError, "must provide the same"):
             pybamm.QuickPlot(
-                pybamm.BaseModel(), None, [pybamm.Solution(0, 0), pybamm.Solution(0, 0)]
+                pybamm.BaseModel(),
+                None,
+                [pybamm.Solution(0, 0, ""), pybamm.Solution(0, 0, "")],
             )
 
 

@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid LOQS model
+# Tests for the lead-acid LOQS model with capacitance
 #
 import pybamm
 from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
@@ -16,13 +16,14 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
         options = {"capacitance": "algebraic"}
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_1p1D_differential(self):
         options = {"capacitance": "differential", "bc_options": {"dimensionality": 1}}
         model = pybamm.lead_acid.LOQS(options)

@@ -57,7 +57,9 @@ class DaeSolver(pybamm.BaseSolver):
         # Set up
         timer = pybamm.Timer()
         start_time = timer.time()
-        concatenated_rhs, concatenated_algebraic, y0, events, jac = self.set_up(model)
+        concatenated_rhs, concatenated_algebraic, y0, model_events, jac = self.set_up(
+            model
+        )
         set_up_time = timer.time() - start_time
 
         def residuals(t, y, ydot):
@@ -80,7 +82,7 @@ class DaeSolver(pybamm.BaseSolver):
 
             return eval_event
 
-        events = [event_fun(event) for event in events]
+        events = [event_fun(event) for event in model_events.values()]
 
         # Create function to evaluate jacobian
         if jac is not None:
@@ -107,7 +109,10 @@ class DaeSolver(pybamm.BaseSolver):
         solution.total_time = timer.time() - start_time
         solution.set_up_time = set_up_time
 
-        pybamm.logger.info("Finish solving {}".format(model.name))
+        # Identify the event that caused termination
+        termination = self.get_termination_reason(solution, model_events)
+
+        pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         return solution
 
     def set_up(self, model):
@@ -127,8 +132,8 @@ class DaeSolver(pybamm.BaseSolver):
             Algebraic equations, which should evaluate to zero
         y0 : :class:`numpy.array`
             Vector of initial conditions
-        events : list of :class:`pybamm.Symbol`
-            List of events at which the model should terminate
+        events : dict
+            Dicitonary of events at which the model should terminate
         jac : :class:`pybamm.SparseStack`
             Jacobian matrix for the differential and algebraic equations
 
@@ -151,7 +156,7 @@ class DaeSolver(pybamm.BaseSolver):
             pybamm.logger.info("Simplifying algebraic")
             concatenated_algebraic = simp.simplify(concatenated_algebraic)
             pybamm.logger.info("Simplifying events")
-            events = [simp.simplify(event) for event in events]
+            events = {name: simp.simplify(event) for name, event in events.items()}
 
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
@@ -180,7 +185,9 @@ class DaeSolver(pybamm.BaseSolver):
             pybamm.logger.info("Converting algebraic to python")
             concatenated_algebraic = pybamm.EvaluatorPython(concatenated_algebraic)
             pybamm.logger.info("Converting events to python")
-            events = [pybamm.EvaluatorPython(event) for event in events]
+            events = {
+                name: pybamm.EvaluatorPython(event) for name, event in events.items()
+            }
 
         # Calculate consistent initial conditions for the algebraic equations
         def rhs(t, y):
@@ -246,7 +253,7 @@ class DaeSolver(pybamm.BaseSolver):
         # Return full set of consistent initial conditions (y0_diff unchanged)
         y0_consistent = np.concatenate([y0_diff, sol.x])
 
-        if sol.success and np.all(sol.fun < self.root_tol):
+        if sol.success and np.all(sol.fun < self.root_tol * len(sol.x)):
             pybamm.logger.info("Finish calculating consistent initial conditions")
             return y0_consistent
         elif not sol.success:
@@ -255,8 +262,12 @@ class DaeSolver(pybamm.BaseSolver):
             )
         else:
             raise pybamm.SolverError(
-                "Could not find consistent initial conditions: "
-                + "solver terminated successfully, but solution above tolerance"
+                """
+                Could not find consistent initial conditions: solver terminated
+                successfully, but maximum solution error ({}) above tolerance ({})
+                """.format(
+                    np.max(sol.fun), self.root_tol * len(sol.x)
+                )
             )
 
     def integrate(

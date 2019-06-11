@@ -6,11 +6,10 @@ import numpy as np
 import scipy.sparse as sparse
 import unittest
 import warnings
-from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 
 
-@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
     def test_ode_integrate(self):
         # Constant
@@ -35,6 +34,7 @@ class TestScikitsSolvers(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         solution = solver.integrate(exponential_decay, y0, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+        self.assertEqual(solution.termination, "final time")
 
     def test_ode_integrate_failure(self):
         # Turn off warnings to ignore sqrt error
@@ -70,6 +70,7 @@ class TestScikitsSolvers(unittest.TestCase):
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_array_less(0, solution.y[0])
         np.testing.assert_array_less(solution.t, 0.5)
+        self.assertEqual(solution.termination, "event")
 
         # Expnonential growth
         solver = pybamm.ScikitsOdeSolver(tol=1e-8)
@@ -92,6 +93,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(np.exp(solution.t), solution.y[0], rtol=1e-4)
         np.testing.assert_array_less(solution.y, 9)
         np.testing.assert_array_less(solution.y ** 2, 7)
+        self.assertEqual(solution.termination, "event")
 
     def test_ode_integrate_with_jacobian(self):
         # Linear
@@ -219,6 +221,7 @@ class TestScikitsSolvers(unittest.TestCase):
         solution = solver.integrate(exponential_decay_dae, y0, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
         np.testing.assert_allclose(solution.y[1], 2 * np.exp(-0.1 * solution.t))
+        self.assertEqual(solution.termination, "final time")
 
     def test_dae_integrate_failure(self):
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
@@ -292,6 +295,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(1.0 * solution.t, solution.y[1])
         np.testing.assert_array_less(solution.y[0], 2)
         np.testing.assert_array_less(solution.y[1], 5)
+        self.assertEqual(solution.termination, "event")
 
         # Exponential decay
         solver = pybamm.ScikitsDaeSolver(tol=1e-8)
@@ -316,6 +320,7 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(solution.y[1], 2 * np.exp(-0.1 * solution.t))
         np.testing.assert_array_less(0.9, solution.y[0])
         np.testing.assert_array_less(solution.t, 0.5)
+        self.assertEqual(solution.termination, "event")
 
     def test_dae_integrate_with_jacobian(self):
         # Constant
@@ -387,10 +392,10 @@ class TestScikitsSolvers(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
-        model.events = [
-            pybamm.min(2 * var - 2.5),
-            pybamm.min(var - 1.5),
-        ]
+        model.events = {
+            "2 * var = 2.5": pybamm.min(2 * var - 2.5),
+            "var = 1.5": pybamm.min(var - 1.5),
+        }
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
@@ -508,10 +513,10 @@ class TestScikitsSolvers(unittest.TestCase):
         model.rhs = {var1: 0.1 * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
-        model.events = [
-            pybamm.min(var1 - 1.5),
-            pybamm.min(var2 - 2.5),
-        ]
+        model.events = {
+            "var1 = 1.5": pybamm.min(var1 - 1.5),
+            "var2 = 2.5": pybamm.min(var2 - 2.5),
+        }
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 

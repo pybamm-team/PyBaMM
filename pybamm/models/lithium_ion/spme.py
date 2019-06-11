@@ -78,9 +78,10 @@ class SPMe(pybamm.LithiumIonBaseModel):
         eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
         eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
+        pot_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
+        )
+        self.variables.update(pot_vars)
 
         # Load electrode and electrolyte models
         electrode_model = pybamm.electrode.Ohm(param)
@@ -102,9 +103,23 @@ class SPMe(pybamm.LithiumIonBaseModel):
         electrode_vars = electrode_model.get_explicit_combined(self.variables)
         self.variables.update(electrode_vars)
 
+        # Update potentials again to get correct surface potential difference
+        delta_phi_n = (
+            self.variables["Negative electrode potential"]
+            - self.variables["Negative electrolyte potential"]
+        )
+        delta_phi_p = (
+            self.variables["Positive electrode potential"]
+            - self.variables["Positive electrolyte potential"]
+        )
+        pot_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
+        )
+        self.variables.update(pot_vars)
+
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events.append(voltage - param.voltage_low_cut)
+        self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     @property
     def default_geometry(self):

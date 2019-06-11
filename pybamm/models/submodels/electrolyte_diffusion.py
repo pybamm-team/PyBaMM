@@ -68,7 +68,7 @@ class StefanMaxwell(pybamm.SubModel):
 
         # Cut off if concentration goes too small
         # (open-circuit potential poorly defined)
-        self.events = [pybamm.min(c_e) - 0.002]
+        self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
 
     def set_leading_order_system(self, variables, reactions):
         """
@@ -114,11 +114,14 @@ class StefanMaxwell(pybamm.SubModel):
             pybamm.Broadcast(c_e, ["separator"]),
             pybamm.Broadcast(c_e, ["positive electrode"]),
         )
-        self.variables = self.get_variables(c_e_var, N_e)
+        self.variables = {
+            **self.get_variables(c_e_var, N_e),
+            "Average electrolyte concentration": c_e,
+        }
 
         # Cut off if concentration goes too small
         # (open-circuit potential poorly defined)
-        self.events = [pybamm.min(c_e) - 0.002]
+        self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
 
     def get_variables(self, c_e, N_e):
         """

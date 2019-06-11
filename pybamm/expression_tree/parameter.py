@@ -27,7 +27,7 @@ class Parameter(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Parameter(self.name, self.domain)
 
-    def evaluate_for_shape(self, t=None, y=None):
+    def evaluate_for_shape(self):
         """
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
@@ -115,7 +115,7 @@ class FunctionParameter(pybamm.Symbol):
         """
         return FunctionParameter(self.name, *children, diff_variable=self.diff_variable)
 
-    def evaluate_for_shape(self, t=None, y=None):
+    def evaluate_for_shape(self):
         """
         Returns the sum of the evaluated children
         See :meth:`pybamm.Symbol.evaluate_for_shape()`

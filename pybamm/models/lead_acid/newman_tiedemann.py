@@ -82,9 +82,10 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         eta_r_n = delta_phi_n - ocp_n
         eta_r_p = delta_phi_p - ocp_p
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
+        potential_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
+        )
+        self.variables.update(potential_vars)
 
         # Interfacial current density
         j0_n = int_curr_model.get_exchange_current_densities(c_e_n)
@@ -101,12 +102,6 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
                 "pos": {"s_plus": param.s_p, "aj": j_p},
             }
         }
-
-        # Cut-off voltage
-        voltage = pybamm.BoundaryValue(delta_phi_p, "right") - pybamm.BoundaryValue(
-            delta_phi_n, "left"
-        )
-        self.events.append(voltage - param.voltage_low_cut)
 
     def set_porosity_submodel(self):
         porosity_model = pybamm.porosity.Standard(self.set_of_parameters)
@@ -161,10 +156,9 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             phi_s_p = variables["Positive electrode potential"]
             i_s_n = variables["Negative electrode current density"]
             i_s_p = variables["Positive electrode current density"]
-            volt_vars = electrode_current_model.get_variables(
-                phi_s_n, phi_s_p, i_s_n, i_s_p
-            )
-            self.variables.update(volt_vars)
+            pot_vars = electrode_current_model.get_potential_variables(phi_s_n, phi_s_p)
+            curr_vars = electrode_current_model.get_current_variables(i_s_n, i_s_p)
+            self.variables.update({**pot_vars, **curr_vars})
         else:
             # Electrolyte current
             eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
@@ -176,6 +170,9 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
             # Post-process electrolyte model
             eleclyte_current_model.set_post_processed()
             self.update(eleclyte_current_model)
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
+        self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     @property
     def default_solver(self):

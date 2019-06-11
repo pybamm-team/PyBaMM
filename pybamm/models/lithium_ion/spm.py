@@ -2,7 +2,6 @@
 # Single Particle Model (SPM)
 #
 import pybamm
-import autograd.numpy as np
 
 
 class SPM(pybamm.LithiumIonBaseModel):
@@ -82,9 +81,10 @@ class SPM(pybamm.LithiumIonBaseModel):
         eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
         eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
+        pot_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
+        )
+        self.variables.update(pot_vars)
 
         # Electrolyte current
         eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
@@ -108,10 +108,12 @@ class SPM(pybamm.LithiumIonBaseModel):
         # TO DO: get terminal voltage in 2D
         if self.options["bc_options"]["dimensionality"] == 0:
             voltage = self.variables["Terminal voltage"]
-            self.events.append(voltage - param.voltage_low_cut)
+            self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
         elif self.options["bc_options"]["dimensionality"] == 2:
             voltage = self.variables["Terminal voltage"]
-            self.events.append(pybamm.Function(np.min, voltage) - param.voltage_low_cut)
+            self.events["Minimum voltage cut-off"] = (
+                pybamm.min(voltage) - param.voltage_low_cut
+            )
 
     @property
     def default_geometry(self):
@@ -163,6 +165,6 @@ class SPM(pybamm.LithiumIonBaseModel):
         # Different solver depending on whether we solve ODEs or DAEs
         dimensionality = self.options["bc_options"]["dimensionality"]
         if dimensionality == 0:
-            return pybamm.ScikitsOdeSolver()
+            return pybamm.ScipySolver()
         else:
             return pybamm.ScikitsDaeSolver()

@@ -29,9 +29,10 @@ class TestSPM(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             model = pybamm.lithium_ion.SPM(options)
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
         model = pybamm.lithium_ion.SPM()
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
+        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
         options = {"bc_options": {"dimensionality": 2}}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)

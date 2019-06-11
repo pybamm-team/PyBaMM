@@ -37,7 +37,7 @@ def plot_voltages(all_variables, t_eval, Crates):
         ax.xaxis.set_ticks_position("bottom")
 
         # Add inset plot
-        inset = inset_axes(ax, width="30%", height="30%", loc=3, borderpad=3)
+        inset = inset_axes(ax, width="40%", height="40%", loc=1, borderpad=2)
 
         # Linestyles
         linestyles = ["k-", "b-.", "r--"]
@@ -62,7 +62,8 @@ def plot_voltages(all_variables, t_eval, Crates):
             )
         # plt.legend(loc="upper right")
     file_name = "capacitance_voltage_comparison.eps".format(Crate)
-    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+    plt.show()
+    # plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def plot_errors(all_variables, t_eval, Crates):
@@ -106,13 +107,14 @@ def plot_errors(all_variables, t_eval, Crates):
             ax.loglog(variables["Time [s]"](t_eval), error, linestyles[j], label=label)
         # plt.legend(loc="upper right")
     file_name = "capacitance_errors_voltages.eps".format(Crate)
-    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+    plt.show()
+    # plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def compare_voltages(args, models):
     t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
     if args.compute:
-        Crates = [0.1]  # , 0.5, 1, 2]
+        Crates = [2]  # , 0.5, 1, 2]
         all_variables, t_eval = model_comparison(models, Crates, t_eval)
         with open("capacitance_data.pickle", "wb") as f:
             data = (all_variables, t_eval)
@@ -120,14 +122,14 @@ def compare_voltages(args, models):
 
     with open("capacitance_data.pickle", "rb") as f:
         (all_variables, t_eval) = pickle.load(f)
-    plot_voltages(all_variables, t_eval, [1])
-    plot_errors(all_variables, t_eval, [0.1, 0.5, 1, 2])
+    plot_voltages(all_variables, t_eval, Crates)
+    plot_errors(all_variables, t_eval, Crates)
 
 
 def convergence_studies(args, models):
     t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
+    all_npts = [10, 30, 50]
     if args.compute:
-        all_npts = [50]
         all_variables, t_eval = convergence_study(models, 1, t_eval, all_npts)
         with open("capacitance_convergence_study.pickle", "wb") as f:
             data = (all_variables, t_eval)
@@ -135,23 +137,37 @@ def convergence_studies(args, models):
 
     with open("capacitance_convergence_study.pickle", "rb") as f:
         (all_variables, t_eval) = pickle.load(f)
-    print(
-        [
-            [x for x in all_variables[all_npts[0]].values()][i]["solution"].solve_time
-            for i in range(len(models))
+    all_times = {
+        model: [
+            [x for x in all_variables[npts].values()][i]["solution"].solve_time
+            for npts in all_npts
         ]
-    )
+        for i, model in enumerate(models)
+    }
+    fig, ax = plt.subplots()
+    linestyles = ["k-", "b-.", "r--"]
+    labels = [
+        "Direct formulation",
+        "Capacitance formulation (differential)",
+        "Capacitance formulation (algebraic)",
+    ]
+    for j, times in enumerate(all_times.values()):
+        ax.loglog(all_npts, times, linestyles[j], label=labels[j])
+    ax.set_xlabel("Number of grid points")
+    ax.set_ylabel("Time [s]")
+    ax.legend()
+    plt.show()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    pybamm.set_logging_level("DEBUG")
+    pybamm.set_logging_level("INFO")
     models = [
-        # pybamm.lead_acid.NewmanTiedemann(),
+        pybamm.lead_acid.NewmanTiedemann(),
         pybamm.lead_acid.NewmanTiedemann({"capacitance": "differential"}),
-        # pybamm.lead_acid.NewmanTiedemann({"capacitance": "algebraic"}),
+        pybamm.lead_acid.NewmanTiedemann({"capacitance": "algebraic"}),
     ]
     # compare_voltages(args, models)
     convergence_studies(args, models)

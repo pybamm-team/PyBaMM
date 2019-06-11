@@ -49,7 +49,7 @@ class BaseModel(object):
         self._initial_conditions = {}
         self._boundary_conditions = {}
         self._variables = {}
-        self._events = []
+        self._events = {}
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
@@ -218,7 +218,7 @@ class BaseModel(object):
                 self._boundary_conditions, submodel.boundary_conditions
             )
             self.variables.update(submodel.variables)  # keys are strings so no check
-            self._events.extend(submodel.events)
+            self._events.update(submodel.events)  # keys are strings so no check
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
@@ -345,7 +345,11 @@ class BaseModel(object):
                     )
 
     def check_variables(self):
-        """ Chec that the right variables are provided. """
+        """
+        Check that the right variables are provided.
+        Check that all variables in the variable list appear in the rhs or algebraic
+        keys
+        """
         missing_vars = []
         for output, expression in self._variables.items():
             if expression is None:
@@ -361,6 +365,31 @@ class BaseModel(object):
             # Remove missing entries
             for output in missing_vars:
                 del self._variables[output]
+
+        # Create list of all Variable nodes that appear in the model's list of variables
+        all_vars = {}
+        for eqn in self.variables.values():
+            # Add all variables in the equation to the list of variables
+            all_vars.update(
+                {x.id: x for x in eqn.pre_order() if isinstance(x, pybamm.Variable)}
+            )
+        var_ids_in_keys = set()
+        for var in {**self.rhs, **self.algebraic}.keys():
+            if isinstance(var, pybamm.Variable):
+                var_ids_in_keys.add(var.id)
+            elif isinstance(var, pybamm.Concatenation):
+                var_ids_in_keys.update([x.id for x in var.children])
+        for var_id, var in all_vars.items():
+            if var_id not in var_ids_in_keys:
+                raise pybamm.ModelError(
+                    """
+                    No key set for variable '{}'. Make sure it is included in either
+                    model.rhs or model.algebraic in an unmodified form (e.g. not
+                    Broadcasted)
+                    """.format(
+                        var
+                    )
+                )
 
 
 class StandardBatteryBaseModel(BaseModel):
@@ -379,7 +408,8 @@ class StandardBatteryBaseModel(BaseModel):
     def default_parameter_values(self):
         # Default parameter values, geometry, submesh, spatial methods and solver
         # Lion parameters left as default parameter set for tests
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
+        pybamm_path = pybamm.root_dir()
+        input_path = os.path.join(pybamm_path, "input", "parameters", "lithium-ion")
         return pybamm.ParameterValues(
             os.path.join(
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
@@ -387,7 +417,7 @@ class StandardBatteryBaseModel(BaseModel):
             {
                 "Typical current [A]": 1,
                 "Current function": os.path.join(
-                    os.getcwd(),
+                    pybamm_path,
                     "pybamm",
                     "parameters",
                     "standard_current_functions",
@@ -475,6 +505,7 @@ class StandardBatteryBaseModel(BaseModel):
             "bc_options": {"dimensionality": 0},
             "capacitance": False,
             "convection": False,
+            "first-order potential": "linear",
         }
         if self._extra_options is None:
             options = default_options
@@ -544,10 +575,10 @@ class StandardBatteryBaseModel(BaseModel):
         # Overpotentials
         self.variables.update(
             {
-                "Negative reaction overpotential": None,
-                "Positive reaction overpotential": None,
-                "Average negative reaction overpotential": None,
-                "Average positive reaction overpotential": None,
+                "Negative electrode reaction overpotential": None,
+                "Positive electrode reaction overpotential": None,
+                "Average negative electrode reaction overpotential": None,
+                "Average positive electrode reaction overpotential": None,
                 "Average reaction overpotential": None,
                 "Average electrolyte overpotential": None,
                 "Average solid phase ohmic losses": None,
@@ -556,10 +587,10 @@ class StandardBatteryBaseModel(BaseModel):
 
         self.variables.update(
             {
-                "Negative reaction overpotential [V]": None,
-                "Positive reaction overpotential [V]": None,
-                "Average negative reaction overpotential [V]": None,
-                "Average positive reaction overpotential [V]": None,
+                "Negative electrode reaction overpotential [V]": None,
+                "Positive electrode reaction overpotential [V]": None,
+                "Average negative electrode reaction overpotential [V]": None,
+                "Average positive electrode reaction overpotential [V]": None,
                 "Average reaction overpotential [V]": None,
                 "Average electrolyte overpotential [V]": None,
                 "Average solid phase ohmic losses [V]": None,
@@ -635,13 +666,14 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
 
     @property
     def default_parameter_values(self):
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
+        pybamm_path = pybamm.root_dir()
+        input_path = os.path.join(pybamm_path, "input", "parameters", "lead-acid")
         return pybamm.ParameterValues(
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current [A]": 1,
                 "Current function": os.path.join(
-                    os.getcwd(),
+                    pybamm_path,
                     "pybamm",
                     "parameters",
                     "standard_current_functions",

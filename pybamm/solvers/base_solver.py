@@ -46,3 +46,30 @@ class BaseSolver(object):
         """
 
         raise NotImplementedError
+
+    def get_termination_reason(self, solution, events):
+        """
+        Identify the cause for termination. In particular, if the solver terminated
+        due to an event, (try to) pinpoint which event was responsible.
+        Note that the current approach (evaluating all the events and then finding which
+        one is smallest at the final timestep) is pretty crude, but is the easiest one
+        that works for all the different solvers.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`
+            The solution object
+        events : dict
+            Dictionary of events
+        """
+        if solution.termination == "final time":
+            return "the solver successfully reached the end of the integration interval"
+        elif solution.termination == "event":
+            # Get final event value
+            final_event_values = {}
+            for name, event in events.items():
+                final_event_values[name] = abs(
+                    event.evaluate(solution.t[-1], solution.y[:, -1])
+                )
+            termination_event = min(final_event_values, key=final_event_values.get)
+            return "the termination event '{}' occurred".format(termination_event)

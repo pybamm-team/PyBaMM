@@ -14,13 +14,13 @@ All models in PyBaMM are implemented as `expression trees <https://github.com/py
 After the model has been created, parameters have been set, and the model has been discretised, the model is now a linear algebra object with the following attributes:
 
 model.concatenated_rhs
-  A :class:`pybamm.Symbol` nodes that can be evaluated at a state (``t``, ``y``) and returns the value of all the differential equations at that state, concatenated into a single vector
+  A :class:`pybamm.Symbol` node that can be evaluated at a state (``t``, ``y``) and returns the value of all the differential equations at that state, concatenated into a single vector
 model.concatenated_algebraic
-  A :class:`pybamm.Symbol` nodes that can be evaluated at a state (``t``, ``y``) and returns the value of all the algebraic equations at that state, concatenated into a single vector
+  A :class:`pybamm.Symbol` node that can be evaluated at a state (``t``, ``y``) and returns the value of all the algebraic equations at that state, concatenated into a single vector
 model.concatenated_initial_conditions
   A numpy array of initial conditions for all the differential and algebraic equations, concatenated into a single vector
 model.events
-  A list of :class:`pybamm.Symbol` nodes representing events at which the solver should terminate. Specifically, the solver should terminate when any of the events in ``model.events`` evaluate to zero
+  A dictionary of :class:`pybamm.Symbol` nodes representing events at which the solver should terminate. Specifically, the solver should terminate when any of the events in ``model.events.values()`` evaluate to zero
 
 The role of solvers is to solve a model at a given set of time points, returning a vector of times ``t`` and a matrix of states ``y``.
 

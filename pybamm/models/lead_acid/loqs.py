@@ -27,7 +27,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         self.set_current_variables()
         self.set_convection_variables()
 
-        # ODEs only (don't use jacobian, use base spatial method)
+        # ODEs only (don't use jacobian)
         self.use_jacobian = False
 
     def set_model_variables(self):
@@ -54,10 +54,12 @@ class LOQS(pybamm.LeadAcidBaseModel):
 
         if self.options["capacitance"] is not False:
             delta_phi_n = pybamm.Variable(
-                "Negative electrode surface potential difference", curr_coll_domain
+                "Leading-order negative electrode surface potential difference",
+                curr_coll_domain,
             )
             delta_phi_p = pybamm.Variable(
-                "Positive electrode surface potential difference", curr_coll_domain
+                "Leading-order positive electrode surface potential difference",
+                curr_coll_domain,
             )
             self.variables.update(
                 {
@@ -86,6 +88,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         neg = ["negative electrode"]
         pos = ["positive electrode"]
         int_curr_model = pybamm.interface.LeadAcidReaction(param)
+        pot_model = pybamm.potential.Potential(param)
         j0_n = int_curr_model.get_exchange_current_densities(c_e, neg)
         j0_p = int_curr_model.get_exchange_current_densities(c_e, pos)
 
@@ -102,7 +105,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
             ]
             self.set_boundary_conditions(self.variables)
 
-            # Reaction overpotential
+            # Potentials
             eta_r_n = delta_phi_n - ocp_n
             eta_r_p = delta_phi_p - ocp_p
 
@@ -128,6 +131,10 @@ class LOQS(pybamm.LeadAcidBaseModel):
             )
             self.update(eleclyte_current_model)
 
+            pot_vars = pot_model.get_all_potentials(
+                (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
+            )
+            self.variables.update(pot_vars)
         else:
             i_boundary_cc = param.current_with_time
             self.variables["Current collector current density"] = i_boundary_cc
@@ -145,16 +152,14 @@ class LOQS(pybamm.LeadAcidBaseModel):
             # Potentials
             eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
             eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
+            pot_vars = pot_model.get_all_potentials(
+                (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
+            )
+            self.variables.update(pot_vars)
 
         # Exchange-current density
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
-
-        # Potentials
-        pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
 
     def set_porosity_submodel(self):
         param = self.set_of_parameters
@@ -195,7 +200,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
         if self.options["bc_options"]["dimensionality"] == 1:
             voltage.domain = "current collector"
             voltage = pybamm.boundary_value(voltage, "right")
-        self.events.append(voltage - param.voltage_low_cut)
+        self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     def set_convection_variables(self):
         velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
@@ -232,4 +237,8 @@ class LOQS(pybamm.LeadAcidBaseModel):
         if self.options["capacitance"] == "algebraic":
             return pybamm.ScikitsDaeSolver()
         else:
-            return pybamm.ScipySolver()
+            # Scipy is better for 1D problems (0D bcs), scikits better for 2D (1D bcs)
+            if self.options["bc_options"]["dimensionality"] == 0:
+                return pybamm.ScipySolver()
+            elif self.options["bc_options"]["dimensionality"] == 1:
+                return pybamm.ScikitsOdeSolver()

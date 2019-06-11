@@ -92,23 +92,23 @@ class DFN(pybamm.LithiumIonBaseModel):
 
         # Potentials
         pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
+        pot_vars = pot_model.get_all_potentials(
+            (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
+        )
+        self.variables.update(pot_vars)
 
         # Voltage
         phi_s_n = self.variables["Negative electrode potential"]
         phi_s_p = self.variables["Positive electrode potential"]
         i_s_n = self.variables["Negative electrode current density"]
         i_s_p = self.variables["Positive electrode current density"]
-        volt_vars = electrode_current_model.get_variables(
-            phi_s_n, phi_s_p, i_s_n, i_s_p
-        )
-        self.variables.update(volt_vars)
+        pot_vars = electrode_current_model.get_potential_variables(phi_s_n, phi_s_p)
+        curr_vars = electrode_current_model.get_current_variables(i_s_n, i_s_p)
+        self.variables.update({**pot_vars, **curr_vars})
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        self.events.append(voltage - param.voltage_low_cut)
+        self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     def set_model_variables(self):
         c_s_n = pybamm.standard_variables.c_s_n

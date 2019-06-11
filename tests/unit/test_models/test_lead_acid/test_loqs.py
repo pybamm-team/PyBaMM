@@ -46,8 +46,12 @@ class TestLeadAcidLOQSCapacitance(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
         options = {"capacitance": "differential"}
+        model = pybamm.lead_acid.LOQS(options)
+        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
+        options = {"capacitance": "differential", "bc_options": {"dimensionality": 1}}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
         options = {"capacitance": "algebraic"}

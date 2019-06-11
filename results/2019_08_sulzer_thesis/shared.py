@@ -25,7 +25,7 @@ def model_comparison(models, Crates, t_eval):
 
     # set mesh
     var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 200, var.x_s: 200, var.x_p: 200}
+    var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20}
     mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
 
     # discretise models

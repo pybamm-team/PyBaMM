@@ -15,6 +15,7 @@ class TestDFN(unittest.TestCase):
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("secondary" in model.default_geometry["negative particle"])
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
         model = pybamm.lithium_ion.DFN()
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
