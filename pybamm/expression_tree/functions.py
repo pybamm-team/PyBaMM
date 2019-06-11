@@ -28,7 +28,7 @@ class Function(pybamm.Symbol):
         try:
             name = "function ({})".format(function.__name__)
         except AttributeError:
-            name = "function ({!r})".format(function)
+            name = "function ({})".format(function.__class__)
         children_list = list(children)
         domain = self.get_children_domains(children_list)
 
