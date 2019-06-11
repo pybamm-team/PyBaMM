@@ -2,6 +2,7 @@
 # Class for leading-order electrolyte diffusion employing stefan-maxwell
 #
 import pybamm
+import numpy as np
 
 
 class LeadingStefanMaxwellDiffusion(pybamm.BaseStefanMaxwellDiffusion):
@@ -69,8 +70,5 @@ class LeadingStefanMaxwellDiffusion(pybamm.BaseStefanMaxwellDiffusion):
         }
 
     def set_initial_conditions(self, variables):
-
         c_e = variables["Average electrolyte concentration"]
-
         self.initial_conditions = {c_e: self.param.c_e_init}
-

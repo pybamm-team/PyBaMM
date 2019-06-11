@@ -2,6 +2,7 @@
 # Base class for electrolyte diffusion employing stefan-maxwell
 #
 import pybamm
+import numpy as np
 
 
 class BaseStefanMaxwellDiffusion(pybamm.BaseSubModel):
@@ -55,3 +56,6 @@ class BaseStefanMaxwellDiffusion(pybamm.BaseSubModel):
 
         return variables
 
+    def set_events(self, variables):
+        c_e = variables["Electrolyte concentration"]
+        self.events = [pybamm.Function(np.min, c_e) - 0.002]
