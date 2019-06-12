@@ -5,7 +5,7 @@ import pybamm
 
 
 class LeadingSurfaceFormStefanMaxwellConductivity(
-    pybamm.BaseSurfaceFormStefanMaxwellConductivity
+    pybamm.BaseLeadingSurfaceFormStefanMaxwellConductivity
 ):
     """Class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations employing the surface potential difference
