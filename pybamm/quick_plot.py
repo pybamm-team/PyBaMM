@@ -229,7 +229,6 @@ class QuickPlot(object):
 
         for k, (key, variable_lists) in enumerate(self.variables.items()):
             ax = self.ax.flat[k]
-            # plt.subplot(*self.subplot_positions[key])
             ax.set_xlim(self.axis[key][:2])
             ax.set_ylim(self.axis[key][2:])
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -242,7 +241,6 @@ class QuickPlot(object):
             if variable_lists[0][0].dimensions == 2:
                 # 2D plot: plot as a function of x at time t
                 ax.set_xlabel("Position [m]", fontsize=fontsize)
-                # plt.tick_params(axis="both", which="major", pad=10)
                 x_value = self.x_values[key]
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
