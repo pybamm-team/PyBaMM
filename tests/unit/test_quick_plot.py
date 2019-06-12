@@ -80,30 +80,19 @@ class TestQuickPlot(unittest.TestCase):
         t_eval = np.linspace(0, 0.01, 2)
 
         # SPM
-        model = pybamm.lithium_ion.SPM()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        param.process_model(model)
-        param.process_geometry(geometry)
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        solver = model.default_solver
-        solution = solver.solve(model, t_eval)
-        pybamm.QuickPlot(model, mesh, solution)
-
-        # LOQS
-        model = pybamm.lead_acid.LOQS()
-        geometry = model.default_geometry
-        param = model.default_parameter_values
-        param.process_model(model)
-        param.process_geometry(geometry)
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
-        solver = model.default_solver
-        solution = solver.solve(model, t_eval)
-        pybamm.QuickPlot(model, mesh, solution)
+        for model in [pybamm.lithium_ion.SPM(), pybamm.lead_acid.LOQS()]:
+            geometry = model.default_geometry
+            param = model.default_parameter_values
+            param.process_model(model)
+            param.process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+            solver = model.default_solver
+            solution = solver.solve(model, t_eval)
+            pybamm.QuickPlot(model, mesh, solution)
 
     def test_failure(self):
         with self.assertRaisesRegex(TypeError, "'models' must be"):
