@@ -87,3 +87,5 @@ class BaseInterface(pybamm.BaseSubModel):
             + self._domain.lower()
             + " electrode surface potential difference [V]": delta_phi_av * pot_scale,
         }
+
+        return variables

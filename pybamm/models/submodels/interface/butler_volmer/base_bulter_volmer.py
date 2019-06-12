@@ -39,7 +39,12 @@ class BaseButlerVolmer(pybamm.BaseInterface):
         Returns variables which are derived from the fundamental variables in the model.
         """
 
-        eta_r = self._get_overpotential(variables)
+        phi_s = variables[self._domain + " electrode potential"]
+        phi_e = variables[self._domain + " electrolyte potential"]
+        ocp = variables[self._domain + " open circuit potential"]
+
+        delta_phi_s = phi_s - phi_e
+        eta_r = phi_s - phi_e - ocp
         j0 = self._get_exchange_current_density(variables)
 
         if self._domain == "Negative":
@@ -53,21 +58,19 @@ class BaseButlerVolmer(pybamm.BaseInterface):
 
         j0_av = pybamm.average(j0)
         j_av = pybamm.average(j)
+        delta_phi_s_av = pybamm.average(delta_phi_s)
         eta_r_av = pybamm.average(eta_r)
 
         variables.update(self._get_standard_interfacial_current_variables(j, j_av))
         variables.update(self._get_standard_exchange_current_variables(j0, j0_av))
+        variables.update(
+            self._get_standard_surface_potential_difference_variables(
+                delta_phi_s, delta_phi_s_av
+            )
+        )
         variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
 
         return variables
-
-    def _get_overpotential(self, variables):
-
-        phi_s = variables[self._domain + " electrode potential"]
-        phi_e = variables[self._domain + " electrolyte potential"]
-        ocp = variables[self._domain + " open circuit potential"]
-
-        return phi_s - phi_e - ocp
 
     def _get_exchange_current_density(self, variables):
         raise NotImplementedError
