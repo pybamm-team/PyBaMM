@@ -1,0 +1,31 @@
+#
+# Class for homogenous current collectors
+#
+import pybamm
+
+
+class HomogeneousCurrentCollector(pybamm.BaseSubModel):
+    """Class for homogeneous current collectors
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+
+    *Extends:* :class:`pybamm.BaseSubModel`
+    """
+
+    def __init__(self, param, domain):
+        super().__init__(param)
+        self._domain = domain
+
+    def get_fundamental_variables(self):
+
+        i_cc = pybamm.Scalar(0)
+
+        i_boundary_cc = self.param.current_with_time
+
+        variables = self._get_standard_current_variables(i_cc, i_boundary_cc)
+
+        return variables
+

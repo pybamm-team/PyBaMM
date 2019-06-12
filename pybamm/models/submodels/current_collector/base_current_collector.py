@@ -33,7 +33,7 @@ class BaseCurrentCollector(pybamm.BaseSubModel):
 
     def _get_standard_current_variables(self, i_cc, i_boundary_cc):
 
-        # add more to this
+        # just need this to get 1D models working for now
         variables = {"Current collector current density": i_boundary_cc}
 
         return variables
