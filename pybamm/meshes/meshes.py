@@ -61,18 +61,32 @@ class Mesh(dict):
             if domain not in ["negative electrode", "separator", "positive electrode"]:
                 self.domain_order.append(domain)
 
+        # Create submeshes
         for domain in geometry:
-            if "secondary" in geometry[domain].keys():
-                repeats = 1
-                for var in geometry[domain]["secondary"].keys():
-                    repeats *= submesh_pts[domain][var.id]  # note (specific to FV)
+            # need to pass tab information if primary domian is 2D current collector
+            if (
+                domain == "current collector"
+                and submesh_types[domain] == pybamm.Scikit2DSubMesh
+            ):
+                self[domain] = [
+                    submesh_types[domain](
+                        geometry[domain]["primary"],
+                        submesh_pts[domain],
+                        geometry[domain]["tabs"],
+                    )
+                ]
             else:
-                repeats = 1
-            self[domain] = [
-                submesh_types[domain](
-                    geometry[domain]["primary"], submesh_pts[domain]
-                )
-            ] * repeats
+                if "secondary" in geometry[domain].keys():
+                    repeats = 1
+                    for var in geometry[domain]["secondary"].keys():
+                        repeats *= submesh_pts[domain][var.id]  # note (specific to FV)
+                else:
+                    repeats = 1
+                self[domain] = [
+                    submesh_types[domain](
+                        geometry[domain]["primary"], submesh_pts[domain]
+                    )
+                ] * repeats
 
         # add ghost meshes
         self.add_ghost_meshes()
@@ -130,6 +144,7 @@ class Mesh(dict):
             (domain, submesh_list)
             for domain, submesh_list in self.items()
             if domain != "time"
+            and not isinstance(submesh_list[0], pybamm.Scikit2DSubMesh)
         ]
         for domain, submesh_list in submeshes:
 
