@@ -69,3 +69,21 @@ class BaseInterface(pybamm.BaseSubModel):
         }
 
         return variables
+
+    def _get_standard_surface_potential_difference_variables(
+        self, delta_phi, delta_phi_av
+    ):
+
+        pot_scale = self.param.potential_scale
+
+        variables = {
+            self._domain + " electrode surface potential difference": delta_phi,
+            "Average "
+            + self._domain.lower()
+            + " electrode surface potential difference": delta_phi_av,
+            self._domain
+            + " electrode surface potential difference [V]": delta_phi * pot_scale,
+            "Average "
+            + self._domain.lower()
+            + " electrode surface potential difference [V]": delta_phi_av * pot_scale,
+        }
