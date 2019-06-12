@@ -71,7 +71,7 @@ class BaseSurfaceFormStefanMaxwellConductivity(pybamm.BaseSurfaceFormStefanMaxwe
             (param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi)
         )
 
-        phi_e = phi_s - delta_phi
+        phi_e = phi_s - delta_phi  # TODO: make this not require phi_s
 
         variables.update(self._get_domain_potential_variables(phi_e))
         variables.update(self._get_domain_current_variables(i_e))
