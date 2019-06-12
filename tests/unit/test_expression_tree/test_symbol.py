@@ -251,7 +251,7 @@ class TestSymbol(unittest.TestCase):
         onen = pybamm.Broadcast(1, ["negative electrode"])
         onep = pybamm.Broadcast(1, ["positive electrode"])
         reactions = {
-            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+            "main": {"neg": {"s": 1, "aj": onen}, "pos": {"s": 1, "aj": onep}}
         }
         model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         model.set_differential_system(variables, reactions)

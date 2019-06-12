@@ -179,9 +179,7 @@ class Power(BinaryOperator):
             elif exponent.evaluates_to_number():
                 return (exponent * base ** (exponent - 1)) * base.jac(variable)
             elif base.evaluates_to_number():
-                return (
-                    base ** exponent * pybamm.log(base)
-                ) * exponent.jac(variable)
+                return (base ** exponent * pybamm.log(base)) * exponent.jac(variable)
             else:
                 return (base ** (exponent - 1)) * (
                     exponent * base.jac(variable)
@@ -544,6 +542,8 @@ class Outer(BinaryOperator):
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+        # Make sure left child keeps same domain
+        left.domain = self.left.domain
         return pybamm.Outer(left, right)
 
 

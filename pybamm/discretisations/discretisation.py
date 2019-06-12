@@ -73,6 +73,9 @@ class Discretisation(object):
             ``inplace`` is False, model != model_disc
 
         """
+        # Check well-posedness to avoid obscure errors
+        model.check_well_posedness()
+
         pybamm.logger.info("Start discretising {}".format(model.name))
 
         # Prepare discretisation

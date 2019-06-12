@@ -60,6 +60,10 @@ nu_plus = pybamm.Parameter("Cation stoichiometry")
 nu_minus = pybamm.Parameter("Anion stoichiometry")
 nu = nu_plus + nu_minus
 
+# Other species properties
+c_ox_init_dim = pybamm.Parameter("Initial oxygen concentration [mol.m-3]")
+c_ox_typ = pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
+
 # Electrode properties
 sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
 sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
@@ -68,39 +72,45 @@ sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
 b = pybamm.geometric_parameters.b
+xi = pybamm.Parameter("Electrode morphological parameter")
 
 # Electrochemical reactions
+# Main
 j0_n_S_ref_dimensional = pybamm.Parameter(
     "Negative electrode reference exchange-current density [A.m-2]"
 )
 j0_p_S_ref_dimensional = pybamm.Parameter(
     "Positive electrode reference exchange-current density [A.m-2]"
 )
+s_plus_n_S_dim = pybamm.Parameter("Negative electrode cation signed stoichiometry")
+s_plus_p_S_dim = pybamm.Parameter("Positive electrode cation signed stoichiometry")
+ne_n_S = pybamm.Parameter("Negative electrode electrons in reaction")
+ne_p_S = pybamm.Parameter("Positive electrode electrons in reaction")
+C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
+# Oxygen
 j0_n_Ox_ref_dimensional = pybamm.Parameter(
     "Negative electrode reference exchange-current density (oxygen) [A.m-2]"
 )
 j0_p_Ox_ref_dimensional = pybamm.Parameter(
     "Positive electrode reference exchange-current density (oxygen) [A.m-2]"
 )
+s_plus_Ox_dim = pybamm.Parameter("Signed stoichiometry of cations (oxygen reaction)")
+s_w_Ox_dim = pybamm.Parameter("Signed stoichiometry of water (oxygen reaction)")
+s_ox_Ox_dim = pybamm.Parameter("Signed stoichiometry of oxygen (oxygen reaction)")
+ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
+c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration [mol.m-3]")
+U_Ox_dim = pybamm.Parameter("Oxygen reference OCP vs SHE [V]")
+# Hydrogen
 j0_n_Hy_ref_dimensional = pybamm.Parameter(
     "Negative electrode reference exchange-current density (hydrogen) [A.m-2]"
 )
 j0_p_Hy_ref_dimensional = pybamm.Parameter(
     "Positive electrode reference exchange-current density (hydrogen) [A.m-2]"
 )
-s_plus_n_S_dim = pybamm.Parameter("Negative electrode cation signed stoichiometry")
-s_plus_p_S_dim = pybamm.Parameter("Positive electrode cation signed stoichiometry")
-ne_n_S = pybamm.Parameter("Negative electrode electrons in reaction")
-ne_p_S = pybamm.Parameter("Positive electrode electrons in reaction")
-s_plus_Ox_dim = pybamm.Parameter("Signed stoichiometry of cations (oxygen reaction)")
-s_w_Ox_dim = pybamm.Parameter("Signed stoichiometry of water (oxygen reaction)")
-s_ox_Ox_dim = pybamm.Parameter("Signed stoichiometry of oxygen (oxygen reaction)")
-ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
-c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration [mol.m-3]")
 s_plus_Hy_dim = pybamm.Parameter("Signed stoichiometry of cations (hydrogen reaction)")
 s_hy_Hy_dim = pybamm.Parameter("Signed stoichiometry of hydrogen (hydrogen reaction)")
 ne_Hy = pybamm.Parameter("Electrons in hydrogen reaction")
-C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
+U_Hy_dim = pybamm.Parameter("Hydrogen reference OCP vs SHE [V]")
 
 
 # Electrolyte properties
@@ -262,9 +272,11 @@ gamma_e = pybamm.Scalar(1)
 Re = rho_typ * velocity_scale * L_x / mu_typ
 
 # Other species properties
+# Oxygen
 curlyD_ox = D_ox_dimensional / D_e_typ
-curlyD_hy = D_hy_dimensional / D_e_typ
 omega_c_ox = c_e_typ * M_ox / rho_typ * (1 - M_w * V_ox / V_w * M_ox)
+# Hydrogen
+curlyD_hy = D_hy_dimensional / D_e_typ
 omega_c_hy = c_e_typ * M_hy / rho_typ * (1 - M_w * V_hy / V_w * M_hy)
 
 # Electrode Properties
@@ -274,15 +286,13 @@ delta_pore_n = 1 / (a_n_dim * L_x)
 delta_pore_p = 1 / (a_p_dim * L_x)
 Q_n_max = Q_n_max_dimensional / (c_e_typ * F)
 Q_p_max = Q_p_max_dimensional / (c_e_typ * F)
+beta_U_n = 1 / Q_n_max
+beta_U_p = -1 / Q_p_max
 
 # Electrochemical reactions
+# Main
 s_plus_n_S = s_plus_n_S_dim / ne_n_S
 s_plus_p_S = s_plus_p_S_dim / ne_p_S
-s_plus_Ox = s_plus_Ox_dim / ne_Ox
-s_w_Ox = s_w_Ox_dim / ne_Ox
-s_ox_Ox = s_ox_Ox_dim / ne_Ox
-s_plus_Hy = s_plus_Hy_dim / ne_Hy
-s_hy_Hy = s_hy_Hy_dim / ne_Hy
 s_n = -(s_plus_n_S + t_plus)  # Dimensionless rection rate (neg)
 s_p = -(s_plus_p_S + t_plus)  # Dimensionless rection rate (pos)
 s = pybamm.Concatenation(
@@ -292,12 +302,6 @@ s = pybamm.Concatenation(
 )
 j0_n_S_ref = j0_n_S_ref_dimensional / interfacial_current_scale_n
 j0_p_S_ref = j0_p_S_ref_dimensional / interfacial_current_scale_p
-m_n = j0_n_S_ref
-m_p = j0_p_S_ref
-j0_n_Ox_ref = j0_n_Ox_ref_dimensional / interfacial_current_scale_n
-j0_p_Ox_ref = j0_p_Ox_ref_dimensional / interfacial_current_scale_p
-j0_n_Hy_ref = j0_n_Hy_ref_dimensional / interfacial_current_scale_n
-j0_p_Hy_ref = j0_p_Hy_ref_dimensional / interfacial_current_scale_p
 C_dl_n = (
     C_dl_dimensional * potential_scale / interfacial_current_scale_n / tau_discharge
 )
@@ -306,6 +310,21 @@ C_dl_p = (
 )
 ne_n = ne_n_S
 ne_p = ne_p_S
+# Oxygen
+s_plus_Ox = s_plus_Ox_dim / ne_Ox
+s_w_Ox = s_w_Ox_dim / ne_Ox
+s_ox_Ox = s_ox_Ox_dim / ne_Ox
+j0_n_Ox_ref = j0_n_Ox_ref_dimensional / interfacial_current_scale_n
+j0_p_Ox_ref = j0_p_Ox_ref_dimensional / interfacial_current_scale_p
+U_n_Ox = (U_Ox_dim - U_n_ref) / potential_scale
+U_p_Ox = (U_Ox_dim - U_p_ref) / potential_scale
+# Hydrogen
+s_plus_Hy = s_plus_Hy_dim / ne_Hy
+s_hy_Hy = s_hy_Hy_dim / ne_Hy
+j0_n_Hy_ref = j0_n_Hy_ref_dimensional / interfacial_current_scale_n
+j0_p_Hy_ref = j0_p_Hy_ref_dimensional / interfacial_current_scale_p
+U_n_Hy = (U_Hy_dim - U_n_ref) / potential_scale
+U_p_Hy = (U_Hy_dim - U_p_ref) / potential_scale
 
 # Electrolyte properties
 beta_surf_n = -c_e_typ * DeltaVsurf_n / ne_n_S  # Molar volume change (lead)
@@ -341,6 +360,7 @@ capacity = Q_e_max_dimensional * 8 * A_cs * L_x
 # Initial conditions
 q_init = pybamm.Parameter("Initial State of Charge")
 c_e_init = q_init
+c_ox_init = c_ox_init_dim / c_ox_typ
 eps_n_init = eps_n_max - beta_surf_n * Q_e_max / l_n * (1 - q_init)
 eps_s_init = eps_s_max
 eps_p_init = eps_p_max + beta_surf_p * Q_e_max / l_p * (1 - q_init)
@@ -349,8 +369,8 @@ eps_init = pybamm.Concatenation(
     pybamm.Broadcast(eps_s_init, ["separator"]),
     pybamm.Broadcast(eps_p_init, ["positive electrode"]),
 )
-curlyU_n_init = Q_e_max * (1 - q_init) / (Q_n_max * l_n)
-curlyU_p_init = Q_e_max * (1 - q_init) / (Q_p_max * l_p)
+curlyU_n_init = Q_e_max * (1.2 - q_init) / (Q_n_max * l_n)
+curlyU_p_init = Q_e_max * (1.2 - q_init) / (Q_p_max * l_p)
 
 
 # hack to make consistent ic with lithium-ion

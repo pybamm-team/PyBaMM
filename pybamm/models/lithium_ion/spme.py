@@ -46,10 +46,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
         broad_j_n = pybamm.Broadcast(j_n, ["negative electrode"])
         broad_j_p = pybamm.Broadcast(j_p, ["positive electrode"])
         reactions = {
-            "main": {
-                "neg": {"s_plus": 1, "aj": broad_j_n},
-                "pos": {"s_plus": 1, "aj": broad_j_p},
-            }
+            "main": {"neg": {"s": 1, "aj": broad_j_n}, "pos": {"s": 1, "aj": broad_j_p}}
         }
         # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
@@ -113,7 +110,9 @@ class SPMe(pybamm.LithiumIonBaseModel):
             - self.variables["Positive electrolyte potential"]
         )
         pot_vars = pot_model.get_all_potentials(
-            (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
+            (ocp_n, ocp_p),
+            delta_phi=(delta_phi_n, delta_phi_p),
+            eta_r=(eta_r_n, eta_r_p),
         )
         self.variables.update(pot_vars)
 

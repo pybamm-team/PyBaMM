@@ -1,5 +1,5 @@
 Interface Submodels
 ===================
 
-.. autoclass:: pybamm.interface.InterfacialCurrent
+.. autoclass:: pybamm.interface.InterfacialReaction
     :members:
