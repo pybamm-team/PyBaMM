@@ -506,6 +506,8 @@ class StandardBatteryBaseModel(BaseModel):
             "capacitance": False,
             "convection": False,
             "first-order potential": "linear",
+            "side reactions": [],
+            "interfacial surface area": "constant",
         }
         if self._extra_options is None:
             options = default_options
@@ -517,11 +519,19 @@ class StandardBatteryBaseModel(BaseModel):
         if (
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
             and options["capacitance"] is False
-            and options["bc_options"]["dimensionality"] == 1
         ):
-            raise pybamm.ModelError(
-                "must use capacitance formulation to solve {!s} in 2D".format(self)
-            )
+            if options["bc_options"]["dimensionality"] == 1:
+                raise pybamm.ModelError(
+                    "must use capacitance formulation to solve {!s} in 2D".format(self)
+                )
+            if len(options["side reactions"]) > 0:
+                raise pybamm.ModelError(
+                    """
+                    must use capacitance formulation to solve {!s} with side reactions
+                    """.format(
+                        self
+                    )
+                )
 
         return options
 

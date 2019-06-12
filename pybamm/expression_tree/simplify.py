@@ -570,7 +570,6 @@ class Simplification(object):
             # process children
             new_left = self.simplify(left)
             new_right = self.simplify(right)
-            # make new symbol, ensure domain remains the same
             # _binary_simplify defined in derived classes for specific rules
             new_symbol = symbol._binary_simplify(new_left, new_right)
             new_symbol.domain = symbol.domain

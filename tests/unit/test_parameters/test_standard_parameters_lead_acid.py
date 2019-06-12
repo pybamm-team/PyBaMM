@@ -30,32 +30,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
-        parameters = {
-            "C_e": pybamm.standard_parameters_lead_acid.C_e,
-            "C_rate": pybamm.standard_parameters_lead_acid.C_rate,
-            "sigma_n": pybamm.standard_parameters_lead_acid.sigma_n,
-            "sigma_p": pybamm.standard_parameters_lead_acid.sigma_p,
-            "C_dl_n": pybamm.standard_parameters_lead_acid.C_dl_n,
-            "C_dl_p": pybamm.standard_parameters_lead_acid.C_dl_p,
-            "DeltaVsurf_n": pybamm.standard_parameters_lead_acid.DeltaVsurf_n,
-            "DeltaVsurf_p": pybamm.standard_parameters_lead_acid.DeltaVsurf_p,
-        }
-        # Process
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
-        parameter_values = pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
-            {
-                "Typical current [A]": 1,
-                "Electrolyte diffusivity": os.path.join(
-                    input_path, "electrolyte_diffusivity_Gu1997.py"
-                ),
-            },
-        )
-
-        param_eval = {
-            name: parameter_values.process_symbol(parameter).evaluate()
-            for name, parameter in parameters.items()
-        }
+        parameters = pybamm.standard_parameters_lead_acid
+        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        param_eval = pybamm.print_parameters(parameters, parameter_values)
+        param_eval = {k: v[0] for k, v in param_eval.items()}
 
         # Diffusional C-rate should be smaller than C-rate
         self.assertLess(param_eval["C_e"], param_eval["C_rate"])
@@ -178,6 +156,31 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         self.assertGreater(param_eval["chi_1"], param_eval["chi_0.5"])
         self.assertLess(param_eval["U_n_1"], param_eval["U_n_0.5"])
         self.assertGreater(param_eval["U_p_1"], param_eval["U_p_0.5"])
+
+    def test_update_initial_state_of_charge(self):
+        # Load parameters to be tested
+        parameters = pybamm.standard_parameters_lead_acid
+        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        param_eval = pybamm.print_parameters(parameters, parameter_values)
+        param_eval = {k: v[0] for k, v in param_eval.items()}
+
+        # Update initial state of charge
+        parameter_values.update({"Initial State of Charge": 0.2})
+        param_eval_update = pybamm.print_parameters(parameters, parameter_values)
+        param_eval_update = {k: v[0] for k, v in param_eval_update.items()}
+
+        # Test that relevant parameters have changed as expected
+        self.assertLess(param_eval_update["q_init"], param_eval["q_init"])
+        self.assertLess(param_eval_update["c_e_init"], param_eval["c_e_init"])
+        self.assertLess(param_eval_update["eps_n_init"], param_eval["eps_n_init"])
+        self.assertEqual(param_eval_update["eps_s_init"], param_eval["eps_s_init"])
+        self.assertLess(param_eval_update["eps_p_init"], param_eval["eps_p_init"])
+        self.assertGreater(
+            param_eval_update["curlyU_n_init"], param_eval["curlyU_n_init"]
+        )
+        self.assertGreater(
+            param_eval_update["curlyU_p_init"], param_eval["curlyU_p_init"]
+        )
 
 
 if __name__ == "__main__":

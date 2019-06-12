@@ -5,7 +5,7 @@ import pybamm
 import autograd.numpy as np
 
 
-class InterfacialCurrent(pybamm.SubModel):
+class InterfacialReaction(pybamm.SubModel):
     """
     Base class for interfacial currents
 
@@ -134,7 +134,7 @@ class InterfacialCurrent(pybamm.SubModel):
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
-    def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p):
+    def get_derived_interfacial_currents(self, j_n, j_p, j0_n, j0_p, reaction="main"):
         """
         Calculate dimensionless and dimensional variables for the interfacial current
         submodel
@@ -149,6 +149,8 @@ class InterfacialCurrent(pybamm.SubModel):
             Exchange-current density in the negative electrode
         j0_p : :class:`pybamm.Symbol`
             Exchange-current density in the positive electrode
+        reaction : str, optional
+            Name of the reaction to set interfacial currents for (default "main")
 
         Returns
         -------
@@ -179,30 +181,34 @@ class InterfacialCurrent(pybamm.SubModel):
             *[j_n_scale * j0_n, pybamm.Broadcast(0, ["separator"]), j_p_scale * j0_p]
         )
 
-        # Averages
-        j_n_bar = pybamm.average(j_n)
-        j_p_bar = pybamm.average(j_p)
+        if reaction == "main":
+            name = "interfacial current density"
+            ecd_name = "exchange-current density"
+        elif reaction == "oxygen":
+            name = "oxygen interfacial current density"
+            ecd_name = "oxygen exchange-current density"
 
-        return {
-            "Negative electrode interfacial current density": j_n,
-            "Positive electrode interfacial current density": j_p,
-            "Average negative electrode interfacial current density": j_n_bar,
-            "Average positive electrode interfacial current density": j_p_bar,
-            "Interfacial current density": j,
-            "Negative electrode exchange-current density": j0_n,
-            "Positive electrode exchange-current density": j0_p,
-            "Exchange-current density": j0,
-            "Negative electrode interfacial current density [A.m-2]": j_n_scale * j_n,
-            "Positive electrode interfacial current density [A.m-2]": j_p_scale * j_p,
-            "Average negative electrode interfacial current density [A.m-2]": j_n_scale
-            * j_n_bar,
-            "Average positive electrode interfacial current density [A.m-2]": j_p_scale
-            * j_p_bar,
-            "Interfacial current density [A.m-2]": j_dimensional,
-            "Negative electrode exchange-current density [A.m-2]": j_n_scale * j0_n,
-            "Positive electrode exchange-current density [A.m-2]": j_p_scale * j0_p,
-            "Exchange-current density [A.m-2]": j0_dimensional,
+        variables = {
+            name.capitalize(): j,
+            ecd_name.capitalize(): j0,
+            name.capitalize() + " [A.m-2]": j_dimensional,
+            ecd_name.capitalize() + " [A.m-2]": j0_dimensional,
         }
+        for domain, j, j0, j_scale in [
+            ["negative electrode", j_n, j0_n, j_n_scale],
+            ["positive electrode", j_p, j0_p, j_p_scale],
+        ]:
+            j_bar = pybamm.average(j)
+            domain_variables = {
+                domain.capitalize() + " " + name: j,
+                "Average " + domain + " " + name: j_bar,
+                domain.capitalize() + " " + ecd_name: j0,
+                domain.capitalize() + " " + name + " [A.m-2]": j_scale * j,
+                "Average " + domain + " " + name + " [A.m-2]": j_scale * j_bar,
+                domain.capitalize() + " " + ecd_name + " [A.m-2]": j_scale * j0,
+            }
+            variables.update(domain_variables)
+        return variables
 
     def get_first_order_butler_volmer(
         self, c_e, delta_phi, c_e_0, delta_phi_0, domain=None
@@ -353,51 +359,7 @@ class InterfacialCurrent(pybamm.SubModel):
         return {**eleclyte_variables, **electrode_variables}
 
 
-class LeadAcidReaction(InterfacialCurrent, pybamm.LeadAcidBaseModel):
-    """
-    Interfacial current from lead-acid reactions
-
-    Parameters
-    ----------
-    set_of_parameters : parameter class
-        The parameters to use for this submodel
-
-    *Extends:* :class:`InterfacialCurrent`, :class:`pybamm.LeadAcidBaseModel`
-    """
-
-    def __init__(self, set_of_parameters):
-        super().__init__(set_of_parameters)
-
-    def get_exchange_current_densities(self, c_e, domain=None):
-        """The exchange current-density as a function of concentration
-
-        Parameters
-        ----------
-        c_e : :class:`pybamm.Symbol`
-            Electrolyte concentration
-        domain : iter of str, optional
-            The domain(s) in which to compute the interfacial current. Default is None,
-            in which case c_e.domain is used.
-
-        Returns
-        -------
-        :class:`pybamm.Symbol`
-            Exchange-current density
-
-        """
-        param = self.set_of_parameters
-        domain = domain or c_e.domain
-
-        if domain == ["negative electrode"]:
-            return param.m_n * c_e
-        elif domain == ["positive electrode"]:
-            c_w = param.c_w(c_e)
-            return param.m_p * c_e ** 2 * c_w
-        else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(domain))
-
-
-class LithiumIonReaction(InterfacialCurrent):
+class LithiumIonReaction(InterfacialReaction):
     """
     Interfacial current from lithium-ion reactions
 
@@ -406,7 +368,7 @@ class LithiumIonReaction(InterfacialCurrent):
     set_of_parameters : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`InterfacialCurrent`
+    *Extends:* :class:`InterfacialReaction`
     """
 
     def __init__(self, set_of_parameters):
