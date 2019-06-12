@@ -9,7 +9,6 @@ models = [
     pybamm.lead_acid.Composite(),
     pybamm.lead_acid.NewmanTiedemann(),
 ]
-# labels = ["a", "b", "c"]
 
 # create geometry
 geometry = models[-1].default_geometry

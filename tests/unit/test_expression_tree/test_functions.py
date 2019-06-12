@@ -6,6 +6,7 @@ import pybamm
 import unittest
 import numpy as np
 import autograd.numpy as auto_np
+from scipy.interpolate import interp1d
 
 
 def test_function(arg):
@@ -92,6 +93,15 @@ class TestFunction(unittest.TestCase):
         b = pybamm.Variable("b", domain="something else")
         with self.assertRaises(pybamm.DomainError):
             pybamm.Function(test_multi_var_function, a, b)
+
+    def test_function_unnamed(self):
+        t = np.linspace(0, 1)
+        entries = 2 * t
+        interpfun = interp1d(t, entries)
+        fun = pybamm.Function(interpfun, pybamm.t)
+        self.assertEqual(
+            fun.name, "function (<class 'scipy.interpolate.interpolate.interp1d'>)"
+        )
 
 
 class TestSpecificFunctions(unittest.TestCase):
