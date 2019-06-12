@@ -254,6 +254,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         pot_scale = param.potential_scale
 
         phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+        phi_e_av = pybamm.average(phi_e)
 
         # Set dimensionless and dimensional variables
         return {
@@ -266,6 +267,7 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             "Separator electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_s,
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
+            "Average electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_av,
             "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
         }
 
@@ -510,16 +512,18 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             Domain in which to set the system
         """
         param = self.set_of_parameters
-        (i_boundary_cc, delta_phi, *rest) = self.unpack(variables, domain)
+        i_boundary_cc, delta_phi_broad = self.unpack(variables, domain)[:2]
 
         if domain == ["negative electrode"]:
+            delta_phi = delta_phi_broad.child
             j_average = i_boundary_cc / param.l_n
-            j = reactions["main"]["neg"]["aj"]
+            j = sum(reaction["neg"]["aj"] for reaction in reactions.values())
             self.initial_conditions[delta_phi] = param.U_n(param.c_n_init)
             C_dl = param.C_dl_n
         elif domain == ["positive electrode"]:
+            delta_phi = delta_phi_broad.child
             j_average = -i_boundary_cc / param.l_p
-            j = reactions["main"]["pos"]["aj"]
+            j = sum(reaction["pos"]["aj"] for reaction in reactions.values())
             self.initial_conditions[delta_phi] = param.U_p(param.c_p_init)
             C_dl = param.C_dl_p
         else:

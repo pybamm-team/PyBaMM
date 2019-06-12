@@ -162,6 +162,9 @@ from .models.submodels import (
     vertical,
 )
 
+# Derived submodel classes
+from .models.submodels import interface_lead_acid, oxygen_diffusion
+
 #
 # Parameters class and methods
 #

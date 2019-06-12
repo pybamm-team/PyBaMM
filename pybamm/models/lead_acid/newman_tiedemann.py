@@ -70,7 +70,7 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         param = self.set_of_parameters
 
         # Exchange-current density
-        int_curr_model = pybamm.interface.LeadAcidReaction(param)
+        int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
         c_e = self.variables["Electrolyte concentration"]
         c_e_n, _, c_e_p = c_e.orphans
 
@@ -98,8 +98,8 @@ class NewmanTiedemann(pybamm.LeadAcidBaseModel):
         # Reactions
         self.reactions = {
             "main": {
-                "neg": {"s_plus": param.s_n, "aj": j_n},
-                "pos": {"s_plus": param.s_p, "aj": j_p},
+                "neg": {"s": param.s_n, "aj": j_n},
+                "pos": {"s": param.s_p, "aj": j_p},
             }
         }
 
