@@ -1,6 +1,7 @@
 #
 # Simulations: discharge of a lead-acid battery
 #
+import pickle
 import pybamm
 
 
@@ -55,13 +56,20 @@ def model_comparison(models, Crates, t_eval):
     return all_variables, t_eval
 
 
-def convergence_study(models, Crate, t_eval, all_npts):
+def convergence_study(models, Crate, t_eval, all_npts, save_folder=None):
     " Solve models at a range of number of grid points "
     # load parameter values and geometry
     geometry = models[0].default_geometry
     param = models[0].default_parameter_values
     current = Crate * 17
-    param.update({"Typical current [A]": current})
+    # Update parameters with a different porosity
+    param.update(
+        {
+            "Typical current [A]": current,
+            "Maximum porosity of negative electrode": 0.92,
+            "Maximum porosity of positive electrode": 0.92,
+        }
+    )
 
     # Process parameters (same parameters for all models)
     for model in models:
@@ -72,9 +80,8 @@ def convergence_study(models, Crate, t_eval, all_npts):
     var = pybamm.standard_spatial_vars
 
     # solve model for range of Crates
-    all_variables = {}
     for npts in all_npts:
-        all_variables[npts] = {}
+        model_variables = {}
         pybamm.logger.info("Setting number of grid points to {}".format(npts))
         var_pts = {var.x_n: npts, var.x_s: npts, var.x_p: npts}
         mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
@@ -85,10 +92,10 @@ def convergence_study(models, Crate, t_eval, all_npts):
         for model in models:
             model_disc = disc.process_model(model, inplace=False)
             solution = model.default_solver.solve(model_disc, t_eval)
-            vars = pybamm.post_process_variables(
+            variables = pybamm.post_process_variables(
                 model_disc.variables, solution.t, solution.y, mesh
             )
-            vars["solution"] = solution
-            all_variables[npts][(model.name, options_to_tuple(model.options))] = vars
-
-    return all_variables, t_eval
+            variables["solution"] = solution
+            model_variables[(model.name, options_to_tuple(model.options))] = variables
+        with open(save_folder + "npts={}.pickle".format(npts), "wb") as f:
+            pickle.dump(model_variables, f, pickle.HIGHEST_PROTOCOL)

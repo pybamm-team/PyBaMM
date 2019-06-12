@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import pybamm
+from collections import defaultdict
 from config import OUTPUT_DIR
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from shared import model_comparison, convergence_study
@@ -128,22 +129,25 @@ def compare_voltages(args, models):
 
 def convergence_studies(args, models):
     t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
-    all_npts = [10, 30, 50]
-    if args.compute:
-        all_variables, t_eval = convergence_study(models, 1, t_eval, all_npts)
-        with open("capacitance_convergence_study.pickle", "wb") as f:
-            data = (all_variables, t_eval)
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    save_folder = "results/2019_08_sulzer_thesis/data/capacitance_convergence_study/"
+    all_npts = [10, 50, 100, 200]  # , 500, 1000]
 
-    with open("capacitance_convergence_study.pickle", "rb") as f:
-        (all_variables, t_eval) = pickle.load(f)
-    all_times = {
-        model: [
-            [x for x in all_variables[npts].values()][i]["solution"].solve_time
-            for npts in all_npts
-        ]
-        for i, model in enumerate(models)
-    }
+    # Get data
+    if args.compute:
+        convergence_study(models, 1, t_eval, [500, 1000], save_folder)
+
+    # Load data
+    grid_points = []
+    all_times = defaultdict(list)
+    for npts in all_npts:
+        with open(save_folder + "npts={}.pickle".format(npts), "rb") as f:
+            model_variables = pickle.load(f)
+            for model_options, variables in model_variables.items():
+                all_times[model_options].append(variables["solution"].solve_time)
+            # Use any of the variables to get the number of grid points
+            grid_points.append(variables["Electrolyte concentration"].x_sol.size)
+
+    # Plot
     fig, ax = plt.subplots()
     linestyles = ["k-", "b-.", "r--"]
     labels = [
@@ -152,18 +156,19 @@ def convergence_studies(args, models):
         "Capacitance formulation (algebraic)",
     ]
     for j, times in enumerate(all_times.values()):
-        ax.loglog(all_npts, times, linestyles[j], label=labels[j])
+        ax.loglog(grid_points, times, linestyles[j], label=labels[j])
     ax.set_xlabel("Number of grid points")
     ax.set_ylabel("Time [s]")
     ax.legend()
-    plt.show()
+    file_name = "capacitance_solver_times.eps"
+    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    pybamm.set_logging_level("INFO")
+    pybamm.set_logging_level("DEBUG")
     models = [
         pybamm.lead_acid.NewmanTiedemann(),
         pybamm.lead_acid.NewmanTiedemann({"capacitance": "differential"}),
