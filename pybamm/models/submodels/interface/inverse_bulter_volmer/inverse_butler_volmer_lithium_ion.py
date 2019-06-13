@@ -3,9 +3,10 @@
 #
 
 import pybamm
+from .base_inverse_butler_volmer import BaseInverseButlerVolmer
 
 
-class InverseButlerVolmerLithiumIon(pybamm.BaseInverseButlerVolmer):
+class InverseButlerVolmerLithiumIon(BaseInverseButlerVolmer):
     """
     Lithium ion inverse Butler-Volmer class
 

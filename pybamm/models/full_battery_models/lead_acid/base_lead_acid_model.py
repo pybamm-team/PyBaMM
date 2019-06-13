@@ -6,12 +6,12 @@ import pybamm
 import os
 
 
-class LeadAcidBaseModel(pybamm.BaseFullBatteryModel):
+class BaseLeadAcidModel(pybamm.BaseBatteryModel):
     """
     Overwrites default parameters from Base Model with default parameters for
     lead-acid models
 
-    **Extends:** :class:`StandardBatteryBaseModel`
+    **Extends:** :class:`BaseBatteryModel`
 
     """
 

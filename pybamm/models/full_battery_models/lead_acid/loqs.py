@@ -2,9 +2,10 @@
 # Lead-acid LOQS model
 #
 import pybamm
+from .base_lead_acid_model import BaseLeadAcidModel
 
 
-class LOQS(pybamm.LeadAcidBaseModel):
+class LOQS(BaseLeadAcidModel):
     """Leading-Order Quasi-Static model for lead-acid, from [1]_.
 
     References
@@ -13,7 +14,7 @@ class LOQS(pybamm.LeadAcidBaseModel):
            Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
            arXiv preprint arXiv:1902.01774, 2019.
 
-    **Extends:** :class:`pybamm.LeadAcidBaseModel`
+    **Extends:** :class:`pybamm.BaseLeadAcidModel`
     """
 
     def __init__(self, options=None):

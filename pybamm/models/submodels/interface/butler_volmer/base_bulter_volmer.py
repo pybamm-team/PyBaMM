@@ -4,9 +4,10 @@
 
 import pybamm
 import numpy as np
+from ..base_interface import BaseInterface
 
 
-class BaseButlerVolmer(pybamm.BaseInterface):
+class BaseButlerVolmer(BaseInterface):
     """
        Butler-Volmer class
 
@@ -15,13 +16,9 @@ class BaseButlerVolmer(pybamm.BaseInterface):
 
     Parameters
     ----------
-    j0 : :class:`pybamm.Symbol`
-        Exchange-current density
-    eta_r : :class:`pybamm.Symbol`
-        Reaction overpotential
+    param : 
+        model parameters
     domain : iter of str, optional
-        The domain(s) in which to compute the interfacial current. Default is None,
-        in which case j0.domain is used.
 
     Returns
     -------

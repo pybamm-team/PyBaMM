@@ -4,7 +4,7 @@
 import pybamm
 
 
-class Potential(pybamm.SubModel):
+class Potential(pybamm.BaseSubModel):
     """Compute open-circuit potentials and reaction overpotentials
 
     Parameters

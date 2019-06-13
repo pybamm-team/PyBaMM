@@ -1,2 +1,3 @@
 from .base_interface import BaseInterface
-from .bulter_volmer import ButlerVolmer
+from . import butler_volmer
+from . import inverse_bulter_volmer

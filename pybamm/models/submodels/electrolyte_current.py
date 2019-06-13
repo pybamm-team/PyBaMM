@@ -5,7 +5,7 @@ import numpy as np
 import pybamm
 
 
-class ElectrolyteCurrentBaseModel(pybamm.SubModel):
+class ElectrolyteCurrentBaseModel(pybamm.BaseSubModel):
     """
     Base model for the potential and current in the electrolyte
 

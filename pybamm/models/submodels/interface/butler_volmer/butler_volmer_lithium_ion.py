@@ -3,13 +3,14 @@
 #
 
 import pybamm
+from .base_bulter_volmer import BaseButlerVolmer
 
 
-class ButlerVolmerLithiumIon(pybamm.BaseButlerVolmer):
+class ButlerVolmerLithiumIon(BaseButlerVolmer):
     """
     Lithium ion Butler-Volmer class
 
-    *Extends:* :class:`pybamm.BaseButlerVolmer`
+    *Extends:* :class:`BaseButlerVolmer`
     """
 
     def __init__(self, param, domain):

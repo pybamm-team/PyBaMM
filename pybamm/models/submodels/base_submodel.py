@@ -2,10 +2,8 @@
 # Base submodel class
 #
 
-import pybamm
 
-
-class BaseSubModel(pybamm.BaseFullBatteryModel):
+class BaseSubModel:
     def __init__(self, param):
         super().__init__()
         self.param = param

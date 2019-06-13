@@ -4,9 +4,10 @@
 
 import pybamm
 import numpy as np
+from ..base_interface import BaseInterface
 
 
-class BaseInverseButlerVolmer(pybamm.BaseInterface):
+class BaseInverseButlerVolmer(BaseInterface):
     """
     Inverts the Butler-Volmer relation to solve for the reaction overpotential.
 

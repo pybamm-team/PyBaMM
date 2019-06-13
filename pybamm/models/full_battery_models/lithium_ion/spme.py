@@ -2,11 +2,12 @@
 # Single Particle Model with Electrolyte (SPMe)
 #
 import pybamm
+from .base_lithium_ion_model import BaseLithiumIonModel
 
 
-class SPMe(pybamm.LithiumIonBaseModel):
+class SPMe(BaseLithiumIonModel):
     """Single Particle Model with Electrolyte (SPMe) of a lithium-ion battery.
-    **Extends:** :class:`pybamm.LithiumIonBaseModel`
+    **Extends:** :class:`pybamm.BaseLithiumIonModel`
     """
 
     def __init__(self):

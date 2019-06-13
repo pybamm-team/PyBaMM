@@ -4,10 +4,10 @@
 import pybamm
 
 
-class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
+class ReactionDiffusionModel(pybamm.BaseBatteryModel):
     """Reaction-diffusion model.
 
-    **Extends**: :class:`pybamm.StandardBatteryBaseModel`
+    **Extends**: :class:`pybamm.BaseBatteryModel`
 
     """
 

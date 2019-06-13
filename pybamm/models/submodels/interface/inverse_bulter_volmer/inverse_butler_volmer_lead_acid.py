@@ -3,9 +3,10 @@
 #
 
 import pybamm
+from .base_inverse_butler_volmer import BaseInverseButlerVolmer
 
 
-class InverseButlerVolmerLeadAcid(pybamm.BaseInverseButlerVolmer):
+class InverseButlerVolmerLeadAcid(BaseInverseButlerVolmer):
     """
     Lead acid inverse Butler-Volmer class
 

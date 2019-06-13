@@ -3,13 +3,14 @@
 #
 
 import pybamm
+from .base_bulter_volmer import BaseButlerVolmer
 
 
-class ButlerVolmerLeadAcid(pybamm.BaseButlerVolmer):
+class ButlerVolmerLeadAcid(BaseButlerVolmer):
     """
     Lead acid Butler-Volmer class
 
-    *Extends:* :class:`pybamm.BaseButlerVolmer`
+    *Extends:* :class:`BaseButlerVolmer`
     """
 
     def __init__(self, param, domain):

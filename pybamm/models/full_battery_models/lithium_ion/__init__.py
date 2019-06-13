@@ -1,7 +1,7 @@
 #
-# Root of the lead-acid models module.
+# Root of the lithium-ion models module.
 #
-from .lithium_ion_model import 
+from .base_lithium_ion_model import BaseLithiumIonModel
 from .spm import SPM
 from .spme import SPMe
 from .dfn import DFN

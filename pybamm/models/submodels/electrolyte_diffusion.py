@@ -6,7 +6,7 @@ import pybamm
 import numpy as np
 
 
-class StefanMaxwell(pybamm.SubModel):
+class StefanMaxwell(pybamm.BaseSubModel):
     """"A class that generates the expression tree for Stefan-Maxwell Diffusion in the
     electrolyte.
 

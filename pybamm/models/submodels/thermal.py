@@ -4,7 +4,7 @@
 import pybamm
 
 
-class Thermal(pybamm.SubModel):
+class Thermal(pybamm.BaseSubModel):
     """Thermal effects by conservation of energy across the whole cell.
 
     Parameters

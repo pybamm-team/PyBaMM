@@ -1,12 +1,12 @@
 #
-# Full battery base model class
+# Base battery model class
 #
 
 import pybamm
 import os
 
 
-class BaseFullBatteryModel(pybamm.BaseModel):
+class BaseBatteryModel(pybamm.BaseModel):
     """
     Base model class with some default settings and required variables
 

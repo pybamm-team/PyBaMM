@@ -2,9 +2,10 @@
 # Single Particle Model (SPM)
 #
 import pybamm
+from .base_lithium_ion_model import BaseLithiumIonModel
 
 
-class SPM(pybamm.BaseLithiumIonModel):
+class SPM(BaseLithiumIonModel):
     """Single Particle Model (SPM) of a lithium-ion battery.
     **Extends:** :class:`pybamm.LithiumIonBaseModel`
     """
