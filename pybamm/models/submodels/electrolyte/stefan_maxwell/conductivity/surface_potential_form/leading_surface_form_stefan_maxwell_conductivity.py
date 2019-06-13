@@ -3,9 +3,13 @@
 #
 import pybamm
 
+from .base_leading_surface_form_stefan_maxwell_conductivity import (
+    BaseLeadingSurfaceFormStefanMaxwellConductivity,
+)
+
 
 class LeadingSurfaceFormStefanMaxwellConductivity(
-    pybamm.BaseLeadingSurfaceFormStefanMaxwellConductivity
+    BaseLeadingSurfaceFormStefanMaxwellConductivity
 ):
     """Class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations employing the surface potential difference
@@ -16,7 +20,7 @@ class LeadingSurfaceFormStefanMaxwellConductivity(
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSurfaceFormStefanMaxwellConductivity`
+    *Extends:* :class:`pybamm.BaseLeadingSurfaceFormStefanMaxwellConductivity`
     """
 
     def __init__(self, param, domain):

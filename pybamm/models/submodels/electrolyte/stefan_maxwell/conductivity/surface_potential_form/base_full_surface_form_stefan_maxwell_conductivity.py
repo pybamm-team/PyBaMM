@@ -3,8 +3,14 @@
 #
 import pybamm
 
+from .base_surface_form_stefan_maxwell_conductivity import (
+    BaseSurfaceFormStefanMaxwellConductivity,
+)
 
-class BaseFullSurfaceFormStefanMaxwellConductivity(pybamm.BaseSurfaceFormStefanMaxwell):
+
+class BaseFullSurfaceFormStefanMaxwellConductivity(
+    BaseSurfaceFormStefanMaxwellConductivity
+):
     """Base class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation. (Full refers to unreduced by asymptotic methods)

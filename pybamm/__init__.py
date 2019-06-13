@@ -160,6 +160,8 @@ from .models.submodels import (
     thermal,
 )
 
+from .models.submodels import electrolyte
+
 
 #
 # Parameters class and methods

@@ -1,10 +1,10 @@
 #
 # Base class for electrolyte conductivity employing stefan-maxwell
 #
-import pybamm
+from ...base_electrolyte_conductivity import BaseElectrolyteConductivity
 
 
-class BaseStefanMaxwellConductivity(pybamm.BaseElectrolyteConductivity):
+class BaseStefanMaxwellConductivity(BaseElectrolyteConductivity):
     """Base class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations.
 

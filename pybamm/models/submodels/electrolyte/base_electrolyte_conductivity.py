@@ -5,7 +5,7 @@
 import pybamm
 
 
-class BaseStefanMaxwellConductivity(pybamm.BaseSubModel):
+class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     """Base class for conservation of charge in the electrolyte.
 
     Parameters

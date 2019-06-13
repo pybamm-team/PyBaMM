@@ -1,10 +1,10 @@
 #
 # Base class for electrolyte diffusion employing stefan-maxwell
 #
-import pybamm
+from ...base_electrolyte_diffusion import BaseElectrolyteDiffusion
 
 
-class BaseStefanMaxwellDiffusion(pybamm.BaseElectrolyteDiffusion):
+class BaseStefanMaxwellDiffusion(BaseElectrolyteDiffusion):
     """Base class for conservation of mass in the electrolyte employing the
     Stefan-Maxwell constitutive equations.
 

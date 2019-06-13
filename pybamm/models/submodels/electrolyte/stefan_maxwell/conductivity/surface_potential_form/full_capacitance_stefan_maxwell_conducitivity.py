@@ -2,10 +2,13 @@
 # Class for electrolyte conductivity employing stefan-maxwell
 #
 import pybamm
+from .base_full_surface_form_stefan_maxwell_conductivity import (
+    BaseFullSurfaceFormStefanMaxwellConductivity,
+)
 
 
 class FullCapacitanceStefanMaxwellConductivity(
-    pybamm.BaseFullSurfaceFormStefanMaxwellConductivity
+    BaseFullSurfaceFormStefanMaxwellConductivity
 ):
     """Class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations. (Full refers to unreduced by

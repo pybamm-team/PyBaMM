@@ -2,10 +2,11 @@
 # Class for leading-order electrolyte diffusion employing stefan-maxwell
 #
 import pybamm
-import numpy as np
+
+from .base_stefan_maxwell_diffusion import BaseStefanMaxwellDiffusion
 
 
-class LeadingStefanMaxwellDiffusion(pybamm.BaseStefanMaxwellDiffusion):
+class LeadingStefanMaxwellDiffusion(BaseStefanMaxwellDiffusion):
     """Class for conservation of mass in the electrolyte employing the
     Stefan-Maxwell constitutive equations. (Leading refers to leading order
     of asymptotic reduction)

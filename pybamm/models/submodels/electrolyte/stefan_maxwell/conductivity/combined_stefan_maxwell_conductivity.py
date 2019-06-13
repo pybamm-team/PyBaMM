@@ -4,9 +4,10 @@
 import pybamm
 
 import numpy as np
+from .base_stefan_maxwell_conductivity import BaseStefanMaxwellConductivity
 
 
-class CombinedStefanMaxwellConductivity(pybamm.BaseStefanMaxwellConductivity):
+class CombinedStefanMaxwellConductivity(BaseStefanMaxwellConductivity):
     """Class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations. (Combined refers to a combined
     leading and first-order expression from the asymptotic reduction)
