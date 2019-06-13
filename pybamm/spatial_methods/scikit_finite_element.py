@@ -57,14 +57,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         :class:`pybamm.Vector`
             Contains the discretised spatial variable
         """
-        # only implemented in y-z plane
-        if symbol.name in ["y", "z"]:
-            symbol_mesh = self.mesh
-            return pybamm.Vector(symbol_mesh[0].npts, domain=symbol.domain)
-        else:
-            raise NotImplementedError(
-                "FiniteElementFenics only implemented in the y-z plane"
-            )
+        symbol_mesh = self.mesh
+        return pybamm.Vector(symbol_mesh[0].npts, domain=symbol.domain)
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -287,10 +281,10 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         if lbc_type == "Dirichlet":
             # set source terms to zero on boundary by zeroing out mass matrix
-            self.bc_apply(mass, mesh.negative_tab)
+            self.bc_apply(mass, mesh.negative_tab, zero=True)
         if rbc_type == "Dirichlet":
             # set source terms to zero on boundary by zeroing out mass matrix
-            self.bc_apply(mass, mesh.positive_tab)
+            self.bc_apply(mass, mesh.positive_tab, zero=True)
 
         return pybamm.Matrix(mass)
 

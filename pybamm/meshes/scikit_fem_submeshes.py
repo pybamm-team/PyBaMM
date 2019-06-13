@@ -49,8 +49,8 @@ class Scikit2DSubMesh:
             self.coord_sys = spatial_vars[0].coord_sys
         else:
             raise pybamm.DomainError(
-                """spatial variables should have the same domain,
-                but have domians {} and {}""".format(
+                """spatial variables should have the same coordinate system,
+                but have coordinate systems {} and {}""".format(
                     spatial_vars[0].coord_sys, spatial_vars[1].coord_sys
                 )
             )

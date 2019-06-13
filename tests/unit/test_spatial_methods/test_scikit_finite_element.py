@@ -8,7 +8,7 @@ import unittest
 from pybamm.spatial_methods.scikit_finite_element import skfem_spec
 
 
-@unittest.skipIf(skfem_spec is None, "scikits-fem not installed")
+@unittest.skipIf(skfem_spec is None, "scikit-fem not installed")
 class TestScikitFiniteElement(unittest.TestCase):
     def test_not_implemented(self):
         mesh = get_2p1d_mesh_for_testing()
