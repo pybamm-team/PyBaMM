@@ -3,10 +3,10 @@
 #
 
 import pybamm
-from .base_bulter_volmer import BaseButlerVolmer
+from .base_bulter_volmer import BaseModel
 
 
-class ButlerVolmerLithiumIon(BaseButlerVolmer):
+class LithiumIon(BaseModel):
     """
     Lithium ion Butler-Volmer class
 

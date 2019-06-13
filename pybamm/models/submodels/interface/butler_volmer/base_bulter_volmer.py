@@ -7,7 +7,7 @@ import numpy as np
 from ..base_interface import BaseInterface
 
 
-class BaseButlerVolmer(BaseInterface):
+class BaseModel(BaseInterface):
     """
        Butler-Volmer class
 

@@ -3,10 +3,10 @@
 #
 
 import pybamm
-from .base_bulter_volmer import BaseButlerVolmer
+from .base_bulter_volmer import BaseModel
 
 
-class ButlerVolmerLeadAcid(BaseButlerVolmer):
+class LeadAcid(BaseModel):
     """
     Lead acid Butler-Volmer class
 

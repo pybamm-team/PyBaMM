@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from .base_current_collector import BaseCurrentCollector
+from .base_current_collector import BaseModel
 
 
-class HomogeneousCurrentCollector(BaseCurrentCollector):
+class Homogeneous(BaseModel):
     """Class for homogeneous current collectors
 
     Parameters

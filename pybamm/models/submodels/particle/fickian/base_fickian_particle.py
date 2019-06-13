@@ -6,7 +6,7 @@ import pybamm
 from ..base_particle import BaseParticle
 
 
-class BaseFickianParticle(BaseParticle):
+class BaseModel(BaseParticle):
     """Base class for molar conservation in particles which employ Fick's law.
 
     Parameters

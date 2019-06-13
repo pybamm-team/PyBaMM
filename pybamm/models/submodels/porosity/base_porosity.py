@@ -4,7 +4,7 @@
 import pybamm
 
 
-class BasePorosity(pybamm.BaseSubModel):
+class BaseModel(pybamm.BaseSubModel):
     """Base class for porosity
 
     Parameters

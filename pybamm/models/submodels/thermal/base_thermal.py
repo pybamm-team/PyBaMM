@@ -4,7 +4,7 @@
 import pybamm
 
 
-class BaseThermal(pybamm.BaseSubModel):
+class BaseModel(pybamm.BaseSubModel):
     """Base class for thermal effects
 
     Parameters

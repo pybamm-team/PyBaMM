@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from .base_thermal import BaseThermal
+from .base_thermal import BaseModel
 
 
-class Isothermal(BaseThermal):
+class Isothermal(BaseModel):
     """Class for isothermal submodel
 
     Parameters

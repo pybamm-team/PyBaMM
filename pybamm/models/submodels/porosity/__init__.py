@@ -1,2 +1,2 @@
-from .base_porosity import BasePorosity
-from .constant_porosity import ConstantPorosity
+from .base_porosity import BaseModel
+from .constant_porosity import Constant

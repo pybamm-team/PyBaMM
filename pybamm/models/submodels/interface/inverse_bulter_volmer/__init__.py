@@ -1,3 +1,3 @@
-from .base_inverse_butler_volmer import BaseInverseButlerVolmer
-from .inverse_butler_volmer_lead_acid import InverseButlerVolmerLeadAcid
-from .inverse_butler_volmer_lithium_ion import InverseButlerVolmerLithiumIon
+from .base_inverse_butler_volmer import BaseModel
+from .inverse_butler_volmer_lead_acid import LeadAcid
+from .inverse_butler_volmer_lithium_ion import LithiumIon

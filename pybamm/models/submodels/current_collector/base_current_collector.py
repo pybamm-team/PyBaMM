@@ -4,7 +4,7 @@
 import pybamm
 
 
-class BaseCurrentCollector(pybamm.BaseSubModel):
+class BaseModel(pybamm.BaseSubModel):
     """Base class for current collectors
 
     Parameters

@@ -7,7 +7,7 @@ import numpy as np
 from ..base_interface import BaseInterface
 
 
-class BaseInverseButlerVolmer(BaseInterface):
+class BaseModel(BaseInterface):
     """
     Inverts the Butler-Volmer relation to solve for the reaction overpotential.
 

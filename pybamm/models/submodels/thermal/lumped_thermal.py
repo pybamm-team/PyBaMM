@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from .base_thermal import BaseThermal
+from .base_thermal import BaseModel
 
 
-class ThermalLumped(BaseThermal):
+class LumpedModel(BaseModel):
     """Class for lumped thermal submodel
 
     Parameters
