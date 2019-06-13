@@ -562,6 +562,12 @@ def average(symbol):
         elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             x = pybamm.standard_spatial_vars.x
             l = pybamm.Scalar(1)
+        elif symbol.domain == ["negative particle"]:
+            x = pybamm.standard_spatial_vars.x_n
+            l = pybamm.geometric_parameters.l_n
+        elif symbol.domain == ["positive particle"]:
+            x = pybamm.standard_spatial_vars.x_p
+            l = pybamm.geometric_parameters.l_p
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(symbol.domain))
 
