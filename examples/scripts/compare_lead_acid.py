@@ -47,7 +47,10 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    "Interfacial current density [A.m-2]",
+    [
+        "Average negative electrode interfacial current density [A.m-2]",
+        "Average positive electrode interfacial current density [A.m-2]",
+    ],
     "Electrolyte concentration [mol.m-3]",
     "Porosity",
     "Electrolyte current density [A.m-2]",
