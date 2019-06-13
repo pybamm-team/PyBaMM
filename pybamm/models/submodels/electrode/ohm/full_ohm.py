@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from .base_ohm import BaseOhm
+from .base_ohm import BaseModel
 
 
-class FullOhm(BaseOhm):
+class Full(BaseModel):
     """Full model for ohm's law with conservation of current for the current in the 
     electrodes.
 

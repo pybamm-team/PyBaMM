@@ -6,7 +6,7 @@ import pybamm
 from ..base_electrode import BaseElectrode
 
 
-class BaseOhm(BaseElectrode):
+class BaseModel(BaseElectrode):
     """Ohm's law + conservation of current for the current in the electrodes.
 
     Parameters

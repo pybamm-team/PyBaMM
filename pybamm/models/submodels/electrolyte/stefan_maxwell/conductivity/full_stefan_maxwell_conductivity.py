@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from .base_stefan_maxwell_conductivity import BaseStefanMaxwellConductivity
+from .base_stefan_maxwell_conductivity import BaseModel
 
 
-class FullStefanMaxwellConductivity(BaseStefanMaxwellConductivity):
+class FullModel(BaseModel):
     """Class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations. (Full refers to unreduced by
     asymptotic methods)

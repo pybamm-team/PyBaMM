@@ -2,10 +2,10 @@
 # Class for the leading-order electrolyte potential employing stefan-maxwell
 #
 import pybamm
-from .base_stefan_maxwell_conductivity import BaseStefanMaxwellConductivity
+from .base_stefan_maxwell_conductivity import BaseModel
 
 
-class LeadingStefanMaxwellConductivity(BaseStefanMaxwellConductivity):
+class LeadingOrderModel(BaseModel):
     """Class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations. (Leading refers to leading-order
     in the asymptotic reduction)

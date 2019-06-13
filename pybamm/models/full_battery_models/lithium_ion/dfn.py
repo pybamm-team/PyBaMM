@@ -2,10 +2,10 @@
 # Doyle-Fuller-Newman (DFN) Model
 #
 import pybamm
-from .base_lithium_ion_model import BaseLithiumIonModel
+from .base_lithium_ion_model import BaseModel
 
 
-class DFN(BaseLithiumIonModel):
+class DFN(BaseModel):
     """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery.
     **Extends:** :class:`pybamm.BaseLithiumIonModel`
     """
@@ -22,6 +22,94 @@ class DFN(BaseLithiumIonModel):
         self.set_thermal_submodel()
 
         self.build()
+
+    def create_model(self):
+        # TODO: put into base model
+
+        # Set the fundamental variables
+        for submodel in self.submodels.values():
+            self.variables.update(submodel.get_fundamental_variables(self.variables))
+
+        # Set presolved variables
+        for submodel in self.submodels.values():
+            self.variables.update(submodel.get_derived_variables(self.variables))
+
+        # Set model equations
+        for submodel in self.submodels.values():
+            submodel.set_rhs(self.variables)
+            submodel.set_algebraic(self.variables)
+            submodel.set_boundary_conditions(self.variables)
+            submodel.set_initial_conditions(self.variables)
+            self.update(submodel)
+
+    def set_thermal_model(self):
+        # TODO: put into base model
+
+        if self.options["thermal"] is None:
+            thermal_submodel = pybamm.IsothermalSubModel()
+        elif self.options["thermal"] == "full":
+            thermal_submodel = pybamm.FullThermalSubModel()
+        elif self.options["thermal"] == "lumped":
+            thermal_submodel = pybamm.LumpedThermalSubmodel()
+        else:
+            raise KeyError("Unknown type of thermal model")
+
+        self.submodels["thermal"] = thermal_submodel
+
+    def set_current_collector_submodel(self):
+        # TODO: put into base model
+
+        # this is where the fast conductivity limit which set the 1D bc for the
+        # problem should go
+        if self.options["current collector"] is None:
+            self.submodels[
+                "negative current collector"
+            ] = pybamm.current_collector.Fast(self.param)
+            self.submodels[
+                "positive current collector"
+            ] = pybamm.current_collector.Fast(self.param)
+        elif self.options["current collector"] == "ohm":
+            self.submodels["negative current collector"] = pybamm.current_collector.Ohm(
+                self.param
+            )
+            self.submodels["positive current collector"] = pybamm.current_collector.Ohm(
+                self.param
+            )
+
+    def set_interfacial_submodel(self):
+        self.submodels["interface"] = pybamm.interface.LithiumIonReaction(self.param)
+
+    def set_particle_submodel(self):
+        self.submodels[
+            "negative particle"
+        ] = pybamm.particle.fickian.FickianManyParticle(self.param, "Negative")
+        self.submodels[
+            "positive particle"
+        ] = pybamm.particle.fickian.FickianManyParticle(self.param, "Positive")
+
+    def set_solid_submodel(self):
+        self.submodels["negative electrode"] = pybamm.electrode.ohm.FullOhm(
+            self.param, "Negative"
+        )
+        self.submodels["positive electrode"] = pybamm.electrode.ohm.FullOhm(
+            self.param, "Positive"
+        )
+
+    def set_electrolyte_submodel(self):
+
+        electrolyte_model = pybamm.electrolyte.stefan_maxwell
+
+        self.submodels[
+            "electrolyte diffusion"
+        ] = electrolyte_model.conductivity.FullStefanMaxwellConductivity(self.param)
+
+        self.submodels[
+            "electrolyte diffusion"
+        ] = pybamm.electrolyte_diffusion.StefanMaxwell(self.param)
+
+        self.submodels[
+            "electrolyte current"
+        ] = pybamm.electrolyte_current.MacInnesStefanMaxwell(self.param)
 
     def set_current_collector_submodel(self):
         # this is where the fast conductivity limit which set the 1D bc for the

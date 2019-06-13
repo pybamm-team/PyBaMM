@@ -4,7 +4,7 @@
 from ...base_electrolyte_conductivity import BaseElectrolyteConductivity
 
 
-class BaseStefanMaxwellConductivity(BaseElectrolyteConductivity):
+class BaseModel(BaseElectrolyteConductivity):
     """Base class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations.
 

@@ -1,3 +1,3 @@
-from .base_stefan_maxwell_diffusion import BaseStefanMaxwellDiffusion
-from .leading_stefan_maxwell_diffusion import LeadingStefanMaxwellDiffusion
-from .full_stefan_maxwell_diffusion import FullStefanMaxwellDiffusion
+from .base_stefan_maxwell_diffusion import BaseModel
+from .leading_stefan_maxwell_diffusion import LeadingOrderModel
+from .full_stefan_maxwell_diffusion import FullModel

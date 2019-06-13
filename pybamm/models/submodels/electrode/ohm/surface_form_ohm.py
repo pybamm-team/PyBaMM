@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from .base_ohm import BaseOhm
+from .base_ohm import BaseModel
 
 
-class SurfaceFormOhm(BaseOhm):
+class SurfaceForm(BaseModel):
     """Ohm's law + conservation of current for the current in the electrodes.
 
     Parameters

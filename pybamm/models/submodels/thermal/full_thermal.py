@@ -3,8 +3,10 @@
 #
 import pybamm
 
+from .base_thermal import BaseThermal
 
-class ThermalFull(pybamm.BaseThermal):
+
+class ThermalFull(BaseThermal):
     """Class for full thermal submodel
 
     Parameters

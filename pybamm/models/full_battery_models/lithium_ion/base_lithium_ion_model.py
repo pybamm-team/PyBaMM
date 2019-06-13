@@ -3,8 +3,10 @@
 #
 import pybamm
 
+from ..base_battery_model import BaseBatteryModel
 
-class BaseLithiumIonModel(pybamm.BaseBatteryModel):
+
+class BaseModel(BaseBatteryModel):
     """
     Overwrites default parameters from Base Model with default parameters for
     lithium-ion models

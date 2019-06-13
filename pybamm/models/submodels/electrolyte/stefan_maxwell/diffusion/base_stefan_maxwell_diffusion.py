@@ -4,7 +4,7 @@
 from ...base_electrolyte_diffusion import BaseElectrolyteDiffusion
 
 
-class BaseStefanMaxwellDiffusion(BaseElectrolyteDiffusion):
+class BaseModel(BaseElectrolyteDiffusion):
     """Base class for conservation of mass in the electrolyte employing the
     Stefan-Maxwell constitutive equations.
 
