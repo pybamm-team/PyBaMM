@@ -1,13 +1,13 @@
 #
-# Class for homogenous current collectors
+# Class for uniform current collectors
 #
 import pybamm
 
 from .base_current_collector import BaseModel
 
 
-class Homogeneous(BaseModel):
-    """Class for homogeneous current collectors
+class Uniform(BaseModel):
+    """Class for uniform current collectors
 
     Parameters
     ----------
@@ -18,8 +18,7 @@ class Homogeneous(BaseModel):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def get_fundamental_variables(self):
 

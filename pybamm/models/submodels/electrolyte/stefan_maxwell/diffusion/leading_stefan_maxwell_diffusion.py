@@ -19,9 +19,8 @@ class LeadingOrderModel(BaseModel):
     *Extends:* :class:`pybamm.BaseStefanMaxwellDiffusion`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param):
         super().__init__(param)
-        self._domain = domain
 
     def get_fundamental_variables(self):
         """
@@ -44,6 +43,8 @@ class LeadingOrderModel(BaseModel):
         )
 
         variables.update(self.get_standard_flux_variables(N_e))
+
+        return variables
 
     def set_rhs(self, variables):
 

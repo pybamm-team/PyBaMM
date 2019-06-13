@@ -21,8 +21,7 @@ class ManyParticles(BaseModel):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def get_fundamental_variables(self):
         """
@@ -42,16 +41,15 @@ class ManyParticles(BaseModel):
 
         return fundamental_variables
 
-    def get_derived_variables(self, variables):
+    def get_coupled_variables(self, variables):
 
         c_s = variables[self._domain + " particle concentration"]
-        c_s_xav = pybamm.average(c_s)
 
-        variables.update(
-            {"X-average " + self._domain + " particle concentration": c_s_xav}
-        )
+        N_s = self.flux_law(c_s)
 
-        variables.update(self.get_standard_derived_variables(variables))
+        variables.update(self._get_standard_concentration_variables(c_s))
+        variables.update(self._get_standard_flux_variables(N_s))
+        variables.update(self._get_standard_ocp_variables(c_s))
 
         return variables
 

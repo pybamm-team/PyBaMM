@@ -19,9 +19,8 @@ class FullModel(BaseModel):
     *Extends:* :class:`pybamm.BaseStefanMaxwellDiffusion`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param):
         super().__init__(param)
-        self._domain = domain
 
     def get_fundamental_variables(self):
         """
@@ -58,6 +57,8 @@ class FullModel(BaseModel):
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         variables.update(self.get_standard_flux_variables(N_e))
+
+        return variables
 
     def set_rhs(self, variables):
 

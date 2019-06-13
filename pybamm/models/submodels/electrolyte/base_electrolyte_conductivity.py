@@ -59,12 +59,14 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         param = self.param
         pot_scale = param.potential_scale
 
-        return {
+        variables = {
             "Average concentration overpotential": eta_c_av,
             "Average electrolyte ohmic losses": delta_phi_e_av,
             "Average concentration overpotential [V]": pot_scale * eta_c_av,
             "Average electrolyte ohmic losses [V]": pot_scale * delta_phi_e_av,
         }
+
+        return variables
 
     def _get_standard_surface_potential_difference_variables(
         self, delta_phi, delta_phi_av

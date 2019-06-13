@@ -18,9 +18,8 @@ class LeadingOrderModel(BaseModel):
     *Extends:* :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param):
         super().__init__(param)
-        self._domain = domain
 
     def get_coupled_variables(self, variables):
 

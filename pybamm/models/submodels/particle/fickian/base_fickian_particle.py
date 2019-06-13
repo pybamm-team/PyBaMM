@@ -20,8 +20,7 @@ class BaseModel(BaseParticle):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def _flux_law(self, c):
         return pybamm.grad(c)

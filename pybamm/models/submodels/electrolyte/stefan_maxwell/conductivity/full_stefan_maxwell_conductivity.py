@@ -19,9 +19,8 @@ class FullModel(BaseModel):
     *Extends:* :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param):
         super().__init__(param)
-        self._domain = domain
 
     def get_fundamental_variables(self):
         """
@@ -46,6 +45,8 @@ class FullModel(BaseModel):
         )
 
         variables.update(self._get_standard_current_variables(i_e))
+
+        return variables
 
     def set_algebraic(self, variables):
 

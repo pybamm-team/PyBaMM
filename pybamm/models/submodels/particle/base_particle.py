@@ -26,9 +26,6 @@ class BaseParticle(pybamm.BaseSubModel):
         c_s_surf = pybamm.surf(c_s)
         c_s_surf_av = pybamm.average(c_s_surf)
 
-        N_s = self._ficks_law(c_s)
-        N_s_xav = self._ficks_law(c_s_xav)
-
         if self._domain == "Negative":
             c_scale = self.param.c_n_max
             ocp = self.param.U_n(c_s_surf)
@@ -63,6 +60,70 @@ class BaseParticle(pybamm.BaseSubModel):
             "Average "
             + self._domain.lower()
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
+            self._domain + " open circuit potential": ocp,
+            "Average " + self._domain.lower() + " open circuit potential": ocp_av,
+            self._domain + " entropic change": dudT,
+            "Average " + self._domain.lower() + " entropic change": dudT_av,
+        }
+
+        return variables
+
+    def _get_standard_concentration_variables(self, c_s):
+
+        c_s_surf = pybamm.surf(c_s)
+        c_s_surf_av = pybamm.average(c_s_surf)
+
+        c_s_av = pybamm.average(c_s)
+
+        if self._domain == "Negative":
+            c_scale = self.param.c_n_max
+        elif self._domain == "Positive":
+            c_scale = self.param.c_p_max
+
+        variables = {
+            self._domain + " particle concentration": c_s,
+            self._domain + " particle concentration [mol.m-3]": c_s * c_scale,
+            "Average " + self._domain.lower() + " particle concentration": c_s_av,
+            "Average "
+            + self._domain.lower()
+            + " particle concentration [mol.m-3]": c_s_av * c_scale,
+            self._domain + " particle surface concentration": c_s_surf,
+            self._domain
+            + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
+            "Average "
+            + self._domain.lower()
+            + " particle surface concentration": c_s_surf_av,
+            "Average "
+            + self._domain.lower()
+            + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
+        }
+
+        return variables
+
+    def _get_standard_flux_variables(self, N_s):
+
+        variables = {self._domain + " particle flux": N_s}
+        return variables
+
+    def _get_standard_ocp_variables(self, c_s):
+
+        c_s_surf = pybamm.surf(c_s)
+
+        if self._domain == "Negative":
+            ocp = self.param.U_n(c_s_surf)
+            dudT = self.param.dUdT_n(c_s_surf)
+
+        elif self._domain == "Positive":
+            ocp = self.param.U_p(c_s_surf)
+            dudT = self.param.dUdT_p(c_s_surf)
+
+        else:
+            pybamm.DomainError
+
+        ocp_av = pybamm.average(ocp)
+        dudT_av = pybamm.average(dudT)
+
+        variables = {
             self._domain + " open circuit potential": ocp,
             "Average " + self._domain.lower() + " open circuit potential": ocp_av,
             self._domain + " entropic change": dudT,

@@ -28,8 +28,7 @@ class BaseModel(BaseInterface):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def get_derived_variables(self, variables):
         """

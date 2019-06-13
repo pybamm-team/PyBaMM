@@ -8,7 +8,15 @@ class BaseSubModel:
         super().__init__()
         self.param = param
         # Initialise empty variables (to avoid overwriting with 'None')
+
+        self.rhs = {}
+        self.algebraic = {}
+        self.boundary_conditions = {}
+        self.initial_conditions = {}
+
         self.variables = {}
+
+        self.events = {}
 
     def get_fundamental_variables(self):
         """

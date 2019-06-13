@@ -36,7 +36,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             )
             V = pybamm.BoundaryValue(phi_s, "right")
             V_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * V
-            delta_phi_s = delta_phi_s - V
+            delta_phi_s = phi_s - V
 
         delta_phi_s_av = pybamm.average(delta_phi_s)
         delta_phi_s_dim = delta_phi_s * param.potential_scale

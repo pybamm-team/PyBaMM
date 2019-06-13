@@ -1,3 +1,3 @@
-from .base_current_collector import BaseCurrentCollector
+from .base_current_collector import BaseModel
 
-from .homogeneous_current_collector import HomogeneousCurrentCollector
+from .homogeneous_current_collector import Uniform
