@@ -19,6 +19,7 @@ class DFN(BaseModel):
 
         self.set_current_collector_submodel()
         self.set_porosity_submodel()
+        self.set_convection_submodel()
         self.set_interfacial_submodel()
         self.set_particle_submodel()
         self.set_solid_submodel()
@@ -69,6 +70,10 @@ class DFN(BaseModel):
     def set_porosity_submodel(self):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+
+    def set_convection_submodel(self):
+
+        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
 
     def set_interfacial_submodel(self):
 

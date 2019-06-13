@@ -35,17 +35,11 @@ class FullModel(BaseModel):
 
         return variables
 
-    def _unpack(self, variables):
+    def get_coupled_variables(self, variables):
 
         eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
         i_e = variables["Electrolyte current density"]
-
-        return eps, c_e, i_e
-
-    def get_coupled_variables(self, variables):
-
-        eps, c_e, i_e = self._unpack(variables)
         v_box = variables["Volume-averaged velocity"]
 
         param = self.param
@@ -56,7 +50,7 @@ class FullModel(BaseModel):
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
-        variables.update(self.get_standard_flux_variables(N_e))
+        variables.update(self._get_standard_flux_variables(N_e))
 
         return variables
 
@@ -64,9 +58,11 @@ class FullModel(BaseModel):
 
         param = self.param
 
-        eps, deps_dt, c_e, i_e, _ = self._unpack(variables)
+        eps = variables["Porosity"]
         deps_dt = variables["Porosity change"]
+        c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
+        i_e = variables["Electrolyte current density"]
 
         # TODO: check lead acid version in new form
         # source_terms = param.s / param.gamma_e * j

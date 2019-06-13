@@ -13,7 +13,7 @@ class BaseModel(BaseInterface):
 
     Parameters
     ----------
-    param 
+    param
         Model parameters
     domain : iter of str, optional
         The domain(s) in which to compute the interfacial current. Default is None,

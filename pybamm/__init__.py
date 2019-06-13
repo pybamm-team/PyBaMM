@@ -160,7 +160,7 @@ from .models.submodels import (
     thermal,
 )
 
-from .models.submodels import electrolyte, current_collector
+from .models.submodels import electrolyte, current_collector, convection
 
 
 #

@@ -16,7 +16,7 @@ class BaseModel(BaseInterface):
 
     Parameters
     ----------
-    param : 
+    param :
         model parameters
     domain : iter of str, optional
 

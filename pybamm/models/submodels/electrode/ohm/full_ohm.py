@@ -75,7 +75,7 @@ class Full(BaseModel):
         """
         phi_s = variables[self._domain + " electrode potential"]
         i_s = variables[self._domain + " electrode current density"]
-        j = variables[self._domain + " interfacial current density"]
+        j = variables[self._domain + " electrode interfacial current density"]
 
         self.algebraic[phi_s] = pybamm.div(i_s) + j
 
