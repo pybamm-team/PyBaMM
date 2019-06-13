@@ -89,11 +89,13 @@ class DFN(BaseLithiumIonModel):
     #         "main": {"neg": {"s_plus": 1, "aj": j_n}, "pos": {"s_plus": 1, "aj": j_p}}
     #     }
     #     # Electrolyte diffusion model
-    #     electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+    #     electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell
+    # (param)
     #     electrolyte_diffusion_model.set_differential_system(self.variables, reactions)
     #     self.update(electrolyte_diffusion_model)
 
-    #     eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(param)
+    #     eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell
+    # (param)
     #     eleclyte_current_model.set_algebraic_system(self.variables, reactions)
     #     self.update(eleclyte_current_model)
 

@@ -3,8 +3,10 @@
 #
 import pybamm
 
+from .base_ohm import BaseOhm
 
-class LeadingOhm(pybamm.BaseOhm):
+
+class LeadingOhm(BaseOhm):
     """Leading-order model for ohm's law with conservation of current for the current
     in the electrodes.
 

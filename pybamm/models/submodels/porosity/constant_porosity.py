@@ -3,8 +3,10 @@
 #
 import pybamm
 
+from .base_porosity import BasePorosity
 
-class ConstantPorosity(pybamm.BaseSubModel):
+
+class ConstantPorosity(BasePorosity):
     """Base class for constant porosity
 
     Parameters

@@ -3,8 +3,10 @@
 #
 import pybamm
 
+from .base_fickian_particle import BaseFickianParticle
 
-class FickianManyParticle(pybamm.BaseFickianParticle):
+
+class FickianManyParticle(BaseFickianParticle):
     """Base class for molar conservation in many particles which employs
     Fick's law.
 

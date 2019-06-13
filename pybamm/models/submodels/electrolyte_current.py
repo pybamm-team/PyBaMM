@@ -433,7 +433,7 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
         conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
 
-        # Why is there a delta_phi in here instead of just a phi_e ? 
+        # Why is there a delta_phi in here instead of just a phi_e ?
         i_e = conductivity * (
             (param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi)
         )

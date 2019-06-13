@@ -3,8 +3,10 @@
 #
 import pybamm
 
+from .base_fickian_particle import BaseFickianParticle
 
-class FickianSingleParticle(pybamm.BaseFickianParticle):
+
+class FickianSingleParticle(BaseFickianParticle):
     """Base class for molar conservation in a single x-averaged particle which employs
     Fick's law.
 
@@ -24,7 +26,7 @@ class FickianSingleParticle(pybamm.BaseFickianParticle):
 
     def get_fundamental_variables(self):
         """
-        Returns the variables in the submodel which can be created indpendent of 
+        Returns the variables in the submodel which can be created indpendent of
         other submodels
         """
 
