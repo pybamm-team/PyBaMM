@@ -73,7 +73,7 @@ class BaseParticle(pybamm.BaseSubModel):
         c_s_surf = pybamm.surf(c_s)
         c_s_surf_av = pybamm.average(c_s_surf)
 
-        c_s_av = pybamm.average(c_s)
+        c_s_av = pybamm.average(c_s_surf)  # TODO: add the proper values here
 
         if self._domain == "Negative":
             c_scale = self.param.c_n_max

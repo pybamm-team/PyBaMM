@@ -36,10 +36,7 @@ class DFN(BaseModel):
 
         # Set presolved variables
         for submodel in self.submodels.values():
-            try:
-                self.variables.update(submodel.get_coupled_variables(self.variables))
-            except:
-                submodel
+            self.variables.update(submodel.get_coupled_variables(self.variables))
 
         # Set model equations
         for submodel in self.submodels.values():

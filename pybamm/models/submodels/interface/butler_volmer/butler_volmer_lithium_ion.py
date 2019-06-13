@@ -21,12 +21,12 @@ class LithiumIon(BaseModel):
         c_s_surf = variables[self._domain + " particle surface concentration"]
         c_e = variables[self._domain + " electrolyte concentration"]
 
-        if self._domain == "Negative electrode":
+        if self._domain == "Negative":
             prefactor = 1 / self.param.C_r_n
-        elif self._domain == "Positive electrode":
+        elif self._domain == "Positive":
             prefactor = self.param.gamma_p / self.param.C_r_p
         else:
-            pybamm.DomainError
+            raise pybamm.DomainError
 
         j0 = prefactor * (
             c_e ** (1 / 2) * c_s_surf ** (1 / 2) * (1 - c_s_surf) ** (1 / 2)

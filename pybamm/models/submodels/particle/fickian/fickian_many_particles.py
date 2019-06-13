@@ -37,17 +37,9 @@ class ManyParticles(BaseModel):
         else:
             pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
 
-        fundamental_variables = {self._domain + " particle concentration": c_s}
+        N_s = self._flux_law(c_s)
 
-        return fundamental_variables
-
-    def get_coupled_variables(self, variables):
-
-        c_s = variables[self._domain + " particle concentration"]
-
-        N_s = self.flux_law(c_s)
-
-        variables.update(self._get_standard_concentration_variables(c_s))
+        variables = self._get_standard_concentration_variables(c_s)
         variables.update(self._get_standard_flux_variables(N_s))
         variables.update(self._get_standard_ocp_variables(c_s))
 

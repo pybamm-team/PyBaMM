@@ -30,7 +30,7 @@ class BaseModel(BaseInterface):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def get_derived_variables(self, variables):
+    def get_coupled_variables(self, variables):
         """
         Returns variables which are derived from the fundamental variables in the model.
         """
