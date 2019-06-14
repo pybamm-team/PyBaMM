@@ -1,17 +1,13 @@
 #
-# Finite Element discretisation class which uses fenics
+# Finite Element discretisation class which uses scikit-fem
 #
 import pybamm
 
 from scipy.sparse import csr_matrix
 import autograd.numpy as np
 
-import importlib
-
-skfem_spec = importlib.util.find_spec("skfem")
-if skfem_spec is not None:
-    skfem = importlib.util.module_from_spec(skfem_spec)
-    skfem_spec.loader.exec_module(skfem)
+if not pybamm.have_scikit_fem():
+    import skfem
 
 
 class ScikitFiniteElement(pybamm.SpatialMethod):
@@ -33,7 +29,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     """
 
     def __init__(self, mesh):
-        if skfem_spec is None:
+        if pybamm.have_scikit_fem() is None:
             raise ImportError("scikit-fem is not installed")
 
         super().__init__(mesh)
@@ -187,7 +183,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
     def integral(self, domain, symbol, discretised_symbol):
         """Vector-vector dot product to implement the integral operator.
-        See :meth:`pybamm.BaseDiscretisation.integral`
+        See :meth:`pybamm.SpatialMethod.integral`
         """
 
         # Calculate integration vector
@@ -232,7 +228,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
     def indefinite_integral(self, domain, symbol, discretised_symbol):
         """Implementation of the indefinite integral operator. The
         input discretised symbol must be defined on the internal mesh edges.
-        See :meth:`pybamm.BaseDiscretisation.indefinite_integral`
+        See :meth:`pybamm.SpatialMethod.indefinite_integral`
         """
         raise NotImplementedError
 

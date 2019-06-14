@@ -5,10 +5,9 @@ import pybamm
 from tests import get_2p1d_mesh_for_testing, get_unit_2p1D_mesh_for_testing
 import numpy as np
 import unittest
-from pybamm.spatial_methods.scikit_finite_element import skfem_spec
 
 
-@unittest.skipIf(skfem_spec is None, "scikit-fem not installed")
+@unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
 class TestScikitFiniteElement(unittest.TestCase):
     def test_not_implemented(self):
         mesh = get_2p1d_mesh_for_testing()
@@ -23,7 +22,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.boundary_value_or_flux(None, None)
 
-    def test(self):
+    def test_discretise_equations(self):
         # get mesh
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {

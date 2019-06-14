@@ -3,10 +3,9 @@
 #
 import pybamm
 import unittest
-from pybamm.meshes.scikit_fem_submeshes import skfem_spec
 
 
-@unittest.skipIf(skfem_spec is None, "scikit-fem not installed")
+@unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
 class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(

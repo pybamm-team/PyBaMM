@@ -142,7 +142,7 @@ generate meshes and assemble discrete operators for use in the finite element me
 the finite element method is only implemented for a small number of submodels in PyBaMM
 (for example, see the [current collector submodel](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/submodels/current_collector.py)).
 
-To install scikit-fem, on the command-line type:
+Note that scikit-fem requires Python 3.6+. To install scikit-fem, on the command-line type:
 
 ```bash
 pip install scikit-fem
