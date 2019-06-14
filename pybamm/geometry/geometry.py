@@ -287,29 +287,26 @@ class Geometryxp0p1DMicro(Geometry1DMicro):
 
         var = pybamm.standard_spatial_vars
 
+        # Add secondary domains to x-domains
         if cc_dimension == 1:
             for domain in self.keys():
-                self[domain] = {
-                    "secondary": {
-                        var.z: {
-                            "min": pybamm.Scalar(0),
-                            "max": pybamm.geometric_parameters.l_z,
-                        }
+                self[domain]["secondary"] = {
+                    var.z: {
+                        "min": pybamm.Scalar(0),
+                        "max": pybamm.geometric_parameters.l_z,
                     }
                 }
         elif cc_dimension == 2:
             for domain in self.keys():
-                self[domain] = {
-                    "secondary": {
-                        var.y: {
-                            "min": pybamm.Scalar(0),
-                            "max": pybamm.geometric_parameters.l_y,
-                        },
-                        var.z: {
-                            "min": pybamm.Scalar(0),
-                            "max": pybamm.geometric_parameters.l_z,
-                        },
-                    }
+                self[domain]["secondary"] = {
+                    var.y: {
+                        "min": pybamm.Scalar(0),
+                        "max": pybamm.geometric_parameters.l_y,
+                    },
+                    var.z: {
+                        "min": pybamm.Scalar(0),
+                        "max": pybamm.geometric_parameters.l_z,
+                    },
                 }
         else:
             raise pybamm.GeometryError(
@@ -346,51 +343,44 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
         l_n = pybamm.geometric_parameters.l_n
         l_s = pybamm.geometric_parameters.l_s
 
+        # Add secondary domains to x-domains
         if cc_dimension == 1:
-            self["negative particle"] = {
-                "secondary": {
-                    var.x_n: {"min": pybamm.Scalar(0), "max": l_n},
-                    var.z: {
-                        "min": pybamm.Scalar(0),
-                        "max": pybamm.geometric_parameters.l_z,
-                    },
-                }
+            self["negative particle"]["secondary"] = {
+                var.x_n: {"min": pybamm.Scalar(0), "max": l_n},
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
             }
-            self["positive particle"] = {
-                "secondary": {
-                    var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
-                    var.z: {
-                        "min": pybamm.Scalar(0),
-                        "max": pybamm.geometric_parameters.l_z,
-                    },
-                }
+            self["negative particle"]["secondary"] = {
+                var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
             }
         elif cc_dimension == 2:
-            self["negative particle"] = {
-                "secondary": {
-                    var.x_n: {"min": pybamm.Scalar(0), "max": l_n},
-                    var.y: {
-                        "min": pybamm.Scalar(0),
-                        "max": pybamm.geometric_parameters.l_y,
-                    },
-                    var.z: {
-                        "min": pybamm.Scalar(0),
-                        "max": pybamm.geometric_parameters.l_z,
-                    },
-                }
+            self["negative particle"]["secondary"] = {
+                var.x_n: {"min": pybamm.Scalar(0), "max": l_n},
+                var.y: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_y,
+                },
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
             }
-            self["positive particle"] = {
-                "secondary": {
-                    var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
-                    var.y: {
-                        "min": pybamm.Scalar(0),
-                        "max": pybamm.geometric_parameters.l_y,
-                    },
-                    var.z: {
-                        "min": pybamm.Scalar(0),
-                        "max": pybamm.geometric_parameters.l_z,
-                    },
-                }
+            self["negative particle"]["secondary"] = {
+                var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
+                var.y: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_y,
+                },
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
             }
         else:
             raise pybamm.GeometryError(
