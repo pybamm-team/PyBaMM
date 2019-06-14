@@ -114,8 +114,8 @@ def plot_errors(all_variables, t_eval, Crates):
 
 def compare_voltages(args, models):
     t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
+    Crates = [2]  # , 0.5, 1, 2]
     if args.compute:
-        Crates = [2]  # , 0.5, 1, 2]
         all_variables, t_eval = model_comparison(models, Crates, t_eval)
         with open("capacitance_data.pickle", "wb") as f:
             data = (all_variables, t_eval)
@@ -123,7 +123,7 @@ def compare_voltages(args, models):
 
     with open("capacitance_data.pickle", "rb") as f:
         (all_variables, t_eval) = pickle.load(f)
-    plot_voltages(all_variables, t_eval, Crates)
+    # plot_voltages(all_variables, t_eval, Crates)
     plot_errors(all_variables, t_eval, Crates)
 
 
@@ -174,5 +174,5 @@ if __name__ == "__main__":
         pybamm.lead_acid.NewmanTiedemann({"capacitance": "differential"}),
         pybamm.lead_acid.NewmanTiedemann({"capacitance": "algebraic"}),
     ]
-    # compare_voltages(args, models)
-    convergence_studies(args, models)
+    compare_voltages(args, models)
+    # convergence_studies(args, models)
