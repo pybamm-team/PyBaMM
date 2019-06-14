@@ -199,12 +199,14 @@ from .geometry import standard_spatial_vars
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+from .meshes.scikit_fem_submeshes import Scikit2DSubMesh, have_scikit_fem
 
 #
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 #
 # Solver classes
