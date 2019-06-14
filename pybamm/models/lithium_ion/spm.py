@@ -139,7 +139,7 @@ class SPM(pybamm.LithiumIonBaseModel):
         if dimensionality in [0, 1]:
             return base_submeshes
         elif dimensionality == 2:
-            base_submeshes["current collector"] = pybamm.FenicsMesh2D
+            base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
             return base_submeshes
 
     @property
@@ -154,7 +154,7 @@ class SPM(pybamm.LithiumIonBaseModel):
         if dimensionality in [0, 1]:
             return base_spatial_methods
         elif dimensionality == 2:
-            base_spatial_methods["current collector"] = pybamm.FiniteElementFenics
+            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
             return base_spatial_methods
 
     @property
