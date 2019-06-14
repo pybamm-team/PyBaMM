@@ -72,6 +72,7 @@ def convergence_study(models, Crate, t_eval, all_npts, save_folder=None):
         {
             "Typical current [A]": current,
             "Maximum porosity of negative electrode": 0.92,
+            "Maximum porosity of separator": 0.92,
             "Maximum porosity of positive electrode": 0.92,
         }
     )
@@ -102,5 +103,7 @@ def convergence_study(models, Crate, t_eval, all_npts, save_folder=None):
             )
             variables["solution"] = solution
             model_variables[(model.name, options_to_tuple(model.options))] = variables
-        with open(save_folder + "npts={}.pickle".format(npts), "wb") as f:
+
+        filename = save_folder + "Crate={}_npts={}.pickle".format(Crate, npts)
+        with open(filename, "wb") as f:
             pickle.dump(model_variables, f, pickle.HIGHEST_PROTOCOL)
