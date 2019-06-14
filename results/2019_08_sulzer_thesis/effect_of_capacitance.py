@@ -11,6 +11,8 @@ from config import OUTPUT_DIR
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from shared import model_comparison, convergence_study
 
+save_folder = "results/2019_08_sulzer_thesis/data/capacitance_results/"
+
 
 def plot_voltages(all_variables, t_eval, Crates):
     # Only use some Crates
@@ -129,18 +131,19 @@ def compare_voltages(args, models):
 
 def convergence_studies(args, models):
     t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
-    save_folder = "results/2019_08_sulzer_thesis/data/capacitance_convergence_study/"
-    all_npts = [10, 50, 100, 200]  # , 500, 1000]
+    all_npts = range(10, 200, 10)
 
     # Get data
+    Crate = 1
     if args.compute:
-        convergence_study(models, 1, t_eval, [500, 1000], save_folder)
+        convergence_study(models, Crate, t_eval, all_npts, save_folder)
 
     # Load data
     grid_points = []
     all_times = defaultdict(list)
     for npts in all_npts:
-        with open(save_folder + "npts={}.pickle".format(npts), "rb") as f:
+        filename = save_folder + "Crate={}_npts={}.pickle".format(Crate, npts)
+        with open(filename, "rb") as f:
             model_variables = pickle.load(f)
             for model_options, variables in model_variables.items():
                 all_times[model_options].append(variables["solution"].solve_time)
