@@ -436,23 +436,28 @@ class MacInnesCapacitance(ElectrolyteCurrentBaseModel):
             Domain in which to set the system
         """
         param = self.set_of_parameters
-        _, delta_phi, c_e, eps = self.unpack(variables, domain)
+        i_boundary_cc, delta_phi, c_e, eps = self.unpack(variables, domain)
 
         if domain == ["negative electrode"]:
             j = reactions["main"]["neg"]["aj"]
             self.initial_conditions[delta_phi] = param.U_n(param.c_n_init)
             C_dl = param.C_dl_n
+            sigma = param.sigma_n
             Domain = "Negative"
         elif domain == ["positive electrode"]:
             j = reactions["main"]["pos"]["aj"]
             self.initial_conditions[delta_phi] = param.U_p(param.c_p_init)
             C_dl = param.C_dl_p
+            sigma = param.sigma_p
             Domain = "Positive"
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
-        conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
+        kappa_eff = param.kappa_e(c_e) * (eps ** param.b)
+        conductivity = 1 / (param.C_e / kappa_eff + 1 / sigma) / param.gamma_e
         i_e = conductivity * (
-            (param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi)
+            (param.chi(c_e) / c_e) * pybamm.grad(c_e)
+            + pybamm.grad(delta_phi)
+            + i_boundary_cc / sigma
         )
         if self.capacitance_options == "differential":
             self.rhs[delta_phi] = 1 / C_dl * (pybamm.div(i_e) - j)
