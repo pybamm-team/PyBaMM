@@ -101,7 +101,7 @@ class SPM(pybamm.LithiumIonBaseModel):
         if self.options["bc_options"]["dimensionality"] == 2:
             current_collector_model = pybamm.current_collector.OhmTwoDimensional(param)
             # current_collector_model.set_uniform_current(self.variables)
-            current_collector_model.set_algebraic_system_spm(self.variables)
+            current_collector_model.set_potential_pair_spm(self.variables)
             self.update(current_collector_model)
 
         # Cut-off voltage

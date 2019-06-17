@@ -12,7 +12,6 @@ param = model.default_parameter_values
 param.process_model(model)
 param.process_geometry(geometry)
 
-
 # set mesh
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
 
