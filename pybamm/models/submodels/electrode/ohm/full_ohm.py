@@ -53,7 +53,7 @@ class Full(BaseModel):
         elif self._domain == "Positive":
             sigma = self.param.sigma_p
 
-        sigma_eff = sigma * (1 - eps)
+        sigma_eff = sigma * (1 - eps) ** self.param.b
         i_s = -sigma_eff * pybamm.grad(phi_s)
 
         variables.update(
@@ -98,10 +98,9 @@ class Full(BaseModel):
 
         elif self._domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.sigma_p * (1 - eps)
+            sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b
             rbc = (
-                i_boundary_cc
-                / pybamm.boundary_value(-sigma_eff ** self.param.b, "right"),
+                i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
                 "Neumann",
             )
 

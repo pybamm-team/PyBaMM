@@ -2,7 +2,7 @@
 # Base class for electrolyte diffusion
 #
 import pybamm
-import numpy as np
+import autograd.numpy as np
 
 
 class BaseElectrolyteDiffusion(pybamm.BaseSubModel):

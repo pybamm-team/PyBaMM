@@ -38,6 +38,7 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
         processed_variables[var] = ProcessedVariable(
             eqn, t_sol, y_sol, mesh, interp_kind, known_evals
         )
+
         for t in known_evals:
             known_evals[t].update(processed_variables[var].known_evals[t])
     return processed_variables

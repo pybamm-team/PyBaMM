@@ -50,6 +50,8 @@ class FullModel(BaseModel):
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
+        N_e = N_e_diffusion
+
         variables.update(self._get_standard_flux_variables(N_e))
 
         return variables
@@ -63,10 +65,12 @@ class FullModel(BaseModel):
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
         i_e = variables["Electrolyte current density"]
+        j = variables["Interfacial current density"]
 
         # TODO: check lead acid version in new form
-        # source_terms = param.s / param.gamma_e * j
-        source_term = ((param.s - param.t_plus) / param.gamma_e) * pybamm.div(i_e)
+        source_term = param.s / param.gamma_e * j
+        # source_term = ((param.s - param.t_plus) / param.gamma_e) * pybamm.div(i_e)
+        # source_term = pybamm.div(i_e) / param.gamma_e  # lithium-ion
 
         self.rhs = {
             c_e: (1 / eps)
