@@ -43,7 +43,7 @@ class LumpedModel(BaseModel):
         return q
 
     def _unpack(self, variables):
-        T_av = variables["Cell temperature"]
+        T_av = variables["Average cell temperature"]
         q = variables["Heat flux"]
         Q_av = variables["Average total heating"]
         return T_av, q, Q_av

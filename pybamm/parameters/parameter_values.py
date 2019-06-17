@@ -133,10 +133,7 @@ class ParameterValues(dict):
                     processing.capitalize(), variable
                 )
             )
-            try:
-                model.variables[variable] = processing_function(equation)
-            except:
-                model.variables[variable] = processing_function(equation)
+            model.variables[variable] = processing_function(equation)
 
         for idx, equation in enumerate(model.events):
             pybamm.logger.debug(

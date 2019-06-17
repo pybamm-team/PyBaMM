@@ -48,8 +48,6 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         variables = {
             "Electrolyte flux": N_e,
             "Electrolyte flux [mol.m-2.s-1]": N_e * flux_scale,
-            "Average electrolyte flux": pybamm.average(N_e),
-            "Average electrolyte flux [mol.m-2.s-1]": pybamm.average(N_e) * flux_scale,
         }
 
         return variables

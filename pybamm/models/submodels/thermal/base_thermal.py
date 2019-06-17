@@ -126,7 +126,7 @@ class BaseModel(pybamm.BaseSubModel):
 
     def set_initial_conditions(self, variables):
 
-        T = self._unpack(variables)
+        T, _, _ = self._unpack(variables)
 
         self.initial_conditions = {T: self.param.T_init}
 

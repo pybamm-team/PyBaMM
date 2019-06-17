@@ -66,18 +66,12 @@ class BaseElectrode(pybamm.BaseSubModel):
 
     def _get_standard_current_variables(self, i_s):
         param = self.param
-        i_s_av = pybamm.average(i_s)
 
         i_s_dim = param.i_typ * i_s
-        i_s_av_dim = param.i_typ * i_s_av
 
         variables = {
             self._domain + " electrode current density": i_s,
-            "Average " + self._domain.lower() + " electrode current density": i_s_av,
             self._domain + " electrode current density [A.m-2]": i_s_dim,
-            "Average "
-            + self._domain.lower()
-            + " electrode current density [A.m-2]": i_s_av_dim,
         }
 
         return variables

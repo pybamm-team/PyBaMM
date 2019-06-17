@@ -344,7 +344,10 @@ class Discretisation(object):
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
-            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            try: 
+                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            except:
+                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
         return new_var_eqn_dict
 
@@ -427,6 +430,10 @@ class Discretisation(object):
             return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.Variable):
+            try: 
+                self._y_slices[symbol.id]
+            except:
+                self._y_slices[symbol.id]
             return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.SpatialVariable):

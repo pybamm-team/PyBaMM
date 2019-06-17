@@ -48,8 +48,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         variables = {
             "Electrolyte current density": i_e,
             "Electrolyte current density [A.m-2]": i_typ * i_e,
-            "Average electrolyte current density": pybamm.average(i_e),
-            "Average electrolyte current density [A.m-2]": pybamm.average(i_e),
         }
 
         return variables
