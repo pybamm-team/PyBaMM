@@ -38,6 +38,24 @@ class BaseInterface(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_whole_cell_interfacial_current_variables(self, variables):
+
+        i_typ = self.param.i_typ
+
+        j_n = variables["Negative electrode interfacial current density"]
+        j_s = pybamm.Broadcast(0, ["separator"])
+        j_p = variables["Positive electrode interfacial current density"]
+        j = pybamm.Concatenation(j_n, j_s, j_p)
+
+        variables.update(
+            {
+                "Interfacial current density": j,
+                "Interfacial current density [A.m-2]": i_typ * j,
+            }
+        )
+
+        return variables
+
     def _get_standard_exchange_current_variables(self, j0, j0_av):
 
         i_typ = self.param.i_typ
@@ -52,6 +70,24 @@ class BaseInterface(pybamm.BaseSubModel):
             + self._domain.lower()
             + " electrode exchange current density [A.m-2]": i_typ * j0_av,
         }
+
+        return variables
+
+    def _get_standard_whole_cell_exchange_current_variables(self, variables):
+
+        i_typ = self.param.i_typ
+
+        j0_n = variables["Negative electrode exchange current density"]
+        j0_s = pybamm.Broadcast(0, ["separator"])
+        j0_p = variables["Positive electrode exchange current density"]
+        j0 = pybamm.Concatenation(j0_n, j0_s, j0_p)
+
+        variables.update(
+            {
+                "Exchange current density": j0,
+                "Exchange current density [A.m-2]": i_typ * j0,
+            }
+        )
 
         return variables
 

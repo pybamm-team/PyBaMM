@@ -55,6 +55,6 @@ class BaseModel(BaseParticle):
             raise pybamm.DomainError("Invalid particle domain")
 
         self.boundary_conditions = {
-            c: {"left": (0, "Neumann"), "right": (rbc, "Neumann")}
+            c: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
         }
 

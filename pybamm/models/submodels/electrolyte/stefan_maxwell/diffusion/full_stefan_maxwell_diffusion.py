@@ -78,7 +78,10 @@ class FullModel(BaseModel):
         c_e = variables["Electrolyte concentration"]
 
         self.boundary_conditions = {
-            c_e: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+            c_e: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
         }
 
     def set_initial_conditions(self, variables):

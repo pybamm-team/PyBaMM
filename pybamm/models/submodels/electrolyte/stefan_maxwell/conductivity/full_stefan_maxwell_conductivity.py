@@ -64,7 +64,10 @@ class FullModel(BaseModel):
         phi_e = variables["Electrolyte potential"]
 
         self.boundary_conditions = {
-            phi_e: {"left": (0, "Neumann"), "right": (0, "Neumann")}
+            phi_e: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
         }
 
     def set_initial_conditions(self, variables):

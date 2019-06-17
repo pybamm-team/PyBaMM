@@ -35,7 +35,7 @@ class BaseElectrode(pybamm.BaseSubModel):
                 param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_av
             )
             V = pybamm.BoundaryValue(phi_s, "right")
-            V_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * V
+            # V_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * V
             delta_phi_s = phi_s - V
 
         delta_phi_s_av = pybamm.average(delta_phi_s)
@@ -59,8 +59,8 @@ class BaseElectrode(pybamm.BaseSubModel):
             + " electrode ohmic losses [V]": delta_phi_s_av_dim,
         }
 
-        if self._domain == "Positive":
-            variables.update({"Voltage": V_dim})
+        # if self._domain == "Positive":
+        #     variables.update({"Voltage": V_dim})
 
         return variables
 

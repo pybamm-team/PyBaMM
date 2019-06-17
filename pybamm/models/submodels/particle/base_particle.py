@@ -64,23 +64,32 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if self._domain == "Negative":
             ocp = self.param.U_n(c_s_surf)
+            ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
             dudT = self.param.dUdT_n(c_s_surf)
 
         elif self._domain == "Positive":
             ocp = self.param.U_p(c_s_surf)
+            ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
             dudT = self.param.dUdT_p(c_s_surf)
 
         else:
             pybamm.DomainError
 
         ocp_av = pybamm.average(ocp)
+        ocp_av_dim = pybamm.average(ocp_dim)
         dudT_av = pybamm.average(dudT)
 
         variables = {
-            self._domain + " open circuit potential": ocp,
-            "Average " + self._domain.lower() + " open circuit potential": ocp_av,
-            self._domain + " entropic change": dudT,
-            "Average " + self._domain.lower() + " entropic change": dudT_av,
+            self._domain + " electrode open circuit potential": ocp,
+            self._domain + " electrode open circuit potential [V]": ocp_dim,
+            "Average "
+            + self._domain.lower()
+            + " electrode open circuit potential": ocp_av,
+            "Average "
+            + self._domain.lower()
+            + " electrode open circuit potential [V]": ocp_av_dim,
+            self._domain + " electrode entropic change": dudT,
+            "Average " + self._domain.lower() + " electrode entropic change": dudT_av,
         }
 
         return variables
@@ -91,7 +100,7 @@ class BaseParticle(pybamm.BaseSubModel):
     def _unpack(self, variables):
         raise NotImplementedError
 
-    def _initial_conditions(self, variables):
+    def set_initial_conditions(self, variables):
 
         c, _, _ = self._unpack(variables)
 
@@ -104,7 +113,5 @@ class BaseParticle(pybamm.BaseSubModel):
         else:
             pybamm.DomainError
 
-        initial_conditions = {c: c_init}
-
-        return initial_conditions
+        self.initial_conditions = {c: c_init}
 

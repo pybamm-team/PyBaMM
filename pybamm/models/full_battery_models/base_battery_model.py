@@ -146,7 +146,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Positive electrode current density": None,
                 "Electrolyte current density": None,
                 "Interfacial current density": None,
-                "Exchange-current density": None,
+                "Exchange current density": None,
             }
         )
 
@@ -156,7 +156,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Positive electrode current density [A.m-2]": None,
                 "Electrolyte current density [A.m-2]": None,
                 "Interfacial current density [A.m-2]": None,
-                "Exchange-current density [A.m-2]": None,
+                "Exchange current density [A.m-2]": None,
             }
         )
         # Voltage
@@ -251,6 +251,74 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "x_s [m]": var.x_s * L_x,
                 "x_p": var.x_p,
                 "x_p [m]": var.x_p * L_x,
+            }
+        )
+
+    def set_voltage_variables(self):
+
+        ocp_n = self.variables["Negative electrode open circuit potential"]
+        ocp_p = self.variables["Positive electrode open circuit potential"]
+        ocp_n_av = self.variables["Average negative electrode open circuit potential"]
+        ocp_p_av = self.variables["Average positive electrode open circuit potential"]
+
+        ocp_n_dim = self.variables["Negative electrode open circuit potential"]
+        ocp_p_dim = self.variables["Positive electrode open circuit potential"]
+        ocp_n_av_dim = self.variables[
+            "Average negative electrode open circuit potential"
+        ]
+        ocp_p_av_dim = self.variables[
+            "Average positive electrode open circuit potential"
+        ]
+
+        ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
+        ocp_n_left_dim = pybamm.BoundaryValue(ocp_n_dim, "left")
+        ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
+        ocp_p_right_dim = pybamm.BoundaryValue(ocp_p_dim, "right")
+
+        ocv_av = ocp_p_av - ocp_n_av
+        ocv_av_dim = ocp_p_av_dim - ocp_n_av_dim
+        ocv = ocp_p_right - ocp_n_left
+        ocv_dim = ocp_p_right_dim - ocp_n_left_dim
+
+        # overpotentials
+        eta_r_n_av = self.variables["Average negative reaction overpotential"]
+        eta_r_n_av_dim = self.variables["Average negative reaction overpotential [V]"]
+        eta_r_p_av = self.variables["Average positive reaction overpotential"]
+        eta_r_p_av_dim = self.variables["Average positive reaction overpotential [V]"]
+
+        delta_phi_s_n_av = self.variables["Average negative electrode ohmic losses"]
+        delta_phi_s_n_av_dim = self.variables[
+            "Average negative electrode ohmic losses [V]"
+        ]
+        delta_phi_s_p_av = self.variables["Average positive electrode ohmic losses"]
+        delta_phi_s_p_av_dim = self.variables[
+            "Average positive electrode ohmic losses [V]"
+        ]
+
+        delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
+        delta_phi_s_av_dim = delta_phi_s_p_av_dim - delta_phi_s_n_av_dim
+
+        eta_r_av = eta_r_p_av - eta_r_n_av
+        eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
+
+        # terminal voltage
+        phi_s_p = self.variables["Positive electrode potential"]
+        phi_s_p_dim = self.variables["Positive electrode potential [V]"]
+        V = pybamm.BoundaryValue(phi_s_p, "right")
+        V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
+
+        self.variables.update(
+            {
+                "Average open circuit voltage": ocv_av,
+                "Measured open circuit voltage": ocv,
+                "Average open circuit voltage [V]": ocv_av_dim,
+                "Measured open circuit voltage [V]": ocv_dim,
+                "Average reaction overpotential": eta_r_av,
+                "Average reaction overpotential [V]": eta_r_av_dim,
+                "Average solid phase ohmic losses": delta_phi_s_av,
+                "Average solid phase ohmic losses [V]": delta_phi_s_av_dim,
+                "Terminal voltage": V,
+                "Terminal voltage [V]": V_dim,
             }
         )
 

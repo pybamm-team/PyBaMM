@@ -47,6 +47,8 @@ class DFN(BaseModel):
             submodel.set_initial_conditions(self.variables)
             self.update(submodel)
 
+        self.set_voltage_variables()
+
     def set_thermal_submodel(self):
         # TODO: put into base model
 

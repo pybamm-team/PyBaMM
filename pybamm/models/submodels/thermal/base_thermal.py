@@ -54,8 +54,8 @@ class BaseModel(pybamm.BaseSubModel):
         eta_r_n = variables["Negative reaction overpotential"]
         eta_r_p = variables["Positive reaction overpotential"]
 
-        dUdT_n = variables["Negative entropic change"]
-        dUdT_p = variables["Positive entropic change"]
+        dUdT_n = variables["Negative electrode entropic change"]
+        dUdT_p = variables["Positive electrode entropic change"]
 
         i_e = variables["Electrolyte current density"]
         phi_e = variables["Electrolyte potential"]
@@ -124,11 +124,9 @@ class BaseModel(pybamm.BaseSubModel):
     def _unpack(self, variables):
         raise NotImplementedError
 
-    def _initial_conditions(self, variables):
+    def set_initial_conditions(self, variables):
 
         T = self._unpack(variables)
 
-        initial_conditions = {T: self.param.T_init}
-
-        return initial_conditions
+        self.initial_conditions = {T: self.param.T_init}
 

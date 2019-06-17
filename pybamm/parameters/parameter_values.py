@@ -133,7 +133,10 @@ class ParameterValues(dict):
                     processing.capitalize(), variable
                 )
             )
-            model.variables[variable] = processing_function(equation)
+            try:
+                model.variables[variable] = processing_function(equation)
+            except:
+                model.variables[variable] = processing_function(equation)
 
         for idx, equation in enumerate(model.events):
             pybamm.logger.debug(
@@ -198,6 +201,7 @@ class ParameterValues(dict):
             Symbol with Parameter instances replaced by Value
 
         """
+
         try:
             return self._processed_symbols[symbol.id]
         except KeyError:

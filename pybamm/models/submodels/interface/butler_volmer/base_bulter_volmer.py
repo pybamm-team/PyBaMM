@@ -37,7 +37,7 @@ class BaseModel(BaseInterface):
 
         phi_s = variables[self._domain + " electrode potential"]
         phi_e = variables[self._domain + " electrolyte potential"]
-        ocp = variables[self._domain + " open circuit potential"]
+        ocp = variables[self._domain + " electrode open circuit potential"]
 
         delta_phi_s = phi_s - phi_e
         eta_r = phi_s - phi_e - ocp
@@ -65,6 +65,14 @@ class BaseModel(BaseInterface):
             )
         )
         variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
+
+        if self._domain == "Positive":
+            variables.update(
+                self._get_standard_whole_cell_interfacial_current_variables(variables)
+            )
+            variables.update(
+                self._get_standard_whole_cell_exchange_current_variables(variables)
+            )
 
         return variables
 
