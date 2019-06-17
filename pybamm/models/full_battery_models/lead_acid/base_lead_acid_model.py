@@ -6,7 +6,7 @@ import pybamm
 import os
 
 
-class BaseLeadAcidModel(pybamm.BaseBatteryModel):
+class BaseModel(pybamm.BaseBatteryModel):
     """
     Overwrites default parameters from Base Model with default parameters for
     lead-acid models

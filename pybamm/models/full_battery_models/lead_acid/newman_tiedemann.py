@@ -2,10 +2,10 @@
 # Lead-acid Newman-Tiedemann model
 #
 import pybamm
-from .base_lead_acid_model import BaseLeadAcidModel
+from .base_lead_acid_model import BaseModel
 
 
-class NewmanTiedemann(BaseLeadAcidModel):
+class NewmanTiedemann(BaseModel):
     """Porous electrode model for lead-acid, from [1]_.
 
     References

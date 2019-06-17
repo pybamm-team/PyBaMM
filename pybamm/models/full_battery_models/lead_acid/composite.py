@@ -2,10 +2,10 @@
 # Lead-acid Composite model
 #
 import pybamm
-from .base_lead_acid_model import BaseLeadAcidModel
+from .base_lead_acid_model import BaseModel
 
 
-class Composite(BaseLeadAcidModel):
+class Composite(BaseModel):
     """Composite model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 

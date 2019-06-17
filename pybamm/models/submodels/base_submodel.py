@@ -16,7 +16,7 @@ class BaseSubModel:
 
         self.variables = {}
 
-        self.events = {}
+        self.events = []
 
     def get_fundamental_variables(self):
         """
@@ -43,4 +43,7 @@ class BaseSubModel:
 
     def set_initial_conditions(self, variables):
         return {}
+
+    def set_events(self, variables):
+        return []
 

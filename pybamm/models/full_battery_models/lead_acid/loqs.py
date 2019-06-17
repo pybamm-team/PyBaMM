@@ -2,10 +2,10 @@
 # Lead-acid LOQS model
 #
 import pybamm
-from .base_lead_acid_model import BaseLeadAcidModel
+from .base_lead_acid_model import BaseModel
 
 
-class LOQS(BaseLeadAcidModel):
+class LOQS(BaseModel):
     """Leading-Order Quasi-Static model for lead-acid, from [1]_.
 
     References

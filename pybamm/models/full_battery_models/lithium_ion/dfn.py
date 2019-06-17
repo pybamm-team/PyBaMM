@@ -45,10 +45,8 @@ class DFN(BaseModel):
             submodel.set_algebraic(self.variables)
             submodel.set_boundary_conditions(self.variables)
             submodel.set_initial_conditions(self.variables)
-            try:
-                self.update(submodel)
-            except:
-                self.update(submodel)
+            submodel.set_events(self.variables)
+            self.update(submodel)
 
         self.set_voltage_variables()
 

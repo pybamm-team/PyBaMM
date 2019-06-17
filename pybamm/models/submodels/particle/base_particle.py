@@ -2,6 +2,7 @@
 # Base class for particles
 #
 import pybamm
+import autograd.numpy as np
 
 
 class BaseParticle(pybamm.BaseSubModel):
@@ -114,4 +115,14 @@ class BaseParticle(pybamm.BaseSubModel):
             pybamm.DomainError
 
         self.initial_conditions = {c: c_init}
+
+    def set_events(self, variables):
+
+        #
+        c_s_surf = variables[self._domain + " particle surface concentration"]
+        tol = 0.01
+        self.events = [
+            pybamm.Function(np.min, c_s_surf) - tol,
+            (1 - tol) - pybamm.Function(np.max, c_s_surf),
+        ]
 
