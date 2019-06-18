@@ -25,7 +25,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         pot_scale = param.potential_scale
         phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
 
-        eta_e_av = pybamm.average(phi_e_p) - pybamm.average(phi_e_n)
+        phi_e_n_av = pybamm.average(phi_e_n)
+        phi_e_s_av = pybamm.average(phi_e_s)
+        phi_e_p_av = pybamm.average(phi_e_p)
+        eta_e_av = phi_e_p_av - phi_e_n_av
 
         variables = {
             "Negative electrolyte potential": phi_e_n,
@@ -36,6 +39,15 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential": phi_e,
             "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
+            "Average negative electrolyte potential": phi_e_n_av,
+            "Average negative electrolyte potential [V]": -param.U_n_ref
+            + pot_scale * phi_e_n_av,
+            "Average separator electrolyte potential": phi_e_s_av,
+            "Average separator electrolyte potential [V]": -param.U_n_ref
+            + pot_scale * phi_e_s_av,
+            "Average positive electrolyte potential": phi_e_p_av,
+            "Average positive electrolyte potential [V]": -param.U_n_ref
+            + pot_scale * phi_e_p_av,
             "Average electrolyte overpotential": eta_e_av,
             "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
         }

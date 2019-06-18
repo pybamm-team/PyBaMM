@@ -23,7 +23,7 @@ class Leading(BaseModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def get_derived_variables(self, variables):
+    def get_coupled_variables(self, variables):
         """
         Returns variables which are derived from the fundamental variables in the model.
         """
@@ -40,8 +40,8 @@ class Leading(BaseModel):
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
         elif self._domain == "Positive":
-            ocp_p_av = variables["Average positive open circuit potential"]
-            eta_r_p_av = variables["Average positive overpotential"]
+            ocp_p_av = variables["Average positive electrode open circuit potential"]
+            eta_r_p_av = variables["Average positive reaction overpotential"]
             phi_e_p_av = variables["Average positive electrolyte potential"]
 
             v = ocp_p_av + eta_r_p_av + phi_e_p_av

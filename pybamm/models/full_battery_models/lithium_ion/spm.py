@@ -19,8 +19,9 @@ class SPM(BaseModel):
         self.set_convection_submodel()
         self.set_interfacial_submodel()
         self.set_particle_submodel()
-        self.set_solid_submodel()
+        self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()
+        self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
 
         self.build_model()
@@ -57,11 +58,14 @@ class SPM(BaseModel):
             self.param, "Positive"
         )
 
-    def set_solid_submodel(self):
+    def set_negative_electrode_submodel(self):
 
         self.submodels["negative electrode"] = pybamm.electrode.ohm.Leading(
             self.param, "Negative"
         )
+
+    def set_positive_electrode_submodel(self):
+
         self.submodels["positive electrode"] = pybamm.electrode.ohm.Leading(
             self.param, "Positive"
         )
@@ -75,7 +79,7 @@ class SPM(BaseModel):
         ] = electrolyte.conductivity.LeadingOrderModel(self.param)
         self.submodels[
             "electrolyte diffusion"
-        ] = electrolyte.diffusion.LeadingOrderModel(self.param)
+        ] = electrolyte.diffusion.ConstantConcentration(self.param)
 
     @property
     def default_geometry(self):

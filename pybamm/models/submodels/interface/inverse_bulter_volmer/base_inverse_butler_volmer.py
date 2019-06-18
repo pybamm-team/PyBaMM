@@ -32,7 +32,7 @@ class BaseModel(BaseInterface):
         j0 = self._get_exchange_current_density(variables)
         j0_av = pybamm.average(j0)
         j_av = self._get_average_interfacial_current_density(variables)
-        j = pybamm.Broadcast(j_av, [self._domain.lower()])
+        j = pybamm.Broadcast(j_av, [self._domain.lower() + " electrode"])
 
         if self._domain == "Negative":
             ne = self.param.ne_n
@@ -68,6 +68,6 @@ class BaseModel(BaseInterface):
         if self._domain == "Negative":
             j_av = i_boundary_cc / pybamm.geometric_parameters.l_n
         elif self._domain == "Positive":
-            j_av - i_boundary_cc / pybamm.geometric_parameters.l_p
+            j_av = -i_boundary_cc / pybamm.geometric_parameters.l_p
 
         return j_av

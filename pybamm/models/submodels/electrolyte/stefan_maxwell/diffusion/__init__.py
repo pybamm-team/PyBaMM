@@ -1,3 +1,4 @@
 from .base_stefan_maxwell_diffusion import BaseModel
 from .leading_stefan_maxwell_diffusion import LeadingOrderModel
 from .full_stefan_maxwell_diffusion import FullModel
+from .constant_stefan_maxwell_diffusion import ConstantConcentration
