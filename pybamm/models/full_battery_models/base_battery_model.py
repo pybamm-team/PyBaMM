@@ -254,6 +254,41 @@ class BaseBatteryModel(pybamm.BaseModel):
             }
         )
 
+    def build_model(self):
+
+        # Get the fundamental variables
+        for submodel in self.submodels.values():
+            self.variables.update(submodel.get_fundamental_variables())
+
+        # Get coupled variables
+        for submodel in self.submodels.values():
+            self.variables.update(submodel.get_coupled_variables(self.variables))
+
+        # Set model equations
+        for submodel in self.submodels.values():
+            submodel.set_rhs(self.variables)
+            submodel.set_algebraic(self.variables)
+            submodel.set_boundary_conditions(self.variables)
+            submodel.set_initial_conditions(self.variables)
+            submodel.set_events(self.variables)
+            self.update(submodel)
+
+        self.set_voltage_variables()
+
+    def set_thermal_submodel(self):
+        # TODO: put into base model
+
+        if self.options["thermal"] is None:
+            thermal_submodel = pybamm.thermal.Isothermal(self.param)
+        elif self.options["thermal"] == "full":
+            thermal_submodel = pybamm.thermal.FullModel(self.param)
+        elif self.options["thermal"] == "lumped":
+            thermal_submodel = pybamm.thermal.LumpedModel(self.param)
+        else:
+            raise KeyError("Unknown type of thermal model")
+
+        self.submodels["thermal"] = thermal_submodel
+
     def set_voltage_variables(self):
 
         ocp_n = self.variables["Negative electrode open circuit potential"]
