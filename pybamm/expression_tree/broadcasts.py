@@ -30,7 +30,13 @@ class Broadcast(pybamm.SpatialOperator):
             child = pybamm.Scalar(child)
 
         # Check domain
-        if child.domain not in [[], domain, ["current collector"]]:
+        if child.domain not in [
+            [],
+            domain,
+            ["current collector"],
+            ["negative particle"],
+            ["positive particle"],
+        ]:
             raise pybamm.DomainError(
                 """
                 Domain of a broadcasted child must be [], ['current collector'],
@@ -62,7 +68,11 @@ class Broadcast(pybamm.SpatialOperator):
         """
         child_eval = self.children[0].evaluate_for_shape()
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
-        if self.children[0].domain == ["current collector"]:
+        if (
+            self.children[0].domain == ["current collector"]
+            or self.children[0].domain == ["negative particle"]
+            or self.children[0].domain == ["positive particle"]
+        ):
             return np.outer(child_eval, vec).reshape(-1, 1)
         else:
             return child_eval * vec

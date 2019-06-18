@@ -430,6 +430,11 @@ class Discretisation(object):
             return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.Variable):
+            try:
+                self._y_slices[symbol.id]
+            except:
+                self._y_slices[symbol.id]
+
             return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.SpatialVariable):

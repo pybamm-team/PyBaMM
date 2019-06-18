@@ -22,12 +22,14 @@ class BaseParticle(pybamm.BaseSubModel):
         super().__init__(param)
         self._domain = domain
 
-    def _get_standard_concentration_variables(self, c_s):
+    def _get_standard_concentration_variables(self, c_s, c_s_xav):
 
-        c_s_surf = pybamm.surf(c_s, set_domain=True)
+        c_s_surf = pybamm.surf(c_s)
+        # TODO: fix surf so don't need to hack this
+        c_s_surf.domain = [self._domain.lower() + " electrode"]
         c_s_surf_av = pybamm.average(c_s_surf)
 
-        c_s_av = pybamm.average(c_s_surf)  # TODO: add the proper values here
+        # c_s_av = pybamm.average(c_s_surf)  # TODO: add the proper values here
 
         if self._domain == "Negative":
             c_scale = self.param.c_n_max
@@ -37,10 +39,10 @@ class BaseParticle(pybamm.BaseSubModel):
         variables = {
             self._domain + " particle concentration": c_s,
             self._domain + " particle concentration [mol.m-3]": c_s * c_scale,
-            "Average " + self._domain.lower() + " particle concentration": c_s_av,
-            "Average "
+            "X-average " + self._domain.lower() + " particle concentration": c_s_xav,
+            "X-average "
             + self._domain.lower()
-            + " particle concentration [mol.m-3]": c_s_av * c_scale,
+            + " particle concentration [mol.m-3]": c_s_xav * c_scale,
             self._domain + " particle surface concentration": c_s_surf,
             self._domain
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
@@ -54,14 +56,20 @@ class BaseParticle(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_standard_flux_variables(self, N_s):
+    def _get_standard_flux_variables(self, N_s, N_s_xav):
 
-        variables = {self._domain + " particle flux": N_s}
+        variables = {
+            self._domain + " particle flux": N_s,
+            "X-average " + self._domain.lower() + " particle flux": N_s_xav,
+        }
+
         return variables
 
     def _get_standard_ocp_variables(self, c_s):
 
         c_s_surf = pybamm.surf(c_s, set_domain=True)
+        # TODO: fix surf so don't need to hack this
+        c_s_surf.domain = [self._domain.lower() + " electrode"]
 
         if self._domain == "Negative":
             ocp = self.param.U_n(c_s_surf)
