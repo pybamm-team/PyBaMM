@@ -76,6 +76,18 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_whole_cell_current_variables(self, variables):
+
+        i_s_n = variables["Negative electrode current density"]
+        i_s_s = pybamm.Broadcast(0, ["separator"])
+        i_s_p = variables["Positive electrode current density"]
+
+        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
+
+        variables.update({"Electrode current density": i_s})
+
+        return variables
+
     @property
     def default_solver(self):
         """

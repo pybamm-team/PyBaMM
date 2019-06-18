@@ -20,9 +20,9 @@ class StandardOutputTests(object):
         self.disc = disc
         self.solution = solution
 
-        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
             self.chemistry = "Lithium-ion"
-        elif isinstance(self.model, pybamm.LeadAcidBaseModel):
+        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
             self.chemistry = "Lead acid"
 
         current_sign = np.sign(parameter_values["Typical current [A]"])
@@ -79,7 +79,7 @@ class BaseOutputTest(object):
         self.x_p_edge = disc.mesh["positive electrode"][0].edges
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell)[0].edges
 
-        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
             self.r_n = disc.mesh["negative particle"][0].nodes
             self.r_p = disc.mesh["positive particle"][0].nodes
             self.r_n_edge = disc.mesh["negative particle"][0].edges
@@ -342,8 +342,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         # self.c_e_s_av = variables["Average separator electrolyte concentration"]
         # self.c_e_p_av = variables["Average positive electrolyte concentration"]
 
-        # self.N_e = variables["Electrolyte flux"]
-        self.N_e_hat = variables["Reduced cation flux"]
+        self.N_e_hat = variables["Electrolyte flux"]
+        # self.N_e_hat = variables["Reduced cation flux"]
 
     def test_concentration_limit(self):
         "Test that the electrolyte concentration is always greater than zero."
@@ -459,7 +459,7 @@ class CurrentTests(BaseOutputTest):
         variables = self.model.variables
 
         self.j = variables["Interfacial current density"]
-        self.j0 = variables["Exchange-current density"]
+        self.j0 = variables["Exchange current density"]
 
         self.j_n = variables["Negative electrode interfacial current density"]
         self.j_p = variables["Positive electrode interfacial current density"]
@@ -470,8 +470,8 @@ class CurrentTests(BaseOutputTest):
             "Average positive electrode interfacial current density"
         ]
 
-        self.j0_n = variables["Negative electrode exchange-current density"]
-        self.j0_p = variables["Positive electrode exchange-current density"]
+        self.j0_n = variables["Negative electrode exchange current density"]
+        self.j0_p = variables["Positive electrode exchange current density"]
 
         self.i_s_n = variables["Negative electrode current density"]
         self.i_s_p = variables["Positive electrode current density"]

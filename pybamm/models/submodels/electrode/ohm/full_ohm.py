@@ -62,6 +62,9 @@ class Full(BaseModel):
 
         variables.update(self._get_standard_current_variables(i_s))
 
+        if self._domain == "Positive":
+            variables.update(self._get_standard_whole_cell_current_variables(variables))
+
         return variables
 
     def set_algebraic(self, variables):
