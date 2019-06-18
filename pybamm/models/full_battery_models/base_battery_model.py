@@ -17,6 +17,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         super().__init__()
         self._extra_options = options
         self.set_standard_output_variables()
+        self.submodels = {}
 
     @property
     def default_parameter_values(self):
@@ -356,4 +357,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Terminal voltage [V]": V_dim,
             }
         )
+
+        # Cut-off voltage
+        voltage = self.variables["Terminal voltage"]
+        self.events.append(voltage - self.param.voltage_low_cut)
 

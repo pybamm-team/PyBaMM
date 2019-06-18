@@ -28,9 +28,10 @@ class LeadingOrderModel(BaseModel):
         variables stated in other submodels
         """
         c_e_av = pybamm.standard_variables.c_e_av
-        c_e = pybamm.Broadcast(
-            c_e_av, ["negative electrode", "separator", "positive electrode"]
-        )
+        c_e_n = pybamm.Broadcast(c_e_av, ["negative electrode"])
+        c_e_s = pybamm.Broadcast(c_e_av, ["separator"])
+        c_e_p = pybamm.Broadcast(c_e_av, ["positive electrode"])
+        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
         variables = self._get_standard_concentration_variables(c_e, c_e_av)
 

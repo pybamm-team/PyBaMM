@@ -9,6 +9,8 @@ c_e_s = pybamm.Variable("Separator electrolyte concentration", ["separator"])
 c_e_p = pybamm.Variable("Positive electrolyte concentration", ["positive electrode"])
 c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
+c_e_av = pybamm.Variable("Average electrolyte concentration")
+
 # Electrolyte potential
 phi_e_n = pybamm.Variable("Negative electrolyte potential", ["negative electrode"])
 phi_e_s = pybamm.Variable("Separator electrolyte potential", ["separator"])

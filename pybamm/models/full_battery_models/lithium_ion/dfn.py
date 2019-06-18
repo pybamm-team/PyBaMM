@@ -13,9 +13,6 @@ class DFN(BaseModel):
     def __init__(self, options=None):
         super().__init__(options)
         self.name = "Doyle-Fuller-Newman model"
-        self.param = pybamm.standard_parameters_lithium_ion
-
-        self.submodels = {}
 
         self.set_current_collector_submodel()
         self.set_porosity_submodel()

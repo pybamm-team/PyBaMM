@@ -22,8 +22,7 @@ class BaseModel(BaseInterface):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
         """
@@ -48,6 +47,14 @@ class BaseModel(BaseInterface):
         variables.update(self._get_standard_interfacial_current_variables(j, j_av))
         variables.update(self._get_standard_exchange_current_variables(j0, j0_av))
         variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
+
+        if self._domain == "Positive":
+            variables.update(
+                self._get_standard_whole_cell_interfacial_current_variables(variables)
+            )
+            variables.update(
+                self._get_standard_whole_cell_exchange_current_variables(variables)
+            )
 
         return variables
 

@@ -21,8 +21,7 @@ class SingleParticle(BaseModel):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def get_fundamental_variables(self):
         """
@@ -30,18 +29,21 @@ class SingleParticle(BaseModel):
         other submodels
         """
 
+        # TODO: change so that solve for the x-average concentration values
         if self._domain == "Negative":
-            c_s_xav = pybamm.standard_variables.c_s_n_xav
-            c_s = pybamm.Broadcast(c_s_xav, ["negative electrode"])
+            # c_s_xav = pybamm.standard_variables.c_s_n_xav
+            # c_s = pybamm.Broadcast(c_s_xav, ["negative electrode"])
+            c_s = pybamm.standard_variables.c_s_n
 
         elif self._domain == "Positive":
-            c_s_xav = pybamm.standard_variables.c_s_p_xav
-            c_s = pybamm.Broadcast(c_s_xav, ["positive electrode"])
+            c_s = pybamm.standard_variables.c_s_p
+            # c_s_xav = pybamm.standard_variables.c_s_p_xav
+            # c_s = pybamm.Broadcast(c_s_xav, ["positive electrode"])
 
         else:
             pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
 
-        variables = self._get_standard_fundamental_variables(c_s, c_s_xav)
+        variables = self._get_standard_concentration_variables(c_s)
 
         return variables
 
