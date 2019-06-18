@@ -76,8 +76,6 @@ class StandardModelTest(object):
 
         self.solution = self.solver.solve(self.model, t_eval)
 
-        print("hello")
-
     def test_outputs(self):
         # run the standard output tests
         std_out_test = tests.StandardOutputTests(

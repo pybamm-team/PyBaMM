@@ -52,10 +52,7 @@ class FullModel(BaseModel):
 
         phi_e = variables["Electrolyte potential"]
         i_e = variables["Electrolyte current density"]
-
-        j_n = variables["Negative electrode interfacial current density"]
-        j_p = variables["Positive electrode interfacial current density"]
-        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
+        j = variables["Interfacial current density"]
 
         self.algebraic = {phi_e: pybamm.div(i_e) - j}
 
