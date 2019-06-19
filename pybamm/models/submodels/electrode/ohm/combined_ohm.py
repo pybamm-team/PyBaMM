@@ -24,7 +24,7 @@ class Combined(BaseModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def get_derived_variables(self, variables):
+    def get_coupled_variables(self, variables):
         """
         Returns variables which are derived from the fundamental variables in the model.
         """
@@ -36,7 +36,7 @@ class Combined(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        eps = variables[self._domain + " porosity"]
+        eps = variables[self._domain + " electrode porosity"]
 
         if self._domain == "Negative":
             sigma_eff = self.param.sigma_n * (1 - eps)
@@ -44,9 +44,11 @@ class Combined(BaseModel):
             i_s = i_boundary_cc - i_boundary_cc * x_n / l_n
 
         elif self._domain == "Positive":
-            ocp_p_av = variables["Average positive open circuit potential"]
-            eta_r_p_av = variables["Average positive overpotential"]
+            ocp_p_av = variables["Average positive electrode open circuit potential"]
+            eta_r_p_av = variables["Average positive reaction overpotential"]
             phi_e_p_av = variables["Average positive electrolyte potential"]
+
+            sigma_eff = self.param.sigma_p * (1 - eps)
 
             const = (
                 ocp_p_av
@@ -62,15 +64,14 @@ class Combined(BaseModel):
         else:
             raise pybamm.DomainError
 
-        derived_variables = {
-            self._domain + " electrode potential": phi_s,
-            self._domain + " electrode current density": i_s,
-        }
+        variables.update(self._get_standard_potential_variables(phi_s))
+        variables.update(self._get_standard_current_variables(i_s))
 
-        derived_variables = self.standard_derived_variables(derived_variables)
+        if self._domain == "Positive":
+            variables.update(self._get_standard_whole_cell_current_variables(variables))
 
         # delta_phi_s_av = -i_boundary_cc / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
-        return derived_variables
+        return variables
 
     @property
     def default_solver(self):

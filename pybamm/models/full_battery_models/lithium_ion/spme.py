@@ -10,102 +10,76 @@ class SPMe(BaseModel):
     **Extends:** :class:`pybamm.BaseLithiumIonModel`
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, options=None):
+        super().__init__(options)
         self.name = "Single Particle Model with electrolyte"
 
-        "-----------------------------------------------------------------------------"
-        "Parameters"
-        param = pybamm.standard_parameters_lithium_ion
-        i_boundary_cc = param.current_with_time
-        self.variables["Current collector current density"] = i_boundary_cc
+        self.set_current_collector_submodel()
+        self.set_porosity_submodel()
+        self.set_convection_submodel()
+        self.set_interfacial_submodel()
+        self.set_particle_submodel()
+        self.set_negative_electrode_submodel()
+        self.set_electrolyte_submodel()
+        self.set_positive_electrode_submodel()
+        self.set_thermal_submodel()
 
-        "-----------------------------------------------------------------------------"
-        "Model Variables"
+        self.build_model()
 
-        c_s_n = pybamm.standard_variables.c_s_n
-        c_s_p = pybamm.standard_variables.c_s_p
-        c_e = pybamm.standard_variables.c_e
-        self.variables["Electrolyte concentration"] = c_e
+    def set_current_collector_submodel(self):
 
-        "-----------------------------------------------------------------------------"
-        "Submodels"
-        # Interfacial current density
-        neg = ["negative electrode"]
-        pos = ["positive electrode"]
-        int_curr_model = pybamm.interface.LithiumIonReaction(param)
-        j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
-        j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
-
-        # Particle models
-        negative_particle_model = pybamm.particle.Standard(param)
-        negative_particle_model.set_differential_system(c_s_n, j_n, broadcast=True)
-        positive_particle_model = pybamm.particle.Standard(param)
-        positive_particle_model.set_differential_system(c_s_p, j_p, broadcast=True)
-
-        # Electrolyte concentration
-        broad_j_n = pybamm.Broadcast(j_n, ["negative electrode"])
-        broad_j_p = pybamm.Broadcast(j_p, ["positive electrode"])
-        reactions = {
-            "main": {
-                "neg": {"s_plus": 1, "aj": broad_j_n},
-                "pos": {"s_plus": 1, "aj": broad_j_p},
-            }
-        }
-        # Electrolyte diffusion model
-        electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        electrolyte_diffusion_model.set_differential_system(self.variables, reactions)
-
-        self.update(
-            negative_particle_model,
-            positive_particle_model,
-            electrolyte_diffusion_model,
+        self.submodels["current collector"] = pybamm.current_collector.Uniform(
+            self.param, "Negative"
         )
 
-        "-----------------------------------------------------------------------------"
-        "Post-Processing"
-        # Exchange-current density
-        c_e_n, _, c_e_p = c_e.orphans
-        c_s_n_surf = pybamm.surf(c_s_n)
-        c_s_p_surf = pybamm.surf(c_s_p)
-        j0_n = int_curr_model.get_exchange_current_densities(c_e_n, c_s_n_surf, neg)
-        j0_p = int_curr_model.get_exchange_current_densities(c_e_p, c_s_p_surf, pos)
-        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
-        self.variables.update(j_vars)
+    def set_porosity_submodel(self):
 
-        # OCP and Overpotentials
-        ocp_n = param.U_n(c_s_n_surf)
-        ocp_p = param.U_p(c_s_p_surf)
-        eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
-        eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
-        pot_model = pybamm.potential.Potential(param)
-        ocp_vars = pot_model.get_derived_open_circuit_potentials(ocp_n, ocp_p)
-        eta_r_vars = pot_model.get_derived_reaction_overpotentials(eta_r_n, eta_r_p)
-        self.variables.update({**ocp_vars, **eta_r_vars})
+        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
 
-        # Load electrode and electrolyte models
-        electrode_model = pybamm.electrode.Ohm(param)
-        electrolyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
-            param
+    def set_convection_submodel(self):
+
+        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+
+    def set_interfacial_submodel(self):
+
+        self.submodels[
+            "negative interface"
+        ] = pybamm.interface.inverse_bulter_volmer.LithiumIon(self.param, "Negative")
+        self.submodels[
+            "positive interface"
+        ] = pybamm.interface.inverse_bulter_volmer.LithiumIon(self.param, "Positive")
+
+    def set_particle_submodel(self):
+
+        self.submodels["negative particle"] = pybamm.particle.fickian.SingleParticle(
+            self.param, "Negative"
+        )
+        self.submodels["positive particle"] = pybamm.particle.fickian.SingleParticle(
+            self.param, "Positive"
         )
 
-        # Negative electrode potential
-        phi_s_n = electrode_model.get_neg_pot_explicit_combined(self.variables)
-        self.variables["Negative electrode potential"] = phi_s_n
+    def set_negative_electrode_submodel(self):
 
-        # Electrolyte potential
-        electrolyte_vars = electrolyte_current_model.get_explicit_combined(
-            self.variables
+        self.submodels["negative electrode"] = pybamm.electrode.ohm.Combined(
+            self.param, "Negative"
         )
-        self.variables.update(electrolyte_vars)
 
-        # Positive electrode potential
-        electrode_vars = electrode_model.get_explicit_combined(self.variables)
-        self.variables.update(electrode_vars)
+    def set_positive_electrode_submodel(self):
 
-        # Cut-off voltage
-        voltage = self.variables["Terminal voltage"]
-        self.events.append(voltage - param.voltage_low_cut)
+        self.submodels["positive electrode"] = pybamm.electrode.ohm.Combined(
+            self.param, "Positive"
+        )
+
+    def set_electrolyte_submodel(self):
+
+        electrolyte = pybamm.electrolyte.stefan_maxwell
+
+        self.submodels[
+            "electrolyte conductivity"
+        ] = electrolyte.conductivity.CombinedOrderModel(self.param)
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FullModel(
+            self.param
+        )
 
     @property
     def default_geometry(self):
