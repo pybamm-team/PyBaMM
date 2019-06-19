@@ -507,12 +507,26 @@ def surf(variable, set_domain=False):
     :class:`GetSurfaceValue`
         the surface value of ``variable``
     """
-    out = boundary_value(variable, "right")
-    if set_domain:
-        if variable.domain == ["negative particle"]:
-            out.domain = ["negative electrode"]
-        elif variable.domain == ["positive particle"]:
-            out.domain = ["positive electrode"]
+    if variable.domain == ["negative electrode"] and isinstance(
+        variable, pybamm.Broadcast
+    ):
+        child_surf = boundary_value(variable.orphans[0], "right")
+        out = pybamm.Broadcast(child_surf, ["negative electrode"])
+        out.domain = ["negative electrode"]
+    elif variable.domain == ["positive electrode"] and isinstance(
+        variable, pybamm.Broadcast
+    ):
+        child_surf = boundary_value(variable.orphans[0], "right")
+        out = pybamm.Broadcast(child_surf, ["positive electrode"])
+        out.domain = ["positive electrode"]
+    else:
+        out = boundary_value(variable, "right")
+        if set_domain:
+            if variable.domain == ["negative particle"]:
+                out.domain = ["negative electrode"]
+            elif variable.domain == ["positive particle"]:
+                out.domain = ["positive electrode"]
+
     return out
 
 

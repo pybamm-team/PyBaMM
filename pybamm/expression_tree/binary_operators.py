@@ -591,9 +591,14 @@ class Outer(BinaryOperator):
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         # Can only take outer product of a current collector symbol
-        if left.domain != ["current collector"]:
+        if (
+            left.domain != ["current collector"]
+            and left.domain != ["negative particle"]
+            and left.domain != ["positive particle"]
+        ):
             raise pybamm.DomainError(
-                "left child domain must be 'current collector', not'{}".format(
+                """left child domain must be 'current collector', 'negative particle', 
+                or 'positive particle', not'{}""".format(
                     left.domain
                 )
             )

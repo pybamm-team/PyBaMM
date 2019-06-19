@@ -39,8 +39,10 @@ class ManyParticles(BaseModel):
 
         N_s = self._flux_law(c_s)
 
-        variables = self._get_standard_concentration_variables(c_s)
-        variables.update(self._get_standard_flux_variables(N_s))
+        # TODO: fix average so can do X-average
+
+        variables = self._get_standard_concentration_variables(c_s, c_s)
+        variables.update(self._get_standard_flux_variables(N_s, N_s))
         variables.update(self._get_standard_ocp_variables(c_s))
 
         return variables

@@ -29,7 +29,6 @@ class SingleParticle(BaseModel):
         other submodels
         """
 
-        # TODO: change so that solve for the x-average concentration values
         if self._domain == "Negative":
             c_s_xav = pybamm.standard_variables.c_s_n_xav
             c_s = pybamm.Broadcast(c_s_xav, ["negative electrode"])
@@ -41,17 +40,16 @@ class SingleParticle(BaseModel):
         else:
             pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
 
-        N_s = self._flux_law(c_s)
         N_s_xav = self._flux_law(c_s_xav)
+        N_s = pybamm.Broadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
-        variables = self._get_standard_concentration_variables(c_s_xav, c_s_xav)
+        variables = self._get_standard_concentration_variables(c_s, c_s_xav)
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
-        variables.update(self._get_standard_ocp_variables(c_s_xav))
+        variables.update(self._get_standard_ocp_variables(c_s))
 
         return variables
 
     def _unpack(self, variables):
-        # TODO: put in the x-av values
         c_s_xav = variables[
             "X-average " + self._domain.lower() + " particle concentration"
         ]
@@ -59,8 +57,5 @@ class SingleParticle(BaseModel):
         j_av = variables[
             "Average " + self._domain.lower() + " electrode interfacial current density"
         ]
-
-        # c_s_xav = variables[self._domain + " particle concentration"]
-        # N_s_xav = variables[self._domain + " particle flux"]
 
         return c_s_xav, N_s_xav, j_av

@@ -24,12 +24,9 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def _get_standard_concentration_variables(self, c_s, c_s_xav):
 
-        c_s_surf = pybamm.surf(c_s)
-        # TODO: fix surf so don't need to hack this
-        c_s_surf.domain = [self._domain.lower() + " electrode"]
-        c_s_surf_av = pybamm.average(c_s_surf)
+        c_s_surf = pybamm.surf(c_s, set_domain=True)
 
-        # c_s_av = pybamm.average(c_s_surf)  # TODO: add the proper values here
+        c_s_surf_av = pybamm.average(c_s_surf)
 
         if self._domain == "Negative":
             c_scale = self.param.c_n_max
@@ -68,8 +65,6 @@ class BaseParticle(pybamm.BaseSubModel):
     def _get_standard_ocp_variables(self, c_s):
 
         c_s_surf = pybamm.surf(c_s, set_domain=True)
-        # TODO: fix surf so don't need to hack this
-        c_s_surf.domain = [self._domain.lower() + " electrode"]
 
         if self._domain == "Negative":
             ocp = self.param.U_n(c_s_surf)
