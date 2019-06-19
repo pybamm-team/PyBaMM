@@ -56,9 +56,7 @@ class DFN(pybamm.LithiumIonBaseModel):
         positive_particle_model.set_differential_system(c_s_p, j_p)
 
         # Electrolyte concentration
-        reactions = {
-            "main": {"neg": {"s": 1, "aj": j_n}, "pos": {"s": 1, "aj": j_p}}
-        }
+        reactions = {"main": {"neg": {"s": 1, "aj": j_n}, "pos": {"s": 1, "aj": j_p}}}
         # Electrolyte diffusion model
         electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
         electrolyte_diffusion_model.set_differential_system(self.variables, reactions)

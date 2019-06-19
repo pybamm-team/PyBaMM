@@ -14,7 +14,7 @@ import os
 VERSION_INT = 0, 0, 0
 VERSION = ".".join([str(x) for x in VERSION_INT])
 if sys.version_info[0] < 3:
-    del (x)  # Before Python3, list comprehension iterators leaked
+    del x  # Before Python3, list comprehension iterators leaked
 
 #
 # Expose pybamm version
@@ -229,4 +229,4 @@ from .quick_plot import QuickPlot
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
 #
-del (sys)
+del sys

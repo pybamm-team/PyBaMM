@@ -126,11 +126,16 @@ class InterfacialReaction(pybamm.SubModel):
         """
         param = self.set_of_parameters
 
-        domain = domain or j.domain
+        # Broadcast if necessary (requires input domain)
+        if domain and j.domain == ["current collector"]:
+            j = pybamm.Broadcast(j, domain)
+        else:
+            domain = domain or j.domain
+
         if domain == ["negative electrode"]:
-            return (2 / param.ne_n) * pybamm.Function(np.arcsinh, pybamm.outer(j, 1 / (2 * j0)))
+            return (2 / param.ne_n) * pybamm.Function(np.arcsinh, j / (2 * j0))
         elif domain == ["positive electrode"]:
-            return (2 / param.ne_p) * pybamm.Function(np.arcsinh, pybamm.outer(j, 1 / (2 * j0)))
+            return (2 / param.ne_p) * pybamm.Function(np.arcsinh, j / (2 * j0))
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))
 
@@ -397,11 +402,11 @@ class LithiumIonReaction(InterfacialReaction):
 
         if domain == ["negative electrode"]:
             return (1 / param.C_r_n) * (
-                pybamm.outer(c_s_k_surf ** (1 / 2) * (1 - c_s_k_surf) ** (1 / 2), c_e ** (1 / 2))
+                c_e ** (1 / 2) * c_s_k_surf ** (1 / 2) * (1 - c_s_k_surf) ** (1 / 2)
             )
         elif domain == ["positive electrode"]:
             return (param.gamma_p / param.C_r_p) * (
-                pybamm.outer(c_s_k_surf ** (1 / 2) * (1 - c_s_k_surf) ** (1 / 2), c_e ** (1 / 2))
+                c_e ** (1 / 2) * c_s_k_surf ** (1 / 2) * (1 - c_s_k_surf) ** (1 / 2)
             )
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(domain))

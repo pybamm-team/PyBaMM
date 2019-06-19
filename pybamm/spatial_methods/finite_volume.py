@@ -407,7 +407,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 try:
                     rbc_i = rbc_value[i]
                 except ValueError:
-                    import ipdb; ipdb.set_trace()
+                    import ipdb
+
+                    ipdb.set_trace()
 
             if lbc_type == "Dirichlet":
                 left_ghost_constant = 2 * lbc_i
@@ -568,7 +570,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 if child_size == n_edges:
                     disc_children[idx] = self.edge_to_node(child)
                 else:
-                    import ipdb; ipdb.set_trace()
+                    import ipdb
+
+                    ipdb.set_trace()
                     raise pybamm.ShapeError(
                         """
                         child must have size n_nodes (number of nodes in the mesh)

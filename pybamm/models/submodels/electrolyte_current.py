@@ -183,10 +183,9 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
                 )
             )
         )
-        phi_e_const.domain = []
 
         phi_e_n = (
-            phi_e_const
+            pybamm.Broadcast(phi_e_const, "negative electrode")
             + chi_0 * first_order_function(c_e_n / c_e_0)
             - pybamm.outer(
                 i_boundary_cc,
@@ -196,13 +195,13 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         )
 
         phi_e_s = (
-            phi_e_const
+            pybamm.Broadcast(phi_e_const, "separator")
             + chi_0 * first_order_function(c_e_s / c_e_0)
             - pybamm.outer(i_boundary_cc, (param.C_e / param.gamma_e) * (x_s / kappa_s))
         )
 
         phi_e_p = (
-            phi_e_const
+            pybamm.Broadcast(phi_e_const, "positive electrode")
             + chi_0 * first_order_function(c_e_p / c_e_0)
             - pybamm.outer(
                 i_boundary_cc,

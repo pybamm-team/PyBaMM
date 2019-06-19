@@ -38,7 +38,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
             )
             self.variables["Current collector current density"] = i_boundary_cc
             curr_coll_domain = ["current collector"]
-            broadcast = False
+            broadcast = True
 
         "-----------------------------------------------------------------------------"
         "Submodels"
@@ -77,21 +77,19 @@ class SPMe(pybamm.LithiumIonBaseModel):
         c_e_n, _, c_e_p = c_e.orphans
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
-        c_s_n_surf.domain = curr_coll_domain
-        c_s_p_surf.domain = curr_coll_domain
+        c_s_n_surf.domain = ["current collector"]
+        c_s_p_surf.domain = ["current collector"]
+        c_s_n_surf = pybamm.Broadcast(c_s_n_surf, "negative electrode")
+        c_s_p_surf = pybamm.Broadcast(c_s_p_surf, "positive electrode")
 
         j0_n = int_curr_model.get_exchange_current_densities(c_e_n, c_s_n_surf, neg)
         j0_p = int_curr_model.get_exchange_current_densities(c_e_p, c_s_p_surf, pos)
         j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
         self.variables.update(j_vars)
-        import ipdb; ipdb.set_trace()
 
         # OCP and Overpotentials
         ocp_n = param.U_n(c_s_n_surf)
         ocp_p = param.U_p(c_s_p_surf)
-        if curr_coll_domain == ["current collector"]:
-            ocp_n = pybamm.Broadcast(ocp_n, ["negative electrode"])
-            ocp_p = pybamm.Broadcast(ocp_p, ["positive electrode"])
         eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
         eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
         pot_model = pybamm.potential.Potential(param)

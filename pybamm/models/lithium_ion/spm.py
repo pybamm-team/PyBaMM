@@ -80,7 +80,6 @@ class SPM(pybamm.LithiumIonBaseModel):
         ocp_p = param.U_p(c_s_p_surf)
         eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
         eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
-        import ipdb; ipdb.set_trace()
         pot_model = pybamm.potential.Potential(param)
         pot_vars = pot_model.get_all_potentials(
             (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
