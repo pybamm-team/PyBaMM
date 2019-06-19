@@ -170,7 +170,9 @@ class Ohm(pybamm.SubModel):
 
         # electrode potential
         sigma_n_eff = param.sigma_n * (1 - eps_n)
-        phi_s_n = i_boundary_cc * x_n * (x_n - 2 * l_n) / (2 * sigma_n_eff * l_n)
+        phi_s_n = pybamm.outer(
+            i_boundary_cc, x_n * (x_n - 2 * l_n) / (2 * sigma_n_eff * l_n)
+        )
 
         return phi_s_n
 
@@ -210,18 +212,24 @@ class Ohm(pybamm.SubModel):
             ocp_p_av
             + eta_r_p_av
             + phi_e_p_av
-            - (i_boundary_cc / 6 / l_p / sigma_p_eff) * (2 * l_p ** 2 - 6 * l_p + 3)
+            - pybamm.outer(
+                i_boundary_cc,
+                (1 / 6 / l_p / sigma_p_eff) * (2 * l_p ** 2 - 6 * l_p + 3),
+            )
         )
+        const.domain = []
 
-        phi_s_p = const - i_boundary_cc * x_p / (2 * l_p * sigma_p_eff) * (
-            x_p + 2 * (l_p - 1)
+        phi_s_p = const - pybamm.outer(
+            i_boundary_cc, x_p / (2 * l_p * sigma_p_eff) * (x_p + 2 * (l_p - 1))
         )
 
         # electrode current
-        i_s_n = i_boundary_cc - i_boundary_cc * x_n / l_n
-        i_s_p = i_boundary_cc - i_boundary_cc * (1 - x_p) / l_p
+        i_s_n = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
+        i_s_p = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 
-        delta_phi_s_av = -i_boundary_cc / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
+        delta_phi_s_av = pybamm.outer(
+            i_boundary_cc, -1 / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
+        )
 
         potential_vars = self.get_potential_variables(phi_s_n, phi_s_p, delta_phi_s_av)
         current_vars = self.get_current_variables(i_s_n, i_s_p)

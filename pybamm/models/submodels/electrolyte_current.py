@@ -176,38 +176,48 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             (-ocp_n_av - eta_r_n_av + phi_s_n_av)
             - chi_0 * pybamm.average(first_order_function(c_e_n / c_e_0))
             - (
-                (i_boundary_cc * param.C_e * l_n / param.gamma_e)
-                * (1 / (3 * kappa_n) - 1 / kappa_s)
+                pybamm.outer(
+                    i_boundary_cc,
+                    (param.C_e * l_n / param.gamma_e)
+                    * (1 / (3 * kappa_n) - 1 / kappa_s),
+                )
             )
         )
+        phi_e_const.domain = []
 
         phi_e_n = (
             phi_e_const
             + chi_0 * first_order_function(c_e_n / c_e_0)
-            - (i_boundary_cc * param.C_e / param.gamma_e)
-            * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
+            - pybamm.outer(
+                i_boundary_cc,
+                (param.C_e / param.gamma_e)
+                * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s),
+            )
         )
 
         phi_e_s = (
             phi_e_const
             + chi_0 * first_order_function(c_e_s / c_e_0)
-            - (i_boundary_cc * param.C_e / param.gamma_e) * (x_s / kappa_s)
+            - pybamm.outer(i_boundary_cc, (param.C_e / param.gamma_e) * (x_s / kappa_s))
         )
 
         phi_e_p = (
             phi_e_const
             + chi_0 * first_order_function(c_e_p / c_e_0)
-            - (i_boundary_cc * param.C_e / param.gamma_e)
-            * (
-                (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
-                + (1 - l_p) / kappa_s
+            - pybamm.outer(
+                i_boundary_cc,
+                (param.C_e / param.gamma_e)
+                * (
+                    (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
+                    + (1 - l_p) / kappa_s
+                ),
             )
         )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         "Ohmic losses and overpotentials"
         # average electrolyte ohmic losses
-        delta_phi_e_av = -(param.C_e * i_boundary_cc / param.gamma_e) * (
+        delta_phi_e_av = -pybamm.outer(i_boundary_cc, param.C_e / param.gamma_e) * (
             param.l_n / (3 * kappa_n)
             + param.l_s / (kappa_s)
             + param.l_p / (3 * kappa_p)

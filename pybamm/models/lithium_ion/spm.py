@@ -80,6 +80,7 @@ class SPM(pybamm.LithiumIonBaseModel):
         ocp_p = param.U_p(c_s_p_surf)
         eta_r_n = int_curr_model.get_inverse_butler_volmer(j_n, j0_n, neg)
         eta_r_p = int_curr_model.get_inverse_butler_volmer(j_p, j0_p, pos)
+        import ipdb; ipdb.set_trace()
         pot_model = pybamm.potential.Potential(param)
         pot_vars = pot_model.get_all_potentials(
             (ocp_n, ocp_p), eta_r=(eta_r_n, eta_r_p)
@@ -104,13 +105,17 @@ class SPM(pybamm.LithiumIonBaseModel):
             current_collector_model.set_potential_pair_spm(self.variables)
             self.update(current_collector_model)
 
+        "-----------------------------------------------------------------------------"
+        "Events"
         # Cut-off voltage
         # TO DO: get terminal voltage in 2D
         if self.options["bc_options"]["dimensionality"] == 0:
             voltage = self.variables["Terminal voltage"]
             self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
         elif self.options["bc_options"]["dimensionality"] == 2:
-            voltage = self.variables["Terminal voltage"]
+            phi_s_cn = self.variables["Negative current collector potential"]
+            phi_s_cp = self.variables["Positive current collector potential"]
+            voltage = phi_s_cp - phi_s_cn
             self.events["Minimum voltage cut-off"] = (
                 pybamm.min(voltage) - param.voltage_low_cut
             )

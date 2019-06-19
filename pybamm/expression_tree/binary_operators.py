@@ -350,7 +350,10 @@ class Multiplication(BinaryOperator):
             # Hadamard product is commutative, so we can switch right and left
             return right.multiply(left)
         else:
-            return left * right
+            try:
+                return left * right
+            except ValueError:
+                import ipdb; ipdb.set_trace()    
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
@@ -514,12 +517,8 @@ class Outer(BinaryOperator):
             )
         # cannot have Variable, StateVector or Matrix in the right symbol, as these
         # can already be 2D objects (so we can't take an outer product with them)
-        if right.has_symbol_of_class(
-            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix)
-        ):
-            raise TypeError(
-                "right child must only contain SpatialVariable and scalars" ""
-            )
+        # Note: Allowing variable seems to be OK
+
 
         super().__init__("outer product", left, right)
 

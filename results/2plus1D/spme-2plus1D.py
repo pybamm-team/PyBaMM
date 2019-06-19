@@ -3,12 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # set logging level
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load (2+1D) SPM model
 options = {"bc_options": {"dimensionality": 2}}
-model = pybamm.lithium_ion.SPM(options)
-model.check_well_posedness()
+model = pybamm.lithium_ion.SPMe(options)
 
 # create geometry
 geometry = model.default_geometry

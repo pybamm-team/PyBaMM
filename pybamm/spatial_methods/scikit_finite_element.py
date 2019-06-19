@@ -103,6 +103,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             @skfem.linear_form
             def unit_bc_load_form(v, dv, w):
                 return v
+
             # assemble form
             unit_load = skfem.asm(unit_bc_load_form, mesh.facet_basis)
 
@@ -110,11 +111,14 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             # value multiplied by weights
             lbc_load = np.zeros(mesh.npts)
             lbc_load[mesh.negative_tab] = unit_load[mesh.negative_tab]
-            boundary_load = boundary_load + lbc_value * pybamm.Vector(lbc_load)
+            boundary_load = (
+                boundary_load
+                + mesh.normal["negative_tab"] * lbc_value * pybamm.Vector(lbc_load)
+            )
         elif lbc_type == "Dirichlet":
             lbc_load = np.zeros(mesh.npts)
             lbc_load[mesh.negative_tab] = 1
-            boundary_load = boundary_load + lbc_value * pybamm.Vector(lbc_load)
+            boundary_load = boundary_load - lbc_value * pybamm.Vector(lbc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -126,11 +130,14 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             # value multiplied by weights
             rbc_load = np.zeros(mesh.npts)
             rbc_load[mesh.positive_tab] = unit_load[mesh.positive_tab]
-            boundary_load = boundary_load + rbc_value * pybamm.Vector(rbc_load)
+            boundary_load = (
+                boundary_load
+                + mesh.normal["positive_tab"] * rbc_value * pybamm.Vector(rbc_load)
+            )
         elif rbc_type == "Dirichlet":
             rbc_load = np.zeros(mesh.npts)
             rbc_load[mesh.positive_tab] = 1
-            boundary_load = boundary_load + rbc_value * pybamm.Vector(rbc_load)
+            boundary_load = boundary_load - rbc_value * pybamm.Vector(rbc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
