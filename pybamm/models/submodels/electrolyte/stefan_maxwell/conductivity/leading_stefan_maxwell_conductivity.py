@@ -53,4 +53,3 @@ class LeadingOrderModel(BaseModel):
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
         return variables
-
