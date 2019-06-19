@@ -196,7 +196,7 @@ class TestProcessedVariable(unittest.TestCase):
 
     def test_processed_variable_ode_pde_solution(self):
         # without space
-        model = pybamm.StandardBatteryBaseModel()
+        model = pybamm.BaseBatteryModel()
         c = pybamm.Variable("conc")
         model.rhs = {c: -c}
         model.initial_conditions = {c: 1}

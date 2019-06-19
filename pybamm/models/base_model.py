@@ -222,10 +222,7 @@ class BaseModel(object):
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
         ids1 = set(x.id for x in dict1.keys())
-        try:
-            ids2 = set(x.id for x in dict2.keys())
-        except:
-            ids2 = set(x.id for x in dict2.keys())
+        ids2 = set(x.id for x in dict2.keys())
         if len(ids1.intersection(ids2)) != 0:
             raise pybamm.ModelError("Submodel incompatible: duplicate variables")
         dict1.update(dict2)
@@ -372,8 +369,4 @@ class BaseModel(object):
             # Remove missing entries
             for output in missing_vars:
                 del self._variables[output]
-
-
-
-
 

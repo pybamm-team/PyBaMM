@@ -57,8 +57,8 @@ class BaseModel(pybamm.BaseSubModel):
         dUdT_n = variables["Negative electrode entropic change"]
         dUdT_p = variables["Positive electrode entropic change"]
 
-        i_e = variables["Electrolyte current density"]
-        phi_e = variables["Electrolyte potential"]
+        # i_e = variables["Electrolyte current density"]
+        # phi_e = variables["Electrolyte potential"]
 
         # phi_s_n = variables["Negative electrode potential"]
         # phi_s_s = pybamm.Broadcast(0, ["separator"])

@@ -7,7 +7,7 @@ from .base_ohm import BaseModel
 
 
 class Full(BaseModel):
-    """Full model for ohm's law with conservation of current for the current in the 
+    """Full model for ohm's law with conservation of current for the current in the
     electrodes.
 
     Parameters
@@ -25,7 +25,7 @@ class Full(BaseModel):
 
     def get_fundamental_variables(self):
         """
-        Returns the variables in the submodel which can be stated independent of 
+        Returns the variables in the submodel which can be stated independent of
         variables stated in other submodels
         """
 

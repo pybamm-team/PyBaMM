@@ -100,8 +100,6 @@ class ProcessedVariable(object):
             self.initialise_1D()
         else:
             n = self.mesh.combine_submeshes(*self.domain)[0].npts
-            r_n = self.mesh.combine_submeshes(*["negative particle"])[0].npts
-            r_p = self.mesh.combine_submeshes(*["positive particle"])[0].npts
             base_shape = self.base_eval.shape[0]
             if base_shape in [n, n + 1]:
                 self.initialise_2D()
