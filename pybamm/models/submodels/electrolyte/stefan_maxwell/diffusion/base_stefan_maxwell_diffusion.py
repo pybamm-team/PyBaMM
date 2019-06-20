@@ -16,5 +16,5 @@ class BaseModel(BaseElectrolyteDiffusion):
     *Extends:* :class:`pybamm.BaseElectrolyteDiffusion`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, ocp=False):
+        super().__init__(param, ocp)

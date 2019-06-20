@@ -19,8 +19,8 @@ class LeadingOrderModel(BaseModel):
     *Extends:* :class:`pybamm.BaseStefanMaxwellDiffusion`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, ocp=False):
+        super().__init__(param, ocp)
 
     def get_fundamental_variables(self):
         """
@@ -34,6 +34,9 @@ class LeadingOrderModel(BaseModel):
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
         variables = self._get_standard_concentration_variables(c_e, c_e_av)
+
+        if self.ocp is True:
+            variables.update(self._get_standard_ocp_variables(c_e))
 
         return variables
 
