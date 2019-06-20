@@ -66,7 +66,7 @@ class LOQS(BaseModel):
         if self.options["convection"] is False:
             self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
         if self.options["convection"] is True:
-            self.submodels["convection"] = pybamm.convection.FullModel(self.param)
+            self.submodels["convection"] = pybamm.convection.LeadingOrder(self.param)
 
     def set_interfacial_submodel(self):
 
