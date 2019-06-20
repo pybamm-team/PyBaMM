@@ -20,6 +20,7 @@ class LOQS(BaseModel):
     def __init__(self, options=None):
         super().__init__(options)
         self.name = "LOQS model"
+        self.use_jacobian = False
 
         self.set_reactions()
         self.set_current_collector_submodel()
@@ -65,7 +66,7 @@ class LOQS(BaseModel):
         if self.options["convection"] is False:
             self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
         if self.options["convection"] is True:
-            self.submodels["convection"] = pybamm.convection.PressureDriven(self.param)
+            self.submodels["convection"] = pybamm.convection.FullModel(self.param)
 
     def set_interfacial_submodel(self):
 
