@@ -29,6 +29,13 @@ delta_phi_p = pybamm.Variable(
     "Positive electrode surface potential difference", ["positive electrode"]
 )
 
+delta_phi_n_av = pybamm.Variable(
+    "Average negative electrode surface potential difference"
+)
+delta_phi_p_av = pybamm.Variable(
+    "Average positive electrode surface potential difference"
+)
+
 # Particle concentration
 c_s_n = pybamm.Variable("Negative particle concentration", ["negative particle"])
 c_s_p = pybamm.Variable("Positive particle concentration", ["positive particle"])

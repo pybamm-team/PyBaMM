@@ -133,16 +133,17 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     def _get_whole_cell_variables(self, variables):
 
         phi_e_n = variables["Negative electrolyte potential"]
-        phi_e_s = variables["Separator potential"]
+        phi_e_s = variables["Separator electrolyte potential"]
         phi_e_p = variables["Positive electrolyte potential"]
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+        phi_e_av = pybamm.average(phi_e)
 
         i_e_n = variables["Negative electrolyte current density"]
-        i_e_s = variables["Separator current density"]
+        i_e_s = variables["Separator electrolyte current density"]
         i_e_p = variables["Positive electrolyte current density"]
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
-        variables.update(self._get_standard_potential_variables(phi_e))
+        variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))
         variables.update(self._get_standard_current_variables(i_e))
 
         return variables

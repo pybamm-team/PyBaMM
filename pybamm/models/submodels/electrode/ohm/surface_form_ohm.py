@@ -20,14 +20,14 @@ class SurfaceForm(BaseModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def set_coupled_variables(self, variables):
+    def get_coupled_variables(self, variables):
 
         param = self.param
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
         i_boundary_cc = variables["Current collector current density"]
         i_e = variables[self._domain + " electrolyte current density"]
-        eps = variables[self._domain + " porosity"]
+        eps = variables[self._domain + " electrode porosity"]
 
         i_s = i_boundary_cc - i_e
 
@@ -47,8 +47,8 @@ class SurfaceForm(BaseModel):
                 + pybamm.boundary_value(delta_phi_p, "left")
             )
 
-        self._get_standard_potential_variables(phi_s)
-        self._get_standard_current_variables(i_s)
+        variables.update(self._get_standard_potential_variables(phi_s))
+        variables.update(self._get_standard_current_variables(i_s))
 
         return variables
 
