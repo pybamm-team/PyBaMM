@@ -21,16 +21,34 @@ class LOQS(BaseModel):
         super().__init__(options)
         self.name = "LOQS model"
 
+        self.set_reactions()
         self.set_current_collector_submodel()
-        self.set_porosity_submodel()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
+        self.set_porosity_submodel()
         self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
 
         self.build_model()
+
+    def set_reactions(self):
+
+        # Should probably refactor as this is a bit clunky at the moment
+        # Maybe each reaction as a Reaction class so we can just list names of classes
+        self.reactions = {
+            "main": {
+                "neg": {
+                    "s_plus": self.param.s_n,
+                    "j": "Average negative electrode interfacial current density",
+                },
+                "pos": {
+                    "s_plus": self.param.s_p,
+                    "j": "Average positive electrode interfacial current density",
+                },
+            }
+        }
 
     def set_current_collector_submodel(self):
 
@@ -85,7 +103,9 @@ class LOQS(BaseModel):
         ] = electrolyte.conductivity.LeadingOrderModel(self.param)
         self.submodels[
             "electrolyte diffusion"
-        ] = electrolyte.diffusion.LeadingOrderModel(self.param, "lead-acid")
+        ] = electrolyte.diffusion.LeadingOrderModel(
+            self.param, self.reactions, ocp=True
+        )
 
     #     self.set_model_variables()
     #     self.set_interface_and_electrolyte_submodels()

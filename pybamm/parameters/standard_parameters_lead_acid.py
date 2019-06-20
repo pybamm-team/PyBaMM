@@ -137,6 +137,11 @@ eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
 Q_n_max_dimensional = pybamm.Parameter("Negative electrode volumetric capacity [C.m-3]")
 Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [C.m-3]")
 
+
+# Fake thermal
+Delta_T = pybamm.Scalar(0)
+
+
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
 

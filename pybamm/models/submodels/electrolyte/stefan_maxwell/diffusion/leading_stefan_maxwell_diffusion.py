@@ -19,8 +19,9 @@ class LeadingOrderModel(BaseModel):
     *Extends:* :class:`pybamm.BaseStefanMaxwellDiffusion`
     """
 
-    def __init__(self, param, ocp=False):
+    def __init__(self, param, reactions, ocp=False):
         super().__init__(param, ocp)
+        self.reactions = reactions
 
     def get_fundamental_variables(self):
         """
@@ -54,25 +55,37 @@ class LeadingOrderModel(BaseModel):
 
         param = self.param
 
-        c_e = variables["Average electrolyte concentration"]
-        eps = variables["Porosity"]
-        deps_n_dt = variables["Negative porosity change"]
-        deps_p_dt = variables["Positive porosity change"]
+        c_e_av = variables["Average electrolyte concentration"]
 
-        eps_n, eps_s, eps_p = [e.orphans[0] for e in eps.orphans]
+        eps_n_av = variables["Average negative electrode porosity"]
+        eps_s_av = variables["Average separator porosity"]
+        eps_p_av = variables["Average positive electrode porosity"]
+
+        deps_n_dt_av = variables["Average negative electrode porosity change"]
+        deps_p_dt_av = variables["Average positive electrode porosity change"]
 
         # TODO: ask tino about this bit
+        # the "j" component of reactions is now just a string referring to the variable
+        # so that the expression doesn't need to be set twice
+        source_terms = sum(
+            param.l_n * rxn["neg"]["s_plus"] * variables[rxn["neg"]["j"]]
+            + param.l_p * rxn["pos"]["s_plus"] * variables[rxn["pos"]["j"]]
+            for rxn in self.reactions.values()
+        )
+
         # source_terms = sum(
         #     param.l_n * rxn["neg"]["s_plus"] * rxn["neg"]["aj"]
         #     + param.l_p * rxn["pos"]["s_plus"] * rxn["pos"]["aj"]
         #     for rxn in self.reactions.values()
         # )
-        source_terms = 0
 
         self.rhs = {
-            c_e: 1
-            / (param.l_n * eps_n + param.l_s * eps_s + param.l_p * eps_p)
-            * (source_terms - c_e * (param.l_n * deps_n_dt + param.l_p * deps_p_dt))
+            c_e_av: 1
+            / (param.l_n * eps_n_av + param.l_s * eps_s_av + param.l_p * eps_p_av)
+            * (
+                source_terms
+                - c_e_av * (param.l_n * deps_n_dt_av + param.l_p * deps_p_dt_av)
+            )
         }
 
     def set_initial_conditions(self, variables):

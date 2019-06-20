@@ -28,7 +28,7 @@ class BaseModel(pybamm.BaseSubModel):
             "Separator porosity": eps_s,
             "Positive electrode porosity": eps_p,
             "Average negative electrode porosity": pybamm.average(eps_n),
-            "Average separator electrode porosity": pybamm.average(eps_s),
+            "Average separator porosity": pybamm.average(eps_s),
             "Average positive electrode porosity": pybamm.average(eps_p),
         }
 
@@ -46,7 +46,7 @@ class BaseModel(pybamm.BaseSubModel):
             "Average porosity change": pybamm.average(deps_dt),
             "Average negative electrode porosity change": pybamm.average(deps_n_dt),
             "Average separator porosity change": pybamm.average(deps_s_dt),
-            "Average positive electroe porosity change": pybamm.average(deps_p_dt),
+            "Average positive electrode porosity change": pybamm.average(deps_p_dt),
         }
 
         return variables
