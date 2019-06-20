@@ -5,7 +5,7 @@ import pybamm
 from .base_porosity import BaseModel
 
 
-class ReactionDriven(BaseModel):
+class FullModel(BaseModel):
     """Class for reaction-driven porosity changes
 
     Parameters
@@ -27,9 +27,15 @@ class ReactionDriven(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        j = variables["Interfacial current density"]
+        j_n = variables["Negative electrode interfacial current density"]
+        j_s = pybamm.Broadcast(0, ["separator"])
+        j_p = variables["Positive electrode interfacial current density"]
 
-        deps_dt = -self.param.beta_surf * j
+        deps_dt_n = -self.param.beta_surf * j_n
+        deps_dt_s = -self.param.beta_surf * j_s
+        deps_dt_p = -self.param.beta_surf * j_p
+
+        deps_dt = pybamm.Concatenation(deps_dt_n, deps_dt_s, deps_dt_p)
 
         variables.update(self._get_standard_porosity_change_variables(deps_dt))
 
