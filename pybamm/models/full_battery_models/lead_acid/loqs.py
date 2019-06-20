@@ -62,7 +62,10 @@ class LOQS(BaseModel):
 
     def set_convection_submodel(self):
 
-        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+        if self.options["convection"] is False:
+            self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+        if self.options["convection"] is True:
+            self.submodels["convection"] = pybamm.convection.PressureDriven(self.param)
 
     def set_interfacial_submodel(self):
 
