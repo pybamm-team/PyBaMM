@@ -46,10 +46,12 @@ class TestLeadAcidLOQS(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    # def test_basic_processing_with_convection(self):
-    #     model = pybamm.lead_acid.LOQS({"convection": True})
-    #     modeltest = tests.StandardModelTest(model)
-    #     modeltest.test_all()
+    def test_basic_processing_with_convection(self):
+        model = pybamm.lead_acid.LOQS(
+            {"convection": True, "thermal": None, "Voltage": "On"}
+        )
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
 
 
 if __name__ == "__main__":

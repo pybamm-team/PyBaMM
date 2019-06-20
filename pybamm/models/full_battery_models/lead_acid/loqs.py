@@ -24,8 +24,8 @@ class LOQS(BaseModel):
 
         self.set_reactions()
         self.set_current_collector_submodel()
-        self.set_convection_submodel()
         self.set_interfacial_submodel()
+        self.set_convection_submodel()
         self.set_porosity_submodel()
         self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()

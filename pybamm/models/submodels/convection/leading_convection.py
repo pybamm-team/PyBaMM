@@ -32,7 +32,7 @@ class LeadingOrder(BaseModel):
         v_box_n = param.beta_n * pybamm.outer(j_n_av, x_n)
         v_box_p = param.beta_p * pybamm.outer(j_p_av, x_p - 1)
 
-        v_box_s, dVbox_dz = self.get_separator_velocities(variables)
+        v_box_s, dVbox_dz = self._separator_velocity(variables)
         v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
 
         variables.update(self._get_standard_velocity_variables(v_box))

@@ -39,8 +39,8 @@ class BaseModel(pybamm.BaseSubModel):
 
     def _get_standard_vertical_velocity_variables(self, dVbox_dz):
 
-        vel_scale = self.set_of_parameters.velocity_scale
-        L_z = self.set_of_parameters.L_z
+        vel_scale = self.param.velocity_scale
+        L_z = self.param.L_z
 
         variables = {
             "Vertical volume-averaged acceleration": dVbox_dz,
