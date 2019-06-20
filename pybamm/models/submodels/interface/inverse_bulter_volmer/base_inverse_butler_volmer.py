@@ -38,8 +38,6 @@ class BaseModel(BaseInterface):
             ne = self.param.ne_n
         elif self._domain == "Positive":
             ne = self.param.ne_p
-        else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(self._domain))
 
         eta_r = (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
         eta_r_av = pybamm.average(eta_r)
@@ -67,6 +65,7 @@ class BaseModel(BaseInterface):
 
         if self._domain == "Negative":
             j_av = i_boundary_cc / pybamm.geometric_parameters.l_n
+
         elif self._domain == "Positive":
             j_av = -i_boundary_cc / pybamm.geometric_parameters.l_p
 

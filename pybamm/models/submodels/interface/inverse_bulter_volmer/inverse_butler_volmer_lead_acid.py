@@ -2,7 +2,6 @@
 # Lead acid inverse Bulter-Volmer class
 #
 
-import pybamm
 from .base_inverse_butler_volmer import BaseModel
 
 
@@ -21,10 +20,9 @@ class LeadAcid(BaseModel):
 
         if self._domain == "Negative":
             j0 = self.param.m_n * c_e
+
         elif self._domain == "Positive":
             c_w = self.param.c_w(c_e)
             j0 = self.param.m_p * c_e ** 2 * c_w
-        else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(self._domain))
 
         return j0

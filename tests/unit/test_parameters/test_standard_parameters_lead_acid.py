@@ -17,7 +17,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_all_defined(self):
         parameters = pybamm.standard_parameters_lead_acid
-        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         output_file = "results/2019_08_sulzer_thesis/parameters.txt"
         pybamm.print_parameters(parameters, parameter_values, output_file)
         # test print_parameters with dict and without C-rate

@@ -7,18 +7,18 @@ import unittest
 
 class TestDFN(unittest.TestCase):
     def test_well_posed(self):
-        options = {"thermal": None}
+        options = {"thermal": None, "Voltage": "On"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
     def test_default_geometry(self):
-        options = {"thermal": None}
+        options = {"thermal": None, "Voltage": "On"}
         model = pybamm.lithium_ion.DFN(options)
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("secondary" in model.default_geometry["negative particle"])
 
     def test_default_solver(self):
-        options = {"thermal": None}
+        options = {"thermal": None, "Voltage": "On"}
         model = pybamm.lithium_ion.DFN(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 

@@ -19,7 +19,13 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def __init__(self, param, domain):
         super().__init__(param)
-        self._domain = domain
+
+        if domain in ["Negative", "Positive"]:
+            self._domain = domain
+        else:
+            raise pybamm.DomainError(
+                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
+            )
 
     def _get_standard_interfacial_current_variables(self, j, j_av):
 

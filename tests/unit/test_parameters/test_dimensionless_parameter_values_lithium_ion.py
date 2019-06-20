@@ -13,7 +13,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         correctly for the specific set of parameters for LCO from dualfoil. The values
         are those converted from those in Scott's transfer which previous versions of
         the DFN work with. A 1C rate corresponds to a 24A/m^2 current density"""
-        values = pybamm.LithiumIonBaseModel().default_parameter_values
+        values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.standard_parameters_lithium_ion
 
         c_rate = param.i_typ / 24  # roughly for the numbers I used before
@@ -194,7 +194,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         )
 
     def test_thermal_parameters(self):
-        values = pybamm.LithiumIonBaseModel().default_parameter_values
+        values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.standard_parameters_lithium_ion
         c_rate = param.i_typ / 24
 
@@ -268,7 +268,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # )
 
     def test_parameter_functions(self):
-        values = pybamm.LithiumIonBaseModel().default_parameter_values
+        values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.standard_parameters_lithium_ion
 
         c_test = pybamm.Scalar(0.5)

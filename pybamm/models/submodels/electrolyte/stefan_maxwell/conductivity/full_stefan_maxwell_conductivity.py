@@ -72,3 +72,9 @@ class FullModel(BaseModel):
         phi_e = variables["Electrolyte potential"]
         self.initial_conditions = {phi_e: -self.param.U_n(self.param.c_n_init)}
 
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        return pybamm.ScikitsDaeSolver()

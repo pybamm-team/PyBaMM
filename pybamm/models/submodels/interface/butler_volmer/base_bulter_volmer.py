@@ -47,8 +47,6 @@ class BaseModel(BaseInterface):
             ne = self.param.ne_n
         elif self._domain == "Positive":
             ne = self.param.ne_p
-        else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(self._domain))
 
         j = 2 * j0 * pybamm.Function(np.sinh, (ne / 2) * eta_r)
 

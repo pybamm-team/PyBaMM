@@ -338,7 +338,7 @@ class TestBaseModel(unittest.TestCase):
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
-        model = pybamm.StandardBatteryBaseModel()
+        model = pybamm.BaseBatteryModel()
         self.assertIsInstance(
             model.default_solver, (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)
         )

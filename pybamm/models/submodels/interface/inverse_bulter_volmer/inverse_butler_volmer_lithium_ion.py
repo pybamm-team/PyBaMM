@@ -2,7 +2,6 @@
 # Lithium ion inverse bulter-volmer class
 #
 
-import pybamm
 from .base_inverse_butler_volmer import BaseModel
 
 
@@ -23,10 +22,9 @@ class LithiumIon(BaseModel):
 
         if self._domain == "Negative":
             prefactor = 1 / self.param.C_r_n
+
         elif self._domain == "Positive":
             prefactor = self.param.gamma_p / self.param.C_r_p
-        else:
-            raise pybamm.DomainError
 
         j0 = prefactor * (
             c_e ** (1 / 2) * c_s_surf ** (1 / 2) * (1 - c_s_surf) ** (1 / 2)

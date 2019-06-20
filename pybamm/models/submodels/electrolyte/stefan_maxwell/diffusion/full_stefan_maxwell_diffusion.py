@@ -39,16 +39,16 @@ class FullModel(BaseModel):
 
         eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
-        i_e = variables["Electrolyte current density"]
-        v_box = variables["Volume-averaged velocity"]
+        # i_e = variables["Electrolyte current density"]
+        # v_box = variables["Volume-averaged velocity"]
 
         param = self.param
 
         N_e_diffusion = -(eps ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
-        N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
-        N_e_convection = c_e * v_box
+        # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
+        # N_e_convection = c_e * v_box
 
-        N_e = N_e_diffusion + N_e_migration + N_e_convection
+        # N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         N_e = N_e_diffusion
 

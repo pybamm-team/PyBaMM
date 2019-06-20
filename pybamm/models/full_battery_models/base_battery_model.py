@@ -274,7 +274,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             submodel.set_events(self.variables)
             self.update(submodel)
 
-        self.set_voltage_variables()
+        # This if statement only exists for the reaction diffusion model.
+        if self.options["Voltage"] != "Off":
+            self.set_voltage_variables()
 
     def set_thermal_submodel(self):
         # TODO: put into base model
