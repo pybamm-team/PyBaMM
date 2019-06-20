@@ -49,9 +49,6 @@ class Leading(BaseModel):
             phi_s = pybamm.Broadcast(v, ["positive electrode"])
             i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 
-        else:
-            pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
-
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 

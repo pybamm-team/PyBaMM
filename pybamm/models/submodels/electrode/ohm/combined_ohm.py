@@ -61,9 +61,6 @@ class Combined(BaseModel):
             )
             i_s = i_boundary_cc - i_boundary_cc * (1 - x_p) / l_p
 
-        else:
-            raise pybamm.DomainError
-
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 

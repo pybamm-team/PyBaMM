@@ -33,8 +33,6 @@ class Full(BaseModel):
             phi_s = pybamm.standard_variables.phi_s_n
         elif self._domain == "Positive":
             phi_s = pybamm.standard_variables.phi_s_p
-        else:
-            pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
 
         variables = self._get_standard_potential_variables(phi_s)
 
