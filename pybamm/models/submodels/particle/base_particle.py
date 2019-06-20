@@ -20,7 +20,13 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def __init__(self, param, domain):
         super().__init__(param)
-        self._domain = domain
+
+        if domain in ["Negative", "Positive"]:
+            self._domain = domain
+        else:
+            raise pybamm.DomainError(
+                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
+            )
 
     def _get_standard_concentration_variables(self, c_s, c_s_xav):
 
@@ -76,9 +82,6 @@ class BaseParticle(pybamm.BaseSubModel):
             ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
             dudT = self.param.dUdT_p(c_s_surf)
 
-        else:
-            pybamm.DomainError
-
         ocp_av = pybamm.average(ocp)
         ocp_av_dim = pybamm.average(ocp_dim)
         dudT_av = pybamm.average(dudT)
@@ -113,9 +116,6 @@ class BaseParticle(pybamm.BaseSubModel):
 
         elif self._domain == "Positive":
             c_init = self.param.c_p_init
-
-        else:
-            pybamm.DomainError
 
         self.initial_conditions = {c: c_init}
 

@@ -7,12 +7,12 @@ import unittest
 
 class TestSPM(unittest.TestCase):
     def test_well_posed(self):
-        options = {"thermal": None}
+        options = {"thermal": None, "Voltage": "On"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_default_geometry(self):
-        options = {"thermal": None}
+        options = {"thermal": None, "Voltage": "On"}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("negative particle" in model.default_geometry)

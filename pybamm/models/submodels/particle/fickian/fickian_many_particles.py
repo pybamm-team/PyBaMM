@@ -34,12 +34,8 @@ class ManyParticles(BaseModel):
         elif self._domain == "Positive":
             c_s = pybamm.standard_variables.c_s_p
 
-        else:
-            pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
-
         N_s = self._flux_law(c_s)
-
-        # TODO: fix average so can do X-average
+        # TODO: fix average so can do X-average N_s
 
         variables = self._get_standard_concentration_variables(c_s, c_s)
         variables.update(self._get_standard_flux_variables(N_s, N_s))

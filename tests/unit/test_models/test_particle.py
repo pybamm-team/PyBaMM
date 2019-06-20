@@ -3,16 +3,11 @@ import unittest
 
 
 class TestParticle(unittest.TestCase):
-    def test_not_implemented(self):
-        c = pybamm.Variable("c", domain=["negative particle", "positive particle"])
-        model = pybamm.models.submodels.particle.Standard(None)
+    def test_exceptions(self):
+        param = pybamm.standard_parameters_lithium_ion
 
-        with self.assertRaises(NotImplementedError):
-            model.set_differential_system(c, None)
-
-        d = pybamm.Variable("d", domain=["not a domain"])
-        with self.assertRaises(pybamm.ModelError):
-            model.set_differential_system(d, None)
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.particle.fickian.ManyParticles(param, "not a domain")
 
 
 if __name__ == "__main__":

@@ -244,17 +244,33 @@ class TestSymbol(unittest.TestCase):
         )
 
     def test_symbol_visualise(self):
+
         param = pybamm.standard_parameters_lithium_ion
 
-        c_e = pybamm.standard_variables.c_e
-        variables = {"Electrolyte concentration": c_e}
-        onen = pybamm.Broadcast(1, ["negative electrode"])
-        onep = pybamm.Broadcast(1, ["positive electrode"])
-        reactions = {
-            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+        one_n = pybamm.Broadcast(1, ["negative electrode"])
+        zero_s = pybamm.Broadcast(0, ["separator"])
+        one_p = pybamm.Broadcast(1, ["positive electrode"])
+
+        j = pybamm.Concatenation(one_n, zero_s, one_p)
+
+        zero_n = pybamm.Broadcast(0, ["negative electrode"])
+        zero_p = pybamm.Broadcast(0, ["positive electrode"])
+
+        deps_dt = pybamm.Concatenation(zero_n, zero_s, zero_p)
+
+        variables = {
+            "Porosity": param.epsilon,
+            "Porosity change": deps_dt,
+            "Interfacial current density": j,
         }
-        model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model.set_differential_system(variables, reactions)
+
+        model = pybamm.electrolyte.stefan_maxwell.diffusion.FullModel(param)
+        variables.update(model.get_fundamental_variables())
+        variables.update(model.get_coupled_variables(variables))
+
+        model.set_rhs(variables)
+
+        c_e = pybamm.standard_variables.c_e
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test.png")
         self.assertTrue(os.path.exists("StefanMaxwell_test.png"))

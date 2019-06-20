@@ -37,9 +37,6 @@ class SingleParticle(BaseModel):
             c_s_xav = pybamm.standard_variables.c_s_p_xav
             c_s = pybamm.Broadcast(c_s_xav, ["positive electrode"])
 
-        else:
-            pybamm.DomainError("Domain must be either: 'Negative' or 'Positive'")
-
         N_s_xav = self._flux_law(c_s_xav)
         N_s = pybamm.Broadcast(N_s_xav, [self._domain.lower() + " electrode"])
 

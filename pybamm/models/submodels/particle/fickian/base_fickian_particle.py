@@ -38,9 +38,6 @@ class BaseModel(BaseParticle):
         elif self._domain == "Positive":
             self.rhs = {c: -(1 / self.param.C_p) * pybamm.div(N)}
 
-        else:
-            raise pybamm.DomainError("Invalid particle domain")
-
     def set_boundary_conditions(self, variables):
 
         c, _, j = self._unpack(variables)
@@ -50,9 +47,6 @@ class BaseModel(BaseParticle):
 
         elif self._domain == "Positive":
             rbc = -self.param.C_p * j / self.param.a_p / self.param.gamma_p
-
-        else:
-            raise pybamm.DomainError("Invalid particle domain")
 
         self.boundary_conditions = {
             c: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
