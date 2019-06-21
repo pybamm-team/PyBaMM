@@ -501,10 +501,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = csr_matrix(kron(eye(sec_pts), sub_matrix))
 
         # Return boundary value with domain removed
-        try:
-            boundary_value = pybamm.Matrix(matrix) @ discretised_child
-        except:
-            boundary_value = pybamm.Matrix(matrix) @ discretised_child
+        boundary_value = pybamm.Matrix(matrix) @ discretised_child
 
         if sec_pts > 1:
             if discretised_child.domain == ["negative particle"]:

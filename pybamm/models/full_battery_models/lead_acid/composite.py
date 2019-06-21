@@ -193,8 +193,10 @@ class Composite(BaseModel):
     #     eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
     #         param, self.options["capacitance"]
     #     )
-    #     eleclyte_current_model.set_leading_order_system(variables_av, reactions_av, neg)
-    #     eleclyte_current_model.set_leading_order_system(variables_av, reactions_av, pos)
+    #     eleclyte_current_model.set_leading_order_system(variables_av, reactions_av,
+    # neg)
+    #     eleclyte_current_model.set_leading_order_system(variables_av, reactions_av,
+    # pos)
     #     self.update(eleclyte_current_model)
 
     # def set_current_variables(self):

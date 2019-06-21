@@ -257,8 +257,10 @@ class LOQS(BaseModel):
     #         self.variables["Current collector current density"] = i_boundary_cc
 
     #         # Interfacial current density
-    #         j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, neg)
-    #         j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc, pos)
+    #         j_n = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc,
+    # neg)
+    #         j_p = int_curr_model.get_homogeneous_interfacial_current(i_boundary_cc,
+    # pos)
     #         self.reactions = {
     #             "main": {
     #                 "neg": {"s_plus": param.s_n, "aj": j_n},

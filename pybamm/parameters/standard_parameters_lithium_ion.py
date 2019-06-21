@@ -92,6 +92,9 @@ c_p_init_dimensional = pybamm.Parameter(
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
 
+# velocity scale
+velocity_scale = pybamm.Scalar(1)
+
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
 

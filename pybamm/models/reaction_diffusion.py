@@ -102,10 +102,10 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
     def set_interfacial_submodel(self):
         self.submodels[
             "negative interface"
-        ] = pybamm.interface.inverse_bulter_volmer.LeadAcid(self.param, "Negative")
+        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Negative")
         self.submodels[
             "positive interface"
-        ] = pybamm.interface.inverse_bulter_volmer.LeadAcid(self.param, "Positive")
+        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Positive")
 
     @property
     def default_parameter_values(self):

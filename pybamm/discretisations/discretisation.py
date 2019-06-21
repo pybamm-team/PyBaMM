@@ -389,14 +389,6 @@ class Discretisation(object):
             if symbol.domain == []:
                 return symbol.__class__(disc_left, disc_right)
             else:
-                try:
-                    spatial_method.process_binary_operators(
-                        symbol, left, right, disc_left, disc_right
-                    )
-                except:
-                    spatial_method.process_binary_operators(
-                        symbol, left, right, disc_left, disc_right
-                    )
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )
@@ -497,10 +489,7 @@ class Discretisation(object):
                 )
             else:
                 unpacked_variables.append(symbol)
-                try:
-                    slices.append(self._y_slices[symbol.id])
-                except:
-                    slices.append(self._y_slices[symbol.id])
+                slices.append(self._y_slices[symbol.id])
 
         if check_complete:
             # Check keys from the given var_eqn_dict against self._y_slices
