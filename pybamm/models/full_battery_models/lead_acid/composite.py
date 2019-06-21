@@ -23,10 +23,10 @@ class Composite(BaseModel):
         self.name = "Composite model"
 
         self.set_current_collector_submodel()
-        self.set_convection_submodel()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
         self.set_negative_electrode_submodel()
+        self.set_convection_submodel()
         self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
@@ -42,7 +42,10 @@ class Composite(BaseModel):
         self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
 
     def set_convection_submodel(self):
-        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+        if self.options["convection"] is False:
+            self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+        if self.options["convection"] is True:
+            self.submodels["convection"] = pybamm.convection.LeadingOrder(self.param)
 
     def set_interfacial_submodel(self):
         self.submodels[

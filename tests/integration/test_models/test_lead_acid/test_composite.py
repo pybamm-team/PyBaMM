@@ -11,15 +11,16 @@ import numpy as np
 
 class TestLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None, "Voltage": "On", "convection": False}
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    # def test_basic_processing_with_convection(self):
-    #     model = pybamm.lead_acid.Composite({"convection": True})
-    #     modeltest = tests.StandardModelTest(model)
-    #     modeltest.test_all()
+    def test_basic_processing_with_convection(self):
+        options = {"thermal": None, "Voltage": "On", "convection": True}
+        model = pybamm.lead_acid.Composite(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
 
     # def test_optimisations(self):
     #     model = pybamm.lead_acid.Composite()
