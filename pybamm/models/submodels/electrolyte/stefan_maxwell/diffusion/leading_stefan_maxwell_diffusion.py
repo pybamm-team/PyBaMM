@@ -34,6 +34,7 @@ class LeadingOrderModel(BaseModel):
         c_e_p = pybamm.Broadcast(c_e_av, ["positive electrode"])
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
+        c_e_n.evaluate_for_shape()
         variables = self._get_standard_concentration_variables(c_e, c_e_av)
 
         if self.ocp is True:

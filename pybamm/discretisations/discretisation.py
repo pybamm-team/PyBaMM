@@ -335,7 +335,7 @@ class Discretisation(object):
 
         """
         new_var_eqn_dict = {}
-        failed_list = []
+        # failed_list = []
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
 
@@ -345,11 +345,11 @@ class Discretisation(object):
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
-            try:
-                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
-            except:
-                failed_list.append(eqn_key)
+            # except:
+            #     new_var_eqn_dict[eqn_key] = "Failed"
+            #     failed_list.append(eqn_key)
 
         return new_var_eqn_dict
 

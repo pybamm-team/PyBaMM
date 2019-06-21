@@ -2,7 +2,7 @@
 # Lead acid Bulter-Volmer class
 #
 
-from .base_surface_for_butler_volmer import BaseModel
+from .base_surface_form_butler_volmer import BaseModel
 
 
 class LeadAcid(BaseModel):

@@ -62,8 +62,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         if self._domain == "Negative":
 
-            eps = variables["Negative electrode porosity"]
-
             lbc = (pybamm.Scalar(0), "Neumann")
 
             c_e_flux = pybamm.BoundaryFlux(c_e, "right")
@@ -76,7 +74,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         elif self._domain == "Positive":
 
-            eps = variables["Positive electrode porosity"]
             c_e_flux = pybamm.BoundaryFlux(c_e, "left")
 
             flux = (
@@ -131,7 +128,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         i_boundary_cc = variables["Current collector current density"]
         c_e_s = variables["Separator electrolyte concentration"]
-        phi_e_n = variables["Negative electrode surface potential difference"]
+        phi_e_n = variables["Negative electrolyte potential"]
         eps_s = variables["Separator porosity"]
 
         chi_e_s = param.chi(c_e_s)
@@ -150,6 +147,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
         )
 
         i_e_s = pybamm.Broadcast(i_e_s_av, ["separator"])
+        phi_e_s = pybamm.Broadcast(
+            pybamm.boundary_value(phi_e_n, "right"), ["separator"]
+        )  # TODO: put in real form
 
         variables.update(self._get_domain_potential_variables(phi_e_s, self._domain))
         variables.update(self._get_domain_current_variables(i_e_s, self._domain))
@@ -185,13 +185,16 @@ class BaseModel(BaseStefanMaxwellConductivity):
         if self._domain == "Negative":
             conductivity = param.sigma_n * (1 - eps) ** param.b
             phi_s = -pybamm.IndefiniteIntegral(i_s / conductivity, x_n)
+            phi_s = pybamm.Broadcast(
+                0, ["negative electrode"]
+            )  # TODO: put in real value
 
         elif self._domain == "Positive":
 
             phi_e_s = variables["Separator electrolyte potential"]
             delta_phi_p = variables["Positive electrode surface potential difference"]
 
-            conductivity = param.sigma_n * (1 - eps) ** param.b
+            conductivity = param.sigma_p * (1 - eps) ** param.b
             phi_s = (
                 -pybamm.IndefiniteIntegral(i_s / conductivity, x_p)
                 + pybamm.boundary_value(phi_e_s, "right")

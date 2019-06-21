@@ -117,15 +117,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     def _get_domain_current_variables(self, i_e, domain):
 
         i_typ = self.param.i_typ
-        i_e_av = pybamm.average(i_e)
 
         variables = {
             self._domain + " electrolyte current density": i_e,
             self._domain + " electrolyte current density [V]": i_e * i_typ,
-            "Average " + self._domain.lower() + " electrolyte current density": i_e_av,
-            "Average "
-            + self._domain.lower()
-            + " electrolyte current density [V]": i_e_av * i_typ,
         }
 
         return variables

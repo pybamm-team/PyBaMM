@@ -326,8 +326,6 @@ class LOQS(BaseModel):
         """
         Create and return the default solver for this model
         """
-        # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["capacitance"] == "algebraic":
-            return pybamm.ScikitsDaeSolver()
-        else:
-            return pybamm.ScikitsOdeSolver()
+
+        return pybamm.ScikitsDaeSolver()
+

@@ -2,7 +2,7 @@
 # Lithium ion bulter-volmer class
 #
 
-from .base_surface_for_butler_volmer import BaseModel
+from .base_surface_form_butler_volmer import BaseModel
 
 
 class LithiumIon(BaseModel):
