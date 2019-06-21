@@ -335,6 +335,7 @@ class Discretisation(object):
 
         """
         new_var_eqn_dict = {}
+        failed_list = []
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
 
@@ -348,7 +349,7 @@ class Discretisation(object):
                 new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
             except:
-                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+                failed_list.append(eqn_key)
 
         return new_var_eqn_dict
 

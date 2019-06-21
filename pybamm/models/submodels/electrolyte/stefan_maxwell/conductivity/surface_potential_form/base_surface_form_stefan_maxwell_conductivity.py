@@ -138,9 +138,15 @@ class BaseModel(BaseStefanMaxwellConductivity):
         kappa_s_eff = param.kappa_e(c_e_s) * (eps_s ** param.b)
         i_e_s_av = i_boundary_cc
 
+        # This is a bit of a hack until we figure out how we want to take gradients of
+        # non-state variables (i.e. put the bcs on without bcs)
+        if c_e_s.has_symbol_of_class(pybamm.Broadcast):
+            grad_c_e_s = pybamm.Broadcast(0, ["separator"])
+        else:
+            grad_c_e_s = pybamm.grad(c_e_s)
+
         phi_e_s = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
-            chi_e_s / c_e_s * pybamm.grad(c_e_s) - param.C_e * i_e_s_av / kappa_s_eff,
-            x_s,
+            chi_e_s / c_e_s * grad_c_e_s - param.C_e * i_e_s_av / kappa_s_eff, x_s
         )
 
         i_e_s = pybamm.Broadcast(i_e_s_av, ["separator"])

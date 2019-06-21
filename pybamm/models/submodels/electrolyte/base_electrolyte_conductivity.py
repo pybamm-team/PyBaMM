@@ -106,9 +106,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         variables = {
             self._domain + " electrolyte potential": phi_e,
             self._domain + " electrolyte potential [V]": phi_e * pot_scale,
-            "Average " + self._domain + " electrolyte potential": phi_e_av,
+            "Average " + self._domain.lower() + " electrolyte potential": phi_e_av,
             "Average "
-            + self._domain
+            + self._domain.lower()
             + " electrolyte potential [V]": phi_e_av * pot_scale,
         }
 
@@ -122,9 +122,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         variables = {
             self._domain + " electrolyte current density": i_e,
             self._domain + " electrolyte current density [V]": i_e * i_typ,
-            "Average " + self._domain + " electrolyte current density": i_e_av,
+            "Average " + self._domain.lower() + " electrolyte current density": i_e_av,
             "Average "
-            + self._domain
+            + self._domain.lower()
             + " electrolyte current density [V]": i_e_av * i_typ,
         }
 

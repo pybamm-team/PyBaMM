@@ -2,9 +2,14 @@
 # Bulter volmer class
 #
 
+# N.B. this can be a child of the standard butler-volmer class but
+# i have left for now because there is a lot to do
+# maybe a small function _get_delta_phi_s which is overwritten depending
+# if surface form or standard form
+
 import pybamm
 import autograd.numpy as np
-from ..base_interface import BaseInterface
+from ...base_interface import BaseInterface
 
 
 class BaseModel(BaseInterface):
@@ -36,11 +41,12 @@ class BaseModel(BaseInterface):
         """
 
         i_boundary_cc = variables["Current collector current density"]
-        phi_s = variables[self._domain + " electrode potential"]
-        phi_e = variables[self._domain + " electrolyte potential"]
+        delta_phi_s = variables[
+            self._domain + " electrode surface potential difference"
+        ]
         ocp = variables[self._domain + " electrode open circuit potential"]
 
-        eta_r = phi_s - phi_e - ocp
+        eta_r = delta_phi_s - ocp
         j0 = self._get_exchange_current_density(variables)
 
         if self._domain == "Negative":
@@ -62,14 +68,6 @@ class BaseModel(BaseInterface):
         variables.update(self._get_standard_interfacial_current_variables(j, j_av))
         variables.update(self._get_standard_exchange_current_variables(j0, j0_av))
         variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
-
-        delta_phi_s = phi_s - phi_e
-        delta_phi_s_av = pybamm.average(delta_phi_s)
-        variables.update(
-            self._get_standard_surface_potential_difference_variables(
-                delta_phi_s, delta_phi_s_av
-            )
-        )
 
         if self._domain == "Positive":
             variables.update(
