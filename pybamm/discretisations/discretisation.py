@@ -344,7 +344,11 @@ class Discretisation(object):
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
-            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            try:
+                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+
+            except:
+                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
         return new_var_eqn_dict
 
@@ -384,6 +388,14 @@ class Discretisation(object):
             if symbol.domain == []:
                 return symbol.__class__(disc_left, disc_right)
             else:
+                try:
+                    spatial_method.process_binary_operators(
+                        symbol, left, right, disc_left, disc_right
+                    )
+                except:
+                    spatial_method.process_binary_operators(
+                        symbol, left, right, disc_left, disc_right
+                    )
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )
@@ -484,7 +496,10 @@ class Discretisation(object):
                 )
             else:
                 unpacked_variables.append(symbol)
-                slices.append(self._y_slices[symbol.id])
+                try:
+                    slices.append(self._y_slices[symbol.id])
+                except:
+                    slices.append(self._y_slices[symbol.id])
 
         if check_complete:
             # Check keys from the given var_eqn_dict against self._y_slices

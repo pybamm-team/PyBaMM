@@ -44,49 +44,6 @@ class BaseFullModel(BaseModel):
 
         return variables
 
-    def set_boundary_conditions(self, variables):
-        """
-        Set boundary conditions for the full model.
-
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of symbols to use in the model
-        """
-        param = self.set_of_parameters
-
-        i_boundary_cc = variables["Current collector current density"]
-        eps = variables[self._domain + " porosity"]
-        c_e = variables[self._domain + " electrolyte concentration"]
-        delta_phi = variables[self._domain + " electrode surface potential difference"]
-
-        conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
-
-        if self._domain == "Negative":
-
-            lbc = (pybamm.Scalar(0), "Neumann")
-
-            c_e_flux = pybamm.BoundaryFlux(c_e, "right")
-            flux = (
-                i_boundary_cc / pybamm.BoundaryValue(conductivity, "right")
-            ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "right") * c_e_flux
-            rbc = (flux, "Neumann")
-
-        elif self._domain == "Positive":
-
-            c_e_flux = pybamm.BoundaryFlux(c_e, "left")
-            flux = (
-                i_boundary_cc / pybamm.BoundaryValue(conductivity, "left")
-            ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux
-            lbc = (flux, "Neumann")
-
-            rbc = (pybamm.Scalar(0), "Neumann")
-
-        else:
-            raise pybamm.DomainError
-
-        self.boundary_conditions = {delta_phi: {"left": lbc, "right": rbc}}
-
     def set_initial_conditions(self, variables):
         """Initial condition"""
         delta_phi_e = variables[

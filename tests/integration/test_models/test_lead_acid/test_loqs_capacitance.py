@@ -10,26 +10,16 @@ import numpy as np
 
 
 class TestLeadAcidLOQSCapacitance(unittest.TestCase):
-    def test_basic_processing_differential(self):
-        options = {
-            "surface form": True,
-            "capacitance": True,
-            "thermal": None,
-            "Voltage": "On",
-        }
-        model = pybamm.lead_acid.LOQS(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+    # def test_basic_processing_differential(self):
+    #     options = {"capacitance": True, "thermal": None, "Voltage": "On"}
+    #     model = pybamm.lead_acid.surface_form.LOQS(options)
+    #     modeltest = tests.StandardModelTest(model)
+    #     modeltest.test_all()
 
     @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
-        options = {
-            "surface form": True,
-            "capacitance": False,
-            "thermal": None,
-            "Voltage": "On",
-        }
-        model = pybamm.lead_acid.LOQS(options)
+        options = {"capacitance": False, "thermal": None, "Voltage": "On"}
+        model = pybamm.lead_acid.surface_form.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 

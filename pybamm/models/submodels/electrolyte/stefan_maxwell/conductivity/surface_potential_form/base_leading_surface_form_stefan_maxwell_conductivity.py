@@ -32,9 +32,6 @@ class BaseLeadingOrderModel(BaseModel):
         else:
             raise pybamm.DomainError
 
-        # delta_phi = pybamm.Broadcast(
-        #     delta_phi_av, [self._domain.lower() + " electrode"]
-        # )
         delta_phi_av = pybamm.average(delta_phi)
 
         variables = self._get_standard_surface_potential_difference_variables(
@@ -47,10 +44,8 @@ class BaseLeadingOrderModel(BaseModel):
         if self._domain == "Separator":
             return {}
 
-        delta_phi_e_av = variables[
-            "Average "
-            + self._domain.lower()
-            + " electrode surface potential difference"
+        delta_phi_e = variables[
+            self._domain + " electrode surface potential difference"
         ]
         if self._domain == "Negative":
             delta_phi_e_init = self.param.U_n(self.param.c_n_init)
@@ -60,4 +55,4 @@ class BaseLeadingOrderModel(BaseModel):
         else:
             raise pybamm.DomainError
 
-        self.initial_conditions = {delta_phi_e_av: delta_phi_e_init}
+        self.initial_conditions = {delta_phi_e: delta_phi_e_init}
