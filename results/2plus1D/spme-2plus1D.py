@@ -18,13 +18,20 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 5, var.x_s: 3, var.x_p: 5, var.r_n: 5, var.r_p: 5, var.y: 5, var.z:5}
+mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
+import ipdb; ipdb.set_trace()
 
 # solve model
+# TO DO: fix simplify Outer bug
+model.use_simplify = False
+model.use_jacobian = False
+model.use_to_python = False
 t_eval = np.linspace(0, 2, 100)
 solution = model.default_solver.solve(model, t_eval)
 

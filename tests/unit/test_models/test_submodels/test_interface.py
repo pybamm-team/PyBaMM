@@ -12,13 +12,14 @@ class TestInterface(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             model.get_butler_volmer(None, None, "not a domain")
 
+        j = pybamm.Variable("j", "not a domain")
         with self.assertRaises(pybamm.DomainError):
-            model.get_inverse_butler_volmer(None, None, "not a domain")
+            model.get_inverse_butler_volmer(j, j, "not a domain")
 
         c = pybamm.Variable("c", "not a domain")
         lithium_ion_model = pybamm.interface.LithiumIonReaction(None)
         with self.assertRaises(pybamm.DomainError):
-            lithium_ion_model.get_exchange_current_densities(c, "not a domain")
+            lithium_ion_model.get_exchange_current_densities(c, c, "not a domain")
 
 
 class TestInterfaceLeadAcid(unittest.TestCase):

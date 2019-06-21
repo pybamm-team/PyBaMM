@@ -62,6 +62,7 @@ from .expression_tree.binary_operators import (
     MatrixMultiplication,
     Division,
     Outer,
+    Kron,
     outer,
     source,
 )

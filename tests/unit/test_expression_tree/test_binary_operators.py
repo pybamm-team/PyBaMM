@@ -92,8 +92,22 @@ class TestBinaryOperators(unittest.TestCase):
             pybamm.Outer(v, y)
         with self.assertRaises(NotImplementedError):
             outer_fun.diff(None)
+
+    def test_kron(self):
+        # Kron class
+        A = pybamm.Matrix(np.eye(2))
+        b = pybamm.Vector(np.array([[4], [5]]))
+        kron = pybamm.Kron(A, b)
+        np.testing.assert_array_equal(
+            kron.evaluate().toarray(), np.kron(A.entries, b.entries)
+        )
+
+        # failures
         with self.assertRaises(NotImplementedError):
-            outer_fun.jac(None)
+            kron.diff(None)
+
+        with self.assertRaises(NotImplementedError):
+            kron.jac(None)
 
     def test_known_eval(self):
         # Scalars

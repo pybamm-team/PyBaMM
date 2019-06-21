@@ -607,7 +607,8 @@ def average(symbol):
         return new_symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.orphans[0]
+        new_symbol = symbol.orphans[0]
+        return new_symbol
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif (
         isinstance(symbol, pybamm.Concatenation)

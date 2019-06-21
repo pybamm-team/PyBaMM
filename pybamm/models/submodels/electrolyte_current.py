@@ -156,7 +156,16 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
             c_e_0 = pybamm.Scalar(1)
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
 
+        # Broadcast if necessary
+        if i_boundary_cc.domain == ["current collector"] and not isinstance(
+            c_e_0, pybamm.Scalar
+        ):
+            # Hack to get c_e_0 domain to be current collector. For some reason just
+            # setting c_e_0.domain = ["current collector"] doesn't work?
+            c_e_0 = c_e_0 * pybamm.Broadcast(1, "current collector")
+
         # bulk conductivities (leading order)
+        kappa_e = param.kappa_e(c_e_0)
         kappa_n = param.kappa_e(c_e_0) * eps_n ** param.b
         kappa_s = param.kappa_e(c_e_0) * eps_s ** param.b
         kappa_p = param.kappa_e(c_e_0) * eps_p ** param.b
@@ -174,41 +183,54 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
         # electrolyte potential (combined leading and first order)
         phi_e_const = (
             (-ocp_n_av - eta_r_n_av + phi_s_n_av)
-            - chi_0 * pybamm.average(first_order_function(c_e_n / c_e_0))
-            - (
-                pybamm.outer(
-                    i_boundary_cc,
-                    (param.C_e * l_n / param.gamma_e)
-                    * (1 / (3 * kappa_n) - 1 / kappa_s),
+            - chi_0
+            * pybamm.average(
+                first_order_function(
+                    c_e_n / pybamm.Broadcast(c_e_0, "negative electrode")
                 )
+            )
+            - (
+                i_boundary_cc
+                * (param.C_e * l_n / param.gamma_e)
+                * (1 / (3 * kappa_n) - 1 / kappa_s)
             )
         )
 
         phi_e_n = (
             pybamm.Broadcast(phi_e_const, "negative electrode")
-            + chi_0 * first_order_function(c_e_n / c_e_0)
+            + chi_0
+            * first_order_function(
+                c_e_n / pybamm.Broadcast(c_e_0, "negative electrode")
+            )
             - pybamm.outer(
-                i_boundary_cc,
-                (param.C_e / param.gamma_e)
-                * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s),
+                i_boundary_cc * (param.C_e / param.gamma_e) / kappa_e,
+                (
+                    (x_n ** 2 - l_n ** 2) / (2 * eps_n ** param.b * l_n)
+                    + l_n / (eps_n ** param.b)
+                ),
             )
         )
 
         phi_e_s = (
             pybamm.Broadcast(phi_e_const, "separator")
-            + chi_0 * first_order_function(c_e_s / c_e_0)
-            - pybamm.outer(i_boundary_cc, (param.C_e / param.gamma_e) * (x_s / kappa_s))
+            + chi_0 * first_order_function(c_e_s / pybamm.Broadcast(c_e_0, "separator"))
+            - pybamm.outer(
+                i_boundary_cc * (param.C_e / param.gamma_e) / kappa_e,
+                x_s / (eps_s ** param.b),
+            )
         )
 
         phi_e_p = (
             pybamm.Broadcast(phi_e_const, "positive electrode")
-            + chi_0 * first_order_function(c_e_p / c_e_0)
+            + chi_0
+            * first_order_function(
+                c_e_p / pybamm.Broadcast(c_e_0, "positive electrode")
+            )
             - pybamm.outer(
-                i_boundary_cc,
-                (param.C_e / param.gamma_e)
-                * (
-                    (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
-                    + (1 - l_p) / kappa_s
+                i_boundary_cc * (param.C_e / param.gamma_e) / kappa_e,
+                (
+                    (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * eps_p ** param.b * l_p)
+                    + (1 - l_p) / (eps_s ** param.b)
                 ),
             )
         )
@@ -216,16 +238,28 @@ class ElectrolyteCurrentBaseModel(pybamm.SubModel):
 
         "Ohmic losses and overpotentials"
         # average electrolyte ohmic losses
-        delta_phi_e_av = -pybamm.outer(i_boundary_cc, param.C_e / param.gamma_e) * (
-            param.l_n / (3 * kappa_n)
-            + param.l_s / (kappa_s)
-            + param.l_p / (3 * kappa_p)
+        delta_phi_e_av = (
+            -i_boundary_cc
+            * (param.C_e / param.gamma_e)
+            * (
+                param.l_n / (3 * kappa_n)
+                + param.l_s / (kappa_s)
+                + param.l_p / (3 * kappa_p)
+            )
         )
 
         # concentration overpotential (combined leading and first order)
         eta_c_av = chi_0 * (
-            pybamm.average(first_order_function(c_e_p / c_e_0))
-            - pybamm.average(first_order_function(c_e_n / c_e_0))
+            pybamm.average(
+                first_order_function(
+                    c_e_p / pybamm.Broadcast(c_e_0, "positive electrode")
+                )
+            )
+            - pybamm.average(
+                first_order_function(
+                    c_e_n / pybamm.Broadcast(c_e_0, "negative electrode")
+                )
+            )
         )
 
         # electrolyte overpotential

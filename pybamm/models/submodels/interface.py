@@ -127,7 +127,11 @@ class InterfacialReaction(pybamm.SubModel):
         param = self.set_of_parameters
 
         # Broadcast if necessary (requires input domain)
-        if domain and j.domain == ["current collector"]:
+        if (
+            domain
+            and j.domain == ["current collector"]
+            and j0.domain in [["negative electrode"], ["positive electrode"]]
+        ):
             j = pybamm.Broadcast(j, domain)
         else:
             domain = domain or j.domain
@@ -399,6 +403,16 @@ class LithiumIonReaction(InterfacialReaction):
         """
         param = self.set_of_parameters
         domain = domain or c_e.domain
+
+        # Broadcast if necessary
+        if c_s_k_surf.domain == ["current collector"] and c_e.domain in [
+            ["negative electrode"],
+            ["positive electrode"],
+        ]:
+            # Hack to get c_s_k_surf to be broadcasted correctly. Not sure
+            # why, but is being broadcasted as though it has an empty domain?
+            c_s_k_surf = c_s_k_surf * pybamm.Broadcast(1, "current collector")
+            c_s_k_surf = pybamm.Broadcast(c_s_k_surf, c_e.domain)
 
         if domain == ["negative electrode"]:
             return (1 / param.C_r_n) * (

@@ -49,7 +49,6 @@ class Ohm(pybamm.SubModel):
         ocp_p = variables["Positive electrode open circuit potential"]
         eta_r_p = variables["Positive electrode reaction overpotential"]
         phi_e = variables["Electrolyte potential"]
-
         ocp_p_av = pybamm.average(ocp_p)
         eta_r_p_av = pybamm.average(eta_r_p)
         phi_e_p = phi_e.orphans[2]
@@ -209,17 +208,14 @@ class Ohm(pybamm.SubModel):
         sigma_p_eff = param.sigma_p * (1 - eps_p)
 
         # hack for getting correct shape and domain when using 2D current collectors
-        i_boundary_cp = pybamm.outer(
-            i_boundary_cc, pybamm.Broadcast(1, ["positive electrode"])
-        )
         const = (
             ocp_p_av
             + eta_r_p_av
             + phi_e_p_av
-            - (i_boundary_cp / 6 / l_p / sigma_p_eff) * (2 * l_p ** 2 - 6 * l_p + 3)
+            - (i_boundary_cc / 6 / l_p / sigma_p_eff) * (2 * l_p ** 2 - 6 * l_p + 3)
         )
-
         phi_s_p = (
+            pybamm.Broadcast(const, "positive electrode")
             - pybamm.outer(i_boundary_cc, x_p / (2 * l_p) * (x_p + 2 * (l_p - 1)))
             / sigma_p_eff
         )
@@ -228,9 +224,7 @@ class Ohm(pybamm.SubModel):
         i_s_n = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
         i_s_p = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 
-        delta_phi_s_av = pybamm.outer(
-            i_boundary_cc, -1 / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
-        )
+        delta_phi_s_av = -i_boundary_cc / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
 
         potential_vars = self.get_potential_variables(phi_s_n, phi_s_p, delta_phi_s_av)
         current_vars = self.get_current_variables(i_s_n, i_s_p)

@@ -5,7 +5,7 @@ import pybamm
 
 import autograd.numpy as np
 import numbers
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse, csr_matrix, kron
 
 
 def is_scalar_zero(expr):
@@ -80,7 +80,7 @@ class BinaryOperator(pybamm.Symbol):
         # Check and process domains, except for Outer symbol which takes the outer
         # product of two smbols in different domains, and gives it the domain of the
         # right child.
-        if isinstance(self, pybamm.Outer):
+        if isinstance(self, (pybamm.Outer, pybamm.Kron)):
             domain = right.domain
         else:
             domain = self.get_children_domains(left.domain, right.domain)
@@ -398,7 +398,7 @@ class MatrixMultiplication(BinaryOperator):
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # We shouldn't need this
-        raise NotImplementedError
+        raise NotImplementedError("diff not implemented for symbol of type 'MatrixMultiplication'")
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -409,8 +409,12 @@ class MatrixMultiplication(BinaryOperator):
         if isinstance(left, pybamm.Array):
             left = pybamm.Matrix(csr_matrix(left.evaluate()))
             return left @ right.jac(variable)
+        elif isinstance(left, pybamm.Negate) and isinstance(left.child, pybamm.Array):
+            # Catch cases of (-D) @ u
+            left = pybamm.Matrix(csr_matrix(left.evaluate()))
+            return left @ right.jac(variable)
         else:
-            raise NotImplementedError
+            raise NotImplementedError("jac of 'MatrixMultiplication' is only implemented for left of type 'pybamm.Array', not {}".format(left.__class__))
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
@@ -515,6 +519,12 @@ class Outer(BinaryOperator):
         # cannot have Variable, StateVector or Matrix in the right symbol, as these
         # can already be 2D objects (so we can't take an outer product with them)
         # Note: Allowing variable seems to be OK
+        if right.has_symbol_of_class(
+            (pybamm.Variable, pybamm.StateVector, pybamm.Matrix)
+        ):
+            raise TypeError(
+                "right child must only contain SpatialVariable and scalars" ""
+            )
 
         super().__init__("outer product", left, right)
 
@@ -528,7 +538,14 @@ class Outer(BinaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        raise NotImplementedError("jac not implemented for symbol of type 'Outer'")
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # right cannot be a StateVector, so no need for product rule
+            left, right = self.orphans
+            # make sure left child keeps same domain
+            left.domain = self.left.domain
+            return pybamm.Kron(left.jac(variable), right)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
@@ -540,6 +557,38 @@ class Outer(BinaryOperator):
         # Make sure left child keeps same domain
         left.domain = self.left.domain
         return pybamm.Outer(left, right)
+
+
+class Kron(BinaryOperator):
+    """A node in the expression tree representing a (sparse) kronecker product operator
+
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+
+        super().__init__("kronecker product", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "kron({!s}, {!s})".format(self.left, self.right)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        raise NotImplementedError("diff not implemented for symbol of type 'Kron'")
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        raise NotImplementedError("jac not implemented for symbol of type 'Kron'")
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return kron(left, right)
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+        return pybamm.Kron(left, right)
 
 
 def outer(left, right):
