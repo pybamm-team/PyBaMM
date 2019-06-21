@@ -389,6 +389,12 @@ class Discretisation(object):
             if symbol.domain == []:
                 return symbol.__class__(disc_left, disc_right)
             else:
+                try:
+                    spatial_method.process_binary_operators(
+                        symbol, left, right, disc_left, disc_right
+                    )
+                except:
+                    print("hello")
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )

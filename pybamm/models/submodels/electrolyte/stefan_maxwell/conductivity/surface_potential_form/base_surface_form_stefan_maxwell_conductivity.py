@@ -96,7 +96,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
         eps = variables[self._domain + " electrode porosity"]
         c_e = variables[self._domain + " electrolyte concentration"]
         delta_phi = variables[self._domain + " electrode surface potential difference"]
-        phi_s = variables[self._domain + " electrode potential"]
 
         conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
 
@@ -106,6 +105,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             grad_c_e = pybamm.Broadcast(0, [self._domain.lower() + " electrode"])
         else:
             grad_c_e = pybamm.grad(c_e)
+            grad_c_e = pybamm.Broadcast(0, [self._domain.lower() + " electrode"])
 
         i_e = conductivity * (
             (param.chi(c_e) / c_e) * grad_c_e + pybamm.grad(delta_phi)
@@ -141,6 +141,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             grad_c_e_s = pybamm.Broadcast(0, ["separator"])
         else:
             grad_c_e_s = pybamm.grad(c_e_s)
+            grad_c_e_s = pybamm.Broadcast(0, ["separator"])
 
         phi_e_s = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
             chi_e_s / c_e_s * grad_c_e_s - param.C_e * i_e_s_av / kappa_s_eff, x_s
@@ -175,6 +176,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             grad_c_e = pybamm.Broadcast(0, [self._domain.lower() + " electrode"])
         else:
             grad_c_e = pybamm.grad(c_e)
+            grad_c_e = pybamm.Broadcast(0, [self._domain.lower() + " electrode"])
 
         i_e = conductivity * (
             (param.chi(c_e) / c_e) * grad_c_e + pybamm.grad(delta_phi)
