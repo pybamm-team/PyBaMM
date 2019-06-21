@@ -22,13 +22,16 @@ class LeadingOrderCapacitanceModel(BaseLeadingOrderModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def set_differential(self, variables):
+    def set_rhs(self, variables):
+
+        if self._domain == "Separator":
+            return None
 
         param = self.param
 
         j = variables[self._domain + " electrode interfacial current density"]
         j_av = variables[
-            "Average " + self._domain + " electrode interfacial current density"
+            "Average " + self._domain.lower() + " electrode interfacial current density"
         ]
         delta_phi = variables[self._domain + " electrode surface potential difference"]
 

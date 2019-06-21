@@ -149,7 +149,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
         i_e_s = pybamm.Broadcast(i_e_s_av, ["separator"])
         phi_e_s = pybamm.Broadcast(
             pybamm.boundary_value(phi_e_n, "right"), ["separator"]
-        )  # TODO: put in real form
+        )  # TODO: add Indefinite integral!
 
         variables.update(self._get_domain_potential_variables(phi_e_s, self._domain))
         variables.update(self._get_domain_current_variables(i_e_s, self._domain))
@@ -185,9 +185,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
         if self._domain == "Negative":
             conductivity = param.sigma_n * (1 - eps) ** param.b
             phi_s = -pybamm.IndefiniteIntegral(i_s / conductivity, x_n)
-            phi_s = pybamm.Broadcast(
-                0, ["negative electrode"]
-            )  # TODO: put in real value
 
         elif self._domain == "Positive":
 
