@@ -23,9 +23,9 @@ class Composite(BaseModel):
         self.name = "Composite model"
 
         self.set_current_collector_submodel()
-        self.set_porosity_submodel()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
+        self.set_porosity_submodel()
         self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
@@ -39,7 +39,7 @@ class Composite(BaseModel):
         )
 
     def set_porosity_submodel(self):
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
 
     def set_convection_submodel(self):
         self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
@@ -66,12 +66,13 @@ class Composite(BaseModel):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FullModel(
+            self.param, ocp=True
+        )
+
         self.submodels[
             "electrolyte conductivity"
         ] = electrolyte.conductivity.CombinedOrderModel(self.param)
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FullModel(
-            self.param
-        )
 
     # def __init__(self, options=None):
     #     # Update own model with submodels

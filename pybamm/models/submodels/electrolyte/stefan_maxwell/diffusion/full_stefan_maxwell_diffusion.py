@@ -33,6 +33,9 @@ class FullModel(BaseModel):
 
         variables = self._get_standard_concentration_variables(c_e, c_e_av)
 
+        if self.ocp is True:
+            variables.update(self._get_standard_ocp_variables(c_e))
+
         return variables
 
     def get_coupled_variables(self, variables):
