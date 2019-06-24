@@ -43,7 +43,7 @@ class FullModel(BaseModel):
         eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
         # i_e = variables["Electrolyte current density"]
-        # v_box = variables["Volume-averaged velocity"]
+        v_box = variables["Volume-averaged velocity"]
 
         param = self.param
 
@@ -53,7 +53,7 @@ class FullModel(BaseModel):
 
         # N_e = N_e_diffusion + N_e_migration + N_e_convection
 
-        N_e = N_e_diffusion
+        N_e = N_e_diffusion + c_e * v_box
 
         variables.update(self._get_standard_flux_variables(N_e))
 
