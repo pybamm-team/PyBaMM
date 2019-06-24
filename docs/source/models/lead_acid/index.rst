@@ -6,3 +6,4 @@ Lead-acid models
   loqs
   composite
   newman_tiedemann
+  surface_form/index.rst

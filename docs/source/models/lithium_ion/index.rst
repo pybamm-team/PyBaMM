@@ -6,3 +6,4 @@ Lithium-ion models
   spm
   spme
   dfn
+  base_lithium_ion_model
