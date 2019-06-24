@@ -111,4 +111,9 @@ class NewmanTiedemann(BaseModel):
         Create and return the default solver for this model
         """
 
-        return pybamm.ScikitsDaeSolver()
+        if self.options["capacitance"] is False:
+            solver = pybamm.ScikitsDaeSolver()
+        elif self.options["capacitance"] is True:
+            solver = pybamm.ScikitsOdeSolver()
+
+        return solver

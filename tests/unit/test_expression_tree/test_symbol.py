@@ -258,10 +258,13 @@ class TestSymbol(unittest.TestCase):
 
         deps_dt = pybamm.Concatenation(zero_n, zero_s, zero_p)
 
+        v_box = pybamm.Scalar(0)
+
         variables = {
             "Porosity": param.epsilon,
             "Porosity change": deps_dt,
             "Interfacial current density": j,
+            "Volume-averaged velocity": v_box,
         }
 
         model = pybamm.electrolyte.stefan_maxwell.diffusion.FullModel(param)

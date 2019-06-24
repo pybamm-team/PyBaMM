@@ -25,7 +25,6 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
 class TestLeadAcidNewmanTiedemannSurfaceForm(unittest.TestCase):
     def test_well_posed(self):
         options = {"thermal": None, "Voltage": "On", "capacitance": False}
-        options = {"capacitance": "algebraic"}
         model = pybamm.lead_acid.surface_form.NewmanTiedemann(options)
         model.check_well_posedness()
 

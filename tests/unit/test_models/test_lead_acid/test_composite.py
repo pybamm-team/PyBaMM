@@ -7,31 +7,33 @@ import unittest
 
 class TestLeadAcidComposite(unittest.TestCase):
     def test_well_posed(self):
-        model = pybamm.lead_acid.Composite()
+        options = {"thermal": None, "Voltage": "On"}
+        model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        model = pybamm.lead_acid.Composite({"convection": True})
-        model.check_well_posedness()
-
-
-class TestLeadAcidCompositeCapacitance(unittest.TestCase):
-    def test_well_posed_differential(self):
-        options = {"capacitance": "differential"}
+        options = {"thermal": None, "Voltage": "On", "convection": True}
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
 
-    def test_well_posed_algebraic(self):
-        options = {"capacitance": "algebraic"}
-        model = pybamm.lead_acid.Composite(options)
+
+class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
+    def test_well_posed(self):
+        options = {"thermal": None, "Voltage": "On", "capacitance": False}
+        model = pybamm.lead_acid.surface_form.Composite(options)
+        model.check_well_posedness()
+
+    def test_well_posed_with_capacitance(self):
+        options = {"thermal": None, "Voltage": "On", "capacitance": True}
+        model = pybamm.lead_acid.surface_form.Composite(options)
         model.check_well_posedness()
 
     def test_default_solver(self):
-        options = {"capacitance": "differential"}
-        model = pybamm.lead_acid.Composite(options)
+        options = {"thermal": None, "Voltage": "On", "capacitance": True}
+        model = pybamm.lead_acid.surface_form.Composite(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
-        options = {"capacitance": "algebraic"}
-        model = pybamm.lead_acid.Composite(options)
+        options = {"thermal": None, "Voltage": "On", "capacitance": False}
+        model = pybamm.lead_acid.surface_form.Composite(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
