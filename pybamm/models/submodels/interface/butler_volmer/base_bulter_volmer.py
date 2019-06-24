@@ -55,7 +55,7 @@ class BaseModel(BaseInterface):
 
         j0_av = pybamm.average(j0)
 
-        j = j_av + (j - pybamm.average(j))  # enforce true average
+        # j = j_av + (j - pybamm.average(j))  # enforce true average
 
         eta_r_av = pybamm.average(eta_r)
 
