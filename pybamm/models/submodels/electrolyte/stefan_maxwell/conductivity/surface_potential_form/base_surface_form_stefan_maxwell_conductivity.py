@@ -172,6 +172,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         # This is a bit of a hack until we figure out how we want to take gradients of
         # non-state variables (i.e. put the bcs on without bcs)
+        # and set internal boundary conditions
         if c_e.has_symbol_of_class(pybamm.Broadcast):
             grad_c_e = pybamm.Broadcast(0, [self._domain.lower() + " electrode"])
         else:
