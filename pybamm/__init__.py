@@ -148,20 +148,30 @@ from .models.simple_ode_model import SimpleODEModel
 # Submodel classes
 #
 from .models.submodels.base_submodel import BaseSubModel
+
+# from .models.submodels import (
+#     electrode,
+#     electrolyte_current,
+#     electrolyte_diffusion,
+#     interface,
+#     particle,
+#     porosity,
+#     potential,
+#     velocity,
+#     vertical,
+#     thermal,
+# )
+
 from .models.submodels import (
+    electrolyte,
     electrode,
-    electrolyte_current,
-    electrolyte_diffusion,
-    interface,
     particle,
+    current_collector,
+    convection,
+    interface,
     porosity,
-    potential,
-    velocity,
-    vertical,
     thermal,
 )
-
-from .models.submodels import electrolyte, current_collector, convection
 
 
 #

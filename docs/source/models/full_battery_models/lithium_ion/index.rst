@@ -3,7 +3,7 @@ Lithium-ion models
 
 .. toctree::
 
+  base_lithium_ion_model
   spm
   spme
   dfn
-  base_lithium_ion_model

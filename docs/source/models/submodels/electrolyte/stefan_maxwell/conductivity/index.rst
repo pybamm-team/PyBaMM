@@ -1,7 +1,7 @@
 Stefan-Maxwell Electrolyte Conductivity Submodels
 =================================================
 
-.. totree::
+.. toctree::
 
     base_stefan_maxwell_conductivity
     leading_stefan_maxwell_conductivity

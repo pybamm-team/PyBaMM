@@ -3,6 +3,7 @@ Submodels
 
 .. toctree::
 
+  base_submodel
   electrode/index
   electrolyte/index
   interface/index
