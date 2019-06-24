@@ -27,8 +27,8 @@ class LOQS(BaseModel):
         self.set_interfacial_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
-        self.set_electrolyte_submodel()
         self.set_negative_electrode_submodel()
+        self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
 
@@ -79,64 +79,23 @@ class LOQS(BaseModel):
 
     def set_negative_electrode_submodel(self):
 
-        if self.options["surface form"] is False:
-            self.submodels["negative electrode"] = pybamm.electrode.ohm.Leading(
-                self.param, "Negative"
-            )
-        elif self.options["surface form"] is True:
-            self.submodels["negative electrode"] = pybamm.electrode.ohm.SurfaceForm(
-                self.param, "Negative"
-            )
-        else:
-            raise pybamm.OptionError(
-                "surface form option must be either 'True' or 'False'"
-            )
+        self.submodels["negative electrode"] = pybamm.electrode.ohm.Leading(
+            self.param, "Negative"
+        )
 
     def set_positive_electrode_submodel(self):
 
-        if self.options["surface form"] is False:
-            self.submodels["positive electrode"] = pybamm.electrode.ohm.Leading(
-                self.param, "Positive"
-            )
-        elif self.options["surface form"] is True:
-            self.submodels["positive electrode"] = pybamm.electrode.ohm.SurfaceForm(
-                self.param, "Positive"
-            )
-        else:
-            raise pybamm.OptionError("'surface form' must be either 'True' or 'False'")
+        self.submodels["positive electrode"] = pybamm.electrode.ohm.Leading(
+            self.param, "Positive"
+        )
 
     def set_electrolyte_submodel(self):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
-        if self.options["surface form"] is False:
-            self.submodels[
-                "electrolyte conductivity"
-            ] = electrolyte.conductivity.LeadingOrderModel(self.param)
-
-        elif self.options["surface form"] is True:
-
-            surf_form = electrolyte.conductivity.surface_potential_form
-
-            if self.options["capacitance"] is False:
-                for domain in ["Negative", "Separator", "Positive"]:
-                    self.submodels[
-                        domain.lower() + "electrolyte conductivity"
-                    ] = surf_form.LeadingOrderModel(self.param, domain)
-
-            elif self.options["capacitance"] is True:
-                for domain in ["Negative", "Separator", "Positive"]:
-                    self.submodels[
-                        domain.lower() + "electrolyte conductivity"
-                    ] = surf_form.LeadingOrderCapacitanceModel(self.param, domain)
-
-            else:
-                raise pybamm.OptionError(
-                    "'capacitance' must be either 'True' or 'False'"
-                )
-
-        else:
-            raise pybamm.OptionError("'surface form' must be either 'True' or 'False'")
+        self.submodels[
+            "electrolyte conductivity"
+        ] = electrolyte.conductivity.LeadingOrderModel(self.param)
 
         self.submodels[
             "electrolyte diffusion"

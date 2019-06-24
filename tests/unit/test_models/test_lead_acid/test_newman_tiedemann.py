@@ -7,34 +7,38 @@ import unittest
 
 class TestLeadAcidNewmanTiedemann(unittest.TestCase):
     def test_well_posed(self):
-        model = pybamm.lead_acid.NewmanTiedemann()
+        options = {"thermal": None, "Voltage": "On"}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        model = pybamm.lead_acid.NewmanTiedemann({"convection": True})
+        options = {"thermal": None, "Voltage": "On", "convection": True}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
 
     def test_default_solver(self):
-        model = pybamm.lead_acid.NewmanTiedemann()
+        options = {"thermal": None, "Voltage": "On"}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
-class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
-    def test_well_posed_differential(self):
-        options = {"capacitance": "differential"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+class TestLeadAcidNewmanTiedemannSurfaceForm(unittest.TestCase):
+    def test_well_posed(self):
+        options = {"thermal": None, "Voltage": "On", "capacitance": False}
+        options = {"capacitance": "algebraic"}
+        model = pybamm.lead_acid.surface_form.NewmanTiedemann(options)
         model.check_well_posedness()
 
-    def test_well_posed_algebraic(self):
-        options = {"capacitance": "algebraic"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+    def test_well_posed_with_capacitance(self):
+        options = {"thermal": None, "Voltage": "On", "capacitance": True}
+        model = pybamm.lead_acid.surface_form.NewmanTiedemann(options)
         model.check_well_posedness()
 
     def test_default_solver(self):
-        options = {"capacitance": "differential"}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        options = {"thermal": None, "Voltage": "On", "capacitance": True}
+        model = pybamm.lead_acid.surface_form.NewmanTiedemann(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
-        options = {"capacitance": "algebraic"}
+        options = {"thermal": None, "Voltage": "On", "capacitance": False}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 

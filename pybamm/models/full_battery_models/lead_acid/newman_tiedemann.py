@@ -135,8 +135,10 @@ class NewmanTiedemann(BaseModel):
     #     c_e_n, _, c_e_p = c_e.orphans
 
     #     # Potentials
-    #     delta_phi_n = self.variables["Negative electrode surface potential difference"]
-    #     delta_phi_p = self.variables["Positive electrode surface potential difference"]
+    #     delta_phi_n = self.variables["Negative electrode surface potential
+    # difference"]
+    #     delta_phi_p = self.variables["Positive electrode surface potential
+    # difference"]
     #     ocp_n = param.U_n(c_e_n)
     #     ocp_p = param.U_p(c_e_p)
     #     eta_r_n = delta_phi_n - ocp_n
@@ -181,7 +183,8 @@ class NewmanTiedemann(BaseModel):
     # def set_convection_submodel(self):
     #     velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
     #     if self.options["convection"] is not False:
-    #         self.variables["Electrolyte pressure"] = pybamm.standard_variables.pressure
+    #         self.variables["Electrolyte pressure"] =
+    # pybamm.standard_variables.pressure
     #         velocity_model.set_algebraic_system(self.variables)
     #         self.update(velocity_model)
     #     else:
@@ -195,7 +198,8 @@ class NewmanTiedemann(BaseModel):
     #     reactions = self.reactions
 
     #     # Electrolyte diffusion model
-    #     electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+    #     electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell
+    # (param)
     #     electrolyte_diffusion_model.set_differential_system(self.variables, reactions)
     #     self.update(electrolyte_diffusion_model)
 
@@ -242,8 +246,4 @@ class NewmanTiedemann(BaseModel):
         """
         Create and return the default solver for this model
         """
-        # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["capacitance"] == "differential":
-            return pybamm.ScikitsOdeSolver()
-        else:
-            return pybamm.ScikitsDaeSolver()
+        return pybamm.ScikitsDaeSolver()

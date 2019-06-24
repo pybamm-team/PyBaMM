@@ -25,6 +25,7 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         self.param.epsilon_p = pybamm.Scalar(1)
 
         self.set_current_collector_submodel()
+        self.set_convection_submodel()
         self.set_porosity_submodel()
         self.set_interfacial_submodel()
         self.set_electrolyte_submodel()
@@ -92,6 +93,9 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
 
     def set_porosity_submodel(self):
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+
+    def set_convection_submodel(self):
+        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
 
     def set_electrolyte_submodel(self):
         electrolyte = pybamm.electrolyte.stefan_maxwell
