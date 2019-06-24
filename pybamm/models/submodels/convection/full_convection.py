@@ -33,7 +33,7 @@ class FullModel(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        _, dVbox_dz = self._separator_velocities(variables)
+        _, dVbox_dz = self._separator_velocity(variables)
 
         variables.update(self._get_standard_vertical_velocity_variables(dVbox_dz))
 
@@ -42,7 +42,7 @@ class FullModel(BaseModel):
     def set_algebraic(self, variables):
         p = variables["Electrolyte pressure"]
         j = variables["Interfacial current density"]
-        v_box = variables["Volume-average velocity"]
+        v_box = variables["Volume-averaged velocity"]
         dVbox_dz = variables["Vertical volume-averaged acceleration"]
 
         self.algebraic = {p: pybamm.div(v_box) + dVbox_dz - self.param.beta * j}
@@ -50,9 +50,12 @@ class FullModel(BaseModel):
     def set_boundary_conditions(self, variables):
         p = variables["Electrolyte pressure"]
         self.boundary_conditions = {
-            p: {"left": (0, "Dirichlet"), "right": (0, "Neumann")}
+            p: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
         }
 
     def set_initial_conditions(self, variables):
         p = variables["Electrolyte pressure"]
-        self.initial_conditions = {p: 0}
+        self.initial_conditions = {p: pybamm.Scalar(0)}
