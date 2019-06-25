@@ -8,12 +8,10 @@ import pybamm
 class OldVertical(pybamm.OldSubModel):
     """
     Vertical submodel
-
     Parameters
     ----------
     set_of_parameters : parameter class
         The parameters to use for this submodel
-
     *Extends:* :class:`pybamm.SubModel`
     """
 
@@ -31,7 +29,6 @@ class OldVertical(pybamm.OldSubModel):
     def set_leading_order_vertical_current(self, bc_variables):
         """ Set the system that gives the leading-order current in the current
         collectors.
-
         Parameters
         ----------
         bc_variables : dict of :class:`pybamm.Symbol`

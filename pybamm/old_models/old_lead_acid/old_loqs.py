@@ -1,24 +1,22 @@
 #
-# Old Lead-acid LOQS model
+# Lead-acid LOQS model
 #
 import pybamm
 
 
 class OldLOQS(pybamm.OldLeadAcidBaseModel):
     """Leading-Order Quasi-Static model for lead-acid, from [1]_.
-
     References
     ----------
     .. [1] V Sulzer, SJ Chapman, CP Please, DA Howey, and CW Monroe. Faster Lead-Acid
            Battery Simulations from Porous-Electrode Theory: II. Asymptotic Analysis.
            arXiv preprint arXiv:1902.01774, 2019.
-
     **Extends:** :class:`pybamm.LeadAcidBaseModel`
     """
 
     def __init__(self, options=None):
         super().__init__(options)
-        self.name = "LOQS model"
+        self.name = "Old LOQS model"
 
         self.set_model_variables()
         self.set_boundary_conditions(self.variables)
@@ -278,9 +276,7 @@ class OldLOQS(pybamm.OldLeadAcidBaseModel):
         param = self.set_of_parameters
 
         oec = pybamm.old_electrolyte_current
-
         elyte_postproc_model = oec.OldElectrolyteCurrentBaseModel(param)
-
         # Electrolyte current
         elyte_vars = elyte_postproc_model.get_explicit_leading_order(self.variables)
         self.variables.update(elyte_vars)

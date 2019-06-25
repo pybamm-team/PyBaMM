@@ -10,10 +10,8 @@ import warnings
 
 class OldBaseModel(object):
     """Base model class for other models to extend.
-
     Attributes
     ----------
-
     rhs: dict
         A dictionary that maps expressions (variables) to expressions that represent
         the rhs
@@ -36,7 +34,6 @@ class OldBaseModel(object):
     events: list
         A list of events that should cause the solver to terminate (e.g. concentration
         goes negative)
-
     """
 
     def __init__(self):
@@ -200,7 +197,6 @@ class OldBaseModel(object):
     def update(self, *submodels):
         """
         Update model to add new physics from submodels
-
         Parameters
         ----------
         submodel : iterable of :class:`pybamm.BaseModel`
@@ -238,7 +234,6 @@ class OldBaseModel(object):
         variable/equation pair in self.rhs
         - There are appropriate boundary conditions in self.boundary_conditions for each
         variable/equation pair in self.rhs and self.algebraic
-
         Parameters
         ----------
         post_discretisation : boolean
@@ -395,7 +390,6 @@ class OldBaseModel(object):
 class OldStandardBatteryBaseModel(OldBaseModel):
     """
     Base model class with some default settings and required variables
-
     **Extends:** :class:`StandardBatteryBaseModel`
     """
 
@@ -517,7 +511,9 @@ class OldStandardBatteryBaseModel(OldBaseModel):
 
         # Some standard checks to make sure options are compatible
         if (
-            isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
+            isinstance(
+                self, (pybamm.old_lead_acid.OldLOQS, pybamm.old_lead_acid.OldComposite)
+            )
             and options["capacitance"] is False
         ):
             if options["bc_options"]["dimensionality"] == 1:
@@ -665,9 +661,7 @@ class OldLeadAcidBaseModel(OldStandardBatteryBaseModel):
     """
     Overwrites default parameters from Base Model with default parameters for
     lead-acid models
-
     **Extends:** :class:`StandardBatteryBaseModel`
-
     """
 
     def __init__(self, options=None):
@@ -733,9 +727,7 @@ class OldLithiumIonBaseModel(OldStandardBatteryBaseModel):
     """
     Overwrites default parameters from Base Model with default parameters for
     lithium-ion models
-
     **Extends:** :class:`StandardBatteryBaseModel`
-
     """
 
     def __init__(self, options=None):
@@ -780,3 +772,4 @@ class OldLithiumIonBaseModel(OldStandardBatteryBaseModel):
                 "r_p [m]": var.r_p * param.R_p,
             }
         )
+
