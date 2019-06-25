@@ -174,7 +174,7 @@ from .old_models.old_base_models import (
     OldStandardBatteryBaseModel,
     OldSubModel,
 )
-from .old_models import old_lead_acid_models
+from .old_models import old_lead_acid
 
 from .old_models.old_submodels import (
     old_current_collector,

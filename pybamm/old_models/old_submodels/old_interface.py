@@ -287,7 +287,7 @@ class OldInterfacialReaction(pybamm.OldSubModel):
         ocp_n = param.U_n(c_e_n)
         ocp_p = param.U_p(c_e_p)
 
-        pot_model = pybamm.potential.Potential(param)
+        pot_model = pybamm.old_potential.OldPotential(param)
         return pot_model.get_all_potentials(
             (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
         )
@@ -346,7 +346,9 @@ class OldInterfacialReaction(pybamm.OldSubModel):
         i_e_n = pybamm.IndefiniteIntegral(j_n, x_n)
         # Shift i_e_p to be equal to 0 at x_p = 1
         i_e_p = pybamm.IndefiniteIntegral(j_p, x_p) - pybamm.Integral(j_p, x_p)
-        eleclyte_model = pybamm.electrolyte_current.ElectrolyteCurrentBaseModel(param)
+        eleclyte_model = pybamm.old_electrolyte_current.OldElectrolyteCurrentBaseModel(
+            param
+        )
         eleclyte_variables = eleclyte_model.get_current_variables(
             (i_e_n, i_e_p), i_boundary_cc
         )
@@ -354,7 +356,7 @@ class OldInterfacialReaction(pybamm.OldSubModel):
         # Electrode current
         i_s_n = i_boundary_cc - i_e_n
         i_s_p = i_boundary_cc - i_e_p
-        electrode_model = pybamm.electrode.Ohm(param)
+        electrode_model = pybamm.old_electrode.OldOhm(param)
         electrode_variables = electrode_model.get_current_variables(i_s_n, i_s_p)
         return {**eleclyte_variables, **electrode_variables}
 

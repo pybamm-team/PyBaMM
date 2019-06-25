@@ -127,7 +127,7 @@ class OldComposite(pybamm.OldLeadAcidBaseModel):
         # Potentials
         ocp_n = param.U_n(c_e_n)
         ocp_p = param.U_p(c_e_p)
-        pot_model = pybamm.potential.Potential(param)
+        pot_model = pybamm.old_potential.OldPotential(param)
         potential_vars = pot_model.get_all_potentials(
             (ocp_n, ocp_p), delta_phi=(delta_phi_n, delta_phi_p)
         )
