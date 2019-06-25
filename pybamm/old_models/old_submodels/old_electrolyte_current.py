@@ -4,7 +4,7 @@
 import pybamm
 
 
-class OldElectrolyteCurrentBaseModel(pybamm.OldBaseSubModel):
+class OldElectrolyteCurrentBaseModel(pybamm.OldSubModel):
     """
     Base model for the potential and current in the electrolyte
 

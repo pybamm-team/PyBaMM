@@ -4,7 +4,7 @@
 import pybamm
 
 
-class OldOhm(pybamm.OldBaseSubModel):
+class OldOhm(pybamm.OldSubModel):
     """Ohm's law + conservation of current for the current in the electrodes.
 
     Parameters

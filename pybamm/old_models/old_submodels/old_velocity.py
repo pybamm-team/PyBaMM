@@ -4,7 +4,7 @@
 import pybamm
 
 
-class OldVelocity(pybamm.OldBaseSubModel):
+class OldVelocity(pybamm.OldSubModel):
     """Electrolyte velocity
 
     Parameters

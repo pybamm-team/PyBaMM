@@ -5,7 +5,7 @@
 import pybamm
 
 
-class OldVertical(pybamm.OldBaseSubModel):
+class OldVertical(pybamm.OldSubModel):
     """
     Vertical submodel
 

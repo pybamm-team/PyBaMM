@@ -392,7 +392,7 @@ class OldBaseModel(object):
                 )
 
 
-class OldStandardBatteryBaseModel(BaseModel):
+class OldStandardBatteryBaseModel(OldBaseModel):
     """
     Base model class with some default settings and required variables
 

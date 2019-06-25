@@ -4,7 +4,7 @@
 import pybamm
 
 
-class OldStefanMaxwell(pybamm.OldBaseSubModel):
+class OldStefanMaxwell(pybamm.OldSubModel):
     """"A class that generates the expression tree for Stefan-Maxwell Diffusion in the
     electrolyte.
 
