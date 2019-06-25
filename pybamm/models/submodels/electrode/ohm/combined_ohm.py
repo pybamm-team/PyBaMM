@@ -67,7 +67,6 @@ class Combined(BaseModel):
         if self._domain == "Positive":
             variables.update(self._get_standard_whole_cell_current_variables(variables))
 
-        # delta_phi_s_av = -i_boundary_cc / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
         return variables
 
     @property
