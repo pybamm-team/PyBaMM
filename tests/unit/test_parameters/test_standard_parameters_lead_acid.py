@@ -31,7 +31,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
         parameters = pybamm.standard_parameters_lead_acid
-        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         param_eval = pybamm.print_parameters(parameters, parameter_values)
         param_eval = {k: v[0] for k, v in param_eval.items()}
 
@@ -160,7 +160,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_update_initial_state_of_charge(self):
         # Load parameters to be tested
         parameters = pybamm.standard_parameters_lead_acid
-        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         param_eval = pybamm.print_parameters(parameters, parameter_values)
         param_eval = {k: v[0] for k, v in param_eval.items()}
 
