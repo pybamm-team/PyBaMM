@@ -1,10 +1,10 @@
 #
-# Lead-acid Newman-Tiedemann model
+# Old Lead-acid Newman-Tiedemann model
 #
 import pybamm
 
 
-class OldNewmanTiedemann(pybamm.LeadAcidBaseModel):
+class OldNewmanTiedemann(pybamm.OldLeadAcidBaseModel):
     """Porous electrode model for lead-acid, from [1]_.
 
     References
@@ -18,7 +18,7 @@ class OldNewmanTiedemann(pybamm.LeadAcidBaseModel):
 
     def __init__(self, options=None):
         super().__init__(options)
-        self.name = "Newman-Tiedemann model"
+        self.name = "Old Newman-Tiedemann model"
 
         self.set_model_variables()
         self.set_boundary_conditions(None)
@@ -70,7 +70,7 @@ class OldNewmanTiedemann(pybamm.LeadAcidBaseModel):
         param = self.set_of_parameters
 
         # Exchange-current density
-        int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
+        int_curr_model = pybamm.old_interface_lead_acid.OldMainReaction(param)
         c_e = self.variables["Electrolyte concentration"]
         c_e_n, _, c_e_p = c_e.orphans
 
@@ -81,7 +81,7 @@ class OldNewmanTiedemann(pybamm.LeadAcidBaseModel):
         ocp_p = param.U_p(c_e_p)
         eta_r_n = delta_phi_n - ocp_n
         eta_r_p = delta_phi_p - ocp_p
-        pot_model = pybamm.potential.Potential(param)
+        pot_model = pybamm.old_potential.OldPotential(param)
         potential_vars = pot_model.get_all_potentials(
             (ocp_n, ocp_p), (eta_r_n, eta_r_p), (delta_phi_n, delta_phi_p)
         )
@@ -104,7 +104,7 @@ class OldNewmanTiedemann(pybamm.LeadAcidBaseModel):
         }
 
     def set_porosity_submodel(self):
-        porosity_model = pybamm.porosity.Standard(self.set_of_parameters)
+        porosity_model = pybamm.old_porosity.OldStandard(self.set_of_parameters)
         porosity_model.set_differential_system(self.variables)
         self.update(porosity_model)
 
@@ -114,7 +114,7 @@ class OldNewmanTiedemann(pybamm.LeadAcidBaseModel):
         ]
 
     def set_convection_submodel(self):
-        velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
+        velocity_model = pybamm.old_velocity.OldVelocity(self.set_of_parameters)
         if self.options["convection"] is not False:
             self.variables["Electrolyte pressure"] = pybamm.standard_variables.pressure
             velocity_model.set_algebraic_system(self.variables)
@@ -130,7 +130,9 @@ class OldNewmanTiedemann(pybamm.LeadAcidBaseModel):
         reactions = self.reactions
 
         # Electrolyte diffusion model
-        electrolyte_diffusion_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        electrolyte_diffusion_model = pybamm.old_electrolyte_diffusion.OldStefanMaxwell(
+            param
+        )
         electrolyte_diffusion_model.set_differential_system(self.variables, reactions)
         self.update(electrolyte_diffusion_model)
 
@@ -142,13 +144,12 @@ class OldNewmanTiedemann(pybamm.LeadAcidBaseModel):
         pos = ["positive electrode"]
 
         if self.options["capacitance"] is False:
-            eleclyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
-                param
-            )
+            oec = pybamm.old_electrolyte_current
+            eleclyte_current_model = oec.OldMacInnesStefanMaxwell(param)
             eleclyte_current_model.set_algebraic_system(self.variables, reactions)
 
             # Electrode model
-            electrode_current_model = pybamm.electrode.Ohm(param)
+            electrode_current_model = pybamm.old_electrode.OldOhm(param)
             electrode_current_model.set_algebraic_system(variables, reactions, neg)
             electrode_current_model.set_algebraic_system(variables, reactions, pos)
             self.update(eleclyte_current_model, electrode_current_model)
@@ -161,7 +162,8 @@ class OldNewmanTiedemann(pybamm.LeadAcidBaseModel):
             self.variables.update({**pot_vars, **curr_vars})
         else:
             # Electrolyte current
-            eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
+            oec = pybamm.old_electrolyte_current
+            eleclyte_current_model = oec.OldMacInnesCapacitance(
                 param, self.options["capacitance"]
             )
             eleclyte_current_model.set_full_system(variables, reactions, neg)

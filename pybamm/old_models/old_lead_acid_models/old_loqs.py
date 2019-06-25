@@ -1,10 +1,10 @@
 #
-# Lead-acid LOQS model
+# Old Lead-acid LOQS model
 #
 import pybamm
 
 
-class OldLOQS(pybamm.LeadAcidBaseModel):
+class OldLOQS(pybamm.OldLeadAcidBaseModel):
     """Leading-Order Quasi-Static model for lead-acid, from [1]_.
 
     References
@@ -80,7 +80,7 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
             current_bc = param.current_with_time
             self.variables["Current collector current density"] = current_bc
         elif dimensionality == 1:
-            current_collector_model = pybamm.vertical.Vertical(param)
+            current_collector_model = pybamm.old_vertical.OldVertical(param)
             current_collector_model.set_leading_order_vertical_current(bc_variables)
             self.update(current_collector_model)
 
@@ -99,8 +99,8 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
         i_boundary_cc = self.variables["Current collector current density"]
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        main_curr_model = pybamm.interface_lead_acid.MainReaction(param)
-        pot_model = pybamm.potential.Potential(param)
+        main_curr_model = pybamm.old_interface_lead_acid.OldMainReaction(param)
+        pot_model = pybamm.old_potential.OldPotential(param)
 
         # Interfacial parameters
         j0_n = main_curr_model.get_exchange_current_densities(c_e, neg)
@@ -132,11 +132,11 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
         delta_phi_p = self.variables["Positive electrode surface potential difference"]
         neg = ["negative electrode"]
         pos = ["positive electrode"]
-        pot_model = pybamm.potential.Potential(param)
+        pot_model = pybamm.old_potential.OldPotential(param)
         self.reactions = {}
 
         # Main reaction
-        main_curr_model = pybamm.interface_lead_acid.MainReaction(param)
+        main_curr_model = pybamm.old_interface_lead_acid.OldMainReaction(param)
         j0_n = main_curr_model.get_exchange_current_densities(c_e, neg)
         j0_p = main_curr_model.get_exchange_current_densities(c_e, pos)
         ocp_n = param.U_n(c_e)
@@ -155,7 +155,7 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
         self.variables.update(pot_vars)
 
         # Oxygen reaction
-        oxygen_curr_model = pybamm.interface_lead_acid.OxygenReaction(param)
+        oxygen_curr_model = pybamm.old_interface_lead_acid.OldOxygenReaction(param)
         if "oxygen" in self.options["side reactions"]:
             c_ox = pybamm.Variable("Oxygen concentration", self.curr_coll_domain)
             self.variables["Oxygen concentration"] = c_ox
@@ -176,7 +176,9 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
     def set_interfacial_surface_area_submodel(self):
         param = self.set_of_parameters
         if self.options["interfacial surface area"] == "varying":
-            surface_area_model = pybamm.interface_lead_acid.VaryingSurfaceArea(param)
+            surface_area_model = pybamm.old_interface_lead_acid.OldVaryingSurfaceArea(
+                param
+            )
             for dom in ["Negative electrode", "Positive electrode"]:
                 self.variables[dom + " utilisation"] = pybamm.Variable(
                     dom + " utilisation", self.curr_coll_domain
@@ -187,7 +189,9 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
             surface_area_model.set_differential_system(self.variables, pos, True)
             self.update(surface_area_model)
         else:
-            surface_area_model = pybamm.interface_lead_acid.ConstantSurfaceArea(param)
+            surface_area_model = pybamm.old_interface_lead_acid.OldConstantSurfaceArea(
+                param
+            )
             zero = pybamm.Scalar(0)
             surface_area_vars = surface_area_model.get_variables(zero, zero)
             self.variables.update(surface_area_vars)
@@ -226,7 +230,8 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
 
     def set_electrolyte_current_submodel(self):
         if self.options["capacitance"] is not False:
-            eleclyte_current_model = pybamm.electrolyte_current.MacInnesCapacitance(
+            oec = pybamm.old_electrolyte_current
+            eleclyte_current_model = oec.OldMacInnesCapacitance(
                 self.set_of_parameters, self.options["capacitance"]
             )
             eleclyte_current_model.set_leading_order_system(
@@ -239,7 +244,7 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
 
     def set_porosity_submodel(self):
         param = self.set_of_parameters
-        porosity_model = pybamm.porosity.Standard(param)
+        porosity_model = pybamm.old_porosity.OldStandard(param)
         porosity_model.set_leading_order_system(self.variables)
         self.update(porosity_model)
 
@@ -257,10 +262,10 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
 
     def set_diffusion_submodels(self):
         param = self.set_of_parameters
-        eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        eleclyte_conc_model = pybamm.old_electrolyte_diffusion.OldStefanMaxwell(param)
         eleclyte_conc_model.set_leading_order_system(self.variables, self.reactions)
         self.update(eleclyte_conc_model)
-        oxygen_conc_model = pybamm.oxygen_diffusion.StefanMaxwell(param)
+        oxygen_conc_model = pybamm.old_oxygen_diffusion.OldStefanMaxwell(param)
         if "oxygen" in self.options["side reactions"]:
             oxygen_conc_model.set_leading_order_system(self.variables, self.reactions)
             self.update(oxygen_conc_model)
@@ -272,15 +277,16 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
     def set_current_variables(self):
         param = self.set_of_parameters
 
-        elyte_postproc_model = pybamm.electrolyte_current.ElectrolyteCurrentBaseModel(
-            param
-        )
+        oec = pybamm.old_electrolyte_current
+
+        elyte_postproc_model = oec.OldElectrolyteCurrentBaseModel(param)
+
         # Electrolyte current
         elyte_vars = elyte_postproc_model.get_explicit_leading_order(self.variables)
         self.variables.update(elyte_vars)
 
         # Electrode
-        electrode_model = pybamm.electrode.Ohm(param)
+        electrode_model = pybamm.old_electrode.OldOhm(param)
         electrode_vars = electrode_model.get_explicit_leading_order(self.variables)
         self.variables.update(electrode_vars)
 
@@ -293,7 +299,7 @@ class OldLOQS(pybamm.LeadAcidBaseModel):
         self.events["Minimum voltage cut-off"] = voltage - param.voltage_low_cut
 
     def set_convection_variables(self):
-        velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
+        velocity_model = pybamm.old_velocity.OldVelocity(self.set_of_parameters)
         if self.options["convection"] is not False:
             velocity_vars = velocity_model.get_explicit_leading_order(self.variables)
             self.variables.update(velocity_vars)

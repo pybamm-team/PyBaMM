@@ -4,7 +4,7 @@
 import pybamm
 
 
-class OldComposite(pybamm.LeadAcidBaseModel):
+class OldComposite(pybamm.OldLeadAcidBaseModel):
     """Composite model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`.
 
@@ -37,7 +37,7 @@ class OldComposite(pybamm.LeadAcidBaseModel):
         self.name = "Composite model"
 
         # Leading order model and variables
-        leading_order_model = pybamm.lead_acid.LOQS(options)
+        leading_order_model = pybamm.old_lead_acid.OldLOQS(options)
         self.update(leading_order_model)
         self.reactions = leading_order_model.reactions
         self.leading_order_variables = leading_order_model.variables
@@ -47,7 +47,9 @@ class OldComposite(pybamm.LeadAcidBaseModel):
 
         # Submodels
         self.set_boundary_conditions(None)
-        int_curr_model = pybamm.interface_lead_acid.MainReaction(self.set_of_parameters)
+        int_curr_model = pybamm.old_interface_lead_acid.OldMainReaction(
+            self.set_of_parameters
+        )
         self.set_diffusion_submodel()
         self.set_electrolyte_current_model(int_curr_model)
         self.set_current_variables()
@@ -71,7 +73,9 @@ class OldComposite(pybamm.LeadAcidBaseModel):
         self.reactions["main"]["neg"]["aj"] = j_n_0
         self.reactions["main"]["pos"]["aj"] = j_p_0
         self.reactions["main"]["porosity change"] = self.variables["Porosity change"]
-        electrolyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
+        electrolyte_conc_model = pybamm.old_electrolyte_diffusion.OldStefanMaxwell(
+            param
+        )
         electrolyte_conc_model.set_differential_system(self.variables, self.reactions)
         self.update(electrolyte_conc_model)
 
@@ -90,10 +94,9 @@ class OldComposite(pybamm.LeadAcidBaseModel):
         param = self.set_of_parameters
 
         # Load electrolyte and electrode potentials
-        electrode_model = pybamm.electrode.Ohm(param)
-        electrolyte_current_model = pybamm.electrolyte_current.MacInnesStefanMaxwell(
-            param
-        )
+        electrode_model = pybamm.old_electrode.OldOhm(param)
+        oec = pybamm.old_electrolyte_current
+        electrolyte_current_model = oec.OldMacInnesStefanMaxwell(param)
 
         # Negative electrode potential
         phi_s_n = electrode_model.get_neg_pot_explicit_combined(self.variables)
@@ -171,7 +174,7 @@ class OldComposite(pybamm.LeadAcidBaseModel):
 
     def set_convection_variables(self):
         pybamm.logger.debug("Setting convection variables")
-        velocity_model = pybamm.velocity.Velocity(self.set_of_parameters)
+        velocity_model = pybamm.old_velocity.OldVelocity(self.set_of_parameters)
         if self.options["convection"] is not False:
             velocity_vars = velocity_model.get_explicit_composite(self.variables)
             self.variables.update(velocity_vars)
