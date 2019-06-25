@@ -49,7 +49,7 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_capacitance(self):
         options = {
             "thermal": None,
