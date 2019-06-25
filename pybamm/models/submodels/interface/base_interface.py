@@ -102,12 +102,14 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
 
         variables = {
-            self._domain + " reaction overpotential": eta_r,
-            "Average " + self._domain.lower() + " reaction overpotential": eta_r_av,
-            self._domain + " reaction overpotential [V]": eta_r * pot_scale,
+            self._domain + " electrode reaction overpotential": eta_r,
             "Average "
             + self._domain.lower()
-            + " reaction overpotential [V]": eta_r_av * pot_scale,
+            + " electrode reaction overpotential": eta_r_av,
+            self._domain + " electrode reaction overpotential [V]": eta_r * pot_scale,
+            "Average "
+            + self._domain.lower()
+            + " electrode reaction overpotential [V]": eta_r_av * pot_scale,
         }
 
         return variables
@@ -116,6 +118,10 @@ class BaseInterface(pybamm.BaseSubModel):
         self, delta_phi, delta_phi_av
     ):
 
+        if self._domain == "Negative":
+            ocp_ref = self.param.U_n_ref
+        elif self._domain == "Positive":
+            ocp_ref = self.param.U_p_ref
         pot_scale = self.param.potential_scale
 
         variables = {
@@ -124,10 +130,12 @@ class BaseInterface(pybamm.BaseSubModel):
             + self._domain.lower()
             + " electrode surface potential difference": delta_phi_av,
             self._domain
-            + " electrode surface potential difference [V]": delta_phi * pot_scale,
+            + " electrode surface potential difference [V]": ocp_ref
+            + delta_phi * pot_scale,
             "Average "
             + self._domain.lower()
-            + " electrode surface potential difference [V]": delta_phi_av * pot_scale,
+            + " electrode surface potential difference [V]": ocp_ref
+            + delta_phi_av * pot_scale,
         }
 
         return variables

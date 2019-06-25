@@ -41,7 +41,7 @@ class Leading(BaseModel):
 
         elif self._domain == "Positive":
             ocp_p_av = variables["Average positive electrode open circuit potential"]
-            eta_r_p_av = variables["Average positive reaction overpotential"]
+            eta_r_p_av = variables["Average positive electrode reaction overpotential"]
             phi_e_p_av = variables["Average positive electrolyte potential"]
 
             v = ocp_p_av + eta_r_p_av + phi_e_p_av

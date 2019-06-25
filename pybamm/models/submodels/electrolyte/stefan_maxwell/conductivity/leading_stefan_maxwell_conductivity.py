@@ -24,7 +24,7 @@ class LeadingOrderModel(BaseModel):
     def get_coupled_variables(self, variables):
 
         ocp_n_av = variables["Average negative electrode open circuit potential"]
-        eta_r_n_av = variables["Average negative reaction overpotential"]
+        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
         phi_s_n_av = variables["Average negative electrode potential"]
         i_boundary_cc = variables["Current collector current density"]
 

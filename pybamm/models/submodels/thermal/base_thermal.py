@@ -51,8 +51,8 @@ class BaseModel(pybamm.BaseSubModel):
         j_n = variables["Negative electrode interfacial current density"]
         j_p = variables["Positive electrode interfacial current density"]
 
-        eta_r_n = variables["Negative reaction overpotential"]
-        eta_r_p = variables["Positive reaction overpotential"]
+        eta_r_n = variables["Negative electrode reaction overpotential"]
+        eta_r_p = variables["Positive electrode reaction overpotential"]
 
         dUdT_n = variables["Negative electrode entropic change"]
         dUdT_p = variables["Positive electrode entropic change"]

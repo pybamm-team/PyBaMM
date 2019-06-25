@@ -332,10 +332,14 @@ class BaseBatteryModel(pybamm.BaseModel):
         ocv_dim = ocp_p_right_dim - ocp_n_left_dim
 
         # overpotentials
-        eta_r_n_av = self.variables["Average negative reaction overpotential"]
-        eta_r_n_av_dim = self.variables["Average negative reaction overpotential [V]"]
-        eta_r_p_av = self.variables["Average positive reaction overpotential"]
-        eta_r_p_av_dim = self.variables["Average positive reaction overpotential [V]"]
+        eta_r_n_av = self.variables["Average negative electrode reaction overpotential"]
+        eta_r_n_av_dim = self.variables[
+            "Average negative electrode reaction overpotential [V]"
+        ]
+        eta_r_p_av = self.variables["Average positive electrode reaction overpotential"]
+        eta_r_p_av_dim = self.variables[
+            "Average positive electrode reaction overpotential [V]"
+        ]
 
         delta_phi_s_n_av = self.variables["Average negative electrode ohmic losses"]
         delta_phi_s_n_av_dim = self.variables[
@@ -357,6 +361,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         phi_s_p_dim = self.variables["Positive electrode potential [V]"]
         V = pybamm.BoundaryValue(phi_s_p, "right")
         V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
+
+        # TODO: add current collector losses to the voltage in 3D
 
         self.variables.update(
             {

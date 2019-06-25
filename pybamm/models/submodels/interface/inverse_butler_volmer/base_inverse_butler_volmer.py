@@ -29,6 +29,8 @@ class BaseModel(BaseInterface):
         Returns variables which are derived from the fundamental variables in the model.
         """
 
+        ocp = variables[self._domain + " electrode open circuit potential"]
+
         j0 = self._get_exchange_current_density(variables)
         j0_av = pybamm.average(j0)
         j_av = self._get_average_interfacial_current_density(variables)
@@ -42,9 +44,17 @@ class BaseModel(BaseInterface):
         eta_r = (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
         eta_r_av = pybamm.average(eta_r)
 
+        delta_phi = eta_r + ocp
+        delta_phi_av = pybamm.average(delta_phi)
+
         variables.update(self._get_standard_interfacial_current_variables(j, j_av))
         variables.update(self._get_standard_exchange_current_variables(j0, j0_av))
         variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
+        variables.update(
+            self._get_standard_surface_potential_difference_variables(
+                delta_phi, delta_phi_av
+            )
+        )
 
         if self._domain == "Positive":
             variables.update(
