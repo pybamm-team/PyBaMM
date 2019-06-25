@@ -45,7 +45,7 @@ class Combined(BaseModel):
 
         elif self._domain == "Positive":
             ocp_p_av = variables["Average positive electrode open circuit potential"]
-            eta_r_p_av = variables["Average positive reaction overpotential"]
+            eta_r_p_av = variables["Average positive electrode reaction overpotential"]
             phi_e_p_av = variables["Average positive electrolyte potential"]
 
             sigma_eff = self.param.sigma_p * (1 - eps)

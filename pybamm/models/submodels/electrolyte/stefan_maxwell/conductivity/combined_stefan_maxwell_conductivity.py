@@ -30,7 +30,7 @@ class CombinedOrderModel(BaseModel):
         c_e = variables["Electrolyte concentration"]
         c_e_av = variables["Average electrolyte concentration"]
         ocp_n_av = variables["Average negative electrode open circuit potential"]
-        eta_r_n_av = variables["Average negative reaction overpotential"]
+        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
         phi_s_n_av = variables["Average negative electrode potential"]
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
