@@ -329,7 +329,7 @@ class OldInterfacialReaction(pybamm.OldSubModel):
         # Set derived potential
         ocp_n_bar = param.U_n(c_e_n_bar)
         ocp_p_bar = param.U_p(c_e_p_bar)
-        pot_model = pybamm.potential.Potential(param)
+        pot_model = pybamm.old_potential.OldPotential(param)
         return pot_model.get_all_potentials(
             (ocp_n_bar, ocp_p_bar), eta_r=(eta_r_n_bar, eta_r_p_bar)
         )
