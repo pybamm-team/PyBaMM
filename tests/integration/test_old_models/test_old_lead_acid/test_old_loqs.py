@@ -11,14 +11,12 @@ import numpy as np
 class TestOldLeadAcidLOQS(unittest.TestCase):
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):
-        options = {"thermal": None, "Voltage": "On"}
-        model = pybamm.lead_acid.LOQS(options)
+        model = pybamm.old_lead_acid.OldLOQS()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"thermal": None, "Voltage": "On"}
-        model = pybamm.lead_acid.LOQS(options)
+        model = pybamm.old_lead_acid.OldLOQS()
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
@@ -33,8 +31,7 @@ class TestOldLeadAcidLOQS(unittest.TestCase):
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_charge(self):
-        options = {"thermal": None, "Voltage": "On"}
-        model = pybamm.lead_acid.LOQS(options)
+        model = pybamm.old_lead_acid.OldLOQS()
         parameter_values = model.default_parameter_values
         parameter_values.update({"Typical current [A]": -1})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
@@ -42,8 +39,7 @@ class TestOldLeadAcidLOQS(unittest.TestCase):
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_zero_current(self):
-        options = {"thermal": None, "Voltage": "On"}
-        model = pybamm.lead_acid.LOQS(options)
+        model = pybamm.old_lead_acid.OldLOQS()
         parameter_values = model.default_parameter_values
         parameter_values.update({"Typical current [A]": 0})
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
@@ -51,7 +47,7 @@ class TestOldLeadAcidLOQS(unittest.TestCase):
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_convection(self):
-        model = pybamm.lead_acid.LOQS(
+        model = pybamm.old_lead_acid.OldLOQS(
             {"convection": True, "thermal": None, "Voltage": "On"}
         )
         modeltest = tests.StandardModelTest(model)
