@@ -7,7 +7,7 @@ import unittest
 
 
 @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
-class TestOhm(unittest.TestCase):
+class TestOldOhm(unittest.TestCase):
     def test_default_solver(self):
         param = pybamm.standard_parameters_lithium_ion
         model = pybamm.old_electrode.OldOhm(param)
