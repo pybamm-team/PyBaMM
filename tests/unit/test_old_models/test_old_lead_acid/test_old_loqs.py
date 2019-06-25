@@ -30,7 +30,7 @@ class TestOldLeadAcidLOQS(unittest.TestCase):
             pybamm.old_lead_acid.OldLOQS(options)
 
 
-class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
+class TestOldLeadAcidLOQSWithSideReactions(unittest.TestCase):
     def test_well_posed(self):
         options = {"capacitance": "differential", "side reactions": ["oxygen"]}
         model = pybamm.old_lead_acid.OldLOQS(options)

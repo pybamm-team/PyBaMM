@@ -5,7 +5,7 @@ import pybamm
 import unittest
 
 
-class TestLeadAcidComposite(unittest.TestCase):
+class TestOldLeadAcidComposite(unittest.TestCase):
     def test_well_posed(self):
         model = pybamm.old_lead_acid.OldComposite()
         model.check_well_posedness()
