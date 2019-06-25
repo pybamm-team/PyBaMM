@@ -10,20 +10,18 @@ import numpy as np
 
 class TestOldLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"thermal": None, "Voltage": "On", "convection": False}
-        model = pybamm.lead_acid.Composite(options)
+        model = pybamm.old_lead_acid.OldComposite()
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
         options = {"convection": True}
-        model = pybamm.lead_acid.Composite(options)
+        model = pybamm.old_lead_acid.OldComposite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"thermal": None, "Voltage": "On", "convection": False}
-        model = pybamm.lead_acid.Composite(options)
+        model = pybamm.old_lead_acid.OldComposite()
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
@@ -39,25 +37,15 @@ class TestOldLeadAcidComposite(unittest.TestCase):
 
 class TestOldLeadAcidCompositeSurfaceForm(unittest.TestCase):
     def test_basic_processing(self):
-        options = {
-            "thermal": None,
-            "Voltage": "On",
-            "convection": False,
-            "capacitance": False,
-        }
-        model = pybamm.lead_acid.surface_form.Composite(options)
+        options = {"capacitance": "algebraic"}
+        model = pybamm.old_lead_acid.OldComposite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_capacitance(self):
-        options = {
-            "thermal": None,
-            "Voltage": "On",
-            "convection": False,
-            "capacitance": True,
-        }
-        model = pybamm.lead_acid.surface_form.Composite(options)
+        options = {"capacitance": "differential"}
+        model = pybamm.old_lead_acid.OldComposite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
