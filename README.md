@@ -1,7 +1,7 @@
 # PyBaMM
 
 [![travis](https://travis-ci.org/pybamm-team/PyBaMM.svg?branch=master)](https://travis-ci.org/pybamm-team/PyBaMM)
-[![appveyor](https://ci.appveyor.com/api/projects/status/xdje8jnhuj0ye1jc?svg=true)](https://ci.appveyor.com/project/martinjrobins/pybamm)
+[![Build status](https://ci.appveyor.com/api/projects/status/xdje8jnhuj0ye1jc/branch/master?svg=true)](https://ci.appveyor.com/project/martinjrobins/pybamm/branch/master)
 [![readthedocs](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/pybamm-team/PyBaMM/branch/master/graph/badge.svg)](https://codecov.io/gh/pybamm-team/PyBaMM)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master?filepath=examples%2Fnotebooks)
