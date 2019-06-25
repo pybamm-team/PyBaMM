@@ -16,7 +16,7 @@ class BaseSubModel:
 
         self.variables = {}
 
-        self.events = []
+        self.events = {}
 
     def get_fundamental_variables(self):
         """

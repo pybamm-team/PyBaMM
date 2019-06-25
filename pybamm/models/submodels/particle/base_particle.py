@@ -124,8 +124,11 @@ class BaseParticle(pybamm.BaseSubModel):
         #
         c_s_surf = variables[self._domain + " particle surface concentration"]
         tol = 0.01
-        self.events = [
-            pybamm.Function(np.min, c_s_surf) - tol,
-            (1 - tol) - pybamm.Function(np.max, c_s_surf),
-        ]
 
+        self.events[
+            "Minumum " + self._domain.lower() + " particle surface concentration"
+        ] = (pybamm.Function(np.min, c_s_surf) - tol)
+
+        self.events[
+            "Maximum " + self._domain.lower() + " particle surface concentration"
+        ] = (1 - tol) - pybamm.Function(np.max, c_s_surf)

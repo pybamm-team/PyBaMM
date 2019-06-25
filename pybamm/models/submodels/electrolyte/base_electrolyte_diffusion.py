@@ -55,7 +55,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
     def set_events(self, variables):
         c_e = variables["Electrolyte concentration"]
-        self.events = [pybamm.Function(np.min, c_e) - 0.002]
+        self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
 
     def _get_standard_ocp_variables(self, c_e):
 

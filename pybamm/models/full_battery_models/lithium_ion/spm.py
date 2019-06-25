@@ -84,3 +84,10 @@ class SPM(BaseModel):
     @property
     def default_geometry(self):
         return pybamm.Geometry("1D macro", "1D micro")
+
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        return pybamm.ScipySolver()
