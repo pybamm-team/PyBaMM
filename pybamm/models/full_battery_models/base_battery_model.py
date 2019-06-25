@@ -119,6 +119,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             "capacitance": False,
             "convection": False,
             "thermal": False,
+            "first-order potential": "linear",
+            "side reactions": [],
+            "interfacial surface area": "constant",
         }
         if self._extra_options is None:
             options = default_options
@@ -135,6 +138,15 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.ModelError(
                 "must use capacitance formulation to solve {!s} in 2D".format(self)
             )
+
+            if len(options["side reactions"]) > 0:
+                raise pybamm.ModelError(
+                    """
+                    must use capacitance formulation to solve {!s} with side reactions
+                    """.format(
+                        self
+                    )
+                )
 
         return options
 
@@ -281,7 +293,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.set_voltage_variables()
 
     def set_thermal_submodel(self):
-        # TODO: put into base model
 
         if self.options["thermal"] is None:
             thermal_submodel = pybamm.thermal.Isothermal(self.param)

@@ -76,7 +76,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_integ, pybamm.Integral)
         self.assertIsInstance(processed_integ.children[0], pybamm.Scalar)
         self.assertEqual(processed_integ.children[0].value, 1)
-        self.assertEqual(processed_integ.integration_variable.id, x.id)
+        self.assertEqual(processed_integ.integration_variable[0].id, x.id)
 
         # process unary operation
         grad = pybamm.Gradient(a)

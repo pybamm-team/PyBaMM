@@ -29,7 +29,7 @@ class TestOhm(unittest.TestCase):
         onen = pybamm.Broadcast(1, ["negative electrode"])
         onep = pybamm.Broadcast(1, ["positive electrode"])
         reactions = {
-            "main": {"neg": {"s_plus": 1, "aj": onen}, "pos": {"s_plus": 1, "aj": onep}}
+            "main": {"neg": {"s": 1, "aj": onen}, "pos": {"s": 1, "aj": onep}}
         }
 
         # Set up model and test
@@ -79,7 +79,7 @@ class TestOhm(unittest.TestCase):
             "Current collector current density": param.current_with_time,
             "Electrolyte potential": phi_e,
             "Positive electrode open circuit potential": ocp_p,
-            "Positive reaction overpotential": eta_r_p,
+            "Positive electrode reaction overpotential": eta_r_p,
         }
 
         # Model

@@ -1,10 +1,11 @@
 # PyBaMM
 
-[![Build Status](https://travis-ci.org/pybamm-team/PyBaMM.svg?branch=master)](https://travis-ci.org/pybamm-team/PyBaMM)
-[![Documentation Status](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
+[![travis](https://travis-ci.org/pybamm-team/PyBaMM.svg?branch=master)](https://travis-ci.org/pybamm-team/PyBaMM)
+[![appveyor](https://ci.appveyor.com/api/projects/status/xdje8jnhuj0ye1jc?svg=true)](https://ci.appveyor.com/project/martinjrobins/pybamm)
+[![readthedocs](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
 [![codecov](https://codecov.io/gh/pybamm-team/PyBaMM/branch/master/graph/badge.svg)](https://codecov.io/gh/pybamm-team/PyBaMM)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master?filepath=examples%2Fnotebooks)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![black_code_style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 Python Battery Mathematical Modelling solves continuum models for batteries, using both numerical methods and asymptotic analysis.
 
@@ -24,7 +25,7 @@ You'll need the following requirements:
 
 The first step is to get the code by cloning this repository
 
-```bash 
+```bash
 git clone https://github.com/pybamm-team/PyBaMM.git
 cd PyBaMM
 ```
@@ -39,21 +40,21 @@ python3 -m venv env
 
 You can then "activate" the environment using:
 
-```bash 
-source env/bin/activate 
+```bash
+source env/bin/activate
 ```
 
 Now all the calls to pip described below will install PyBaMM and its dependencies into
 the environment `env`. When you are ready to exit the environment and go back to your
 original system, just type:
 
-```bash 
-deactivate 
+```bash
+deactivate
 ```
 
 PyBaMM has the following python libraries as dependencies: `numpy`, `scipy`, `pandas`,
 `matplotlib`. These, along with PyBaMM, can easily be installed using `pip`. First, make
-sure you have activated your virtual environment as above, and that you have the latest 
+sure you have activated your virtual environment as above, and that you have the latest
 version of pip installed:
 
 ```bash
@@ -91,8 +92,8 @@ wrapped SUNDIALS ODE and DAE
 Before installing odes, you need to have installed:
 
 - Python header files (`python-dev/python3-dev` on Debian/Ubuntu-based distributions)
-- C compiler 
-- Fortran compiler (e.g. gfortran) 
+- C compiler
+- Fortran compiler (e.g. gfortran)
 - BLAS/LAPACK install (OpenBLAS is recommended by the scikits.odes developers)
 - Sundials 3.1.1
 
@@ -134,6 +135,20 @@ Please see the [scikits.odes
 documentation](https://scikits-odes.readthedocs.io/en/latest/installation.html) for more
 detailed installation instructions.
 
+### [scikit.fem](https://github.com/kinnala/scikit-fem)
+
+Users can install [scikit.fem](https://github.com/kinnala/scikit-fem) in order to
+generate meshes and assemble discrete operators for use in the finite element method. At present,
+the finite element method is only implemented for a small number of submodels in PyBaMM
+(for example, see the [current collector submodel](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/submodels/current_collector.py)).
+
+Note that scikit-fem requires Python 3.6+. To install scikit-fem, on the command-line type:
+
+```bash
+pip install scikit-fem
+```
+
+Please see the [scikit.fem documentation](https://kinnala.github.io/scikit-fem-docs/learning.html) for more information.
 
 ## How can I contribute to PyBaMM?
 

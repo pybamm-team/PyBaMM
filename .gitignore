@@ -45,6 +45,7 @@ dist/
 # coverage
 .coverage
 coverage.xml
+htmlcov/
 
 # black setup file seems to make Travis CI fail
 pyproject.toml
@@ -62,6 +63,3 @@ pyvenv.cfg
 
 # sundials
 sundials
-
-# code coverage
-htmlcov/

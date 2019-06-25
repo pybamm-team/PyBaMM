@@ -131,7 +131,10 @@ def simplify_addition_subtraction(myclass, left, right):
         """
         ret = None
         if len(array) > 0:
-            ret = array[0]
+            if types[0] in [None, pybamm.Addition]:
+                ret = array[0]
+            elif types[0] == pybamm.Subtraction:
+                ret = -array[0]
             for child, typ in zip(array[1:], types[1:]):
                 if typ == pybamm.Addition:
                     ret += child
@@ -155,11 +158,18 @@ def simplify_addition_subtraction(myclass, left, right):
         for j, (term_j, typ_j) in enumerate(
             zip(numerator[i + 1 :], numerator_types[i + 1 :])
         ):
+            if isinstance(term_j, pybamm.Multiplication) and isinstance(
+                term_j.left, pybamm.Scalar
+            ):
+                factor = term_j.left.evaluate()
+                term_j = term_j.right
+            else:
+                factor = 1
             if term_i.id == term_j.id:
                 if typ_j == pybamm.Addition:
-                    term_i_count += 1
+                    term_i_count += factor
                 elif typ_j == pybamm.Subtraction:
-                    term_i_count -= 1
+                    term_i_count -= factor
                 del numerator[j + i + 1]
                 del numerator_types[j + i + 1]
 
@@ -188,15 +198,7 @@ def simplify_addition_subtraction(myclass, left, right):
     else:
         # or mix of both
         constant_expr = pybamm.simplify_if_constant(constant_expr)
-        if constant_types[0] is None and nonconstant_types[0] == pybamm.Addition:
-            new_expression = constant_expr + nonconstant_expr
-        elif constant_types[0] is None and nonconstant_types[0] == pybamm.Subtraction:
-            new_expression = constant_expr - nonconstant_expr
-        elif nonconstant_types[0] is None and constant_types[0] == pybamm.Addition:
-            new_expression = nonconstant_expr + constant_expr
-        else:
-            assert constant_types[0] == pybamm.Subtraction
-            new_expression = nonconstant_expr - constant_expr
+        new_expression = constant_expr + nonconstant_expr
 
     return new_expression
 
@@ -568,7 +570,6 @@ class Simplification(object):
             # process children
             new_left = self.simplify(left)
             new_right = self.simplify(right)
-            # make new symbol, ensure domain remains the same
             # _binary_simplify defined in derived classes for specific rules
             new_symbol = symbol._binary_simplify(new_left, new_right)
             new_symbol.domain = symbol.domain

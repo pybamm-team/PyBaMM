@@ -3,10 +3,8 @@
 #
 import pybamm
 
-import numpy as np
 
-
-class StefanMaxwell(pybamm.BaseSubModel):
+class OldStefanMaxwell(pybamm.OldBaseSubModel):
     """"A class that generates the expression tree for Stefan-Maxwell Diffusion in the
     electrolyte.
 
@@ -39,7 +37,7 @@ class StefanMaxwell(pybamm.BaseSubModel):
         # if porosity is not provided, use the input parameter
         try:
             epsilon = variables["Porosity"]
-            deps_dt = reactions["main"]["porosity change"]
+            deps_dt = sum(rxn["porosity change"] for rxn in reactions.values())
         except KeyError:
             epsilon = param.epsilon
             deps_dt = pybamm.Scalar(0)
@@ -53,10 +51,17 @@ class StefanMaxwell(pybamm.BaseSubModel):
         N_e = N_e_diff + N_e_conv
 
         # Model
-        j_n = reactions["main"]["neg"]["aj"]
-        j_p = reactions["main"]["pos"]["aj"]
-        j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
-        source_terms = param.s / param.gamma_e * j
+        source_terms = (
+            sum(
+                pybamm.Concatenation(
+                    reaction["neg"]["s"] * reaction["neg"]["aj"],
+                    pybamm.Broadcast(0, ["separator"]),
+                    reaction["pos"]["s"] * reaction["pos"]["aj"],
+                )
+                for reaction in reactions.values()
+            )
+            / param.gamma_e
+        )
         self.rhs = {
             c_e: (1 / epsilon)
             * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_dt)
@@ -70,7 +75,7 @@ class StefanMaxwell(pybamm.BaseSubModel):
 
         # Cut off if concentration goes too small
         # (open-circuit potential poorly defined)
-        self.events = [pybamm.Function(np.min, c_e) - 0.002]
+        self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
 
     def set_leading_order_system(self, variables, reactions):
         """
@@ -97,8 +102,8 @@ class StefanMaxwell(pybamm.BaseSubModel):
 
         # Model
         source_terms = sum(
-            param.l_n * rxn["neg"]["s_plus"] * rxn["neg"]["aj"]
-            + param.l_p * rxn["pos"]["s_plus"] * rxn["pos"]["aj"]
+            param.l_n * rxn["neg"]["s"] * rxn["neg"]["aj"]
+            + param.l_p * rxn["pos"]["s"] * rxn["pos"]["aj"]
             for rxn in reactions.values()
         )
         self.rhs = {
@@ -116,56 +121,66 @@ class StefanMaxwell(pybamm.BaseSubModel):
             pybamm.Broadcast(c_e, ["separator"]),
             pybamm.Broadcast(c_e, ["positive electrode"]),
         )
-        self.variables = self.get_variables(c_e_var, N_e)
+        self.variables = {
+            **self.get_variables(c_e_var, N_e),
+            "Average electrolyte concentration": c_e,
+        }
 
         # Cut off if concentration goes too small
         # (open-circuit potential poorly defined)
-        self.events = [pybamm.Function(np.min, c_e) - 0.002]
+        self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
 
-    def get_variables(self, c_e, N_e):
+    def get_variables(self, c, N, species="electrolyte"):
         """
         Calculate dimensionless and dimensional variables for the electrolyte diffusion
         submodel
 
         Parameters
         ----------
-        c_e : :class:`pybamm.Concatenation`
-            Electrolyte concentration
-        N_e : :class:`pybamm.Symbol`
-            Flux of electrolyte cations
+        c : :class:`pybamm.Concatenation`
+            Concentration of ions/molecules
+        N : :class:`pybamm.Symbol`
+            Flux of ioins/molecules
+        species : str, optional
+            The name of the species to set variables for (default is "electrolyte")
 
         Returns
         -------
         dict
             Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
         """
-        c_e_typ = self.set_of_parameters.c_e_typ
+        if species == "electrolyte":
+            c_typ = self.set_of_parameters.c_e_typ
+            flux_species = "cation"
+        elif species == "oxygen":
+            c_typ = self.set_of_parameters.c_ox_typ
+            flux_species = "oxygen"
 
-        if c_e.domain == []:
-            c_e_n = pybamm.Broadcast(c_e, domain=["negative electrode"])
-            c_e_s = pybamm.Broadcast(c_e, domain=["separator"])
-            c_e_p = pybamm.Broadcast(c_e, domain=["positive electrode"])
-            c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
-        if N_e.domain == []:
-            N_e_n = pybamm.Broadcast(N_e, domain=["negative electrode"])
-            N_e_s = pybamm.Broadcast(N_e, domain=["separator"])
-            N_e_p = pybamm.Broadcast(N_e, domain=["positive electrode"])
-            N_e = pybamm.Concatenation(N_e_n, N_e_s, N_e_p)
+        if c.domain == []:
+            c_n = pybamm.Broadcast(c, domain=["negative electrode"])
+            c_s = pybamm.Broadcast(c, domain=["separator"])
+            c_p = pybamm.Broadcast(c, domain=["positive electrode"])
+            c = pybamm.Concatenation(c_n, c_s, c_p)
+        if N.domain == []:
+            N_n = pybamm.Broadcast(N, domain=["negative electrode"])
+            N_s = pybamm.Broadcast(N, domain=["separator"])
+            N_p = pybamm.Broadcast(N, domain=["positive electrode"])
+            N = pybamm.Concatenation(N_n, N_s, N_p)
 
-        c_e_n, c_e_s, c_e_p = c_e.orphans
+        c_n, c_s, c_p = c.orphans
 
-        c_e_av = pybamm.average(c_e)
+        c_av = pybamm.average(c)
 
         return {
-            "Electrolyte concentration": c_e,
-            "Average electrolyte concentration": c_e_av,
-            "Negative electrolyte concentration": c_e_n,
-            "Separator electrolyte concentration": c_e_s,
-            "Positive electrolyte concentration": c_e_p,
-            "Reduced cation flux": N_e,
-            "Electrolyte concentration [mol.m-3]": c_e_typ * c_e,
-            "Average electrolyte concentration [mol.m-3]": c_e_typ * c_e_av,
-            "Negative electrolyte concentration [mol.m-3]": c_e_typ * c_e_n,
-            "Separator electrolyte concentration [mol.m-3]": c_e_typ * c_e_s,
-            "Positive electrolyte concentration [mol.m-3]": c_e_typ * c_e_p,
+            species.capitalize() + " concentration": c,
+            "Average " + species + " concentration": c_av,
+            "Negative " + species + " concentration": c_n,
+            "Separator " + species + " concentration": c_s,
+            "Positive " + species + " concentration": c_p,
+            "Reduced " + flux_species + " flux": N,
+            species.capitalize() + " concentration [mol.m-3]": c_typ * c,
+            "Average " + species + " concentration [mol.m-3]": c_typ * c_av,
+            "Negative " + species + " concentration [mol.m-3]": c_typ * c_n,
+            "Separator " + species + " concentration [mol.m-3]": c_typ * c_s,
+            "Positive " + species + " concentration [mol.m-3]": c_typ * c_p,
         }

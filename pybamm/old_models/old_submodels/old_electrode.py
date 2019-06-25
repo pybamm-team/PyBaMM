@@ -4,7 +4,7 @@
 import pybamm
 
 
-class Ohm(pybamm.BaseSubModel):
+class OldOhm(pybamm.OldBaseSubModel):
     """Ohm's law + conservation of current for the current in the electrodes.
 
     Parameters
@@ -47,7 +47,7 @@ class Ohm(pybamm.BaseSubModel):
         """ Unpack variables for post-processing """
         i_boundary_cc = variables["Current collector current density"]
         ocp_p = variables["Positive electrode open circuit potential"]
-        eta_r_p = variables["Positive reaction overpotential"]
+        eta_r_p = variables["Positive electrode reaction overpotential"]
         phi_e = variables["Electrolyte potential"]
 
         ocp_p_av = pybamm.average(ocp_p)
@@ -141,7 +141,9 @@ class Ohm(pybamm.BaseSubModel):
 
         delta_phi_s_av = pybamm.Scalar(0)
 
-        return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
+        potential_vars = self.get_potential_variables(phi_s_n, phi_s_p, delta_phi_s_av)
+        current_vars = self.get_current_variables(i_s_n, i_s_p)
+        return {**potential_vars, **current_vars}
 
     def get_neg_pot_explicit_combined(self, variables):
         """
@@ -221,9 +223,11 @@ class Ohm(pybamm.BaseSubModel):
 
         delta_phi_s_av = -i_boundary_cc / 3 * (l_p / sigma_p_eff + l_n / sigma_n_eff)
 
-        return self.get_variables(phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av)
+        potential_vars = self.get_potential_variables(phi_s_n, phi_s_p, delta_phi_s_av)
+        current_vars = self.get_current_variables(i_s_n, i_s_p)
+        return {**potential_vars, **current_vars}
 
-    def get_variables(self, phi_s_n, phi_s_p, i_s_n, i_s_p, delta_phi_s_av=None):
+    def get_potential_variables(self, phi_s_n, phi_s_p, delta_phi_s_av=None):
         """
         Calculate dimensionless and dimensional variables for the electrode submodel
 
@@ -233,10 +237,6 @@ class Ohm(pybamm.BaseSubModel):
             The electrode potential in the negative electrode
         phi_s_p : :class:`pybamm.Symbol`
             The electrode potential in the positive electrode
-        i_s_n : :class:`pybamm.Symbol`
-            The electrode current density in the negative electrode
-        i_s_p : :class:`pybamm.Symbol`
-            The electrode current density in the positive electrode
         delta_phi_s_av : :class:`pybamm,Symbol`, optional
             Average solid phase Ohmic losses. Default is None, in which case
             delta_phi_s_av is calculated from phi_s_n and phi_s_p
@@ -258,8 +258,6 @@ class Ohm(pybamm.BaseSubModel):
         # Unpack
         phi_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
         phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
-        i_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
-        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
 
         # Voltage variable
         v = pybamm.boundary_value(phi_s_p, "right")
@@ -269,9 +267,6 @@ class Ohm(pybamm.BaseSubModel):
         phi_s_s_dim = pybamm.Broadcast(0, ["separator"])
         phi_s_p_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_p
         phi_s_dim = pybamm.Concatenation(phi_s_n_dim, phi_s_s_dim, phi_s_p_dim)
-        i_s_n_dim = param.i_typ * i_s_n
-        i_s_p_dim = param.i_typ * i_s_p
-        i_s_dim = param.i_typ * i_s
         delta_phi_s_av_dim = param.potential_scale * delta_phi_s_av
         v_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * v
 
@@ -280,19 +275,43 @@ class Ohm(pybamm.BaseSubModel):
             "Negative electrode potential": phi_s_n,
             "Positive electrode potential": phi_s_p,
             "Electrode potential": phi_s,
-            "Negative electrode current density": i_s_n,
-            "Positive electrode current density": i_s_p,
-            "Electrode current density": i_s,
             "Average solid phase ohmic losses": delta_phi_s_av,
             "Terminal voltage": v,
             "Negative electrode potential [V]": phi_s_n_dim,
             "Positive electrode potential [V]": phi_s_p_dim,
             "Electrode potential [V]": phi_s_dim,
-            "Negative electrode current density [A.m-2]": i_s_n_dim,
-            "Positive electrode current density [A.m-2]": i_s_p_dim,
-            "Electrode current density [A.m-2]": i_s_dim,
             "Average solid phase ohmic losses [V]": delta_phi_s_av_dim,
             "Terminal voltage [V]": v_dim,
+        }
+
+    def get_current_variables(self, i_s_n, i_s_p):
+        """
+        Calculate dimensionless and dimensional variables for the electrode current
+
+        Parameters
+        ----------
+        i_s_n : :class:`pybamm.Symbol`
+            The electrode current density in the negative electrode
+        i_s_p : :class:`pybamm.Symbol`
+            The electrode current density in the positive electrode
+
+        Returns
+        -------
+        dict
+            Dictionary {string: :class:`pybamm.Symbol`} of relevant variables
+        """
+        i_typ = self.set_of_parameters.i_typ
+
+        i_s_s = pybamm.Broadcast(0, ["separator"])  # can we put NaN?
+        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
+
+        return {
+            "Negative electrode current density": i_s_n,
+            "Positive electrode current density": i_s_p,
+            "Electrode current density": i_s,
+            "Negative electrode current density [A.m-2]": i_typ * i_s_n,
+            "Positive electrode current density [A.m-2]": i_typ * i_s_p,
+            "Electrode current density [A.m-2]": i_typ * i_s,
         }
 
     @property

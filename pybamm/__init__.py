@@ -41,6 +41,7 @@ ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
 #
 # Utility classes and methods
 #
+from .util import root_dir
 from .util import Timer
 from .util import load_function
 from .logger import logger, set_logging_level
@@ -64,6 +65,7 @@ from .expression_tree.binary_operators import (
     inner,
     Outer,
     outer,
+    source,
 )
 from .expression_tree.concatenations import (
     Concatenation,
@@ -81,6 +83,8 @@ from .expression_tree.unary_operators import (
     SpatialOperator,
     Gradient,
     Divergence,
+    Laplacian,
+    Mass,
     BoundaryOperator,
     BoundaryValue,
     BoundaryFlux,
@@ -88,11 +92,12 @@ from .expression_tree.unary_operators import (
     IndefiniteIntegral,
     grad,
     div,
+    laplacian,
     surf,
     average,
     boundary_value,
 )
-from .expression_tree.function import Function
+from .expression_tree.functions import *
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import Broadcast
 from .expression_tree.scalar import Scalar
@@ -136,7 +141,6 @@ from .models import standard_variables
 
 # Battery models
 from .models.full_battery_models.base_battery_model import BaseBatteryModel
-
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 
@@ -149,19 +153,6 @@ from .models.simple_ode_model import SimpleODEModel
 #
 from .models.submodels.base_submodel import BaseSubModel
 
-# from .models.submodels import (
-#     electrode,
-#     electrolyte_current,
-#     electrolyte_diffusion,
-#     interface,
-#     particle,
-#     porosity,
-#     potential,
-#     velocity,
-#     vertical,
-#     thermal,
-# )
-
 from .models.submodels import (
     electrolyte,
     electrode,
@@ -173,6 +164,29 @@ from .models.submodels import (
     thermal,
 )
 
+# TODO: move these
+# Derived submodel classes
+from .models.submodels import interface_lead_acid, oxygen_diffusion
+
+
+#
+# OLD MODELS. TODO: remove these once lead acid in new format
+#
+from .old_models import old_base_models
+from .old_models import old_lead_acid_models
+from .old_models.old_submodels import (
+    old_current_collector,
+    old_electrode,
+    old_electrolyte_current,
+    old_electrolyte_diffusion,
+    old_interface,
+    old_interface_lead_acid,
+    old_oxygen_diffusion,
+    old_porosity,
+    old_potential,
+    old_velocity,
+    old_vertical,
+)
 
 #
 # Parameters class and methods
@@ -192,9 +206,11 @@ from .geometry.geometry import (
     Geometry,
     Geometry1DMacro,
     Geometry3DMacro,
-    Geometry1p1DMacro,
     Geometry1DMicro,
     Geometry1p1DMicro,
+    Geometryxp1DMacro,
+    Geometryxp0p1DMicro,
+    Geometryxp1p1DMicro,
 )
 
 from .expression_tree.independent_variable import KNOWN_SPATIAL_VARS, KNOWN_COORD_SYS
@@ -206,12 +222,14 @@ from .geometry import standard_spatial_vars
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
 from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+from .meshes.scikit_fem_submeshes import Scikit2DSubMesh, have_scikit_fem
 
 #
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 #
 # Solver classes
@@ -223,6 +241,7 @@ from .solvers.dae_solver import DaeSolver
 from .solvers.scipy_solver import ScipySolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver
+from .solvers.scikits_ode_solver import have_scikits_odes
 
 #
 # other

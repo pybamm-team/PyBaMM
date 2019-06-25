@@ -1,6 +1,8 @@
 #
 # Native PyBaMM Meshes
 #
+import pybamm
+
 import numpy as np
 
 
@@ -38,7 +40,7 @@ class Uniform1DSubMesh(SubMesh1D):
 
         # check that only one variable passed in
         if len(lims) != 1:
-            raise ValueError("lims should only contain a single variable")
+            raise pybamm.GeometryError("lims should only contain a single variable")
 
         var = list(lims.keys())[0]
         spatial_lims = lims[var]

@@ -267,6 +267,13 @@ class TestSymbol(unittest.TestCase):
             "Volume-averaged velocity": v_box,
         }
 
+        # c_e = pybamm.standard_variables.c_e
+        # variables = {"Electrolyte concentration": c_e}
+        # onen = pybamm.Broadcast(1, ["negative electrode"])
+        # onep = pybamm.Broadcast(1, ["positive electrode"])
+        # reactions = {
+        #     "main": {"neg": {"s": 1, "aj": onen}, "pos": {"s": 1, "aj": onep}}
+
         model = pybamm.electrolyte.stefan_maxwell.diffusion.FullModel(param)
         variables.update(model.get_fundamental_variables())
         variables.update(model.get_coupled_variables(variables))
@@ -341,8 +348,6 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing
         )
-        broadcast2 = pybamm.Broadcast(0, domain="separator")
-        self.assertNotEqual(var.shape_for_testing, broadcast2.shape_for_testing)
 
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):

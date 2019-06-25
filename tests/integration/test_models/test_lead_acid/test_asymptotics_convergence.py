@@ -8,6 +8,7 @@ import unittest
 
 
 class TestAsymptoticConvergence(unittest.TestCase):
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_leading_order_convergence(self):
         """
         Check that the leading-order model solution converges linearly in C_e to the
@@ -76,15 +77,17 @@ class TestAsymptoticConvergence(unittest.TestCase):
             return (loqs_error, comp_error)
 
         # Get errors
-        currents = 0.005 / (2 ** np.arange(3))
+        currents = 0.5 / (2 ** np.arange(3))
         errs = np.array([get_max_error(current) for current in currents])
         loqs_errs, comp_errs = [np.array(err) for err in zip(*errs)]
         # Get rates: expect linear convergence for loqs, quadratic for composite
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
         # Composite not converging as expected
-        # comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
-        # np.testing.assert_array_less(1.99 * np.ones_like(comp_rates), comp_rates)
+        comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
+        np.testing.assert_array_less(0.99 * np.ones_like(comp_rates), comp_rates)
+        # Check composite more accurate than loqs
+        np.testing.assert_array_less(comp_errs, loqs_errs)
 
 
 if __name__ == "__main__":

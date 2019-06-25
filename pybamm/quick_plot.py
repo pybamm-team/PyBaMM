@@ -3,6 +3,7 @@
 #
 import numpy as np
 import pybamm
+from collections import defaultdict
 
 
 def ax_min(data):
@@ -23,6 +24,18 @@ def ax_max(data):
         return 1.1 * data_max
 
 
+def split_long_string(title, max_words=4):
+    "Get title in a nice format"
+    words = title.split()
+    # Don't split if fits on one line, don't split just for units
+    if len(words) <= max_words or words[max_words].startswith("["):
+        return title
+    else:
+        first_line = (" ").join(words[:max_words])
+        second_line = (" ").join(words[max_words:])
+        return first_line + "\n" + second_line
+
+
 class QuickPlot(object):
     """
     Generates a quick plot of a subset of key outputs of the model so that the model
@@ -39,11 +52,14 @@ class QuickPlot(object):
     solutions: (iter of) :class:`pybamm.Solver`
         The numerical solution(s) for the model(s) which contained the solution to the
         model(s).
-    output_variables : list of str
+    output_variables : list of str, optional
         List of variables to plot
+    labels : list of str, optional
+        Labels for the different models. Defaults to model names
     """
 
-    def __init__(self, models, mesh, solutions, output_variables=None):
+    def __init__(self, models, mesh, solutions, output_variables=None, labels=None):
+        # Pre-process models and solutions
         if isinstance(models, pybamm.BaseModel):
             models = [models]
         elif not isinstance(models, list):
@@ -57,14 +73,17 @@ class QuickPlot(object):
         else:
             raise ValueError("must provide the same number of models and solutions")
 
+        # Set labels
+        self.labels = labels or [model.name for model in models]
+
         # Scales (default to 1 if information not in model)
-        vars = models[0].variables
+        variables = models[0].variables
         self.x_scale = 1
         self.time_scale = 1
-        if "x [m]" and "x" in vars:
-            self.x_scale = (vars["x [m]"] / vars["x"]).evaluate()[-1]
-        if "Time [m]" and "Time" in vars:
-            self.time_scale = (vars["Time [h]"] / vars["Time"]).evaluate(t=1)
+        if "x [m]" and "x" in variables:
+            self.x_scale = (variables["x [m]"] / variables["x"]).evaluate()[-1]
+        if "Time [m]" and "Time" in variables:
+            self.time_scale = (variables["Time [h]"] / variables["Time"]).evaluate(t=1)
 
         # Time parameters
         self.ts = [solution.t for solution in solutions]
@@ -107,55 +126,83 @@ class QuickPlot(object):
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
-        n = int(len(output_variables) // np.sqrt(len(output_variables)))
-        m = np.ceil(len(output_variables) / n)
+        self.n_rows = int(len(output_variables) // np.sqrt(len(output_variables)))
+        self.n_cols = int(np.ceil(len(output_variables) / self.n_rows))
 
         # Process output variables into a form that can be plotted
-        for k, var in enumerate(output_variables):
-            self.variables[var] = [
-                pybamm.ProcessedVariable(
-                    models[i].variables[var], solutions[i].t, solutions[i].y, mesh
-                )
-                for i in range(len(models))
-            ]
-            if self.variables[var][0].dimensions == 2:
-                domain = models[0].variables[var].domain
-                self.x_values[var] = mesh.combine_submeshes(*domain)[0].edges
-            self.subplot_positions[var] = (n, m, k + 1)
+        for k, variable_list in enumerate(output_variables):
+            # Make sure we always have a list of lists of variables
+            if isinstance(variable_list, str):
+                variable_list = [variable_list]
 
-        # Set labels
-        self.labels = [model.name for model in models]
+            # Prepare list of variables
+            key = tuple(variable_list)
+            self.variables[key] = [None] * len(models)
 
-        # Don't allow 3D variables
-        if self.variables[var][0].dimensions == 3:
-            raise NotImplementedError("cannot plot 3D variables")
+            # process each variable in variable_list for each model
+            for i, model in enumerate(models):
+                # self.variables is a dictionary of lists of lists
+                self.variables[key][i] = [
+                    pybamm.ProcessedVariable(
+                        model.variables[var], solutions[i].t, solutions[i].y, mesh
+                    )
+                    for var in variable_list
+                ]
+
+            # Make sure variables have the same dimensions and domain
+            domain = self.variables[key][0][0].domain
+            for variable in self.variables[key][0]:
+                if variable.domain != domain:
+                    raise ValueError("mismatching variable domains")
+
+            # Set the x variable for any two-dimensional variables
+            if self.variables[key][0][0].dimensions == 2:
+                self.x_values[key] = mesh.combine_submeshes(*domain)[0].edges
+
+            # Don't allow 3D variables
+            elif any(var.dimensions == 3 for var in self.variables[key][0]):
+                raise NotImplementedError("cannot plot 3D variables")
+
+            # Define subplot position
+            self.subplot_positions[key] = (self.n_rows, self.n_cols, k + 1)
 
     def reset_axis(self):
         """
         Reset the axis limits to the default values.
+        These are calculated to fit around the minimum and maximum values of all the
+        variables in each subplot
         """
         self.axis = {}
-        for name, variable in self.variables.items():
-            if variable[0].dimensions == 1:
-                y_min = np.min([ax_min(v(self.ts[i])) for i, v in enumerate(variable)])
-                y_max = np.max([ax_max(v(self.ts[i])) for i, v in enumerate(variable)])
-                if y_min == y_max:
-                    y_min -= 1
-                    y_max += 1
-                self.axis[name] = [self.min_t, self.max_t, y_min, y_max]
-            elif variable[0].dimensions == 2:
-                x = self.x_values[name]
+        for key, variable_lists in self.variables.items():
+            if variable_lists[0][0].dimensions == 1:
+                x = None
+                x_min = self.min_t
+                x_max = self.max_t
+            elif variable_lists[0][0].dimensions == 2:
+                x = self.x_values[key]
                 x_scaled = x * self.x_scale
-                y_min = np.min(
-                    [ax_min(v(self.ts[i], x)) for i, v in enumerate(variable)]
-                )
-                y_max = np.max(
-                    [ax_max(v(self.ts[i], x)) for i, v in enumerate(variable)]
-                )
-                if y_min == y_max:
-                    y_min -= 1
-                    y_max += 1
-                self.axis[name] = [x_scaled[0], x_scaled[-1], y_min, y_max]
+                x_min = x_scaled[0]
+                x_max = x_scaled[-1]
+
+            # Get min and max y values
+            y_min = np.min(
+                [
+                    ax_min(var(self.ts[i], x))
+                    for i, variable_list in enumerate(variable_lists)
+                    for var in variable_list
+                ]
+            )
+            y_max = np.max(
+                [
+                    ax_max(var(self.ts[i], x))
+                    for i, variable_list in enumerate(variable_lists)
+                    for var in variable_list
+                ]
+            )
+            if y_min == y_max:
+                y_min -= 1
+                y_max += 1
+            self.axis[key] = [x_min, x_max, y_min, y_max]
 
     def plot(self, t):
         """Produces a quick plot with the internal states at time t.
@@ -169,51 +216,81 @@ class QuickPlot(object):
         import matplotlib.pyplot as plt
 
         t /= self.time_scale
-        self.fig, self.ax = plt.subplots(figsize=(15, 8))
+        self.fig, self.ax = plt.subplots(self.n_rows, self.n_cols, figsize=(15, 8))
         plt.tight_layout()
         plt.subplots_adjust(left=-0.1)
         self.plots = {}
         self.time_lines = {}
 
-        for k, name in enumerate(self.variables.keys()):
-            variable = self.variables[name]
-            plt.subplot(*self.subplot_positions[name])
-            plt.ylabel(name, fontsize=14)
-            plt.axis(self.axis[name])
-            self.plots[name] = [None] * self.num_models
-            # Set labels
+        colors = ["r", "b", "k", "g"]
+        linestyles = ["-", ":", "--", "-."]
+        fontsize = 42 // self.n_cols
+
+        for k, (key, variable_lists) in enumerate(self.variables.items()):
+            if len(self.variables) == 1:
+                ax = self.ax
+            else:
+                ax = self.ax.flat[k]
+            ax.set_xlim(self.axis[key][:2])
+            ax.set_ylim(self.axis[key][2:])
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            self.plots[key] = defaultdict(dict)
+            # Set labels for the first subplot only (avoid repetition)
             if k == 0:
                 labels = self.labels
             else:
                 labels = [None] * len(self.labels)
-            if variable[0].dimensions == 2:
+            if variable_lists[0][0].dimensions == 2:
                 # 2D plot: plot as a function of x at time t
-                plt.xlabel("Position [m]", fontsize=14)
-                x_value = self.x_values[name]
-                for i in range(self.num_models):
-                    self.plots[name][i], = plt.plot(
-                        x_value * self.x_scale,
-                        variable[i](t, x_value),
-                        lw=2,
-                        label=labels[i],
-                    )
+                ax.set_xlabel("Position [m]", fontsize=fontsize)
+                x_value = self.x_values[key]
+                for i, variable_list in enumerate(variable_lists):
+                    for j, variable in enumerate(variable_list):
+                        if j == 0:
+                            label = labels[i]
+                        else:
+                            label = None
+                        self.plots[key][i][j], = ax.plot(
+                            x_value * self.x_scale,
+                            variable(t, x_value),
+                            lw=2,
+                            color=colors[i],
+                            linestyle=linestyles[j],
+                            label=label,
+                        )
             else:
                 # 1D plot: plot as a function of time, indicating time t with a line
-                plt.xlabel("Time [h]", fontsize=14)
-                for i in range(self.num_models):
-                    full_t = self.ts[i]
-                    self.plots[name][i], = plt.plot(
-                        full_t * self.time_scale,
-                        variable[i](full_t),
-                        lw=2,
-                        label=labels[i],
-                    )
-                    y_min, y_max = self.axis[name][2:]
-                    self.time_lines[name], = plt.plot(
-                        [t * self.time_scale, t * self.time_scale],
-                        [y_min, y_max],
-                        "k--",
-                    )
+                ax.set_xlabel("Time [h]", fontsize=fontsize)
+                for i, variable_list in enumerate(variable_lists):
+                    for j, variable in enumerate(variable_list):
+                        full_t = self.ts[i]
+                        if j == 0:
+                            label = labels[i]
+                        else:
+                            label = None
+                        self.plots[key][i][j], = ax.plot(
+                            full_t * self.time_scale,
+                            variable(full_t),
+                            lw=2,
+                            color=colors[i],
+                            linestyle=linestyles[j],
+                            label=label,
+                        )
+                y_min, y_max = self.axis[key][2:]
+                self.time_lines[key], = ax.plot(
+                    [t * self.time_scale, t * self.time_scale], [y_min, y_max], "k--"
+                )
+            # Set either y label or legend entries
+            if len(key) == 1:
+                title = split_long_string(key[0])
+                ax.set_title(title, fontsize=fontsize)
+            else:
+                ax.legend(
+                    [split_long_string(s, 6) for s in key],
+                    bbox_to_anchor=(0.5, 1.2),
+                    fontsize=8,
+                    loc="upper center",
+                )
         self.fig.legend(loc="lower right")
 
     def dynamic_plot(self, testing=False):
@@ -246,12 +323,13 @@ class QuickPlot(object):
         """
         t = self.sfreq.val
         t_dimensionless = t / self.time_scale
-        for var, plot in self.plots.items():
-            if self.variables[var][0].dimensions == 2:
-                x = self.x_values[var]
-                for i in range(self.num_models):
-                    plot[i].set_ydata(self.variables[var][i](t_dimensionless, x))
+        for key, plot in self.plots.items():
+            if self.variables[key][0][0].dimensions == 2:
+                x = self.x_values[key]
+                for i, variable_lists in enumerate(self.variables[key]):
+                    for j, variable in enumerate(variable_lists):
+                        plot[i][j].set_ydata(variable(t_dimensionless, x))
             else:
-                self.time_lines[var].set_xdata([t])
+                self.time_lines[key].set_xdata([t])
 
         self.fig.canvas.draw_idle()

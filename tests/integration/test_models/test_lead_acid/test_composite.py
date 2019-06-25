@@ -3,7 +3,6 @@
 #
 import pybamm
 import tests
-from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 
 import unittest
 import numpy as np
@@ -17,7 +16,7 @@ class TestLeadAcidComposite(unittest.TestCase):
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
-        options = {"thermal": None, "Voltage": "On", "convection": True}
+        options = {"convection": True}
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

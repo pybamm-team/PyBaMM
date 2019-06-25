@@ -15,6 +15,10 @@ if scikits_odes_spec is not None:
         scikits_odes_spec.loader.exec_module(scikits_odes)
 
 
+def have_scikits_odes():
+    return scikits_odes_spec is None
+
+
 class ScikitsOdeSolver(pybamm.OdeSolver):
     """Solve a discretised model, using scikits.odes.
 
@@ -120,7 +124,13 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
         # return solution, we need to tranpose y to match scipy's ivp interface
         if sol.flag in [0, 2]:
             # 0 = solved for all t_eval
+            if sol.flag == 0:
+                termination = "final time"
             # 2 = found root(s)
-            return pybamm.Solution(sol.values.t, np.transpose(sol.values.y))
+            elif sol.flag == 2:
+                termination = "event"
+            return pybamm.Solution(
+                sol.values.t, np.transpose(sol.values.y), termination
+            )
         else:
             raise pybamm.SolverError(sol.message)

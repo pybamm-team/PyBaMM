@@ -48,7 +48,7 @@ class BaseModel(object):
         self._initial_conditions = {}
         self._boundary_conditions = {}
         self._variables = {}
-        self._events = []
+        self._events = {}
         self._concatenated_rhs = None
         self._concatenated_initial_conditions = None
         self._mass_matrix = None
@@ -217,7 +217,7 @@ class BaseModel(object):
                 self._boundary_conditions, submodel.boundary_conditions
             )
             self.variables.update(submodel.variables)  # keys are strings so no check
-            self._events.extend(submodel.events)
+            self._events.update(submodel.events)
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
@@ -369,4 +369,29 @@ class BaseModel(object):
             # Remove missing entries
             for output in missing_vars:
                 del self._variables[output]
+
+        # Create list of all Variable nodes that appear in the model's list of variables
+        all_vars = {}
+        for eqn in self.variables.values():
+            # Add all variables in the equation to the list of variables
+            all_vars.update(
+                {x.id: x for x in eqn.pre_order() if isinstance(x, pybamm.Variable)}
+            )
+        var_ids_in_keys = set()
+        for var in {**self.rhs, **self.algebraic}.keys():
+            if isinstance(var, pybamm.Variable):
+                var_ids_in_keys.add(var.id)
+            elif isinstance(var, pybamm.Concatenation):
+                var_ids_in_keys.update([x.id for x in var.children])
+        for var_id, var in all_vars.items():
+            if var_id not in var_ids_in_keys:
+                raise pybamm.ModelError(
+                    """
+                    No key set for variable '{}'. Make sure it is included in either
+                    model.rhs or model.algebraic in an unmodified form (e.g. not
+                    Broadcasted)
+                    """.format(
+                        var
+                    )
+                )
 

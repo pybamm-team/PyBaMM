@@ -10,6 +10,8 @@ Separator width [m],0.0015,Manufacturer,
 Positive electrode width [m],0.00125,Manufacturer,
 Electrode height [m],0.114,Manufacturer,
 Electrode depth [m],0.065,Manufacturer,
+Negative tab centre z-coordinate [m],0.114,Tab at top,
+Positive tab centre z-coordinate [m],0.114,Tab at top,
 ,,,
 # Electrical,,,
 Cell capacity [A.h],17,Manufacturer,
@@ -33,6 +35,8 @@ Molar mass of anions [kg.mol-1],0.097,lide1992crc,Hydrogen sulfate anions
 ,,,
 # Other species properties,,,
 Oxygen diffusivity [m2.s-1],2.1e-9,cussler2009diffusion
+Initial oxygen concentration [mol.m-3],0,,
+Typical oxygen concentration [mol.m-3],1000,,
 Hydrogen diffusivity [m2.s-1],4.5e-9,cussler2009diffusion
 Partial molar volume of oxygen molecules [m3.mol-1],3.21E-5,zhou2001partial,
 Partial molar volume of hydrogen molecules [m3.mol-1],2.31E-5,zhou2001partial,
@@ -46,9 +50,9 @@ Pore size [m],1E-07,,
 Maximum porosity of negative electrode,0.53,,
 Maximum porosity of separator,0.92,,
 Maximum porosity of positive electrode,0.57,,
-Molar volume of lead [m3.mol-1],1.82539682539683E-05,,Calculated as () divided by ()
-Molar volume of lead-dioxide [m3.mol-1],2.54797441364606E-05,,
-Molar volume of lead sulfate [m3.mol-1],4.81717011128776E-05,,
+Molar volume of lead [m3.mol-1],1.82539682539683E-05,,Calculated as 207e-3 / 11.34e3
+Molar volume of lead-dioxide [m3.mol-1],2.54797441364606E-05,,Calculated as 239e-3 / 9.38e3
+Molar volume of lead sulfate [m3.mol-1],4.81717011128776E-05,,Calculated as 303e-3 / 6.29e3
 Negative electrode volumetric capacity [C.m-3],3.473e9,bernardi1995mathematical,
 Positive electrode volumetric capacity [C.m-3],2.745e9,bernardi1995mathematical,
 ,,,
@@ -56,6 +60,7 @@ Positive electrode volumetric capacity [C.m-3],2.745e9,bernardi1995mathematical,
 Negative electrode surface area density [m-1],2300000,,
 Positive electrode surface area density [m-1],23000000,,
 Bruggeman coefficient,1.5,,
+Electrode morphological parameter,0.6,srinivasan2003mathematical,
 Negative electrode capacity [C.m-3],3473000000,,
 Positive electrode capacity [C.m-3],2745000000,,
 ,,,

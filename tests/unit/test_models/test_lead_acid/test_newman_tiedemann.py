@@ -16,6 +16,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
         options = {"thermal": None, "Voltage": "On"}
         model = pybamm.lead_acid.NewmanTiedemann(options)
@@ -33,12 +34,13 @@ class TestLeadAcidNewmanTiedemannSurfaceForm(unittest.TestCase):
         model = pybamm.lead_acid.surface_form.NewmanTiedemann(options)
         model.check_well_posedness()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
-        options = {"thermal": None, "Voltage": "On", "capacitance": True}
-        model = pybamm.lead_acid.surface_form.NewmanTiedemann(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
-        options = {"thermal": None, "Voltage": "On", "capacitance": False}
-        model = pybamm.lead_acid.NewmanTiedemann(options)
+        options = {"capacitance": "differential"}
+        model = pybamm.old_lead_acid.OldNewmanTiedemann(options)
+        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
+        options = {"capacitance": "algebraic"}
+        model = pybamm.old_lead_acid.OldNewmanTiedemann(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 

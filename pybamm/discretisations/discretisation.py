@@ -73,6 +73,9 @@ class Discretisation(object):
             ``inplace`` is False, model != model_disc
 
         """
+        # Check well-posedness to avoid obscure errors
+        model.check_well_posedness()
+
         pybamm.logger.info("Start discretising {}".format(model.name))
 
         # Prepare discretisation
@@ -110,9 +113,10 @@ class Discretisation(object):
         model_disc.variables = self.process_dict(model.variables)
 
         # Process events
-        processed_events = [None] * len(model.events)
-        for idx, event in enumerate(model.events):
-            processed_events[idx] = self.process_symbol(event)
+        processed_events = {}
+        for event, equation in model.events.items():
+            pybamm.logger.debug("Discretise event '{}'".format(event))
+            processed_events[event] = self.process_symbol(equation)
         model_disc.events = processed_events
 
         # Create mass matrix
@@ -399,6 +403,12 @@ class Discretisation(object):
 
             elif isinstance(symbol, pybamm.Divergence):
                 return child_spatial_method.divergence(child, disc_child, self.bcs)
+
+            elif isinstance(symbol, pybamm.Laplacian):
+                return child_spatial_method.laplacian(child, disc_child, self.bcs)
+
+            elif isinstance(symbol, pybamm.Mass):
+                return child_spatial_method.mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
                 return child_spatial_method.indefinite_integral(

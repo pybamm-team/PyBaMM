@@ -1,6 +1,6 @@
 sudo: false
 
-dist: trusty
+dist: xenial
 
 language: python
 
@@ -45,6 +45,7 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
+            - PYBAMM_SCIKITS_ODES=true
           if: type != cron
         - python: "3.6"
           addons:
@@ -61,6 +62,24 @@ matrix:
           env:
             - PYBAMM_UNIT=true
             - PYBAMM_EXAMPLES=true
+            - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_SCIKIT_FEM=true
+        - python: "3.6"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.6-dev
+          env:
+            - PYBAMM_UNIT=true
+            - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_SCIKIT_FEM=true
         - python: "3.6"
           addons:
             apt:
@@ -76,16 +95,31 @@ matrix:
           env:
             - PYBAMM_UNIT=true
           if: type != cron
-        #- python: "3.7"
-        #  env:
-        #    - PINT_UNIT=true
-        #  if: type != cron
+        - python: "3.7"
+          addons:
+            apt:
+              sources:
+                - deadsnakes
+              packages:
+                - gfortran
+                - gcc
+                - libopenblas-dev
+                - liblapack-dev
+                - graphviz
+                - python3.7-dev
+          env:
+            - PYBAMM_UNIT=true
+            - PYBAMM_EXAMPLES=true
+            - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_SCIKIT_FEM=true
+          if: type != cron
         # Unit testing on OS/X
-        # - os: osx
-        #   language: generic
-        #   env:
-        #     - PYBAMM_UNIT=true
-        #   if: type != cron
+        - os: osx
+          language: generic
+          env:
+            - PYTHON=3.6.5
+            - PYBAMM_UNIT=true
+          if: type != cron
         # Docs, style and cover checking, latest Python version only
         - python: "3.6"
           addons:
@@ -131,6 +165,8 @@ matrix:
                 - python3.6-dev
           env:
             - PYBAMM_COVER=true
+            - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_SCIKIT_FEM=true
           if: type != cron
           # Cron jobs
         - python: "3.6"
@@ -147,19 +183,46 @@ matrix:
                 - python3.6-dev
           env:
             - PYBAMM_EXAMPLES=true
+            - PYBAMM_SCIKITS_ODES=true
+            - PYBAMM_SCIKIT_FEM=true
           if: type == cron
+
+# Install graphviz for macs
+before_install: |
+  # below is reproduced from https://pythonhosted.org/CodeChat/.travis.yml.html
+  if [[ $TRAVIS_OS_NAME == "osx" ]]; then
+    brew update;
+    # Per the `pyenv homebrew recommendations <https://github.com/yyuu/pyenv/wiki#suggested-build-environment>`_.
+    brew install graphviz openssl readline;
+    # See https://docs.travis-ci.com/user/osx-ci-environment/#A-note-on-upgrading-packages.
+    brew outdated pyenv || brew upgrade pyenv
+    # virtualenv doesn't work without pyenv knowledge. venv in Python 3.3
+    # doesn't provide Pip by default. So, use `pyenv-virtualenv <https://github.com/yyuu/pyenv-virtualenv/blob/master/README.md>`_.
+    brew install pyenv-virtualenv
+    pyenv install $PYTHON;
+    # I would expect something like ``pyenv init; pyenv local $PYTHON`` or
+    # ``pyenv shell $PYTHON`` would work, but ``pyenv init`` doesn't seem to
+    # modify the Bash environment. ??? So, I hand-set the variables instead.
+    export PYENV_VERSION=$PYTHON;
+    export PATH="/Users/travis/.pyenv/shims:${PATH}";
+    pyenv virtualenv venv;
+    source venv/bin/activate;
+    # A manual check that the correct version of Python is running.
+    python --version;
+  fi
 
 # Install dependencies
 # Note: Use pip (not apt-get) for Python dependencies
 # Note: Only install normal dependencies for unit tests; these should be tested
 #       without the packages from -dev and -doc!
 install:
-  - pip install pip==18
+  - pip install --upgrade pip
   - pip install .
   - if [[ $PYBAMM_DOCS == true ]]; then pip install -e .[docs]; fi;
   - if [[ $PYBAMM_STYLE == true || $PYBAMM_EXAMPLES ]]; then pip install -e .[dev]; fi;
   - if [[ $PYBAMM_COVER == true ]]; then pip install coverage codecov; fi;
-  - source scripts/install_scikits_odes.sh
+  - if [[ $PYBAMM_SCIKITS_ODES == true ]]; then source scripts/install_scikits_odes.sh; fi;
+  - if [[ $PYBAMM_SCIKIT_FEM == true ]]; then pip install scikit-fem; fi;
 
 before_script:
 - python --version

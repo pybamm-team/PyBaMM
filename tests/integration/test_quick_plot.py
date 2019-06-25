@@ -8,6 +8,7 @@ class TestQuickPlot(unittest.TestCase):
     Tests that QuickPlot is created correctly
     """
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_plot_lithium_ion(self):
         spm = pybamm.lithium_ion.SPM()
         spme = pybamm.lithium_ion.SPMe()
@@ -29,12 +30,12 @@ class TestQuickPlot(unittest.TestCase):
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
-        quick_plot.axis.update({"Electrolyte concentration": new_axis})
-        self.assertEqual(quick_plot.axis["Electrolyte concentration"], new_axis)
+        quick_plot.axis.update({("Electrolyte concentration",): new_axis})
+        self.assertEqual(quick_plot.axis[("Electrolyte concentration",)], new_axis)
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis["Electrolyte concentration"], new_axis)
+        self.assertNotEqual(quick_plot.axis[("Electrolyte concentration",)], new_axis)
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
@@ -60,18 +61,19 @@ class TestQuickPlot(unittest.TestCase):
 
         # update the axis
         new_axis = [0, 0.5, 0, 1]
-        quick_plot.axis.update({"Electrolyte concentration": new_axis})
-        self.assertEqual(quick_plot.axis["Electrolyte concentration"], new_axis)
+        quick_plot.axis.update({("Electrolyte concentration",): new_axis})
+        self.assertEqual(quick_plot.axis[("Electrolyte concentration",)], new_axis)
 
         # and now reset them
         quick_plot.reset_axis()
-        self.assertNotEqual(quick_plot.axis["Electrolyte concentration"], new_axis)
+        self.assertNotEqual(quick_plot.axis[("Electrolyte concentration",)], new_axis)
 
         # check dynamic plot loads
         quick_plot.dynamic_plot(testing=True)
 
         quick_plot.update(0.01)
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_plot_lead_acid(self):
         loqs = pybamm.lead_acid.LOQS()
         geometry = loqs.default_geometry

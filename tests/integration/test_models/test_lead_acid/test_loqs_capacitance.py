@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid LOQS model
+# Tests for the lead-acid LOQS model with capacitance
 #
 import pybamm
 from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
@@ -13,17 +13,19 @@ import numpy as np
 class TestLeadAcidLoqsSurfaceForm(unittest.TestCase):
     @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
     def test_basic_processing(self):
-        options = {"capacitance": False, "thermal": None, "Voltage": "On"}
+        options = {"capacitance": "algebraic"}
         model = pybamm.lead_acid.surface_form.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_capacitance(self):
-        options = {"capacitance": True, "thermal": None, "Voltage": "On"}
-        model = pybamm.lead_acid.surface_form.LOQS(options)
+        options = {"capacitance": "differential"}
+        model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_1p1D_differential(self):
         options = {"capacitance": "differential", "bc_options": {"dimensionality": 1}}
         options = {"surface form": True, "capacitance": False}

@@ -137,7 +137,7 @@ class BinaryOperator(pybamm.Symbol):
             right = self.right.evaluate(t, y)
             return self._binary_evaluate(left, right)
 
-    def evaluate_for_shape(self, t=None, y=None):
+    def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape()`. """
         left = self.children[0].evaluate_for_shape()
         right = self.children[1].evaluate_for_shape()
@@ -164,7 +164,7 @@ class Power(BinaryOperator):
         base, exponent = self.orphans
         return base ** (exponent - 1) * (
             exponent * base.diff(variable)
-            + base * pybamm.Function(np.log, base) * exponent.diff(variable)
+            + base * pybamm.log(base) * exponent.diff(variable)
         )
 
     def jac(self, variable):
@@ -179,13 +179,11 @@ class Power(BinaryOperator):
             elif exponent.evaluates_to_number():
                 return (exponent * base ** (exponent - 1)) * base.jac(variable)
             elif base.evaluates_to_number():
-                return (
-                    base ** exponent * pybamm.Function(np.log, base)
-                ) * exponent.jac(variable)
+                return (base ** exponent * pybamm.log(base)) * exponent.jac(variable)
             else:
                 return (base ** (exponent - 1)) * (
                     exponent * base.jac(variable)
-                    + base * pybamm.Function(np.log, base) * exponent.jac(variable)
+                    + base * pybamm.log(base) * exponent.jac(variable)
                 )
 
     def _binary_evaluate(self, left, right):
@@ -632,6 +630,8 @@ class Outer(BinaryOperator):
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+        # Make sure left child keeps same domain
+        left.domain = self.left.domain
         return pybamm.Outer(left, right)
 
 
@@ -645,3 +645,22 @@ def outer(left, right):
         return left * right
     except pybamm.DomainError:
         return pybamm.Outer(left, right)
+
+
+def source(left, right):
+    """A convinience function for creating (part of) an expression tree representing
+    a source term in the (weak) finite element formulation. The left child is the
+    symbol representing the source term and the right child is the symbol of the
+    equation variable (key). The method returns the matrix-vector product of the
+    mass matrix (adjusted to account for the boundary conditions imposed the the
+    right symbol) and the discretised left symbol.
+    """
+
+    if left.domain != ["current collector"] or right.domain != ["current collector"]:
+        raise pybamm.DomainError(
+            """finite element method only implemented in the 'current collector' domain,
+            but symbols have domains {} and {}""".format(
+                left.domain, right.domain
+            )
+        )
+    return pybamm.Mass(right) @ left

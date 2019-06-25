@@ -4,7 +4,7 @@
 import pybamm
 
 
-class Standard(pybamm.SubModel):
+class OldStandard(pybamm.OldSubModel):
     """Change in porosity due to reactions
 
     Parameters
@@ -37,6 +37,12 @@ class Standard(pybamm.SubModel):
 
         self.variables = {"Porosity": epsilon, "Porosity change": deps_dt}
 
+        # Terminate if porosity reaches zero or one
+        self.events = {
+            "Minimum porosity cut-off": pybamm.min(epsilon),
+            "Maximum porosity cut-off": pybamm.max(epsilon) - 1,
+        }
+
     def set_leading_order_system(self, variables):
         """
         ODE system for the leading-order change in porosity due to reactions
@@ -49,9 +55,13 @@ class Standard(pybamm.SubModel):
         param = self.set_of_parameters
         epsilon = variables["Porosity"]
         eps_n, eps_s, eps_p = [e.orphans[0] for e in epsilon.orphans]
-        j_n = variables["Negative electrode interfacial current density"].orphans[0]
+        j_n = variables[
+            "Average negative electrode interfacial current density per volume"
+        ]
         j_s = pybamm.Scalar(0)
-        j_p = variables["Positive electrode interfacial current density"].orphans[0]
+        j_p = variables[
+            "Average positive electrode interfacial current density per volume"
+        ]
 
         for (eps, j, beta_surf, eps_init, domain) in [
             (eps_n, j_n, param.beta_surf_n, param.eps_n_init, "negative electrode"),
@@ -68,6 +78,14 @@ class Standard(pybamm.SubModel):
                 {
                     Domain + " porosity": pybamm.Broadcast(eps, domain),
                     Domain + " porosity change": pybamm.Broadcast(deps_dt, domain),
+                }
+            )
+            # Terminate if porosity reaches zero or one
+            cutoff = "porosity cut-off (" + domain + ")"
+            self.events.update(
+                {
+                    "Minimum " + cutoff: pybamm.min(epsilon),
+                    "Maximum " + cutoff: pybamm.max(epsilon) - 1,
                 }
             )
 
