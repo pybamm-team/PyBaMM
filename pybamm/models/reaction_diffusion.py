@@ -47,7 +47,7 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
     def set_electrolyte_submodel(self):
         electrolyte = pybamm.electrolyte.stefan_maxwell
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FullModel(
-            self.param
+            self.param, ocp=True
         )
 
     def set_interfacial_submodel(self):
