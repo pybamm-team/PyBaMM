@@ -36,12 +36,14 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         model = pybamm.lead_acid.surface_form.Composite(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
-    def test_well_posed_average_first_order(self):
-        model = pybamm.lead_acid.Composite({"first-order potential": "average"})
-        model.check_well_posedness()
-
     def test_well_posed_with_convection(self):
-        model = pybamm.lead_acid.Composite({"convection": True})
+        options = {
+            "thermal": None,
+            "Voltage": "On",
+            "capacitance": False,
+            "convection": True,
+        }
+        model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
 
 

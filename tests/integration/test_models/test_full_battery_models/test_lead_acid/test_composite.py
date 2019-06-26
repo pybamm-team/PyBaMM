@@ -16,7 +16,7 @@ class TestLeadAcidComposite(unittest.TestCase):
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
-        options = {"convection": True}
+        options = {"thermal": None, "Voltage": "On", "convection": True}
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -37,29 +37,29 @@ class TestLeadAcidComposite(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
 
-class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
-    def test_basic_processing(self):
-        options = {
-            "thermal": None,
-            "Voltage": "On",
-            "convection": False,
-            "capacitance": False,
-        }
-        model = pybamm.lead_acid.surface_form.Composite(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+# class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
+#     def test_basic_processing(self):
+#         options = {
+#             "thermal": None,
+#             "Voltage": "On",
+#             "convection": False,
+#             "capacitance": False,
+#         }
+#         model = pybamm.lead_acid.surface_form.Composite(options)
+#         modeltest = tests.StandardModelTest(model)
+#         modeltest.test_all()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
-    def test_basic_processing_with_capacitance(self):
-        options = {
-            "thermal": None,
-            "Voltage": "On",
-            "convection": False,
-            "capacitance": True,
-        }
-        model = pybamm.lead_acid.surface_form.Composite(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
+#     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+#     def test_basic_processing_with_capacitance(self):
+#         options = {
+#             "thermal": None,
+#             "Voltage": "On",
+#             "convection": False,
+#             "capacitance": True,
+#         }
+#         model = pybamm.lead_acid.surface_form.Composite(options)
+#         modeltest = tests.StandardModelTest(model)
+#         modeltest.test_all()
 
 
 if __name__ == "__main__":
