@@ -183,10 +183,10 @@ class OldInterfacialReaction(pybamm.OldSubModel):
 
         if reaction == "main":
             name = "interfacial current density"
-            ecd_name = "exchange-current density"
+            ecd_name = "exchange current density"
         elif reaction == "oxygen":
             name = "oxygen interfacial current density"
-            ecd_name = "oxygen exchange-current density"
+            ecd_name = "oxygen exchange current density"
 
         variables = {
             name.capitalize(): j,

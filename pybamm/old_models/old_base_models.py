@@ -540,7 +540,7 @@ class OldStandardBatteryBaseModel(OldBaseModel):
                 "Positive electrode current density": None,
                 "Electrolyte current density": None,
                 "Interfacial current density": None,
-                "Exchange-current density": None,
+                "Exchange current density": None,
             }
         )
 
@@ -550,7 +550,7 @@ class OldStandardBatteryBaseModel(OldBaseModel):
                 "Positive electrode current density [A.m-2]": None,
                 "Electrolyte current density [A.m-2]": None,
                 "Interfacial current density [A.m-2]": None,
-                "Exchange-current density [A.m-2]": None,
+                "Exchange current density [A.m-2]": None,
             }
         )
         # Voltage

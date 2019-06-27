@@ -15,9 +15,9 @@ class TestCompareOutputs(unittest.TestCase):
         """
         # load models
         models = [
-            pybamm.lead_acid.LOQS(),
-            pybamm.lead_acid.Composite(),
-            pybamm.lead_acid.NewmanTiedemann(),
+            pybamm.old_lead_acid.OldLOQS(),
+            pybamm.old_lead_acid.OldComposite(),
+            pybamm.old_lead_acid.OldNewmanTiedemann(),
         ]
 
         # load parameter values (same for all models)
@@ -58,8 +58,8 @@ class TestCompareOutputs(unittest.TestCase):
         # load models
         options = [{"capacitance": cap} for cap in [False, "differential", "algebraic"]]
         model_combos = [
-            ([pybamm.lead_acid.LOQS(opt) for opt in options]),
-            ([pybamm.lead_acid.NewmanTiedemann(opt) for opt in options]),
+            ([pybamm.old_lead_acid.OldLOQS(opt) for opt in options]),
+            ([pybamm.old_lead_acid.OldNewmanTiedemann(opt) for opt in options]),
         ]
 
         for models in model_combos:

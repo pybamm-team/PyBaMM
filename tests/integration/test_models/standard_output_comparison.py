@@ -169,7 +169,7 @@ class VariablesComparison(BaseOutputComparison):
         self.compare("Positive electrode potential")
         self.compare("Electrolyte potential")
         # Currents
-        self.compare("Exchange-current density")
+        self.compare("Exchange current density")
         self.compare("Negative electrode current density")
         self.compare("Positive electrode current density")
 
