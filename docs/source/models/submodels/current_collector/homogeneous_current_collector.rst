@@ -1,4 +1,5 @@
 Uniform Current Collector
-=========================
+==========================
 
-..autoclass:: pybamm.current_collector.Uniform
+.. autoclass:: pybamm.current_collector.Uniform
+    :members:

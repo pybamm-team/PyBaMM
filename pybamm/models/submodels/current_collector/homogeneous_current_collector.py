@@ -2,19 +2,20 @@
 # Class for uniform current collectors
 #
 import pybamm
-
 from .base_current_collector import BaseModel
 
 
 class Uniform(BaseModel):
-    """Class for uniform current collectors
+    """A submodel for uniform potential in the current collectors which
+    is valid in the limit of fast conductivity in the current collectors.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+
+    **Extends:** :class:`pybamm.current_collector.BaseModel`
     """
 
     def __init__(self, param, domain):
