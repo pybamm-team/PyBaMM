@@ -7,14 +7,18 @@ from .base_ohm import BaseModel
 
 
 class SurfaceForm(BaseModel):
-    """Ohm's law + conservation of current for the current in the electrodes.
+    """A submodel for the electrode with Ohm's law in the surface potential 
+    formulation.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
+    domain : str
+        Either 'Negative' or 'Positive'
 
-    *Extends:* :class:`pybamm.SubModel`
+
+    **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
     def __init__(self, param, domain):

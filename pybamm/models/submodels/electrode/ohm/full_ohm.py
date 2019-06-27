@@ -1,33 +1,28 @@
 #
-# Full model for Ohm's law in the electrode
+# Full model of electrode employing Ohm's law
 #
 import pybamm
-
 from .base_ohm import BaseModel
 
 
 class Full(BaseModel):
-    """Full model for ohm's law with conservation of current for the current in the
-    electrodes.
+    """Full model of electrode employing Ohm's law.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative electrode' or 'Positive electrode'
+        Either 'Negative' or 'Positive'
 
-    *Extends:* :class:`pybamm.BaseOhm`
+
+    **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
     def get_fundamental_variables(self):
-        """
-        Returns the variables in the submodel which can be stated independent of
-        variables stated in other submodels
-        """
 
         if self._domain == "Negative":
             phi_s = pybamm.standard_variables.phi_s_n
@@ -39,9 +34,6 @@ class Full(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        """
-        Returns variables which are coupled to other submodels
-        """
 
         phi_s = variables[self._domain + " electrode potential"]
         eps = variables[self._domain + " electrode porosity"]
@@ -66,14 +58,7 @@ class Full(BaseModel):
         return variables
 
     def set_algebraic(self, variables):
-        """
-        PDE for current in the electrodes, using Ohm's law
 
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of symbols to use in the model
-        """
         phi_s = variables[self._domain + " electrode potential"]
         i_s = variables[self._domain + " electrode current density"]
         j = variables[self._domain + " electrode interfacial current density"]
@@ -81,14 +66,7 @@ class Full(BaseModel):
         self.algebraic[phi_s] = pybamm.div(i_s) + j
 
     def set_boundary_conditions(self, variables):
-        """
-        Boundary conditions for current in the electrodes.
 
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of symbols to use in the model
-        """
         phi_s = variables[self._domain + " electrode potential"]
         eps = variables[self._domain + " electrode porosity"]
         i_boundary_cc = variables["Current collector current density"]
@@ -108,14 +86,7 @@ class Full(BaseModel):
         self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
     def set_initial_conditions(self, variables):
-        """
-        Initial conditions for current and potentials in the electrodes.
 
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of symbols to use in the model
-        """
         phi_s = variables[self._domain + " electrode potential"]
 
         if self._domain == "Negative":

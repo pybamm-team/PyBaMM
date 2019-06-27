@@ -1,5 +1,5 @@
 Full Ohmic Electrode Model
 ==========================
 
-..autoclass:: pybamm.electrode.ohm.Full
+.. autoclass:: pybamm.electrode.ohm.Full
     :members:
