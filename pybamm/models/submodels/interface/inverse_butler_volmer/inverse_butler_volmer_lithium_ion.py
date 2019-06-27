@@ -9,7 +9,7 @@ class LithiumIon(BaseModel):
     """
     Lithium ion inverse Butler-Volmer class
 
-    *Extends:* :class:`pybamm.BaseInverseButlerVolmer`
+    *Extends:* :class:`pybamm.interface.inverse_butler_volmer.BaseModel`
     """
 
     def __init__(self, param, domain):

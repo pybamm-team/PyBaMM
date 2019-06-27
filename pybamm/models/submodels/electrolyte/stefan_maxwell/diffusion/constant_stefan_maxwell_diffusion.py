@@ -16,7 +16,7 @@ class ConstantConcentration(BaseModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseStefanMaxwellDiffusion`
+    *Extends:* :class:`pybamm.electrolyte.stefan_maxwell.diffusion.BaseModel`
     """
 
     def __init__(self, param):

@@ -9,7 +9,7 @@ class LeadAcid(BaseModel):
     """
     Lead acid inverse Butler-Volmer class
 
-    *Extends:* :class:`pybamm.BaseButlerVolmer`
+    *Extends:* :class:`pybamm.interface.inverse_butler_volmer.BaseModel`
     """
 
     def __init__(self, param, domain):
