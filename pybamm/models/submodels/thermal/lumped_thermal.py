@@ -14,7 +14,7 @@ class LumpedModel(BaseModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseThermal`
+    *Extends:* :class:`BaseModel`
     """
 
     def __init__(self, param):

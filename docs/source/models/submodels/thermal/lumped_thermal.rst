@@ -1,7 +1,7 @@
 Lumped Thermal Submodel
 =======================
 
-.. autoclass:: pybamm.thermal.Lumped
+.. autoclass:: pybamm.thermal.LumpedModel
     :members:
 
 

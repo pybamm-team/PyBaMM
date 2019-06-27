@@ -16,8 +16,6 @@ class ManyParticles(BaseModel):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
-
-    *Extends:* :class:`pybamm.BaseFickianParticle`
     """
 
     def __init__(self, param, domain):

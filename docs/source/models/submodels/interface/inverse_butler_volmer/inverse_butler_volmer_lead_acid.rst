@@ -1,7 +1,7 @@
 Lead Acid Inverse Butler-Volmer Submodel
 ========================================
 
-.. autoclass:: pybamm.inverse_butler_volmer.LeadAcid
+.. autoclass:: pybamm.interface.inverse_butler_volmer.LeadAcid
     :members:
 
 

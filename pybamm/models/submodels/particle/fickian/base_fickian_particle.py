@@ -16,7 +16,7 @@ class BaseModel(BaseParticle):
     domain : str
         The domain of the model either 'Negative' or 'Positive'
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain):
