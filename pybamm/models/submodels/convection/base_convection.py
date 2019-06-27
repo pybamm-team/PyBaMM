@@ -1,24 +1,40 @@
 #
-# Base class for convection
+# Base class for convection submodels
 #
 import pybamm
 
 
 class BaseModel(pybamm.BaseSubModel):
-    """Base class for convection
+    """Base class for convection submodels.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+
+    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param):
         super().__init__(param)
 
     def _get_standard_velocity_variables(self, v_box):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the fluid velocity.
+
+        Parameters
+        ----------
+        v_box : :class:`pybamm.Symbol`
+            The volume-averaged fluid velocity
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the volume-averaged
+            velocity.
+        """
 
         vel_scale = self.param.velocity_scale
 
@@ -31,6 +47,20 @@ class BaseModel(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_pressure_variables(self, p):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the pressure in the fluid.
+
+        Parameters
+        ----------
+        p : :class:`pybamm.Symbol`
+            The fluid pressure
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the pressure.
+        """
 
         # add more to this (x-averages etc)
         variables = {"Electrolyte pressure": p}
@@ -38,7 +68,20 @@ class BaseModel(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_vertical_velocity_variables(self, dVbox_dz):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the vertical velocity of the fluid.
 
+        Parameters
+        ----------
+        dV_box_dz : :class:`pybamm.Symbol`
+            The vertical velocity of the fluid
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the vertical velocity.
+        """
         vel_scale = self.param.velocity_scale
         L_z = self.param.L_z
 
@@ -51,12 +94,12 @@ class BaseModel(pybamm.BaseSubModel):
 
     def _separator_velocity(self, variables):
         """
-        Calculate x- and z-components of velocity in the separator
+        A private method to calculate x- and z-components of velocity in the separator
 
         Parameters
         ----------
         variables : dict
-            Dictionary of symbols to use in the model
+            Dictionary of variables in the whole model.
 
         Returns
         -------

@@ -1,19 +1,20 @@
 #
-# Class for pressure driven convection
+# Submodel for pressure driven convection
 #
 import pybamm
 from .base_convection import BaseModel
 
 
 class FullModel(BaseModel):
-    """Class for pressure-driven convection
+    """Submodel for the full model of pressure-driven convection
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`BaseModel`
+
+    **Extends:** :class:`pybamm.convection.BaseModel`
     """
 
     def __init__(self, param):

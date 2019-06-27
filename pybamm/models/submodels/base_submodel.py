@@ -63,7 +63,8 @@ class BaseSubModel:
         be created independent of other submodels. For example, the electrolyte
         concentration variables can be created independent of whether any other
         variables have been defined in the model. As a rule, if a variable can be
-        created without variables from other submodels, then it should be.
+        created without variables from other submodels, then it should be placed in
+        this method.
 
         Returns
         -------

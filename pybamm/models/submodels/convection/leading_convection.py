@@ -6,14 +6,15 @@ from .base_convection import BaseModel
 
 
 class LeadingOrder(BaseModel):
-    """Class for leading-order pressure-driven convection
+    """A submodel for the leading-order approximation of pressure-driven convection
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`BaseModel`
+
+    **Extends:** :class:`pybamm.convection.BaseModel`
     """
 
     def __init__(self, param):
