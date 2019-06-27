@@ -2,6 +2,7 @@ Convection Submodels
 ====================
 
 .. toctree::
+  :maxdepth: 1
 
   base_convection
   no_convection

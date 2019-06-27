@@ -2,6 +2,7 @@ Porosity Submodels
 ==================
 
 .. toctree::
+  :maxdepth: 1
 
   base_porosity
   constant_porosity

@@ -2,6 +2,7 @@ Thermal Submodels
 =================
 
 .. toctree::
+  :maxdepth: 1
 
   base_thermal
   isothermal

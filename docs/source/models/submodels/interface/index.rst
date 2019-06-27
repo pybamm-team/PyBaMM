@@ -2,6 +2,7 @@ Interface Submodels
 ===================
 
 .. toctree::
+  :maxdepth: 1
 
   base_interface
   butler_volmer/index
