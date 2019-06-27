@@ -15,9 +15,9 @@ class TestAsymptoticConvergence(unittest.TestCase):
         full model solution
         """
         # Create models
-        leading_order_model = pybamm.lead_acid.LOQS()
-        composite_model = pybamm.lead_acid.Composite()
-        full_model = pybamm.lead_acid.NewmanTiedemann()
+        leading_order_model = pybamm.old_lead_acid.OldLOQS()
+        composite_model = pybamm.old_lead_acid.OldComposite()
+        full_model = pybamm.old_lead_acid.OldNewmanTiedemann()
         # Same parameters, same geometry
         parameter_values = full_model.default_parameter_values
         parameter_values.process_model(leading_order_model)
