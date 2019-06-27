@@ -13,13 +13,31 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+
+    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param):
         super().__init__(param)
 
     def _get_standard_potential_variables(self, phi_e, phi_e_av):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the potential in the electrolyte.
+
+        Parameters
+        ----------
+        phi_e : :class:`pybamm.Symbol`
+            The potential in the electrolyte.
+        phi_e_av : :class:`pybamm.Symbol`
+            The cell-averaged potential in the electrolyte.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the potential in the
+            electrolyte.
+        """
 
         param = self.param
         pot_scale = param.potential_scale
@@ -55,6 +73,21 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_current_variables(self, i_e):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the current in the electrolyte.
+
+        Parameters
+        ----------
+        i_e : :class:`pybamm.Symbol`
+            The current in the electrolyte.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the current in the
+            electrolyte.
+        """
 
         i_typ = self.param.i_typ
         variables = {
@@ -65,6 +98,25 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         return variables
 
     def _get_split_overpotential(self, eta_c_av, delta_phi_e_av):
+        """ 
+        A private function to obtain the standard variables which
+        can be derived from the electrode-averaged concentration
+        overpotential and Ohmic losses in the electrolyte.
+
+        Parameters
+        ----------
+        eta_c_av : :class:`pybamm.Symbol`
+            The electrode-averaged concentration overpotential
+        delta_phi_e_av: :class:`pybamm.Symbol`
+            The electrode-averaged electrolyte Ohmic losses
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the electrode-averaged
+            concentration overpotential and Ohmic losses in the electrolyte
+            electrolyte.
+        """
 
         param = self.param
         pot_scale = param.potential_scale
@@ -81,6 +133,22 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     def _get_standard_surface_potential_difference_variables(
         self, delta_phi, delta_phi_av
     ):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the surface potential difference.
+
+        Parameters
+        ----------
+        delta_phi_e : :class:`pybamm.Symbol`
+            The surface potential difference.
+        delta_phi_e_av : :class: `pybamm.Symbol`
+            The electrode-averaged surface potential difference
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the surface potential difference.
+        """
 
         pot_scale = self.param.potential_scale
 
@@ -99,6 +167,24 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         return variables
 
     def _get_domain_potential_variables(self, phi_e, domain):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the potential in the electrolyte split
+        by domain: 'negative electrode', 'separator' and 'positive electrode'.
+
+        Parameters
+        ----------
+        phi_e : :class:`pybamm.Symbol`
+            The potential in the electrolyte within the domain 'domain'.
+        domain : str
+            The domain, either: 'Negative', 'Separator', or 'Positive'
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the potential in the
+            electrolyte in domain 'domain'.
+        """
 
         pot_scale = self.param.potential_scale
         phi_e_av = pybamm.average(phi_e)
@@ -115,6 +201,24 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         return variables
 
     def _get_domain_current_variables(self, i_e, domain):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the current in the electrolyte split
+        by domain: 'negative electrode', 'separator' and 'positive electrode'.
+
+        Parameters
+        ----------
+        i_e : :class:`pybamm.Symbol`
+            The current in the electrolyte within the domain 'domain'.
+        domain : str
+            The domain, either: 'Negative', 'Separator', or 'Positive'
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the current in the
+            electrolyte in domain 'domain'.
+        """
 
         i_typ = self.param.i_typ
 
@@ -126,6 +230,23 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         return variables
 
     def _get_whole_cell_variables(self, variables):
+        """
+        A private function to obtain the potential and current concatenated
+        across the whole cell. Note required 'variables' to contain the potential
+        and current in the subdomains: 'negative electrode', 'separator', and
+        'positive electrode'.
+
+        Parameters
+        ----------
+        variables : dict
+            The variables that have been set in the rest of the model.
+
+        Returns
+        -------
+        variables : dict
+            The variables including the whole-cell electrolyte potentials
+            and currents.
+        """
 
         phi_e_n = variables["Negative electrolyte potential"]
         phi_e_s = variables["Separator electrolyte potential"]

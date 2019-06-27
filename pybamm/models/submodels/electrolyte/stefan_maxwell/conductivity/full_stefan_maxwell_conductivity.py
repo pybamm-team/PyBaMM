@@ -16,18 +16,14 @@ class FullModel(BaseModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseStefanMaxwellConductivity`
+
+    **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
     def __init__(self, param):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        """
-        Returns the variables in the submodel which can be stated independent of
-        variables stated in other submodels
-        """
-
         phi_e = pybamm.standard_variables.phi_e
         phi_e_av = pybamm.average(phi_e)
 
@@ -49,7 +45,6 @@ class FullModel(BaseModel):
         return variables
 
     def set_algebraic(self, variables):
-
         phi_e = variables["Electrolyte potential"]
         i_e = variables["Electrolyte current density"]
         j = variables["Interfacial current density"]
@@ -57,7 +52,6 @@ class FullModel(BaseModel):
         self.algebraic = {phi_e: pybamm.div(i_e) - j}
 
     def set_boundary_conditions(self, variables):
-
         phi_e = variables["Electrolyte potential"]
 
         self.boundary_conditions = {
@@ -68,7 +62,6 @@ class FullModel(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        """Pseudo initial conditions for DAE solver (initial guess)"""
         phi_e = variables["Electrolyte potential"]
         self.initial_conditions = {phi_e: -self.param.U_n(self.param.c_n_init)}
 

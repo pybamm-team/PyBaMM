@@ -15,14 +15,14 @@ class LeadingOrderModel(BaseModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseStefanMaxwellConductivity`
+
+    **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
     def __init__(self, param):
         super().__init__(param)
 
     def get_coupled_variables(self, variables):
-
         ocp_n_av = variables["Average negative electrode open circuit potential"]
         eta_r_n_av = variables["Average negative electrode reaction overpotential"]
         phi_s_n_av = variables["Average negative electrode potential"]

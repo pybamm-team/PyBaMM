@@ -13,7 +13,8 @@ class BaseModel(BaseElectrolyteConductivity):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+
+    **Extends:** :class:`pybamm.electrolyte.BaseElectrolyteConductivity`
     """
 
     def __init__(self, param):

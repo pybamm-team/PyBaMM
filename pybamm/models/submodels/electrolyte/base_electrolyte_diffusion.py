@@ -12,7 +12,8 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+
+    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, ocp=False):
@@ -20,6 +21,23 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         self.ocp = ocp
 
     def _get_standard_concentration_variables(self, c_e, c_e_av):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the concentration in the electrolyte.
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            The concentration in the electrolyte.
+        c_e_av : :class:`pybamm.Symbol`
+            The cell-averaged concentration in the electrolyte.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the concentration in the
+            electrolyte.
+        """
 
         c_e_typ = self.param.c_e_typ
         c_e_n, c_e_s, c_e_p = c_e.orphans
@@ -40,6 +58,21 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_flux_variables(self, N_e):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the mass flux in the electrolyte.
+
+        Parameters
+        ----------
+        N_e : :class:`pybamm.Symbol`
+            The flux in the electrolyte.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the flux in the
+            electrolyte.
+        """
 
         param = self.param
         D_e_typ = param.D_e(param.c_e_typ)
@@ -57,6 +90,21 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
 
     def _get_standard_ocp_variables(self, c_e):
+        """
+        A private function to obtain the open circuit potential and
+        related standard variables.
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            The concentration in the electrolyte.
+
+        Returns
+        -------
+        variables : dict
+            The variables dictionary including the open circuit potentials
+            and related standard variables.
+        """
 
         c_e_n, _, c_e_p = c_e.orphans
 

@@ -17,14 +17,14 @@ class CombinedOrderModel(BaseModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseStefanMaxwellConductivity`
+
+    **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
     def __init__(self, param):
         super().__init__(param)
 
     def get_coupled_variables(self, variables):
-
         i_boundary_cc = variables["Current collector current density"]
         eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
