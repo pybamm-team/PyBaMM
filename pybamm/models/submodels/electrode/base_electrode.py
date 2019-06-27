@@ -1,18 +1,20 @@
 #
-# Base class for the electrode
+# Base class for electrode submodels
 #
 import pybamm
 
 
 class BaseElectrode(pybamm.BaseSubModel):
-    """Base class for conservation of current for the current in the electrodes.
+    """Base class for electrode submodels.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
+    domain : str
+        Either 'Negative' or 'Positive'
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain):
@@ -25,7 +27,21 @@ class BaseElectrode(pybamm.BaseSubModel):
             )
 
     def _get_standard_potential_variables(self, phi_s):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the potential in the electrode.
 
+        Parameters
+        ----------
+        phi_s : :class:`pybamm.Symbol`
+            The potential in the electrode.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the potential in the
+            electrode.
+        """
         param = self.param
         phi_s_av = pybamm.average(phi_s)
 
@@ -40,7 +56,6 @@ class BaseElectrode(pybamm.BaseSubModel):
                 param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_av
             )
             V = pybamm.BoundaryValue(phi_s, "right")
-            # V_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * V
             delta_phi_s = phi_s - V
 
         delta_phi_s_av = pybamm.average(delta_phi_s)
@@ -64,12 +79,24 @@ class BaseElectrode(pybamm.BaseSubModel):
             + " electrode ohmic losses [V]": delta_phi_s_av_dim,
         }
 
-        # if self._domain == "Positive":
-        #     variables.update({"Voltage": V_dim})
-
         return variables
 
     def _get_standard_current_variables(self, i_s):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the current in the electrode.
+
+        Parameters
+        ----------
+        i_s : :class:`pybamm.Symbol`
+            The current in the electrode.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the current in the
+            electrode.
+        """
         param = self.param
 
         i_s_dim = param.i_typ * i_s
@@ -82,7 +109,21 @@ class BaseElectrode(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_whole_cell_current_variables(self, variables):
+        """
+        A private function to obtain the whole-cell versions of the
+        current variables.
 
+        Parameters
+        ----------
+        variables : dict
+            The variables in the whole model.
+
+        Returns
+        -------
+        variables : dict
+            The variables in the whole model with the whole-cell
+            current variables added.
+        """
         i_s_n = variables["Negative electrode current density"]
         i_s_s = pybamm.Broadcast(0, ["separator"])
         i_s_p = variables["Positive electrode current density"]

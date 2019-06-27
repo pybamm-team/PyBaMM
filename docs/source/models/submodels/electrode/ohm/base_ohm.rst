@@ -1,5 +1,5 @@
 Base Ohmic Electrode Model
-==========================
+===========================
 
-..autoclass:: pybamm.electrode.ohm.BaseModel
+.. autoclass:: pybamm.electrode.ohm.BaseModel
     :members:

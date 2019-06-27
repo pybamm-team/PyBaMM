@@ -1,5 +1,5 @@
 Leading Order Ohmic Electrode Model
 ====================================
 
-..autoclass:: pybamm.electrode.ohm.Leading
+.. autoclass:: pybamm.electrode.ohm.Leading
     :members:

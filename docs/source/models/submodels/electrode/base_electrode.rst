@@ -1,5 +1,5 @@
 Base Electrode Model
 ====================
 
-..autoclass:: pybamm.electrode.BaseElectrode
+.. autoclass:: pybamm.electrode.BaseElectrode
     :members:

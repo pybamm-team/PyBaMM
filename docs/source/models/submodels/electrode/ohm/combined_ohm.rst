@@ -1,5 +1,5 @@
 Combined Order Ohmic Electrode Model
 ====================================
 
-..autoclass:: pybamm.electrode.ohm.Combined
+.. autoclass:: pybamm.electrode.ohm.Combined
     :members:

@@ -33,8 +33,8 @@ class BaseModel(pybamm.BaseSubModel):
         Returns
         -------
         variables : dict
-            The variables which can be derived from the volume-averaged
-            velocity.
+            The variables which can be derived from the potential in the 
+            current collector.
         """
 
         pot_scale = self.param.potential_scale
@@ -62,8 +62,8 @@ class BaseModel(pybamm.BaseSubModel):
         Returns
         -------
         variables : dict
-            The variables which can be derived from the volume-averaged
-            velocity.
+            The variables which can be derived from the current in the current
+            collector.
         """
 
         # just need this to get 1D models working for now

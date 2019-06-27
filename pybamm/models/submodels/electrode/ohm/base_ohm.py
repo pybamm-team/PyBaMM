@@ -2,19 +2,22 @@
 # Base class for Ohm's law submodels
 #
 import pybamm
-
 from ..base_electrode import BaseElectrode
 
 
 class BaseModel(BaseElectrode):
-    """Ohm's law + conservation of current for the current in the electrodes.
+    """A base class for electrode submodels that employ
+    Ohm's law.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
+    domain : str
+        Either 'Negative' or 'Positive'
 
-    *Extends:* :class:`pybamm.SubModel`
+
+    **Extends:** :class:`pybamm.electrode.BaseElectrode`
     """
 
     def __init__(self, param, domain):

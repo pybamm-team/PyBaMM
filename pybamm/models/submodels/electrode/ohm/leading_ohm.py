@@ -7,17 +7,18 @@ from .base_ohm import BaseModel
 
 
 class Leading(BaseModel):
-    """Leading-order model for ohm's law with conservation of current for the current
-    in the electrodes.
+    """An electrode submodel that employs Ohm's law the leading-order approximation to
+    governing equations.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     domain : str
-        Either 'Negative electrode' or 'Positive electrode'
+        Either 'Negative' or 'Positive'
 
-    *Extends:* :class:`pybamm.BaseOhm`
+
+    **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
     def __init__(self, param, domain):

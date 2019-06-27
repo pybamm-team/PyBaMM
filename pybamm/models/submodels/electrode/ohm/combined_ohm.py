@@ -18,7 +18,8 @@ class Combined(BaseModel):
     domain : str
         Either 'Negative electrode' or 'Positive electrode'
 
-    *Extends:* :class:`pybamm.BaseOhm`
+
+    **Extends:** :class:`pybamm.BaseOhm`
     """
 
     def __init__(self, param, domain):
