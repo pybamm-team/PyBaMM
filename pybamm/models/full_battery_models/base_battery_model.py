@@ -118,10 +118,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             "bc_options": {"dimensionality": 0},
             "capacitance": False,
             "convection": False,
-            "thermal": False,
+            "thermal": None,
             "first-order potential": "linear",
             "side reactions": [],
             "interfacial surface area": "constant",
+            "Voltage": "On",
         }
         if self._extra_options is None:
             options = default_options
