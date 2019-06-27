@@ -227,12 +227,6 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Create appropriate submesh by combining submeshes in domain
         submesh_list = self.mesh.combine_submeshes(*domain)
 
-        ## Create vector of ones using submesh
-        #vector = np.array([])
-        #for submesh in submesh_list:
-        #    vector = np.append(vector, submesh.d_edges * np.ones_like(submesh.nodes))
-        #return pybamm.Matrix(vector[np.newaxis, :])
-
         # Create vector of ones for primary domain submesh
         submesh = submesh_list[0]
         vector = submesh.d_edges * np.ones_like(submesh.nodes)

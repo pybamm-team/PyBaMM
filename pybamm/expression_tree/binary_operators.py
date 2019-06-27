@@ -512,7 +512,7 @@ class Outer(BinaryOperator):
         # Can only take outer product of a current collector symbol
         if left.domain != ["current collector"]:
             raise pybamm.DomainError(
-                "left child domain must be 'current collector', not'{}".format(
+                "left child domain must be 'current collector', not'{}'".format(
                     left.domain
                 )
             )

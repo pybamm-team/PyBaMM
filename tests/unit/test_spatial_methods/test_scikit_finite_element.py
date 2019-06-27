@@ -19,8 +19,6 @@ class TestScikitFiniteElement(unittest.TestCase):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.indefinite_integral(None, None, None)
-        with self.assertRaises(NotImplementedError):
-            spatial_method.boundary_value_or_flux(None, None)
 
     def test_discretise_equations(self):
         # get mesh
@@ -210,6 +208,25 @@ class TestScikitFiniteElement(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             integral_eqn_disc.evaluate(None, y_test), 6 * ly * lz
         )
+
+    def test_left_right(self):
+        mesh = get_2p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="current collector")
+        extrap_left = pybamm.BoundaryValue(var, "left")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+
+        # check constant returns constant at tab
+        constant_y = np.ones(mesh["current collector"][0].npts)
+        self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 1)
+        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 1)
 
 
 if __name__ == "__main__":

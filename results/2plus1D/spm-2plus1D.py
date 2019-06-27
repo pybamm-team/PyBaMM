@@ -1,6 +1,7 @@
 import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 # set logging level
 pybamm.set_logging_level("INFO")
@@ -19,14 +20,20 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10, var.y: 17, var.z: 17}
+# depnding on number of points in y-z plane may need to increase recursion depth...
+sys.setrecursionlimit(10000)
+mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
-# solve model
-t_eval = np.linspace(0, 2, 100)
+# solve model -- simulate one hour discharge
+tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
+t_end = 3600 / tau.evaluate(0)
+t_eval = np.linspace(0, t_end, 120)
 solution = model.default_solver.solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
@@ -44,8 +51,8 @@ phi_s_cp = pybamm.ProcessedVariable(
 )
 l_y = phi_s_cp.x_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
-y_plot = np.linspace(0, l_y, 51)
-z_plot = np.linspace(0, l_z, 51)
+y_plot = np.linspace(0, l_y, 101)
+z_plot = np.linspace(0, l_z, 101)
 
 
 def plot(t):

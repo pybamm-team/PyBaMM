@@ -26,7 +26,7 @@ i_typ = pybamm.Function(
 voltage_low_cut_dimensional = pybamm.Parameter("Lower voltage cut-off [V]")
 voltage_high_cut_dimensional = pybamm.Parameter("Upper voltage cut-off [V]")
 current_with_time = pybamm.FunctionParameter(
-    "Current function", pybamm.t
+    "Current function", pybamm.t,
 ) * pybamm.Function(np.sign, I_typ)
 dimensional_current_density_with_time = i_typ * current_with_time
 dimensional_current_with_time = I_typ * current_with_time
