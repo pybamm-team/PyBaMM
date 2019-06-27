@@ -25,8 +25,14 @@ i_typ = pybamm.Function(
 )
 voltage_low_cut_dimensional = pybamm.Parameter("Lower voltage cut-off [V]")
 voltage_high_cut_dimensional = pybamm.Parameter("Upper voltage cut-off [V]")
+
+# Current as a function of *dimensional* time. The below is overwritten in
+# standard_parameters_lithium_ion.py and standard_parameters_lead_acid.py
+# to use the correct timescale used for non-dimensionalisation. For a base model,
+# the user may provide the typical timescale as a parameter.
+timescale = pybamm.Parameter("Typical timescale [s]")
 current_with_time = pybamm.FunctionParameter(
-    "Current function", pybamm.t
+    "Current function", pybamm.t * timescale
 ) * pybamm.Function(np.sign, I_typ)
 dimensional_current_density_with_time = i_typ * current_with_time
 dimensional_current_with_time = I_typ * current_with_time

@@ -22,6 +22,7 @@ class TestElectricalParameters(unittest.TestCase):
                 "Electrode depth [m]": 0.1,
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
+                "Typical timescale [s]": 60,
                 "Current function": os.path.join(
                     os.getcwd(),
                     "pybamm",
