@@ -121,4 +121,4 @@ class LOQS(BaseModel):
         """
         Create and return the default solver for this model
         """
-        return pybamm.ScikitsOdeSolver()
+        return pybamm.ScipySolver()
