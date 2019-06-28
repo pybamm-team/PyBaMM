@@ -5,6 +5,7 @@ import pybamm
 import unittest
 
 
+@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestLeadAcidComposite(unittest.TestCase):
     def test_well_posed(self):
         options = {"thermal": None, "Voltage": "On"}
@@ -17,6 +18,7 @@ class TestLeadAcidComposite(unittest.TestCase):
         model.check_well_posedness()
 
 
+@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
     def test_well_posed(self):
         options = {"thermal": None, "Voltage": "On", "capacitance": False}
