@@ -9,7 +9,8 @@ from ..base_interface import BaseInterface
 
 class BaseModel(BaseInterface):
     """
-    Inverts the Butler-Volmer relation to solve for the reaction overpotential.
+    A base submodel that implements the inverted form of the Butler-Volmer relation to 
+    solve for the reaction overpotential.
 
     Parameters
     ----------
@@ -25,10 +26,6 @@ class BaseModel(BaseInterface):
         super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
-        """
-        Returns variables which are derived from the fundamental variables in the model.
-        """
-
         ocp = variables[self._domain + " electrode open circuit potential"]
 
         j0 = self._get_exchange_current_density(variables)
@@ -70,6 +67,9 @@ class BaseModel(BaseInterface):
         raise NotImplementedError
 
     def _get_average_interfacial_current_density(self, variables):
+        """
+        Method to obtain the average interfacial current density.
+        """
 
         i_boundary_cc = variables["Current collector current density"]
 

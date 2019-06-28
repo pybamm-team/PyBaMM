@@ -13,7 +13,8 @@ class BaseModel(BaseElectrolyteDiffusion):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseElectrolyteDiffusion`
+
+    **Extends:** :class:`pybamm.electrolyte.BaseElectrolyteDiffusion`
     """
 
     def __init__(self, param, ocp=False):

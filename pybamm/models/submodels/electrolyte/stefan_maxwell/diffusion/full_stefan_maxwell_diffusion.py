@@ -16,18 +16,14 @@ class FullModel(BaseModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseStefanMaxwellDiffusion`
+
+    **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.diffusion.BaseModel`
     """
 
     def __init__(self, param, ocp=False):
         super().__init__(param, ocp)
 
     def get_fundamental_variables(self):
-        """
-        Returns the variables in the submodel which can be stated independent of
-        variables stated in other submodels
-        """
-
         c_e = pybamm.standard_variables.c_e
         c_e_av = pybamm.average(c_e)
 

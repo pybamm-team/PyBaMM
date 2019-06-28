@@ -7,15 +7,29 @@ from .base_bulter_volmer import BaseModel
 
 class LithiumIon(BaseModel):
     """
-    Lithium ion Butler-Volmer class
+    Lithium-ion Butler-Volmer class
 
-    *Extends:* :class:`pybamm.interface.butler_volmer.BaseModel`
+    **Extends:** :class:`pybamm.interface.butler_volmer.BaseModel`
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
     def _get_exchange_current_density(self, variables):
+        """
+        A private function to obtain the exchange current density for a lithium-ion
+        intercalation reaction.
+
+        Parameters
+        ----------
+        variables: dict
+        `   The variables in the full model.
+
+        Returns
+        -------
+        j0 : :class: `pybamm.Symbol`
+            The exchange current density.
+        """
 
         c_s_surf = variables[self._domain + " particle surface concentration"]
         c_e = variables[self._domain + " electrolyte concentration"]

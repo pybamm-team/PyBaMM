@@ -14,7 +14,8 @@ from ...base_interface import BaseInterface
 
 class BaseModel(BaseInterface):
     """
-       Butler-Volmer class
+       Base submodel which implements the forward Butler-Volmer equation for the
+       surface potential form.
 
     .. math::
         j = j_0(c) * \\sinh(\\eta_r(c))
@@ -23,23 +24,17 @@ class BaseModel(BaseInterface):
     ----------
     param :
         model parameters
-    domain : iter of str, optional
+    domain : str
+        The domain to implement the model, either: 'Negative' or 'Positive'.
 
-    Returns
-    -------
-    :class:`pybamm.Symbol`
-        Interfacial current density
 
+    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
-        """
-        Returns variables which are derived from the fundamental variables in the model.
-        """
-
         i_boundary_cc = variables["Current collector current density"]
         delta_phi_s = variables[
             self._domain + " electrode surface potential difference"

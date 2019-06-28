@@ -11,10 +11,11 @@ class BaseInterface(pybamm.BaseSubModel):
 
     Parameters
     ----------
-    set_of_parameters : parameter class
+    param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+
+    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain):

@@ -7,16 +7,15 @@ from .base_surface_form_butler_volmer import BaseModel
 
 class LithiumIon(BaseModel):
     """
-    Lithium ion Butler-Volmer class
+    Lithium-ion Butler-Volmer submodel for the surface form.
 
-    *Extends:* :class:`BaseButlerVolmer`
+    **Extends:** :class:`pybamm.interface.butler_volmer.surface_form.BaseModel`
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
     def _get_exchange_current_density(self, variables):
-
         c_s_surf = variables[self._domain + " particle surface concentration"]
         c_e = variables[self._domain + " electrolyte concentration"]
 
