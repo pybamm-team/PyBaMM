@@ -1,5 +1,5 @@
-Base Full Stefan-Maxwell Conductivity Submodel (Surface Form)
-=============================================================
+Base Full Model 
+===============
 
 .. autoclass:: pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseFullModel
     :members:

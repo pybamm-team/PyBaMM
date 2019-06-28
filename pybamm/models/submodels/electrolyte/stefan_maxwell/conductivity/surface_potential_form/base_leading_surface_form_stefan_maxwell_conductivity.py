@@ -15,8 +15,9 @@ class BaseLeadingOrderModel(BaseModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSurfaceFormStefanMaxwellConductivity`
-    """
+
+    **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseModel`
+    """  # noqa: E501
 
     def __init__(self, param, domain):
         super().__init__(param, domain)

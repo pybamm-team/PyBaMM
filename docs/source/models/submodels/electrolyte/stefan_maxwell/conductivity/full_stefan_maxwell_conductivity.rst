@@ -1,5 +1,5 @@
-Full Stefan-Maxwell Conductivity Submodel
-=========================================
+Full Model
+==========
 
 .. autoclass:: pybamm.electrolyte.stefan_maxwell.conductivity.FullModel
     :members:

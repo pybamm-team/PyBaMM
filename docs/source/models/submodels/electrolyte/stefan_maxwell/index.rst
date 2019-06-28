@@ -1,7 +1,8 @@
-Stefan-Maxwell Electrolyte Submodels
-====================================
+Stefan-Maxwell
+==============
 
 .. toctree::
+    :maxdepth: 1
 
     conductivity/index
     diffusion/index

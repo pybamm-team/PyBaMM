@@ -1,5 +1,5 @@
-Full Capacitance Stefan-Maxwell Conductivity Submodel (Surface Form)
-====================================================================
+Capacitance Full Model
+=======================
 
 .. autoclass:: pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.FullCapacitanceModel
     :members:

@@ -1,5 +1,5 @@
-Stefan Maxwell Electrolyte Conductivity Submodels (Surface Form)
-================================================================
+Surface Form
+=============
 
 .. toctree::
 

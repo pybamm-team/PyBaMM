@@ -1,5 +1,5 @@
-Leading Stefan-Maxwell Diffusion Submodel
-=========================================
+Leading Order Model
+===================
 
 .. autoclass:: pybamm.electrolyte.stefan_maxwell.diffusion.LeadingOrderModel
     :members:

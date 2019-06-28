@@ -16,19 +16,15 @@ class BaseFullModel(BaseModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSurfaceFormStefanMaxwellConductivity`
-    """
+
+    **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseModel`
+    """  # noqa: E501
 
     def __init__(self, param, domain):
         super().__init__(param)
         self._domain = domain
 
     def get_fundamental_variables(self):
-        """
-        Returns the variables in the submodel which can be stated independent of
-        variables stated in other submodels
-        """
-
         if self._domain == "Negative":
             delta_phi = pybamm.standard_variables.delta_phi_n
         elif self._domain == "Positive":
@@ -45,7 +41,6 @@ class BaseFullModel(BaseModel):
         return variables
 
     def set_initial_conditions(self, variables):
-        """Initial condition"""
         delta_phi_e = variables[
             self._domain + " electrode surface potential difference"
         ]

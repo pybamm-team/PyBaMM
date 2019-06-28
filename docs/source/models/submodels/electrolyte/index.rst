@@ -1,8 +1,8 @@
-Electrolyte Submodels
-=====================
+Electrolyte
+===========
 
 .. toctree::
-  :maxdepth: 1
+  :maxdepth: 2
 
   base_electrolyte_conductivity
   base_electrolyte_diffusion

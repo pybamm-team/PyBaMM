@@ -17,7 +17,8 @@ class BaseModel(BaseStefanMaxwellConductivity):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseStefanMaxwellConductivity`
+
+    **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.BaseModel`
     """
 
     def __init__(self, param, domain):
@@ -39,15 +40,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
         return variables
 
     def set_boundary_conditions(self, variables):
-        """
-        Set boundary conditions for the full model.
-
-        Parameters
-        ----------
-        variables : dict
-            Dictionary of symbols to use in the model
-        """
-
         if self._domain == "Separator":
             return None
 
@@ -90,6 +82,10 @@ class BaseModel(BaseStefanMaxwellConductivity):
         self.boundary_conditions = {delta_phi: {"left": lbc, "right": rbc}}
 
     def _get_neg_pos_coupled_variables(self, variables):
+        """
+        A private function to get the coupled variables when the domain is 'Negative'
+        or 'Positive'.
+        """
 
         param = self.param
 
@@ -122,6 +118,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
         return variables
 
     def _get_sep_coupled_variables(self, variables):
+        """
+        A private function to get the coupled variables when the domain is 'Separator'.
+        """
 
         param = self.param
         x_s = pybamm.standard_spatial_vars.x_s

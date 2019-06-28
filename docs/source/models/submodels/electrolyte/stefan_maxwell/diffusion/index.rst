@@ -1,5 +1,5 @@
-Stefan-Maxwell Diffusion Submodels
-==================================
+Diffusion
+=========
 
 .. toctree::
 
