@@ -11,11 +11,14 @@ class TestBaseModel(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
 
         a = pybamm.Scalar(0)
+        a_n = pybamm.Broadcast(pybamm.Scalar(0), ["negative electrode"])
+        a_s = pybamm.Broadcast(pybamm.Scalar(0), ["separator"])
+        a_p = pybamm.Broadcast(pybamm.Scalar(0), ["positive electrode"])
         variables = {
             "Current collector current density": a,
-            "Negative electrode porosity": a,
-            "Negative electrolyte concentration": a,
-            "Negative electrode surface potential difference": a,
+            "Negative electrode porosity": a_n,
+            "Negative electrolyte concentration": a_n,
+            "Negative electrode surface potential difference": a_n,
         }
 
         spf = pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form
@@ -25,12 +28,12 @@ class TestBaseModel(unittest.TestCase):
 
         variables = {
             "Current collector current density": a,
-            "Negative electrolyte potential": a,
-            "Negative electrolyte current density": a,
-            "Separator electrolyte potential": a,
-            "Separator electrolyte current density": a,
-            "Positive electrode porosity": a,
-            "Positive electrolyte concentration": a,
+            "Negative electrolyte potential": a_n,
+            "Negative electrolyte current density": a_n,
+            "Separator electrolyte potential": a_s,
+            "Separator electrolyte current density": a_s,
+            "Positive electrode porosity": a_p,
+            "Positive electrolyte concentration": a_p,
         }
         submodel = spf.BaseLeadingOrderModel(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)

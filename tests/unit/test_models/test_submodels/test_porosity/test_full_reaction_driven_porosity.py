@@ -10,10 +10,11 @@ import unittest
 class TestFullModel(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
-        a = pybamm.Scalar(0)
+        a_n = pybamm.Broadcast(pybamm.Scalar(0), ["negative electrode"])
+        a_p = pybamm.Broadcast(pybamm.Scalar(0), ["positive electrode"])
         variables = {
-            "Negative electrode interfacial current density": a,
-            "Positive electrode interfacial current density": a,
+            "Negative electrode interfacial current density": a_n,
+            "Positive electrode interfacial current density": a_p,
         }
         submodel = pybamm.porosity.FullModel(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
