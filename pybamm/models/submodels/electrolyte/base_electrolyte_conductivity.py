@@ -98,7 +98,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         return variables
 
     def _get_split_overpotential(self, eta_c_av, delta_phi_e_av):
-        """ 
+        """
         A private function to obtain the standard variables which
         can be derived from the electrode-averaged concentration
         overpotential and Ohmic losses in the electrolyte.

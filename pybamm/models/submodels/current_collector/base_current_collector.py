@@ -33,7 +33,7 @@ class BaseModel(pybamm.BaseSubModel):
         Returns
         -------
         variables : dict
-            The variables which can be derived from the potential in the 
+            The variables which can be derived from the potential in the
             current collector.
         """
 

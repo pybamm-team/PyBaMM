@@ -9,7 +9,7 @@ from ..base_interface import BaseInterface
 
 class BaseModel(BaseInterface):
     """
-    A base submodel that implements the inverted form of the Butler-Volmer relation to 
+    A base submodel that implements the inverted form of the Butler-Volmer relation to
     solve for the reaction overpotential.
 
     Parameters

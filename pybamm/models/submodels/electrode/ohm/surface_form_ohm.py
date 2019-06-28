@@ -7,7 +7,7 @@ from .base_ohm import BaseModel
 
 
 class SurfaceForm(BaseModel):
-    """A submodel for the electrode with Ohm's law in the surface potential 
+    """A submodel for the electrode with Ohm's law in the surface potential
     formulation.
 
     Parameters
