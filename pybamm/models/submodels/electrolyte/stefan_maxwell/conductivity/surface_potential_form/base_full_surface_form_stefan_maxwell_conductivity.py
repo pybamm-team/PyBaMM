@@ -21,7 +21,7 @@ class BaseFullModel(BaseModel):
     """  # noqa: E501
 
     def __init__(self, param, domain):
-        super().__init__(param)
+        super().__init__(param, domain)
         self._domain = domain
 
     def get_fundamental_variables(self):
@@ -34,7 +34,7 @@ class BaseFullModel(BaseModel):
 
         delta_phi_av = pybamm.average(delta_phi)
 
-        variables = pybamm.get_standard_surface_potential_difference_variables(
+        variables = self._get_standard_surface_potential_difference_variables(
             delta_phi, delta_phi_av
         )
 
