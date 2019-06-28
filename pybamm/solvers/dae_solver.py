@@ -19,10 +19,11 @@ class DaeSolver(pybamm.BaseSolver):
         The tolerance for the initial-condition solver (default is 1e-8).
     """
 
-    def __init__(self, method=None, tol=1e-8, root_method="lm", root_tol=1e-6):
+    def __init__(self, method=None, tol=1e-8, root_method="lm", root_tol=1e-6, max_steps=1000):
         super().__init__(method, tol)
         self.root_method = root_method
         self.root_tol = root_tol
+        self.max_steps = max_steps
 
     @property
     def root_method(self):
@@ -39,6 +40,14 @@ class DaeSolver(pybamm.BaseSolver):
     @root_tol.setter
     def root_tol(self, tol):
         self._root_tol = tol
+
+    @property
+    def max_steps(self):
+        return self._max_steps
+
+    @max_steps.setter
+    def max_steps(self, max_steps):
+        self._max_steps = max_steps
 
     def solve(self, model, t_eval):
         """Calculate the solution of the model at specified times.

@@ -27,6 +27,7 @@ build/
 input/*
 !input/parameters
 !input/comsol_results/
+!input/drive_cycles
 
 # simulation outputs
 out/

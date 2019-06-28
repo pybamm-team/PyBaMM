@@ -1,7 +1,6 @@
 #
 # Car current (piecewise constant)
 #
-import numpy as np
 
 
 def car_current(t):
@@ -16,16 +15,15 @@ def car_current(t):
            for Li-ion battery design, simulation, and control. Journal of The
            Electrochemical Society, 163(7):1192-1205, 2016.
     """
-    current = np.piecewise(
-        t,
-        [
-            (t >= 0) & (t <= 50),
-            (t > 60) & (t <= 210),
-            (t > 210) & (t <= 410),
-            (t > 410) & (t <= 415),
-            (t > 415) & (t <= 615),
-            (t > 615),
-        ],
-        [1, -0.5, 0.5, 1, 2, 1.25, -0.5],
+
+    current = (
+        1 * (t >= 0) * (t <= 50)
+        - 0.5 * (t > 50) * (t <= 60)
+        + 0.5 * (t > 60) * (t <= 210)
+        + 1 * (t > 210) * (t <= 410)
+        + 2 * (t > 410) * (t <= 415)
+        + 1.25 * (t > 415) * (t <= 615)
+        - 0.5 * (t > 615)
     )
+
     return current

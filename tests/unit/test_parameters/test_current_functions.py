@@ -11,7 +11,7 @@ import numpy as np
 
 class TestCurrentFunctions(unittest.TestCase):
     def test_all_functions(self):
-        function_list = [cf.sin_current]
+        function_list = [cf.sin_current, cf.car_current, cf.get_csv_current]
         standard_tests = StandardCurrentFunctionTests(function_list)
         standard_tests.test_all()
 
