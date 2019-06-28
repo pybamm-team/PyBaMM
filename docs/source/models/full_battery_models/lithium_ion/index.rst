@@ -1,4 +1,4 @@
-Lithium-ion models
+Lithium-ion Models
 ==================
 
 .. toctree::

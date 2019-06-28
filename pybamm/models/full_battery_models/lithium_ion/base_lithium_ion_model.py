@@ -3,15 +3,13 @@
 #
 import pybamm
 
-from ..base_battery_model import BaseBatteryModel
 
-
-class BaseModel(BaseBatteryModel):
+class BaseModel(pybamm.BaseBatteryModel):
     """
     Overwrites default parameters from Base Model with default parameters for
     lithium-ion models
 
-    **Extends:** :class:`BaseBatteryModel`
+    **Extends:** :class:`pybamm.BaseBatteryModel`
 
     """
 

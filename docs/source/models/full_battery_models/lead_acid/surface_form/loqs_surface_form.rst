@@ -1,5 +1,5 @@
-Lead Acid LOQS Model (Surface Form)
-===================================
+LOQS Model
+==========
 
 .. autoclass:: pybamm.lead_acid.surface_form.LOQS
 

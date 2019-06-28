@@ -2,6 +2,7 @@ Models
 ======
 
 .. toctree::
+  :maxdepth: 1
 
   base_models
   reaction_diffusion

@@ -10,7 +10,7 @@ class BaseBatteryModel(pybamm.BaseModel):
     """
     Base model class with some default settings and required variables
 
-    **Extends:** :class:`StandardBatteryBaseModel`
+    **Extends:** :class:`pybamm.BaseModel`
     """
 
     def __init__(self, options=None):

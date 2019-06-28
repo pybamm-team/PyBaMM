@@ -7,7 +7,9 @@ from .base_lithium_ion_model import BaseModel
 
 class DFN(BaseModel):
     """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery.
-    **Extends:** :class:`pybamm.BaseLithiumIonModel`
+
+
+    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, options=None):

@@ -1,5 +1,5 @@
-Lead Acid LOQS Model
-====================
+LOQS Model
+==========
 
 .. autoclass:: pybamm.lead_acid.LOQS
     :members:

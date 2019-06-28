@@ -14,7 +14,8 @@ class NewmanTiedemann(BaseModel):
            Battery Simulations from Porous-Electrode Theory: I. Physical Model.
            arXiv preprint arXiv:1902.01771, 2019.
 
-    **Extends:** :class:`pybamm.LeadAcidBaseModel`
+
+    **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
     def __init__(self, options=None):

@@ -1,5 +1,5 @@
-Lead-acid models (Surface formulation)
-======================================
+Surface Form
+============
 
 .. toctree::
 

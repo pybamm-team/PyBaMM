@@ -1,5 +1,5 @@
-Lithium-ion Doyle-Fuller-Newman (DFN)
-=====================================
+Doyle-Fuller-Newman (DFN)
+=========================
 
 .. autoclass:: pybamm.lithium_ion.DFN
     :members:
