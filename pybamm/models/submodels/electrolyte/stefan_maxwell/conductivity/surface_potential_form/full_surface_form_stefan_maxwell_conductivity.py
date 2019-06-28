@@ -20,8 +20,7 @@ class FullModel(BaseFullModel):
     """  # noqa: E501
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def set_algebraic(self, variables):
         delta_phi = variables[self._domain + " electrode surface potential difference"]

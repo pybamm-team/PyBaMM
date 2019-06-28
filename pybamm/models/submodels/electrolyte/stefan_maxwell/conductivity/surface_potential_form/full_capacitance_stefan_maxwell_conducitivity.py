@@ -21,7 +21,7 @@ class FullCapacitanceModel(BaseFullModel):
     """  # noqa: E501
 
     def __init__(self, param, domain):
-        super().__init__(param)
+        super().__init__(param, domain)
         self._domain = domain
 
     def set_rhs(self, variables):
