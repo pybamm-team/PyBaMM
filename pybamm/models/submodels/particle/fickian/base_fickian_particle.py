@@ -26,7 +26,7 @@ class BaseModel(BaseParticle):
     def _flux_law(self, c):
         return -pybamm.grad(c)
 
-    def _unpack():
+    def _unpack(self, variables):
         raise NotImplementedError
 
     def set_rhs(self, variables):
