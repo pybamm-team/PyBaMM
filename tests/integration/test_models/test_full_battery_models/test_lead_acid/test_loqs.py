@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 
 
+@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestLOQS(unittest.TestCase):
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):

@@ -40,6 +40,7 @@ class TestLeadAcidLoqsSurfaceForm(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_optimisations(self):
         options = {"capacitance": "differential"}
         model = pybamm.old_lead_acid.OldLOQS(options)
