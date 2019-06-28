@@ -13,7 +13,8 @@ class LeadingOrder(BaseModel):
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`BaseModel`
+
+    **Extends:** :class:`pybamm.porosity.BaseModel`
     """
 
     def __init__(self, param):

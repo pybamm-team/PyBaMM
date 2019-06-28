@@ -7,14 +7,15 @@ from .base_porosity import BaseModel
 
 
 class Constant(BaseModel):
-    """Base class for constant porosity
+    """Submodel for constant porosity
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+
+    **Extends:** :class:`pybamm.porosity.BaseModel`
     """
 
     def get_fundamental_variables(self):
