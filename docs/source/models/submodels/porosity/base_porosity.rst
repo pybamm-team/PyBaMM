@@ -1,5 +1,5 @@
-Base Porosity Submodel
-======================
+Base Model
+===========
 
 .. autoclass:: pybamm.porosity.BaseModel
     :members:

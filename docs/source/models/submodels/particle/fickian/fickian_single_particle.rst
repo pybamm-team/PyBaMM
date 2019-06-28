@@ -1,5 +1,5 @@
-Fickian Single Particle Submodel
-================================
+Single Particle
+===============
 
 .. autoclass:: pybamm.particle.fickian.SingleParticle
     :members:

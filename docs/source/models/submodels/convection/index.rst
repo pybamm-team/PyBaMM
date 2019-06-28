@@ -1,5 +1,5 @@
-Convection Submodels
-====================
+Convection
+==========
 
 .. toctree::
   :maxdepth: 1

@@ -1,6 +1,6 @@
 
-Surface Form Ohmic Electrode Model
-===================================
+Surface Form
+============
 
 .. autoclass:: pybamm.electrode.ohm.SurfaceForm
     :members:

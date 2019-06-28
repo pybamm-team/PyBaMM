@@ -1,5 +1,5 @@
-Full Reaction-Driven Porosity Submodel
-======================================
+Full Model
+==========
 
 .. autoclass:: pybamm.porosity.FullModel
     :members:

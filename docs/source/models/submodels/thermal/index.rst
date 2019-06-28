@@ -1,5 +1,5 @@
-Thermal Submodels
-=================
+Thermal
+=======
 
 .. toctree::
   :maxdepth: 1

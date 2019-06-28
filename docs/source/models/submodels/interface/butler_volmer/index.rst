@@ -1,7 +1,8 @@
-Butler-Volmer Submodels
-=======================
+Butler-Volmer
+==============
 
 .. toctree::
+  :maxdepth: 1
 
   base_butler_volmer
   butler_volmer_lithium_ion

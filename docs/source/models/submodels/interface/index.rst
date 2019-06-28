@@ -1,5 +1,5 @@
-Interface Submodels
-===================
+Interface
+==========
 
 .. toctree::
   :maxdepth: 1

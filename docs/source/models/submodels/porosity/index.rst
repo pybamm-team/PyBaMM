@@ -1,5 +1,5 @@
-Porosity Submodels
-==================
+Porosity
+========
 
 .. toctree::
   :maxdepth: 1

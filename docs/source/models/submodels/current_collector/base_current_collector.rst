@@ -1,5 +1,5 @@
-Base Current Collector Submodel
-================================
+Base Model
+==========
 
 .. autoclass:: pybamm.current_collector.BaseModel
     :members:

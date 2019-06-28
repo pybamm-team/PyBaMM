@@ -1,5 +1,5 @@
-Inverse Butler-Volmer Submodels
-===============================
+Inverse Butler-Volmer
+=====================
 
 .. toctree::
 

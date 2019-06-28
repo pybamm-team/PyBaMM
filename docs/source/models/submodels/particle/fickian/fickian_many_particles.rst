@@ -1,5 +1,5 @@
-Fickian Many Particles Submodel
-===============================
+Many Particle
+=============
 
 .. autoclass:: pybamm.particle.fickian.ManyParticles
     :members:

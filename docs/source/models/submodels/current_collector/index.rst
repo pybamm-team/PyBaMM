@@ -1,5 +1,5 @@
-Current Collector Submodels
-===========================
+Current Collector
+=================
 
 .. toctree::
   :maxdepth: 1

@@ -1,5 +1,5 @@
-Electrode Submodels
-===================
+Electrode
+=========
 
 .. toctree::
   :maxdepth: 1

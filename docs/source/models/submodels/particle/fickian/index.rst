@@ -1,5 +1,5 @@
-Fickian Particle Submodels
-==========================
+Fickian
+========
 
 .. toctree::
 

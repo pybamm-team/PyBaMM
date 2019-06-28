@@ -1,5 +1,5 @@
-Particle Submodels
-==================
+Particle
+========
 
 .. toctree::
   :maxdepth: 1

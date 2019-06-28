@@ -1,5 +1,5 @@
-Isothermal Submodel
-=====================
+Isothermal
+==========
 
 .. autoclass:: pybamm.thermal.Isothermal
     :members:

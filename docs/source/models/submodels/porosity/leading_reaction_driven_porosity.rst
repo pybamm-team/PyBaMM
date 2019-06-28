@@ -1,5 +1,5 @@
-Leading-Order Reaction-Driven Porosity Submodel
-===============================================
+Leading-Order Model 
+===================
 
 .. autoclass:: pybamm.porosity.LeadingOrder
     :members:

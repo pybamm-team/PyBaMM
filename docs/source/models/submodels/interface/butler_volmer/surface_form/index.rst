@@ -1,5 +1,5 @@
-Butler-Volmer Submodels (Surface Form)
-======================================
+Surface Form
+=============
 
 .. toctree::
 

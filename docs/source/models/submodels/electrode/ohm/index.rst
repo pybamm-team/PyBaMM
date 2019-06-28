@@ -1,5 +1,5 @@
-Ohmic Electrode Submodels
-=========================
+Ohmic
+=====
 
 .. toctree::
 

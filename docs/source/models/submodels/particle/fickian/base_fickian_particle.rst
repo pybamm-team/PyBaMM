@@ -1,5 +1,5 @@
-Base Fickian Particle Submodel
-==============================
+Base Model
+==========
 
 .. autoclass:: pybamm.particle.fickian.BaseModel
     :members:
