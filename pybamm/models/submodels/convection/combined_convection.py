@@ -33,7 +33,7 @@ class CombinedOrder(BaseModel):
             pybamm.IndefiniteIntegral(j_p, x_p) - pybamm.Integral(j_p, x_p)
         )
 
-        v_box_s, dVbox_dz = self.get_separator_velocities(variables)
+        v_box_s, dVbox_dz = self._separator_velocity(variables)
         v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
 
         variables.update(self._get_standard_velocity_variables(v_box))
