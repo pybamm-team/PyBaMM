@@ -2,7 +2,6 @@
 # Class for many particles with Fickian diffusion
 #
 import pybamm
-
 from .base_fickian_particle import BaseModel
 
 
@@ -16,16 +15,15 @@ class ManyParticles(BaseModel):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+
+
+    **Extends:** :class:`pybamm.particle.fickian.BaseModel`
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
     def get_fundamental_variables(self):
-        """
-        Returns the variables in the submodel for which a PDE must be solved to obtains
-        """
-
         if self._domain == "Negative":
             c_s = pybamm.standard_variables.c_s_n
 

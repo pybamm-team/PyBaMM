@@ -15,7 +15,8 @@ class BaseParticle(pybamm.BaseSubModel):
     domain : str
         The domain of the model either 'Negative' or 'Positive'
 
-    *Extends:* :class:`pybamm.BaseSubModel`
+
+    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain):
@@ -29,7 +30,6 @@ class BaseParticle(pybamm.BaseSubModel):
             )
 
     def _get_standard_concentration_variables(self, c_s, c_s_xav):
-
         c_s_surf = pybamm.surf(c_s, set_domain=True)
 
         c_s_surf_av = pybamm.average(c_s_surf)
@@ -60,7 +60,6 @@ class BaseParticle(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_flux_variables(self, N_s, N_s_xav):
-
         variables = {
             self._domain + " particle flux": N_s,
             "X-average " + self._domain.lower() + " particle flux": N_s_xav,
@@ -69,7 +68,6 @@ class BaseParticle(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_ocp_variables(self, c_s):
-
         c_s_surf = pybamm.surf(c_s, set_domain=True)
 
         if self._domain == "Negative":
@@ -108,7 +106,6 @@ class BaseParticle(pybamm.BaseSubModel):
         raise NotImplementedError
 
     def set_initial_conditions(self, variables):
-
         c, _, _ = self._unpack(variables)
 
         if self._domain == "Negative":
@@ -120,8 +117,6 @@ class BaseParticle(pybamm.BaseSubModel):
         self.initial_conditions = {c: c_init}
 
     def set_events(self, variables):
-
-        #
         c_s_surf = variables[self._domain + " particle surface concentration"]
         tol = 0.01
 

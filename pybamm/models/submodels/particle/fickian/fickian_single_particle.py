@@ -16,17 +16,15 @@ class SingleParticle(BaseModel):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+
+
+    **Extends:** :class:`pybamm.particle.fickian.BaseModel`
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
     def get_fundamental_variables(self):
-        """
-        Returns the variables in the submodel which can be created indpendent of
-        other submodels
-        """
-
         if self._domain == "Negative":
             c_s_xav = pybamm.standard_variables.c_s_n_xav
             c_s = pybamm.Broadcast(c_s_xav, ["negative electrode"])
