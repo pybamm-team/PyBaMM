@@ -26,15 +26,16 @@ class CombinedOrderModel(BaseModel):
 
     def get_coupled_variables(self, variables):
         i_boundary_cc = variables["Current collector current density"]
-        eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
         c_e_av = variables["Average electrolyte concentration"]
         ocp_n_av = variables["Average negative electrode open circuit potential"]
         eta_r_n_av = variables["Average negative electrode reaction overpotential"]
         phi_s_n_av = variables["Average negative electrode potential"]
+        eps_n_av = variables["Average negative electrode porosity"]
+        eps_s_av = variables["Average separator porosity"]
+        eps_p_av = variables["Average positive electrode porosity"]
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
-        eps_n, eps_s, eps_p = [e.orphans[0] for e in eps.orphans]
 
         param = self.param
         l_n = param.l_n
@@ -44,9 +45,9 @@ class CombinedOrderModel(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # bulk conductivities
-        kappa_n = param.kappa_e(c_e_av) * eps_n ** param.b
-        kappa_s = param.kappa_e(c_e_av) * eps_s ** param.b
-        kappa_p = param.kappa_e(c_e_av) * eps_p ** param.b
+        kappa_n_av = param.kappa_e(c_e_av) * eps_n_av ** param.b
+        kappa_s_av = param.kappa_e(c_e_av) * eps_s_av ** param.b
+        kappa_p_av = param.kappa_e(c_e_av) * eps_p_av ** param.b
 
         chi_av = param.chi(c_e_av)
 
@@ -64,7 +65,7 @@ class CombinedOrderModel(BaseModel):
             - chi_av * pybamm.average(pybamm.Function(np.log, c_e_n / c_e_av))
             - (
                 (i_boundary_cc * param.C_e * l_n / param.gamma_e)
-                * (1 / (3 * kappa_n) - 1 / kappa_s)
+                * (1 / (3 * kappa_n_av) - 1 / kappa_s_av)
             )
         )
 
@@ -72,13 +73,13 @@ class CombinedOrderModel(BaseModel):
             phi_e_const
             + chi_av * pybamm.Function(np.log, c_e_n / c_e_av)
             - (i_boundary_cc * param.C_e / param.gamma_e)
-            * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n * l_n) + l_n / kappa_s)
+            * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n_av * l_n) + l_n / kappa_s_av)
         )
 
         phi_e_s = (
             phi_e_const
             + chi_av * pybamm.Function(np.log, c_e_s / c_e_av)
-            - (i_boundary_cc * param.C_e / param.gamma_e) * (x_s / kappa_s)
+            - (i_boundary_cc * param.C_e / param.gamma_e) * (x_s / kappa_s_av)
         )
 
         phi_e_p = (
@@ -86,8 +87,8 @@ class CombinedOrderModel(BaseModel):
             + chi_av * pybamm.Function(np.log, c_e_p / c_e_av)
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * (
-                (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p * l_p)
-                + (1 - l_p) / kappa_s
+                (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p_av * l_p)
+                + (1 - l_p) / kappa_s_av
             )
         )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
@@ -101,9 +102,9 @@ class CombinedOrderModel(BaseModel):
 
         # average electrolyte ohmic losses
         delta_phi_e_av = -(param.C_e * i_boundary_cc / param.gamma_e) * (
-            param.l_n / (3 * kappa_n)
-            + param.l_s / (kappa_s)
-            + param.l_p / (3 * kappa_p)
+            param.l_n / (3 * kappa_n_av)
+            + param.l_s / (kappa_s_av)
+            + param.l_p / (3 * kappa_p_av)
         )
 
         variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))
