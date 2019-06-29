@@ -11,7 +11,11 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
 
     """
 
-    def __init__(self, options={}):
+    def __init__(self, options=None):
+
+        if not options:
+            options = {}
+
         options.update(
             {"Voltage": "Off"}
         )  # annoying option only for reaction diffusion
