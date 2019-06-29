@@ -36,6 +36,7 @@ class TestOldLeadAcidComposite(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
 
+@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestOldLeadAcidCompositeSurfaceForm(unittest.TestCase):
     def test_basic_processing(self):
         options = {"capacitance": "algebraic"}
