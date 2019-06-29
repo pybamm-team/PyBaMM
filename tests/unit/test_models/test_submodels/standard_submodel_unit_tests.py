@@ -7,9 +7,11 @@ class StandardSubModelTests(object):
 
     """ Basic tests for submodels. Just tests everything runs without raising error"""
 
-    def __init__(self, submodel, variables={}):
+    def __init__(self, submodel, variables=None):
         # variables should be a dict of variables which are needed by the submodels
         # to run all its functions propertly
+        if not variables:
+            variables = {}
         self.submodel = submodel
         self.variables = variables
 

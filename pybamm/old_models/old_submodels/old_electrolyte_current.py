@@ -340,14 +340,14 @@ class OldMacInnesStefanMaxwell(OldElectrolyteCurrentBaseModel):
 
         # Unpack variables
         phi_e = variables["Electrolyte potential"]
-        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+        phi_e_n, _, phi_e_p = phi_e.orphans
         c_e = variables["Electrolyte concentration"]
         c_e_n, c_e_s, c_e_p = c_e.orphans
         try:
             epsilon = variables["Porosity"]
         except KeyError:
             epsilon = param.epsilon
-        epsilon_n, epsilon_s, epsilon_p = epsilon.orphans
+        epsilon_n, epsilon_s, _ = epsilon.orphans
 
         # Unpack variables
         j_n = reactions["main"]["neg"]["aj"]
