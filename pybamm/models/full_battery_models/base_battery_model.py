@@ -141,14 +141,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "must use capacitance formulation to solve {!s} in 2D".format(self)
             )
 
-            if len(options["side reactions"]) > 0:
-                raise pybamm.ModelError(
-                    """
-                    must use capacitance formulation to solve {!s} with side reactions
-                    """.format(
-                        self
-                    )
+        if len(options["side reactions"]) > 0:
+            raise pybamm.ModelError(
+                """
+                must use capacitance formulation to solve {!s} with side reactions
+                """.format(
+                    self
                 )
+            )
 
         return options
 
