@@ -59,7 +59,7 @@ class BaseModel(object):
         self.use_simplify = True
         self.use_to_python = True
 
-    def _set_dict(self, dict, name):
+    def _set_dictionary(self, dict, name):
         """
         Convert any scalar equations in dict to 'pybamm.Scalar'
         and check that domains are consistent
@@ -97,7 +97,7 @@ class BaseModel(object):
 
     @rhs.setter
     def rhs(self, rhs):
-        self._rhs = self._set_dict(rhs, "rhs")
+        self._rhs = self._set_dictionary(rhs, "rhs")
 
     @property
     def algebraic(self):
@@ -105,7 +105,7 @@ class BaseModel(object):
 
     @algebraic.setter
     def algebraic(self, algebraic):
-        self._algebraic = self._set_dict(algebraic, "algebraic")
+        self._algebraic = self._set_dictionary(algebraic, "algebraic")
 
     @property
     def initial_conditions(self):
@@ -113,7 +113,7 @@ class BaseModel(object):
 
     @initial_conditions.setter
     def initial_conditions(self, initial_conditions):
-        self._initial_conditions = self._set_dict(
+        self._initial_conditions = self._set_dictionary(
             initial_conditions, "initial_conditions"
         )
 
