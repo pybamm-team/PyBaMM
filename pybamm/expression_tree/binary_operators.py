@@ -494,7 +494,18 @@ class Division(BinaryOperator):
 
 class Inner(BinaryOperator):
     """
-    A node in the expression tree which represents the inner (or dot) product.
+    A node in the expression tree which represents the inner (or dot) product. This
+    operator should be used to take the inner product of two mathematical vectors
+    (as opposed to the computational vectors arrived at post-discretisation) of the
+    form v = v_x e_x + v_y e_y + v_z e_z where v_x, v_y, v_z are scalars
+    and e_x, e_y, e_z are x-y-z-directional unit vectors. For v and w mathematical
+    vectors, inner product returns v_x * w_x + v_y * w_y + v_z * w_z. In addition,
+    for some spatial discretisations mathematical vector quantities (such as
+    i = grad(phi) ) are evaluated on a different part of the grid to mathematical
+    scalars (e.g. for finite volume mathematical scalars are evaluated on the nodes but
+    mathematical vectors are evaluated on cell edges). Therefore, inner also transfers
+    the inner product of the vector onto the scalar part of the grid if required
+    by a particular discretisation.
 
     **Extends:** :class:`BinaryOperator`
     """
