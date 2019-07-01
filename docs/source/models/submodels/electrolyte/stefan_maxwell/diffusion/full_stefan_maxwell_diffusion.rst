@@ -1,6 +1,6 @@
 Full Model
 ==========
 
-.. autoclass:: pybamm.electrolyte.stefan_maxwell.diffusion.FullModel
+.. autoclass:: pybamm.electrolyte.stefan_maxwell.diffusion.Full
     :members:
 

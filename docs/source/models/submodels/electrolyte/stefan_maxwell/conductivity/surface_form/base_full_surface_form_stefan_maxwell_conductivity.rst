@@ -1,5 +1,5 @@
 Base Full Model 
 ===============
 
-.. autoclass:: pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseFullModel
+.. autoclass:: pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseFull
     :members:

@@ -16,7 +16,7 @@ class FullCapacitance(BaseFull):
         The parameters to use for this submodel
 
 
-    **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseFullModel`
+    **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseFull`
 
     """  # noqa: E501
 

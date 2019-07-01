@@ -16,7 +16,7 @@ class LeadingOrder(BaseLeadingOrder):
         The parameters to use for this submodel
 
 
-    **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseLeadingOrderModel`
+    **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseLeadingOrder`
     """  # noqa: E501
 
     def __init__(self, param, domain):

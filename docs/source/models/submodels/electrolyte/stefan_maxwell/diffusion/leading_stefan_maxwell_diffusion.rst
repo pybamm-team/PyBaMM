@@ -1,7 +1,7 @@
 Leading Order Model
 ===================
 
-.. autoclass:: pybamm.electrolyte.stefan_maxwell.diffusion.LeadingOrderModel
+.. autoclass:: pybamm.electrolyte.stefan_maxwell.diffusion.LeadingOrder
     :members:
 
 

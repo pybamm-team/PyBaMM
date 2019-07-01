@@ -1,7 +1,7 @@
 Full Model
 ==========
 
-.. autoclass:: pybamm.porosity.FullModel
+.. autoclass:: pybamm.porosity.Full
     :members:
 
 

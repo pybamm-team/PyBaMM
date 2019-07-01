@@ -1,5 +1,5 @@
 Full Model
 ==========
 
-.. autoclass:: pybamm.convection.FullModel
+.. autoclass:: pybamm.convection.Full
     :members:

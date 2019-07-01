@@ -1,5 +1,5 @@
 Full Model
 ==========
 
-.. autoclass:: pybamm.thermal.FullModel
+.. autoclass:: pybamm.thermal.Full
     :members:
