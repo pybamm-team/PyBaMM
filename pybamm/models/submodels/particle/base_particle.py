@@ -21,13 +21,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def __init__(self, param, domain):
         super().__init__(param)
-
-        if domain in ["Negative", "Positive"]:
-            self._domain = domain
-        else:
-            raise pybamm.DomainError(
-                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
-            )
+        self._domain = domain
 
     def _get_standard_concentration_variables(self, c_s, c_s_xav):
         c_s_surf = pybamm.surf(c_s, set_domain=True)
@@ -127,3 +121,16 @@ class BaseParticle(pybamm.BaseSubModel):
         self.events[
             "Maximum " + self._domain.lower() + " particle surface concentration"
         ] = (1 - tol) - pybamm.Function(np.max, c_s_surf)
+
+    @property
+    def _domain(self):
+        return self.__domain
+
+    @_domain.setter
+    def _domain(self, domain):
+        if domain in ["Negative", "Positive"]:
+            self.__domain = domain
+        else:
+            raise pybamm.DomainError(
+                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
+            )

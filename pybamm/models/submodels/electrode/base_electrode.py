@@ -19,12 +19,7 @@ class BaseElectrode(pybamm.BaseSubModel):
 
     def __init__(self, param, domain):
         super().__init__(param)
-        if domain in ["Negative", "Positive"]:
-            self._domain = domain
-        else:
-            raise pybamm.DomainError(
-                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
-            )
+        self._domain = domain
 
     def _get_standard_potential_variables(self, phi_s):
         """
@@ -133,6 +128,19 @@ class BaseElectrode(pybamm.BaseSubModel):
         variables.update({"Electrode current density": i_s})
 
         return variables
+
+    @property
+    def _domain(self):
+        return self.__domain
+
+    @_domain.setter
+    def _domain(self, domain):
+        if domain in ["Negative", "Positive"]:
+            self.__domain = domain
+        else:
+            raise pybamm.DomainError(
+                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
+            )
 
     @property
     def default_solver(self):

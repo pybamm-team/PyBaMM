@@ -34,8 +34,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
         elif self._domain == "Positive":
             variables.update(self._get_neg_pos_coupled_variables(variables))
             variables.update(self._get_whole_cell_variables(variables))
-        else:
-            raise pybamm.DomainError
 
         return variables
 
@@ -202,3 +200,18 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         return phi_s
 
+    @property
+    def _domain(self):
+        return self.__domain
+
+    @_domain.setter
+    def _domain(self, domain):
+        if domain in ["Negative", "Separator", "Positive"]:
+            self.__domain = domain
+        else:
+            raise pybamm.DomainError(
+                """Domain must be either 'Negative',
+                'Separator', or 'Positive' not {}""".format(
+                    domain
+                )
+            )

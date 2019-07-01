@@ -101,13 +101,13 @@ class LOQS(BaseModel):
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + "electrolyte conductivity"
-                ] = surf_form.LeadingOrderModel(self.param, domain)
+                ] = surf_form.LeadingOrder(self.param, domain)
 
         elif self.options["capacitance"] is True:
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + "electrolyte conductivity"
-                ] = surf_form.LeadingOrderCapacitanceModel(self.param, domain)
+                ] = surf_form.LeadingOrderCapacitance(self.param, domain)
 
         else:
             raise pybamm.OptionError("'capacitance' must be either 'True' or 'False'")
