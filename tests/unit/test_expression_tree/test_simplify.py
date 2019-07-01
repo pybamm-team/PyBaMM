@@ -540,6 +540,17 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(outer_simp, pybamm.Vector)
         np.testing.assert_array_equal(outer_simp.evaluate(), 2 * np.ones((15, 1)))
 
+    def test_simplify_divide_outer(self):
+        M = pybamm.Matrix(np.ones((15, 15)))
+        u = pybamm.Scalar(1)
+        v = pybamm.Vector(np.ones(5), domain="current collector")
+        w = pybamm.Vector(2 * np.ones(3), domain="test")
+        outer = pybamm.Outer(v, w)
+        exp1 = Division(outer, u)
+        exp2 = pybamm.Division(M @ pybamm.Division(outer, u), u)
+        import ipdb; ipdb.set_trace()
+        exp.simplify()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

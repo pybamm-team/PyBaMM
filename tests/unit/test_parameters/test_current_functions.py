@@ -18,7 +18,7 @@ class TestCurrentFunctions(unittest.TestCase):
     def test_get_csv_current(self):
         function = cf.get_csv_current
         # Interpolant always returns an array
-        assert isinstance(function(0), numbers.ndarray)
+        assert isinstance(function(0), np.ndarray)
         assert isinstance(function(np.zeros(3)), np.ndarray)
         assert isinstance(function(np.zeros([3, 3])), np.ndarray)
 
