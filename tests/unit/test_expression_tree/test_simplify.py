@@ -540,6 +540,23 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(outer_simp, pybamm.Vector)
         np.testing.assert_array_equal(outer_simp.evaluate(), 2 * np.ones((15, 1)))
 
+    def test_simplify_divide_outer(self):
+        u = pybamm.Scalar(1)
+        v = pybamm.StateVector(slice(0, 5), domain="current collector")
+        outer = pybamm.Outer(v, u)
+
+        exp1 = pybamm.Division(pybamm.Division(outer, u), u)
+        self.assertIsInstance(exp1.simplify(), pybamm.Outer)
+
+        exp2 = pybamm.Division(pybamm.Division(outer, 2 * u), u)
+        self.assertIsInstance(exp2.simplify(), pybamm.Multiplication)
+
+        exp3 = pybamm.Division(pybamm.Division(outer, u), 2 * u)
+        self.assertIsInstance(exp3.simplify(), pybamm.Multiplication)
+
+        exp4 = pybamm.Division(pybamm.Division(outer, 2 * u), 2 * u)
+        exp4.simplify()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
