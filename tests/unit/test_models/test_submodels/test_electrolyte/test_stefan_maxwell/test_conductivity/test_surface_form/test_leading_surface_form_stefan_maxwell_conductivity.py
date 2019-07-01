@@ -23,7 +23,7 @@ class TestLeadingOrderModel(unittest.TestCase):
         }
 
         spf = pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form
-        submodel = spf.LeadingOrderModel(param, "Negative")
+        submodel = spf.LeadingOrder(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -38,7 +38,7 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Positive electrode interfacial current density": a_p,
             "Average positive electrode interfacial current density": a,
         }
-        submodel = spf.LeadingOrderModel(param, "Positive")
+        submodel = spf.LeadingOrder(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

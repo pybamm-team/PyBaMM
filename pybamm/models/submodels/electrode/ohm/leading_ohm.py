@@ -6,7 +6,7 @@ import pybamm
 from .base_ohm import BaseModel
 
 
-class Leading(BaseModel):
+class LeadingOrder(BaseModel):
     """An electrode submodel that employs Ohm's law the leading-order approximation to
     governing equations.
 

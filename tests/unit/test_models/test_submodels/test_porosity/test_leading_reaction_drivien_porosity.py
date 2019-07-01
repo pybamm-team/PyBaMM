@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestLeadingModel(unittest.TestCase):
+class TestLeadingOrder(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
         a = pybamm.Scalar(0)

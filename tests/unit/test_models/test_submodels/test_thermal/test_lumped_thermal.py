@@ -20,7 +20,7 @@ class TestLumped(unittest.TestCase):
             "Negative electrode entropic change": a_n,
             "Positive electrode entropic change": a_p,
         }
-        submodel = pybamm.thermal.LumpedModel(param)
+        submodel = pybamm.thermal.Lumped(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

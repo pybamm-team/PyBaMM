@@ -39,13 +39,13 @@ class NewmanTiedemann(BaseModel):
         )
 
     def set_porosity_submodel(self):
-        self.submodels["porosity"] = pybamm.porosity.FullModel(self.param)
+        self.submodels["porosity"] = pybamm.porosity.Full(self.param)
 
     def set_convection_submodel(self):
         if self.options["convection"] is False:
             self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
         if self.options["convection"] is True:
-            self.submodels["convection"] = pybamm.convection.FullModel(self.param)
+            self.submodels["convection"] = pybamm.convection.Full(self.param)
 
     def set_interfacial_submodel(self):
         self.submodels["negative interface"] = pybamm.interface.butler_volmer.LeadAcid(
@@ -69,11 +69,11 @@ class NewmanTiedemann(BaseModel):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FullModel(
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, ocp=True
         )
 
-        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.FullModel(
+        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
             self.param
         )
 

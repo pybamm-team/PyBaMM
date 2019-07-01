@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from .base_leading_surface_form_stefan_maxwell_conductivity import BaseLeadingOrderModel
+from .base_leading_surface_form_stefan_maxwell_conductivity import BaseLeadingOrder
 
 
-class LeadingOrderCapacitanceModel(BaseLeadingOrderModel):
+class LeadingOrderCapacitance(BaseLeadingOrder):
     """Class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation. (Full refers to unreduced by asymptotic methods)

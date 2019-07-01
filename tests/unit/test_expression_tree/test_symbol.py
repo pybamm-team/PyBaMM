@@ -274,7 +274,7 @@ class TestSymbol(unittest.TestCase):
         # reactions = {
         #     "main": {"neg": {"s": 1, "aj": onen}, "pos": {"s": 1, "aj": onep}}
 
-        model = pybamm.electrolyte.stefan_maxwell.diffusion.FullModel(param)
+        model = pybamm.electrolyte.stefan_maxwell.diffusion.Full(param)
         variables.update(model.get_fundamental_variables())
         variables.update(model.get_coupled_variables(variables))
 

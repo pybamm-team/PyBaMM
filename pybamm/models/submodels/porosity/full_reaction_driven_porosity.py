@@ -5,7 +5,7 @@ import pybamm
 from .base_porosity import BaseModel
 
 
-class FullModel(BaseModel):
+class Full(BaseModel):
     """Class for reaction-driven porosity changes
 
     Parameters

@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestFullModel(unittest.TestCase):
+class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
 
@@ -16,7 +16,7 @@ class TestFullModel(unittest.TestCase):
             "Current collector current density": a,
             "Interfacial current density": a,
         }
-        submodel = pybamm.convection.FullModel(param)
+        submodel = pybamm.convection.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

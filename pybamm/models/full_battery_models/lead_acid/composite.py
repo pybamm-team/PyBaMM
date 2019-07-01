@@ -70,12 +70,12 @@ class Composite(BaseModel):
         ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Positive")
 
     def set_negative_electrode_submodel(self):
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.Combined(
+        self.submodels["negative electrode"] = pybamm.electrode.ohm.CombinedOrder(
             self.param, "Negative"
         )
 
     def set_positive_electrode_submodel(self):
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.Combined(
+        self.submodels["positive electrode"] = pybamm.electrode.ohm.CombinedOrder(
             self.param, "Positive"
         )
 
@@ -83,13 +83,13 @@ class Composite(BaseModel):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FullModel(
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, ocp=True
         )
 
         self.submodels[
             "electrolyte conductivity"
-        ] = electrolyte.conductivity.CombinedOrderModel(self.param)
+        ] = electrolyte.conductivity.CombinedOrder(self.param)
 
     @property
     def default_solver(self):

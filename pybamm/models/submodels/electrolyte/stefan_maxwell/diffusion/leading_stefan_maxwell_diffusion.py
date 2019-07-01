@@ -6,7 +6,7 @@ import pybamm
 from .base_stefan_maxwell_diffusion import BaseModel
 
 
-class LeadingOrderModel(BaseModel):
+class LeadingOrder(BaseModel):
     """Class for conservation of mass in the electrolyte employing the
     Stefan-Maxwell constitutive equations. (Leading refers to leading order
     of asymptotic reduction)

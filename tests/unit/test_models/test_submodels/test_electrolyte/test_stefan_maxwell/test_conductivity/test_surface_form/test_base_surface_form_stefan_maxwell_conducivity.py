@@ -35,7 +35,7 @@ class TestBaseModel(unittest.TestCase):
             "Positive electrode porosity": a_p,
             "Positive electrolyte concentration": a_p,
         }
-        submodel = spf.BaseLeadingOrderModel(param, "Positive")
+        submodel = spf.BaseLeadingOrder(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

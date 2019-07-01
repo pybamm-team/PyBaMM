@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestFullModel(unittest.TestCase):
+class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         a = pybamm.Scalar(0)
@@ -22,7 +22,7 @@ class TestFullModel(unittest.TestCase):
         }
 
         spf = pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form
-        submodel = spf.FullModel(param, "Negative")
+        submodel = spf.Full(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -36,7 +36,7 @@ class TestFullModel(unittest.TestCase):
             "Positive electrolyte concentration": a_p,
             "Positive electrode interfacial current density": a_p,
         }
-        submodel = spf.FullModel(param, "Positive")
+        submodel = spf.Full(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

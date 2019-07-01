@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestLeadingCapacitanceModel(unittest.TestCase):
+class TestLeadingCapacitance(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         a = pybamm.Scalar(0)
@@ -23,7 +23,7 @@ class TestLeadingCapacitanceModel(unittest.TestCase):
         }
 
         spf = pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form
-        submodel = spf.LeadingOrderCapacitanceModel(param, "Negative")
+        submodel = spf.LeadingOrderCapacitance(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -38,7 +38,7 @@ class TestLeadingCapacitanceModel(unittest.TestCase):
             "Positive electrode interfacial current density": a_p,
             "Average positive electrode interfacial current density": a,
         }
-        submodel = spf.LeadingOrderCapacitanceModel(param, "Positive")
+        submodel = spf.LeadingOrderCapacitance(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

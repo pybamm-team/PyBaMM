@@ -5,7 +5,7 @@ import pybamm
 from .base_stefan_maxwell_conductivity import BaseModel
 
 
-class LeadingOrderModel(BaseModel):
+class LeadingOrder(BaseModel):
     """Class for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations. (Leading refers to leading-order
     in the asymptotic reduction)

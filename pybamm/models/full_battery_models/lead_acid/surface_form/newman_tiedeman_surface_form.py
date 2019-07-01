@@ -87,7 +87,7 @@ class NewmanTiedemann(BaseModel):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FullModel(
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, ocp=True
         )
 
@@ -97,13 +97,13 @@ class NewmanTiedemann(BaseModel):
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + "electrolyte conductivity"
-                ] = surf_form.LeadingOrderModel(self.param, domain)
+                ] = surf_form.LeadingOrder(self.param, domain)
 
         elif self.options["capacitance"] is True:
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + "electrolyte conductivity"
-                ] = surf_form.LeadingOrderCapacitanceModel(self.param, domain)
+                ] = surf_form.LeadingOrderCapacitance(self.param, domain)
 
     @property
     def default_solver(self):

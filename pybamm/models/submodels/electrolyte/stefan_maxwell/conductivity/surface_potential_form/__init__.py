@@ -2,15 +2,13 @@
 from .base_surface_form_stefan_maxwell_conductivity import BaseModel
 
 # Full order models
-from .base_full_surface_form_stefan_maxwell_conductivity import BaseFullModel
-from .full_surface_form_stefan_maxwell_conductivity import FullModel
-from .full_capacitance_stefan_maxwell_conducitivity import FullCapacitanceModel
+from .base_full_surface_form_stefan_maxwell_conductivity import BaseFull
+from .full_surface_form_stefan_maxwell_conductivity import Full
+from .full_capacitance_stefan_maxwell_conducitivity import FullCapacitance
 
 
 # Leading-order models
-from .base_leading_surface_form_stefan_maxwell_conductivity import BaseLeadingOrderModel
-from .leading_surface_form_stefan_maxwell_conductivity import LeadingOrderModel
-from .leading_capacitance_stefan_maxwell_conductivity import (
-    LeadingOrderCapacitanceModel,
-)
+from .base_leading_surface_form_stefan_maxwell_conductivity import BaseLeadingOrder
+from .leading_surface_form_stefan_maxwell_conductivity import LeadingOrder
+from .leading_capacitance_stefan_maxwell_conductivity import LeadingOrderCapacitance
 

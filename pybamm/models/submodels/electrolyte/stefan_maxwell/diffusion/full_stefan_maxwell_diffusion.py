@@ -6,7 +6,7 @@ import pybamm
 from .base_stefan_maxwell_diffusion import BaseModel
 
 
-class FullModel(BaseModel):
+class Full(BaseModel):
     """Class for conservation of mass in the electrolyte employing the
     Stefan-Maxwell constitutive equations. (Full refers to unreduced by
     asymptotic methods)

@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestFullModel(unittest.TestCase):
+class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
 

@@ -5,7 +5,7 @@ import pybamm
 from .base_convection import BaseModel
 
 
-class FullModel(BaseModel):
+class Full(BaseModel):
     """Submodel for the full model of pressure-driven convection
 
     Parameters

@@ -6,7 +6,7 @@ import pybamm
 from .base_ohm import BaseModel
 
 
-class Combined(BaseModel):
+class CombinedOrder(BaseModel):
     """An explicit combined leading and first order solution to solid phase
     current conservation with ohm's law. Note that the returned current density is
     only the leading order approximation.

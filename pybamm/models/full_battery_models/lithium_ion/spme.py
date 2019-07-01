@@ -74,13 +74,13 @@ class SPMe(BaseModel):
 
     def set_negative_electrode_submodel(self):
 
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.Combined(
+        self.submodels["negative electrode"] = pybamm.electrode.ohm.CombinedOrder(
             self.param, "Negative"
         )
 
     def set_positive_electrode_submodel(self):
 
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.Combined(
+        self.submodels["positive electrode"] = pybamm.electrode.ohm.CombinedOrder(
             self.param, "Positive"
         )
 
@@ -90,10 +90,8 @@ class SPMe(BaseModel):
 
         self.submodels[
             "electrolyte conductivity"
-        ] = electrolyte.conductivity.CombinedOrderModel(self.param)
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FullModel(
-            self.param
-        )
+        ] = electrolyte.conductivity.CombinedOrder(self.param)
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
 
     @property
     def default_geometry(self):

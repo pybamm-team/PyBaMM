@@ -17,7 +17,7 @@ class TestFull(unittest.TestCase):
             "Volume-averaged velocity": a,
             "Interfacial current density": a,
         }
-        submodel = pybamm.electrolyte.stefan_maxwell.diffusion.FullModel(param)
+        submodel = pybamm.electrolyte.stefan_maxwell.diffusion.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

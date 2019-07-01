@@ -80,13 +80,13 @@ class LOQS(BaseModel):
 
     def set_negative_electrode_submodel(self):
 
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.Leading(
+        self.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
             self.param, "Negative"
         )
 
     def set_positive_electrode_submodel(self):
 
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.Leading(
+        self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
             self.param, "Positive"
         )
 
@@ -96,11 +96,9 @@ class LOQS(BaseModel):
 
         self.submodels[
             "electrolyte conductivity"
-        ] = electrolyte.conductivity.LeadingOrderModel(self.param)
+        ] = electrolyte.conductivity.LeadingOrder(self.param)
 
-        self.submodels[
-            "electrolyte diffusion"
-        ] = electrolyte.diffusion.LeadingOrderModel(
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.LeadingOrder(
             self.param, self.reactions, ocp=True
         )
 

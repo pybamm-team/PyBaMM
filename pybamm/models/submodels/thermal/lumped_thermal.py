@@ -6,7 +6,7 @@ import pybamm
 from .base_thermal import BaseModel
 
 
-class LumpedModel(BaseModel):
+class Lumped(BaseModel):
     """Class for lumped thermal submodel
 
     Parameters

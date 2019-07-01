@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestFullModel(unittest.TestCase):
+class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         a = pybamm.Scalar(0)
@@ -16,7 +16,7 @@ class TestFullModel(unittest.TestCase):
             "Electrolyte concentration": a,
             "Interfacial current density": a,
         }
-        submodel = pybamm.electrolyte.stefan_maxwell.conductivity.FullModel(param)
+        submodel = pybamm.electrolyte.stefan_maxwell.conductivity.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

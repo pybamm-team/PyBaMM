@@ -72,12 +72,10 @@ class DFN(BaseModel):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
-        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.FullModel(
+        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
             self.param
         )
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FullModel(
-            self.param
-        )
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
 
     @property
     def default_geometry(self):

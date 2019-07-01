@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestLeadingModel(unittest.TestCase):
+class TestLeadingOrder(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         a = pybamm.Scalar(0)
@@ -17,9 +17,7 @@ class TestLeadingModel(unittest.TestCase):
             "Average negative electrode open circuit potential": a,
             "Average negative electrode reaction overpotential": a,
         }
-        submodel = pybamm.electrolyte.stefan_maxwell.conductivity.LeadingOrderModel(
-            param
-        )
+        submodel = pybamm.electrolyte.stefan_maxwell.conductivity.LeadingOrder(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestCombinedModel(unittest.TestCase):
+class TestCombinedOrder(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
 
@@ -20,11 +20,11 @@ class TestCombinedModel(unittest.TestCase):
             "Average positive electrode reaction overpotential": a,
             "Average positive electrolyte potential": a,
         }
-        submodel = pybamm.electrode.ohm.Combined(param, "Negative")
+        submodel = pybamm.electrode.ohm.CombinedOrder(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.electrode.ohm.Combined(param, "Positive")
+        submodel = pybamm.electrode.ohm.CombinedOrder(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

@@ -33,7 +33,7 @@ class TestLeadingOrder(unittest.TestCase):
             "Average negative electrode interfacial current density": a,
             "Average positive electrode interfacial current density": a,
         }
-        submodel = pybamm.electrolyte.stefan_maxwell.diffusion.LeadingOrderModel(
+        submodel = pybamm.electrolyte.stefan_maxwell.diffusion.LeadingOrder(
             param, reactions
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
