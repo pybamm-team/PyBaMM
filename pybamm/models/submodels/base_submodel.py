@@ -100,7 +100,7 @@ class BaseSubModel:
         """
         A method to set the right hand side of the differential equations which contain
         a time derivative. Note: this method modifies the state of self.rhs. Unless
-        overwritten by a submodel, the default behaviour of 'pass' is used as 
+        overwritten by a submodel, the default behaviour of 'pass' is used as
         implemented in :class:`pybamm.BaseSubModel`.
 
         Parameters
@@ -128,7 +128,8 @@ class BaseSubModel:
         """
         A method to set the boundary conditions for the submodel. Note: this method
         modifies the state of self.boundary_conditions. Unless overwritten by a
-        submodel, the default behaviour of 'pass' is used a implemented in :class:`pybamm.BaseSubModel`.
+        submodel, the default behaviour of 'pass' is used a implemented in
+        :class:`pybamm.BaseSubModel`.
 
         Parameters
         ----------
