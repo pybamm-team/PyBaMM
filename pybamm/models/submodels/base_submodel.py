@@ -99,55 +99,70 @@ class BaseSubModel:
     def set_rhs(self, variables):
         """
         A method to set the right hand side of the differential equations which contain
-        a time derivative. Note: this method modifies the state of self.rhs
+        a time derivative. Note: this method modifies the state of self.rhs. Unless
+        overwritten by a submodel, the default behaviour of 'pass' is used as 
+        implemented in :class:`pybamm.BaseSubModel`.
 
         Parameters
         ----------
         variables: dict
             The variables in the whole model.
         """
+        pass
 
     def set_algebraic(self, variables):
         """
         A method to set the differential equations which do not contain a time
-        derivative. Note: this method modifies the state of self.algebraic
+        derivative. Note: this method modifies the state of self.algebraic. Unless
+        overwritten by a submodel, the default behaviour of 'pass' is used as
+        implemented in :class:`pybamm.BaseSubModel`.
 
         Parameters
         ----------
         variables: dict
             The variables in the whole model.
         """
+        pass
 
     def set_boundary_conditions(self, variables):
         """
         A method to set the boundary conditions for the submodel. Note: this method
-        modifies the state of self.boundary_conditions
+        modifies the state of self.boundary_conditions. Unless overwritten by a
+        submodel, the default behaviour of 'pass' is used a implemented in :class:`pybamm.BaseSubModel`.
 
         Parameters
         ----------
         variables: dict
             The variables in the whole model.
         """
+        pass
 
     def set_initial_conditions(self, variables):
         """
         A method to set the initial conditions for the submodel. Note: this method
-        modifies the state of self.initial_conditions
+        modifies the state of self.initial_conditions. Unless overwritten by a
+        submodel, the default behaviour of 'pass' is used a implemented in
+        :class:`pybamm.BaseSubModel`.
+
 
         Parameters
         ----------
         variables: dict
             The variables in the whole model.
         """
+        pass
 
     def set_events(self, variables):
         """
         A method to set events related to the state of submodel variable. Note: this
-        method modifies the state of self.events
+        method modifies the state of self.events. Unless overwritten by a submodel, the
+        default behaviour of 'pass' is used a implemented in
+        :class:`pybamm.BaseSubModel`.
 
         Parameters
         ----------
         variables: dict
             The variables in the whole model.
         """
+        pass
 
