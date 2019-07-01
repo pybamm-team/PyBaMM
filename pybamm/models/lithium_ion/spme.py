@@ -123,3 +123,7 @@ class SPMe(pybamm.LithiumIonBaseModel):
     @property
     def default_geometry(self):
         return pybamm.Geometry("1D macro", "1D micro")
+
+    @property
+    def default_solver(self):
+        return pybamm.ScipySolver()

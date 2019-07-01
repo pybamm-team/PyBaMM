@@ -10,8 +10,9 @@ import warnings
 
 def get_csv_current(t):
     """
-    Loads a current profile from a csv file and interpolate on the fly
-
+    Loads a current profile from a csv file and interpolates on the fly !!SLOW!!
+    TO DO: update so that the data is loaded and interpolated once (e.g. during
+    discretisation) and then the interpolant is called during solve.
     """
     pybamm_path = pybamm.root_dir()
     data = pd.read_csv(

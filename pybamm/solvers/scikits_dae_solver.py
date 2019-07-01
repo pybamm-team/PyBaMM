@@ -29,9 +29,14 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         The method to use to find initial conditions (default is "lm")
     tolerance : float, optional
         The tolerance for the initial-condition solver (default is 1e-8).
+    max_steps: int, optional
+        The maximum number of steps the solver will take before terminating
+        (defualt is 1000).
     """
 
-    def __init__(self, method="ida", tol=1e-8, root_method="lm", root_tol=1e-6, max_steps=500):
+    def __init__(
+        self, method="ida", tol=1e-8, root_method="lm", root_tol=1e-6, max_steps=1000
+    ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
@@ -69,7 +74,12 @@ class ScikitsDaeSolver(pybamm.DaeSolver):
         def rootfn(t, y, ydot, return_root):
             return_root[:] = [event(t, y) for event in events]
 
-        extra_options = {"old_api": False, "rtol": self.tol, "atol": self.tol, "max_steps": self.max_steps}
+        extra_options = {
+            "old_api": False,
+            "rtol": self.tol,
+            "atol": self.tol,
+            "max_steps": self.max_steps,
+        }
 
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0)
