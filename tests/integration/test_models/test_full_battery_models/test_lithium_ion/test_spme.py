@@ -10,13 +10,13 @@ import unittest
 
 class TestSPMe(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lithium_ion.SPMe(options)
         optimtest = tests.OptimisationsTest(model)
 
@@ -31,12 +31,12 @@ class TestSPMe(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
     def test_thermal(self):
-        options = {"thermal": "lumped", "Voltage": "On"}
+        options = {"thermal": "lumped"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-        options = {"thermal": "full", "Voltage": "On"}
+        options = {"thermal": "full"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

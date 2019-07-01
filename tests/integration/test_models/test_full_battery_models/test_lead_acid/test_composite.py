@@ -11,19 +11,19 @@ import numpy as np
 @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"thermal": None, "Voltage": "On", "convection": False}
+        options = {"thermal": None, "convection": False}
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
-        options = {"thermal": None, "Voltage": "On", "convection": True}
+        options = {"thermal": None, "convection": True}
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"thermal": None, "Voltage": "On", "convection": False}
+        options = {"thermal": None, "convection": False}
         model = pybamm.lead_acid.Composite(options)
         optimtest = tests.OptimisationsTest(model)
 

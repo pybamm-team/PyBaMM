@@ -11,7 +11,7 @@ import unittest
 @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestDFN(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lithium_ion.DFN(options)
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
@@ -19,7 +19,7 @@ class TestDFN(unittest.TestCase):
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lithium_ion.DFN(options)
         optimtest = tests.OptimisationsTest(model)
 
@@ -35,7 +35,7 @@ class TestDFN(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
     def test_full_thermal(self):
-        options = {"thermal": "full", "Voltage": "On"}
+        options = {"thermal": "full"}
         model = pybamm.lithium_ion.DFN(options)
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
@@ -43,7 +43,7 @@ class TestDFN(unittest.TestCase):
         modeltest.test_all()
 
     def test_lumped_thermal(self):
-        options = {"thermal": "lumped", "Voltage": "On"}
+        options = {"thermal": "lumped"}
         model = pybamm.lithium_ion.DFN(options)
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}

@@ -7,18 +7,18 @@ import unittest
 
 class TestLeadAcidNewmanTiedemann(unittest.TestCase):
     def test_well_posed(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        options = {"thermal": None, "Voltage": "On", "convection": True}
+        options = {"thermal": None, "convection": True}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         model.check_well_posedness()
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 

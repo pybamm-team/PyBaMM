@@ -12,13 +12,13 @@ import numpy as np
 class TestLOQS(unittest.TestCase):
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lead_acid.LOQS(options)
         optimtest = tests.OptimisationsTest(model)
 
@@ -34,7 +34,7 @@ class TestLOQS(unittest.TestCase):
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_charge(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lead_acid.LOQS(options)
         parameter_values = model.default_parameter_values
         parameter_values.update({"Typical current [A]": -1})
@@ -43,7 +43,7 @@ class TestLOQS(unittest.TestCase):
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_zero_current(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lead_acid.LOQS(options)
         parameter_values = model.default_parameter_values
         parameter_values.update({"Typical current [A]": 0})
@@ -52,9 +52,7 @@ class TestLOQS(unittest.TestCase):
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_convection(self):
-        model = pybamm.lead_acid.LOQS(
-            {"convection": True, "thermal": None, "Voltage": "On"}
-        )
+        model = pybamm.lead_acid.LOQS({"convection": True, "thermal": None})
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
