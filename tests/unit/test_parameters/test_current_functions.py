@@ -11,9 +11,16 @@ import numpy as np
 
 class TestCurrentFunctions(unittest.TestCase):
     def test_all_functions(self):
-        function_list = [cf.sin_current, cf.car_current, cf.get_csv_current]
+        function_list = [cf.sin_current, cf.car_current]
         standard_tests = StandardCurrentFunctionTests(function_list)
         standard_tests.test_all()
+
+    def test_get_csv_current(self):
+        function = cf.get_csv_current
+        # Interpolant always returns an array
+        assert isinstance(function(0), numbers.ndarray)
+        assert isinstance(function(np.zeros(3)), np.ndarray)
+        assert isinstance(function(np.zeros([3, 3])), np.ndarray)
 
     def test_sin_current(self):
         # create current functions
