@@ -88,9 +88,15 @@ class BaseOutputTest(object):
         # Useful parameters
         self.l_n = param.process_symbol(pybamm.geometric_parameters.l_n).evaluate()
         self.l_p = param.process_symbol(pybamm.geometric_parameters.l_p).evaluate()
-        self.i_cell = param.process_symbol(
-            pybamm.electrical_parameters.current_with_time
-        ).evaluate(self.t)
+
+        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
+        elif isinstance(self.model, pybamm.LeadAcidBaseModel):
+            current_param = pybamm.standard_parameters_lead_acid.current_with_time
+        else:
+            current_param = pybamm.electrical_parameters.current_with_time
+
+        self.i_cell = param.process_symbol(current_param).evaluate(self.t)
 
     def get_var(self, var):
         "Helper function to reduce repeated code."
@@ -515,7 +521,13 @@ class CurrentTests(BaseOutputTest):
         current density"""
         t, x_n, x_s, x_p = self.t, self.x_n, self.x_s, self.x_p
 
-        current_param = pybamm.electrical_parameters.current_with_time
+        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
+        elif isinstance(self.model, pybamm.LeadAcidBaseModel):
+            current_param = pybamm.standard_parameters_lead_acid.current_with_time
+        else:
+            current_param = pybamm.electrical_parameters.current_with_time
+
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         for x in [x_n, x_s, x_p]:
             np.testing.assert_array_almost_equal(
@@ -532,7 +544,13 @@ class CurrentTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
 
-        current_param = pybamm.electrical_parameters.current_with_time
+        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
+        elif isinstance(self.model, pybamm.LeadAcidBaseModel):
+            current_param = pybamm.standard_parameters_lead_acid.current_with_time
+        else:
+            current_param = pybamm.electrical_parameters.current_with_time
+
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=3)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[-1]), 0, decimal=4)

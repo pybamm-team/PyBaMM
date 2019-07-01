@@ -1,9 +1,12 @@
+#
+# Simulate user-defined current profile
+#
 import pybamm
 import numpy as np
 import os
 
 # load model
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 model = pybamm.lithium_ion.SPMe()
 
 # create geometry
@@ -29,13 +32,7 @@ tau = param.process_symbol(
     pybamm.standard_parameters_lithium_ion.tau_discharge
 ).evaluate(0)
 t_eval = np.linspace(0, 1800 / tau, 100)
-
-# need to increase max solver steps if solving DAEs along with an erratic drive cycle
-solver = model.default_solver
-if isinstance(solver, pybamm.DaeSolver):
-    solver.max_steps = 10000
-
-solution = solver.solve(model, t_eval)
+solution = model.default_solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(model, mesh, solution)

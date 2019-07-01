@@ -1,6 +1,6 @@
 # Based on the US06 drive cycle,
-# Left column is amperes so should be adjusted to be a dimensionless coefficient which will be multiplied by the typical current,
-,
+# Left column is a dimensionless amplitude which will be multiplied by the typical current,
+amplitude,time
 0.012859,0
 0.012859,1
 0.012859,2

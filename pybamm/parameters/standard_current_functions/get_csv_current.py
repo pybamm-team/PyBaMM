@@ -6,39 +6,32 @@ import os
 import pandas as pd
 import numpy as np
 import warnings
+import scipy.interpolate as interp
+
+
+# Load data from csv
+pybamm_path = pybamm.root_dir()
+data = pd.read_csv(
+    os.path.join(pybamm_path, "input", "drive_cycles", "US06.csv"), comment="#"
+).to_dict('list')
+
+# Interpolate using Piecewise Cubic Hermite Interpolating Polynomial
+# (does not overshoot non-smooth data)
+current = interp.PchipInterpolator(data["time"], data["amplitude"])
 
 
 def get_csv_current(t):
     """
-    Loads a current profile from a csv file and interpolates on the fly !!SLOW!!
-    TO DO: update so that the data is loaded and interpolated once (e.g. during
-    discretisation) and then the interpolant is called during solve.
+    Calls the interpolating function created using the data from a user-supplied
+    csv file at time t (seconds).
     """
-    pybamm_path = pybamm.root_dir()
-    data = pd.read_csv(
-        os.path.join(pybamm_path, "input", "drive_cycles", "US06.csv"), comment="#"
-    )
 
-    amplitude = data.values[:, 0]
-    time = data.values[:, 1]
-    if np.min(t) < time[0] or np.max(t) > time[-1]:
+    if np.min(t) < data["time"][0] or np.max(t) > data["time"][-1]:
         warnings.warn(
             "Requested time ({}) is outside of the data range [{}, {}]".format(
-                t, time[0], time[-1]
+                t, data["time"][0], data["time"][-1]
             ),
             pybamm.ModelWarning,
         )
-    current = np.interp(t, time, amplitude)
-    return current
 
-    # def current(t):
-    #    if np.min(t) < time[0] or np.max(t) > time[-1]:
-    #        warnings.warn(
-    #            "Requested time ({}) is outside of the data range [{}, {}]".format(
-    #                t, time[0], time[-1]
-    #            ),
-    #            pybamm.ModelWarning,
-    #        )
-    #    return np.interp(t, time, amplitude)
-
-    # return current
+    return current(t)
