@@ -170,7 +170,6 @@ from .models.submodels import (
 from .old_models.old_base_models import (
     OldBaseModel,
     OldLeadAcidBaseModel,
-    OldLithiumIonBaseModel,
     OldStandardBatteryBaseModel,
     OldSubModel,
 )
