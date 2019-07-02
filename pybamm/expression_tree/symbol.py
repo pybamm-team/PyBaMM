@@ -501,6 +501,7 @@ class Symbol(anytree.NodeMixin):
             self.has_symbol_of_class(pybamm.Gradient)
             and not self.has_symbol_of_class(pybamm.Divergence)
             and not self.has_symbol_of_class(pybamm.IndefiniteIntegral)
+            and not self.has_symbol_of_class(pybamm.Inner)
         )
 
     def has_symbol_of_class(self, symbol_class):

@@ -4,7 +4,7 @@
 import pybamm
 
 
-class SimpleODEModel(pybamm.StandardBatteryBaseModel):
+class SimpleODEModel(pybamm.BaseBatteryModel):
     """A model consisting of only ODEs.
     Useful for testing solution when variables have domain '[]', and for testing
     broadcasting.

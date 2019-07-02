@@ -61,6 +61,8 @@ from .expression_tree.binary_operators import (
     Multiplication,
     MatrixMultiplication,
     Division,
+    Inner,
+    inner,
     Outer,
     Kron,
     outer,
@@ -111,6 +113,7 @@ from .expression_tree.vector import Vector, StateVector
 
 from .expression_tree.exceptions import (
     DomainError,
+    OptionError,
     ModelError,
     SolverError,
     ShapeError,
@@ -134,37 +137,57 @@ from .expression_tree.evaluate import (
 #
 # Model classes
 #
+from .models.base_model import BaseModel
 from .models import standard_variables
-from .models.base_models import (
-    BaseModel,
-    StandardBatteryBaseModel,
-    SubModel,
-    LeadAcidBaseModel,
-    LithiumIonBaseModel,
-)
+
+# Battery models
+from .models.full_battery_models.base_battery_model import BaseBatteryModel
+from .models.full_battery_models import lead_acid
+from .models.full_battery_models import lithium_ion
+
+# Other models
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
-from .models import lead_acid
-from .models import lithium_ion
 
 #
 # Submodel classes
 #
+from .models.submodels.base_submodel import BaseSubModel
+
 from .models.submodels import (
-    current_collector,
+    electrolyte,
     electrode,
-    electrolyte_current,
-    electrolyte_diffusion,
-    interface,
     particle,
+    current_collector,
+    convection,
+    interface,
     porosity,
-    potential,
-    velocity,
-    vertical,
+    thermal,
 )
 
-# Derived submodel classes
-from .models.submodels import interface_lead_acid, oxygen_diffusion
+#
+# OLD MODELS. TODO: remove these once lead acid in new format
+#
+from .old_models.old_base_models import (
+    OldBaseModel,
+    OldLeadAcidBaseModel,
+    OldStandardBatteryBaseModel,
+    OldSubModel,
+)
+from .old_models import old_lead_acid
+
+from .old_models.old_submodels import (
+    old_current_collector,
+    old_electrode,
+    old_electrolyte_current,
+    old_electrolyte_diffusion,
+    old_interface,
+    old_porosity,
+    old_potential,
+    old_velocity,
+    old_vertical,
+)
+from .old_models.old_submodels import old_interface_lead_acid, old_oxygen_diffusion
 
 #
 # Parameters class and methods

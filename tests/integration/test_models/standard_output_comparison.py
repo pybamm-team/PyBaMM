@@ -21,9 +21,11 @@ class StandardOutputComparison(object):
         self.discs = discs
         self.solutions = solutions
 
-        if isinstance(self.models[0], pybamm.LithiumIonBaseModel):
+        if isinstance(self.models[0], pybamm.lithium_ion.BaseModel):
             self.chemistry = "Lithium-ion"
-        elif isinstance(self.models[0], pybamm.LeadAcidBaseModel):
+        elif isinstance(self.models[0], pybamm.lead_acid.BaseModel):
+            self.chemistry = "Lead acid"
+        elif isinstance(self.models[0], pybamm.OldLeadAcidBaseModel):
             self.chemistry = "Lead acid"
 
         self.t = self.get_output_times()
@@ -165,7 +167,7 @@ class VariablesComparison(BaseOutputComparison):
         self.compare("Positive electrode potential")
         self.compare("Electrolyte potential")
         # Currents
-        self.compare("Exchange-current density")
+        self.compare("Exchange current density")
         self.compare("Negative electrode current density")
         self.compare("Positive electrode current density")
 

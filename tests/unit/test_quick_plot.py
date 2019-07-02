@@ -80,7 +80,8 @@ class TestQuickPlot(unittest.TestCase):
         t_eval = np.linspace(0, 0.01, 2)
 
         # SPM
-        for model in [pybamm.lithium_ion.SPM(), pybamm.lead_acid.LOQS()]:
+        options = {"thermal": None, "Voltage": "on"}
+        for model in [pybamm.lithium_ion.SPM(options), pybamm.old_lead_acid.OldLOQS()]:
             geometry = model.default_geometry
             param = model.default_parameter_values
             param.process_model(model)

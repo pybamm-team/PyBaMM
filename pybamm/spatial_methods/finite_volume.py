@@ -544,9 +544,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Post-processing to make sure discretised dimensions match
         left_evaluates_on_edges = left.evaluates_on_edges()
         right_evaluates_on_edges = right.evaluates_on_edges()
+
+        # inner product takes fluxes from edges to nodes
+        if isinstance(bin_op, pybamm.Inner):
+            disc_left = self.edge_to_node(disc_left)
+            disc_right = self.edge_to_node(disc_right)
         # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging
-        if left_evaluates_on_edges == right_evaluates_on_edges:
+        elif left_evaluates_on_edges == right_evaluates_on_edges:
             pass
         # If only left child evaluates on edges, map right child onto edges
         elif left_evaluates_on_edges and not right_evaluates_on_edges:

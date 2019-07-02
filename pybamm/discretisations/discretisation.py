@@ -348,12 +348,8 @@ class Discretisation(object):
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
-            try:
-                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
-            except ValueError:
-                import ipdb
+            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
-                ipdb.set_trace()
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):

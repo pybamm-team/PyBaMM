@@ -38,6 +38,7 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
         processed_variables[var] = ProcessedVariable(
             eqn, t_sol, y_sol, mesh, interp_kind, known_evals
         )
+
         for t in known_evals:
             known_evals[t].update(processed_variables[var].known_evals[t])
     return processed_variables
@@ -104,7 +105,8 @@ class ProcessedVariable(object):
             self.initialise_1D()
         else:
             n = self.mesh.combine_submeshes(*self.domain)[0].npts
-            if self.base_eval.shape[0] in [n, n + 1]:
+            base_shape = self.base_eval.shape[0]
+            if base_shape in [n, n + 1]:
                 self.initialise_2D()
             else:
                 self.initialise_3D()
@@ -191,7 +193,11 @@ class ProcessedVariable(object):
         )
 
     def initialise_3D(self):
-        len_x = len(self.mesh.combine_submeshes(*self.domain))
+        if self.base_variable.has_symbol_of_class(pybamm.Outer):
+            # bit of a hack for now
+            len_x = self.mesh.combine_submeshes(*self.domain)[0].npts
+        else:
+            len_x = len(self.mesh.combine_submeshes(*self.domain))
         len_r = self.base_eval.shape[0] // len_x
         entries = np.empty((len_x, len_r, len(self.t_sol)))
 
@@ -203,15 +209,36 @@ class ProcessedVariable(object):
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, y, self.known_evals[t]
                 )
-                entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_x, len_r])
+
+                # another hack sorry
+                if self.base_variable.has_symbol_of_class(pybamm.Outer):
+                    temporary = np.reshape(eval_and_known_evals[0], [len_r, len_x])
+                    entries[:, :, idx] = np.transpose(temporary)
+                else:
+                    entries[:, :, idx] = np.reshape(
+                        eval_and_known_evals[0], [len_x, len_r]
+                    )
+
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
                     self.base_variable.evaluate(t, y), [len_x, len_r]
                 )
         # Process the discretisation to get x values
-        nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
-        edges = self.mesh.combine_submeshes(*self.domain)[0].edges
+        if self.domain == [
+            "negative electrode"
+        ] and self.base_variable.has_symbol_of_class(pybamm.Outer):
+            nodes = self.mesh.combine_submeshes(*["negative particle"])[0].nodes
+            edges = self.mesh.combine_submeshes(*["negative particle"])[0].edges
+        elif self.domain == [
+            "positive electrode"
+        ] and self.base_variable.has_symbol_of_class(pybamm.Outer):
+            nodes = self.mesh.combine_submeshes(*["positive particle"])[0].nodes
+            edges = self.mesh.combine_submeshes(*["positive particle"])[0].edges
+        else:
+            nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
+            edges = self.mesh.combine_submeshes(*self.domain)[0].edges
+
         if entries.shape[1] == len(nodes):
             r_sol = nodes
         elif entries.shape[1] == len(edges):
@@ -220,9 +247,13 @@ class ProcessedVariable(object):
             raise ValueError("3D variable shape does not match domain shape")
 
         # Get x values
-        if self.domain == ["negative particle"]:
+        if self.domain == ["negative particle"] or self.domain == [
+            "negative electrode"
+        ]:
             x_sol = self.mesh["negative electrode"][0].nodes
-        elif self.domain == ["positive particle"]:
+        elif self.domain == ["positive particle"] or self.domain == [
+            "positive electrode"
+        ]:
             x_sol = self.mesh["positive electrode"][0].nodes
 
         # assign attributes for reference

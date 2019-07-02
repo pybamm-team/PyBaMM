@@ -1,0 +1,63 @@
+#
+# Tests for the lithium-ion SPMe model
+#
+import pybamm
+import tests
+
+import numpy as np
+import unittest
+
+
+class TestSPMe(unittest.TestCase):
+    def test_basic_processing(self):
+        options = {"thermal": None}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_basic_processing_2plus1D(self):
+        options = {"bc_options": {"dimensionality": 2}}
+        model = pybamm.lithium_ion.SPMe(options)
+        # TO DO: fix bug in SPMe simplify
+        model.use_simplify = False
+        model.use_jacobian = False
+        model.use_to_python = False
+        modeltest = tests.StandardModelTest(model)
+        # TO DO: fix processed variable for 3D variables which come from outer
+        # product with current collector variables
+        modeltest.test_all(skip_output_tests=True)
+
+    def test_optimisations(self):
+        options = {"thermal": None}
+        model = pybamm.lithium_ion.SPMe(options)
+        optimtest = tests.OptimisationsTest(model)
+
+        original = optimtest.evaluate_model()
+        simplified = optimtest.evaluate_model(simplify=True)
+        using_known_evals = optimtest.evaluate_model(use_known_evals=True)
+        simp_and_known = optimtest.evaluate_model(simplify=True, use_known_evals=True)
+        simp_and_python = optimtest.evaluate_model(simplify=True, to_python=True)
+        np.testing.assert_array_almost_equal(original, simplified)
+        np.testing.assert_array_almost_equal(original, using_known_evals)
+        np.testing.assert_array_almost_equal(original, simp_and_known)
+        np.testing.assert_array_almost_equal(original, simp_and_python)
+
+    def test_thermal(self):
+        options = {"thermal": "lumped"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+        options = {"thermal": "full"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+
+if __name__ == "__main__":
+    print("Add -v for more debug output")
+    import sys
+
+    if "-v" in sys.argv:
+        debug = True
+    unittest.main()
