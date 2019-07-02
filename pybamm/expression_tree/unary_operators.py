@@ -582,12 +582,14 @@ def surf(variable, set_domain=False):
         variable, pybamm.Broadcast
     ):
         child_surf = boundary_value(variable.orphans[0], "right")
+        child_surf.domain = ["current collector"]  # TODO fix
         out = pybamm.Broadcast(child_surf, ["negative electrode"])
         out.domain = ["negative electrode"]
     elif variable.domain == ["positive electrode"] and isinstance(
         variable, pybamm.Broadcast
     ):
         child_surf = boundary_value(variable.orphans[0], "right")
+        child_surf.domain = ["current collector"]  # TODO fix
         out = pybamm.Broadcast(child_surf, ["positive electrode"])
         out.domain = ["positive electrode"]
     else:

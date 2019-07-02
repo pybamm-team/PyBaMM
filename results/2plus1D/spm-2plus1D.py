@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import sys
 
 # set logging level
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load (2+1D) SPM model
 options = {"bc_options": {"dimensionality": 2}}
@@ -21,7 +21,15 @@ param.process_geometry(geometry)
 
 # set mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10, var.y: 17, var.z: 17}
+var_pts = {
+    var.x_n: 10,
+    var.x_s: 8,
+    var.x_p: 11,
+    var.r_n: 7,
+    var.r_p: 13,
+    var.y: 17,
+    var.z: 19,
+}
 # depnding on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
@@ -87,7 +95,9 @@ def plot(t):
     plt.set_cmap("viridis")
     plt.colorbar(phi_s_cp_plot)
 
-    plt.subplots_adjust(top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5)
+    plt.subplots_adjust(
+        top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
+    )
     plt.show()
 
 

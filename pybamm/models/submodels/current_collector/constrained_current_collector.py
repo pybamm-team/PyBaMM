@@ -41,9 +41,11 @@ class ConstrainedPotentialPair(BaseModel):
 
         ocp_p_av = variables["Average positive electrode open circuit potential"]
         ocp_n_av = variables["Average negative electrode open circuit potential"]
-        eta_r_av = variables["Average reaction overpotential"]
+        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
+        eta_r_p_av = variables["Average positive electrode reaction overpotential"]
         eta_e_av = variables["Average electrolyte overpotential"]
-        delta_phi_s_av = variables["Average solid phase ohmic losses"]
+        delta_phi_s_n_av = variables["Average negative electrode ohmic losses"]
+        delta_phi_s_p_av = variables["Average positive electrode ohmic losses"]
 
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
@@ -51,7 +53,13 @@ class ConstrainedPotentialPair(BaseModel):
         v_boundary_cc = variables["Local current collector potential difference"]
 
         local_voltage_expression = (
-            ocp_p_av - ocp_n_av + eta_r_av + eta_e_av + delta_phi_s_av
+            ocp_p_av
+            - ocp_n_av
+            + eta_r_p_av
+            - eta_r_n_av
+            + eta_e_av
+            + delta_phi_s_p_av
+            - delta_phi_s_n_av
         )
 
         self.algebraic = {
