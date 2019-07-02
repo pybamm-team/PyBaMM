@@ -3,13 +3,12 @@ import numpy as np
 
 # load models
 options = {"thermal": None}
+pybamm.set_logging_level("INFO")
 models = [
     pybamm.lithium_ion.SPM(options),
     pybamm.lithium_ion.SPMe(options),
     pybamm.lithium_ion.DFN(options),
 ]
-pybamm.set_logging_level("INFO")
-models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.SPMe(), pybamm.lithium_ion.DFN()]
 
 
 # load parameter values and process models and geometry
