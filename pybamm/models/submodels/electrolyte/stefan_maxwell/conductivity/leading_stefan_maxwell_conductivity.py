@@ -34,6 +34,11 @@ class LeadingOrder(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
+        cc = ["current collector"]  # TODO: fix ugly hack
+        phi_s_n_av.domain = cc
+        eta_r_n_av.domain = cc
+        ocp_n_av.domain = cc
+
         phi_e_av = phi_s_n_av - eta_r_n_av - ocp_n_av
         phi_e_n = pybamm.Broadcast(phi_e_av, ["negative electrode"])
         phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"])

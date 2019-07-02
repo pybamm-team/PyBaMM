@@ -30,7 +30,7 @@ var_pts = {
     var.y: 17,
     var.z: 19,
 }
-# depnding on number of points in y-z plane may need to increase recursion depth...
+# depending on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 

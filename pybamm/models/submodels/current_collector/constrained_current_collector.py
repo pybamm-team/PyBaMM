@@ -52,6 +52,15 @@ class ConstrainedPotentialPair(BaseModel):
         i_boundary_cc = variables["Current collector current density"]
         v_boundary_cc = variables["Local current collector potential difference"]
 
+        cc = ["current collector"]
+        ocp_p_av.domain = cc
+        ocp_n_av.domain = cc
+        eta_r_n_av.domain = cc
+        eta_r_p_av.domain = cc
+        eta_e_av.domain = cc
+        delta_phi_s_n_av.domain = cc
+        delta_phi_s_p_av.domain = cc
+
         local_voltage_expression = (
             ocp_p_av
             - ocp_n_av
