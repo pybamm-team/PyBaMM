@@ -19,3 +19,6 @@ from .shared import (
     get_2p1d_discretisation_for_testing,
     get_unit_2p1D_mesh_for_testing,
 )
+from .unit.test_models.test_submodels.standard_submodel_unit_tests import (
+    StandardSubModelTests,
+)

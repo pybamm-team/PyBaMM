@@ -93,7 +93,7 @@ class StandardModelTest(object):
 
         if (
             isinstance(
-                self.model, (pybamm.LithiumIonBaseModel, pybamm.LeadAcidBaseModel)
+                self.model, (pybamm.lithium_ion.BaseModel, pybamm.lead_acid.BaseModel)
             )
             and not skip_output_tests
         ):

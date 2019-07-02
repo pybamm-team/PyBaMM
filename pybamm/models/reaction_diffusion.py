@@ -4,64 +4,68 @@
 import pybamm
 
 
-class ReactionDiffusionModel(pybamm.StandardBatteryBaseModel):
+class ReactionDiffusionModel(pybamm.BaseBatteryModel):
     """Reaction-diffusion model.
 
-    **Extends**: :class:`pybamm.StandardBatteryBaseModel`
+    **Extends**: :class:`pybamm.BaseBatteryModel`
 
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, options=None):
 
-        "-----------------------------------------------------------------------------"
-        "Parameters"
-        param = pybamm.standard_parameters_lead_acid
-        current = param.current_with_time
+        if not options:
+            options = {}
 
-        "-----------------------------------------------------------------------------"
-        "Model Variables"
+        options.update(
+            {"Voltage": "Off"}
+        )  # annoying option only for reaction diffusion
+        super().__init__(options)
+        self.name = "Reaction diffusion model"
+        self.param = pybamm.standard_parameters_lead_acid
 
-        c_e = pybamm.standard_variables.c_e
+        # Manually set porosity parameters
+        self.param.epsilon_n = pybamm.Scalar(1)
+        self.param.epsilon_s = pybamm.Scalar(1)
+        self.param.epsilon_p = pybamm.Scalar(1)
 
-        "-----------------------------------------------------------------------------"
-        "Submodels"
+        self.set_current_collector_submodel()
+        self.set_convection_submodel()
+        self.set_porosity_submodel()
+        self.set_interfacial_submodel()
+        self.set_electrolyte_submodel()
 
-        # Interfacial current density
-        neg = ["negative electrode"]
-        pos = ["positive electrode"]
-        int_curr_model = pybamm.interface_lead_acid.MainReaction(param)
-        j_n = int_curr_model.get_homogeneous_interfacial_current(current, neg)
-        j_p = int_curr_model.get_homogeneous_interfacial_current(current, pos)
+        self.build_model()
 
-        # Porosity
-        epsilon = pybamm.Scalar(1)
+    def set_current_collector_submodel(self):
 
-        # Electrolyte concentration
-        j_n = pybamm.Broadcast(j_n, neg)
-        j_p = pybamm.Broadcast(j_p, pos)
-        self.variables = {"Electrolyte concentration": c_e, "Porosity": epsilon}
-        reactions = {
-            "main": {
-                "neg": {"s": 1, "aj": j_n},
-                "pos": {"s": 1, "aj": j_p},
-                "porosity change": 0,
-            }
-        }
-        eleclyte_conc_model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        eleclyte_conc_model.set_differential_system(self.variables, reactions)
-        self.update(eleclyte_conc_model)
+        self.submodels["current collector"] = pybamm.current_collector.Uniform(
+            self.param, "Negative"
+        )
 
-        "-----------------------------------------------------------------------------"
-        "Post-Processing"
+    def set_porosity_submodel(self):
+        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
 
-        # Exchange-current density
-        c_e_n, _, c_e_p = c_e.orphans
-        j0_n = int_curr_model.get_exchange_current_densities(c_e_n, neg)
-        j0_p = int_curr_model.get_exchange_current_densities(c_e_p, pos)
-        j_vars = int_curr_model.get_derived_interfacial_currents(j_n, j_p, j0_n, j0_p)
-        self.variables.update(j_vars)
+    def set_convection_submodel(self):
+        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+
+    def set_electrolyte_submodel(self):
+        electrolyte = pybamm.electrolyte.stefan_maxwell
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+            self.param, ocp=True
+        )
+
+    def set_interfacial_submodel(self):
+        self.submodels[
+            "negative interface"
+        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Negative")
+        self.submodels[
+            "positive interface"
+        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Positive")
+
+    def set_voltage_variables(self):
+        "overwrite to set nothing"
+        return None
 
     @property
     def default_parameter_values(self):
-        return pybamm.LeadAcidBaseModel().default_parameter_values
+        return pybamm.lead_acid.BaseModel().default_parameter_values

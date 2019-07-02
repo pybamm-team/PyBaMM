@@ -349,6 +349,7 @@ class Discretisation(object):
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):

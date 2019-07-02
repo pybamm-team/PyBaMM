@@ -2,10 +2,10 @@ Models
 ======
 
 .. toctree::
+  :maxdepth: 1
 
   base_models
   reaction_diffusion
   simple_ode_model
-  lead_acid/index
-  lithium_ion/index
+  full_battery_models/index
   submodels/index

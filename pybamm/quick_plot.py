@@ -60,7 +60,9 @@ class QuickPlot(object):
 
     def __init__(self, models, mesh, solutions, output_variables=None, labels=None):
         # Pre-process models and solutions
-        if isinstance(models, pybamm.BaseModel):
+        if isinstance(models, pybamm.BaseModel) or isinstance(
+            models, pybamm.OldBaseModel
+        ):
             models = [models]
         elif not isinstance(models, list):
             raise TypeError("'models' must be 'pybamm.BaseModel' or list")
@@ -92,7 +94,7 @@ class QuickPlot(object):
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
-            if isinstance(models[0], pybamm.LithiumIonBaseModel):
+            if isinstance(models[0], pybamm.lithium_ion.BaseModel):
                 output_variables = [
                     "Negative particle surface concentration",
                     "Electrolyte concentration",
@@ -103,7 +105,7 @@ class QuickPlot(object):
                     "Positive electrode potential [V]",
                     "Terminal voltage [V]",
                 ]
-            elif isinstance(models[0], pybamm.LeadAcidBaseModel):
+            elif isinstance(models[0], pybamm.lead_acid.BaseModel):
                 output_variables = [
                     "Interfacial current density [A.m-2]",
                     "Electrolyte concentration [mol.m-3]",

@@ -257,6 +257,39 @@ class TestBinaryOperators(unittest.TestCase):
             (pybammS1 / pybammv1).evaluate().toarray(), S1.toarray() / v1
         )
 
+    def test_inner(self):
+        model = pybamm.lithium_ion.BaseModel()
+
+        phi_s = pybamm.standard_variables.phi_s_n
+        i = pybamm.grad(phi_s)
+
+        model.rhs = {phi_s: pybamm.inner(i, i)}
+        model.boundary_conditions = {
+            phi_s: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        model.initial_conditions = {phi_s: pybamm.Scalar(0)}
+
+        model.variables = {"inner": pybamm.inner(i, i)}
+
+        # load parameter values and process model and geometry
+        param = model.default_parameter_values
+        geometry = model.default_geometry
+        param.process_model(model)
+        param.process_geometry(geometry)
+
+        # set mesh
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+
+        # discretise model
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        # check doesn't evaluate on edges anymore
+        self.assertEqual(model.variables["inner"].evaluates_on_edges(), False)
+
 
 class TestIsZero(unittest.TestCase):
     def test_is_scalar_zero(self):

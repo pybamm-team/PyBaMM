@@ -196,7 +196,7 @@ class TestProcessedVariable(unittest.TestCase):
 
     def test_processed_variable_ode_pde_solution(self):
         # without space
-        model = pybamm.StandardBatteryBaseModel()
+        model = pybamm.BaseBatteryModel()
         c = pybamm.Variable("conc")
         model.rhs = {c: -c}
         model.initial_conditions = {c: 1}
@@ -210,7 +210,7 @@ class TestProcessedVariable(unittest.TestCase):
         # with space
         # set up and solve model
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        model = pybamm.StandardBatteryBaseModel()
+        model = pybamm.BaseBatteryModel()
         c = pybamm.Variable("conc", domain=whole_cell)
         c_s = pybamm.Variable("particle conc", domain="negative particle")
         model.rhs = {c: -c, c_s: 1 - c_s}

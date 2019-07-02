@@ -78,6 +78,12 @@ class SpatialMethod:
             out = pybamm.Outer(
                 symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
             )
+        elif symbol.domain == ["negative particle"] or symbol.domain == [
+            "positive particle"
+        ]:
+            out = pybamm.Outer(
+                symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
+            )
         else:
             out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
         return out

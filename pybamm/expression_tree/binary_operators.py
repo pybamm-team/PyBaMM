@@ -492,11 +492,106 @@ class Division(BinaryOperator):
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
 
 
+class Inner(BinaryOperator):
+    """
+    A node in the expression tree which represents the inner (or dot) product. This
+    operator should be used to take the inner product of two mathematical vectors
+    (as opposed to the computational vectors arrived at post-discretisation) of the
+    form v = v_x e_x + v_y e_y + v_z e_z where v_x, v_y, v_z are scalars
+    and e_x, e_y, e_z are x-y-z-directional unit vectors. For v and w mathematical
+    vectors, inner product returns v_x * w_x + v_y * w_y + v_z * w_z. In addition,
+    for some spatial discretisations mathematical vector quantities (such as
+    i = grad(phi) ) are evaluated on a different part of the grid to mathematical
+    scalars (e.g. for finite volume mathematical scalars are evaluated on the nodes but
+    mathematical vectors are evaluated on cell edges). Therefore, inner also transfers
+    the inner product of the vector onto the scalar part of the grid if required
+    by a particular discretisation.
+
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        super().__init__("inner product", left, right)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        # apply product rule
+        left, right = self.orphans
+        return left.diff(variable) * right + left * right.diff(variable)
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # apply product rule
+            left, right = self.orphans
+            if left.evaluates_to_number() and right.evaluates_to_number():
+                return pybamm.Scalar(0)
+            elif left.evaluates_to_number():
+                return left * right.jac(variable)
+            elif right.evaluates_to_number():
+                return right * left.jac(variable)
+            else:
+                return right * left.jac(variable) + left * right.jac(variable)
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+
+        if issparse(left):
+            return left.multiply(right)
+        elif issparse(right):
+            # Hadamard product is commutative, so we can switch right and left
+            return right.multiply(left)
+        else:
+            return left * right
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+
+        # anything multiplied by a scalar zero returns a scalar zero
+        if is_scalar_zero(left):
+            if isinstance(right, pybamm.Array):
+                return pybamm.Array(np.zeros(right.shape))
+            else:
+                return pybamm.Scalar(0)
+        if is_scalar_zero(right):
+            if isinstance(left, pybamm.Array):
+                return pybamm.Array(np.zeros(left.shape))
+            else:
+                return pybamm.Scalar(0)
+
+        # if one of the children is a zero matrix, we have to be careful about shapes
+        if is_matrix_zero(left) or is_matrix_zero(right):
+            shape = (left * right).shape
+            if len(shape) == 1 or shape[1] == 1:
+                return pybamm.Vector(np.zeros(shape))
+            else:
+                return pybamm.Matrix(csr_matrix(shape))
+
+        # anything multiplied by a scalar one returns itself
+        if is_one(left):
+            return right
+        if is_one(right):
+            return left
+
+        return pybamm.simplify_multiplication_division(self.__class__, left, right)
+
+
+def inner(left, right):
+    """
+    Return inner product of two symbols.
+    """
+    return pybamm.Inner(left, right)
+
+
 class Outer(BinaryOperator):
     """A node in the expression tree representing an outer product.
     This takes a 1D vector in the current collector domain of size (n,1) and a 1D
     variable of size (m,1), takes their outer product, and reshapes this into a vector
-    of size (nm,1).
+    of size (nm,1). It can also take in a vector in a single particle and a vector
+    of the electrolyte domain to repeat that particle.
     Note: this class might be a bit dangerous, so at the moment it is very restrictive
     in what symbols can be passed to it
 
@@ -506,9 +601,14 @@ class Outer(BinaryOperator):
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
         # Can only take outer product of a current collector symbol
-        if left.domain != ["current collector"]:
+        if (
+            left.domain != ["current collector"]
+            and left.domain != ["negative particle"]
+            and left.domain != ["positive particle"]
+        ):
             raise pybamm.DomainError(
-                "left child domain must be 'current collector', not'{}".format(
+                """left child domain must be 'current collector', 'negative particle',
+                or 'positive particle', not'{}""".format(
                     left.domain
                 )
             )

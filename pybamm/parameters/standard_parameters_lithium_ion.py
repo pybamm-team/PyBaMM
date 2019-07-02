@@ -76,6 +76,11 @@ sigma_cp_dimensional = pybamm.Parameter(
 # Microscale geometry
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
+a_k_dim = pybamm.Concatenation(
+    pybamm.Broadcast(a_n_dim, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(a_p_dim, ["positive electrode"]),
+)
 R_n = pybamm.geometric_parameters.R_n
 R_p = pybamm.geometric_parameters.R_p
 b = pybamm.geometric_parameters.b
@@ -105,6 +110,9 @@ c_p_init_dimensional = pybamm.Parameter(
 
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
+
+# velocity scale
+velocity_scale = pybamm.Scalar(1)
 
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
@@ -212,6 +220,7 @@ l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+
 l_cp = pybamm.geometric_parameters.l_cp
 delta = pybamm.geometric_parameters.delta
 
@@ -282,14 +291,26 @@ rho_s = pybamm.thermal_parameters.rho_s
 rho_p = pybamm.thermal_parameters.rho_p
 rho_cp = pybamm.thermal_parameters.rho_cp
 
+rho_k = pybamm.thermal_parameters.rho_k
+rho = rho_n * l_n + rho_s * l_s + rho_p * l_p
+
 lambda_cn = pybamm.thermal_parameters.lambda_cn
 lambda_n = pybamm.thermal_parameters.lambda_n
 lambda_s = pybamm.thermal_parameters.lambda_s
 lambda_p = pybamm.thermal_parameters.lambda_p
 lambda_cp = pybamm.thermal_parameters.lambda_cp
 
+lambda_k = pybamm.thermal_parameters.lambda_k
+
 Theta = pybamm.thermal_parameters.Theta
 h = pybamm.thermal_parameters.h
+B = (
+    i_typ
+    * R
+    * T_ref
+    * tau_th_yz
+    / (pybamm.thermal_parameters.rho_eff_dim * F * Delta_T * L_x)
+)
 
 # Initial conditions
 c_e_init = c_e_init_dimensional / c_e_typ
