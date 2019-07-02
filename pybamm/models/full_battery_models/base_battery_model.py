@@ -288,9 +288,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         if self.options["thermal"] is None:
             thermal_submodel = pybamm.thermal.Isothermal(self.param)
         elif self.options["thermal"] == "full":
-            thermal_submodel = pybamm.thermal.FullModel(self.param)
+            thermal_submodel = pybamm.thermal.Full(self.param)
         elif self.options["thermal"] == "lumped":
-            thermal_submodel = pybamm.thermal.LumpedModel(self.param)
+            thermal_submodel = pybamm.thermal.Lumped(self.param)
         else:
             raise KeyError("Unknown type of thermal model")
 
