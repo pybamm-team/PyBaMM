@@ -70,6 +70,9 @@ def simplify_addition_subtraction(myclass, left, right):
 
         outputs to lists `numerator` and `numerator_types`
 
+        Note that domains are all set to [] as we do not wish to consider domains once
+        simplifications are applied
+
         e.g.
 
         (1 + 2) + 3       -> [1, 2, 3]    and [None, Addition, Addition]
@@ -77,6 +80,9 @@ def simplify_addition_subtraction(myclass, left, right):
         1 - (2 + 3)       -> [1, 2, 3]    and [None, Subtraction, Subtraction]
         (1 + 2) - (2 + 3) -> [1, 2, 2, 3] and [None, Addition, Subtraction, Subtraction]
         """
+
+        left_child.domain = []
+        right_child.domain = []
         for side, child in [("left", left_child), ("right", right_child)]:
             if isinstance(child, (pybamm.Addition, pybamm.Subtraction)):
                 left, right = child.orphans
@@ -264,6 +270,9 @@ def simplify_multiplication_division(myclass, left, right):
         Note that multiplication *within* matrix multiplications, e.g. a@(b*c), are not
         flattened into a@b*c, as this would be incorrect (see #253)
 
+        Note that the domains are all set to [] as we do not wish to consider domains
+        once simplifications are applied
+
         outputs to lists `numerator`, `denominator` and `numerator_types`
 
         e.g.
@@ -272,6 +281,9 @@ def simplify_multiplication_division(myclass, left, right):
         (1 @ 2) / 3 ->  [1, 2]       [3]       [None, MatrixMultiplication]
         1 / (c / 2) ->  [1, 2]       [c]       [None, Multiplication]
         """
+
+        left_child.domain = []
+        right_child.domain = []
         for side, child in [("left", left_child), ("right", right_child)]:
 
             if side == "left":
