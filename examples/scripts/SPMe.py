@@ -8,7 +8,7 @@ model = pybamm.lithium_ion.SPMe()
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
-param = model.default_parameter_values
+param = model.default_parameter_value
 param.process_model(model)
 param.process_geometry(geometry)
 
