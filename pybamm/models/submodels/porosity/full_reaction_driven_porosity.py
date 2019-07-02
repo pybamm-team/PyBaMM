@@ -6,7 +6,7 @@ from .base_porosity import BaseModel
 
 
 class Full(BaseModel):
-    """Class for reaction-driven porosity changes
+    """Full model for reaction-driven porosity changes
 
     Parameters
     ----------

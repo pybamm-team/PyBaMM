@@ -6,9 +6,9 @@ from .base_stefan_maxwell_conductivity import BaseModel
 
 
 class LeadingOrder(BaseModel):
-    """Class for conservation of charge in the electrolyte employing the
-    Stefan-Maxwell constitutive equations. (Leading refers to leading-order
-    in the asymptotic reduction)
+    """Leading-order model for conservation of charge in the electrolyte
+    employing the Stefan-Maxwell constitutive equations. (Leading refers
+    to leading-order in the asymptotic reduction)
 
     Parameters
     ----------

@@ -6,9 +6,9 @@ from .base_full_surface_form_stefan_maxwell_conductivity import BaseFull
 
 
 class FullCapacitance(BaseFull):
-    """Class for conservation of charge in the electrolyte employing the
-    Stefan-Maxwell constitutive equations. (Full refers to unreduced by
-    asymptotic methods)
+    """Full model for conservation of charge in the electrolyte employing the
+    Stefan-Maxwell constitutive equations and where capacitance is present. 
+    (Full refers to unreduced by asymptotic methods)
 
     Parameters
     ----------

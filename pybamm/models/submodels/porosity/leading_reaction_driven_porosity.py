@@ -6,7 +6,7 @@ from .base_porosity import BaseModel
 
 
 class LeadingOrder(BaseModel):
-    """Class for reaction-driven porosity changes
+    """Leading-order model for reaction-driven porosity changes
 
     Parameters
     ----------

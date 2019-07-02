@@ -6,9 +6,9 @@ from .base_leading_surface_form_stefan_maxwell_conductivity import BaseLeadingOr
 
 
 class LeadingOrder(BaseLeadingOrder):
-    """Class for conservation of charge in the electrolyte employing the
+    """Leading-order model for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations employing the surface potential difference
-    formulation. (Full refers to unreduced by asymptotic methods)
+    formulation.
 
     Parameters
     ----------
