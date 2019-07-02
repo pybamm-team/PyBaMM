@@ -590,7 +590,8 @@ class Outer(BinaryOperator):
     """A node in the expression tree representing an outer product.
     This takes a 1D vector in the current collector domain of size (n,1) and a 1D
     variable of size (m,1), takes their outer product, and reshapes this into a vector
-    of size (nm,1).
+    of size (nm,1). It can also take in a vector in a single particle and a vector
+    of the electrolyte domain to repeat that particle.
     Note: this class might be a bit dangerous, so at the moment it is very restrictive
     in what symbols can be passed to it
 
