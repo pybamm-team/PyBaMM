@@ -16,11 +16,10 @@ class BaseModel(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param):
         super().__init__(param)
-        self._domain = domain
 
-    def _get_standard_potential_variables(self, phi_cc):
+    def _get_standard_potential_variables(self, phi_s_cn, phi_s_cp):
         """
         A private function to obtain the standard variables which
         can be derived from the potential in the current collector.
@@ -39,10 +38,16 @@ class BaseModel(pybamm.BaseSubModel):
 
         pot_scale = self.param.potential_scale
 
+        V_cc = phi_s_cp - phi_s_cn
+
         # add more to this
         variables = {
-            self._domain + "current collector potential": phi_cc,
-            self._domain + " current collector potential [V]": phi_cc * pot_scale,
+            "Negative current collector potential": phi_s_cn,
+            "Negative current collector potential [V]": phi_s_cn * pot_scale,
+            "Positive current collector potential": phi_s_cp,
+            "Positive current collector potential [V]": phi_s_cp * pot_scale,
+            "Local current collector potential difference": V_cc,
+            "Local current collector potential difference [V]": V_cc * pot_scale,
         }
 
         return variables

@@ -30,7 +30,7 @@ class SPM(BaseModel):
     def set_current_collector_submodel(self):
 
         self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param, "Negative"
+            self.param
         )
 
     def set_porosity_submodel(self):

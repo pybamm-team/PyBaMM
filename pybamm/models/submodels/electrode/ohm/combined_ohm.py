@@ -39,8 +39,11 @@ class CombinedOrder(BaseModel):
 
         if self._domain == "Negative":
             sigma_eff = self.param.sigma_n * (1 - eps)
-            phi_s = i_boundary_cc * x_n * (x_n - 2 * l_n) / (2 * sigma_eff * l_n)
-            i_s = i_boundary_cc - i_boundary_cc * x_n / l_n
+            phi_s = (
+                pybamm.outer(i_boundary_cc, x_n * (x_n - 2 * l_n) / (2 * l_n))
+                / sigma_eff
+            )
+            i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
         elif self._domain == "Positive":
             ocp_p_av = variables["Average positive electrode open circuit potential"]
@@ -55,10 +58,12 @@ class CombinedOrder(BaseModel):
                 + phi_e_p_av
                 - (i_boundary_cc / 6 / l_p / sigma_eff) * (2 * l_p ** 2 - 6 * l_p + 3)
             )
-            phi_s = const - i_boundary_cc * x_p / (2 * l_p * sigma_eff) * (
-                x_p + 2 * (l_p - 1)
+            phi_s = (
+                const
+                - pybamm.outer(i_boundary_cc, x_p / (2 * l_p) * (x_p + 2 * (l_p - 1)))
+                / sigma_eff
             )
-            i_s = i_boundary_cc - i_boundary_cc * (1 - x_p) / l_p
+            i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
