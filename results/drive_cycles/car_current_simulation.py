@@ -1,5 +1,5 @@
 #
-# Simulate user-defined current profile
+# Simulate car current profile
 #
 import pybamm
 import numpy as np

@@ -16,7 +16,7 @@ class TestCurrentFunctions(unittest.TestCase):
         standard_tests.test_all()
 
     def test_get_csv_current(self):
-        function = cf.get_csv_current
+        function = pybamm.GetCurrentData("US06.csv")
         # Interpolant always returns an array
         assert isinstance(function(0), np.ndarray)
         assert isinstance(function(np.zeros(3)), np.ndarray)
