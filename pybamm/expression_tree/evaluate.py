@@ -85,6 +85,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
             symbol_str = "np.outer({}, {}).reshape(-1, 1)".format(
                 children_vars[0], children_vars[1]
             )
+        elif isinstance(symbol, pybamm.Kron):
+            symbol_str = "scipy.sparse.kron({}, {})".format(
+                children_vars[0], children_vars[1]
+            )
         else:
             symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 
@@ -240,9 +244,12 @@ class EvaluatorPython:
         self._result_var = id_to_python_variable(symbol.id, symbol.is_constant())
 
         # compile the generated python code
-        self._variable_compiled = compile(
-            self._variable_function, self._result_var, "exec"
-        )
+        try:
+            self._variable_compiled = compile(
+                self._variable_function, self._result_var, "exec"
+            )
+        except:
+            print(self._variable_function)
 
         # compile the line that will return the output of `evaluate`
         self._return_compiled = compile(

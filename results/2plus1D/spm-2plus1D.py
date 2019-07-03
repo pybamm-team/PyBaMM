@@ -23,12 +23,12 @@ param.process_geometry(geometry)
 var = pybamm.standard_spatial_vars
 var_pts = {
     var.x_n: 10,
-    var.x_s: 8,
-    var.x_p: 11,
-    var.r_n: 7,
-    var.r_p: 13,
-    var.y: 17,
-    var.z: 19,
+    var.x_s: 10,
+    var.x_p: 10,
+    var.r_n: 10,
+    var.r_p: 10,
+    var.y: 10,
+    var.z: 10,
 }
 # depending on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)

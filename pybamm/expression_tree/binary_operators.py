@@ -413,11 +413,15 @@ class MatrixMultiplication(BinaryOperator):
         left, right = self.orphans
         if isinstance(left, pybamm.Array):
             left = pybamm.Matrix(csr_matrix(left.evaluate()))
-            return left @ right.jac(variable)
+            jac = left @ right.jac(variable)
+            jac.domain = []
+            return jac
         elif isinstance(left, pybamm.Negate) and isinstance(left.child, pybamm.Array):
             # Catch cases of (-D) @ u
             left = pybamm.Matrix(csr_matrix(left.evaluate()))
-            return left @ right.jac(variable)
+            jac = left @ right.jac(variable)
+            jac.domain = []
+            return jac
         else:
             raise NotImplementedError(
                 """jac of 'MatrixMultiplication' is only
