@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import sys
 
 # set logging level
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
 # load (2+1D) SPM model
 options = {"bc_options": {"dimensionality": 2}}
@@ -30,7 +30,7 @@ var_pts = {
     var.y: 10,
     var.z: 10,
 }
-# depending on number of points in y-z plane may need to increase recursion depth...
+# depnding on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
@@ -59,8 +59,8 @@ phi_s_cp = pybamm.ProcessedVariable(
 )
 l_y = phi_s_cp.x_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
-y_plot = np.linspace(0, l_y, 101)
-z_plot = np.linspace(0, l_z, 101)
+y_plot = np.linspace(0, l_y, 21)
+z_plot = np.linspace(0, l_z, 21)
 
 
 def plot(t):
@@ -73,8 +73,11 @@ def plot(t):
 
     # negative current collector potential
     plt.subplot(121)
-    phi_s_cn_plot = plt.contourf(
-        y_plot, z_plot, np.transpose(phi_s_cn(x=y_plot, r=z_plot, t=solution.t[ind]))
+    phi_s_cn_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(phi_s_cn(x=y_plot, r=z_plot, t=solution.t[ind])),
+        shading="gouraud",
     )
     plt.axis([0, l_y, 0, l_z])
     plt.xlabel(r"$y$")
@@ -85,9 +88,13 @@ def plot(t):
 
     # positive current collector potential
     plt.subplot(122)
-    phi_s_cp_plot = plt.contourf(
-        y_plot, z_plot, np.transpose(phi_s_cp(x=y_plot, r=z_plot, t=solution.t[ind]))
+    phi_s_cp_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(phi_s_cp(x=y_plot, r=z_plot, t=solution.t[ind])),
+        shading="gouraud",
     )
+
     plt.axis([0, l_y, 0, l_z])
     plt.xlabel(r"$y$")
     plt.ylabel(r"$z$")

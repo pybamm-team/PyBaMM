@@ -1,11 +1,12 @@
 import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 # set logging level
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
-# load (2+1D) SPM model
+# load (2+1D) SPMe model
 options = {"bc_options": {"dimensionality": 2}}
 model = pybamm.lithium_ion.SPMe(options)
 
@@ -19,20 +20,29 @@ param.process_geometry(geometry)
 
 # set mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 5, var.x_s: 3, var.x_p: 5, var.r_n: 5, var.r_p: 5, var.y: 5, var.z:5}
+var_pts = {
+    var.x_n: 10,
+    var.x_s: 10,
+    var.x_p: 10,
+    var.r_n: 10,
+    var.r_p: 10,
+    var.y: 10,
+    var.z: 10,
+}
+# depnding on number of points in y-z plane may need to increase recursion depth...
+sys.setrecursionlimit(10000)
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
-import ipdb; ipdb.set_trace()
 
-# solve model
-# TO DO: fix simplify Outer bug
-model.use_simplify = False
+# solve model -- simulate one hour discharge
+tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
+t_end = 3600 / tau.evaluate(0)
+t_eval = np.linspace(0, t_end, 120)
+# TO DO: fix jacobian bug
 model.use_jacobian = False
-model.use_to_python = False
-t_eval = np.linspace(0, 2, 100)
 solution = model.default_solver.solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
@@ -50,8 +60,8 @@ phi_s_cp = pybamm.ProcessedVariable(
 )
 l_y = phi_s_cp.x_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
-y_plot = np.linspace(0, l_y, 51)
-z_plot = np.linspace(0, l_z, 51)
+y_plot = np.linspace(0, l_y, 21)
+z_plot = np.linspace(0, l_z, 21)
 
 
 def plot(t):
@@ -64,8 +74,11 @@ def plot(t):
 
     # negative current collector potential
     plt.subplot(121)
-    phi_s_cn_plot = plt.contourf(
-        y_plot, z_plot, np.transpose(phi_s_cn(x=y_plot, r=z_plot, t=solution.t[ind]))
+    phi_s_cn_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(phi_s_cn(x=y_plot, r=z_plot, t=solution.t[ind])),
+        shading="gouraud",
     )
     plt.axis([0, l_y, 0, l_z])
     plt.xlabel(r"$y$")
@@ -76,9 +89,13 @@ def plot(t):
 
     # positive current collector potential
     plt.subplot(122)
-    phi_s_cp_plot = plt.contourf(
-        y_plot, z_plot, np.transpose(phi_s_cp(x=y_plot, r=z_plot, t=solution.t[ind]))
+    phi_s_cp_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(phi_s_cp(x=y_plot, r=z_plot, t=solution.t[ind])),
+        shading="gouraud",
     )
+
     plt.axis([0, l_y, 0, l_z])
     plt.xlabel(r"$y$")
     plt.ylabel(r"$z$")
@@ -86,7 +103,9 @@ def plot(t):
     plt.set_cmap("viridis")
     plt.colorbar(phi_s_cp_plot)
 
-    plt.subplots_adjust(top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5)
+    plt.subplots_adjust(
+        top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
+    )
     plt.show()
 
 
