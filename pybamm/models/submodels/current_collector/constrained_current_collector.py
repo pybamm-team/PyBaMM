@@ -72,21 +72,15 @@ class ConstrainedPotentialPair(BaseModel):
             i_boundary_cc: v_boundary_cc - local_voltage_expression,
         }
 
-        self.algebraic = {
-            phi_s_cn: pybamm.laplacian(phi_s_cn)
-            - (param.sigma_cn * param.delta ** 2 / param.l_cn)
-            * pybamm.source(i_boundary_cc, phi_s_cn),
-            phi_s_cp: pybamm.laplacian(phi_s_cp)
-            + (param.sigma_cp * param.delta ** 2 / param.l_cp)
-            * pybamm.source(i_boundary_cc, phi_s_cp),
-            i_boundary_cc: i_boundary_cc
-            - ocp_p_av
-            + ocp_n_av
-            - eta_r_p_av
-            + eta_r_n_av
-            - eta_e_av
-            + delta_phi_s_n_av,
-        }
+        # self.algebraic = {
+        #     phi_s_cn: pybamm.laplacian(phi_s_cn)
+        #     - (param.sigma_cn * param.delta ** 2 / param.l_cn)
+        #     * pybamm.source(i_boundary_cc, phi_s_cn),
+        #     phi_s_cp: pybamm.laplacian(phi_s_cp)
+        #     + (param.sigma_cp * param.delta ** 2 / param.l_cp)
+        #     * pybamm.source(i_boundary_cc, phi_s_cp),
+        #     i_boundary_cc: v_boundary_cc - ocp_n_av - i_boundary_cc,
+        # }
 
     def set_boundary_conditions(self, variables):
 

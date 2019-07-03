@@ -401,7 +401,9 @@ class MatrixMultiplication(BinaryOperator):
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
         # We shouldn't need this
-        raise NotImplementedError("diff not implemented for symbol of type 'MatrixMultiplication'")
+        raise NotImplementedError(
+            "diff not implemented for symbol of type 'MatrixMultiplication'"
+        )
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -417,7 +419,13 @@ class MatrixMultiplication(BinaryOperator):
             left = pybamm.Matrix(csr_matrix(left.evaluate()))
             return left @ right.jac(variable)
         else:
-            raise NotImplementedError("jac of 'MatrixMultiplication' is only implemented for left of type 'pybamm.Array', not {}".format(left.__class__))
+            raise NotImplementedError(
+                """jac of 'MatrixMultiplication' is only
+             implemented for left of type 'pybamm.Array',
+             not {}""".format(
+                    left.__class__
+                )
+            )
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
