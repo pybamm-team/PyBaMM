@@ -235,7 +235,7 @@ class VoltageTests(BaseOutputTest):
             + self.eta_r_av(self.t)
             + self.eta_e_av(self.t)
             + self.delta_phi_s_av(self.t),
-            decimal=3,
+            decimal=2,
         )
 
     def test_all(self):

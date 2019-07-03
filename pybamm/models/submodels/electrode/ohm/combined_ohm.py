@@ -51,15 +51,19 @@ class CombinedOrder(BaseModel):
             phi_e_p_av = variables["Average positive electrolyte potential"]
 
             sigma_eff = self.param.sigma_p * (1 - eps)
+            sigma_eff_av = pybamm.average(sigma_eff)
 
             const = (
                 ocp_p_av
                 + eta_r_p_av
                 + phi_e_p_av
-                - (i_boundary_cc / 6 / l_p / sigma_eff) * (2 * l_p ** 2 - 6 * l_p + 3)
+                - (i_boundary_cc / 6 / l_p / sigma_eff_av)
+                * (2 * l_p ** 2 - 6 * l_p + 3)
             )
             phi_s = (
-                const
+                pybamm.Broadcast(
+                    const, ["positive electrode"], broadcast_type="primary"
+                )
                 - pybamm.outer(i_boundary_cc, x_p / (2 * l_p) * (x_p + 2 * (l_p - 1)))
                 / sigma_eff
             )
