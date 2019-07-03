@@ -373,10 +373,7 @@ class Discretisation(object):
         try:
             return self._discretised_symbols[symbol.id]
         except KeyError:
-            try:
-                discretised_symbol = self._process_symbol(symbol)
-            except:
-                print("hello")
+            discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
             return discretised_symbol
 

@@ -612,10 +612,11 @@ class Outer(BinaryOperator):
             left.domain != ["current collector"]
             and left.domain != ["negative particle"]
             and left.domain != ["positive particle"]
+            and left.domain != []
         ):
             raise pybamm.DomainError(
                 """left child domain must be 'current collector', 'negative particle',
-                or 'positive particle', not'{}""".format(
+                'positive particle', or '', not'{}""".format(
                     left.domain
                 )
             )
