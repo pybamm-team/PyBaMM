@@ -24,7 +24,7 @@ class Broadcast(pybamm.SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, domain, name=None):
+    def __init__(self, child, domain, name=None, broadcast_type="full"):
         # Convert child to scalar if it is a number
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
@@ -51,6 +51,9 @@ class Broadcast(pybamm.SpatialOperator):
         # overwrite child domain ([]) with specified broadcasting domain
         self.domain = domain
 
+        # set type of broadcast
+        self.broadcast_type = broadcast_type
+
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
@@ -68,11 +71,24 @@ class Broadcast(pybamm.SpatialOperator):
         """
         child_eval = self.children[0].evaluate_for_shape()
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
-        if (
-            self.children[0].domain == ["current collector"]
-            or self.children[0].domain == ["negative particle"]
-            or self.children[0].domain == ["positive particle"]
-        ):
+
+        # if (
+        #     self.children[0].domain == ["current collector"]
+        #     or self.children[0].domain == ["negative particle"]
+        #     or self.children[0].domain == ["positive particle"]
+        # ):
+        #     return np.outer(child_eval, vec).reshape(-1, 1)
+        # else:
+        # return child_eval * vec
+
+        if self.type == "primary":
             return np.outer(child_eval, vec).reshape(-1, 1)
-        else:
+        elif self.type == "full":
             return child_eval * vec
+        else:
+            raise KeyError(
+                """Broadcast type must be either: 'primary' or 'full' and not {}.
+                 Support for 'secondary' will be added in the future""".format(
+                    self.type
+                )
+            )

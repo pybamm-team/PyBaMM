@@ -34,27 +34,26 @@ class LeadingOrder(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        cc = ["current collector"]  # TODO: fix ugly hack
-        phi_s_n_av.domain = cc
-        eta_r_n_av.domain = cc
-        ocp_n_av.domain = cc
-
         phi_e_av = phi_s_n_av - eta_r_n_av - ocp_n_av
-        phi_e_n = pybamm.Broadcast(phi_e_av, ["negative electrode"])
-        phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"])
-        phi_e_p = pybamm.Broadcast(phi_e_av, ["positive electrode"])
+        phi_e_n = pybamm.Broadcast(
+            phi_e_av, ["negative electrode"], broadcast_type="primary"
+        )
+        phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"], broadcast_type="primary")
+        phi_e_p = pybamm.Broadcast(
+            phi_e_av, ["positive electrode"], broadcast_type="primary"
+        )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
-        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
+        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"], broadcast_type="primary")
         i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))
         variables.update(self._get_standard_current_variables(i_e))
 
-        eta_c_av = pybamm.Scalar(0)  # concentration overpotential
-        delta_phi_e_av = pybamm.Scalar(0)  # ohmic losses
+        eta_c_av = 0 * i_boundary_cc  # concentration overpotential
+        delta_phi_e_av = 0 * i_boundary_cc  # ohmic losses
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
         return variables

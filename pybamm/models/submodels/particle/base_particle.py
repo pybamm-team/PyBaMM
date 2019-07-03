@@ -25,7 +25,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def _get_standard_concentration_variables(self, c_s, c_s_xav):
 
-        c_s_surf = pybamm.surf(c_s)
+        c_s_surf = pybamm.surf(c_s, set_domain=True)
 
         c_s_surf_av = pybamm.average(c_s_surf)
 

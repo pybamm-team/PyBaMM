@@ -253,7 +253,9 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.child)
             if isinstance(symbol, pybamm.Broadcast):
-                new_symbol = pybamm.Broadcast(new_child, symbol.domain)
+                new_symbol = pybamm.Broadcast(
+                    new_child, symbol.domain, broadcast_type=symbol.broadcast_type
+                )
             elif isinstance(symbol, pybamm.Integral):
                 new_symbol = symbol.__class__(new_child, symbol.integration_variable)
             elif isinstance(symbol, pybamm.BoundaryOperator):

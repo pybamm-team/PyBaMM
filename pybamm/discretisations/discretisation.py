@@ -102,15 +102,15 @@ class Discretisation(object):
         model_disc.initial_conditions = ics
         model_disc.concatenated_initial_conditions = concat_ics
 
-        # Process parabolic and elliptic equations
-        rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
-        model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
-        model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
-
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
         # model.initial_conditions and model.boundary_conditions
         model_disc.variables = self.process_dict(model.variables)
+
+        # Process parabolic and elliptic equations
+        rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
+        model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
+        model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
 
         # Process events
         processed_events = {}
@@ -348,7 +348,10 @@ class Discretisation(object):
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
-            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            try:
+                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+            except:
+                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
         return new_var_eqn_dict
 
@@ -373,7 +376,7 @@ class Discretisation(object):
             try:
                 discretised_symbol = self._process_symbol(symbol)
             except:
-                discretised_symbol = self._process_symbol(symbol)
+                print("hello")
             self._discretised_symbols[symbol.id] = discretised_symbol
             return discretised_symbol
 
@@ -426,7 +429,9 @@ class Discretisation(object):
                 if symbol.domain == []:
                     symbol = disc_child * pybamm.Vector(np.array([1]))
                 else:
-                    symbol = spatial_method.broadcast(disc_child, symbol.domain)
+                    symbol = spatial_method.broadcast(
+                        disc_child, symbol.domain, symbol.broadcast_type
+                    )
                 return symbol
 
             elif isinstance(symbol, pybamm.BoundaryOperator):
