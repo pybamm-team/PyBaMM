@@ -73,13 +73,8 @@ class DaeSolver(pybamm.BaseSolver):
             # turn into 1D arrays
             rhs_eval = rhs_eval[:, 0]
             alg_eval = alg_eval[:, 0]
-            # get entries of the mass matrix corresponding to rhs
-            mass_matrix = model.mass_matrix.entries[
-                0 : rhs_eval.shape[0], 0 : rhs_eval.shape[0]
-            ]
-            return np.concatenate(
-                (rhs_eval - mass_matrix @ ydot[: rhs_eval.shape[0]], alg_eval)
-            )
+            mass_matrix = model.mass_matrix.entries
+            return np.concatenate((rhs_eval, alg_eval)) - mass_matrix @ ydot
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
