@@ -62,6 +62,9 @@ class DaeSolver(pybamm.BaseSolver):
         )
         set_up_time = timer.time() - start_time
 
+        # get mass matrix entries
+        mass_matrix = model.mass_matrix.entries
+
         def residuals(t, y, ydot):
             pybamm.logger.debug(
                 "Evaluating residuals for {} at t={}".format(model.name, t)
@@ -73,7 +76,7 @@ class DaeSolver(pybamm.BaseSolver):
             # turn into 1D arrays
             rhs_eval = rhs_eval[:, 0]
             alg_eval = alg_eval[:, 0]
-            return np.concatenate((rhs_eval - ydot[: rhs_eval.shape[0]], alg_eval))
+            return np.concatenate((rhs_eval, alg_eval)) - mass_matrix @ ydot
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
@@ -101,7 +104,7 @@ class DaeSolver(pybamm.BaseSolver):
             y0,
             t_eval,
             events=events,
-            mass_matrix=model.mass_matrix.entries,
+            mass_matrix=mass_matrix,
             jacobian=jacobian,
         )
         # Assign times
