@@ -143,7 +143,11 @@ class Index(UnaryOperator):
 
     def __init__(self, child, index, name=None):
         self.index = index
-        if isinstance(index, int):
+        if index == -1:
+            self.slice = slice(index, None)
+            if name is None:
+                name = "Index[-1]"
+        elif isinstance(index, int):
             self.slice = slice(index, index + 1)
             if name is None:
                 name = "Index[" + str(index) + "]"
@@ -157,7 +161,9 @@ class Index(UnaryOperator):
         else:
             raise TypeError("index must be integer or slice")
 
-        if self.slice.stop > child.size:
+        if self.slice in (slice(0, 1), slice(-1, None)):
+            pass
+        elif self.slice.stop > child.size:
             raise ValueError("slice size exceeds child size")
 
         super().__init__(name, child)

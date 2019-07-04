@@ -146,6 +146,13 @@ class BaseSubModel:
         Note: this method modifies the state of self.boundary_conditions.
         """
 
+        def boundary_average(left_orphan, right_orphan):
+            left_orphan.domain = []
+            right_orphan.domain = []
+            left = pybamm.Index(left_orphan, -1)
+            right = pybamm.Index(right_orphan, 0)
+            return (left + right) / 2
+
         internal_bcs = {}
         for var in self.boundary_conditions.keys():
             if isinstance(var, pybamm.Concatenation):
@@ -156,18 +163,33 @@ class BaseSubModel:
 
                 first_orphan = first_child.new_copy()
                 lbc = self.boundary_conditions[var]["left"]
-                rbc = (pybamm.BoundaryValue(first_orphan, "right"), "Dirichlet")
+
+                second_orphan = middle_children[0].new_copy()
+                rbc = (boundary_average(first_orphan, second_orphan), "Dirichlet")
                 internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
 
-                for child in middle_children:
-                    orphan = child.new_copy()
-                    lbc = (pybamm.BoundaryValue(orphan, "left"), "Dirichlet")
-                    rbc = (pybamm.BoundaryValue(orphan, "right"), "Dirichlet")
-                    internal_bcs.update({child: {"left": lbc, "right": rbc}})
+                for i, _ in enumerate(middle_children):
+                    current_child = children[i + 1]
 
+                    current_orphan = current_child.new_copy()
+
+                    previous_orphan = children[i].new_copy()
+                    next_orphan = children[i + 2].new_copy()
+
+                    lbc = (
+                        boundary_average(previous_orphan, current_orphan),
+                        "Dirichlet",
+                    )
+                    rbc = (boundary_average(current_orphan, next_orphan), "Dirichlet")
+
+                    internal_bcs.update({current_child: {"left": lbc, "right": rbc}})
+
+                second_last_orphan = children[-2].new_copy()
                 last_orphan = last_child.new_copy()
-                lbc = (pybamm.BoundaryValue(last_orphan, "left"), "Dirichlet")
+
+                lbc = (boundary_average(second_last_orphan, last_orphan), "Dirichlet")
                 rbc = self.boundary_conditions[var]["right"]
+
                 internal_bcs.update({last_child: {"left": lbc, "right": rbc}})
 
         self.boundary_conditions.update(internal_bcs)
