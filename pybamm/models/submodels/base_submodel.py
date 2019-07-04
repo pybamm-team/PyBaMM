@@ -149,11 +149,26 @@ class BaseSubModel:
         internal_bcs = {}
         for var in self.boundary_conditions.keys():
             if isinstance(var, pybamm.Concatenation):
-                for child in var.children:
+                children = var.children
+                first_child = children[0]
+                middle_children = children[1:-1]
+                last_child = children[-1]
+
+                first_orphan = first_child.new_copy()
+                lbc = self.boundary_conditions[var]["left"]
+                rbc = (pybamm.BoundaryValue(first_orphan, "right"), "Dirichlet")
+                internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
+
+                for child in middle_children:
                     orphan = child.new_copy()
                     lbc = (pybamm.BoundaryValue(orphan, "left"), "Dirichlet")
                     rbc = (pybamm.BoundaryValue(orphan, "right"), "Dirichlet")
                     internal_bcs.update({child: {"left": lbc, "right": rbc}})
+
+                last_orphan = last_child.new_copy()
+                lbc = (pybamm.BoundaryValue(last_orphan, "left"), "Dirichlet")
+                rbc = self.boundary_conditions[var]["right"]
+                internal_bcs.update({last_child: {"left": lbc, "right": rbc}})
 
         self.boundary_conditions.update(internal_bcs)
 

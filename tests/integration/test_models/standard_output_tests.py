@@ -396,6 +396,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         np.testing.assert_array_almost_equal(self.N_e_hat(t, x[0]), 0)
         np.testing.assert_array_almost_equal(self.N_e_hat(t, x[-1]), 0)
 
+
     def test_splitting(self):
         """Test that when splitting the concentrations and fluxes by negative electrode,
         separator, and positive electrode, we get the correct behaviour: continuous
@@ -406,6 +407,18 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         )
 
         np.testing.assert_array_equal(self.c_e(t, x), c_e_combined)
+
+        variables = self.model.variables
+        N_e_n = variables["Negative electrolyte flux"]
+        N_e_s = variables["Separator electrolyte flux"]
+        N_e_p = variables["Positive electrolyte flux"]
+        N_e = variables["Electrolyte flux"]
+
+        N_e_combined = np.concatenate(
+            (N_e_n(t, x_n), N_e_s(t, x_s), N_e_p(t, x_p)), axis=0
+        )
+
+        np.testing.assert_array_almost_equal(N_e(t, x), N_e_combined, decimal=3)
 
     def test_all(self):
         self.test_concentration_limit()

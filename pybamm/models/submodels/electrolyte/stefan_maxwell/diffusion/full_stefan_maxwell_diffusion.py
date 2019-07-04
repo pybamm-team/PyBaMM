@@ -51,8 +51,28 @@ class Full(BaseModel):
 
         N_e = N_e_diffusion + c_e * v_box
 
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+        eps_n, eps_s, eps_p = eps.orphans
+
+        N_e_n = (
+            -(eps_n ** param.b) * param.D_e(c_e_n) * pybamm.grad(c_e_n) + c_e_n * v_box
+        )
+        N_e_s = (
+            -(eps_s ** param.b) * param.D_e(c_e_s) * pybamm.grad(c_e_s) + c_e_s * v_box
+        )
+        N_e_p = (
+            -(eps_p ** param.b) * param.D_e(c_e_p) * pybamm.grad(c_e_p) + c_e_p * v_box
+        )
+
         variables.update(self._get_standard_flux_variables(N_e))
 
+        variables.update(
+            {
+                "Negative electrolyte flux": N_e_n,
+                "Separator electrolyte flux": N_e_s,
+                "Positive electrolyte flux": N_e_p,
+            }
+        )
         return variables
 
     def set_rhs(self, variables):
