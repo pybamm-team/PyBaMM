@@ -277,6 +277,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             submodel.set_rhs(self.variables)
             submodel.set_algebraic(self.variables)
             submodel.set_boundary_conditions(self.variables)
+            submodel.set_internal_boundary_conditions()
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
             self.update(submodel)

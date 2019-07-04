@@ -1,6 +1,7 @@
 #
 # Base submodel class
 #
+import pybamm
 
 
 class BaseSubModel:
@@ -137,6 +138,24 @@ class BaseSubModel:
             The variables in the whole model.
         """
         pass
+
+    def set_internal_boundary_conditions(self):
+        """
+        A method to set the internal boundary conditions for the submodel.
+        These are required to properly calculate the gradient.
+        Note: this method modifies the state of self.boundary_conditions.
+        """
+
+        internal_bcs = {}
+        for var in self.boundary_conditions.keys():
+            if isinstance(var, pybamm.Concatenation):
+                for child in var.children:
+                    orphan = child.new_copy()
+                    lbc = (pybamm.BoundaryValue(orphan, "left"), "Dirichlet")
+                    rbc = (pybamm.BoundaryValue(orphan, "right"), "Dirichlet")
+                    internal_bcs.update({child: {"left": lbc, "right": rbc}})
+
+        self.boundary_conditions.update(internal_bcs)
 
     def set_initial_conditions(self, variables):
         """
