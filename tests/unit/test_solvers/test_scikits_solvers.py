@@ -363,6 +363,27 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
         np.testing.assert_allclose(0.5 * solution.t ** 2, solution.y[1])
 
+    def test_dae_integrate_with_non_unity_mass(self):
+        # Constant
+        solver = pybamm.ScikitsDaeSolver(tol=1e-8)
+
+        def constant_growth_dae(t, y, ydot):
+            return np.array([0.5 * np.ones_like(y[0]) - 4 * ydot[0], 2.0 * y[0] - y[1]])
+
+        mass_matrix = np.array([[4.0, 0.0], [0.0, 0.0]])
+
+        def jacobian(t, y):
+            return np.array([[0.0, 0.0], [2.0, -1.0]])
+
+        y0 = np.array([0.0, 0.0])
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.integrate(
+            constant_growth_dae, y0, t_eval, mass_matrix=mass_matrix, jacobian=jacobian
+        )
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(0.125 * solution.t, solution.y[0])
+        np.testing.assert_allclose(0.25 * solution.t, solution.y[1])
+
     def test_model_solver_ode(self):
         # Create model
         model = pybamm.BaseModel()
