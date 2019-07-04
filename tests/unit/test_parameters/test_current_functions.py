@@ -2,66 +2,97 @@
 # Tests for current input functions
 #
 import pybamm
-import pybamm.parameters.standard_current_functions as cf
 import numbers
-import os
 import unittest
 import numpy as np
 
 
 class TestCurrentFunctions(unittest.TestCase):
-    def test_all_functions(self):
-        function_list = [cf.sin_current, cf.car_current]
-        standard_tests = StandardCurrentFunctionTests(function_list)
-        standard_tests.test_all()
+    def test_constant_current(self):
+        function = pybamm.GetConstantCurrent(current=4)
+        assert isinstance(function(0), numbers.Number)
+        assert isinstance(function(np.zeros(3)), numbers.Number)
+        assert isinstance(function(np.zeros([3, 3])), numbers.Number)
 
-    def test_get_csv_current(self):
-        function = pybamm.GetCurrentData("US06.csv")
-        # Interpolant always returns an array
-        assert isinstance(function(0), np.ndarray)
-        assert isinstance(function(np.zeros(3)), np.ndarray)
-        assert isinstance(function(np.zeros([3, 3])), np.ndarray)
+    def test_get_current_data(self):
+        # test units
+        function_list = [
+            pybamm.GetCurrentData("US06.csv", units="[A]"),
+            pybamm.GetCurrentData("car_current.csv", units="[]", current_scale=10),
+        ]
+        for function in function_list:
+            function.interpolate()
 
-    def test_sin_current(self):
-        # create current functions
-        current_density = (
-            pybamm.electrical_parameters.dimensional_current_density_with_time
-        )
-
-        # process
-        tau = 1800
+        # test process parameters
+        dimensional_current = pybamm.electrical_parameters.dimensional_current_with_time
         parameter_values = pybamm.ParameterValues(
             {
-                "Electrode height [m]": 0.1,
-                "Electrode depth [m]": 0.1,
-                "Typical timescale [s]": tau,
-                "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "sin_current.py",
+                "Typical timescale [s]": 1,
+                "Current function": pybamm.GetCurrentData(
+                    "car_current.csv", units="[]"
                 ),
             }
         )
-        current_desnity_eval = parameter_values.process_symbol(current_density)
-        # one hour dimensional time
+        dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
+
+        def current(t):
+            return dimensional_current_eval.evaluate(t=t)
+
+        function_list.append(current)
+
+        standard_tests = StandardCurrentFunctionTests(function_list, always_array=True)
+        standard_tests.test_all()
+
+    def test_user_current(self):
+        # create user-defined sin function
+        def my_fun(t, A, omega):
+            return A * np.sin(2 * np.pi * omega * t)
+
+        # choose amplitude and frequency
+        A = pybamm.electrical_parameters.I_typ
+        omega = 3
+
+        # pass my_fun to GetUserCurrent class, giving the additonal parameters as
+        # keyword arguments
+        current = pybamm.GetUserCurrent(my_fun, A=A, omega=omega)
+
+        # set and process parameters
+        parameter_values = pybamm.ParameterValues(
+            {
+                "Typical current [A]": 2,
+                "Typical timescale [s]": 1,
+                "Current function": current,
+            }
+        )
+        dimensional_current = pybamm.electrical_parameters.dimensional_current_with_time
+        dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
+
+        def current(t):
+            return dimensional_current_eval.evaluate(t=t)
+
+        # check output types
+        standard_tests = StandardCurrentFunctionTests([current])
+        standard_tests.test_all()
+
+        # check output correct value
         time = np.linspace(0, 3600, 600)
         np.testing.assert_array_almost_equal(
-            current_desnity_eval.evaluate(t=time / tau),
-            (2 / (8 * 0.1 * 0.1)) * np.sin(2 * np.pi * time),
+            current(time), 2 * np.sin(2 * np.pi * 3 * time)
         )
 
 
 class StandardCurrentFunctionTests(object):
-    def __init__(self, function_list):
+    def __init__(self, function_list, always_array=False):
         self.function_list = function_list
+        self.always_array = always_array
 
     def test_output_type(self):
         for function in self.function_list:
-            assert isinstance(function(0), numbers.Number)
+            if self.always_array is True:
+                assert isinstance(function(0), np.ndarray)
+            else:
+                assert isinstance(function(0), numbers.Number)
             assert isinstance(function(np.zeros(3)), np.ndarray)
             assert isinstance(function(np.zeros([3, 3])), np.ndarray)
 

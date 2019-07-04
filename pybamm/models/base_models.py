@@ -416,12 +416,8 @@ class StandardBatteryBaseModel(BaseModel):
             ),
             {
                 "Typical current [A]": 1,
-                "Current function": os.path.join(
-                    pybamm_path,
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
+                "Current function": pybamm.GetConstantCurrent(
+                    pybamm.standard_parameters_lithium_ion.I_typ
                 ),
                 "Electrolyte diffusivity": os.path.join(
                     input_path, "electrolyte_diffusivity_Capiglia1999.py"
@@ -682,12 +678,8 @@ class LeadAcidBaseModel(StandardBatteryBaseModel):
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current [A]": 1,
-                "Current function": os.path.join(
-                    pybamm_path,
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
+                "Current function": pybamm.GetConstantCurrent(
+                    pybamm.standard_parameters_lead_acid.I_typ
                 ),
                 "Electrolyte diffusivity": os.path.join(
                     input_path, "electrolyte_diffusivity_Gu1997.py"

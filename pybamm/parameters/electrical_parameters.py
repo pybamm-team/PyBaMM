@@ -2,7 +2,6 @@
 # Standard electrical parameters
 #
 import pybamm
-import numpy as np
 
 
 def abs_non_zero(x):
@@ -31,8 +30,8 @@ voltage_high_cut_dimensional = pybamm.Parameter("Upper voltage cut-off [V]")
 # to use the correct timescale used for non-dimensionalisation. For a base model,
 # the user may provide the typical timescale as a parameter.
 timescale = pybamm.Parameter("Typical timescale [s]")
-current_with_time = pybamm.FunctionParameter(
+dimensional_current_with_time = pybamm.FunctionParameter(
     "Current function", pybamm.t * timescale
-) * pybamm.Function(np.sign, I_typ)
-dimensional_current_density_with_time = i_typ * current_with_time
-dimensional_current_with_time = I_typ * current_with_time
+)
+dimensional_current_density_with_time = i_typ * (dimensional_current_with_time / I_typ)
+current_with_time = dimensional_current_with_time / I_typ

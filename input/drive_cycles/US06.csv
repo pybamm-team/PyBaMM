@@ -1,6 +1,5 @@
 # Based on the US06 drive cycle,
-# Left column is a dimensionless amplitude which will be multiplied by the typical current,
-amplitude,time
+current [A],time [s]
 0.012859,0
 0.012859,1
 0.012859,2

@@ -225,6 +225,18 @@ class ParameterValues(dict):
             new_children = [self.process_symbol(child) for child in symbol.children]
             function_name = self[symbol.name]
 
+            # if current setter, process any parameters that are symbols and
+            # store the evaluated symbol in the parameters_eval dict
+            if isinstance(function_name, pybamm.GetCurrent):
+                for param, sym in function_name.parameters.items():
+                    if isinstance(sym, pybamm.Symbol):
+                        sym_eval = self.process_symbol(sym).evaluate()
+                        function_name.parameters_eval[param] = sym_eval
+                        # If loading data, need to update interpolant with
+                        # evaluated parameters
+                        if isinstance(function_name, pybamm.GetCurrentData):
+                            function_name.interpolate()
+
             if callable(function_name):
                 function = pybamm.Function(function_name, *new_children)
             else:

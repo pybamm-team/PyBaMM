@@ -1,5 +1,5 @@
 # This is adapted from the file getCarCurrent.m which is part of the LIONSIMBA toolbox.,
-amplitude,time
+current [],time [s]
 1,0
 1,50
 -0.5,50.001

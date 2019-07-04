@@ -13,7 +13,7 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-param["Current function"] = pybamm.GetCurrentData("US06.csv")
+param["Current function"] = pybamm.GetCurrentData("US06.csv", units="[A]")
 param.process_model(model)
 param.process_geometry(geometry)
 

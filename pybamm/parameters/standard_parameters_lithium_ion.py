@@ -5,7 +5,6 @@
 Standard parameters for lithium-ion battery models
 """
 import pybamm
-import numpy as np
 from scipy import constants
 
 # --------------------------------------------------------------------------------------
@@ -351,8 +350,8 @@ def dUdT_p(c_s_p):
 
 # --------------------------------------------------------------------------------------
 "6. Input current"
-current_with_time = pybamm.FunctionParameter(
+dimensional_current_with_time = pybamm.FunctionParameter(
     "Current function", pybamm.t * tau_discharge
-) * pybamm.Function(np.sign, I_typ)
-dimensional_current_density_with_time = i_typ * current_with_time
-dimensional_current_with_time = I_typ * current_with_time
+)
+dimensional_current_density_with_time = i_typ * (dimensional_current_with_time / I_typ)
+current_with_time = dimensional_current_with_time / I_typ
