@@ -97,6 +97,8 @@ class Discretisation(object):
             # create a blank model so that original model is unchanged
             model_disc = pybamm.BaseModel()
 
+        model_disc.bcs = self.bcs
+
         # Process initial condtions
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
@@ -437,10 +439,6 @@ class Discretisation(object):
             return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.Variable):
-            try:
-                pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
-            except:
-                pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
             return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
 
         elif isinstance(symbol, pybamm.SpatialVariable):

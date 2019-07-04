@@ -161,12 +161,16 @@ class Index(UnaryOperator):
         else:
             raise TypeError("index must be integer or slice")
 
-        if self.slice in (slice(0, 1), slice(-1, None)):
+        if self.slice in (slice(0, 1), slice(-1, None), slice(-2, -1), slice(1, 2)):
             pass
         elif self.slice.stop > child.size:
             raise ValueError("slice size exceeds child size")
 
         super().__init__(name, child)
+
+        # no domain for integer value
+        if isinstance(index, int):
+            self.domain = []
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
