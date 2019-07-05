@@ -24,7 +24,10 @@ class BaseBatteryModel(pybamm.BaseModel):
     def default_parameter_values(self):
         # Default parameter values, geometry, submesh, spatial methods and solver
         # Lion parameters left as default parameter set for tests
-        input_path = os.path.join(pybamm.root_dir(), "input", "parameters", "lithium-ion")
+        input_path = os.path.join(
+            pybamm.root_dir(),
+            "input", "parameters", "lithium-ion"
+        )
         return pybamm.ParameterValues(
             os.path.join(
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
@@ -373,4 +376,3 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
-
