@@ -2,6 +2,7 @@
 # Standard electrical parameters
 #
 import pybamm
+import numpy as np
 
 
 def abs_non_zero(x):
@@ -34,4 +35,6 @@ dimensional_current_with_time = pybamm.FunctionParameter(
     "Current function", pybamm.t * timescale
 )
 dimensional_current_density_with_time = i_typ * (dimensional_current_with_time / I_typ)
-current_with_time = dimensional_current_with_time / I_typ
+current_with_time = (
+    dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
+)

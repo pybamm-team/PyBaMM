@@ -210,7 +210,13 @@ class ParameterValues(dict):
         try:
             return self._processed_symbols[symbol.id]
         except KeyError:
-            processed_symbol = self._process_symbol(symbol)
+            try:
+                processed_symbol = self._process_symbol(symbol)
+            except KeyError:
+                import ipdb
+
+                ipdb.set_trace()
+
             self._processed_symbols[symbol.id] = processed_symbol
             return processed_symbol
 
