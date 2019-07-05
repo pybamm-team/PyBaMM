@@ -68,6 +68,9 @@ class BaseModel(BaseInterface):
     def _get_exchange_current_density(self, variables):
         raise NotImplementedError
 
+    def _get_standard_ocp_variables(self, variables):
+        raise NotImplementedError
+
     def _get_average_interfacial_current_density(self, variables):
         """
         Method to obtain the average interfacial current density.

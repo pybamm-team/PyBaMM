@@ -9,17 +9,18 @@ import unittest
 
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
+        param = pybamm.standard_parameters_lithium_ion
 
         a = pybamm.Scalar(0)
         variables = {"Negative electrode open circuit potential": a}
-        submodel = pybamm.interface.inverse_butler_volmer.BaseModel(None, "Negative")
+        submodel = pybamm.interface.inverse_butler_volmer.BaseModel(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
         with self.assertRaises(NotImplementedError):
             std_tests.test_all()
 
         variables = {"Positive electrode open circuit potential": a}
-        submodel = pybamm.interface.inverse_butler_volmer.BaseModel(None, "Positive")
+        submodel = pybamm.interface.inverse_butler_volmer.BaseModel(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         with self.assertRaises(NotImplementedError):
             std_tests.test_all()
