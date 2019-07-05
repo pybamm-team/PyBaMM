@@ -69,9 +69,7 @@ class GetCurrentData(pybamm.GetCurrent):
             )
         # Interpolate using Piecewise Cubic Hermite Interpolating Polynomial
         # (does not overshoot non-smooth data)
-        self.current_interp = interp.PchipInterpolator(
-            self.time, current
-        )
+        self.current_interp = interp.PchipInterpolator(self.time, current)
 
     def __call__(self, t):
         """
@@ -82,7 +80,7 @@ class GetCurrentData(pybamm.GetCurrent):
         if np.min(t) < self.time[0] or np.max(t) > self.time[-1]:
             warnings.warn(
                 "Requested time ({}) is outside of the data range [{}, {}]".format(
-                    t, self.t_start, self.t_end
+                    t, self.time[0], self.time[-1]
                 ),
                 pybamm.ModelWarning,
             )
