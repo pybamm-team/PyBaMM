@@ -8,6 +8,20 @@ import unittest
 
 
 class TestBaseSubModel(unittest.TestCase):
+    def test_domain(self):
+        # Accepted string
+        submodel = pybamm.BaseSubModel(None, "Negative")
+        self.assertEqual(submodel.domain, "Negative")
+
+        # None (accepted but can't be called as an attribute)
+        submodel = pybamm.BaseSubModel(None, None)
+        with self.assertRaises(AttributeError):
+            submodel.domain
+
+        # bad string
+        with self.assertRaises(pybamm.DomainError):
+            submodel = pybamm.BaseSubModel(None, "bad string")
+
     def test_public_functions(self):
         submodel = pybamm.BaseSubModel(None)
         std_tests = tests.StandardSubModelTests(submodel)
