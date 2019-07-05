@@ -8,7 +8,7 @@ from .full_capacitance_stefan_maxwell_conducitivity import FullCapacitance
 
 
 # Leading-order models
-from .base_leading_surface_form_stefan_maxwell_conductivity import BaseLeadingOrder
-from .leading_surface_form_stefan_maxwell_conductivity import LeadingOrder
-from .leading_capacitance_stefan_maxwell_conductivity import LeadingOrderCapacitance
-
+from .leading_surface_form_stefan_maxwell_conductivity import (
+    LeadingOrderDifferential,
+    LeadingOrderAlgebraic,
+)

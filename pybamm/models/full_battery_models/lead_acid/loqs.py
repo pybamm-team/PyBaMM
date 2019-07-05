@@ -109,20 +109,19 @@ class LOQS(BaseModel):
         surf_form = electrolyte.conductivity.surface_potential_form
 
         if self.options["capacitance"] is False:
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    domain.lower() + "electrolyte conductivity"
-                ] = surf_form.LeadingOrder(self.param, domain)
-
-        elif self.options["capacitance"] is True:
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    domain.lower() + "electrolyte conductivity"
-                ] = surf_form.LeadingOrderCapacitance(self.param, domain)
-        elif bla:
             self.submodels[
                 "electrolyte conductivity"
             ] = electrolyte.conductivity.LeadingOrder(self.param)
+        elif self.options["capacitance"] == "differential":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + "electrolyte conductivity"
+                ] = surf_form.LeadingOrderDifferential(self.param, domain)
+        elif self.options["capacitance"] == "algebraic":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + "electrolyte conductivity"
+                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
 
         else:
             raise pybamm.OptionError("'capacitance' must be either 'True' or 'False'")
@@ -141,11 +140,18 @@ class LOQS(BaseModel):
 
     @property
     def default_geometry(self):
-        return pybamm.Geometry("1D macro")
+        if self.options["bc_options"]["dimensionality"] == 0:
+            return pybamm.Geometry("1D macro")
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            return pybamm.Geometry("1+1D macro")
 
     @property
     def default_solver(self):
         """
         Create and return the default solver for this model
         """
-        return pybamm.ScipySolver()
+
+        if self.options["capacitance"] == "algebraic":
+            return pybamm.ScikitsDaeSolver()
+        else:
+            return pybamm.ScipySolver()
