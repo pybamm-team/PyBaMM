@@ -17,8 +17,7 @@ class BaseModel(pybamm.BaseSubModel):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def _get_standard_potential_variables(self, phi_cc):
         """
@@ -41,8 +40,8 @@ class BaseModel(pybamm.BaseSubModel):
 
         # add more to this
         variables = {
-            self._domain + "current collector potential": phi_cc,
-            self._domain + " current collector potential [V]": phi_cc * pot_scale,
+            self.domain + "current collector potential": phi_cc,
+            self.domain + " current collector potential [V]": phi_cc * pot_scale,
         }
 
         return variables
@@ -70,4 +69,3 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {"Current collector current density": i_boundary_cc}
 
         return variables
-

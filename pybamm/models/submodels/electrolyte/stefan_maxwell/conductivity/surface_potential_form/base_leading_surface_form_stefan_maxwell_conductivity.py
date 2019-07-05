@@ -23,11 +23,11 @@ class BaseLeadingOrder(BaseModel):
 
     def get_fundamental_variables(self):
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             delta_phi = pybamm.standard_variables.delta_phi_n
-        elif self._domain == "Separator":
+        elif self.domain == "Separator":
             return {}
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             delta_phi = pybamm.standard_variables.delta_phi_p
         else:
             raise pybamm.DomainError
@@ -41,15 +41,13 @@ class BaseLeadingOrder(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        if self._domain == "Separator":
+        if self.domain == "Separator":
             return {}
 
-        delta_phi_e = variables[
-            self._domain + " electrode surface potential difference"
-        ]
-        if self._domain == "Negative":
+        delta_phi_e = variables[self.domain + " electrode surface potential difference"]
+        if self.domain == "Negative":
             delta_phi_e_init = self.param.U_n(self.param.c_n_init)
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             delta_phi_e_init = self.param.U_p(self.param.c_p_init)
 
         else:

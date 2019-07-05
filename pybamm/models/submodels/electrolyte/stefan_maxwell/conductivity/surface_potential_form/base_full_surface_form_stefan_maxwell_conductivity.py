@@ -22,12 +22,11 @@ class BaseFull(BaseModel):
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
-        self._domain = domain
 
     def get_fundamental_variables(self):
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             delta_phi = pybamm.standard_variables.delta_phi_n
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             delta_phi = pybamm.standard_variables.delta_phi_p
         else:
             raise pybamm.DomainError
@@ -41,16 +40,13 @@ class BaseFull(BaseModel):
         return variables
 
     def set_initial_conditions(self, variables):
-        delta_phi_e = variables[
-            self._domain + " electrode surface potential difference"
-        ]
-        if self._domain == "Negative":
+        delta_phi_e = variables[self.domain + " electrode surface potential difference"]
+        if self.domain == "Negative":
             delta_phi_e_init = self.param.U_n(self.param.c_n_init)
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             delta_phi_e_init = self.param.U_p(self.param.c_p_init)
 
         else:
             raise pybamm.DomainError
 
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
-

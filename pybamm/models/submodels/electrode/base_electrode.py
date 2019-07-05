@@ -18,8 +18,7 @@ class BaseElectrode(pybamm.BaseSubModel):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def _get_standard_potential_variables(self, phi_s):
         """
@@ -40,12 +39,12 @@ class BaseElectrode(pybamm.BaseSubModel):
         param = self.param
         phi_s_av = pybamm.average(phi_s)
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             phi_s_dim = param.potential_scale * phi_s
             phi_s_av_dim = param.potential_scale * phi_s_av
             delta_phi_s = phi_s
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             phi_s_dim = param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s
             phi_s_av_dim = (
                 param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_av
@@ -58,19 +57,17 @@ class BaseElectrode(pybamm.BaseSubModel):
         delta_phi_s_av_dim = delta_phi_s_av * param.potential_scale
 
         variables = {
-            self._domain + " electrode potential": phi_s,
-            self._domain + " electrode potential [V]": phi_s_dim,
-            "Average " + self._domain.lower() + " electrode potential": phi_s_av,
+            self.domain + " electrode potential": phi_s,
+            self.domain + " electrode potential [V]": phi_s_dim,
+            "Average " + self.domain.lower() + " electrode potential": phi_s_av,
+            "Average " + self.domain.lower() + " electrode potential [V]": phi_s_av_dim,
+            self.domain + " electrode ohmic losses": delta_phi_s,
+            self.domain + " electrode ohmic losses [V]": delta_phi_s_dim,
             "Average "
-            + self._domain.lower()
-            + " electrode potential [V]": phi_s_av_dim,
-            self._domain + " electrode ohmic losses": delta_phi_s,
-            self._domain + " electrode ohmic losses [V]": delta_phi_s_dim,
-            "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode ohmic losses": delta_phi_s_av,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode ohmic losses [V]": delta_phi_s_av_dim,
         }
 
@@ -97,8 +94,8 @@ class BaseElectrode(pybamm.BaseSubModel):
         i_s_dim = param.i_typ * i_s
 
         variables = {
-            self._domain + " electrode current density": i_s,
-            self._domain + " electrode current density [A.m-2]": i_s_dim,
+            self.domain + " electrode current density": i_s,
+            self.domain + " electrode current density [A.m-2]": i_s_dim,
         }
 
         return variables
@@ -128,19 +125,6 @@ class BaseElectrode(pybamm.BaseSubModel):
         variables.update({"Electrode current density": i_s})
 
         return variables
-
-    @property
-    def _domain(self):
-        return self.__domain
-
-    @_domain.setter
-    def _domain(self, domain):
-        if domain in ["Negative", "Positive"]:
-            self.__domain = domain
-        else:
-            raise pybamm.DomainError(
-                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
-            )
 
     @property
     def default_solver(self):

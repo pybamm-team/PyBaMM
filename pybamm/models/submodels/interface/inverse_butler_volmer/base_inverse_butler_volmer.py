@@ -26,16 +26,16 @@ class BaseModel(BaseInterface):
         super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
-        ocp = variables[self._domain + " electrode open circuit potential"]
+        ocp = variables[self.domain + " electrode open circuit potential"]
 
         j0 = self._get_exchange_current_density(variables)
         j0_av = pybamm.average(j0)
         j_av = self._get_average_interfacial_current_density(variables)
-        j = pybamm.Broadcast(j_av, [self._domain.lower() + " electrode"])
+        j = pybamm.Broadcast(j_av, [self.domain.lower() + " electrode"])
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             ne = self.param.ne_n
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             ne = self.param.ne_p
 
         eta_r = (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
@@ -53,7 +53,7 @@ class BaseModel(BaseInterface):
             )
         )
 
-        if self._domain == "Positive":
+        if self.domain == "Positive":
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
             )
@@ -73,10 +73,10 @@ class BaseModel(BaseInterface):
 
         i_boundary_cc = variables["Current collector current density"]
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             j_av = i_boundary_cc / pybamm.geometric_parameters.l_n
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             j_av = -i_boundary_cc / pybamm.geometric_parameters.l_p
 
         return j_av

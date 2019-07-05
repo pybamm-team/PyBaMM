@@ -24,10 +24,10 @@ class ManyParticles(BaseModel):
         super().__init__(param, domain)
 
     def get_fundamental_variables(self):
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             c_s = pybamm.standard_variables.c_s_n
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             c_s = pybamm.standard_variables.c_s_p
 
         N_s = self._flux_law(c_s)
@@ -40,9 +40,8 @@ class ManyParticles(BaseModel):
         return variables
 
     def _unpack(self, variables):
-        c_s = variables[self._domain + " particle concentration"]
-        N_s = variables[self._domain + " particle flux"]
-        j = variables[self._domain + " electrode interfacial current density"]
+        c_s = variables[self.domain + " particle concentration"]
+        N_s = variables[self.domain + " particle flux"]
+        j = variables[self.domain + " electrode interfacial current density"]
 
         return c_s, N_s, j
-

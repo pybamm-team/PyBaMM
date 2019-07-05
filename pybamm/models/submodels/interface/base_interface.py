@@ -19,21 +19,20 @@ class BaseInterface(pybamm.BaseSubModel):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def _get_standard_interfacial_current_variables(self, j, j_av):
 
         i_typ = self.param.i_typ
 
         variables = {
-            self._domain + " electrode interfacial current density": j,
+            self.domain + " electrode interfacial current density": j,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode interfacial current density": j_av,
-            self._domain + " interfacial current density [A.m-2]": i_typ * j,
+            self.domain + " interfacial current density [A.m-2]": i_typ * j,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode interfacial current density [A.m-2]": i_typ * j_av,
         }
 
@@ -62,13 +61,13 @@ class BaseInterface(pybamm.BaseSubModel):
         i_typ = self.param.i_typ
 
         variables = {
-            self._domain + " electrode exchange current density": j0,
+            self.domain + " electrode exchange current density": j0,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode exchange current density": j0_av,
-            self._domain + " exchange current density [A.m-2]": i_typ * j0,
+            self.domain + " exchange current density [A.m-2]": i_typ * j0,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode exchange current density [A.m-2]": i_typ * j0_av,
         }
 
@@ -97,13 +96,13 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
 
         variables = {
-            self._domain + " electrode reaction overpotential": eta_r,
+            self.domain + " electrode reaction overpotential": eta_r,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode reaction overpotential": eta_r_av,
-            self._domain + " electrode reaction overpotential [V]": eta_r * pot_scale,
+            self.domain + " electrode reaction overpotential [V]": eta_r * pot_scale,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode reaction overpotential [V]": eta_r_av * pot_scale,
         }
 
@@ -113,37 +112,24 @@ class BaseInterface(pybamm.BaseSubModel):
         self, delta_phi, delta_phi_av
     ):
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             ocp_ref = self.param.U_n_ref
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             ocp_ref = self.param.U_p_ref
         pot_scale = self.param.potential_scale
 
         variables = {
-            self._domain + " electrode surface potential difference": delta_phi,
+            self.domain + " electrode surface potential difference": delta_phi,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode surface potential difference": delta_phi_av,
-            self._domain
+            self.domain
             + " electrode surface potential difference [V]": ocp_ref
             + delta_phi * pot_scale,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode surface potential difference [V]": ocp_ref
             + delta_phi_av * pot_scale,
         }
 
         return variables
-
-    @property
-    def _domain(self):
-        return self.__domain
-
-    @_domain.setter
-    def _domain(self, domain):
-        if domain in ["Negative", "Positive"]:
-            self.__domain = domain
-        else:
-            raise pybamm.DomainError(
-                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
-            )

@@ -24,13 +24,13 @@ class LeadingOrder(BaseLeadingOrder):
 
     def set_algebraic(self, variables):
 
-        if self._domain == "Separator":
+        if self.domain == "Separator":
             return {}
 
-        j = variables[self._domain + " electrode interfacial current density"]
+        j = variables[self.domain + " electrode interfacial current density"]
         j_av = variables[
-            "Average " + self._domain.lower() + " electrode interfacial current density"
+            "Average " + self.domain.lower() + " electrode interfacial current density"
         ]
-        delta_phi = variables[self._domain + " electrode surface potential difference"]
+        delta_phi = variables[self.domain + " electrode surface potential difference"]
 
         self.algebraic[delta_phi] = j_av - j
