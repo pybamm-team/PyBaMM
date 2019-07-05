@@ -106,10 +106,26 @@ class LOQS(BaseModel):
     def set_electrolyte_submodel(self):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
+        surf_form = electrolyte.conductivity.surface_potential_form
 
-        self.submodels[
-            "electrolyte conductivity"
-        ] = electrolyte.conductivity.LeadingOrder(self.param)
+        if self.options["capacitance"] is False:
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + "electrolyte conductivity"
+                ] = surf_form.LeadingOrder(self.param, domain)
+
+        elif self.options["capacitance"] is True:
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + "electrolyte conductivity"
+                ] = surf_form.LeadingOrderCapacitance(self.param, domain)
+        elif bla:
+            self.submodels[
+                "electrolyte conductivity"
+            ] = electrolyte.conductivity.LeadingOrder(self.param)
+
+        else:
+            raise pybamm.OptionError("'capacitance' must be either 'True' or 'False'")
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.LeadingOrder(
             self.param, self.reactions, ocp=True
