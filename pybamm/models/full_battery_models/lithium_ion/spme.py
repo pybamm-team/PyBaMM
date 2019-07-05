@@ -58,10 +58,10 @@ class SPMe(BaseModel):
 
         self.submodels[
             "negative interface"
-        ] = pybamm.interface.inverse_butler_volmer.LithiumIon(self.param, "Negative")
+        ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Negative")
         self.submodels[
             "positive interface"
-        ] = pybamm.interface.inverse_butler_volmer.LithiumIon(self.param, "Positive")
+        ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Positive")
 
     def set_particle_submodel(self):
 

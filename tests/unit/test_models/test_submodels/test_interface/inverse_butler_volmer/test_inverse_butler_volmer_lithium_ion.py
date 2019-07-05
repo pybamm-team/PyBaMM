@@ -21,7 +21,7 @@ class TestLithiumIon(unittest.TestCase):
             "Negative electrolyte concentration": a_n,
             "Negative particle surface concentration": a_n,
         }
-        submodel = pybamm.interface.inverse_butler_volmer.LithiumIon(param, "Negative")
+        submodel = pybamm.interface.lithium_ion.InverseButlerVolmer(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
         std_tests.test_all()
@@ -34,7 +34,7 @@ class TestLithiumIon(unittest.TestCase):
             "Positive electrolyte concentration": a_p,
             "Positive particle surface concentration": a_p,
         }
-        submodel = pybamm.interface.inverse_butler_volmer.LithiumIon(param, "Positive")
+        submodel = pybamm.interface.lithium_ion.InverseButlerVolmer(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

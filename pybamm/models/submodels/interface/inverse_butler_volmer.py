@@ -26,6 +26,8 @@ class BaseModel(BaseInterface):
         super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
+        # Get open-circuit potential variables and reaction overpotential
+        variables.update(self._get_standard_ocp_variables(variables))
         ocp = variables[self.domain + " electrode open circuit potential"]
 
         j0 = self._get_exchange_current_density(variables)

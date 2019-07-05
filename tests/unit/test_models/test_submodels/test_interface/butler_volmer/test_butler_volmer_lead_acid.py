@@ -21,7 +21,7 @@ class TestLeadAcid(unittest.TestCase):
             "Negative electrode open circuit potential": a_n,
             "Negative electrolyte concentration": a_n,
         }
-        submodel = pybamm.interface.butler_volmer.LeadAcid(param, "Negative")
+        submodel = pybamm.interface.lead_acid.ButlerVolmer(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
         std_tests.test_all()
@@ -35,7 +35,7 @@ class TestLeadAcid(unittest.TestCase):
             "Negative electrode interfacial current density": a_n,
             "Negative electrode exchange current density": a_n,
         }
-        submodel = pybamm.interface.butler_volmer.LeadAcid(param, "Positive")
+        submodel = pybamm.interface.lead_acid.ButlerVolmer(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

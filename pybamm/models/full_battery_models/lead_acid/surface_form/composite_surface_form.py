@@ -68,10 +68,10 @@ class Composite(BaseModel):
     def set_interfacial_submodel(self):
         self.submodels[
             "negative interface"
-        ] = pybamm.interface.butler_volmer.LeadAcid(self.param, "Negative")
+        ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Negative")
         self.submodels[
             "positive interface"
-        ] = pybamm.interface.butler_volmer.LeadAcid(self.param, "Positive")
+        ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Positive")
 
     def set_negative_electrode_submodel(self):
         self.submodels["negative electrode"] = pybamm.electrode.ohm.SurfaceForm(
@@ -88,7 +88,7 @@ class Composite(BaseModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
-            self.param, ocp=True
+            self.param
         )
 
         surf_form = electrolyte.conductivity.surface_potential_form

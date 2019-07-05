@@ -71,11 +71,11 @@ class LOQS(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        self.submodels["negative interface"] = pybamm.interface.butler_volmer.LeadAcid(
+        self.submodels["negative interface"] = pybamm.interface.lead_acid.ButlerVolmer(
             self.param, "Negative"
         )
 
-        self.submodels["positive interface"] = pybamm.interface.butler_volmer.LeadAcid(
+        self.submodels["positive interface"] = pybamm.interface.lead_acid.ButlerVolmer(
             self.param, "Positive"
         )
 
@@ -115,7 +115,7 @@ class LOQS(BaseModel):
         self.submodels[
             "electrolyte diffusion"
         ] = electrolyte.diffusion.LeadingOrderModel(
-            self.param, self.reactions, ocp=True
+            self.param, self.reactions
         )
 
     @property

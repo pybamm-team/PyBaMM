@@ -16,9 +16,8 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, ocp=False):
+    def __init__(self, param):
         super().__init__(param)
-        self.ocp = ocp
 
     def _get_standard_concentration_variables(self, c_e, c_e_av):
         """
