@@ -17,14 +17,20 @@ class GetCurrentData(pybamm.GetCurrent):
     Parameters
     ----------
     filename : str
-        The name of the file to load
+        The name of the file to load.
+    units : str, optional
+        The units of the current data which is to be loaded. Can be "[]" for
+        dimenionless data (default), or "[A]" for current in Amperes.
+    current_cale : :class:`pybamm.Symbol` or float, optional
+        The scale the current in Amperes if loading non-dimensional data. Default
+        is to use the typical current I_typ
 
+    **Extends:"": :class:`pybamm.GetCurrent`
     """
 
     def __init__(
         self, filename, units="[]", current_scale=pybamm.electrical_parameters.I_typ
     ):
-        # Parameters which need to be processed
         self.parameters = {"Current [A]": current_scale}
         self.parameters_eval = {"Current [A]": current_scale}
 
@@ -49,6 +55,7 @@ class GetCurrentData(pybamm.GetCurrent):
             raise pybamm.ModelError("No input file provided for current")
 
     def interpolate(self):
+        " Creates the interpolant from the loaded data "
         # If data is dimenionless, multiply by a typical current (e.g. data
         # could be C-rate and current_scale the 1C discharge current). Otherwise,
         # just import the current data.
@@ -64,7 +71,6 @@ class GetCurrentData(pybamm.GetCurrent):
         # (does not overshoot non-smooth data)
         self.current_interp = interp.PchipInterpolator(
             self.time, current
-            ,
         )
 
     def __call__(self, t):

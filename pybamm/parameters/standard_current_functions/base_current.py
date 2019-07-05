@@ -4,13 +4,15 @@
 
 
 class GetCurrent(object):
-    def __init__(self, **kwargs):
-        # The parameters dictionary holds the symbols. During processing of
-        # parameters these are evaluated and stored in parameters_eval. The
-        # separate dictionary is required so that the symbol may be processed again
-        # if the parameters are updated
-        self.parameters = kwargs
-        self.parameters_eval = kwargs
+    """
+    The base class for setting the input current for a simulation. The parameters
+    dictionary holds the symbols of any paramters required to evaluate the current.
+    During processing, the evaluated parameters are stored in parameters_eval.
+    """
+    def __init__(self):
+        #
+        self.parameters = {}
+        self.parameters_eval = {}
 
     def __call__(self, t):
         return 1

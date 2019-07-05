@@ -118,13 +118,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current [A]": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
+                "Current function": pybamm.GetConstantCurrent(),
                 "Electrolyte diffusivity": os.path.join(
                     input_path, "electrolyte_diffusivity_Gu1997.py"
                 ),
