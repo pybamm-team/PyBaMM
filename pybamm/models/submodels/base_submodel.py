@@ -45,7 +45,7 @@ class BaseSubModel:
         symbols.
     """
 
-    def __init__(self, param):
+    def __init__(self, param, domain=None):
         super().__init__()
         self.param = param
         # Initialise empty variables (to avoid overwriting with 'None')
@@ -56,6 +56,23 @@ class BaseSubModel:
         self.initial_conditions = {}
         self.variables = {}
         self.events = {}
+
+        self.domain = domain
+
+    @property
+    def domain(self):
+        return self._domain
+
+    @domain.setter
+    def domain(self, domain):
+        if domain in ["Negative", "Positive"]:
+            self._domain = domain
+        elif domain is None:
+            pass
+        else:
+            raise pybamm.DomainError(
+                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
+            )
 
     def get_fundamental_variables(self):
         """
@@ -166,4 +183,3 @@ class BaseSubModel:
             The variables in the whole model.
         """
         pass
-

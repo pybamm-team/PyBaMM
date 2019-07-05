@@ -38,12 +38,12 @@ class LeadAcid(BaseModel):
         j0 : :class: `pybamm.Symbol`
             The exchange current density.
         """
-        c_e = variables[self._domain + " electrolyte concentration"]
+        c_e = variables[self.domain + " electrolyte concentration"]
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             j0 = self.param.j0_n_S_ref * c_e
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             c_w = self.param.c_w(c_e)
             j0 = self.param.j0_p_S_ref * c_e ** 2 * c_w
 

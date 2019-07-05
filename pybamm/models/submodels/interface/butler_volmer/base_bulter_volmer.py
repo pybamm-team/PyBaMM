@@ -30,18 +30,18 @@ class BaseModel(BaseInterface):
 
     def get_coupled_variables(self, variables):
         i_boundary_cc = variables["Current collector current density"]
-        phi_s = variables[self._domain + " electrode potential"]
-        phi_e = variables[self._domain + " electrolyte potential"]
-        ocp = variables[self._domain + " electrode open circuit potential"]
+        phi_s = variables[self.domain + " electrode potential"]
+        phi_e = variables[self.domain + " electrolyte potential"]
+        ocp = variables[self.domain + " electrode open circuit potential"]
 
         eta_r = phi_s - phi_e - ocp
         j0 = self._get_exchange_current_density(variables)
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             ne = self.param.ne_n
             j_av = i_boundary_cc / pybamm.geometric_parameters.l_n
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             ne = self.param.ne_p
             j_av = -i_boundary_cc / pybamm.geometric_parameters.l_p
 
@@ -65,7 +65,7 @@ class BaseModel(BaseInterface):
             )
         )
 
-        if self._domain == "Positive":
+        if self.domain == "Positive":
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
             )

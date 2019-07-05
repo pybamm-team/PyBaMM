@@ -26,22 +26,22 @@ class LeadingOrderCapacitance(BaseLeadingOrder):
 
     def set_rhs(self, variables):
 
-        if self._domain == "Separator":
+        if self.domain == "Separator":
             return None
 
         param = self.param
 
-        j = variables[self._domain + " electrode interfacial current density"]
+        j = variables[self.domain + " electrode interfacial current density"]
         j_av = variables[
-            "Average " + self._domain.lower() + " electrode interfacial current density"
+            "Average " + self.domain.lower() + " electrode interfacial current density"
         ]
-        delta_phi = variables[self._domain + " electrode surface potential difference"]
+        delta_phi = variables[self.domain + " electrode surface potential difference"]
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             C_dl = param.C_dl_n
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             C_dl = param.C_dl_p
         else:
-            raise pybamm.DomainError("domain '{}' not recognised".format(self._domain))
+            raise pybamm.DomainError("domain '{}' not recognised".format(self.domain))
 
         self.rhs[delta_phi] = 1 / C_dl * (j_av - j)
