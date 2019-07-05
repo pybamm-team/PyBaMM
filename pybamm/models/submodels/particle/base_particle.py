@@ -60,38 +60,6 @@ class BaseParticle(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_standard_ocp_variables(self, c_s):
-        c_s_surf = pybamm.surf(c_s, set_domain=True)
-
-        if self.domain == "Negative":
-            ocp = self.param.U_n(c_s_surf)
-            ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
-            dudT = self.param.dUdT_n(c_s_surf)
-
-        elif self.domain == "Positive":
-            ocp = self.param.U_p(c_s_surf)
-            ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
-            dudT = self.param.dUdT_p(c_s_surf)
-
-        ocp_av = pybamm.average(ocp)
-        ocp_av_dim = pybamm.average(ocp_dim)
-        dudT_av = pybamm.average(dudT)
-
-        variables = {
-            self.domain + " electrode open circuit potential": ocp,
-            self.domain + " electrode open circuit potential [V]": ocp_dim,
-            "Average "
-            + self.domain.lower()
-            + " electrode open circuit potential": ocp_av,
-            "Average "
-            + self.domain.lower()
-            + " electrode open circuit potential [V]": ocp_av_dim,
-            self.domain + " electrode entropic change": dudT,
-            "Average " + self.domain.lower() + " electrode entropic change": dudT_av,
-        }
-
-        return variables
-
     def _flux_law(self, c):
         raise NotImplementedError
 

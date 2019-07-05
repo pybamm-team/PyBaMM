@@ -51,6 +51,45 @@ class BaseModel(BaseInterface, pybamm.lead_acid.BaseModel):
 
         return j0
 
+    def _get_standard_ocp_variables(self, variables):
+        """
+        A private function to obtain the open circuit potential and
+        related standard variables.
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            The concentration in the electrolyte.
+
+        Returns
+        -------
+        variables : dict
+            The variables dictionary including the open circuit potentials
+            and related standard variables.
+        """
+
+        c_e = variables[self.domain + " electrolyte concentration"]
+        if self.domain == "Negative":
+            ocp = self.param.U_n(c_e)
+            ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
+        elif self.domain == "Positive":
+            ocp = self.param.U_p(c_e)
+            ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
+
+        ocp_av = pybamm.average(ocp)
+        ocp_av_dim = pybamm.average(ocp_dim)
+
+        return {
+            self.domain + " electrode open circuit potential": ocp,
+            self.domain + " electrode open circuit potential [V]": ocp_dim,
+            "Average "
+            + self.domain.lower()
+            + " electrode open circuit potential": ocp_av,
+            "Average "
+            + self.domain.lower()
+            + " electrode open circuit potential [V]": ocp_av_dim,
+        }
+
 
 class ButlerVolmer(BaseModel, butler_volmer.BaseModel):
     def __init__(self, param, domain):

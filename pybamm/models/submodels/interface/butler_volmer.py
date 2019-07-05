@@ -29,6 +29,7 @@ class BaseModel(BaseInterface):
         super().__init__(param, domain)
 
     def _get_delta_phi_s(self, variables):
+        "Calculate delta_phi_s, and derived variables, using phi_s and phi_e"
         phi_s = variables[self.domain + " electrode potential"]
         phi_e = variables[self.domain + " electrolyte potential"]
         delta_phi_s = phi_s - phi_e
@@ -46,10 +47,13 @@ class BaseModel(BaseInterface):
         if self.domain + " electrode surface potential difference" not in variables:
             variables = self._get_delta_phi_s(variables)
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
-        ocp = variables[self.domain + " electrode open circuit potential"]
 
-        eta_r = delta_phi_s - ocp
+        # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
+        # Get open-circuit potential variables and reaction overpotential
+        variables.update(self._get_standard_ocp_variables(variables))
+        ocp = variables[self.domain + " electrode open circuit potential"]
+        eta_r = delta_phi_s - ocp
 
         if self.domain == "Negative":
             ne = self.param.ne_n
@@ -71,15 +75,18 @@ class BaseModel(BaseInterface):
         variables.update(self._get_standard_exchange_current_variables(j0, j0_av))
         variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
 
-        if self.domain == "Positive":
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
+        # if self.domain == "Positive":
+        #     variables.update(
+        #         self._get_standard_whole_cell_interfacial_current_variables(variables)
+        #     )
+        #     variables.update(
+        #         self._get_standard_whole_cell_exchange_current_variables(variables)
+        #     )
 
         return variables
+
+    def _get_open_circuit_potential(self, variables):
+        raise NotImplementedError
 
     def _get_exchange_current_density(self, variables):
         raise NotImplementedError
