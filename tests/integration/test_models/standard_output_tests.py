@@ -407,7 +407,6 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
 
         np.testing.assert_array_equal(self.c_e(t, x), c_e_combined)
 
-
     def test_all(self):
         self.test_concentration_limit()
         self.test_conservation()

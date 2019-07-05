@@ -1,7 +1,6 @@
 #
 # Base submodel class
 #
-import pybamm
 
 
 class BaseSubModel:
