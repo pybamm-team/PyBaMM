@@ -75,7 +75,10 @@ class BaseModel(BaseInterface):
         variables.update(self._get_standard_exchange_current_variables(j0, j0_av))
         variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
 
-        if self.domain == "Positive":
+        if (
+            "Negative electrode interfacial current density" in variables
+            and "Positive electrode interfacial current density" in variables
+        ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
             )
