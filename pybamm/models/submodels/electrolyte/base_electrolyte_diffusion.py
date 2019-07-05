@@ -53,10 +53,6 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             "Separator electrolyte concentration [mol.m-3]": c_e_typ * c_e_s,
             "Positive electrolyte concentration": c_e_p,
             "Positive electrolyte concentration [mol.m-3]": c_e_typ * c_e_p,
-            "Test grad c_e": pybamm.grad(c_e),
-            "Test grad c_e_n": pybamm.grad(c_e_n),
-            "Test grad c_e_s": pybamm.grad(c_e_s),
-            "Test grad c_e_p": pybamm.grad(c_e_p),
         }
 
         return variables

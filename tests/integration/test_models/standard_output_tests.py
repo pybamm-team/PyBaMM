@@ -407,38 +407,6 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
 
         np.testing.assert_array_equal(self.c_e(t, x), c_e_combined)
 
-        variables = self.model.variables
-        N_e_n = variables["Negative electrolyte flux"]
-        N_e_s = variables["Separator electrolyte flux"]
-        N_e_p = variables["Positive electrolyte flux"]
-        N_e = variables["Electrolyte flux"]
-
-        N_e_combined = np.concatenate(
-            (N_e_n(t, x_n), N_e_s(t, x_s), N_e_p(t, x_p)), axis=0
-        )
-
-        grad_c_e_n = variables["Test grad c_e_n"]
-        grad_c_e_s = variables["Test grad c_e_s"]
-        grad_c_e_p = variables["Test grad c_e_p"]
-        grad_c_e = variables["Test grad c_e"]
-
-        grad_c_e_combined = np.concatenate(
-            (grad_c_e_n(t, x_n), grad_c_e_s(t, x_s), grad_c_e_p(t, x_p)), axis=0
-        )
-
-        abs_diff = np.abs(grad_c_e(t, x) - grad_c_e_combined)
-        import matplotlib.pyplot as plt
-        plt.plot(abs_diff)
-        plt.show()
-
-        # abs_diff = np.abs(N_e(t, x) - N_e_combined)
-        # import matplotlib.pyplot as plt
-        # plt.plot(abs_diff)
-        # plt.show()
-        np.testing.assert_array_almost_equal(
-            grad_c_e(t, x), grad_c_e_combined, decimal=3
-        )
-        np.testing.assert_array_almost_equal(N_e(t, x), N_e_combined, decimal=3)
 
     def test_all(self):
         self.test_concentration_limit()
