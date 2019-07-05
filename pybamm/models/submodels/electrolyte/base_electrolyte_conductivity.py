@@ -17,8 +17,8 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, domain=None):
+        super().__init__(param, domain)
 
     def _get_standard_potential_variables(self, phi_e, phi_e_av):
         """
@@ -153,14 +153,14 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
 
         variables = {
-            self._domain + " electrode surface potential difference": delta_phi,
+            self.domain + " electrode surface potential difference": delta_phi,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode surface potential difference": delta_phi_av,
-            self._domain
+            self.domain
             + " electrode surface potential difference [V]": delta_phi * pot_scale,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrode surface potential difference [V]": delta_phi_av * pot_scale,
         }
 
@@ -190,11 +190,11 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         phi_e_av = pybamm.average(phi_e)
 
         variables = {
-            self._domain + " electrolyte potential": phi_e,
-            self._domain + " electrolyte potential [V]": phi_e * pot_scale,
-            "Average " + self._domain.lower() + " electrolyte potential": phi_e_av,
+            self.domain + " electrolyte potential": phi_e,
+            self.domain + " electrolyte potential [V]": phi_e * pot_scale,
+            "Average " + self.domain.lower() + " electrolyte potential": phi_e_av,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " electrolyte potential [V]": phi_e_av * pot_scale,
         }
 
@@ -223,8 +223,8 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         i_typ = self.param.i_typ
 
         variables = {
-            self._domain + " electrolyte current density": i_e,
-            self._domain + " electrolyte current density [V]": i_e * i_typ,
+            self.domain + " electrolyte current density": i_e,
+            self.domain + " electrolyte current density [V]": i_e * i_typ,
         }
 
         return variables

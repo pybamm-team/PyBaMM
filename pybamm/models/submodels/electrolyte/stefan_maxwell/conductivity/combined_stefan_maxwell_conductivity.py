@@ -21,8 +21,8 @@ class CombinedOrder(BaseModel):
     **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, domain=None):
+        super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
         i_boundary_cc = variables["Current collector current density"]
@@ -112,4 +112,3 @@ class CombinedOrder(BaseModel):
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
         return variables
-

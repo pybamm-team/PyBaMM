@@ -20,8 +20,8 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, domain=None):
+        super().__init__(param, domain)
 
     def get_fundamental_variables(self):
         phi_e = pybamm.standard_variables.phi_e
