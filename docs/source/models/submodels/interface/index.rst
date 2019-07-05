@@ -5,5 +5,7 @@ Interface
   :maxdepth: 1
 
   base_interface
-  butler_volmer/index
-  inverse_butler_volmer/index
+  butler_volmer
+  interface_lead_acid
+  interface_lithium_ion
+  inverse_butler_volmer

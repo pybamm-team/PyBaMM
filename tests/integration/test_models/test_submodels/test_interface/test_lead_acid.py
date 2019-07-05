@@ -7,42 +7,40 @@ from tests import get_discretisation_for_testing
 import unittest
 
 
-class TestOldMainReaction(unittest.TestCase):
+class TestMainReaction(unittest.TestCase):
     def setUp(self):
-        self.c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
-        self.c_e_s = pybamm.Variable("concentration", domain=["separator"])
-        self.c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
-        self.c_e = pybamm.Concatenation(self.c_e_n, self.c_e_s, self.c_e_p)
-        self.c_s_n_surf = pybamm.surf(
-            pybamm.Variable("particle conc", domain=["negative particle"])
-        )
-        self.c_s_p_surf = pybamm.surf(
-            pybamm.Variable("particle conc", domain=["positive particle"])
-        )
+        c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
+        c_e_s = pybamm.Variable("concentration", domain=["separator"])
+        c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
+        self.c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        self.variables = {
+            "Negative electrolyte concentration": c_e_n,
+            "Positive electrolyte concentration": c_e_p,
+        }
 
     def tearDown(self):
-        del self.c_e_n
-        del self.c_e_s
-        del self.c_e_p
+        del self.variables
         del self.c_e
 
     def test_creation_main_reaction(self):
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model = pybamm.old_interface_lead_acid.OldMainReaction(param)
-        j0_n = model.get_exchange_current_densities(self.c_e_n)
-        j0_p = model.get_exchange_current_densities(self.c_e_p)
+        model_n = pybamm.interface.lead_acid.BaseModel(param, "Negative")
+        j0_n = model_n._get_exchange_current_density(self.variables)
+        model_p = pybamm.interface.lead_acid.BaseModel(param, "Positive")
+        j0_p = model_p._get_exchange_current_density(self.variables)
         self.assertEqual(j0_n.domain, ["negative electrode"])
         self.assertEqual(j0_p.domain, ["positive electrode"])
 
     def test_set_parameters_main_reaction(self):
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model = pybamm.old_interface_lead_acid.OldMainReaction(param)
-        j0_n = model.get_exchange_current_densities(self.c_e_n)
-        j0_p = model.get_exchange_current_densities(self.c_e_p)
+        model_n = pybamm.interface.lead_acid.BaseModel(param, "Negative")
+        j0_n = model_n._get_exchange_current_density(self.variables)
+        model_p = pybamm.interface.lead_acid.BaseModel(param, "Positive")
+        j0_p = model_p._get_exchange_current_density(self.variables)
         # Process parameters
-        parameter_values = model.default_parameter_values
+        parameter_values = model_n.default_parameter_values
         j0_n = parameter_values.process_symbol(j0_n)
         j0_p = parameter_values.process_symbol(j0_p)
         # Test
@@ -54,11 +52,12 @@ class TestOldMainReaction(unittest.TestCase):
     def test_discretisation_main_reaction(self):
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model = pybamm.old_interface_lead_acid.OldMainReaction(param)
-        j0_n = model.get_exchange_current_densities(self.c_e_n)
-        j0_p = model.get_exchange_current_densities(self.c_e_p)
+        model_n = pybamm.interface.lead_acid.BaseModel(param, "Negative")
+        j0_n = model_n._get_exchange_current_density(self.variables)
+        model_p = pybamm.interface.lead_acid.BaseModel(param, "Positive")
+        j0_p = model_p._get_exchange_current_density(self.variables)
         # Process parameters and discretise
-        parameter_values = model.default_parameter_values
+        parameter_values = model_n.default_parameter_values
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
         disc.set_variable_slices([self.c_e])
@@ -77,22 +76,20 @@ class TestOldMainReaction(unittest.TestCase):
             j0_p.evaluate(y=y).shape, (mesh["positive electrode"][0].npts, 1)
         )
 
-    def test_failure(self):
-        model = pybamm.old_interface_lead_acid.OldMainReaction(None)
-        with self.assertRaises(pybamm.DomainError):
-            model.get_exchange_current_densities(None, "not a domain")
-
     def test_diff_main_reaction(self):
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model = pybamm.old_interface_lead_acid.OldMainReaction(param)
-        parameter_values = model.default_parameter_values
+        model_n = pybamm.interface.lead_acid.BaseModel(param, "Negative")
+        model_p = pybamm.interface.lead_acid.BaseModel(param, "Positive")
+        parameter_values = model_n.default_parameter_values
 
         def j0_n(c_e):
-            return model.get_exchange_current_densities(c_e, ["negative electrode"])
+            variables = {**self.variables, "Negative electrolyte concentration": c_e}
+            return model_n._get_exchange_current_density(variables)
 
         def j0_p(c_e):
-            return model.get_exchange_current_densities(c_e, ["positive electrode"])
+            variables = {**self.variables, "Positive electrolyte concentration": c_e}
+            return model_p._get_exchange_current_density(variables)
 
         c_e = pybamm.Scalar(0.5)
         h = pybamm.Scalar(0.00001)

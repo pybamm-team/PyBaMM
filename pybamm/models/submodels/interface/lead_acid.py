@@ -1,13 +1,14 @@
 #
-# Lead acid inverse Bulter-Volmer class
+# Lead-acid interface classes
 #
+import pybamm
+from .base_interface import BaseInterface
+from . import butler_volmer, inverse_butler_volmer
 
-from .base_inverse_butler_volmer import BaseModel
 
-
-class LeadAcid(BaseModel):
+class BaseModel(BaseInterface, pybamm.lead_acid.BaseModel):
     """
-    Lead acid inverse Butler-Volmer class
+    Base lead-acid interface class
 
     Parameters
     ----------
@@ -17,7 +18,8 @@ class LeadAcid(BaseModel):
         The domain to implement the model, either: 'Negative' or 'Positive'.
 
 
-    **Extends:** :class:`pybamm.interface.inverse_butler_volmer.BaseModel`
+    **Extends:** :class:`pybamm.interface.BaseInterface`
+    and :class:`pybamm.lead_acid.BaseModel`
     """
 
     def __init__(self, param, domain):
@@ -48,3 +50,13 @@ class LeadAcid(BaseModel):
             j0 = self.param.j0_p_S_ref * c_e ** 2 * c_w
 
         return j0
+
+
+class ButlerVolmer(BaseModel, butler_volmer.BaseModel):
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
+
+
+class InverseButlerVolmer(BaseModel, inverse_butler_volmer.BaseModel):
+    def __init__(self, param, domain):
+        super().__init__(param, domain)

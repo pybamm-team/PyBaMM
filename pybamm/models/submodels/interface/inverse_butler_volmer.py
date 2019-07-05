@@ -4,7 +4,7 @@
 
 import pybamm
 import autograd.numpy as np
-from ..base_interface import BaseInterface
+from .base_interface import BaseInterface
 
 
 class BaseModel(BaseInterface):
