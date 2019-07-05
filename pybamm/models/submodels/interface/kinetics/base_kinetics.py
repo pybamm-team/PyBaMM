@@ -3,16 +3,12 @@
 #
 
 import pybamm
-import autograd.numpy as np
-from .base_interface import BaseInterface
+from ..base_interface import BaseInterface
 
 
-class BaseModel(BaseInterface):
+class BaseKinetics(BaseInterface):
     """
-       Base submodel which implements the forward Butler-Volmer equation:
-
-    .. math::
-        j = j_0(c) * \\sinh(\\eta_r(c))
+    Base submodel for kinetics
 
     Parameters
     ----------
@@ -33,11 +29,8 @@ class BaseModel(BaseInterface):
         phi_s = variables[self.domain + " electrode potential"]
         phi_e = variables[self.domain + " electrolyte potential"]
         delta_phi_s = phi_s - phi_e
-        delta_phi_s_av = pybamm.average(delta_phi_s)
         variables.update(
-            self._get_standard_surface_potential_difference_variables(
-                delta_phi_s, delta_phi_s_av
-            )
+            self._get_standard_surface_potential_difference_variables(delta_phi_s)
         )
         return variables
 
@@ -57,23 +50,16 @@ class BaseModel(BaseInterface):
 
         if self.domain == "Negative":
             ne = self.param.ne_n
-            j_av = i_boundary_cc / pybamm.geometric_parameters.l_n
-
         elif self.domain == "Positive":
             ne = self.param.ne_p
-            j_av = -i_boundary_cc / pybamm.geometric_parameters.l_p
 
-        j = 2 * j0 * pybamm.Function(np.sinh, (ne / 2) * eta_r)
-
-        j0_av = pybamm.average(j0)
-
+        j = self._get_kinetics(j0, ne, eta_r)
+        j_av = self._get_average_interfacial_current_density(variables)
         # j = j_av + (j - pybamm.average(j))  # enforce true average
 
-        eta_r_av = pybamm.average(eta_r)
-
         variables.update(self._get_standard_interfacial_current_variables(j, j_av))
-        variables.update(self._get_standard_exchange_current_variables(j0, j0_av))
-        variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
+        variables.update(self._get_standard_exchange_current_variables(j0))
+        variables.update(self._get_standard_overpotential_variables(eta_r))
 
         if (
             "Negative electrode interfacial current density" in variables

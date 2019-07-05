@@ -3,7 +3,7 @@
 #
 import pybamm
 from .base_interface import BaseInterface
-from . import butler_volmer, inverse_butler_volmer
+from .kinetics import butler_volmer, inverse_butler_volmer
 
 
 class BaseModel(BaseInterface, pybamm.lead_acid.BaseModel):
@@ -91,7 +91,7 @@ class BaseModel(BaseInterface, pybamm.lead_acid.BaseModel):
         }
 
 
-class ButlerVolmer(BaseModel, butler_volmer.BaseModel):
+class ButlerVolmer(BaseModel, butler_volmer.BaseButlerVolmer):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 

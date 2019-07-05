@@ -4,7 +4,7 @@
 
 import pybamm
 import autograd.numpy as np
-from .base_interface import BaseInterface
+from ..base_interface import BaseInterface
 
 
 class BaseModel(BaseInterface):
@@ -31,7 +31,6 @@ class BaseModel(BaseInterface):
         ocp = variables[self.domain + " electrode open circuit potential"]
 
         j0 = self._get_exchange_current_density(variables)
-        j0_av = pybamm.average(j0)
         j_av = self._get_average_interfacial_current_density(variables)
         j = pybamm.Broadcast(j_av, [self.domain.lower() + " electrode"])
 
@@ -41,21 +40,20 @@ class BaseModel(BaseInterface):
             ne = self.param.ne_p
 
         eta_r = (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
-        eta_r_av = pybamm.average(eta_r)
 
         delta_phi = eta_r + ocp
-        delta_phi_av = pybamm.average(delta_phi)
 
         variables.update(self._get_standard_interfacial_current_variables(j, j_av))
-        variables.update(self._get_standard_exchange_current_variables(j0, j0_av))
-        variables.update(self._get_standard_overpotential_variables(eta_r, eta_r_av))
+        variables.update(self._get_standard_exchange_current_variables(j0))
+        variables.update(self._get_standard_overpotential_variables(eta_r))
         variables.update(
-            self._get_standard_surface_potential_difference_variables(
-                delta_phi, delta_phi_av
-            )
+            self._get_standard_surface_potential_difference_variables(delta_phi)
         )
 
-        if self.domain == "Positive":
+        if (
+            "Negative electrode interfacial current density" in variables
+            and "Positive electrode interfacial current density" in variables
+        ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
             )
@@ -70,18 +68,3 @@ class BaseModel(BaseInterface):
 
     def _get_standard_ocp_variables(self, variables):
         raise NotImplementedError
-
-    def _get_average_interfacial_current_density(self, variables):
-        """
-        Method to obtain the average interfacial current density.
-        """
-
-        i_boundary_cc = variables["Current collector current density"]
-
-        if self.domain == "Negative":
-            j_av = i_boundary_cc / pybamm.geometric_parameters.l_n
-
-        elif self.domain == "Positive":
-            j_av = -i_boundary_cc / pybamm.geometric_parameters.l_p
-
-        return j_av

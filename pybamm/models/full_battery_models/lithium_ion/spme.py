@@ -33,11 +33,8 @@ class SPMe(BaseModel):
             phi_s = self.variables[domain + " electrode potential"]
             phi_e = self.variables[domain + " electrolyte potential"]
             delta_phi = phi_s - phi_e
-            delta_phi_av = pybamm.average(delta_phi)
             s = self.submodels[domain.lower() + " interface"]
-            var = s._get_standard_surface_potential_difference_variables(
-                delta_phi, delta_phi_av
-            )
+            var = s._get_standard_surface_potential_difference_variables(delta_phi)
             self.variables.update(var)
 
     def set_current_collector_submodel(self):
