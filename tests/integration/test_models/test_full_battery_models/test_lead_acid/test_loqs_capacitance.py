@@ -14,36 +14,32 @@ class TestLeadAcidLoqsSurfaceForm(unittest.TestCase):
     @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
     def test_basic_processing(self):
         options = {"capacitance": "algebraic"}
-        model = pybamm.old_lead_acid.OldLOQS(options)
+        model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_with_capacitance(self):
         options = {"capacitance": "differential"}
-        model = pybamm.old_lead_acid.OldLOQS(options)
+        model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_1p1D_differential(self):
         options = {"capacitance": "differential", "bc_options": {"dimensionality": 1}}
-        options = {"surface form": True, "capacitance": False}
-        model = pybamm.old_lead_acid.OldLOQS(options)
+        model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
     def test_basic_processing_1p1D_algebraic(self):
         options = {"capacitance": "algebraic", "bc_options": {"dimensionality": 1}}
-        model = pybamm.old_lead_acid.OldLOQS(options)
+        model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_optimisations(self):
         options = {"capacitance": "differential"}
-        model = pybamm.old_lead_acid.OldLOQS(options)
+        model = pybamm.lead_acid.LOQS(options)
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()

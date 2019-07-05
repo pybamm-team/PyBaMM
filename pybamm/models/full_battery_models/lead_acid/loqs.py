@@ -71,12 +71,25 @@ class LOQS(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        self.submodels[
-            "negative interface"
-        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Negative")
-        self.submodels[
-            "positive interface"
-        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Positive")
+        if self.options["capacitance"] is False:
+            self.submodels[
+                "negative interface"
+            ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Negative")
+            self.submodels[
+                "positive interface"
+            ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Positive")
+        else:
+            self.submodels[
+                "negative interface"
+            ] = pybamm.interface.butler_volmer.surface_form.LeadAcid(
+                self.param, "Negative"
+            )
+
+            self.submodels[
+                "positive interface"
+            ] = pybamm.interface.butler_volmer.surface_form.LeadAcid(
+                self.param, "Positive"
+            )
 
     def set_negative_electrode_submodel(self):
 
