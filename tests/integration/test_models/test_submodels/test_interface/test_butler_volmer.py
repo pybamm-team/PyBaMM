@@ -10,22 +10,52 @@ import numpy as np
 
 class TestButlerVolmer(unittest.TestCase):
     def setUp(self):
-        self.eta_r_n = pybamm.Variable("overpotential", ["negative electrode"])
-        self.eta_r_p = pybamm.Variable("overpotential", ["positive electrode"])
-        self.j0_n = pybamm.Variable("exchange-curr density", ["negative electrode"])
-        self.j0_p = pybamm.Variable("exchange-curr density", ["positive electrode"])
+        self.delta_phi_s_n = pybamm.Variable(
+            "surface potential difference", ["negative electrode"]
+        )
+        self.delta_phi_s_p = pybamm.Variable(
+            "surface potential difference", ["positive electrode"]
+        )
+        c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
+        c_e_s = pybamm.Variable("concentration", domain=["separator"])
+        c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
+        self.c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        self.c_s_n_surf = pybamm.surf(
+            pybamm.Variable("particle conc", domain=["negative particle"])
+        )
+        self.c_s_p_surf = pybamm.surf(
+            pybamm.Variable("particle conc", domain=["positive particle"])
+        )
+        self.variables = {
+            "Negative electrode surface potential difference": self.delta_phi_s_n,
+            "Positive electrode surface potential difference": self.delta_phi_s_p,
+            "Negative electrolyte concentration": c_e_n,
+            "Positive electrolyte concentration": c_e_p,
+            "Negative particle surface concentration": self.c_s_n_surf,
+            "Positive particle surface concentration": self.c_s_p_surf,
+            "Current collector current density": pybamm.Scalar(1),
+            "Negative electrode open circuit potential": pybamm.Scalar(0),
+            "Positive electrode open circuit potential": pybamm.Scalar(0),
+        }
 
     def tearDown(self):
-        del self.eta_r_n
-        del self.eta_r_p
-        del self.j0_n
-        del self.j0_p
+        del self.variables
+        del self.c_e
+        del self.c_s_n_surf
+        del self.c_s_p_surf
+        del self.delta_phi_s_n
+        del self.delta_phi_s_p
 
     def test_creation(self):
         param = pybamm.standard_parameters_lithium_ion
-        model = pybamm.interface.butler_volmer.BaseModel(param)
-        j_n = model.get_butler_volmer(self.j0_n, self.eta_r_n)
-        j_p = model.get_butler_volmer(self.j0_p, self.eta_r_p)
+        model_n = pybamm.interface.lithium_ion.ButlerVolmer(param, "Negative")
+        j_n = model_n.get_coupled_variables(self.variables)[
+            "Negative electrode interfacial current density"
+        ]
+        model_p = pybamm.interface.lithium_ion.ButlerVolmer(param, "Positive")
+        j_p = model_p.get_coupled_variables(self.variables)[
+            "Positive electrode interfacial current density"
+        ]
 
         # negative electrode Butler-Volmer is Multiplication
         self.assertIsInstance(j_n, pybamm.Multiplication)
@@ -37,12 +67,17 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_set_parameters(self):
         param = pybamm.standard_parameters_lithium_ion
-        model = pybamm.interface.butler_volmer.BaseModel(param)
-        j_n = model.get_butler_volmer(self.j0_n, self.eta_r_n)
-        j_p = model.get_butler_volmer(self.j0_p, self.eta_r_p)
+        model_n = pybamm.interface.lithium_ion.ButlerVolmer(param, "Negative")
+        j_n = model_n.get_coupled_variables(self.variables)[
+            "Negative electrode interfacial current density"
+        ]
+        model_p = pybamm.interface.lithium_ion.ButlerVolmer(param, "Positive")
+        j_p = model_p.get_coupled_variables(self.variables)[
+            "Positive electrode interfacial current density"
+        ]
 
         # Process parameters
-        parameter_values = model.default_parameter_values
+        parameter_values = model_n.default_parameter_values
         j_n = parameter_values.process_symbol(j_n)
         j_p = parameter_values.process_symbol(j_p)
         [self.assertNotIsInstance(x, pybamm.Parameter) for x in j_n.pre_order()]
@@ -50,16 +85,29 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_discretisation(self):
         param = pybamm.standard_parameters_lithium_ion
-        model = pybamm.interface.butler_volmer.BaseModel(param)
-        j_n = model.get_butler_volmer(self.j0_n, self.eta_r_n)
-        j_p = model.get_butler_volmer(self.j0_p, self.eta_r_p)
+        model_n = pybamm.interface.lithium_ion.ButlerVolmer(param, "Negative")
+        j_n = model_n.get_coupled_variables(self.variables)[
+            "Negative electrode interfacial current density"
+        ]
+        model_p = pybamm.interface.lithium_ion.ButlerVolmer(param, "Positive")
+        j_p = model_p.get_coupled_variables(self.variables)[
+            "Positive electrode interfacial current density"
+        ]
         j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
 
         # Process parameters and discretise
-        parameter_values = model.default_parameter_values
+        parameter_values = model_n.default_parameter_values
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
-        disc.set_variable_slices([self.j0_n, self.eta_r_n, self.j0_p, self.eta_r_p])
+        disc.set_variable_slices(
+            [
+                self.c_e,
+                self.delta_phi_s_n,
+                self.delta_phi_s_p,
+                self.c_s_n_surf,
+                self.c_s_p_surf,
+            ]
+        )
 
         j_n = disc.process_symbol(parameter_values.process_symbol(j_n))
         j_p = disc.process_symbol(parameter_values.process_symbol(j_p))
@@ -86,8 +134,9 @@ class TestButlerVolmer(unittest.TestCase):
 
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model = pybamm.interface_lead_acid.MainReaction(param)
-        parameter_values = model.default_parameter_values
+        model_n = pybamm.interface.lead_acid.ButlerVolmer(param, "Negative")
+        model_p = pybamm.interface.lead_acid.ButlerVolmer(param, "Positive")
+        parameter_values = model_n.default_parameter_values
 
         def j_n(c_e):
             eta_r_n = 1 - param.U_n(c_e)
@@ -118,8 +167,9 @@ class TestButlerVolmer(unittest.TestCase):
 
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model = pybamm.interface_lead_acid.MainReaction(param)
-        parameter_values = model.default_parameter_values
+        model_n = pybamm.interface.lead_acid.ButlerVolmer(param, "Negative")
+        model_p = pybamm.interface.lead_acid.ButlerVolmer(param, "Positive")
+        parameter_values = model_n.default_parameter_values
 
         def j_n(delta_phi):
             return model.get_butler_volmer(1, delta_phi - 1, ["negative electrode"])
@@ -143,13 +193,6 @@ class TestButlerVolmer(unittest.TestCase):
             (j_p(delta_phi + h) - j_p(delta_phi - h)) / (2 * h)
         )
         self.assertAlmostEqual(j_p_diff.evaluate(), j_p_FD.evaluate())
-
-    def test_failure(self):
-        model = pybamm.interface.butler_volmer.BaseModel(None)
-        with self.assertRaises(pybamm.DomainError):
-            model.get_butler_volmer(None, None, "not a domain")
-        with self.assertRaises(pybamm.DomainError):
-            model.get_inverse_butler_volmer(None, None, "not a domain")
 
 
 if __name__ == "__main__":
