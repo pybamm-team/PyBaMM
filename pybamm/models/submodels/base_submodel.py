@@ -1,6 +1,7 @@
 #
 # Base submodel class
 #
+import pybamm
 
 
 class BaseSubModel:
@@ -65,7 +66,7 @@ class BaseSubModel:
 
     @domain.setter
     def domain(self, domain):
-        if domain in ["Negative", "Positive"]:
+        if domain in ["Negative", "Separator", "Positive"]:
             self._domain = domain
         elif domain is None:
             pass
