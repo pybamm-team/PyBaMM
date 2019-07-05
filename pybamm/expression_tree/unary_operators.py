@@ -591,12 +591,26 @@ def surf(variable, set_domain=False):
     :class:`GetSurfaceValue`
         the surface value of ``variable``
     """
-    out = boundary_value(variable, "right")
-    if set_domain:
-        if variable.domain == ["negative particle"]:
-            out.domain = ["negative electrode"]
-        elif variable.domain == ["positive particle"]:
-            out.domain = ["positive electrode"]
+    if variable.domain == ["negative electrode"] and isinstance(
+        variable, pybamm.Broadcast
+    ):
+        child_surf = boundary_value(variable.orphans[0], "right")
+        out = pybamm.Broadcast(child_surf, ["negative electrode"])
+        out.domain = ["negative electrode"]
+    elif variable.domain == ["positive electrode"] and isinstance(
+        variable, pybamm.Broadcast
+    ):
+        child_surf = boundary_value(variable.orphans[0], "right")
+        out = pybamm.Broadcast(child_surf, ["positive electrode"])
+        out.domain = ["positive electrode"]
+    else:
+        out = boundary_value(variable, "right")
+        if set_domain:
+            if variable.domain == ["negative particle"]:
+                out.domain = ["negative electrode"]
+            elif variable.domain == ["positive particle"]:
+                out.domain = ["positive electrode"]
+
     return out
 
 
@@ -649,6 +663,12 @@ def average(symbol):
         elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             x = pybamm.standard_spatial_vars.x
             l = pybamm.Scalar(1)
+        elif symbol.domain == ["negative particle"]:
+            x = pybamm.standard_spatial_vars.x_n
+            l = pybamm.geometric_parameters.l_n
+        elif symbol.domain == ["positive particle"]:
+            x = pybamm.standard_spatial_vars.x_p
+            l = pybamm.geometric_parameters.l_p
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(symbol.domain))
 

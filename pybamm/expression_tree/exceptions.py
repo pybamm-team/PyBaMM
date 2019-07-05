@@ -9,6 +9,12 @@ class DomainError(Exception):
     pass
 
 
+class OptionError(Exception):
+    """Option error: an unknown option was given"""
+
+    pass
+
+
 class GeometryError(Exception):
     """
         Geometry error: Raised if the an unimplemented geometry is used.

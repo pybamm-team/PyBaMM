@@ -2,12 +2,18 @@ import pybamm
 import numpy as np
 
 # load models
+options = {"thermal": None}
 pybamm.set_logging_level("INFO")
-models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.SPMe(), pybamm.lithium_ion.DFN()]
+models = [
+    pybamm.lithium_ion.SPM(options),
+    pybamm.lithium_ion.SPMe(options),
+    pybamm.lithium_ion.DFN(options),
+]
 
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
+param.update({"Typical current [A]": 0.3})
 pybamm.set_logging_level("INFO")
 param.update({"Typical current [A]": 1})
 for model in models:

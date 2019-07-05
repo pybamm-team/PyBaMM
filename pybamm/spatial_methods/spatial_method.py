@@ -3,7 +3,7 @@
 #
 import pybamm
 import numpy as np
-from scipy.sparse import eye, kron, coo_matrix
+from scipy.sparse import eye, kron, coo_matrix, csr_matrix
 
 
 class SpatialMethod:
@@ -75,6 +75,12 @@ class SpatialMethod:
         )
 
         if symbol.domain == ["current collector"]:
+            out = pybamm.Outer(
+                symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
+            )
+        elif symbol.domain == ["negative particle"] or symbol.domain == [
+            "positive particle"
+        ]:
             out = pybamm.Outer(
                 symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
             )
@@ -265,7 +271,8 @@ class SpatialMethod:
         # Get number of points in secondary dimension
         sec_pts = len(submesh)
 
-        mass = kron(eye(sec_pts), prim_mass)
+        # Convert to csr_matrix as required by some solvers
+        mass = csr_matrix(kron(eye(sec_pts), prim_mass))
         return pybamm.Matrix(mass)
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):
