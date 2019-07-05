@@ -15,12 +15,11 @@ class TestBaseSubModel(unittest.TestCase):
 
         # None (accepted but can't be called as an attribute)
         submodel = pybamm.BaseSubModel(None, None)
-        with self.assertRaises(AttributeError):
-            submodel.domain
+        self.assertFalse(hasattr(submodel, "_domain"))
 
         # bad string
         with self.assertRaises(pybamm.DomainError):
-            submodel = pybamm.BaseSubModel(None, "bad string")
+            pybamm.BaseSubModel(None, "bad string")
 
     def test_public_functions(self):
         submodel = pybamm.BaseSubModel(None)
