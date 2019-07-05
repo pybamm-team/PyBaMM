@@ -200,15 +200,14 @@ class Discretisation(object):
 
                 first_child = children[0]
                 first_orphan = first_child.new_copy()
-                lbc = model.boundary_conditions[var]["left"]
-
                 next_child = children[1]
                 next_orphan = next_child.new_copy()
+
+                lbc = model.boundary_conditions[var]["left"]
                 rbc = (boundary_gradient(first_orphan, next_orphan), "Neumann")
                 internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
 
                 for i, _ in enumerate(children[1:-1]):
-
                     current_child = next_child
                     current_orphan = next_orphan
                     next_child = children[i + 2]
@@ -216,16 +215,13 @@ class Discretisation(object):
 
                     lbc = rbc
                     rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
-
                     internal_bcs.update({current_child: {"left": lbc, "right": rbc}})
 
                 lbc = rbc
                 rbc = model.boundary_conditions[var]["right"]
-
                 internal_bcs.update({children[-1]: {"left": lbc, "right": rbc}})
 
         model.boundary_conditions.update(internal_bcs)
-
         return model
 
     def process_initial_conditions(self, model):
