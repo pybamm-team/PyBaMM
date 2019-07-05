@@ -2,20 +2,14 @@
 # Bulter volmer class
 #
 
-# N.B. this can be a child of the standard butler-volmer class but
-# i have left for now because there is a lot to do
-# maybe a small function _get_delta_phi_s which is overwritten depending
-# if surface form or standard form
-
 import pybamm
 import autograd.numpy as np
-from ...base_interface import BaseInterface
+from ..base_interface import BaseInterface
 
 
 class BaseModel(BaseInterface):
     """
-       Base submodel which implements the forward Butler-Volmer equation for the
-       surface potential form.
+       Base submodel which implements the forward Butler-Volmer equation:
 
     .. math::
         j = j_0(c) * \\sinh(\\eta_r(c))
@@ -34,8 +28,23 @@ class BaseModel(BaseInterface):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
+    def _get_delta_phi_s(self, variables):
+        phi_s = variables[self.domain + " electrode potential"]
+        phi_e = variables[self.domain + " electrolyte potential"]
+        delta_phi_s = phi_s - phi_e
+        delta_phi_s_av = pybamm.average(delta_phi_s)
+        variables.update(
+            self._get_standard_surface_potential_difference_variables(
+                delta_phi_s, delta_phi_s_av
+            )
+        )
+        return variables
+
     def get_coupled_variables(self, variables):
         i_boundary_cc = variables["Current collector current density"]
+        # Calculate delta_phi_s from phi_s and phi_e if it isn't already known
+        if self.domain + " electrode surface potential difference" not in variables:
+            variables = self._get_delta_phi_s(variables)
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
         ocp = variables[self.domain + " electrode open circuit potential"]
 

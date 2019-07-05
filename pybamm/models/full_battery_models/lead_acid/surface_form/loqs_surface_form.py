@@ -71,13 +71,13 @@ class LOQS(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        self.submodels[
-            "negative interface"
-        ] = pybamm.interface.butler_volmer.surface_form.LeadAcid(self.param, "Negative")
+        self.submodels["negative interface"] = pybamm.interface.butler_volmer.LeadAcid(
+            self.param, "Negative"
+        )
 
-        self.submodels[
-            "positive interface"
-        ] = pybamm.interface.butler_volmer.surface_form.LeadAcid(self.param, "Positive")
+        self.submodels["positive interface"] = pybamm.interface.butler_volmer.LeadAcid(
+            self.param, "Positive"
+        )
 
     def set_negative_electrode_submodel(self):
 
@@ -145,4 +145,3 @@ class LOQS(BaseModel):
             solver = pybamm.ScikitsOdeSolver()
 
         return solver
-
