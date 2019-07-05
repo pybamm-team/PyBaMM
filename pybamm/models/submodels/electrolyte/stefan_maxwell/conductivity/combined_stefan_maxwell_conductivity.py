@@ -62,7 +62,7 @@ class CombinedOrder(BaseModel):
             -ocp_n_av
             - eta_r_n_av
             + phi_s_n_av
-            - chi_av * pybamm.average(pybamm.Function(np.log, c_e_n / c_e_av))
+            - chi_av * pybamm.average(pybamm.log(c_e_n / c_e_av))
             - (
                 (i_boundary_cc * param.C_e * l_n / param.gamma_e)
                 * (1 / (3 * kappa_n_av) - 1 / kappa_s_av)
@@ -71,20 +71,20 @@ class CombinedOrder(BaseModel):
 
         phi_e_n = (
             phi_e_const
-            + chi_av * pybamm.Function(np.log, c_e_n / c_e_av)
+            + chi_av * pybamm.log(c_e_n / c_e_av)
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n_av * l_n) + l_n / kappa_s_av)
         )
 
         phi_e_s = (
             phi_e_const
-            + chi_av * pybamm.Function(np.log, c_e_s / c_e_av)
+            + chi_av * pybamm.log(c_e_s / c_e_av)
             - (i_boundary_cc * param.C_e / param.gamma_e) * (x_s / kappa_s_av)
         )
 
         phi_e_p = (
             phi_e_const
-            + chi_av * pybamm.Function(np.log, c_e_p / c_e_av)
+            + chi_av * pybamm.log(c_e_p / c_e_av)
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * (
                 (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p_av * l_p)
@@ -96,8 +96,8 @@ class CombinedOrder(BaseModel):
 
         # concentration overpotential
         eta_c_av = chi_av * (
-            pybamm.average(pybamm.Function(np.log, c_e_p / c_e_av))
-            - pybamm.average(pybamm.Function(np.log, c_e_n / c_e_av))
+            pybamm.average(pybamm.log(c_e_p / c_e_av))
+            - pybamm.average(pybamm.log(c_e_n / c_e_av))
         )
 
         # average electrolyte ohmic losses

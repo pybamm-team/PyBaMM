@@ -3,10 +3,10 @@
 #
 
 import pybamm
-from .base_kinetics import BaseKinetics
+from .base_kinetics import BaseModel
 
 
-class BaseButlerVolmer(BaseKinetics):
+class BaseButlerVolmer(BaseModel):
     """
     Base submodel which implements the forward Butler-Volmer equation:
 

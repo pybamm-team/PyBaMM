@@ -3,7 +3,7 @@
 #
 import pybamm
 from .base_interface import BaseInterface
-from .kinetics import butler_volmer, inverse_butler_volmer
+from . import kinetics
 
 
 class BaseModel(BaseInterface, pybamm.lithium_ion.BaseModel):
@@ -18,7 +18,7 @@ class BaseModel(BaseInterface, pybamm.lithium_ion.BaseModel):
         The domain to implement the model, either: 'Negative' or 'Positive'.
 
 
-    **Extends:** :class:`pybamm.interface.inverse_butler_volmer.BaseModel`
+    **Extends:** :class:`pybamm.interface.BaseInterface`
     and :class:`pybamm.lithium_ion.BaseModel`
     """
 
@@ -87,11 +87,11 @@ class BaseModel(BaseInterface, pybamm.lithium_ion.BaseModel):
         }
 
 
-class ButlerVolmer(BaseModel, butler_volmer.BaseButlerVolmer):
+class ButlerVolmer(BaseModel, kinetics.BaseButlerVolmer):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
 
-class InverseButlerVolmer(BaseModel, inverse_butler_volmer.BaseModel):
+class InverseButlerVolmer(BaseModel, kinetics.BaseInverseButlerVolmer):
     def __init__(self, param, domain):
         super().__init__(param, domain)

@@ -7,7 +7,7 @@ import autograd.numpy as np
 from ..base_interface import BaseInterface
 
 
-class BaseModel(BaseInterface):
+class BaseInverseButlerVolmer(BaseInterface):
     """
     A base submodel that implements the inverted form of the Butler-Volmer relation to
     solve for the reaction overpotential.

@@ -6,7 +6,7 @@ import pybamm
 from ..base_interface import BaseInterface
 
 
-class BaseKinetics(BaseInterface):
+class BaseModel(BaseInterface):
     """
     Base submodel for kinetics
 
