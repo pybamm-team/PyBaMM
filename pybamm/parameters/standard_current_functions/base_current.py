@@ -10,7 +10,6 @@ class GetCurrent(object):
     During processing, the evaluated parameters are stored in parameters_eval.
     """
     def __init__(self):
-        #
         self.parameters = {}
         self.parameters_eval = {}
 

@@ -5,7 +5,7 @@ import pickle
 import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
-os.chdir(pybamm.__path__[0] + "/..")
+os.chdir(pybamm.root_dir())
 
 # dictionary of available comsol results
 C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
