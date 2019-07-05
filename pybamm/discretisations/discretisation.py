@@ -193,6 +193,8 @@ class Discretisation(object):
 
             return dy / dx
 
+        bc_key_ids = [key.id for key in list(model.boundary_conditions.keys())]
+
         internal_bcs = {}
         for var in model.boundary_conditions.keys():
             if isinstance(var, pybamm.Concatenation):
@@ -205,7 +207,9 @@ class Discretisation(object):
 
                 lbc = model.boundary_conditions[var]["left"]
                 rbc = (boundary_gradient(first_orphan, next_orphan), "Neumann")
-                internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
+
+                if first_child.id not in bc_key_ids:
+                    internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
 
                 for i, _ in enumerate(children[1:-1]):
                     current_child = next_child
@@ -215,11 +219,15 @@ class Discretisation(object):
 
                     lbc = rbc
                     rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
-                    internal_bcs.update({current_child: {"left": lbc, "right": rbc}})
+                    if current_child.id not in bc_key_ids:
+                        internal_bcs.update(
+                            {current_child: {"left": lbc, "right": rbc}}
+                        )
 
                 lbc = rbc
                 rbc = model.boundary_conditions[var]["right"]
-                internal_bcs.update({children[-1]: {"left": lbc, "right": rbc}})
+                if children[-1].id not in bc_key_ids:
+                    internal_bcs.update({children[-1]: {"left": lbc, "right": rbc}})
 
         model.boundary_conditions.update(internal_bcs)
         return model
