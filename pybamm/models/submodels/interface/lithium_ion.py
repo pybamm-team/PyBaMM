@@ -1,11 +1,12 @@
 #
 # Lithium-ion interface classes
 #
+import pybamm
 from .base_interface import BaseInterface
 from . import butler_volmer, inverse_butler_volmer
 
 
-class BaseModel(BaseInterface):
+class BaseModel(BaseInterface, pybamm.lithium_ion.BaseModel):
     """
     Base lead-acid interface class
 
@@ -18,6 +19,7 @@ class BaseModel(BaseInterface):
 
 
     **Extends:** :class:`pybamm.interface.inverse_butler_volmer.BaseModel`
+    and :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, param, domain):
