@@ -74,22 +74,18 @@ class LOQS(BaseModel):
         if self.options["capacitance"] is False:
             self.submodels[
                 "negative interface"
-            ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Negative")
+            ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Negative")
             self.submodels[
                 "positive interface"
-            ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Positive")
+            ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Positive")
         else:
             self.submodels[
                 "negative interface"
-            ] = pybamm.interface.butler_volmer.surface_form.LeadAcid(
-                self.param, "Negative"
-            )
+            ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Negative")
 
             self.submodels[
                 "positive interface"
-            ] = pybamm.interface.butler_volmer.surface_form.LeadAcid(
-                self.param, "Positive"
-            )
+            ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Positive")
 
     def set_negative_electrode_submodel(self):
 
@@ -128,7 +124,7 @@ class LOQS(BaseModel):
             raise pybamm.OptionError("'capacitance' must be either 'True' or 'False'")
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.LeadingOrder(
-            self.param, self.reactions, ocp=True
+            self.param, self.reactions
         )
 
     @property

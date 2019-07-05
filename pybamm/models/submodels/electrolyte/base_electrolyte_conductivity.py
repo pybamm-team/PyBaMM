@@ -130,19 +130,15 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_standard_surface_potential_difference_variables(
-        self, delta_phi, delta_phi_av
-    ):
+    def _get_standard_surface_potential_difference_variables(self, delta_phi):
         """
         A private function to obtain the standard variables which
         can be derived from the surface potential difference.
 
         Parameters
         ----------
-        delta_phi_e : :class:`pybamm.Symbol`
+        delta_phi : :class:`pybamm.Symbol`
             The surface potential difference.
-        delta_phi_e_av : :class: `pybamm.Symbol`
-            The electrode-averaged surface potential difference
 
         Returns
         -------
@@ -151,8 +147,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         """
 
         pot_scale = self.param.potential_scale
+        delta_phi_av = pybamm.average(delta_phi)
 
-        variables = {
+        return {
             self.domain + " electrode surface potential difference": delta_phi,
             "Average "
             + self.domain.lower()
@@ -163,8 +160,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             + self.domain.lower()
             + " electrode surface potential difference [V]": delta_phi_av * pot_scale,
         }
-
-        return variables
 
     def _get_domain_potential_variables(self, phi_e, domain):
         """

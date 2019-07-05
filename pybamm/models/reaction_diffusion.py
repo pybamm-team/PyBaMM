@@ -51,16 +51,16 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
     def set_electrolyte_submodel(self):
         electrolyte = pybamm.electrolyte.stefan_maxwell
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
-            self.param, ocp=True
+            self.param
         )
 
     def set_interfacial_submodel(self):
         self.submodels[
             "negative interface"
-        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Negative")
+        ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Negative")
         self.submodels[
             "positive interface"
-        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Positive")
+        ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Positive")
 
     def set_voltage_variables(self):
         "overwrite to set nothing"
