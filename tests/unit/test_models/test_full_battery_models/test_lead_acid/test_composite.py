@@ -5,41 +5,13 @@ import pybamm
 import unittest
 
 
-@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestLeadAcidComposite(unittest.TestCase):
     def test_well_posed(self):
-        options = {"thermal": None}
-        model = pybamm.lead_acid.Composite(options)
+        model = pybamm.lead_acid.Composite()
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        options = {"thermal": None, "convection": True}
-        model = pybamm.lead_acid.Composite(options)
-        model.check_well_posedness()
-
-
-@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
-class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
-    def test_well_posed(self):
-        options = {"thermal": None, "capacitance": False}
-        model = pybamm.lead_acid.surface_form.Composite(options)
-        model.check_well_posedness()
-
-    def test_well_posed_with_capacitance(self):
-        options = {"thermal": None, "capacitance": True}
-        model = pybamm.lead_acid.surface_form.Composite(options)
-        model.check_well_posedness()
-
-    def test_default_solver(self):
-        options = {"thermal": None, "capacitance": True}
-        model = pybamm.lead_acid.surface_form.Composite(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsOdeSolver)
-        options = {"thermal": None, "capacitance": False}
-        model = pybamm.lead_acid.surface_form.Composite(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
-
-    def test_well_posed_with_convection(self):
-        options = {"thermal": None, "capacitance": False, "convection": True}
+        options = {"convection": True}
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
 
