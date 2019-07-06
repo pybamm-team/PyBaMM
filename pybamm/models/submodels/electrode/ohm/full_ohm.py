@@ -24,9 +24,9 @@ class Full(BaseModel):
 
     def get_fundamental_variables(self):
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             phi_s = pybamm.standard_variables.phi_s_n
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             phi_s = pybamm.standard_variables.phi_s_p
 
         variables = self._get_standard_potential_variables(phi_s)
@@ -35,47 +35,45 @@ class Full(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        phi_s = variables[self._domain + " electrode potential"]
-        eps = variables[self._domain + " electrode porosity"]
+        phi_s = variables[self.domain + " electrode potential"]
+        eps = variables[self.domain + " electrode porosity"]
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             sigma = self.param.sigma_n
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             sigma = self.param.sigma_p
 
         sigma_eff = sigma * (1 - eps) ** self.param.b
         i_s = -sigma_eff * pybamm.grad(phi_s)
 
-        variables.update(
-            {self._domain + " electrode effective conductivity": sigma_eff}
-        )
+        variables.update({self.domain + " electrode effective conductivity": sigma_eff})
 
         variables.update(self._get_standard_current_variables(i_s))
 
-        if self._domain == "Positive":
+        if self.domain == "Positive":
             variables.update(self._get_standard_whole_cell_current_variables(variables))
 
         return variables
 
     def set_algebraic(self, variables):
 
-        phi_s = variables[self._domain + " electrode potential"]
-        i_s = variables[self._domain + " electrode current density"]
-        j = variables[self._domain + " electrode interfacial current density"]
+        phi_s = variables[self.domain + " electrode potential"]
+        i_s = variables[self.domain + " electrode current density"]
+        j = variables[self.domain + " electrode interfacial current density"]
 
         self.algebraic[phi_s] = pybamm.div(i_s) + j
 
     def set_boundary_conditions(self, variables):
 
-        phi_s = variables[self._domain + " electrode potential"]
-        eps = variables[self._domain + " electrode porosity"]
+        phi_s = variables[self.domain + " electrode potential"]
+        eps = variables[self.domain + " electrode porosity"]
         i_boundary_cc = variables["Current collector current density"]
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             lbc = (pybamm.Scalar(0), "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
             sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b
             rbc = (
@@ -87,11 +85,11 @@ class Full(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        phi_s = variables[self._domain + " electrode potential"]
+        phi_s = variables[self.domain + " electrode potential"]
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             phi_s_init = pybamm.Scalar(0)
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             phi_s_init = self.param.U_p(self.param.c_p_init) - self.param.U_n(
                 self.param.c_n_init
             )

@@ -33,23 +33,22 @@ class BaseModel(BaseParticle):
 
         c, N, _ = self._unpack(variables)
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             self.rhs = {c: -(1 / self.param.C_n) * pybamm.div(N)}
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             self.rhs = {c: -(1 / self.param.C_p) * pybamm.div(N)}
 
     def set_boundary_conditions(self, variables):
 
         c, _, j = self._unpack(variables)
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             rbc = -self.param.C_n * j / self.param.a_n
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             rbc = -self.param.C_p * j / self.param.a_p / self.param.gamma_p
 
         self.boundary_conditions = {
             c: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
         }
-
