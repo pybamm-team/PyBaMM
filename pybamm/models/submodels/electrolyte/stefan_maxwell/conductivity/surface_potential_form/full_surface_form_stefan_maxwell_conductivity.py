@@ -135,8 +135,8 @@ class BaseModel(BaseStefanMaxwellConductivity):
         phi_s = self.nasty_hack_to_get_phi_s(variables)
         phi_e = phi_s - delta_phi
 
-        variables.update(self._get_domain_potential_variables(phi_e, self.domain))
-        variables.update(self._get_domain_current_variables(i_e, self.domain))
+        variables.update(self._get_domain_potential_variables(phi_e))
+        variables.update(self._get_domain_current_variables(i_e))
 
         return variables
 
@@ -174,8 +174,8 @@ class BaseModel(BaseStefanMaxwellConductivity):
             pybamm.boundary_value(phi_e_n, "right"), ["separator"]
         )  # TODO: add Indefinite integral!
 
-        variables.update(self._get_domain_potential_variables(phi_e_s, self.domain))
-        variables.update(self._get_domain_current_variables(i_e_s, self.domain))
+        variables.update(self._get_domain_potential_variables(phi_e_s))
+        variables.update(self._get_domain_current_variables(i_e_s))
 
         return variables
 

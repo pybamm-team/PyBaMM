@@ -41,6 +41,8 @@ class BaseModel(BaseInterface, pybamm.lead_acid.BaseModel):
             The exchange current density.
         """
         c_e = variables[self.domain + " electrolyte concentration"]
+        if isinstance(c_e, pybamm.Broadcast):
+            c_e = c_e.orphans[0]
 
         if self.domain == "Negative":
             j0 = self.param.j0_n_S_ref * c_e

@@ -40,7 +40,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         i_typ = self.param.i_typ
 
-        return {
+        variables = {
             self.domain + " electrode interfacial current density": j,
             "Average "
             + self.domain.lower()
@@ -50,6 +50,8 @@ class BaseInterface(pybamm.BaseSubModel):
             + self.domain.lower()
             + " electrode interfacial current density [A.m-2]": i_typ * j_av,
         }
+
+        return variables
 
     def _get_standard_whole_cell_interfacial_current_variables(self, variables):
 
@@ -72,18 +74,23 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_exchange_current_variables(self, j0):
 
         i_typ = self.param.i_typ
+        # Average, and broadcast if necessary
         j0_av = pybamm.average(j0)
+        if j0.domain in [[], ["current collector"]]:
+            j0 = pybamm.Broadcast(j0, self.domain_for_broadcast)
 
-        return {
+        variables = {
             self.domain + " electrode exchange current density": j0,
             "Average "
             + self.domain.lower()
             + " electrode exchange current density": j0_av,
-            self.domain + " exchange current density [A.m-2]": i_typ * j0,
+            self.domain + " electrode exchange current density [A.m-2]": i_typ * j0,
             "Average "
             + self.domain.lower()
             + " electrode exchange current density [A.m-2]": i_typ * j0_av,
         }
+
+        return variables
 
     def _get_standard_whole_cell_exchange_current_variables(self, variables):
 
@@ -108,7 +115,7 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
         eta_r_av = pybamm.average(eta_r)
 
-        return {
+        variables = {
             self.domain + " electrode reaction overpotential": eta_r,
             "Average "
             + self.domain.lower()
@@ -118,6 +125,8 @@ class BaseInterface(pybamm.BaseSubModel):
             + self.domain.lower()
             + " electrode reaction overpotential [V]": eta_r_av * pot_scale,
         }
+
+        return variables
 
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
 
@@ -129,7 +138,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         delta_phi_av = pybamm.average(delta_phi)
 
-        return {
+        variables = {
             self.domain + " electrode surface potential difference": delta_phi,
             "Average "
             + self.domain.lower()
@@ -142,3 +151,5 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode surface potential difference [V]": ocp_ref
             + delta_phi_av * pot_scale,
         }
+
+        return variables

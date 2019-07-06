@@ -60,6 +60,11 @@ class BaseSubModel:
 
         self.domain = domain
 
+        if self.domain in ["Negative", "Positive"]:
+            self.domain_for_broadcast = self.domain.lower() + " electrode"
+        else:
+            self.domain_for_broadcast = "separator"
+
     @property
     def domain(self):
         return self._domain

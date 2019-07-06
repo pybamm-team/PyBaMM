@@ -2,12 +2,10 @@
 # Class for full surface form electrolyte conductivity employing stefan-maxwell
 #
 import pybamm
-from ..base_stefan_maxwell_conductivity import (
-    BaseModel as BaseStefanMaxwellConductivity,
-)
+from ..leading_stefan_maxwell_conductivity import LeadingOrder
 
 
-class BaseLeadingOrder(BaseStefanMaxwellConductivity):
+class BaseLeadingOrderSurfaceForm(LeadingOrder):
     """Base class for leading-order conservation of charge in the electrolyte employing
     the Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation. (Leading refers to leading order in asymptotics)
@@ -57,27 +55,23 @@ class BaseLeadingOrder(BaseStefanMaxwellConductivity):
         self.initial_conditions = {delta_phi: delta_phi_init}
 
     def get_coupled_variables(self, variables):
+        # Use the potential difference in the negative electrode to calculate the
+        # potential difference and current
         if self.domain == "Negative":
-            delta_phi_n = variables[
+            delta_phi_n_av = variables[
                 "Average negative electrode surface potential difference"
             ]
-            phi_e_av = -delta_phi_n
-            phi_e_n = pybamm.Broadcast(phi_e_av, ["negative electrode"])
-            phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"])
-            phi_e_p = pybamm.Broadcast(phi_e_av, ["positive electrode"])
-            phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
-            variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))
 
-            i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
-            i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
-            i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
-            i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
-            variables.update(self._get_standard_current_variables(i_e))
+            # Potential
+            phi_e_av = -delta_phi_n_av
 
-        return variables
+            return self._get_coupled_variables_from_potential(variables, phi_e_av)
+
+        else:
+            return variables
 
 
-class LeadingOrderDifferential(BaseLeadingOrder):
+class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
     """Leading-order model for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation and where capacitance is present.
@@ -88,7 +82,7 @@ class LeadingOrderDifferential(BaseLeadingOrder):
         The parameters to use for this submodel
 
 
-    **Extends:** :class:`BaseLeadingOrder`
+    **Extends:** :class:`BaseLeadingOrderSurfaceForm`
 
     """
 
@@ -117,7 +111,7 @@ class LeadingOrderDifferential(BaseLeadingOrder):
         self.rhs[delta_phi] = 1 / C_dl * (j_av - j)
 
 
-class LeadingOrderAlgebraic(BaseLeadingOrder):
+class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
     """Leading-order model for conservation of charge in the electrolyte employing the
     Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation.
@@ -128,7 +122,7 @@ class LeadingOrderAlgebraic(BaseLeadingOrder):
         The parameters to use for this submodel
 
 
-    **Extends:** :class:`BaseLeadingOrder`
+    **Extends:** :class:`BaseLeadingOrderSurfaceForm`
     """
 
     def __init__(self, param, domain):
@@ -142,6 +136,7 @@ class LeadingOrderAlgebraic(BaseLeadingOrder):
         j_av = variables[
             "Average " + self.domain.lower() + " electrode interfacial current density"
         ]
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
-
+        delta_phi = variables[
+            "Average " + self.domain.lower() + " electrode surface potential difference"
+        ]
         self.algebraic[delta_phi] = j_av - j
