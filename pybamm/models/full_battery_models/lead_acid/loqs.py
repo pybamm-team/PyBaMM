@@ -105,21 +105,19 @@ class LOQS(BaseModel):
         surf_form = electrolyte.conductivity.surface_potential_form
 
         if self.options["capacitance"] is False:
+            self.submodels[
+                "electrolyte conductivity"
+            ] = electrolyte.conductivity.LeadingOrder(self.param)
+        elif self.options["capacitance"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + "electrolyte conductivity"
                 ] = surf_form.LeadingOrder(self.param, domain)
-
-        elif self.options["capacitance"] is True:
+        elif self.options["capacitance"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + "electrolyte conductivity"
                 ] = surf_form.LeadingOrderCapacitance(self.param, domain)
-        elif bla:
-            self.submodels[
-                "electrolyte conductivity"
-            ] = electrolyte.conductivity.LeadingOrder(self.param)
-
         else:
             raise pybamm.OptionError("'capacitance' must be either 'True' or 'False'")
 

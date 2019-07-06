@@ -373,4 +373,3 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
-
