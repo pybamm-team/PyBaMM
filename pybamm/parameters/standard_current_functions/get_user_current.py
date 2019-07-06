@@ -18,10 +18,14 @@ class GetUserCurrent(pybamm.GetCurrent):
 
     **Extends:"": :class:`pybamm.GetCurrent`
     """
+
     def __init__(self, function, **kwargs):
         self.parameters = kwargs
         self.parameters_eval = kwargs
         self.function = function
+
+    def __str__(self):
+        return "User defined current"
 
     def __call__(self, t):
         return self.function(t, **self.parameters_eval)

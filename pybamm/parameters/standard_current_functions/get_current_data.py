@@ -54,6 +54,9 @@ class GetCurrentData(pybamm.GetCurrent):
         else:
             raise pybamm.ModelError("No input file provided for current")
 
+    def __str__(self):
+        return "Current from data"
+
     def interpolate(self):
         " Creates the interpolant from the loaded data "
         # If data is dimenionless, multiply by a typical current (e.g. data

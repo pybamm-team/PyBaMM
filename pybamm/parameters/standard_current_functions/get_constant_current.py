@@ -20,5 +20,8 @@ class GetConstantCurrent(pybamm.GetCurrent):
         self.parameters = {"Current [A]": current}
         self.parameters_eval = {"Current [A]": current}
 
+    def __str__(self):
+        return "Constant current"
+
     def __call__(self, t):
         return self.parameters_eval["Current [A]"]
