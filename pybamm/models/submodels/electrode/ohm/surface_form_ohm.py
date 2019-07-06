@@ -54,7 +54,10 @@ class SurfaceForm(BaseModel):
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 
-        if self.domain == "Positive":
+        if (
+            "Negative electrode current density" in variables
+            and "Positive electrode current density" in variables
+        ):
             variables.update(self._get_standard_whole_cell_current_variables(variables))
 
         return variables
