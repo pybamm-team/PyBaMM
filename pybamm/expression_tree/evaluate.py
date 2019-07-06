@@ -244,12 +244,9 @@ class EvaluatorPython:
         self._result_var = id_to_python_variable(symbol.id, symbol.is_constant())
 
         # compile the generated python code
-        try:
-            self._variable_compiled = compile(
-                self._variable_function, self._result_var, "exec"
-            )
-        except:
-            print(self._variable_function)
+        self._variable_compiled = compile(
+            self._variable_function, self._result_var, "exec"
+        )
 
         # compile the line that will return the output of `evaluate`
         self._return_compiled = compile(

@@ -9,7 +9,6 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-import ipdb; ipdb.set_trace()
 param.process_model(model)
 param.process_geometry(geometry)
 

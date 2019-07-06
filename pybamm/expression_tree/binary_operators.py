@@ -83,10 +83,7 @@ class BinaryOperator(pybamm.Symbol):
         if isinstance(self, (pybamm.Outer, pybamm.Kron)):
             domain = right.domain
         else:
-            try:
-                domain = self.get_children_domains(left.domain, right.domain)
-            except:
-                domain = self.get_children_domains(left.domain, right.domain)
+            domain = self.get_children_domains(left.domain, right.domain)
 
         super().__init__(name, children=[left, right], domain=domain)
         self.left = self.children[0]
@@ -417,6 +414,8 @@ class MatrixMultiplication(BinaryOperator):
         if isinstance(left, pybamm.Array):
             left = pybamm.Matrix(csr_matrix(left.evaluate()))
             jac = left @ right.jac(variable)
+            # Remove domain as matrix multiplies which come from an integral
+            # end up getting the child domains back which throws an error
             jac.domain = []
             return jac
         elif isinstance(left, pybamm.Negate) and isinstance(left.child, pybamm.Array):

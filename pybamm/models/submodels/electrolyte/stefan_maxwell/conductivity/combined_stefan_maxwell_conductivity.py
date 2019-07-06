@@ -68,12 +68,11 @@ class CombinedOrder(BaseModel):
             + phi_s_n_av
             - chi_av
             * pybamm.average(
-                pybamm.Function(
-                    np.log,
+                pybamm.log(
                     c_e_n
                     / pybamm.Broadcast(
                         c_e_av, ["negative electrode"], broadcast_type="primary"
-                    ),
+                    )
                 )
             )
             - (
@@ -87,12 +86,11 @@ class CombinedOrder(BaseModel):
                 phi_e_const, ["negative electrode"], broadcast_type="primary"
             )
             + chi_av
-            * pybamm.Function(
-                np.log,
+            * pybamm.log(
                 c_e_n
                 / pybamm.Broadcast(
                     c_e_av, ["negative electrode"], broadcast_type="primary"
-                ),
+                )
             )
             - pybamm.outer(
                 i_boundary_cc * (param.C_e / param.gamma_e) / kappa_n_av,
@@ -107,10 +105,9 @@ class CombinedOrder(BaseModel):
         phi_e_s = (
             pybamm.Broadcast(phi_e_const, ["separator"], broadcast_type="primary")
             + chi_av
-            * pybamm.Function(
-                np.log,
+            * pybamm.log(
                 c_e_s
-                / pybamm.Broadcast(c_e_av, ["separator"], broadcast_type="primary"),
+                / pybamm.Broadcast(c_e_av, ["separator"], broadcast_type="primary")
             )
             - pybamm.outer(i_boundary_cc * param.C_e / param.gamma_e / kappa_s_av, x_s)
         )
@@ -120,12 +117,11 @@ class CombinedOrder(BaseModel):
                 phi_e_const, ["positive electrode"], broadcast_type="primary"
             )
             + chi_av
-            * pybamm.Function(
-                np.log,
+            * pybamm.log(
                 c_e_p
                 / pybamm.Broadcast(
                     c_e_av, ["positive electrode"], broadcast_type="primary"
-                ),
+                )
             )
             - pybamm.outer(
                 i_boundary_cc * (param.C_e / param.gamma_e) / kappa_p_av,
@@ -145,21 +141,19 @@ class CombinedOrder(BaseModel):
         # concentration overpotential
         eta_c_av = chi_av * (
             pybamm.average(
-                pybamm.Function(
-                    np.log,
+                pybamm.log(
                     c_e_p
                     / pybamm.Broadcast(
                         c_e_av, ["positive electrode"], broadcast_type="primary"
-                    ),
+                    )
                 )
             )
             - pybamm.average(
-                pybamm.Function(
-                    np.log,
+                pybamm.log(
                     c_e_n
                     / pybamm.Broadcast(
                         c_e_av, ["negative electrode"], broadcast_type="primary"
-                    ),
+                    )
                 )
             )
         )

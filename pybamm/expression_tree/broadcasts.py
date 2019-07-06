@@ -80,6 +80,6 @@ class Broadcast(pybamm.SpatialOperator):
             raise KeyError(
                 """Broadcast type must be either: 'primary' or 'full' and not {}.
                  Support for 'secondary' will be added in the future""".format(
-                    self.broadcast_ype
+                    self.broadcast_type
                 )
             )
