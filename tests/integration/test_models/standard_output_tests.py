@@ -25,7 +25,11 @@ class StandardOutputTests(object):
         elif isinstance(self.model, pybamm.lead_acid.BaseModel):
             self.chemistry = "Lead acid"
 
-        current_sign = np.sign(parameter_values["Typical current [A]"])
+        # Only for constant current
+        current_sign = np.sign(
+            parameter_values["Current function"].parameters_eval["Current [A]"]
+        )
+
         if current_sign == 1:
             self.operating_condition = "discharge"
         elif current_sign == -1:

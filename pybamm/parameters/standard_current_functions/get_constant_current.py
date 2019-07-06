@@ -15,6 +15,7 @@ class GetConstantCurrent(pybamm.GetCurrent):
 
     **Extends:"": :class:`pybamm.GetCurrent`
     """
+
     def __init__(self, current=pybamm.electrical_parameters.I_typ):
         self.parameters = {"Current [A]": current}
         self.parameters_eval = {"Current [A]": current}

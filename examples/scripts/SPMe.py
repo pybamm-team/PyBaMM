@@ -2,13 +2,14 @@ import pybamm
 import numpy as np
 
 # load model
-model = pybamm.lithium_ion.SPMe()
+model = pybamm.lithium_ion.SPM()
 
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
+param.update({"Current function": pybamm.GetConstantCurrent(current=0)})
 param.process_model(model)
 param.process_geometry(geometry)
 
