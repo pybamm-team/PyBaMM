@@ -151,7 +151,12 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables which can be derived from the surface potential difference.
         """
 
+        if self.domain == "Negative":
+            ocp_ref = self.param.U_n_ref
+        elif self.domain == "Positive":
+            ocp_ref = self.param.U_p_ref
         pot_scale = self.param.potential_scale
+
         # Average, and broadcast if necessary
         delta_phi_av = pybamm.average(delta_phi)
         if delta_phi.domain in [[], ["current collector"]]:
@@ -163,11 +168,15 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             + self.domain.lower()
             + " electrode surface potential difference": delta_phi_av,
             self.domain
-            + " electrode surface potential difference [V]": delta_phi * pot_scale,
+            + " electrode surface potential difference [V]": ocp_ref
+            + delta_phi * pot_scale,
             "Average "
             + self.domain.lower()
-            + " electrode surface potential difference [V]": delta_phi_av * pot_scale,
+            + " electrode surface potential difference [V]": ocp_ref
+            + delta_phi_av * pot_scale,
         }
+
+        return variables
 
     def _get_domain_potential_variables(self, phi_e, domain=None):
         """

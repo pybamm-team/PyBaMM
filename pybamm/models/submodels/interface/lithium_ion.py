@@ -1,7 +1,6 @@
 #
 # Lithium-ion interface classes
 #
-import pybamm
 from .base_interface import BaseInterface
 from . import inverse_kinetics, kinetics
 
@@ -60,11 +59,11 @@ class BaseInterfaceLithiumIon(BaseInterface):
 
         if self.domain == "Negative":
             ocp = self.param.U_n(c_s_surf)
-            dudT = self.param.dUdT_n(c_s_surf)
+            dUdT = self.param.dUdT_n(c_s_surf)
 
         elif self.domain == "Positive":
             ocp = self.param.U_p(c_s_surf)
-            dudT = self.param.dUdT_p(c_s_surf)
+            dUdT = self.param.dUdT_p(c_s_surf)
 
         return ocp, dUdT
 

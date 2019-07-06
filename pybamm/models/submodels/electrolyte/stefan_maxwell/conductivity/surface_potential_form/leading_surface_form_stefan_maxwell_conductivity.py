@@ -108,6 +108,9 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         elif self.domain == "Positive":
             C_dl = param.C_dl_p
 
+        if isinstance(j, pybamm.Broadcast):
+            j = j.orphans[0]
+
         self.rhs[delta_phi] = 1 / C_dl * (j_av - j)
 
 
@@ -139,4 +142,8 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         delta_phi = variables[
             "Average " + self.domain.lower() + " electrode surface potential difference"
         ]
+
+        if isinstance(j, pybamm.Broadcast):
+            j = j.orphans[0]
+
         self.algebraic[delta_phi] = j_av - j

@@ -39,6 +39,9 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_interfacial_current_variables(self, j, j_av):
 
         i_typ = self.param.i_typ
+        # Broadcast if necessary
+        if j.domain in [[], ["current collector"]]:
+            j = pybamm.Broadcast(j, self.domain_for_broadcast)
 
         variables = {
             self.domain + " electrode interfacial current density": j,
@@ -183,7 +186,7 @@ class BaseInterface(pybamm.BaseSubModel):
         ocp_av = pybamm.average(ocp)
         if ocp.domain in [[], ["current collector"]]:
             ocp = pybamm.Broadcast(ocp, self.domain_for_broadcast)
-        dudT_av = pybamm.average(dudT)
+        dUdT_av = pybamm.average(dUdT)
 
         if self.domain == "Negative":
             ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
@@ -201,8 +204,8 @@ class BaseInterface(pybamm.BaseSubModel):
             "Average "
             + self.domain.lower()
             + " electrode open circuit potential [V]": ocp_av_dim,
-            self.domain + " electrode entropic change": dudT,
-            "Average " + self.domain.lower() + " electrode entropic change": dudT_av,
+            self.domain + " electrode entropic change": dUdT,
+            "Average " + self.domain.lower() + " electrode entropic change": dUdT_av,
         }
 
         return variables

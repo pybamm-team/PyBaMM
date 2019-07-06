@@ -2,6 +2,7 @@
 # Bulter volmer class
 #
 
+import pybamm
 from ..base_interface import BaseInterface
 
 

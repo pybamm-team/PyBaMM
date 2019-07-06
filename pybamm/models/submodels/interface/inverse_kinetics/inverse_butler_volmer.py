@@ -26,9 +26,7 @@ class BaseInverseButlerVolmer(BaseInterface):
         super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
-        # Get open-circuit potential variables and reaction overpotential
-        variables.update(self._get_standard_ocp_variables(variables))
-        ocp = variables[self.domain + " electrode open circuit potential"]
+        ocp, dUdT = self._get_open_circuit_potential(variables)
 
         j0 = self._get_exchange_current_density(variables)
         j_av = self._get_average_interfacial_current_density(variables)
@@ -49,6 +47,7 @@ class BaseInverseButlerVolmer(BaseInterface):
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
+        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         if (
             "Negative electrode interfacial current density" in variables
@@ -66,5 +65,5 @@ class BaseInverseButlerVolmer(BaseInterface):
     def _get_exchange_current_density(self, variables):
         raise NotImplementedError
 
-    def _get_standard_ocp_variables(self, variables):
+    def _get_open_circuit_potential(self, variables):
         raise NotImplementedError
