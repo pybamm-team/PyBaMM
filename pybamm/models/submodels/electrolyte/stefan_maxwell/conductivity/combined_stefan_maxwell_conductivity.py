@@ -25,6 +25,12 @@ class CombinedOrder(BaseModel):
         super().__init__(param)
 
     def get_coupled_variables(self, variables):
+        # NOTE: the heavy use of Broadcast and outer in this method is mainly so
+        # that products are handled correctly when using 1 or 2D current collector
+        # models. In standard 1D battery models outer behaves as a normal multiply.
+        # In the future, multiply will automatically handle switching between
+        # normal multiply and outer products as appropriate.
+
         i_boundary_cc = variables["Current collector current density"]
         c_e = variables["Electrolyte concentration"]
         c_e_av = variables["Average electrolyte concentration"]
@@ -172,4 +178,3 @@ class CombinedOrder(BaseModel):
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
         return variables
-

@@ -71,8 +71,8 @@ class BaseModel(pybamm.BaseSubModel):
             collector.
         """
 
+        # TO DO: implement grad in 2D to return i_cc
         # just need this to get 1D models working for now
         variables = {"Current collector current density": i_boundary_cc}
 
         return variables
-

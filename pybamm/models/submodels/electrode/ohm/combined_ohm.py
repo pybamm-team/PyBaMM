@@ -38,7 +38,7 @@ class CombinedOrder(BaseModel):
         eps = variables[self._domain + " electrode porosity"]
 
         if self._domain == "Negative":
-            sigma_eff = self.param.sigma_n * (1 - eps)
+            sigma_eff = self.param.sigma_n * (1 - eps) ** self.param.b
             phi_s = (
                 pybamm.outer(i_boundary_cc, x_n * (x_n - 2 * l_n) / (2 * l_n))
                 / sigma_eff
@@ -50,7 +50,7 @@ class CombinedOrder(BaseModel):
             eta_r_p_av = variables["Average positive electrode reaction overpotential"]
             phi_e_p_av = variables["Average positive electrolyte potential"]
 
-            sigma_eff = self.param.sigma_p * (1 - eps)
+            sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b
             sigma_eff_av = pybamm.average(sigma_eff)
 
             const = (
@@ -60,6 +60,7 @@ class CombinedOrder(BaseModel):
                 - (i_boundary_cc / 6 / l_p / sigma_eff_av)
                 * (2 * l_p ** 2 - 6 * l_p + 3)
             )
+
             phi_s = (
                 pybamm.Broadcast(
                     const, ["positive electrode"], broadcast_type="primary"

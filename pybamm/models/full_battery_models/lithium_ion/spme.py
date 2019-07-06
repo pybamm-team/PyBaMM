@@ -46,10 +46,20 @@ class SPMe(BaseModel):
             self.submodels["current collector"] = pybamm.current_collector.Uniform(
                 self.param
             )
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            raise NotImplementedError(
+                "One-dimensional current collector submodel not implemented."
+            )
         elif self.options["bc_options"]["dimensionality"] == 2:
             self.submodels[
                 "current collector"
-            ] = pybamm.current_collector.ConstrainedPotentialPair(self.param)
+            ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
+        else:
+            raise pybamm.ModelError(
+                "Dimension of current collectors must be 0, 1, or 2, not {}".format(
+                    self.options["bc_options"]["dimensionality"]
+                )
+            )
 
     def set_porosity_submodel(self):
 
@@ -151,4 +161,3 @@ class SPMe(BaseModel):
             return pybamm.ScipySolver()
         else:
             return pybamm.ScikitsDaeSolver()
-

@@ -348,10 +348,34 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # terminal voltage
-        phi_s_p = self.variables["Positive electrode potential"]
-        phi_s_p_dim = self.variables["Positive electrode potential [V]"]
-        V = pybamm.BoundaryValue(phi_s_p, "right")
-        V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
+        if self.options["bc_options"]["dimensionality"] == 0:
+            phi_s_p = self.variables["Positive electrode potential"]
+            phi_s_p_dim = self.variables["Positive electrode potential [V]"]
+            V = pybamm.BoundaryValue(phi_s_p, "right")
+            V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            # TO DO: add for lithium-ion. Think this is working for old lead acid?
+            raise NotImplementedError(
+                "One-dimensional current collector submodel not implemented."
+            )
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            phi_s_cn = self.variables["Negative current collector potential"]
+            phi_s_cp = self.variables["Positive current collector potential"]
+            phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
+            phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
+            # In 2D left corresponds to the negative tab and right the positive tab
+            V = pybamm.BoundaryValue(phi_s_cp, "right") - pybamm.BoundaryValue(
+                phi_s_cn, "left"
+            )
+            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right") - pybamm.BoundaryValue(
+                phi_s_cn_dim, "left"
+            )
+        else:
+            raise pybamm.ModelError(
+                "Dimension of current collectors must be 0, 1, or 2, not {}".format(
+                    self.options["bc_options"]["dimensionality"]
+                )
+            )
 
         # TODO: add current collector losses to the voltage in 3D
 
@@ -372,5 +396,4 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
-        # self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
-
+        self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut

@@ -72,23 +72,14 @@ class Broadcast(pybamm.SpatialOperator):
         child_eval = self.children[0].evaluate_for_shape()
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
 
-        # if (
-        #     self.children[0].domain == ["current collector"]
-        #     or self.children[0].domain == ["negative particle"]
-        #     or self.children[0].domain == ["positive particle"]
-        # ):
-        #     return np.outer(child_eval, vec).reshape(-1, 1)
-        # else:
-        # return child_eval * vec
-
-        if self.type == "primary":
+        if self.broadcast_type == "primary":
             return np.outer(child_eval, vec).reshape(-1, 1)
-        elif self.type == "full":
+        elif self.broadcast_type == "full":
             return child_eval * vec
         else:
             raise KeyError(
                 """Broadcast type must be either: 'primary' or 'full' and not {}.
                  Support for 'secondary' will be added in the future""".format(
-                    self.type
+                    self.broadcast_ype
                 )
             )

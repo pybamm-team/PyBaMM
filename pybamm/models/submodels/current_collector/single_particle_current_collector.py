@@ -5,9 +5,9 @@ import pybamm
 from .base_current_collector import BaseModel
 
 
-class ConstrainedPotentialPair(BaseModel):
-    """A submodel for two-dimensional constrained potential pair 
-    current collectors.
+class SingleParticlePotentialPair(BaseModel):
+    """A submodel for Ohm's law plus conservation of current in the current collectors,
+    which uses the voltage-current relationship from the SPM(e).
 
     Parameters
     ----------
@@ -28,7 +28,8 @@ class ConstrainedPotentialPair(BaseModel):
 
         variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
 
-        i_cc = pybamm.Scalar(0)  # grad not implemented for 2D yet
+        # TO DO: grad not implemented for 2D yet
+        i_cc = pybamm.Scalar(0)
         i_boundary_cc = pybamm.standard_variables.i_boundary_cc
 
         variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
@@ -52,6 +53,7 @@ class ConstrainedPotentialPair(BaseModel):
         i_boundary_cc = variables["Current collector current density"]
         v_boundary_cc = variables["Local current collector potential difference"]
 
+        # The voltage-current expression from the SPM(e)
         local_voltage_expression = (
             ocp_p_av
             - ocp_n_av
@@ -71,16 +73,6 @@ class ConstrainedPotentialPair(BaseModel):
             * pybamm.source(i_boundary_cc, phi_s_cp),
             i_boundary_cc: v_boundary_cc - local_voltage_expression,
         }
-
-        # self.algebraic = {
-        #     phi_s_cn: pybamm.laplacian(phi_s_cn)
-        #     - (param.sigma_cn * param.delta ** 2 / param.l_cn)
-        #     * pybamm.source(i_boundary_cc, phi_s_cn),
-        #     phi_s_cp: pybamm.laplacian(phi_s_cp)
-        #     + (param.sigma_cp * param.delta ** 2 / param.l_cp)
-        #     * pybamm.source(i_boundary_cc, phi_s_cp),
-        #     i_boundary_cc: v_boundary_cc - ocp_n_av - i_boundary_cc,
-        # }
 
     def set_boundary_conditions(self, variables):
 
@@ -120,4 +112,3 @@ class ConstrainedPotentialPair(BaseModel):
             phi_s_cp: param.U_p(param.c_p_init) - param.U_n(param.c_n_init),
             i_boundary_cc: applied_current / param.l_y / param.l_z,
         }
-
