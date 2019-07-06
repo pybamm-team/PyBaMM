@@ -16,10 +16,10 @@ class BaseModel(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
-    def _get_standard_potential_variables(self, phi_s_cn, phi_s_cp):
+    def _get_standard_potential_variables(self, phi_cc):
         """
         A private function to obtain the standard variables which
         can be derived from the potential in the current collector.
@@ -38,16 +38,10 @@ class BaseModel(pybamm.BaseSubModel):
 
         pot_scale = self.param.potential_scale
 
-        V_cc = phi_s_cp - phi_s_cn
-
         # add more to this
         variables = {
-            "Negative current collector potential": phi_s_cn,
-            "Negative current collector potential [V]": phi_s_cn * pot_scale,
-            "Positive current collector potential": phi_s_cp,
-            "Positive current collector potential [V]": phi_s_cp * pot_scale,
-            "Local current collector potential difference": V_cc,
-            "Local current collector potential difference [V]": V_cc * pot_scale,
+            self.domain + "current collector potential": phi_cc,
+            self.domain + " current collector potential [V]": phi_cc * pot_scale,
         }
 
         return variables
@@ -71,7 +65,6 @@ class BaseModel(pybamm.BaseSubModel):
             collector.
         """
 
-        # TO DO: implement grad in 2D to return i_cc
         # just need this to get 1D models working for now
         variables = {"Current collector current density": i_boundary_cc}
 

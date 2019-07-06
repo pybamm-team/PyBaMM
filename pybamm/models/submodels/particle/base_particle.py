@@ -2,7 +2,6 @@
 # Base class for particles
 #
 import pybamm
-import autograd.numpy as np
 
 
 class BaseParticle(pybamm.BaseSubModel):
@@ -20,8 +19,7 @@ class BaseParticle(pybamm.BaseSubModel):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param)
-        self._domain = domain
+        super().__init__(param, domain)
 
     def _get_standard_concentration_variables(self, c_s, c_s_xav):
 
@@ -29,26 +27,26 @@ class BaseParticle(pybamm.BaseSubModel):
 
         c_s_surf_av = pybamm.average(c_s_surf)
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             c_scale = self.param.c_n_max
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             c_scale = self.param.c_p_max
 
         variables = {
-            self._domain + " particle concentration": c_s,
-            self._domain + " particle concentration [mol.m-3]": c_s * c_scale,
-            "X-average " + self._domain.lower() + " particle concentration": c_s_xav,
+            self.domain + " particle concentration": c_s,
+            self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
+            "X-average " + self.domain.lower() + " particle concentration": c_s_xav,
             "X-average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " particle concentration [mol.m-3]": c_s_xav * c_scale,
-            self._domain + " particle surface concentration": c_s_surf,
-            self._domain
+            self.domain + " particle surface concentration": c_s_surf,
+            self.domain
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " particle surface concentration": c_s_surf_av,
             "Average "
-            + self._domain.lower()
+            + self.domain.lower()
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
         }
 
@@ -56,40 +54,8 @@ class BaseParticle(pybamm.BaseSubModel):
 
     def _get_standard_flux_variables(self, N_s, N_s_xav):
         variables = {
-            self._domain + " particle flux": N_s,
-            "X-average " + self._domain.lower() + " particle flux": N_s_xav,
-        }
-
-        return variables
-
-    def _get_standard_ocp_variables(self, c_s):
-        c_s_surf = pybamm.surf(c_s, set_domain=True)
-
-        if self._domain == "Negative":
-            ocp = self.param.U_n(c_s_surf)
-            ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
-            dudT = self.param.dUdT_n(c_s_surf)
-
-        elif self._domain == "Positive":
-            ocp = self.param.U_p(c_s_surf)
-            ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
-            dudT = self.param.dUdT_p(c_s_surf)
-
-        ocp_av = pybamm.average(ocp)
-        ocp_av_dim = pybamm.average(ocp_dim)
-        dudT_av = pybamm.average(dudT)
-
-        variables = {
-            self._domain + " electrode open circuit potential": ocp,
-            self._domain + " electrode open circuit potential [V]": ocp_dim,
-            "Average "
-            + self._domain.lower()
-            + " electrode open circuit potential": ocp_av,
-            "Average "
-            + self._domain.lower()
-            + " electrode open circuit potential [V]": ocp_av_dim,
-            self._domain + " electrode entropic change": dudT,
-            "Average " + self._domain.lower() + " electrode entropic change": dudT_av,
+            self.domain + " particle flux": N_s,
+            "X-average " + self.domain.lower() + " particle flux": N_s_xav,
         }
 
         return variables
@@ -103,35 +69,22 @@ class BaseParticle(pybamm.BaseSubModel):
     def set_initial_conditions(self, variables):
         c, _, _ = self._unpack(variables)
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             c_init = self.param.c_n_init
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             c_init = self.param.c_p_init
 
         self.initial_conditions = {c: c_init}
 
     def set_events(self, variables):
-        c_s_surf = variables[self._domain + " particle surface concentration"]
+        c_s_surf = variables[self.domain + " particle surface concentration"]
         tol = 0.01
 
         self.events[
-            "Minumum " + self._domain.lower() + " particle surface concentration"
-        ] = (pybamm.Function(np.min, c_s_surf) - tol)
+            "Minumum " + self.domain.lower() + " particle surface concentration"
+        ] = (pybamm.min(c_s_surf) - tol)
 
         self.events[
-            "Maximum " + self._domain.lower() + " particle surface concentration"
-        ] = (1 - tol) - pybamm.Function(np.max, c_s_surf)
-
-    @property
-    def _domain(self):
-        return self.__domain
-
-    @_domain.setter
-    def _domain(self, domain):
-        if domain in ["Negative", "Positive"]:
-            self.__domain = domain
-        else:
-            raise pybamm.DomainError(
-                "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
-            )
+            "Maximum " + self.domain.lower() + " particle surface concentration"
+        ] = (1 - tol) - pybamm.max(c_s_surf)

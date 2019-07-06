@@ -20,8 +20,8 @@ class LeadingOrder(BaseModel):
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.diffusion.BaseModel`
     """
 
-    def __init__(self, param, reactions, ocp=False):
-        super().__init__(param, ocp)
+    def __init__(self, param, reactions):
+        super().__init__(param)
         self.reactions = reactions
 
     def get_fundamental_variables(self):
@@ -31,12 +31,9 @@ class LeadingOrder(BaseModel):
         c_e_p = pybamm.Broadcast(c_e_av, ["positive electrode"])
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-        variables = self._get_standard_concentration_variables(c_e, c_e_av)
+        c_e_n.evaluate_for_shape()
 
-        if self.ocp is True:
-            variables.update(self._get_standard_ocp_variables(c_e))
-
-        return variables
+        return self._get_standard_concentration_variables(c_e, c_e_av)
 
     def get_coupled_variables(self, variables):
 

@@ -25,13 +25,13 @@ class SingleParticle(BaseModel):
         super().__init__(param, domain)
 
     def get_fundamental_variables(self):
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             c_s_xav = pybamm.standard_variables.c_s_n_xav
             c_s = pybamm.Broadcast(
                 c_s_xav, ["negative electrode"], broadcast_type="primary"
             )
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             c_s_xav = pybamm.standard_variables.c_s_p_xav
             c_s = pybamm.Broadcast(
                 c_s_xav, ["positive electrode"], broadcast_type="primary"
@@ -44,17 +44,16 @@ class SingleParticle(BaseModel):
 
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
-        variables.update(self._get_standard_ocp_variables(c_s))
 
         return variables
 
     def _unpack(self, variables):
         c_s_xav = variables[
-            "X-average " + self._domain.lower() + " particle concentration"
+            "X-average " + self.domain.lower() + " particle concentration"
         ]
-        N_s_xav = variables["X-average " + self._domain.lower() + " particle flux"]
+        N_s_xav = variables["X-average " + self.domain.lower() + " particle flux"]
         j_av = variables[
-            "Average " + self._domain.lower() + " electrode interfacial current density"
+            "Average " + self.domain.lower() + " electrode interfacial current density"
         ]
 
         return c_s_xav, N_s_xav, j_av

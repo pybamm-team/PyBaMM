@@ -318,7 +318,7 @@ class Discretisation(object):
             mass_list.append(mass_algebraic)
 
         # Create block diagonal (sparse) mass matrix
-        mass_matrix = block_diag(mass_list)
+        mass_matrix = block_diag(mass_list, format="csr")
 
         return pybamm.Matrix(mass_matrix)
 
