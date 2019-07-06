@@ -24,9 +24,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def default_parameter_values(self):
         input_path = os.path.join(pybamm.root_dir(), "input", "parameters", "lead-acid")
         return pybamm.ParameterValues(
-            os.path.join(
-                input_path, "default.csv"
-            ),
+            os.path.join(input_path, "default.csv"),
             {
                 "Typical current [A]": 1,
                 "Current function": os.path.join(
@@ -74,4 +72,3 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
             }
         )
-

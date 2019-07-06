@@ -6,7 +6,7 @@ from .base_interface import BaseInterface
 from . import inverse_kinetics, kinetics
 
 
-class BaseInterfaceLeadAcid(BaseInterface, pybamm.lead_acid.BaseModel):
+class BaseInterfaceLeadAcid(BaseInterface):
     """
     Base lead-acid interface class
 
@@ -19,7 +19,6 @@ class BaseInterfaceLeadAcid(BaseInterface, pybamm.lead_acid.BaseModel):
 
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
-    and :class:`pybamm.lead_acid.BaseModel`
     """
 
     def __init__(self, param, domain):
