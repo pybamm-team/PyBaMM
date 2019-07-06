@@ -74,7 +74,8 @@ class TestButlerVolmer(unittest.TestCase):
         ]
 
         # Process parameters
-        parameter_values = model_n.default_parameter_values
+        parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
+
         j_n = parameter_values.process_symbol(j_n)
         j_p = parameter_values.process_symbol(j_p)
         # Test
@@ -96,7 +97,7 @@ class TestButlerVolmer(unittest.TestCase):
         j = pybamm.Concatenation(j_n, pybamm.Broadcast(0, ["separator"]), j_p)
 
         # Process parameters and discretise
-        parameter_values = model_n.default_parameter_values
+        parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
         disc.set_variable_slices(
@@ -137,7 +138,7 @@ class TestButlerVolmer(unittest.TestCase):
         param = pybamm.standard_parameters_lead_acid
         model_n = pybamm.interface.lead_acid.ButlerVolmer(param, "Negative")
         model_p = pybamm.interface.lead_acid.ButlerVolmer(param, "Positive")
-        parameter_values = model_n.default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
 
         def j_n(c_e):
             variables = {
@@ -182,7 +183,7 @@ class TestButlerVolmer(unittest.TestCase):
         param = pybamm.standard_parameters_lead_acid
         model_n = pybamm.interface.lead_acid.ButlerVolmer(param, "Negative")
         model_p = pybamm.interface.lead_acid.ButlerVolmer(param, "Positive")
-        parameter_values = model_n.default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
 
         def j_n(delta_phi):
             variables = {

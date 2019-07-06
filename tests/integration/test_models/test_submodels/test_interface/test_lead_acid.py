@@ -25,9 +25,9 @@ class TestMainReaction(unittest.TestCase):
     def test_creation_main_reaction(self):
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model_n = pybamm.interface.lead_acid.BaseModel(param, "Negative")
+        model_n = pybamm.interface.lead_acid.BaseInterfaceLeadAcid(param, "Negative")
         j0_n = model_n._get_exchange_current_density(self.variables)
-        model_p = pybamm.interface.lead_acid.BaseModel(param, "Positive")
+        model_p = pybamm.interface.lead_acid.BaseInterfaceLeadAcid(param, "Positive")
         j0_p = model_p._get_exchange_current_density(self.variables)
         self.assertEqual(j0_n.domain, ["negative electrode"])
         self.assertEqual(j0_p.domain, ["positive electrode"])
@@ -35,12 +35,12 @@ class TestMainReaction(unittest.TestCase):
     def test_set_parameters_main_reaction(self):
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model_n = pybamm.interface.lead_acid.BaseModel(param, "Negative")
+        model_n = pybamm.interface.lead_acid.BaseInterfaceLeadAcid(param, "Negative")
         j0_n = model_n._get_exchange_current_density(self.variables)
-        model_p = pybamm.interface.lead_acid.BaseModel(param, "Positive")
+        model_p = pybamm.interface.lead_acid.BaseInterfaceLeadAcid(param, "Positive")
         j0_p = model_p._get_exchange_current_density(self.variables)
         # Process parameters
-        parameter_values = model_n.default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         j0_n = parameter_values.process_symbol(j0_n)
         j0_p = parameter_values.process_symbol(j0_p)
         # Test
@@ -52,12 +52,12 @@ class TestMainReaction(unittest.TestCase):
     def test_discretisation_main_reaction(self):
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model_n = pybamm.interface.lead_acid.BaseModel(param, "Negative")
+        model_n = pybamm.interface.lead_acid.BaseInterfaceLeadAcid(param, "Negative")
         j0_n = model_n._get_exchange_current_density(self.variables)
-        model_p = pybamm.interface.lead_acid.BaseModel(param, "Positive")
+        model_p = pybamm.interface.lead_acid.BaseInterfaceLeadAcid(param, "Positive")
         j0_p = model_p._get_exchange_current_density(self.variables)
         # Process parameters and discretise
-        parameter_values = model_n.default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         disc = get_discretisation_for_testing()
         mesh = disc.mesh
         disc.set_variable_slices([self.c_e])
@@ -79,9 +79,9 @@ class TestMainReaction(unittest.TestCase):
     def test_diff_main_reaction(self):
         # With intercalation
         param = pybamm.standard_parameters_lead_acid
-        model_n = pybamm.interface.lead_acid.BaseModel(param, "Negative")
-        model_p = pybamm.interface.lead_acid.BaseModel(param, "Positive")
-        parameter_values = model_n.default_parameter_values
+        model_n = pybamm.interface.lead_acid.BaseInterfaceLeadAcid(param, "Negative")
+        model_p = pybamm.interface.lead_acid.BaseInterfaceLeadAcid(param, "Positive")
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
 
         def j0_n(c_e):
             variables = {**self.variables, "Negative electrolyte concentration": c_e}
