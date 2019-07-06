@@ -20,14 +20,19 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.diffusion.BaseModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, ocp=False):
+        super().__init__(param, ocp)
 
     def get_fundamental_variables(self):
         c_e = pybamm.standard_variables.c_e
         c_e_av = pybamm.average(c_e)
 
-        return self._get_standard_concentration_variables(c_e, c_e_av)
+        variables = self._get_standard_concentration_variables(c_e, c_e_av)
+
+        if self.ocp is True:
+            variables.update(self._get_standard_ocp_variables(c_e))
+
+        return variables
 
     def get_coupled_variables(self, variables):
 
@@ -87,3 +92,4 @@ class Full(BaseModel):
         c_e = variables["Electrolyte concentration"]
 
         self.initial_conditions = {c_e: self.param.c_e_init}
+

@@ -45,10 +45,10 @@ class DFN(BaseModel):
 
         self.submodels[
             "negative interface"
-        ] = pybamm.interface.lithium_ion.ButlerVolmer(self.param, "Negative")
+        ] = pybamm.interface.butler_volmer.LithiumIon(self.param, "Negative")
         self.submodels[
             "positive interface"
-        ] = pybamm.interface.lithium_ion.ButlerVolmer(self.param, "Positive")
+        ] = pybamm.interface.butler_volmer.LithiumIon(self.param, "Positive")
 
     def set_particle_submodel(self):
 

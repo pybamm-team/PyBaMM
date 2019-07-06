@@ -48,10 +48,10 @@ class NewmanTiedemann(BaseModel):
             self.submodels["convection"] = pybamm.convection.Full(self.param)
 
     def set_interfacial_submodel(self):
-        self.submodels["negative interface"] = pybamm.interface.lead_acid.ButlerVolmer(
+        self.submodels["negative interface"] = pybamm.interface.butler_volmer.LeadAcid(
             self.param, "Negative"
         )
-        self.submodels["positive interface"] = pybamm.interface.lead_acid.ButlerVolmer(
+        self.submodels["positive interface"] = pybamm.interface.butler_volmer.LeadAcid(
             self.param, "Positive"
         )
 
@@ -70,7 +70,7 @@ class NewmanTiedemann(BaseModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
-            self.param
+            self.param, ocp=True
         )
 
         self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
