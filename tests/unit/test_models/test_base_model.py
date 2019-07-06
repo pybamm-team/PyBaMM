@@ -2,8 +2,6 @@
 # Tests for the base model class
 #
 import pybamm
-import os
-
 import unittest
 
 
@@ -380,6 +378,7 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
             model.default_parameter_values['Reference temperature [K]'], 298.15)
 
         # change path and try again
+        import os
         cwd = os.getcwd()
         os.chdir('..')
         model = pybamm.BaseBatteryModel()
