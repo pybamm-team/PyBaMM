@@ -3,7 +3,7 @@
 #
 import pybamm
 from .base_interface import BaseInterface
-from . import kinetics
+from . import inverse_kinetics, kinetics
 
 
 class BaseInterfaceLeadAcid(BaseInterface, pybamm.lead_acid.BaseModel):
@@ -103,10 +103,12 @@ class ButlerVolmer(BaseInterfaceLeadAcid, kinetics.BaseButlerVolmer):
         super().__init__(param, domain)
 
 
-class InverseButlerVolmer(BaseInterfaceLeadAcid, kinetics.BaseInverseButlerVolmer):
+class InverseButlerVolmer(
+    BaseInterfaceLeadAcid, inverse_kinetics.BaseInverseButlerVolmer
+):
     """
     Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseInverseButlerVolmer` (for kinetics)
+    :class:`inverse_kinetics.BaseInverseButlerVolmer` (for kinetics)
     """
 
     def __init__(self, param, domain):

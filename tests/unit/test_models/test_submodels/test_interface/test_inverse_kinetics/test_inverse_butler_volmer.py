@@ -13,14 +13,14 @@ class TestBaseModel(unittest.TestCase):
 
         a = pybamm.Scalar(0)
         variables = {"Negative electrode open circuit potential": a}
-        submodel = pybamm.interface.kinetics.BaseInverseButlerVolmer(param, "Negative")
+        submodel = pybamm.interface.inverse_kinetics.BaseInverseButlerVolmer(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
         with self.assertRaises(NotImplementedError):
             std_tests.test_all()
 
         variables = {"Positive electrode open circuit potential": a}
-        submodel = pybamm.interface.kinetics.BaseInverseButlerVolmer(param, "Positive")
+        submodel = pybamm.interface.inverse_kinetics.BaseInverseButlerVolmer(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         with self.assertRaises(NotImplementedError):
             std_tests.test_all()
