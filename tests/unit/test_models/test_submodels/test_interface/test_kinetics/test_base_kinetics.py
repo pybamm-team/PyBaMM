@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import tests
 import unittest
 
 
