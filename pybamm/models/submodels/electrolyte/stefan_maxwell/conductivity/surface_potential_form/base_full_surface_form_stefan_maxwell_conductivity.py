@@ -31,11 +31,7 @@ class BaseFull(BaseModel):
         else:
             raise pybamm.DomainError
 
-        delta_phi_av = pybamm.average(delta_phi)
-
-        variables = self._get_standard_surface_potential_difference_variables(
-            delta_phi, delta_phi_av
-        )
+        variables = self._get_standard_surface_potential_difference_variables(delta_phi)
 
         return variables
 

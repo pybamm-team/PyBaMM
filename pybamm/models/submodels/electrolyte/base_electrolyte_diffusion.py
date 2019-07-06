@@ -16,9 +16,8 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, ocp=False):
+    def __init__(self, param):
         super().__init__(param)
-        self.ocp = ocp
 
     def _get_standard_concentration_variables(self, c_e, c_e_av):
         """
@@ -88,48 +87,3 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
     def set_events(self, variables):
         c_e = variables["Electrolyte concentration"]
         self.events["Zero electrolyte concentration cut-off"] = pybamm.min(c_e) - 0.002
-
-    def _get_standard_ocp_variables(self, c_e):
-        """
-        A private function to obtain the open circuit potential and
-        related standard variables.
-
-        Parameters
-        ----------
-        c_e : :class:`pybamm.Symbol`
-            The concentration in the electrolyte.
-
-        Returns
-        -------
-        variables : dict
-            The variables dictionary including the open circuit potentials
-            and related standard variables.
-        """
-
-        c_e_n, _, c_e_p = c_e.orphans
-
-        ocp_n = self.param.U_n(c_e_n)
-        ocp_p = self.param.U_p(c_e_p)
-
-        ocp_n_dim = self.param.U_n_ref + self.param.potential_scale * ocp_n
-        ocp_p_dim = self.param.U_p_ref + self.param.potential_scale * ocp_p
-
-        ocp_n_av = pybamm.average(ocp_n)
-        ocp_n_av_dim = pybamm.average(ocp_n_dim)
-
-        ocp_p_av = pybamm.average(ocp_p)
-        ocp_p_av_dim = pybamm.average(ocp_p_dim)
-
-        variables = {
-            "Negative electrode open circuit potential": ocp_n,
-            "Negative electrode open circuit potential [V]": ocp_n_dim,
-            "Average negative electrode open circuit potential": ocp_n_av,
-            "Average negative electrode open circuit potential [V]": ocp_n_av_dim,
-            "Positive electrode open circuit potential": ocp_p,
-            "Positive electrode open circuit potential [V]": ocp_p_dim,
-            "Average positive electrode open circuit potential": ocp_p_av,
-            "Average positive electrode open circuit potential [V]": ocp_p_av_dim,
-        }
-
-        return variables
-
