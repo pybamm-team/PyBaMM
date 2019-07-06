@@ -146,7 +146,7 @@ class VoltageTests(BaseOutputTest):
             - charge: eta_r_n < 0, eta_r_p > 0
             - off: eta_r_n == 0, eta_r_p == 0
             """
-        tol = 0.001
+        tol = 0.01
         t, x_n, x_p = self.t, self.x_n, self.x_p
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(-self.eta_r_n(t, x_n), tol)

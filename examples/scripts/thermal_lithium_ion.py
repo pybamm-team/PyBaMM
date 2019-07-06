@@ -38,5 +38,6 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = ["Electrolyte concentration", "Cell temperature [K]"]
-plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+labels = ["Full thermal model", "Lumped thermal model"]
+plot = pybamm.QuickPlot(models, mesh, solutions, output_variables, labels)
 plot.dynamic_plot()

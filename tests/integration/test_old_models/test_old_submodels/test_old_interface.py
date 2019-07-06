@@ -66,9 +66,9 @@ class TestOldHomogeneousReaction(unittest.TestCase):
 
         j = disc.process_symbol(parameter_values.process_symbol(j))
 
-        # Simplifiy, since current is constant this should give an array when evaluated
+        # Simplifiy
         j_simp = j.simplify()
-        self.assertIsInstance(j_simp.evaluate(t=0), np.ndarray)
+
         # test values
         l_n = parameter_values.process_symbol(param.l_n)
         l_p = parameter_values.process_symbol(param.l_p)

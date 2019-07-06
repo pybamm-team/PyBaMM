@@ -72,10 +72,12 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_current_functions(self):
         # create current functions
-        dimensional_current = (
+        dimensional_current_density = (
             pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
         )
-        dimensionless_current = pybamm.standard_parameters_lead_acid.current_with_time
+        dimensionless_current_density = (
+            pybamm.standard_parameters_lead_acid.current_density_with_time
+        )
 
         # process
         parameter_values = pybamm.ParameterValues(
@@ -91,14 +93,16 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
                 "Current function": pybamm.GetConstantCurrent(),
             }
         )
-        dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
-        dimensionless_current_eval = parameter_values.process_symbol(
-            dimensionless_current
+        dimensional_current_density_eval = parameter_values.process_symbol(
+            dimensional_current_density
+        )
+        dimensionless_current_density_eval = parameter_values.process_symbol(
+            dimensionless_current_density
         )
         self.assertAlmostEqual(
-            dimensional_current_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1)
+            dimensional_current_density_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1)
         )
-        self.assertEqual(dimensionless_current_eval.evaluate(t=3), 1)
+        self.assertEqual(dimensionless_current_density_eval.evaluate(t=3), 1)
 
     def test_functions_lead_acid(self):
         # Load parameters to be tested

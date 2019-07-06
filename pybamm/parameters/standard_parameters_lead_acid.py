@@ -431,7 +431,13 @@ def U_p(c_e_p):
 dimensional_current_with_time = pybamm.FunctionParameter(
     "Current function", pybamm.t * tau_discharge
 )
-dimensional_current_density_with_time = i_typ * (dimensional_current_with_time / I_typ)
+dimensional_current_density_with_time = dimensional_current_with_time / (
+    n_electrodes_parallel * pybamm.geometric_parameters.A_cc
+)
+
 current_with_time = (
     dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
+)
+current_density_with_time = (
+    dimensional_current_density_with_time / i_typ * pybamm.Function(np.sign, I_typ)
 )

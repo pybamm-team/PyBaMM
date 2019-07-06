@@ -30,4 +30,3 @@ class Uniform(BaseModel):
         variables = self._get_standard_current_variables(i_cc, i_boundary_cc)
 
         return variables
-
