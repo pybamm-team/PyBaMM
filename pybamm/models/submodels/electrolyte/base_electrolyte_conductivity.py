@@ -149,7 +149,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
         delta_phi_av = pybamm.average(delta_phi)
 
-        return {
+        variables = {
             self.domain + " electrode surface potential difference": delta_phi,
             "Average "
             + self.domain.lower()
@@ -160,6 +160,8 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             + self.domain.lower()
             + " electrode surface potential difference [V]": delta_phi_av * pot_scale,
         }
+
+        return variables
 
     def _get_domain_potential_variables(self, phi_e, domain):
         """
