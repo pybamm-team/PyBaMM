@@ -18,7 +18,7 @@ class TestBaseModel(unittest.TestCase):
             "Negative electrolyte potential": a,
             "Negative electrode open circuit potential": a,
         }
-        submodel = pybamm.interface.kinetics.BaseButlerVolmer(param, "Negative")
+        submodel = pybamm.interface.kinetics.BaseModel(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
         with self.assertRaises(NotImplementedError):
@@ -30,7 +30,7 @@ class TestBaseModel(unittest.TestCase):
             "Positive electrolyte potential": a,
             "Positive electrode open circuit potential": a,
         }
-        submodel = pybamm.interface.kinetics.BaseButlerVolmer(param, "Positive")
+        submodel = pybamm.interface.kinetics.BaseModel(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         with self.assertRaises(NotImplementedError):
             std_tests.test_all()
