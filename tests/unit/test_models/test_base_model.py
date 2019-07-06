@@ -331,7 +331,7 @@ class TestBaseModel(unittest.TestCase):
         # TODO: getting a strange bug here, related to CPython bug here:
         #    https://bugs.python.org/issue29620
         # with self.assertWarns(pybamm.ModelWarning):
-        #     model.check_well_posedness()
+        model.check_well_posedness()
 
         # Check None entries have been removed from the variables dictionary
         for key, item in model._variables.items():
