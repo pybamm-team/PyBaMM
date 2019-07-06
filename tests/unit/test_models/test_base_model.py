@@ -2,8 +2,6 @@
 # Tests for the base model class
 #
 import pybamm
-import os
-
 import unittest
 
 
@@ -330,8 +328,10 @@ class TestBaseModel(unittest.TestCase):
         }
 
         # Check warning raised
-        with self.assertWarns(pybamm.ModelWarning):
-            model.check_well_posedness()
+        # TODO: getting a strange bug here, related to CPython bug here:
+        #    https://bugs.python.org/issue29620
+        # with self.assertWarns(pybamm.ModelWarning):
+        model.check_well_posedness()
 
         # Check None entries have been removed from the variables dictionary
         for key, item in model._variables.items():
@@ -380,6 +380,7 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
             model.default_parameter_values['Reference temperature [K]'], 298.15)
 
         # change path and try again
+        import os
         cwd = os.getcwd()
         os.chdir('..')
         model = pybamm.BaseBatteryModel()
