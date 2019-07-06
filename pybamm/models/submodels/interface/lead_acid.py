@@ -3,10 +3,10 @@
 #
 import pybamm
 from .base_interface import BaseInterface
-from . import kinetics
+from . import inverse_kinetics, kinetics
 
 
-class BaseModel(BaseInterface, pybamm.lead_acid.BaseModel):
+class BaseInterfaceLeadAcid(BaseInterface):
     """
     Base lead-acid interface class
 
@@ -19,7 +19,6 @@ class BaseModel(BaseInterface, pybamm.lead_acid.BaseModel):
 
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
-    and :class:`pybamm.lead_acid.BaseModel`
     """
 
     def __init__(self, param, domain):
@@ -79,7 +78,7 @@ class BaseModel(BaseInterface, pybamm.lead_acid.BaseModel):
         ocp_av = pybamm.average(ocp)
         ocp_av_dim = pybamm.average(ocp_dim)
 
-        return {
+        variables = {
             self.domain + " electrode open circuit potential": ocp,
             self.domain + " electrode open circuit potential [V]": ocp_dim,
             "Average "
@@ -90,12 +89,26 @@ class BaseModel(BaseInterface, pybamm.lead_acid.BaseModel):
             + " electrode open circuit potential [V]": ocp_av_dim,
         }
 
+        return variables
 
-class ButlerVolmer(BaseModel, kinetics.BaseButlerVolmer):
+
+class ButlerVolmer(BaseInterfaceLeadAcid, kinetics.BaseButlerVolmer):
+    """
+    Extends :class:`BaseInterfaceLeadIon` (for exchange-current density, etc) and
+    :class:`kinetics.BaseButlerVolmer` (for kinetics)
+    """
+
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
 
-class InverseButlerVolmer(BaseModel, kinetics.BaseInverseButlerVolmer):
+class InverseButlerVolmer(
+    BaseInterfaceLeadAcid, inverse_kinetics.BaseInverseButlerVolmer
+):
+    """
+    Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
+    :class:`inverse_kinetics.BaseInverseButlerVolmer` (for kinetics)
+    """
+
     def __init__(self, param, domain):
         super().__init__(param, domain)
