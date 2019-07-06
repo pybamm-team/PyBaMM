@@ -1,7 +1,7 @@
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
 except ImportError:
-    from distutils.core import setup
+    from distutils.core import setup, find_packages
 
 # Load text for description and license
 with open("README.md") as f:
@@ -12,7 +12,14 @@ setup(
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     url="https://github.com/pybamm-team/PyBaMM",
-    include_package_data=True,
+    #include_package_data=True,
+    packages=find_packages(include=('pybamm', 'pybamm.*')),
+    package_data={'pybamm': [
+        '../input/parameters/lithium-ion/*.csv',
+        '../input/parameters/lithium-ion/*.py',
+        '../input/parameters/lead-acid/*.csv',
+        '../input/parameters/lead-acid/*.py',
+        ]},
     # List of dependencies
     install_requires=[
         "numpy>=1.16",

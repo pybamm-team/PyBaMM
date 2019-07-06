@@ -24,7 +24,9 @@ class BaseModel(pybamm.BaseBatteryModel):
     def default_parameter_values(self):
         input_path = os.path.join(pybamm.root_dir(), "input", "parameters", "lead-acid")
         return pybamm.ParameterValues(
-            "input/parameters/lead-acid/default.csv",
+            os.path.join(
+                input_path, "default.csv"
+            ),
             {
                 "Typical current [A]": 1,
                 "Current function": os.path.join(
