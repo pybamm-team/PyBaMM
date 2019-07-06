@@ -2,8 +2,6 @@
 # Class for the combined electrolyte potential employing stefan-maxwell
 #
 import pybamm
-
-import numpy as np
 from .base_stefan_maxwell_conductivity import BaseModel
 
 

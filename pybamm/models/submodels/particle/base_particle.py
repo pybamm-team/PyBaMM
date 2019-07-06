@@ -2,7 +2,6 @@
 # Base class for particles
 #
 import pybamm
-import autograd.numpy as np
 
 
 class BaseParticle(pybamm.BaseSubModel):

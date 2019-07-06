@@ -2,7 +2,6 @@
 # Bulter volmer class
 #
 
-import pybamm
 from ..base_interface import BaseInterface
 
 
@@ -35,7 +34,6 @@ class BaseModel(BaseInterface):
         return variables
 
     def get_coupled_variables(self, variables):
-        i_boundary_cc = variables["Current collector current density"]
         # Calculate delta_phi_s from phi_s and phi_e if it isn't already known
         if self.domain + " electrode surface potential difference" not in variables:
             variables = self._get_delta_phi_s(variables)
@@ -74,8 +72,11 @@ class BaseModel(BaseInterface):
 
         return variables
 
-    def _get_open_circuit_potential(self, variables):
+    def _get_exchange_current_density(self, variables):
         raise NotImplementedError
 
-    def _get_exchange_current_density(self, variables):
+    def _get_kinetics(self, j0, ne, eta_r):
+        raise NotImplementedError
+
+    def _get_open_circuit_potential(self, variables):
         raise NotImplementedError
