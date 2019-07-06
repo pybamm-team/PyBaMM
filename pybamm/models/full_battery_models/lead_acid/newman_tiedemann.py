@@ -25,9 +25,9 @@ class NewmanTiedemann(BaseModel):
         self.set_current_collector_submodel()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
-        self.set_negative_electrode_submodel()
         self.set_convection_submodel()
         self.set_electrolyte_submodel()
+        self.set_negative_electrode_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
 
@@ -56,14 +56,18 @@ class NewmanTiedemann(BaseModel):
         )
 
     def set_negative_electrode_submodel(self):
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Negative"
-        )
+        if self.options["capacitance"] is False:
+            submodel = pybamm.electrode.ohm.Full(self.param, "Negative")
+        else:
+            submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
+        self.submodels["negative electrode"] = submodel
 
     def set_positive_electrode_submodel(self):
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Positive"
-        )
+        if self.options["capacitance"] is False:
+            submodel = pybamm.electrode.ohm.Full(self.param, "Positive")
+        else:
+            submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
+        self.submodels["positive electrode"] = submodel
 
     def set_electrolyte_submodel(self):
 

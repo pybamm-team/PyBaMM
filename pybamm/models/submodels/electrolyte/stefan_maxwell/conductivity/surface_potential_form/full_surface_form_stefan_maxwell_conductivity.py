@@ -81,33 +81,36 @@ class BaseModel(BaseStefanMaxwellConductivity):
         conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
 
         if self.domain == "Negative":
-
-            lbc = (pybamm.Scalar(0), "Neumann")
-
             c_e_flux = pybamm.BoundaryFlux(c_e, "right")
-
             flux = (
                 i_boundary_cc / pybamm.BoundaryValue(conductivity, "right")
             ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "right") * c_e_flux
 
+            lbc = (pybamm.Scalar(0), "Neumann")
             rbc = (flux, "Neumann")
+            lbc_c_e = (pybamm.Scalar(0), "Neumann")
+            rbc_c_e = (c_e_flux, "Neumann")
 
         elif self.domain == "Positive":
-
             c_e_flux = pybamm.BoundaryFlux(c_e, "left")
-
             flux = (
                 i_boundary_cc / pybamm.BoundaryValue(conductivity, "left")
             ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux
 
             lbc = (flux, "Neumann")
-
             rbc = (pybamm.Scalar(0), "Neumann")
+            lbc_c_e = (c_e_flux, "Neumann")
+            rbc_c_e = (pybamm.Scalar(0), "Neumann")
 
         else:
             raise pybamm.DomainError
 
-        self.boundary_conditions = {delta_phi: {"left": lbc, "right": rbc}}
+        # TODO: check if we still need the boundary conditions for c_e, once we have
+        # internal boundary conditions
+        self.boundary_conditions = {
+            delta_phi: {"left": lbc, "right": rbc},
+            c_e: {"left": lbc_c_e, "right": rbc_c_e},
+        }
 
     def _get_neg_pos_coupled_variables(self, variables):
         """
@@ -123,17 +126,10 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
 
-        # This is a bit of a hack until we figure out how we want to take gradients of
-        # non-state variables (i.e. put the bcs on without bcs)
-        if c_e.has_symbol_of_class(pybamm.Broadcast):
-            grad_c_e = pybamm.Broadcast(0, [self.domain.lower() + " electrode"])
-        else:
-            grad_c_e = pybamm.grad(c_e)
-            grad_c_e = pybamm.Broadcast(0, [self.domain.lower() + " electrode"])
-
         i_e = conductivity * (
-            (param.chi(c_e) / c_e) * grad_c_e + pybamm.grad(delta_phi)
+            (param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi)
         )
+        variables.update(self._get_domain_current_variables(i_e))
 
         # TODO: Expression can be written in a form which does not require phi_s and
         # so avoid this hack.
@@ -141,7 +137,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
         phi_e = phi_s - delta_phi
 
         variables.update(self._get_domain_potential_variables(phi_e))
-        variables.update(self._get_domain_current_variables(i_e))
 
         return variables
 
@@ -160,27 +155,23 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         chi_e_s = param.chi(c_e_s)
         kappa_s_eff = param.kappa_e(c_e_s) * (eps_s ** param.b)
-        i_e_s_av = i_boundary_cc
-
-        # This is a bit of a hack until we figure out how we want to take gradients of
-        # non-state variables (i.e. put the bcs on without bcs)
-        if c_e_s.has_symbol_of_class(pybamm.Broadcast):
-            grad_c_e_s = pybamm.Broadcast(0, ["separator"])
-        else:
-            grad_c_e_s = pybamm.grad(c_e_s)
-            grad_c_e_s = pybamm.Broadcast(0, ["separator"])
 
         phi_e_s = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
-            chi_e_s / c_e_s * grad_c_e_s - param.C_e * i_e_s_av / kappa_s_eff, x_s
+            chi_e_s / c_e_s * pybamm.grad(c_e_s)
+            - param.C_e * i_boundary_cc / kappa_s_eff,
+            x_s,
         )
 
-        i_e_s = pybamm.Broadcast(i_e_s_av, ["separator"])
-        phi_e_s = pybamm.Broadcast(
-            pybamm.boundary_value(phi_e_n, "right"), ["separator"]
-        )  # TODO: add Indefinite integral!
+        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
 
         variables.update(self._get_domain_potential_variables(phi_e_s))
         variables.update(self._get_domain_current_variables(i_e_s))
+
+        # Update boundary conditions (for indefinite integral)
+        self.boundary_conditions[c_e_s] = {
+            "left": (pybamm.BoundaryFlux(c_e_s, "left"), "Neumann"),
+            "right": (pybamm.BoundaryFlux(c_e_s, "right"), "Neumann"),
+        }
 
         return variables
 
@@ -192,23 +183,8 @@ class BaseModel(BaseStefanMaxwellConductivity):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
         eps = variables[self.domain + " electrode porosity"]
-        c_e = variables[self.domain + " electrolyte concentration"]
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
-        conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
         i_boundary_cc = variables["Current collector current density"]
-
-        # This is a bit of a hack until we figure out how we want to take gradients of
-        # non-state variables (i.e. put the bcs on without bcs)
-        # and set internal boundary conditions
-        if c_e.has_symbol_of_class(pybamm.Broadcast):
-            grad_c_e = pybamm.Broadcast(0, [self.domain.lower() + " electrode"])
-        else:
-            grad_c_e = pybamm.grad(c_e)
-            grad_c_e = pybamm.Broadcast(0, [self.domain.lower() + " electrode"])
-
-        i_e = conductivity * (
-            (param.chi(c_e) / c_e) * grad_c_e + pybamm.grad(delta_phi)
-        )
+        i_e = variables[self.domain + " electrolyte current density"]
 
         i_s = i_boundary_cc - i_e
 
@@ -256,7 +232,7 @@ class FullAlgebraic(BaseModel):
         i_e = variables[self.domain + " electrolyte current density"]
         j = variables[self.domain + " electrode interfacial current density"]
 
-        self.rhs[delta_phi] = pybamm.div(i_e) - j
+        self.algebraic[delta_phi] = pybamm.div(i_e) - j
 
 
 class FullDifferential(BaseModel):
