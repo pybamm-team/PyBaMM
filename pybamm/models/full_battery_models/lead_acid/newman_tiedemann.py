@@ -68,18 +68,32 @@ class NewmanTiedemann(BaseModel):
     def set_electrolyte_submodel(self):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
+        surf_form = electrolyte.conductivity.surface_potential_form
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
-            self.param
-        )
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
 
-        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-            self.param
-        )
+        if self.options["capacitance"] is False:
+            self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
+                self.param
+            )
+        elif self.options["capacitance"] == "differential":
+            for domain in ["Negative", "Positive"]:
+                self.submodels[
+                    domain.lower() + " electrolyte conductivity"
+                ] = surf_form.FullDifferential(self.param, domain)
+        elif self.options["capacitance"] == "algebraic":
+            for domain in ["Negative", "Positive"]:
+                self.submodels[
+                    domain.lower() + " electrolyte conductivity"
+                ] = surf_form.FullAlgebraic(self.param, domain)
 
     @property
     def default_solver(self):
         """
         Create and return the default solver for this model
         """
-        return pybamm.ScikitsDaeSolver()
+        # Different solver depending on whether we solve ODEs or DAEs
+        if self.options["capacitance"] == "differential":
+            return pybamm.ScipySolver()
+        else:
+            return pybamm.ScikitsDaeSolver()

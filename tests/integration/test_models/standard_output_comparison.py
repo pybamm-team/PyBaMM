@@ -134,12 +134,16 @@ class AveragesComparison(BaseOutputComparison):
 
     def test_all(self):
         # Potentials
-        # self.compare("Average open circuit voltage")
+        self.compare("Average open circuit voltage")
         # Currents
         self.compare("Average negative electrode interfacial current density")
         self.compare("Average positive electrode interfacial current density")
         # Concentration
         self.compare("Average electrolyte concentration")
+        # Porosity
+        self.compare("Average negative electrode porosity")
+        self.compare("Average separator porosity")
+        self.compare("Average positive electrode porosity")
 
 
 class VariablesComparison(BaseOutputComparison):

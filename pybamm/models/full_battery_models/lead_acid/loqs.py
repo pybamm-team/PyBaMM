@@ -111,12 +111,12 @@ class LOQS(BaseModel):
         elif self.options["capacitance"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
-                    domain.lower() + "electrolyte conductivity"
+                    domain.lower() + " electrolyte conductivity"
                 ] = surf_form.LeadingOrderDifferential(self.param, domain)
         elif self.options["capacitance"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
-                    domain.lower() + "electrolyte conductivity"
+                    domain.lower() + " electrolyte conductivity"
                 ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
 
         else:
