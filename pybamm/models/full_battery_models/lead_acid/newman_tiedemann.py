@@ -77,12 +77,12 @@ class NewmanTiedemann(BaseModel):
                 self.param
             )
         elif self.options["capacitance"] == "differential":
-            for domain in ["Negative", "Positive"]:
+            for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
                 ] = surf_form.FullDifferential(self.param, domain)
         elif self.options["capacitance"] == "algebraic":
-            for domain in ["Negative", "Positive"]:
+            for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
                 ] = surf_form.FullAlgebraic(self.param, domain)

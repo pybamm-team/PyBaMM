@@ -30,6 +30,8 @@ class BaseModel(BaseStefanMaxwellConductivity):
     def get_fundamental_variables(self):
         if self.domain == "Negative":
             delta_phi = pybamm.standard_variables.delta_phi_n
+        elif self.domain == "Separator":
+            return {}
         elif self.domain == "Positive":
             delta_phi = pybamm.standard_variables.delta_phi_p
         else:
@@ -40,6 +42,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
         return variables
 
     def set_initial_conditions(self, variables):
+        if self.domain == "Separator":
+            return
+
         delta_phi_e = variables[self.domain + " electrode surface potential difference"]
         if self.domain == "Negative":
             delta_phi_e_init = self.param.U_n(self.param.c_n_init)
@@ -244,6 +249,9 @@ class FullAlgebraic(BaseModel):
         super().__init__(param, domain)
 
     def set_algebraic(self, variables):
+        if self.domain == "Separator":
+            return
+
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
         j = variables[self.domain + " electrode interfacial current density"]
@@ -270,6 +278,9 @@ class FullDifferential(BaseModel):
         super().__init__(param, domain)
 
     def set_rhs(self, variables):
+        if self.domain == "Separator":
+            return
+
         if self.domain == "Negative":
             C_dl = self.param.C_dl_n
         elif self.domain == "Positive":
