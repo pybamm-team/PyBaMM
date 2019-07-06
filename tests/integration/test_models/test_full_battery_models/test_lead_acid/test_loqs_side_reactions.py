@@ -6,7 +6,6 @@ import tests
 import unittest
 
 
-@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
     def test_discharge_differential(self):
         options = {"capacitance": "differential", "side reactions": ["oxygen"]}

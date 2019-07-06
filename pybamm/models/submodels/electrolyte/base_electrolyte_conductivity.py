@@ -95,6 +95,11 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             "Electrolyte current density [A.m-2]": i_typ * i_e,
         }
 
+        if isinstance(i_e, pybamm.Concatenation):
+            i_e_n, _, i_e_p = i_e.orphans
+            variables.update(self._get_domain_current_variables(i_e_n, "Negative"))
+            variables.update(self._get_domain_current_variables(i_e_p, "Positive"))
+
         return variables
 
     def _get_split_overpotential(self, eta_c_av, delta_phi_e_av):

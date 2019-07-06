@@ -2,10 +2,12 @@
 # Class for full surface form electrolyte conductivity employing stefan-maxwell
 #
 import pybamm
-from .base_surface_form_stefan_maxwell_conductivity import BaseModel
+from ..base_stefan_maxwell_conductivity import (
+    BaseModel as BaseStefanMaxwellConductivity,
+)
 
 
-class BaseLeadingOrder(BaseModel):
+class BaseLeadingOrder(BaseStefanMaxwellConductivity):
     """Base class for leading-order conservation of charge in the electrolyte employing
     the Stefan-Maxwell constitutive equations employing the surface potential difference
     formulation. (Leading refers to leading order in asymptotics)
@@ -41,16 +43,38 @@ class BaseLeadingOrder(BaseModel):
         if self.domain == "Separator":
             return
 
-        delta_phi_e = variables[self.domain + " electrode surface potential difference"]
+        delta_phi = variables[
+            "Average " + self.domain.lower() + " electrode surface potential difference"
+        ]
         if self.domain == "Negative":
-            delta_phi_e_init = self.param.U_n(self.param.c_n_init)
+            delta_phi_init = self.param.U_n(self.param.c_n_init)
         elif self.domain == "Positive":
-            delta_phi_e_init = self.param.U_p(self.param.c_p_init)
+            delta_phi_init = self.param.U_p(self.param.c_p_init)
 
         else:
             raise pybamm.DomainError
 
-        self.initial_conditions = {delta_phi_e: delta_phi_e_init}
+        self.initial_conditions = {delta_phi: delta_phi_init}
+
+    def get_coupled_variables(self, variables):
+        if self.domain == "Negative":
+            delta_phi_n = variables[
+                "Average negative electrode surface potential difference"
+            ]
+            phi_e_av = -delta_phi_n
+            phi_e_n = pybamm.Broadcast(phi_e_av, ["negative electrode"])
+            phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"])
+            phi_e_p = pybamm.Broadcast(phi_e_av, ["positive electrode"])
+            phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+            variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))
+
+            i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
+            i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
+            i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
+            i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
+            variables.update(self._get_standard_current_variables(i_e))
+
+        return variables
 
 
 class LeadingOrderDifferential(BaseLeadingOrder):
@@ -81,7 +105,9 @@ class LeadingOrderDifferential(BaseLeadingOrder):
         j_av = variables[
             "Average " + self.domain.lower() + " electrode interfacial current density"
         ]
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
+        delta_phi = variables[
+            "Average " + self.domain.lower() + " electrode surface potential difference"
+        ]
 
         if self.domain == "Negative":
             C_dl = param.C_dl_n
