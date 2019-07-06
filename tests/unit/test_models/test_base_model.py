@@ -330,7 +330,8 @@ class TestBaseModel(unittest.TestCase):
         }
 
         # Check warning raised
-        self.assertWarns(pybamm.ModelWarning, model.check_well_posedness)
+        with self.assertWarns(pybamm.ModelWarning):
+            model.check_well_posedness()
 
         # Check None entries have been removed from the variables dictionary
         for key, item in model._variables.items():
