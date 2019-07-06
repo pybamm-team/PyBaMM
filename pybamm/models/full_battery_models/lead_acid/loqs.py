@@ -73,10 +73,10 @@ class LOQS(BaseModel):
 
         self.submodels[
             "negative interface"
-        ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Negative")
+        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Negative")
         self.submodels[
             "positive interface"
-        ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Positive")
+        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Positive")
 
     def set_negative_electrode_submodel(self):
 
@@ -99,7 +99,7 @@ class LOQS(BaseModel):
         ] = electrolyte.conductivity.LeadingOrder(self.param)
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.LeadingOrder(
-            self.param, self.reactions
+            self.param, self.reactions, ocp=True
         )
 
     @property

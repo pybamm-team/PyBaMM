@@ -68,10 +68,10 @@ class NewmanTiedemann(BaseModel):
     def set_interfacial_submodel(self):
         self.submodels[
             "negative interface"
-        ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Negative")
+        ] = pybamm.interface.butler_volmer.surface_form.LeadAcid(self.param, "Negative")
         self.submodels[
             "positive interface"
-        ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Positive")
+        ] = pybamm.interface.butler_volmer.surface_form.LeadAcid(self.param, "Positive")
 
     def set_negative_electrode_submodel(self):
         self.submodels["negative electrode"] = pybamm.electrode.ohm.SurfaceForm(
@@ -88,7 +88,7 @@ class NewmanTiedemann(BaseModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
-            self.param
+            self.param, ocp=True
         )
 
         surf_form = electrolyte.conductivity.surface_potential_form

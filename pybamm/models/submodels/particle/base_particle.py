@@ -2,6 +2,7 @@
 # Base class for particles
 #
 import pybamm
+import autograd.numpy as np
 
 
 class BaseParticle(pybamm.BaseSubModel):
@@ -59,6 +60,38 @@ class BaseParticle(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_ocp_variables(self, c_s):
+        c_s_surf = pybamm.surf(c_s, set_domain=True)
+
+        if self.domain == "Negative":
+            ocp = self.param.U_n(c_s_surf)
+            ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
+            dudT = self.param.dUdT_n(c_s_surf)
+
+        elif self.domain == "Positive":
+            ocp = self.param.U_p(c_s_surf)
+            ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
+            dudT = self.param.dUdT_p(c_s_surf)
+
+        ocp_av = pybamm.average(ocp)
+        ocp_av_dim = pybamm.average(ocp_dim)
+        dudT_av = pybamm.average(dudT)
+
+        variables = {
+            self.domain + " electrode open circuit potential": ocp,
+            self.domain + " electrode open circuit potential [V]": ocp_dim,
+            "Average "
+            + self.domain.lower()
+            + " electrode open circuit potential": ocp_av,
+            "Average "
+            + self.domain.lower()
+            + " electrode open circuit potential [V]": ocp_av_dim,
+            self.domain + " electrode entropic change": dudT,
+            "Average " + self.domain.lower() + " electrode entropic change": dudT_av,
+        }
+
+        return variables
+
     def _flux_law(self, c):
         raise NotImplementedError
 
@@ -82,8 +115,8 @@ class BaseParticle(pybamm.BaseSubModel):
 
         self.events[
             "Minumum " + self.domain.lower() + " particle surface concentration"
-        ] = (pybamm.min(c_s_surf) - tol)
+        ] = (pybamm.Function(np.min, c_s_surf) - tol)
 
         self.events[
             "Maximum " + self.domain.lower() + " particle surface concentration"
-        ] = (1 - tol) - pybamm.max(c_s_surf)
+        ] = (1 - tol) - pybamm.Function(np.max, c_s_surf)

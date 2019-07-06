@@ -33,8 +33,11 @@ class SPMe(BaseModel):
             phi_s = self.variables[domain + " electrode potential"]
             phi_e = self.variables[domain + " electrolyte potential"]
             delta_phi = phi_s - phi_e
+            delta_phi_av = pybamm.average(delta_phi)
             s = self.submodels[domain.lower() + " interface"]
-            var = s._get_standard_surface_potential_difference_variables(delta_phi)
+            var = s._get_standard_surface_potential_difference_variables(
+                delta_phi, delta_phi_av
+            )
             self.variables.update(var)
 
     def set_current_collector_submodel(self):
@@ -55,10 +58,10 @@ class SPMe(BaseModel):
 
         self.submodels[
             "negative interface"
-        ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Negative")
+        ] = pybamm.interface.inverse_butler_volmer.LithiumIon(self.param, "Negative")
         self.submodels[
             "positive interface"
-        ] = pybamm.interface.lithium_ion.InverseButlerVolmer(self.param, "Positive")
+        ] = pybamm.interface.inverse_butler_volmer.LithiumIon(self.param, "Positive")
 
     def set_particle_submodel(self):
 
