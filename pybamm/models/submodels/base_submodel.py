@@ -59,11 +59,7 @@ class BaseSubModel:
         self.events = {}
 
         self.domain = domain
-
-        if self.domain in ["Negative", "Positive"]:
-            self.domain_for_broadcast = self.domain.lower() + " electrode"
-        else:
-            self.domain_for_broadcast = "separator"
+        self.set_domain_for_broadcast()
 
     @property
     def domain(self):
@@ -79,6 +75,13 @@ class BaseSubModel:
             raise pybamm.DomainError(
                 "Domain must be either 'Negative' or 'Positive' not {}".format(domain)
             )
+
+    def set_domain_for_broadcast(self):
+        if hasattr(self, "_domain"):
+            if self.domain in ["Negative", "Positive"]:
+                self.domain_for_broadcast = self.domain.lower() + " electrode"
+            elif self.domain == "Separator":
+                self.domain_for_broadcast = "separator"
 
     def get_fundamental_variables(self):
         """

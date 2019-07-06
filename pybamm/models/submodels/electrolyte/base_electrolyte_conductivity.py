@@ -152,9 +152,12 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         """
 
         pot_scale = self.param.potential_scale
+        # Average, and broadcast if necessary
         delta_phi_av = pybamm.average(delta_phi)
+        if delta_phi.domain in [[], ["current collector"]]:
+            delta_phi = pybamm.Broadcast(delta_phi, self.domain_for_broadcast)
 
-        return {
+        variables = {
             self.domain + " electrode surface potential difference": delta_phi,
             "Average "
             + self.domain.lower()

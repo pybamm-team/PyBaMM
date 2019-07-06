@@ -38,12 +38,14 @@ class BaseModel(BaseInterface):
         if self.domain + " electrode surface potential difference" not in variables:
             variables = self._get_delta_phi_s(variables)
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
+        # If delta_phi_s was broadcast, take only the orphan
+        if isinstance(delta_phi_s, pybamm.Broadcast):
+            delta_phi_s = delta_phi_s.orphans[0]
 
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        variables.update(self._get_standard_ocp_variables(variables))
-        ocp = variables[self.domain + " electrode open circuit potential"]
+        ocp, dUdT = self._get_open_circuit_potential(variables)
         eta_r = delta_phi_s - ocp
 
         if self.domain == "Negative":
@@ -58,6 +60,7 @@ class BaseModel(BaseInterface):
         variables.update(self._get_standard_interfacial_current_variables(j, j_av))
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
+        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         if (
             "Negative electrode interfacial current density" in variables

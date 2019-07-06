@@ -24,7 +24,10 @@ class BaseBatteryModel(pybamm.BaseModel):
     def default_parameter_values(self):
         # Default parameter values, geometry, submesh, spatial methods and solver
         # Lion parameters left as default parameter set for tests
-        input_path = os.path.join(os.getcwd(), "input", "parameters", "lithium-ion")
+        input_path = os.path.join(
+            pybamm.root_dir(),
+            "input", "parameters", "lithium-ion"
+        )
         return pybamm.ParameterValues(
             os.path.join(
                 input_path, "mcmb2528_lif6-in-ecdmc_lico2_parameters_Dualfoil.csv"
@@ -32,7 +35,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             {
                 "Typical current [A]": 1,
                 "Current function": os.path.join(
-                    os.getcwd(),
+                    pybamm.root_dir(),
                     "pybamm",
                     "parameters",
                     "standard_current_functions",
