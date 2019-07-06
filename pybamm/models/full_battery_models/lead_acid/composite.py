@@ -40,11 +40,8 @@ class Composite(BaseModel):
             phi_s = self.variables[domain + " electrode potential"]
             phi_e = self.variables[domain + " electrolyte potential"]
             delta_phi = phi_s - phi_e
-            delta_phi_av = pybamm.average(delta_phi)
             s = self.submodels[domain.lower() + " interface"]
-            var = s._get_standard_surface_potential_difference_variables(
-                delta_phi, delta_phi_av
-            )
+            var = s._get_standard_surface_potential_difference_variables(delta_phi)
             self.variables.update(var)
 
     def set_current_collector_submodel(self):
@@ -64,10 +61,10 @@ class Composite(BaseModel):
     def set_interfacial_submodel(self):
         self.submodels[
             "negative interface"
-        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Negative")
+        ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Negative")
         self.submodels[
             "positive interface"
-        ] = pybamm.interface.inverse_butler_volmer.LeadAcid(self.param, "Positive")
+        ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Positive")
 
     def set_negative_electrode_submodel(self):
         self.submodels["negative electrode"] = pybamm.electrode.ohm.CombinedOrder(
@@ -83,9 +80,7 @@ class Composite(BaseModel):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
-            self.param, ocp=True
-        )
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
 
         self.submodels[
             "electrolyte conductivity"

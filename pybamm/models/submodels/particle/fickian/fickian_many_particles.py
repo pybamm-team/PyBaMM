@@ -35,7 +35,6 @@ class ManyParticles(BaseModel):
 
         variables = self._get_standard_concentration_variables(c_s, c_s)
         variables.update(self._get_standard_flux_variables(N_s, N_s))
-        variables.update(self._get_standard_ocp_variables(c_s))
 
         return variables
 
