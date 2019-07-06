@@ -68,11 +68,11 @@ class TestCurrentFunctions(unittest.TestCase):
         dimensional_current = pybamm.electrical_parameters.dimensional_current_with_time
         dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
 
-        def current(t):
+        def user_current(t):
             return dimensional_current_eval.evaluate(t=t)
 
         # check output types
-        standard_tests = StandardCurrentFunctionTests([current])
+        standard_tests = StandardCurrentFunctionTests([user_current])
         standard_tests.test_all()
 
         # check output correct value
