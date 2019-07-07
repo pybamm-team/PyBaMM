@@ -39,18 +39,29 @@ class LOQS(BaseModel):
 
         # Should probably refactor as this is a bit clunky at the moment
         # Maybe each reaction as a Reaction class so we can just list names of classes
+        param = self.param
+        icd = " interfacial current density"
         self.reactions = {
             "main": {
-                "neg": {
-                    "s_plus": self.param.s_n,
-                    "j": "Average negative electrode interfacial current density",
-                },
-                "pos": {
-                    "s_plus": self.param.s_p,
-                    "j": "Average positive electrode interfacial current density",
-                },
+                "Negative": {"s": param.s_n, "aj": "Average negative electrode" + icd},
+                "Positive": {"s": param.s_p, "aj": "Average positive electrode" + icd},
             }
         }
+        if "oxygen" in self.options["side reactions"]:
+            self.reactions["oxygen"] = {
+                "Negative": {
+                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s_ox": -param.s_ox_Ox,
+                    "aj": "Average negative electrode oxygen" + icd,
+                },
+                "Positive": {
+                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s_ox": -param.s_ox_Ox,
+                    "aj": "Average positive electrode oxygen" + icd,
+                },
+            }
+            self.reactions["main"]["Negative"]["s_ox"] = 0
+            self.reactions["main"]["Positive"]["s_ox"] = 0
 
     def set_current_collector_submodel(self):
 
@@ -112,15 +123,14 @@ class LOQS(BaseModel):
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderDifferential(self.param, domain)
+                ] = surf_form.LeadingOrderDifferential(
+                    self.param, domain, self.reactions
+                )
         elif self.options["capacitance"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
-
-        else:
-            raise pybamm.OptionError("'capacitance' must be either 'True' or 'False'")
+                ] = surf_form.LeadingOrderAlgebraic(self.param, domain, self.reactions)
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.LeadingOrder(
             self.param, self.reactions

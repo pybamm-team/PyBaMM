@@ -15,7 +15,8 @@ class LeadingOrder(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    reactions : dict
+        Dictionary of reaction terms
 
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.diffusion.BaseModel`
     """
@@ -58,20 +59,11 @@ class LeadingOrder(BaseModel):
         deps_n_dt_av = variables["Average negative electrode porosity change"]
         deps_p_dt_av = variables["Average positive electrode porosity change"]
 
-        # TODO: ask tino about this bit
-        # the "j" component of reactions is now just a string referring to the variable
-        # so that the expression doesn't need to be set twice
         source_terms = sum(
-            param.l_n * rxn["neg"]["s_plus"] * variables[rxn["neg"]["j"]]
-            + param.l_p * rxn["pos"]["s_plus"] * variables[rxn["pos"]["j"]]
+            param.l_n * rxn["Negative"]["s"] * variables[rxn["Negative"]["aj"]]
+            + param.l_p * rxn["Positive"]["s"] * variables[rxn["Positive"]["aj"]]
             for rxn in self.reactions.values()
         )
-
-        # source_terms = sum(
-        #     param.l_n * rxn["neg"]["s_plus"] * rxn["neg"]["aj"]
-        #     + param.l_p * rxn["pos"]["s_plus"] * rxn["pos"]["aj"]
-        #     for rxn in self.reactions.values()
-        # )
 
         self.rhs = {
             c_e_av: 1

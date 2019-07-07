@@ -19,8 +19,9 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseModel`
     """  # noqa: E501
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, reactions):
         super().__init__(param, domain)
+        self.reactions = reactions
 
     def get_fundamental_variables(self):
 
@@ -30,8 +31,6 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             return {}
         elif self.domain == "Positive":
             delta_phi = pybamm.standard_variables.delta_phi_p_av
-        else:
-            raise pybamm.DomainError
 
         variables = self._get_standard_surface_potential_difference_variables(delta_phi)
         return variables
@@ -49,9 +48,6 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
         elif self.domain == "Positive":
             delta_phi_init = self.param.U_p(self.param.c_p_init)
 
-        else:
-            raise pybamm.DomainError
-
         self.initial_conditions = {delta_phi: delta_phi_init}
 
     def get_coupled_variables(self, variables):
@@ -61,10 +57,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             delta_phi_n_av = variables[
                 "Average negative electrode surface potential difference"
             ]
-
-            # Potential
             phi_e_av = -delta_phi_n_av
-
             return self._get_coupled_variables_from_potential(variables, phi_e_av)
 
         else:
@@ -86,8 +79,8 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
 
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reactions):
+        super().__init__(param, domain, reactions)
 
     def set_rhs(self, variables):
         if self.domain == "Separator":
@@ -95,8 +88,14 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
 
         param = self.param
 
-        j = variables[self.domain + " electrode interfacial current density"]
-        j_av = variables[
+        sum_j = 0
+        for reaction in self.reactions.values():
+            j = variables[reaction[self.domain]["aj"]]
+            if isinstance(j, pybamm.Broadcast):
+                j = j.orphans[0]
+            sum_j += j
+
+        sum_j_av = variables[
             "Average " + self.domain.lower() + " electrode interfacial current density"
         ]
         delta_phi = variables[
@@ -108,10 +107,7 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         elif self.domain == "Positive":
             C_dl = param.C_dl_p
 
-        if isinstance(j, pybamm.Broadcast):
-            j = j.orphans[0]
-
-        self.rhs[delta_phi] = 1 / C_dl * (j_av - j)
+        self.rhs[delta_phi] = 1 / C_dl * (sum_j_av - sum_j)
 
 
 class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
@@ -128,22 +124,25 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
     **Extends:** :class:`BaseLeadingOrderSurfaceForm`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reactions):
+        super().__init__(param, domain, reactions)
 
     def set_algebraic(self, variables):
         if self.domain == "Separator":
             return
 
-        j = variables[self.domain + " electrode interfacial current density"]
-        j_av = variables[
+        sum_j = 0
+        for reaction in self.reactions.values():
+            j = variables[reaction[self.domain]["aj"]]
+            if isinstance(j, pybamm.Broadcast):
+                j = j.orphans[0]
+            sum_j += j
+
+        sum_j_av = variables[
             "Average " + self.domain.lower() + " electrode interfacial current density"
         ]
         delta_phi = variables[
             "Average " + self.domain.lower() + " electrode surface potential difference"
         ]
 
-        if isinstance(j, pybamm.Broadcast):
-            j = j.orphans[0]
-
-        self.algebraic[delta_phi] = j_av - j
+        self.algebraic[delta_phi] = sum_j_av - sum_j

@@ -35,11 +35,17 @@ class TestLeadAcidLOQS(unittest.TestCase):
 
 
 class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
-    def test_well_posed(self):
+    def test_well_posed_differential(self):
         options = {"capacitance": "differential", "side reactions": ["oxygen"]}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
+    def test_well_posed_algebraic(self):
+        options = {"capacitance": "algebraic", "side reactions": ["oxygen"]}
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
+
+    @unittest.skip("varying surface area not implemented in new submodel format")
     def test_varying_surface_area(self):
         options = {
             "capacitance": "differential",
