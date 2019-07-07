@@ -77,14 +77,25 @@ class BaseModel(BaseStefanMaxwellConductivity):
         eps = variables[self.domain + " electrode porosity"]
         c_e = variables[self.domain + " electrolyte concentration"]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
+        if self.domain == "Negative":
+            sigma = param.sigma_n
+        elif self.domain == "Positive":
+            sigma = param.sigma_p
 
-        conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
+        sigma_eff = sigma * (1 - eps) ** self.param.b
+        conductivity = (
+            param.kappa_e(c_e)
+            * (eps ** param.b)
+            / (param.C_e / param.gamma_e + param.kappa_e(c_e) / sigma_eff)
+        )
 
         if self.domain == "Negative":
             c_e_flux = pybamm.BoundaryFlux(c_e, "right")
             flux = (
-                i_boundary_cc / pybamm.BoundaryValue(conductivity, "right")
-            ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "right") * c_e_flux
+                (i_boundary_cc / pybamm.BoundaryValue(conductivity, "right"))
+                - pybamm.BoundaryValue(param.chi(c_e) / c_e, "right") * c_e_flux
+                - i_boundary_cc / pybamm.BoundaryValue(sigma_eff, "right")
+            )
 
             lbc = (pybamm.Scalar(0), "Neumann")
             rbc = (flux, "Neumann")
@@ -94,8 +105,10 @@ class BaseModel(BaseStefanMaxwellConductivity):
         elif self.domain == "Positive":
             c_e_flux = pybamm.BoundaryFlux(c_e, "left")
             flux = (
-                i_boundary_cc / pybamm.BoundaryValue(conductivity, "left")
-            ) - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux
+                (i_boundary_cc / pybamm.BoundaryValue(conductivity, "left"))
+                - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux
+                - i_boundary_cc / pybamm.BoundaryValue(sigma_eff, "left")
+            )
 
             lbc = (flux, "Neumann")
             rbc = (pybamm.Scalar(0), "Neumann")
@@ -123,11 +136,24 @@ class BaseModel(BaseStefanMaxwellConductivity):
         eps = variables[self.domain + " electrode porosity"]
         c_e = variables[self.domain + " electrolyte concentration"]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
+        i_boundary_cc = variables["Current collector current density"]
 
-        conductivity = param.kappa_e(c_e) * (eps ** param.b) / param.C_e / param.gamma_e
+        if self.domain == "Negative":
+            sigma = param.sigma_n
+        elif self.domain == "Positive":
+            sigma = param.sigma_p
+
+        sigma_eff = sigma * (1 - eps) ** self.param.b
+        conductivity = (
+            param.kappa_e(c_e)
+            * (eps ** param.b)
+            / (param.C_e / param.gamma_e + param.kappa_e(c_e) / sigma_eff)
+        )
 
         i_e = conductivity * (
-            (param.chi(c_e) / c_e) * pybamm.grad(c_e) + pybamm.grad(delta_phi)
+            (param.chi(c_e) / c_e) * pybamm.grad(c_e)
+            + pybamm.grad(delta_phi)
+            + i_boundary_cc / sigma_eff
         )
         variables.update(self._get_domain_current_variables(i_e))
 
