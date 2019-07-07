@@ -80,27 +80,29 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         if self.domain == "Negative":
             c_e_flux = pybamm.BoundaryFlux(c_e, "right")
-            flux = (
+            flux_left = -pybamm.BoundaryValue(i_boundary_cc / sigma_eff, "left")
+            flux_right = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "right"))
                 - pybamm.BoundaryValue(param.chi(c_e) / c_e, "right") * c_e_flux
-                - i_boundary_cc / pybamm.BoundaryValue(sigma_eff, "right")
+                - pybamm.BoundaryValue(i_boundary_cc / sigma_eff, "right")
             )
 
-            lbc = (pybamm.Scalar(0), "Neumann")
-            rbc = (flux, "Neumann")
+            lbc = (flux_left, "Neumann")
+            rbc = (flux_right, "Neumann")
             lbc_c_e = (pybamm.Scalar(0), "Neumann")
             rbc_c_e = (c_e_flux, "Neumann")
 
         elif self.domain == "Positive":
             c_e_flux = pybamm.BoundaryFlux(c_e, "left")
-            flux = (
+            flux_left = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "left"))
                 - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux
-                - i_boundary_cc / pybamm.BoundaryValue(sigma_eff, "left")
+                - pybamm.BoundaryValue(i_boundary_cc / sigma_eff, "left")
             )
+            flux_right = -pybamm.BoundaryValue(i_boundary_cc / sigma_eff, "right")
 
-            lbc = (flux, "Neumann")
-            rbc = (pybamm.Scalar(0), "Neumann")
+            lbc = (flux_left, "Neumann")
+            rbc = (flux_right, "Neumann")
             lbc_c_e = (c_e_flux, "Neumann")
             rbc_c_e = (pybamm.Scalar(0), "Neumann")
 
