@@ -1,8 +1,5 @@
 #
-# Class for electrolyte conductivity employing stefan-maxwell
-#
-#
-# Base class for full surface form electrolyte conductivity employing stefan-maxwell
+# Class for full surface form electrolyte conductivity employing stefan-maxwell
 #
 import pybamm
 from ..base_stefan_maxwell_conductivity import (

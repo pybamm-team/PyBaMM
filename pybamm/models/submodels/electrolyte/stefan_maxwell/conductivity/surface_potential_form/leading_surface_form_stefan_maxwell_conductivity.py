@@ -1,5 +1,5 @@
 #
-# Class for full surface form electrolyte conductivity employing stefan-maxwell
+# Class for leading-order surface form electrolyte conductivity employing stefan-maxwell
 #
 import pybamm
 from ..leading_stefan_maxwell_conductivity import LeadingOrder
