@@ -25,8 +25,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Default parameter values, geometry, submesh, spatial methods and solver
         # Lion parameters left as default parameter set for tests
         input_path = os.path.join(
-            pybamm.root_dir(),
-            "input", "parameters", "lithium-ion"
+            pybamm.root_dir(), "input", "parameters", "lithium-ion"
         )
         return pybamm.ParameterValues(
             os.path.join(
@@ -34,12 +33,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             ),
             {
                 "Typical current [A]": 1,
-                "Current function": os.path.join(
-                    pybamm.root_dir(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
+                "Current function": pybamm.GetConstantCurrent(
+                    pybamm.standard_parameters_lithium_ion.I_typ
                 ),
                 "Electrolyte diffusivity": os.path.join(
                     input_path, "electrolyte_diffusivity_Capiglia1999.py"
@@ -148,6 +143,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_standard_output_variables(self):
         # Standard output variables
+
         # Interfacial current
         self.variables.update(
             {
@@ -158,7 +154,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Exchange current density": None,
             }
         )
-
         self.variables.update(
             {
                 "Negative electrode current density [A.m-2]": None,
@@ -168,6 +163,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Exchange current density [A.m-2]": None,
             }
         )
+
         # Voltage
         self.variables.update(
             {
@@ -180,7 +176,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Terminal voltage": None,
             }
         )
-
         self.variables.update(
             {
                 "Negative electrode open circuit potential [V]": None,
@@ -205,7 +200,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Average solid phase ohmic losses": None,
             }
         )
-
         self.variables.update(
             {
                 "Negative reaction overpotential [V]": None,
@@ -217,6 +211,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Average solid phase ohmic losses [V]": None,
             }
         )
+
         # Concentration
         self.variables.update(
             {
@@ -237,7 +232,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.variables = {}
 
         # Current
-        icell = pybamm.electrical_parameters.current_with_time
+        icell = pybamm.electrical_parameters.current_density_with_time
         icell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
         I = pybamm.electrical_parameters.dimensional_current_with_time
         self.variables.update(
@@ -247,9 +242,19 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Current [A]": I,
             }
         )
+
         # Time
-        self.variables.update({"Time": pybamm.t})
-        # x-position
+        time_scale = pybamm.electrical_parameters.timescale
+        self.variables.update(
+            {
+                "Time [s]": pybamm.t * time_scale,
+                "Time [min]": pybamm.t * time_scale / 60,
+                "Time [h]": pybamm.t * time_scale / 3600,
+                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
+            }
+        )
+
+        # Spatial
         var = pybamm.standard_spatial_vars
         L_x = pybamm.geometric_parameters.L_x
         self.variables.update(

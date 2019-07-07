@@ -1,7 +1,11 @@
+#
+# Simulate drive cycle loaded from csv file
+#
 import pybamm
 import numpy as np
 
 # load model
+pybamm.set_logging_level("INFO")
 model = pybamm.lithium_ion.SPMe()
 
 # create geometry
@@ -9,6 +13,7 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
+param["Current function"] = pybamm.GetCurrentData("US06.csv", units="[A]")
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -19,9 +24,18 @@ mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
-# solve model
-t_eval = np.linspace(0, 0.2, 100)
-solution = model.default_solver.solve(model, t_eval)
+# simulate US06 drive cycle
+tau = param.process_symbol(
+    pybamm.standard_parameters_lithium_ion.tau_discharge
+).evaluate(0)
+t_eval = np.linspace(0, 600 / tau, 600)
+
+# need to increase max solver steps if solving DAEs along with an erratic drive cycle
+solver = model.default_solver
+if isinstance(solver, pybamm.DaeSolver):
+    solver.max_steps = 10000
+
+solution = solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(model, mesh, solution)
