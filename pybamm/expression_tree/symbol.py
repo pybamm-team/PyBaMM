@@ -15,9 +15,24 @@ def evaluate_for_shape_using_domain(domain):
     """
     Return a vector of the appropriate shape, based on the domain.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
+
+    Empty domain has size 1.
+    If the domain falls within the list of standard battery domains, the size is read
+    from a dictionary of standard domain sizes. Otherwise, the hash of the domain string
+    is used to generate a `random` domain size.
     """
+    fixed_domain_sizes = {
+        "current collector": 3,
+        "negative particle": 5,
+        "positive particle": 7,
+        "negative electrode": 11,
+        "separator": 13,
+        "positive electrode": 17,
+    }
     if domain == []:
         size = 1
+    elif all(dom in fixed_domain_sizes for dom in domain):
+        size = sum(fixed_domain_sizes[dom] for dom in domain)
     else:
         size = sum(hash(dom) % 100 for dom in domain)
     return np.nan * np.ones((size, 1))

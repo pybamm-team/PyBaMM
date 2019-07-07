@@ -5,7 +5,7 @@ import pickle
 import scipy.interpolate as interp
 
 # change working directory to the root of pybamm
-os.chdir(pybamm.__path__[0] + "/..")
+os.chdir(pybamm.root_dir())
 
 "-----------------------------------------------------------------------------"
 "Pick C_rate and load comsol data"

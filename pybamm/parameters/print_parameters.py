@@ -21,6 +21,7 @@ ignore = [
     "unicode_literals",
     "pybamm",
     "constants",
+    "np",
 ]
 
 
