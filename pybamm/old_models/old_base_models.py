@@ -410,12 +410,8 @@ class OldStandardBatteryBaseModel(OldBaseModel):
             ),
             {
                 "Typical current [A]": 1,
-                "Current function": os.path.join(
-                    pybamm_path,
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
+                "Current function": pybamm.GetConstantCurrent(
+                    pybamm.standard_parameters_lithium_ion.I_typ
                 ),
                 "Electrolyte diffusivity": os.path.join(
                     input_path, "electrolyte_diffusivity_Capiglia1999.py"
@@ -676,12 +672,8 @@ class OldLeadAcidBaseModel(OldStandardBatteryBaseModel):
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current [A]": 1,
-                "Current function": os.path.join(
-                    pybamm_path,
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
+                "Current function": pybamm.GetConstantCurrent(
+                    pybamm.standard_parameters_lead_acid.I_typ
                 ),
                 "Electrolyte diffusivity": os.path.join(
                     input_path, "electrolyte_diffusivity_Gu1997.py"
@@ -710,9 +702,21 @@ class OldLeadAcidBaseModel(OldStandardBatteryBaseModel):
 
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
-        # Standard time variable
+        # Current
+        icell = pybamm.standard_parameters_lead_acid.current_with_time
+        icell_dim = (
+            pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
+        )
+        I = pybamm.standard_parameters_lead_acid.dimensional_current_with_time
+        self.variables.update(
+            {
+                "Total current density": icell,
+                "Total current density [A.m-2]": icell_dim,
+                "Current [A]": I,
+            }
+        )
+        # Time
         time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
-        I = pybamm.electrical_parameters.dimensional_current_with_time
         self.variables.update(
             {
                 "Time [s]": pybamm.t * time_scale,

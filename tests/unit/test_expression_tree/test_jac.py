@@ -175,6 +175,12 @@ class TestJacobian(unittest.TestCase):
         jac = ind.jac(vec).evaluate(y=np.linspace(0, 2, 5)).toarray()
         np.testing.assert_array_equal(jac, np.array([[0, 0, 0, 1, 0]]))
 
+        # jac of ind of something that isn't a StateVector should return zeros
+        const_vec = pybamm.Vector(np.ones(3))
+        ind = pybamm.Index(const_vec, 2)
+        jac = ind.jac(vec).evaluate(y=np.linspace(0, 2, 5)).toarray()
+        np.testing.assert_array_equal(jac, np.array([[0, 0, 0, 0, 0]]))
+
     def test_jac_of_self(self):
         "Jacobian of variable with respect to itself should be one."
         a = pybamm.Variable("a")

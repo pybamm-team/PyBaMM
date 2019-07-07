@@ -35,14 +35,14 @@ class CombinedOrder(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        eps = variables[self._domain + " electrode porosity"]
+        eps = variables[self.domain + " electrode porosity"]
 
-        if self._domain == "Negative":
+        if self.domain == "Negative":
             sigma_eff = self.param.sigma_n * (1 - eps)
             phi_s = i_boundary_cc * x_n * (x_n - 2 * l_n) / (2 * sigma_eff * l_n)
             i_s = i_boundary_cc - i_boundary_cc * x_n / l_n
 
-        elif self._domain == "Positive":
+        elif self.domain == "Positive":
             ocp_p_av = variables["Average positive electrode open circuit potential"]
             eta_r_p_av = variables["Average positive electrode reaction overpotential"]
             phi_e_p_av = variables["Average positive electrolyte potential"]
@@ -63,7 +63,7 @@ class CombinedOrder(BaseModel):
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 
-        if self._domain == "Positive":
+        if self.domain == "Positive":
             variables.update(self._get_standard_whole_cell_current_variables(variables))
 
         return variables

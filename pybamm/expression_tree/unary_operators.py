@@ -3,6 +3,7 @@
 #
 import numpy as np
 import pybamm
+from scipy.sparse import csr_matrix
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -174,8 +175,20 @@ class Index(UnaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        child_jac = self.child.jac(variable)
-        return Index(child_jac, self.index)
+
+        # if child.jac returns a matrix of zeros, this subsequently gives a bug
+        # when trying to simplify the node Index(child_jac). Instead, search the
+        # tree for StateVectors and return a matrix of zeros of the correct size
+        # if none are found.
+        if all([not (isinstance(n, pybamm.StateVector)) for n in self.pre_order()]):
+            variable_y_indices = np.arange(
+                variable.y_slice.start, variable.y_slice.stop
+            )
+            jac = csr_matrix((1, np.size(variable_y_indices)))
+            return pybamm.Matrix(jac)
+        else:
+            child_jac = self.child.jac(variable)
+            return Index(child_jac, self.index)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """

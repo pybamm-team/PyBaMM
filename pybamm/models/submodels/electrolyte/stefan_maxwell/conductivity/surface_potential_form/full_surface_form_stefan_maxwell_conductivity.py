@@ -23,9 +23,8 @@ class Full(BaseFull):
         super().__init__(param, domain)
 
     def set_algebraic(self, variables):
-        delta_phi = variables[self._domain + " electrode surface potential difference"]
-        i_e = variables[self._domain + " electrolyte current density"]
-        j = variables[self._domain + " electrode interfacial current density"]
+        delta_phi = variables[self.domain + " electrode surface potential difference"]
+        i_e = variables[self.domain + " electrolyte current density"]
+        j = variables[self.domain + " electrode interfacial current density"]
 
         self.rhs[delta_phi] = pybamm.div(i_e) - j
-
