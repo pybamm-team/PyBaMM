@@ -73,21 +73,10 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         param = self.param
 
+        conductivity, sigma_eff = self._get_conductivities(variables)
         i_boundary_cc = variables["Current collector current density"]
-        eps = variables[self.domain + " electrode porosity"]
         c_e = variables[self.domain + " electrolyte concentration"]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
-        if self.domain == "Negative":
-            sigma = param.sigma_n
-        elif self.domain == "Positive":
-            sigma = param.sigma_p
-
-        sigma_eff = sigma * (1 - eps) ** self.param.b
-        conductivity = (
-            param.kappa_e(c_e)
-            * (eps ** param.b)
-            / (param.C_e / param.gamma_e + param.kappa_e(c_e) / sigma_eff)
-        )
 
         if self.domain == "Negative":
             c_e_flux = pybamm.BoundaryFlux(c_e, "right")
@@ -125,19 +114,10 @@ class BaseModel(BaseStefanMaxwellConductivity):
             c_e: {"left": lbc_c_e, "right": rbc_c_e},
         }
 
-    def _get_neg_pos_coupled_variables(self, variables):
-        """
-        A private function to get the coupled variables when the domain is 'Negative'
-        or 'Positive'.
-        """
-
+    def _get_conductivities(self, variables):
         param = self.param
-
         eps = variables[self.domain + " electrode porosity"]
         c_e = variables[self.domain + " electrolyte concentration"]
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
-        i_boundary_cc = variables["Current collector current density"]
-
         if self.domain == "Negative":
             sigma = param.sigma_n
         elif self.domain == "Positive":
@@ -149,6 +129,21 @@ class BaseModel(BaseStefanMaxwellConductivity):
             * (eps ** param.b)
             / (param.C_e / param.gamma_e + param.kappa_e(c_e) / sigma_eff)
         )
+
+        return conductivity, sigma_eff
+
+    def _get_neg_pos_coupled_variables(self, variables):
+        """
+        A private function to get the coupled variables when the domain is 'Negative'
+        or 'Positive'.
+        """
+
+        param = self.param
+
+        conductivity, sigma_eff = self._get_conductivities(variables)
+        i_boundary_cc = variables["Current collector current density"]
+        c_e = variables[self.domain + " electrolyte concentration"]
+        delta_phi = variables[self.domain + " electrode surface potential difference"]
 
         i_e = conductivity * (
             (param.chi(c_e) / c_e) * pybamm.grad(c_e)
