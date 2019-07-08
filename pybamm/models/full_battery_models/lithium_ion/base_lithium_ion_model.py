@@ -67,3 +67,16 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "r_p [m]": var.r_p * param.R_p,
             }
         )
+
+    def set_reactions(self):
+
+        # Should probably refactor as this is a bit clunky at the moment
+        # Maybe each reaction as a Reaction class so we can just list names of classes
+        param = self.param
+        icd = " interfacial current density"
+        self.reactions = {
+            "main": {
+                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
+                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
+            }
+        }

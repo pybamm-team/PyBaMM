@@ -16,6 +16,7 @@ class DFN(BaseModel):
         super().__init__(options)
         self.name = "Doyle-Fuller-Newman model"
 
+        self.set_reactions()
         self.set_current_collector_submodel()
         self.set_porosity_submodel()
         self.set_convection_submodel()
@@ -73,9 +74,11 @@ class DFN(BaseModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
         self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-            self.param
+            self.param, self.reactions
         )
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+            self.param, self.reactions
+        )
 
     @property
     def default_geometry(self):

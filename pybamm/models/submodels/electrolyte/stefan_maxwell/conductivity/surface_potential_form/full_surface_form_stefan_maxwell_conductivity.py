@@ -31,8 +31,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
             return {}
         elif self.domain == "Positive":
             delta_phi = pybamm.standard_variables.delta_phi_p
-        else:
-            raise pybamm.DomainError
 
         variables = self._get_standard_surface_potential_difference_variables(delta_phi)
 
@@ -47,8 +45,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
             delta_phi_e_init = self.param.U_n(self.param.c_n_init)
         elif self.domain == "Positive":
             delta_phi_e_init = self.param.U_p(self.param.c_p_init)
-        else:
-            raise pybamm.DomainError
 
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 
@@ -102,9 +98,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
             rbc = (flux_right, "Neumann")
             lbc_c_e = (c_e_flux, "Neumann")
             rbc_c_e = (pybamm.Scalar(0), "Neumann")
-
-        else:
-            raise pybamm.DomainError
 
         # TODO: check if we still need the boundary conditions for c_e, once we have
         # internal boundary conditions

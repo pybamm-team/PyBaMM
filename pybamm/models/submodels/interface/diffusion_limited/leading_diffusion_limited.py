@@ -3,10 +3,10 @@
 #
 
 import pybamm
-from ..base_interface import BaseInterface
+from .base_diffusion_limited import BaseModel
 
 
-class LeadingOrder(BaseInterface):
+class LeadingOrder(BaseModel):
     """
     Leading-order submodel for diffusion-limited kinetics
 
@@ -24,65 +24,15 @@ class LeadingOrder(BaseInterface):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def _get_delta_phi_s(self, variables):
-        "Calculate delta_phi_s, and derived variables, using phi_s and phi_e"
-        phi_s = variables[self.domain + " electrode potential"]
-        phi_e = variables[self.domain + " electrolyte potential"]
-        delta_phi_s = phi_s - phi_e
-        variables.update(
-            self._get_standard_surface_potential_difference_variables(delta_phi_s)
-        )
-        return variables
-
-    def get_coupled_variables(self, variables):
-        # Calculate delta_phi_s from phi_s and phi_e if it isn't already known
-        if self.domain + " electrode surface potential difference" not in variables:
-            variables = self._get_delta_phi_s(variables)
-        delta_phi_s = variables[self.domain + " electrode surface potential difference"]
-        # If delta_phi_s was broadcast, take only the orphan
-        if isinstance(delta_phi_s, pybamm.Broadcast):
-            delta_phi_s = delta_phi_s.orphans[0]
-
-        # Get exchange-current density
-        j0 = self._get_exchange_current_density(variables)
-        # Get open-circuit potential variables and reaction overpotential
-        ocp, dUdT = self._get_open_circuit_potential(variables)
-        eta_r = delta_phi_s - ocp
-
-        j_av = self._get_average_interfacial_current_density(variables)
-        # j = j_av + (j - pybamm.average(j))  # enforce true average
-
+    def _get_diffusion_limited_current_density(self, variables):
         if self.domain == "Negative":
-            j_p = variables[
-                "Positive electrode"
-                + self.reaction_name
-                + " interfacial current density"
-            ].orphans[0]
-            j = -self.param.l_p * j_p / self.param.l_n
-
-        variables.update(self._get_standard_interfacial_current_variables(j, j_av))
-        variables.update(self._get_standard_exchange_current_variables(j0))
-        variables.update(self._get_standard_overpotential_variables(eta_r))
-        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
-
-        if (
-            "Negative electrode interfacial current density" in variables
-            and "Positive electrode interfacial current density" in variables
-        ):
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
+            j_p = pybamm.average(
+                variables[
+                    "Positive electrode"
+                    + self.reaction_name
+                    + " interfacial current density"
+                ]
             )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
+            j = pybamm.Scalar(0)  # -self.param.l_p * j_p / self.param.l_n
 
-        return variables
-
-    def _get_exchange_current_density(self, variables):
-        raise NotImplementedError
-
-    def _get_kinetics(self, j0, ne, eta_r):
-        raise NotImplementedError
-
-    def _get_open_circuit_potential(self, variables):
-        raise NotImplementedError
+        return j

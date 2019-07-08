@@ -20,8 +20,8 @@ class BaseModel(BaseElectrode):
     **Extends:** :class:`pybamm.electrode.BaseElectrode`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reactions=None):
+        super().__init__(param, domain, reactions)
 
     @property
     def default_solver(self):

@@ -21,7 +21,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
-class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
+class TestLeadAcidNewmanTiedemannSurfaceForm(unittest.TestCase):
     def test_well_posed_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.NewmanTiedemann(options)
@@ -40,6 +40,23 @@ class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
         options = {"surface form": "algebraic"}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
+
+
+class TestLeadAcidNewmanTiedemannSideReactions(unittest.TestCase):
+    def test_well_posed(self):
+        options = {"side reactions": ["oxygen"]}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model.check_well_posedness()
+
+    def test_well_posed_surface_form_differential(self):
+        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model.check_well_posedness()
+
+    def test_well_posed_surface_form_algebraic(self):
+        options = {"side reactions": ["oxygen"], "surface form": "algebraic"}
+        model = pybamm.lead_acid.NewmanTiedemann(options)
+        model.check_well_posedness()
 
 
 if __name__ == "__main__":

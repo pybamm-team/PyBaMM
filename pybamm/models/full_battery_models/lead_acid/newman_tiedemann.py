@@ -55,17 +55,27 @@ class NewmanTiedemann(BaseModel):
         self.submodels["positive interface"] = pybamm.interface.lead_acid.ButlerVolmer(
             self.param, "Positive"
         )
+        # Side reactions
+        if "oxygen" in self.options["side reactions"]:
+            self.submodels[
+                "positive oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.LeadingOrderDiffusionLimited(
+                self.param, "Negative"
+            )
 
     def set_negative_electrode_submodel(self):
         if self.options["surface form"] is False:
-            submodel = pybamm.electrode.ohm.Full(self.param, "Negative")
+            submodel = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
         else:
             submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
         self.submodels["negative electrode"] = submodel
 
     def set_positive_electrode_submodel(self):
         if self.options["surface form"] is False:
-            submodel = pybamm.electrode.ohm.Full(self.param, "Positive")
+            submodel = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
         else:
             submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
         self.submodels["positive electrode"] = submodel
