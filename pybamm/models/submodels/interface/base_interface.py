@@ -47,11 +47,15 @@ class BaseInterface(pybamm.BaseSubModel):
             self.domain + " electrode interfacial current density": j,
             "Average "
             + self.domain.lower()
-            + " electrode interfacial current density": j_av,
+            + " electrode"
+            + self.reaction_name
+            + " interfacial current density": j_av,
             self.domain + " interfacial current density [A.m-2]": i_typ * j,
             "Average "
             + self.domain.lower()
-            + " electrode interfacial current density [A.m-2]": i_typ * j_av,
+            + " electrode"
+            + self.reaction_name
+            + " interfacial current density [A.m-2]": i_typ * j_av,
         }
 
         return variables
@@ -86,11 +90,15 @@ class BaseInterface(pybamm.BaseSubModel):
             self.domain + " electrode exchange current density": j0,
             "Average "
             + self.domain.lower()
-            + " electrode exchange current density": j0_av,
+            + " electrode"
+            + self.reaction_name
+            + " exchange current density": j0_av,
             self.domain + " electrode exchange current density [A.m-2]": i_typ * j0,
             "Average "
             + self.domain.lower()
-            + " electrode exchange current density [A.m-2]": i_typ * j0_av,
+            + " electrode"
+            + self.reaction_name
+            + " exchange current density [A.m-2]": i_typ * j0_av,
         }
 
         return variables
@@ -125,11 +133,15 @@ class BaseInterface(pybamm.BaseSubModel):
             self.domain + " electrode reaction overpotential": eta_r,
             "Average "
             + self.domain.lower()
-            + " electrode reaction overpotential": eta_r_av,
+            + " electrode"
+            + self.reaction_name
+            + " reaction overpotential": eta_r_av,
             self.domain + " electrode reaction overpotential [V]": eta_r * pot_scale,
             "Average "
             + self.domain.lower()
-            + " electrode reaction overpotential [V]": eta_r_av * pot_scale,
+            + " electrode"
+            + self.reaction_name
+            + " reaction overpotential [V]": eta_r_av * pot_scale,
         }
 
         return variables
@@ -151,13 +163,17 @@ class BaseInterface(pybamm.BaseSubModel):
             self.domain + " electrode surface potential difference": delta_phi,
             "Average "
             + self.domain.lower()
-            + " electrode surface potential difference": delta_phi_av,
+            + " electrode"
+            + self.reaction_name
+            + " surface potential difference": delta_phi_av,
             self.domain
             + " electrode surface potential difference [V]": ocp_ref
             + delta_phi * pot_scale,
             "Average "
             + self.domain.lower()
-            + " electrode surface potential difference [V]": ocp_ref
+            + " electrode"
+            + self.reaction_name
+            + " surface potential difference [V]": ocp_ref
             + delta_phi_av * pot_scale,
         }
 
@@ -200,10 +216,14 @@ class BaseInterface(pybamm.BaseSubModel):
             self.domain + " electrode open circuit potential [V]": ocp_dim,
             "Average "
             + self.domain.lower()
-            + " electrode open circuit potential": ocp_av,
+            + " electrode"
+            + self.reaction_name
+            + " open circuit potential": ocp_av,
             "Average "
             + self.domain.lower()
-            + " electrode open circuit potential [V]": ocp_av_dim,
+            + " electrode"
+            + self.reaction_name
+            + " open circuit potential [V]": ocp_av_dim,
             self.domain + " electrode entropic change": dUdT,
             "Average " + self.domain.lower() + " electrode entropic change": dUdT_av,
         }

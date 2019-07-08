@@ -1,13 +1,14 @@
 #
-# Lithium-ion interface classes
+# Interface classes for oxygen reaction in lead-acid batteries
 #
+import pybamm
 from .base_interface import BaseInterface
-from . import inverse_kinetics, kinetics
+from . import kinetics
 
 
-class BaseInterfaceLithiumIon(BaseInterface):
+class BaseInterfaceOxygenLeadAcid(BaseInterface):
     """
-    Base lthium-ion interface class
+    Base lead-acid interface class
 
     Parameters
     ----------
@@ -22,35 +23,32 @@ class BaseInterfaceLithiumIon(BaseInterface):
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
-        self.reaction_name = ""  # empty reaction name, assumed to be the main reaction
+        self.reaction_name = " oxygen"
 
     def _get_exchange_current_density(self, variables):
         """
-        A private function to obtain the exchange current density for a lithium-ion
+        A private function to obtain the exchange current density for a lead acid
         deposition reaction.
 
         Parameters
         ----------
         variables: dict
-        `   The variables in the full model.
+            The variables in the full model.
 
         Returns
         -------
         j0 : :class: `pybamm.Symbol`
             The exchange current density.
         """
-        c_s_surf = variables[self.domain + " particle surface concentration"]
         c_e = variables[self.domain + " electrolyte concentration"]
+        # If c_e was broadcast, take only the orphan
+        if isinstance(c_e, pybamm.Broadcast):
+            c_e = c_e.orphans[0]
 
         if self.domain == "Negative":
-            prefactor = 1 / self.param.C_r_n
-
+            j0 = pybamm.Scalar(0)
         elif self.domain == "Positive":
-            prefactor = self.param.gamma_p / self.param.C_r_p
-
-        j0 = prefactor * (
-            c_e ** (1 / 2) * c_s_surf ** (1 / 2) * (1 - c_s_surf) ** (1 / 2)
-        )
+            j0 = self.param.j0_p_Ox_ref * c_e  # ** self.param.exponent_e_Ox
 
         return j0
 
@@ -71,43 +69,45 @@ class BaseInterfaceLithiumIon(BaseInterface):
             The entropic change in open-circuit potential due to temperature
 
         """
-        c_s_surf = variables[self.domain + " particle surface concentration"]
-        # c_s_surf = pybamm.surf(c_s, set_domain=True)
-
         if self.domain == "Negative":
-            ocp = self.param.U_n(c_s_surf)
-            dUdT = self.param.dUdT_n(c_s_surf)
-
+            ocp = self.param.U_n_Ox
         elif self.domain == "Positive":
-            ocp = self.param.U_p(c_s_surf)
-            dUdT = self.param.dUdT_p(c_s_surf)
+            ocp = self.param.U_p_Ox
+
+        dUdT = pybamm.Scalar(0)
 
         return ocp, dUdT
 
     def _get_number_of_electrons_in_reaction(self):
-        if self.domain == "Negative":
-            ne = self.param.ne_n
-        elif self.domain == "Positive":
-            ne = self.param.ne_p
-        return ne
+        return self.param.ne_Ox / 2
 
 
-class ButlerVolmer(BaseInterfaceLithiumIon, kinetics.BaseButlerVolmer):
+class ForwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.BaseForwardTafel):
     """
-    Extends :class:`BaseInterfaceLithiumIon` (for exchange-current density, etc) and
-    :class:`kinetics.BaseButlerVolmer` (for kinetics)
+    Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
+    :class:`kinetics.BaseForwardTafel` (for kinetics)
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
 
-class InverseButlerVolmer(
-    BaseInterfaceLithiumIon, inverse_kinetics.BaseInverseButlerVolmer
+class BackwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.BaseBackwardTafel):
+    """
+    Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
+    :class:`kinetics.BaseBackwardTafel` (for kinetics)
+    """
+
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
+
+
+class BaseLeadingOrderDiffusionLimited(
+    BaseInterfaceOxygenLeadAcid, BaseLeadingOrderDiffusionLimited
 ):
     """
-    Extends :class:`BaseInterfaceLithiumIon` (for exchange-current density, etc) and
-    :class:`inverse_kinetics.BaseInverseButlerVolmer` (for kinetics)
+    Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
+    :class:`kinetics.BaseLeadingOrderDiffusionLimited` (for kinetics)
     """
 
     def __init__(self, param, domain):

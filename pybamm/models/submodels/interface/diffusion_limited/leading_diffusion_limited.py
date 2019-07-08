@@ -1,5 +1,5 @@
 #
-# Base kinetics class
+# Leading-order diffusion limited kinetics
 #
 
 import pybamm
@@ -8,7 +8,7 @@ from ..base_interface import BaseInterface
 
 class BaseModel(BaseInterface):
     """
-    Base submodel for kinetics
+    Leading-order submodel for diffusion-limited kinetics
 
     Parameters
     ----------
@@ -48,12 +48,17 @@ class BaseModel(BaseInterface):
         # Get open-circuit potential variables and reaction overpotential
         ocp, dUdT = self._get_open_circuit_potential(variables)
         eta_r = delta_phi_s - ocp
-        # Get number of electrons in reaction
-        ne = self._get_number_of_electrons_in_reaction()
 
-        j = self._get_kinetics(j0, ne, eta_r)
         j_av = self._get_average_interfacial_current_density(variables)
         # j = j_av + (j - pybamm.average(j))  # enforce true average
+
+        if self.domain == "Negative":
+            j_p = variables[
+                "Positive electrode"
+                + self.reaction_name
+                + " interfacial current density"
+            ]
+            j = -self.param.l_p * j_p / self.param.l_n
 
         variables.update(self._get_standard_interfacial_current_variables(j, j_av))
         variables.update(self._get_standard_exchange_current_variables(j0))

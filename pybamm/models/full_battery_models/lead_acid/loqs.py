@@ -82,6 +82,7 @@ class LOQS(BaseModel):
 
     def set_interfacial_submodel(self):
 
+        # Main reaction
         if self.options["capacitance"] is False:
             self.submodels[
                 "negative interface"
@@ -97,6 +98,16 @@ class LOQS(BaseModel):
             self.submodels[
                 "positive interface"
             ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Positive")
+        # Side reactions
+        if "oxygen" in self.options["side reactions"]:
+            self.submodels[
+                "positive oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.DiffusionLimited(
+                self.param, "Negative"
+            )
 
     def set_negative_electrode_submodel(self):
 
