@@ -165,30 +165,6 @@ from .models.submodels import (
 )
 
 #
-# OLD MODELS. TODO: remove these once lead acid in new format
-#
-from .old_models.old_base_models import (
-    OldBaseModel,
-    OldLeadAcidBaseModel,
-    OldStandardBatteryBaseModel,
-    OldSubModel,
-)
-from .old_models import old_lead_acid
-
-from .old_models.old_submodels import (
-    old_current_collector,
-    old_electrode,
-    old_electrolyte_current,
-    old_electrolyte_diffusion,
-    old_interface,
-    old_porosity,
-    old_potential,
-    old_velocity,
-    old_vertical,
-)
-from .old_models.old_submodels import old_interface_lead_acid, old_oxygen_diffusion
-
-#
 # Parameters class and methods
 #
 from .parameters.parameter_values import ParameterValues
@@ -247,7 +223,9 @@ from .solvers.scikits_ode_solver import have_scikits_odes
 # Current profiles
 #
 from .parameters.standard_current_functions.base_current import GetCurrent
-from .parameters.standard_current_functions.get_constant_current import GetConstantCurrent
+from .parameters.standard_current_functions.get_constant_current import (
+    GetConstantCurrent,
+)
 from .parameters.standard_current_functions.get_user_current import GetUserCurrent
 from .parameters.standard_current_functions.get_current_data import GetCurrentData
 

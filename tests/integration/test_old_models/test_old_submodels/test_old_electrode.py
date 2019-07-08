@@ -10,6 +10,7 @@ import numbers
 import unittest
 
 
+@unittest.skipIf("old models removed, test kept for reference")
 @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
 class TestOldOhm(unittest.TestCase):
     def test_basic_processing(self):
