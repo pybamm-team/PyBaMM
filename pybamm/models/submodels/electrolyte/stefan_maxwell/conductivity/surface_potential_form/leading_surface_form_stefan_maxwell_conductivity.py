@@ -95,7 +95,7 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
 
         param = self.param
 
-        j = variables[self.domain + " electrode interfacial current density"]
+        j = variables[self.domain + " electrode interfacial current density"].orphans[0]
         j_av = variables[
             "Average " + self.domain.lower() + " electrode interfacial current density"
         ]
@@ -107,9 +107,6 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
             C_dl = param.C_dl_n
         elif self.domain == "Positive":
             C_dl = param.C_dl_p
-
-        if isinstance(j, pybamm.Broadcast):
-            j = j.orphans[0]
 
         self.rhs[delta_phi] = 1 / C_dl * (j_av - j)
 
@@ -135,15 +132,12 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         if self.domain == "Separator":
             return
 
-        j = variables[self.domain + " electrode interfacial current density"]
+        j = variables[self.domain + " electrode interfacial current density"].orphans[0]
         j_av = variables[
             "Average " + self.domain.lower() + " electrode interfacial current density"
         ]
         delta_phi = variables[
             "Average " + self.domain.lower() + " electrode surface potential difference"
         ]
-
-        if isinstance(j, pybamm.Broadcast):
-            j = j.orphans[0]
 
         self.algebraic[delta_phi] = j_av - j

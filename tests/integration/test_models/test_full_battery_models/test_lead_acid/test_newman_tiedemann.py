@@ -43,20 +43,20 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
 
 class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
     def test_basic_processing_differential(self):
-        options = {"capacitance": "differential"}
+        options = {"surface form": "differential"}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing_algebraic(self):
-        options = {"capacitance": "algebraic"}
+        options = {"surface form": "algebraic"}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"capacitance": "differential"}
+        options = {"surface form": "differential"}
         model = pybamm.lead_acid.NewmanTiedemann(options)
         optimtest = tests.OptimisationsTest(model)
 

@@ -32,7 +32,7 @@ class OldNewmanTiedemann(pybamm.OldLeadAcidBaseModel):
         c_e = pybamm.standard_variables.c_e
         eps = pybamm.standard_variables.eps
 
-        if self.options["capacitance"] is False:
+        if self.options["surface form"] is False:
             phi_e = pybamm.standard_variables.phi_e
             phi_s_p = pybamm.standard_variables.phi_s_p
             phi_s_n = pybamm.standard_variables.phi_s_n
@@ -143,7 +143,7 @@ class OldNewmanTiedemann(pybamm.OldLeadAcidBaseModel):
         neg = ["negative electrode"]
         pos = ["positive electrode"]
 
-        if self.options["capacitance"] is False:
+        if self.options["surface form"] is False:
             oec = pybamm.old_electrolyte_current
             eleclyte_current_model = oec.OldMacInnesStefanMaxwell(param)
             eleclyte_current_model.set_algebraic_system(self.variables, reactions)
@@ -164,7 +164,7 @@ class OldNewmanTiedemann(pybamm.OldLeadAcidBaseModel):
             # Electrolyte current
             oec = pybamm.old_electrolyte_current
             eleclyte_current_model = oec.OldMacInnesCapacitance(
-                param, self.options["capacitance"]
+                param, self.options["surface form"]
             )
             eleclyte_current_model.set_full_system(variables, reactions, neg)
             eleclyte_current_model.set_full_system(variables, reactions, pos)
@@ -182,7 +182,7 @@ class OldNewmanTiedemann(pybamm.OldLeadAcidBaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["capacitance"] == "differential":
+        if self.options["surface form"] == "differential":
             return pybamm.ScipySolver()
         else:
             return pybamm.ScikitsDaeSolver()

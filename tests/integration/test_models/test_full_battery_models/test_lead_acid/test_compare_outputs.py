@@ -56,7 +56,9 @@ class TestCompareOutputs(unittest.TestCase):
         full model solution
         """
         # load models
-        options = [{"capacitance": cap} for cap in [False, "differential", "algebraic"]]
+        options = [
+            {"surface form": cap} for cap in [False, "differential", "algebraic"]
+        ]
         model_combos = [
             ([pybamm.lead_acid.LOQS(opt) for opt in options]),
             ([pybamm.lead_acid.NewmanTiedemann(opt) for opt in options]),

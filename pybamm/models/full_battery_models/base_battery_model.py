@@ -115,7 +115,7 @@ class BaseBatteryModel(pybamm.BaseModel):
     def options(self):
         default_options = {
             "bc_options": {"dimensionality": 0},
-            "capacitance": False,
+            "surface form": False,
             "convection": False,
             "thermal": None,
             "first-order potential": "linear",
@@ -132,16 +132,16 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Some standard checks to make sure options are compatible
         if (
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
-            and options["capacitance"] is False
+            and options["surface form"] is False
         ):
             if options["bc_options"]["dimensionality"] == 1:
                 raise pybamm.ModelError(
-                    "must use capacitance formulation to solve {!s} in 2D".format(self)
+                    "must use surface formulation to solve {!s} in 2D".format(self)
                 )
             if len(options["side reactions"]) > 0:
                 raise pybamm.ModelError(
                     """
-                    must use capacitance formulation to solve {!s} with side reactions
+                    must use surface formulation to solve {!s} with side reactions
                     """.format(
                         self
                     )

@@ -53,7 +53,7 @@ class OldLOQS(pybamm.OldLeadAcidBaseModel):
 
         self.variables.update({"Electrolyte concentration": c_e, "Porosity": epsilon})
 
-        if self.options["capacitance"] is not False:
+        if self.options["surface form"] is not False:
             delta_phi_n = pybamm.Variable(
                 "Leading-order negative electrode surface potential difference",
                 curr_coll_domain,
@@ -83,7 +83,7 @@ class OldLOQS(pybamm.OldLeadAcidBaseModel):
             self.update(current_collector_model)
 
     def set_interface_submodel(self):
-        if self.options["capacitance"] is False:
+        if self.options["surface form"] is False:
             self.set_interface_direct_formulation()
         else:
             self.set_interface_capacitance_formulation()
@@ -227,10 +227,10 @@ class OldLOQS(pybamm.OldLeadAcidBaseModel):
             self.reactions["main"]["pos"]["s_ox"] = 0
 
     def set_electrolyte_current_submodel(self):
-        if self.options["capacitance"] is not False:
+        if self.options["surface form"] is not False:
             oec = pybamm.old_electrolyte_current
             eleclyte_current_model = oec.OldMacInnesCapacitance(
-                self.set_of_parameters, self.options["capacitance"]
+                self.set_of_parameters, self.options["surface form"]
             )
             eleclyte_current_model.set_leading_order_system(
                 self.variables, self.reactions, ["negative electrode"]
@@ -326,7 +326,7 @@ class OldLOQS(pybamm.OldLeadAcidBaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["capacitance"] == "algebraic":
+        if self.options["surface form"] == "algebraic":
             return pybamm.ScikitsDaeSolver()
         else:
             # Scipy is better for 1D problems (0D bcs), scikits better for 2D (1D bcs)

@@ -493,7 +493,7 @@ class OldStandardBatteryBaseModel(OldBaseModel):
     def options(self):
         default_options = {
             "bc_options": {"dimensionality": 0},
-            "capacitance": False,
+            "surface form": False,
             "convection": False,
             "first-order potential": "linear",
             "side reactions": [],
@@ -510,7 +510,7 @@ class OldStandardBatteryBaseModel(OldBaseModel):
             isinstance(
                 self, (pybamm.old_lead_acid.OldLOQS, pybamm.old_lead_acid.OldComposite)
             )
-            and options["capacitance"] is False
+            and options["surface form"] is False
         ):
             if options["bc_options"]["dimensionality"] == 1:
                 raise pybamm.ModelError(
