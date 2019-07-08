@@ -60,8 +60,12 @@ class LeadingOrder(BaseModel):
         deps_p_dt_av = variables["Average positive electrode porosity change"]
 
         source_terms = sum(
-            param.l_n * rxn["Negative"]["s"] * variables[rxn["Negative"]["aj"]]
-            + param.l_p * rxn["Positive"]["s"] * variables[rxn["Positive"]["aj"]]
+            param.l_n
+            * rxn["Negative"]["s"]
+            * variables[rxn["Negative"]["aj"]].orphans[0]
+            + param.l_p
+            * rxn["Positive"]["s"]
+            * variables[rxn["Positive"]["aj"]].orphans[0]
             for rxn in self.reactions.values()
         )
 

@@ -41,7 +41,7 @@ class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_algebraic(self):
-        options = {"capacitance": "algebraic", "side reactions": ["oxygen"]}
+        options = {"surface form": "algebraic", "side reactions": ["oxygen"]}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 

@@ -57,7 +57,7 @@ class LeadingOrder(BaseInterface):
                 "Positive electrode"
                 + self.reaction_name
                 + " interfacial current density"
-            ]
+            ].orphans[0]
             j = -self.param.l_p * j_p / self.param.l_n
 
         variables.update(self._get_standard_interfacial_current_variables(j, j_av))

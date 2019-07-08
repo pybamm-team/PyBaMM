@@ -7,8 +7,9 @@ pybamm.set_logging_level("DEBUG")
 models = [
     pybamm.lead_acid.LOQS(),
     pybamm.lead_acid.LOQS(
-        {"capacitance": "differential", "side reactions": ["oxygen"]}
+        {"surface form": "differential", "side reactions": ["oxygen"]}
     ),
+    pybamm.lead_acid.LOQS({"surface form": "algebraic", "side reactions": ["oxygen"]}),
     # pybamm.lead_acid.Composite(),
     # pybamm.lead_acid.NewmanTiedemann(),
 ]
@@ -20,7 +21,7 @@ geometry = models[-1].default_geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 20,
+        "Typical current [A]": -20,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,

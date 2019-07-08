@@ -43,8 +43,8 @@ class LOQS(BaseModel):
         icd = " interfacial current density"
         self.reactions = {
             "main": {
-                "Negative": {"s": param.s_n, "aj": "Average negative electrode" + icd},
-                "Positive": {"s": param.s_p, "aj": "Average positive electrode" + icd},
+                "Negative": {"s": param.s_n, "aj": "Negative electrode" + icd},
+                "Positive": {"s": param.s_p, "aj": "Positive electrode" + icd},
             }
         }
         if "oxygen" in self.options["side reactions"]:
@@ -52,12 +52,12 @@ class LOQS(BaseModel):
                 "Negative": {
                     "s": -(param.s_plus_Ox + param.t_plus),
                     "s_ox": -param.s_ox_Ox,
-                    "aj": "Average negative electrode oxygen" + icd,
+                    "aj": "Negative electrode oxygen" + icd,
                 },
                 "Positive": {
                     "s": -(param.s_plus_Ox + param.t_plus),
                     "s_ox": -param.s_ox_Ox,
-                    "aj": "Average positive electrode oxygen" + icd,
+                    "aj": "Positive electrode oxygen" + icd,
                 },
             }
             self.reactions["main"]["Negative"]["s_ox"] = 0

@@ -79,8 +79,7 @@ class BaseInterfaceOxygenLeadAcid(BaseInterface):
         return ocp, dUdT
 
     def _get_number_of_electrons_in_reaction(self):
-        # TODO: remove the  / 2
-        return self.param.ne_Ox / 2
+        return self.param.ne_Ox
 
 
 class ForwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.BaseForwardTafel):
