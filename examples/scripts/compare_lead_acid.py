@@ -9,7 +9,7 @@ models = [
     pybamm.lead_acid.LOQS(
         {"surface form": "differential", "side reactions": ["oxygen"]}
     ),
-    # pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
+    pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
     # pybamm.lead_acid.Composite(),
     # pybamm.lead_acid.NewmanTiedemann(),
 ]

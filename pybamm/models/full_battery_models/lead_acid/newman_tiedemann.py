@@ -31,6 +31,7 @@ class NewmanTiedemann(BaseModel):
         self.set_negative_electrode_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
+        self.set_side_reaction_submodels()
 
         self.build_model()
 
@@ -55,16 +56,6 @@ class NewmanTiedemann(BaseModel):
         self.submodels["positive interface"] = pybamm.interface.lead_acid.ButlerVolmer(
             self.param, "Positive"
         )
-        # Side reactions
-        if "oxygen" in self.options["side reactions"]:
-            self.submodels[
-                "positive oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
-            self.submodels[
-                "negative oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.LeadingOrderDiffusionLimited(
-                self.param, "Negative"
-            )
 
     def set_negative_electrode_submodel(self):
         if self.options["surface form"] is False:
@@ -103,6 +94,24 @@ class NewmanTiedemann(BaseModel):
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
                 ] = surf_form.FullAlgebraic(self.param, domain, self.reactions)
+
+    def set_side_reaction_submodels(self):
+        if "oxygen" in self.options["side reactions"]:
+            self.submodels[
+                "positive oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.LeadingOrderDiffusionLimited(
+                self.param, "Negative"
+            )
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Full(
+                self.param, self.reactions
+            )
+        else:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(
+                self.param
+            )
 
     @property
     def default_solver(self):

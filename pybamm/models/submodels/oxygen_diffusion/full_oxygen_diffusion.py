@@ -6,9 +6,30 @@ import pybamm
 from .base_oxygen_diffusion import BaseModel
 
 
+def separator_and_positive_only(variable):
+    """Return only the separator and positive electrode children
+
+    Parameters
+    ----------
+    variable : :class:`pybamm.Concatenation`
+        Concatenation of variables in negative, separator, positive
+
+    Returns
+    -------
+    :class:`pybamm.Concatenation`
+        Concatenation of variables in separator and positive only
+    """
+    _, var_s, var_p = variable.orphans
+    return pybamm.Concatenation(var_s, var_p)
+
+
 class Full(BaseModel):
     """Class for conservation of mass of oxygen. (Full refers to unreduced by
     asymptotic methods)
+    In this model, extremely fast oxygen kinetics in the negative electrode imposes
+    zero oxygen concentration there, and so the oxygen variable only lives in the
+    separator and positive electrode. The boundary condition at the negative electrode/
+    separator interface is homogeneous Dirichlet.
 
     Parameters
     ----------
@@ -23,26 +44,34 @@ class Full(BaseModel):
         super().__init__(param, reactions)
 
     def get_fundamental_variables(self):
-        c_ox = pybamm.standard_variables.c_ox
+        # Oxygen concentration (oxygen concentration is zero in the negative electrode)
+        c_ox_n = pybamm.Broadcast(0, "negative electrode")
+        c_ox_s = pybamm.Variable("Separator oxygen concentration", ["separator"])
+        c_ox_p = pybamm.Variable(
+            "Positive oxygen concentration", ["positive electrode"]
+        )
+        c_ox_s_p = pybamm.Concatenation(c_ox_s, c_ox_p)
+        variables = {"Separator and positive electrode oxygen concentration": c_ox_s_p}
 
-        return self._get_standard_concentration_variables(c_ox)
+        c_ox = pybamm.Concatenation(c_ox_n, c_ox_s, c_ox_p)
+        variables.update(self._get_standard_concentration_variables(c_ox))
+
+        return variables
 
     def get_coupled_variables(self, variables):
 
-        eps = variables["Porosity"]
-        c_ox = variables["Oxygen concentration"]
-        # i_ox = variables["Oxygen current density"]
-        v_box = variables["Volume-averaged velocity"]
+        eps = separator_and_positive_only(variables["Porosity"])
+        c_ox = variables["Separator and positive electrode oxygen concentration"]
+        # TODO: allow charge and convection?
+        v_box = pybamm.Scalar(0)
 
         param = self.param
 
-        N_ox_diffusion = -(eps ** param.b) * param.D_ox(c_ox) * pybamm.grad(c_ox)
-        # N_ox_migration = (param.C_ox * param.t_plus) / param.gamma_ox * i_ox
-        # N_ox_convection = c_ox * v_box
-
-        # N_ox = N_ox_diffusion + N_ox_migration + N_ox_convection
+        N_ox_diffusion = -(eps ** param.b) * param.curlyD_ox * pybamm.grad(c_ox)
 
         N_ox = N_ox_diffusion + c_ox * v_box
+        # Flux in the negative electrode is zero
+        N_ox = pybamm.Concatenation(pybamm.Broadcast(0, "negative electrode"), N_ox)
 
         variables.update(self._get_standard_flux_variables(N_ox))
 
@@ -52,10 +81,10 @@ class Full(BaseModel):
 
         param = self.param
 
-        eps = variables["Porosity"]
-        deps_dt = variables["Porosity change"]
-        c_ox = variables["Oxygen concentration"]
-        N_ox = variables["Oxygen flux"]
+        eps = separator_and_positive_only(variables["Porosity"])
+        deps_dt = separator_and_positive_only(variables["Porosity change"])
+        c_ox = variables["Separator and positive electrode oxygen concentration"]
+        N_ox = variables["Oxygen flux"].orphans[1]
 
         source_terms = sum(
             pybamm.Concatenation(
@@ -67,12 +96,12 @@ class Full(BaseModel):
 
         self.rhs = {
             c_ox: (1 / eps)
-            * (-pybamm.div(N_ox) / param.C_ox + source_terms - c_ox * deps_dt)
+            * (-pybamm.div(N_ox) / param.C_e + source_terms - c_ox * deps_dt)
         }
 
     def set_boundary_conditions(self, variables):
 
-        c_ox = variables["Oxygen concentration"]
+        c_ox = variables["Separator and positive electrode oxygen concentration"]
 
         self.boundary_conditions = {
             c_ox: {
@@ -83,6 +112,6 @@ class Full(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        c_ox = variables["Oxygen concentration"]
+        c_ox = variables["Separator and positive electrode oxygen concentration"]
 
         self.initial_conditions = {c_ox: self.param.c_ox_init}
