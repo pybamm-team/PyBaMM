@@ -245,6 +245,14 @@ from .solvers.scikits_ode_solver import ScikitsOdeSolver
 from .solvers.scikits_ode_solver import have_scikits_odes
 
 #
+# Current profiles
+#
+from .parameters.standard_current_functions.base_current import GetCurrent
+from .parameters.standard_current_functions.get_constant_current import GetConstantCurrent
+from .parameters.standard_current_functions.get_user_current import GetUserCurrent
+from .parameters.standard_current_functions.get_current_data import GetCurrentData
+
+#
 # other
 #
 from .processed_variable import post_process_variables, ProcessedVariable

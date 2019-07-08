@@ -349,6 +349,13 @@ class TestSymbol(unittest.TestCase):
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing
         )
 
+        var = pybamm.Variable("var", domain=["random domain", "other domain"])
+        broadcast = pybamm.Broadcast(0, domain=["random domain", "other domain"])
+        self.assertEqual(var.shape_for_testing, broadcast.shape_for_testing)
+        self.assertEqual(
+            (var + broadcast).shape_for_testing, broadcast.shape_for_testing
+        )
+
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):
             sym.shape_for_testing

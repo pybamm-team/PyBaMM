@@ -21,6 +21,9 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         )  # annoying option only for reaction diffusion
         super().__init__(options)
         self.name = "Reaction diffusion model"
+        # NOTE: set_standard_output_variables sets the lead acid timescales,
+        # so if paramaters are changed here the timescale in the method
+        # set_standard_output_variables may need to be altered
         self.param = pybamm.standard_parameters_lead_acid
 
         # Manually set porosity parameters
@@ -69,3 +72,30 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
     @property
     def default_parameter_values(self):
         return pybamm.lead_acid.BaseModel().default_parameter_values
+
+    def set_standard_output_variables(self):
+        super().set_standard_output_variables()
+        # Set current variables to use lead acid timescale
+        icell = pybamm.standard_parameters_lead_acid.current_with_time
+        icell_dim = (
+            pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
+        )
+        I = pybamm.standard_parameters_lead_acid.dimensional_current_with_time
+        self.variables.update(
+            {
+                "Total current density": icell,
+                "Total current density [A.m-2]": icell_dim,
+                "Current [A]": I,
+            }
+        )
+
+        # Set time variables to use lead acid timescale
+        time_scale = pybamm.standard_parameters_lead_acid.tau_discharge
+        self.variables.update(
+            {
+                "Time [s]": pybamm.t * time_scale,
+                "Time [min]": pybamm.t * time_scale / 60,
+                "Time [h]": pybamm.t * time_scale / 3600,
+                "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
+            }
+        )

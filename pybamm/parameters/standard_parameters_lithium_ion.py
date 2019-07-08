@@ -5,7 +5,9 @@
 Standard parameters for lithium-ion battery models
 """
 import pybamm
+import numpy as np
 from scipy import constants
+
 
 # --------------------------------------------------------------------------------------
 "File Layout:"
@@ -14,6 +16,7 @@ from scipy import constants
 # 3. Scalings
 # 4. Dimensionless Parameters
 # 5. Dimensionless Functions
+# 6. Input Current
 
 # --------------------------------------------------------------------------------------
 "1. Dimensional Parameters"
@@ -53,10 +56,6 @@ n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
 i_typ = pybamm.electrical_parameters.i_typ
 voltage_low_cut_dimensional = pybamm.electrical_parameters.voltage_low_cut_dimensional
 voltage_high_cut_dimensional = pybamm.electrical_parameters.voltage_high_cut_dimensional
-current_with_time = pybamm.electrical_parameters.current_with_time
-dimensional_current_density_with_time = (
-    pybamm.electrical_parameters.dimensional_current_density_with_time
-)
 
 # Electrolyte properties
 c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
@@ -370,3 +369,20 @@ def dUdT_p(c_s_p):
     "Dimensionless entropic change in positive open-circuit potential"
     sto = c_s_p
     return dUdT_p_dimensional(sto) * Delta_T / potential_scale
+
+
+# --------------------------------------------------------------------------------------
+"6. Input current"
+dimensional_current_with_time = pybamm.FunctionParameter(
+    "Current function", pybamm.t * tau_discharge
+)
+dimensional_current_density_with_time = dimensional_current_with_time / (
+    n_electrodes_parallel * pybamm.geometric_parameters.A_cc
+)
+
+current_with_time = (
+    dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
+)
+current_density_with_time = (
+    dimensional_current_density_with_time / i_typ * pybamm.Function(np.sign, I_typ)
+)

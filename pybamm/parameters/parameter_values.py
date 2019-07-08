@@ -211,6 +211,7 @@ class ParameterValues(dict):
             return self._processed_symbols[symbol.id]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
+
             self._processed_symbols[symbol.id] = processed_symbol
             return processed_symbol
 
@@ -225,6 +226,19 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.FunctionParameter):
             new_children = [self.process_symbol(child) for child in symbol.children]
             function_name = self[symbol.name]
+
+            # if current setter, process any parameters that are symbols and
+            # store the evaluated symbol in the parameters_eval dict
+            if isinstance(function_name, pybamm.GetCurrent):
+                for param, sym in function_name.parameters.items():
+                    if isinstance(sym, pybamm.Symbol):
+                        new_sym = self.process_symbol(sym)
+                        function_name.parameters[param] = new_sym
+                        function_name.parameters_eval[param] = new_sym.evaluate()
+                # If loading data, need to update interpolant with
+                # evaluated parameters
+                if isinstance(function_name, pybamm.GetCurrentData):
+                    function_name.interpolate()
 
             if callable(function_name):
                 function = pybamm.Function(function_name, *new_children)
@@ -320,4 +334,18 @@ class ParameterValues(dict):
                 except KeyError:
                     # KeyError -> name not in parameter dict, don't update
                     continue
+            elif isinstance(x, pybamm.Function):
+                # Need to update values in parameters_eval dict of current functions
+                if isinstance(x.function, pybamm.GetCurrent):
+                    for param, sym in x.function.parameters.items():
+                        if isinstance(sym, pybamm.Scalar):
+                            try:
+                                x.function.parameters_eval[param] = self[sym.name]
+                            except KeyError:
+                                # KeyError -> name not in parameter dict, don't update
+                                continue
+                    if isinstance(x.function, pybamm.GetCurrentData):
+                        # update interpolant
+                        x.function.interpolate()
+
         return symbol
