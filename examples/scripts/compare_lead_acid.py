@@ -56,7 +56,7 @@ output_variables = [
         "Average positive electrode interfacial current density [A.m-2]",
     ],
     "Electrolyte concentration [mol.m-3]",
-    "Average oxygen concentration [mol.m-3]",
+    "Oxygen concentration [mol.m-3]",
     "Electrolyte current density [A.m-2]",
     "Electrolyte potential [V]",
     "Terminal voltage [V]",
