@@ -56,14 +56,14 @@ class NewmanTiedemann(BaseModel):
         )
 
     def set_negative_electrode_submodel(self):
-        if self.options["capacitance"] is False:
+        if self.options["surface form"] is False:
             submodel = pybamm.electrode.ohm.Full(self.param, "Negative")
         else:
             submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
         self.submodels["negative electrode"] = submodel
 
     def set_positive_electrode_submodel(self):
-        if self.options["capacitance"] is False:
+        if self.options["surface form"] is False:
             submodel = pybamm.electrode.ohm.Full(self.param, "Positive")
         else:
             submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
@@ -76,16 +76,16 @@ class NewmanTiedemann(BaseModel):
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
 
-        if self.options["capacitance"] is False:
+        if self.options["surface form"] is False:
             self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
                 self.param
             )
-        elif self.options["capacitance"] == "differential":
+        elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
                 ] = surf_form.FullDifferential(self.param, domain)
-        elif self.options["capacitance"] == "algebraic":
+        elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
@@ -97,7 +97,7 @@ class NewmanTiedemann(BaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["capacitance"] == "differential":
+        if self.options["surface form"] == "differential":
             return pybamm.ScipySolver()
         else:
             return pybamm.ScikitsDaeSolver()

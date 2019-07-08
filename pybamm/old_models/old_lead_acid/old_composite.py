@@ -190,7 +190,7 @@ class OldComposite(pybamm.OldLeadAcidBaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["capacitance"] == "algebraic":
+        if self.options["surface form"] == "algebraic":
             return pybamm.ScikitsDaeSolver()
         else:
             return pybamm.ScipySolver()

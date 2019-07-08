@@ -82,8 +82,7 @@ class LOQS(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        # Main reaction
-        if self.options["capacitance"] is False:
+        if self.options["surface form"] is False:
             self.submodels[
                 "negative interface"
             ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Negative")
@@ -126,18 +125,18 @@ class LOQS(BaseModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
         surf_form = electrolyte.conductivity.surface_potential_form
 
-        if self.options["capacitance"] is False:
+        if self.options["surface form"] is False:
             self.submodels[
                 "electrolyte conductivity"
             ] = electrolyte.conductivity.LeadingOrder(self.param)
-        elif self.options["capacitance"] == "differential":
+        elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
                 ] = surf_form.LeadingOrderDifferential(
                     self.param, domain, self.reactions
                 )
-        elif self.options["capacitance"] == "algebraic":
+        elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
@@ -168,7 +167,7 @@ class LOQS(BaseModel):
         Create and return the default solver for this model
         """
 
-        if self.options["capacitance"] == "algebraic":
+        if self.options["surface form"] == "algebraic":
             return pybamm.ScikitsDaeSolver()
         else:
             return pybamm.ScipySolver()

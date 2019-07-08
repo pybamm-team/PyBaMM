@@ -90,9 +90,7 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
 
         sum_j = 0
         for reaction in self.reactions.values():
-            j = variables[reaction[self.domain]["aj"]]
-            if isinstance(j, pybamm.Broadcast):
-                j = j.orphans[0]
+            j = variables[reaction[self.domain]["aj"]].orphans[0]
             sum_j += j
 
         sum_j_av = variables[
@@ -133,9 +131,7 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
 
         sum_j = 0
         for reaction in self.reactions.values():
-            j = variables[reaction[self.domain]["aj"]]
-            if isinstance(j, pybamm.Broadcast):
-                j = j.orphans[0]
+            j = variables[reaction[self.domain]["aj"]].orphans[0]
             sum_j += j
 
         sum_j_av = variables[
