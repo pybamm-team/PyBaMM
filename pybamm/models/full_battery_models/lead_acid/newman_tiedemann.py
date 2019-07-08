@@ -22,6 +22,7 @@ class NewmanTiedemann(BaseModel):
         super().__init__(options)
         self.name = "Newman-Tiedemann model"
 
+        self.set_reactions()
         self.set_current_collector_submodel()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
@@ -74,22 +75,24 @@ class NewmanTiedemann(BaseModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
         surf_form = electrolyte.conductivity.surface_potential_form
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+            self.param, self.reactions
+        )
 
         if self.options["surface form"] is False:
             self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-                self.param
+                self.param, self.reactions
             )
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullDifferential(self.param, domain)
+                ] = surf_form.FullDifferential(self.param, domain, self.reactions)
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullAlgebraic(self.param, domain)
+                ] = surf_form.FullAlgebraic(self.param, domain, self.reactions)
 
     @property
     def default_solver(self):

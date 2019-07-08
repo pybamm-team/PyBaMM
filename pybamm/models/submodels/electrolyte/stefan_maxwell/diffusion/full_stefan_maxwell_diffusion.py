@@ -20,8 +20,8 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.diffusion.BaseModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, reactions):
+        super().__init__(param, reactions)
 
     def get_fundamental_variables(self):
         c_e = pybamm.standard_variables.c_e
@@ -62,13 +62,21 @@ class Full(BaseModel):
         j = variables["Interfacial current density"]
 
         # TODO: check lead acid version in new form
-        source_term = param.s / param.gamma_e * j
         # source_term = ((param.s - param.t_plus) / param.gamma_e) * pybamm.div(i_e)
         # source_term = pybamm.div(i_e) / param.gamma_e  # lithium-ion
+        source_terms = sum(
+            pybamm.Concatenation(
+                reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
+                pybamm.Broadcast(0, "separator"),
+                reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
+            )
+            / param.gamma_e
+            for reaction in self.reactions.values()
+        )
 
         self.rhs = {
             c_e: (1 / eps)
-            * (-pybamm.div(N_e) / param.C_e + source_term - c_e * deps_dt)
+            * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_dt)
         }
 
     def set_boundary_conditions(self, variables):

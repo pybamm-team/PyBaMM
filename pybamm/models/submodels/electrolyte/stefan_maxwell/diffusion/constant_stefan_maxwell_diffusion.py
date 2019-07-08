@@ -7,9 +7,7 @@ from .base_stefan_maxwell_diffusion import BaseModel
 
 
 class ConstantConcentration(BaseModel):
-    """Class for conservation of mass in the electrolyte employing the
-    Stefan-Maxwell constitutive equations. (Leading refers to leading order
-    of asymptotic reduction)
+    """Class for constant concentration of electrolyte
 
     Parameters
     ----------
@@ -42,4 +40,3 @@ class ConstantConcentration(BaseModel):
 
     def set_boundary_conditions(self, variables):
         return None
-

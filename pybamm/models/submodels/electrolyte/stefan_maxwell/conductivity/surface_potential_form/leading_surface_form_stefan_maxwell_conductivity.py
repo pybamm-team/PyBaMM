@@ -20,8 +20,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     """  # noqa: E501
 
     def __init__(self, param, domain, reactions):
-        super().__init__(param, domain)
-        self.reactions = reactions
+        super().__init__(param, domain, reactions)
 
     def get_fundamental_variables(self):
 

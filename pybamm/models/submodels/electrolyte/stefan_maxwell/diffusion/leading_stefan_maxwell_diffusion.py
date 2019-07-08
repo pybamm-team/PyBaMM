@@ -22,8 +22,7 @@ class LeadingOrder(BaseModel):
     """
 
     def __init__(self, param, reactions):
-        super().__init__(param)
-        self.reactions = reactions
+        super().__init__(param, reactions)
 
     def get_fundamental_variables(self):
         c_e_av = pybamm.standard_variables.c_e_av
