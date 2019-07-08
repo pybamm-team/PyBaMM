@@ -11,7 +11,7 @@ import autograd.numpy as np
 from anytree.exporter import DotExporter
 
 
-def evaluate_for_shape_using_domain(domain):
+def evaluate_for_shape_using_domain(domain, typ="vector"):
     """
     Return a vector of the appropriate shape, based on the domain.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
@@ -35,7 +35,10 @@ def evaluate_for_shape_using_domain(domain):
         size = sum(fixed_domain_sizes[dom] for dom in domain)
     else:
         size = sum(hash(dom) % 100 for dom in domain)
-    return np.nan * np.ones((size, 1))
+    if typ == "vector":
+        return np.nan * np.ones((size, 1))
+    elif typ == "matrix":
+        return np.nan * np.ones((size, size))
 
 
 class Symbol(anytree.NodeMixin):
