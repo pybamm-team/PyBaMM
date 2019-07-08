@@ -1,14 +1,14 @@
 #
-# Leading-order diffusion limited kinetics
+# Full diffusion limited kinetics
 #
 
 import pybamm
 from .base_diffusion_limited import BaseModel
 
 
-class LeadingOrder(BaseModel):
+class Full(BaseModel):
     """
-    Leading-order submodel for diffusion-limited kinetics
+    Full submodel for diffusion-limited kinetics
 
     Parameters
     ----------
@@ -26,11 +26,11 @@ class LeadingOrder(BaseModel):
 
     def _get_diffusion_limited_current_density(self, variables):
         if self.domain == "Negative":
-            j_p = variables[
-                "Positive electrode"
-                + self.reaction_name
-                + " interfacial current density"
-            ].orphans[0]
+            import ipdb
+
+            ipdb.set_trace()
+            N_ox = variables["Oxygen flux"]
+
             j = -self.param.l_p * j_p / self.param.l_n
 
         return j

@@ -76,6 +76,9 @@ class BaseModel(pybamm.BaseSubModel):
         param = self.param
         flux_scale = param.curlyD_ox * param.c_ox_typ / param.L_x
 
+        import ipdb
+
+        ipdb.set_trace()
         variables = {
             "Oxygen flux": N_ox,
             "Oxygen flux [mol.m-2.s-1]": N_ox * flux_scale,

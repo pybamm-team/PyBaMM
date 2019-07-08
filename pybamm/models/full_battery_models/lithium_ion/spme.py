@@ -24,6 +24,7 @@ class SPMe(BaseModel):
         self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
+        self.set_reactions()
 
         self.build_model()
 
@@ -88,7 +89,9 @@ class SPMe(BaseModel):
         self.submodels[
             "electrolyte conductivity"
         ] = electrolyte.conductivity.CombinedOrder(self.param)
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+            self.param, self.reactions
+        )
 
     @property
     def default_geometry(self):

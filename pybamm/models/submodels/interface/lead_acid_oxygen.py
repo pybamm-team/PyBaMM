@@ -112,3 +112,13 @@ class LeadingOrderDiffusionLimited(
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
+
+
+class FullDiffusionLimited(BaseInterfaceOxygenLeadAcid, diffusion_limited.Full):
+    """
+    Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
+    :class:`kinetics.BaseFullDiffusionLimited` (for kinetics)
+    """
+
+    def __init__(self, param, domain):
+        super().__init__(param, domain)

@@ -281,22 +281,30 @@ class BaseBatteryModel(pybamm.BaseModel):
     def build_model(self):
 
         # Get the fundamental variables
-        for submodel in self.submodels.values():
+        for name, submodel in self.submodels.items():
+            pybamm.logger.debug("Getting fundamental variables for {}".format(name))
             self.variables.update(submodel.get_fundamental_variables())
 
         # Get coupled variables
-        for submodel in self.submodels.values():
+        for name, submodel in self.submodels.items():
+            pybamm.logger.debug("Getting coupled variables for {}".format(name))
             self.variables.update(submodel.get_coupled_variables(self.variables))
 
-        # Set model equations
-        for submodel in self.submodels.values():
+            # Set model equations
+        for name, submodel in self.submodels.items():
+            pybamm.logger.debug("Setting rhs for {}".format(name))
             submodel.set_rhs(self.variables)
+            pybamm.logger.debug("Setting algebraic for {}".format(name))
             submodel.set_algebraic(self.variables)
+            pybamm.logger.debug("Setting boundary conditions for {}".format(name))
             submodel.set_boundary_conditions(self.variables)
+            pybamm.logger.debug("Setting initial conditions for {}".format(name))
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
+            pybamm.logger.debug("Updating {}".format(name))
             self.update(submodel)
 
+        pybamm.logger.debug("Setting voltage variables")
         self.set_voltage_variables()
 
     def set_thermal_submodel(self):

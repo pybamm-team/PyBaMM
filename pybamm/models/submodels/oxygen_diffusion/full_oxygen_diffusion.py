@@ -74,7 +74,9 @@ class Full(BaseModel):
         N_ox = pybamm.Concatenation(pybamm.Broadcast(0, "negative electrode"), N_ox)
 
         variables.update(self._get_standard_flux_variables(N_ox))
+        import ipdb
 
+        ipdb.set_trace()
         return variables
 
     def set_rhs(self, variables):

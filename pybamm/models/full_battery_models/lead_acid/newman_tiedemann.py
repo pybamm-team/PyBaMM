@@ -24,6 +24,7 @@ class NewmanTiedemann(BaseModel):
 
         self.set_reactions()
         self.set_current_collector_submodel()
+        self.set_side_reaction_submodels()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
         self.set_convection_submodel()
@@ -31,7 +32,6 @@ class NewmanTiedemann(BaseModel):
         self.set_negative_electrode_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
-        self.set_side_reaction_submodels()
 
         self.build_model()
 
@@ -102,7 +102,7 @@ class NewmanTiedemann(BaseModel):
             ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
             self.submodels[
                 "negative oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.LeadingOrderDiffusionLimited(
+            ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
                 self.param, "Negative"
             )
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Full(

@@ -36,6 +36,7 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         self.set_porosity_submodel()
         self.set_interfacial_submodel()
         self.set_electrolyte_submodel()
+        self.set_reactions()
 
         self.build_model()
 
@@ -54,7 +55,7 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
     def set_electrolyte_submodel(self):
         electrolyte = pybamm.electrolyte.stefan_maxwell
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
-            self.param
+            self.param, self.reactions
         )
 
     def set_interfacial_submodel(self):
@@ -99,3 +100,16 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
                 "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
             }
         )
+
+    def set_reactions(self):
+
+        # Should probably refactor as this is a bit clunky at the moment
+        # Maybe each reaction as a Reaction class so we can just list names of classes
+        param = self.param
+        icd = " interfacial current density"
+        self.reactions = {
+            "main": {
+                "Negative": {"s": param.s_n, "aj": "Negative electrode" + icd},
+                "Positive": {"s": param.s_p, "aj": "Positive electrode" + icd},
+            }
+        }
