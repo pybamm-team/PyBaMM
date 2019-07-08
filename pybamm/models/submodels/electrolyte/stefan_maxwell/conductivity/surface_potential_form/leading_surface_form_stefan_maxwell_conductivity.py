@@ -96,8 +96,10 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         param = self.param
 
         j = variables[self.domain + " electrode interfacial current density"].orphans[0]
-        j_av = variables[
-            "Average " + self.domain.lower() + " electrode interfacial current density"
+        j_tot_av = variables[
+            "Average "
+            + self.domain.lower()
+            + " electrode total interfacial current density"
         ]
         delta_phi = variables[
             "Average " + self.domain.lower() + " electrode surface potential difference"
@@ -108,7 +110,7 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         elif self.domain == "Positive":
             C_dl = param.C_dl_p
 
-        self.rhs[delta_phi] = 1 / C_dl * (j_av - j)
+        self.rhs[delta_phi] = 1 / C_dl * (j_tot_av - j)
 
 
 class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
@@ -133,11 +135,13 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
             return
 
         j = variables[self.domain + " electrode interfacial current density"].orphans[0]
-        j_av = variables[
-            "Average " + self.domain.lower() + " electrode interfacial current density"
+        j_tot_av = variables[
+            "Average "
+            + self.domain.lower()
+            + " electrode total interfacial current density"
         ]
         delta_phi = variables[
             "Average " + self.domain.lower() + " electrode surface potential difference"
         ]
 
-        self.algebraic[delta_phi] = j_av - j
+        self.algebraic[delta_phi] = j_tot_av - j
