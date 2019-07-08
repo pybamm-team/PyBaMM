@@ -47,12 +47,13 @@ class Broadcast(pybamm.SpatialOperator):
             )
         if name is None:
             name = "broadcast"
-        super().__init__(name, child)
-        # overwrite child domain ([]) with specified broadcasting domain
-        self.domain = domain
 
         # set type of broadcast
         self.broadcast_type = broadcast_type
+
+        super().__init__(name, child)
+        # overwrite child domain ([]) with specified broadcasting domain
+        self.domain = domain
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
