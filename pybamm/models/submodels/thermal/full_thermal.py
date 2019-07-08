@@ -24,9 +24,8 @@ class Full(BaseModel):
     def get_fundamental_variables(self):
 
         T = pybamm.standard_variables.T
-        T_av = pybamm.average(T)
 
-        variables = self._get_standard_fundamental_variables(T, T_av)
+        variables = self._get_standard_fundamental_variables(T)
         return variables
 
     def get_coupled_variables(self, variables):
