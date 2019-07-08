@@ -144,7 +144,11 @@ class Index(UnaryOperator):
 
     def __init__(self, child, index, name=None):
         self.index = index
-        if isinstance(index, int):
+        if index == -1:
+            self.slice = slice(index, None)
+            if name is None:
+                name = "Index[-1]"
+        elif isinstance(index, int):
             self.slice = slice(index, index + 1)
             if name is None:
                 name = "Index[" + str(index) + "]"
@@ -158,10 +162,16 @@ class Index(UnaryOperator):
         else:
             raise TypeError("index must be integer or slice")
 
-        if self.slice.stop > child.size:
+        if self.slice in (slice(0, 1), slice(-1, None)):
+            pass
+        elif self.slice.stop > child.size:
             raise ValueError("slice size exceeds child size")
 
         super().__init__(name, child)
+
+        # no domain for integer value
+        if isinstance(index, int):
+            self.domain = []
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
@@ -295,16 +305,7 @@ class Mass(SpatialOperator):
         super().__init__("mass", child)
 
     def evaluate_for_shape(self):
-        """
-        Return a matrix of the appropriate shape, based on the domain.
-        Domain 'sizes' can clash, but are unlikely to, and won't cause failures
-        if they do.
-        """
-        if self.domain == []:
-            size = 1
-        else:
-            size = sum(hash(dom) % 100 for dom in self.domain)
-        return np.nan * np.ones((size, size))
+        return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
 
 
 class Integral(SpatialOperator):
