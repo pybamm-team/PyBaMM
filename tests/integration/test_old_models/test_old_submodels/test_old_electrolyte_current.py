@@ -2,7 +2,6 @@
 # Tests for the electrolyte submodels
 #
 import pybamm
-from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
 import numbers
 import numpy as np
@@ -11,7 +10,6 @@ import unittest
 
 
 @unittest.skip("old models removed, test kept for reference")
-# @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
 class TestOldMacInnesStefanMaxwell(unittest.TestCase):
     def test_basic_processing(self):
         # Parameters
@@ -155,7 +153,6 @@ class TestOldMacInnesStefanMaxwell(unittest.TestCase):
 
 
 @unittest.skip("old models removed, test kept for reference")
-@unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
 class TestOldMacInnesCapacitance(unittest.TestCase):
     def test_basic_processing(self):
         # Parameters
