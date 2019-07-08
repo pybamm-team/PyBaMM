@@ -295,16 +295,7 @@ class Mass(SpatialOperator):
         super().__init__("mass", child)
 
     def evaluate_for_shape(self):
-        """
-        Return a matrix of the appropriate shape, based on the domain.
-        Domain 'sizes' can clash, but are unlikely to, and won't cause failures
-        if they do.
-        """
-        if self.domain == []:
-            size = 1
-        else:
-            size = sum(hash(dom) % 100 for dom in self.domain)
-        return np.nan * np.ones((size, size))
+        return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
 
 
 class Integral(SpatialOperator):

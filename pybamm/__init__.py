@@ -132,6 +132,7 @@ from .expression_tree.evaluate import (
     to_python,
     EvaluatorPython,
 )
+from .expression_tree.symbol import evaluate_for_shape_using_domain
 
 #
 # Model classes

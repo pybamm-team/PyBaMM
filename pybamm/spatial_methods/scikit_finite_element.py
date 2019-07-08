@@ -274,6 +274,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
         _, lbc_type = boundary_conditions[symbol.id]["left"]
         _, rbc_type = boundary_conditions[symbol.id]["right"]
+        
         if lbc_type == "Dirichlet":
             # set source terms to zero on boundary by zeroing out mass matrix
             self.bc_apply(mass, mesh.negative_tab, zero=True)
