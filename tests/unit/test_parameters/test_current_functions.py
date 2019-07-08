@@ -14,6 +14,18 @@ class TestCurrentFunctions(unittest.TestCase):
         assert isinstance(function(np.zeros(3)), numbers.Number)
         assert isinstance(function(np.zeros([3, 3])), numbers.Number)
 
+        # test simplify
+        current = pybamm.electrical_parameters.current_with_time
+        parameter_values = pybamm.ParameterValues(
+            {
+                "Typical current [A]": 2,
+                "Typical timescale [s]": 1,
+                "Current function": pybamm.GetConstantCurrent(),
+            }
+        )
+        processed_current = parameter_values.process_symbol(current)
+        self.assertIsInstance(processed_current.simplify(), pybamm.Scalar)
+
     def test_get_current_data(self):
         # test units
         function_list = [
