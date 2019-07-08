@@ -45,7 +45,6 @@ class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
-    @unittest.skip("varying surface area not implemented in new submodel format")
     def test_varying_surface_area(self):
         options = {
             "surface form": "differential",

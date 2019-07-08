@@ -273,6 +273,8 @@ class ParameterValues(dict):
             elif isinstance(symbol, pybamm.BoundaryOperator):
                 # BoundaryValue or BoundaryFlux
                 new_symbol = symbol.__class__(new_child, symbol.side)
+            elif isinstance(symbol, pybamm.Index):
+                new_symbol = symbol.__class__(new_child, symbol.index)
             else:
                 new_symbol = symbol.__class__(new_child)
             # ensure domain remains the same
