@@ -394,4 +394,3 @@ class BaseModel(object):
                         var
                     )
                 )
-

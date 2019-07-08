@@ -39,6 +39,9 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_interfacial_current_variables(self, j, j_av):
 
         i_typ = self.param.i_typ
+        # Broadcast if necessary
+        if j.domain in [[], ["current collector"]]:
+            j = pybamm.Broadcast(j, self.domain_for_broadcast)
 
         variables = {
             self.domain + " electrode interfacial current density": j,
@@ -74,14 +77,17 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_exchange_current_variables(self, j0):
 
         i_typ = self.param.i_typ
+        # Average, and broadcast if necessary
         j0_av = pybamm.average(j0)
+        if j0.domain in [[], ["current collector"]]:
+            j0 = pybamm.Broadcast(j0, self.domain_for_broadcast)
 
         variables = {
             self.domain + " electrode exchange current density": j0,
             "Average "
             + self.domain.lower()
             + " electrode exchange current density": j0_av,
-            self.domain + " exchange current density [A.m-2]": i_typ * j0,
+            self.domain + " electrode exchange current density [A.m-2]": i_typ * j0,
             "Average "
             + self.domain.lower()
             + " electrode exchange current density [A.m-2]": i_typ * j0_av,
@@ -110,7 +116,10 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_overpotential_variables(self, eta_r):
 
         pot_scale = self.param.potential_scale
+        # Average, and broadcast if necessary
         eta_r_av = pybamm.average(eta_r)
+        if eta_r.domain in [[], ["current collector"]]:
+            eta_r = pybamm.Broadcast(eta_r, self.domain_for_broadcast)
 
         variables = {
             self.domain + " electrode reaction overpotential": eta_r,
@@ -133,7 +142,10 @@ class BaseInterface(pybamm.BaseSubModel):
             ocp_ref = self.param.U_p_ref
         pot_scale = self.param.potential_scale
 
+        # Average, and broadcast if necessary
         delta_phi_av = pybamm.average(delta_phi)
+        if delta_phi.domain in [[], ["current collector"]]:
+            delta_phi = pybamm.Broadcast(delta_phi, self.domain_for_broadcast)
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
@@ -147,6 +159,53 @@ class BaseInterface(pybamm.BaseSubModel):
             + self.domain.lower()
             + " electrode surface potential difference [V]": ocp_ref
             + delta_phi_av * pot_scale,
+        }
+
+        return variables
+
+    def _get_standard_ocp_variables(self, ocp, dUdT):
+        """
+        A private function to obtain the open circuit potential and
+        related standard variables.
+
+        Parameters
+        ----------
+        ocp : :class:`pybamm.Symbol`
+            The open-circuit potential
+        dUdT : :class:`pybamm.Symbol`
+            The entropic change in ocp
+
+        Returns
+        -------
+        variables : dict
+            The variables dictionary including the open circuit potentials
+            and related standard variables.
+        """
+
+        # Average, and broadcast if necessary
+        ocp_av = pybamm.average(ocp)
+        if ocp.domain in [[], ["current collector"]]:
+            ocp = pybamm.Broadcast(ocp, self.domain_for_broadcast)
+        dUdT_av = pybamm.average(dUdT)
+
+        if self.domain == "Negative":
+            ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
+            ocp_av_dim = self.param.U_n_ref + self.param.potential_scale * ocp_av
+        elif self.domain == "Positive":
+            ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
+            ocp_av_dim = self.param.U_p_ref + self.param.potential_scale * ocp_av
+
+        variables = {
+            self.domain + " electrode open circuit potential": ocp,
+            self.domain + " electrode open circuit potential [V]": ocp_dim,
+            "Average "
+            + self.domain.lower()
+            + " electrode open circuit potential": ocp_av,
+            "Average "
+            + self.domain.lower()
+            + " electrode open circuit potential [V]": ocp_av_dim,
+            self.domain + " electrode entropic change": dUdT,
+            "Average " + self.domain.lower() + " electrode entropic change": dUdT_av,
         }
 
         return variables
