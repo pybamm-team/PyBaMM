@@ -172,13 +172,21 @@ class OldInterfacialReaction(pybamm.OldSubModel):
 
         # Broadcast if necessary
         if j_n.domain in [[], ["current collector"]]:
-            j_n = pybamm.Broadcast(j_n, ["negative electrode"])
+            j_n = pybamm.Broadcast(
+                j_n, ["negative electrode"], broadcast_type="primary"
+            )
         if j_p.domain in [[], ["current collector"]]:
-            j_p = pybamm.Broadcast(j_p, ["positive electrode"])
+            j_p = pybamm.Broadcast(
+                j_p, ["positive electrode"], broadcast_type="primary"
+            )
         if j0_n.domain in [[], ["current collector"]]:
-            j0_n = pybamm.Broadcast(j0_n, ["negative electrode"])
+            j0_n = pybamm.Broadcast(
+                j0_n, ["negative electrode"], broadcast_type="primary"
+            )
         if j0_p.domain in [[], ["current collector"]]:
-            j0_p = pybamm.Broadcast(j0_p, ["positive electrode"])
+            j0_p = pybamm.Broadcast(
+                j0_p, ["positive electrode"], broadcast_type="primary"
+            )
 
         # Concatenations
         j = pybamm.Concatenation(*[j_n, pybamm.Broadcast(0, ["separator"]), j_p])

@@ -76,8 +76,14 @@ class OldStandard(pybamm.OldSubModel):
             self.initial_conditions.update({eps: eps_init})
             self.variables.update(
                 {
-                    Domain + " porosity": pybamm.Broadcast(eps, domain),
-                    Domain + " porosity change": pybamm.Broadcast(deps_dt, domain),
+                    Domain
+                    + " porosity": pybamm.Broadcast(
+                        eps, domain, broadcast_type="primary"
+                    ),
+                    Domain
+                    + " porosity change": pybamm.Broadcast(
+                        deps_dt, domain, broadcast_type="primary"
+                    ),
                 }
             )
             # Terminate if porosity reaches zero or one

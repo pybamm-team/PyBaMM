@@ -132,7 +132,7 @@ class OldOhm(pybamm.OldSubModel):
         # electode potential
         phi_s_n = pybamm.Broadcast(0, ["negative electrode"])
         v = ocp_p_av + eta_r_p_av + phi_e_p_av
-        phi_s_p = pybamm.Broadcast(v, ["positive electrode"])
+        phi_s_p = pybamm.Broadcast(v, ["positive electrode"], broadcast_type="primary")
 
         # electrode current
         i_s_n = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)

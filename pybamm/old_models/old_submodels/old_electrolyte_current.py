@@ -81,9 +81,13 @@ class OldElectrolyteCurrentBaseModel(pybamm.OldSubModel):
         phi_e_const = -pybamm.boundary_value(ocp_n, "left") - pybamm.boundary_value(
             eta_r_n, "left"
         )
-        phi_e_n = pybamm.Broadcast(phi_e_const, ["negative electrode"])
-        phi_e_s = pybamm.Broadcast(phi_e_const, ["separator"])
-        phi_e_p = pybamm.Broadcast(phi_e_const, ["positive electrode"])
+        phi_e_n = pybamm.Broadcast(
+            phi_e_const, ["negative electrode"], broadcast_type="primary"
+        )
+        phi_e_s = pybamm.Broadcast(phi_e_const, ["separator"], broadcast_type="primary")
+        phi_e_p = pybamm.Broadcast(
+            phi_e_const, ["positive electrode"], broadcast_type="primary"
+        )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # electrolyte current
@@ -331,7 +335,9 @@ class OldElectrolyteCurrentBaseModel(pybamm.OldSubModel):
         i_typ = self.set_of_parameters.i_typ
         if isinstance(i_e, tuple):
             i_e_n, i_e_p = i_e
-            i_e_s = pybamm.Broadcast(i_boundary_cc, "separator")
+            i_e_s = pybamm.Broadcast(
+                i_boundary_cc, "separator", broadcast_type="primary"
+            )
             i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         return {

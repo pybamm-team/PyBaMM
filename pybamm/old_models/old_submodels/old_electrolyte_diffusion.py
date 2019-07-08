@@ -117,9 +117,9 @@ class OldStefanMaxwell(pybamm.OldSubModel):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         N_e = pybamm.Broadcast(0, whole_cell)
         c_e_var = pybamm.Concatenation(
-            pybamm.Broadcast(c_e, ["negative electrode"]),
-            pybamm.Broadcast(c_e, ["separator"]),
-            pybamm.Broadcast(c_e, ["positive electrode"]),
+            pybamm.Broadcast(c_e, ["negative electrode"], broadcast_type="primary"),
+            pybamm.Broadcast(c_e, ["separator"], broadcast_type="primary"),
+            pybamm.Broadcast(c_e, ["positive electrode"], broadcast_type="primary"),
         )
         self.variables = {
             **self.get_variables(c_e_var, N_e),

@@ -46,9 +46,13 @@ class OldLOQS(pybamm.OldLeadAcidBaseModel):
         eps_p_pc = pybamm.Variable("Positive electrode porosity", curr_coll_domain)
 
         epsilon = pybamm.Concatenation(
-            pybamm.Broadcast(eps_n_pc, ["negative electrode"]),
-            pybamm.Broadcast(eps_s_pc, ["separator"]),
-            pybamm.Broadcast(eps_p_pc, ["positive electrode"]),
+            pybamm.Broadcast(
+                eps_n_pc, ["negative electrode"], broadcast_type="primary"
+            ),
+            pybamm.Broadcast(eps_s_pc, ["separator"], broadcast_type="primary"),
+            pybamm.Broadcast(
+                eps_p_pc, ["positive electrode"], broadcast_type="primary"
+            ),
         )
 
         self.variables.update({"Electrolyte concentration": c_e, "Porosity": epsilon})

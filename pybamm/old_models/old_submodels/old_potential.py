@@ -43,9 +43,13 @@ class OldPotential(pybamm.OldSubModel):
 
         # Broadcast if necessary
         if pot_n.domain in [[], ["current collector"]]:
-            pot_n = pybamm.Broadcast(pot_n, ["negative electrode"])
+            pot_n = pybamm.Broadcast(
+                pot_n, ["negative electrode"], broadcast_type="primary"
+            )
         if pot_p.domain in [[], ["current collector"]]:
-            pot_p = pybamm.Broadcast(pot_p, ["positive electrode"])
+            pot_p = pybamm.Broadcast(
+                pot_p, ["positive electrode"], broadcast_type="primary"
+            )
 
         # Derived and dimensional potentials
         pot_n_av = pybamm.average(pot_n)
