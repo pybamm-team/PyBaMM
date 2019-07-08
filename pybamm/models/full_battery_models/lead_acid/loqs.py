@@ -105,7 +105,7 @@ class LOQS(BaseModel):
             ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
             self.submodels[
                 "negative oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.DiffusionLimited(
+            ] = pybamm.interface.lead_acid_oxygen.LeadingOrderDiffusionLimited(
                 self.param, "Negative"
             )
 

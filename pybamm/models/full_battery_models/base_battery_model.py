@@ -286,7 +286,12 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Get coupled variables
         for submodel in self.submodels.values():
-            self.variables.update(submodel.get_coupled_variables(self.variables))
+            try:
+                self.variables.update(submodel.get_coupled_variables(self.variables))
+            except:
+                import ipdb
+
+                ipdb.set_trace()
 
         # Set model equations
         for submodel in self.submodels.values():

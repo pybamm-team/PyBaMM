@@ -3,7 +3,7 @@
 #
 import pybamm
 from .base_interface import BaseInterface
-from . import kinetics
+from . import kinetics, diffusion_limited
 
 
 class BaseInterfaceOxygenLeadAcid(BaseInterface):
@@ -79,6 +79,7 @@ class BaseInterfaceOxygenLeadAcid(BaseInterface):
         return ocp, dUdT
 
     def _get_number_of_electrons_in_reaction(self):
+        # TODO: remove the  / 2
         return self.param.ne_Ox / 2
 
 
@@ -102,8 +103,8 @@ class BackwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.BaseBackwardTafel):
         super().__init__(param, domain)
 
 
-class BaseLeadingOrderDiffusionLimited(
-    BaseInterfaceOxygenLeadAcid, BaseLeadingOrderDiffusionLimited
+class LeadingOrderDiffusionLimited(
+    BaseInterfaceOxygenLeadAcid, diffusion_limited.LeadingOrder
 ):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and

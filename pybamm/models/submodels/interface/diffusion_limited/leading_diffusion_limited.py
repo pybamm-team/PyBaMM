@@ -6,7 +6,7 @@ import pybamm
 from ..base_interface import BaseInterface
 
 
-class BaseModel(BaseInterface):
+class LeadingOrder(BaseInterface):
     """
     Leading-order submodel for diffusion-limited kinetics
 
