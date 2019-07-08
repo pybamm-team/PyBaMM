@@ -5,10 +5,11 @@ pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
+    pybamm.lead_acid.LOQS(),
     pybamm.lead_acid.LOQS(
         {"surface form": "differential", "side reactions": ["oxygen"]}
     ),
-    pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
+    # pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
     # pybamm.lead_acid.Composite(),
     # pybamm.lead_acid.NewmanTiedemann(),
 ]
@@ -55,7 +56,7 @@ output_variables = [
         "Average positive electrode interfacial current density [A.m-2]",
     ],
     "Electrolyte concentration [mol.m-3]",
-    "Porosity",
+    "Average oxygen concentration [mol.m-3]",
     "Electrolyte current density [A.m-2]",
     "Electrolyte potential [V]",
     "Terminal voltage [V]",

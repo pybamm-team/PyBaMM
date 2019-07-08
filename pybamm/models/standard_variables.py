@@ -75,3 +75,12 @@ T_s = pybamm.Variable("Separator temperature", ["separator"])
 T_p = pybamm.Variable("Positive electrode temperature", ["positive electrode"])
 T = pybamm.Concatenation(T_n, T_s, T_p)
 T_av = pybamm.Variable("Average cell temperature")
+
+
+# Oxygen concentration
+c_ox_n = pybamm.Variable("Negative oxygen concentration", ["negative electrode"])
+c_ox_s = pybamm.Variable("Separator oxygen concentration", ["separator"])
+c_ox_p = pybamm.Variable("Positive oxygen concentration", ["positive electrode"])
+c_ox = pybamm.Concatenation(c_ox_n, c_ox_s, c_ox_p)
+
+c_ox_av = pybamm.Variable("Average oxygen concentration")

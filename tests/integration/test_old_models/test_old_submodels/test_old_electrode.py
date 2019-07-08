@@ -2,7 +2,6 @@
 # Tests for the electrolyte submodels
 #
 import pybamm
-from pybamm.solvers.scikits_ode_solver import scikits_odes_spec
 import tests
 import numpy as np
 import numbers

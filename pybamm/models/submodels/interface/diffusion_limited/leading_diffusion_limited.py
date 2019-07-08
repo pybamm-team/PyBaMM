@@ -33,6 +33,6 @@ class LeadingOrder(BaseModel):
                     + " interfacial current density"
                 ]
             )
-            j = pybamm.Scalar(0)  # -self.param.l_p * j_p / self.param.l_n
+            j = -self.param.l_p * j_p / self.param.l_n
 
         return j

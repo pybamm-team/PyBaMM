@@ -72,7 +72,6 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Should probably refactor as this is a bit clunky at the moment
         # Maybe each reaction as a Reaction class so we can just list names of classes
-        param = self.param
         icd = " interfacial current density"
         self.reactions = {
             "main": {

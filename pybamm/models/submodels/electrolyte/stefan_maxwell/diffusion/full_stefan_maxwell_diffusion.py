@@ -59,7 +59,6 @@ class Full(BaseModel):
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
         # i_e = variables["Electrolyte current density"]
-        j = variables["Interfacial current density"]
 
         # TODO: check lead acid version in new form
         # source_term = ((param.s - param.t_plus) / param.gamma_e) * pybamm.div(i_e)
