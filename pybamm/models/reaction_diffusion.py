@@ -31,12 +31,12 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         self.param.epsilon_s = pybamm.Scalar(1)
         self.param.epsilon_p = pybamm.Scalar(1)
 
+        self.set_reactions()
         self.set_current_collector_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
         self.set_interfacial_submodel()
         self.set_electrolyte_submodel()
-        self.set_reactions()
 
         self.build_model()
 

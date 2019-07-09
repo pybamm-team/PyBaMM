@@ -12,13 +12,13 @@ class TestLeadingOrder(unittest.TestCase):
         param = pybamm.standard_parameters_lead_acid
         reactions = {
             "main": {
-                "neg": {
-                    "s_plus": param.s_n,
-                    "j": "Average negative electrode interfacial current density",
+                "Negative": {
+                    "s_ox": param.s_ox_Ox,
+                    "aj": "Negative electrode interfacial current density",
                 },
-                "pos": {
-                    "s_plus": param.s_p,
-                    "j": "Average positive electrode interfacial current density",
+                "Positive": {
+                    "s_ox": param.s_ox_Ox,
+                    "aj": "Positive electrode interfacial current density",
                 },
             }
         }
@@ -30,8 +30,12 @@ class TestLeadingOrder(unittest.TestCase):
             "Average negative electrode porosity change": a,
             "Average separator porosity change": a,
             "Average positive electrode porosity change": a,
-            "Average negative electrode interfacial current density": a,
-            "Average positive electrode interfacial current density": a,
+            "Negative electrode interfacial current density": pybamm.Broadcast(
+                a, "negative electrode"
+            ),
+            "Positive electrode interfacial current density": pybamm.Broadcast(
+                a, "positive electrode"
+            ),
         }
         submodel = pybamm.oxygen_diffusion.LeadingOrder(param, reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
