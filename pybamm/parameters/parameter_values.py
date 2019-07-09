@@ -60,10 +60,25 @@ class ParameterValues(dict):
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
     def update(self, values):
+        # check parameter values
+        self.check_parameter_values(values)
+        # update
         for k, v in values.items():
             self[k] = v
         # reset processed symbols
         self._processed_symbols = {}
+
+    def check_parameter_values(self, values):
+        if (
+            "Typical current density" in values
+            and values["Typical current density"] == 0
+        ):
+            raise ValueError(
+                """
+                Typical current density cannot be zero. A possible alternative is to set
+                "Current function" to `pybamm.GetConstantCurrent(current=0)` instead
+                """
+            )
 
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.

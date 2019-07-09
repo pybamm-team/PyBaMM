@@ -6,7 +6,7 @@ import pybamm
 from .base_diffusion_limited import BaseModel
 
 
-class Full(BaseModel):
+class BaseFullDiffusionLimited(BaseModel):
     """
     Full submodel for diffusion-limited kinetics
 

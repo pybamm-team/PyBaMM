@@ -103,7 +103,7 @@ class BackwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.BaseBackwardTafel):
 
 
 class LeadingOrderDiffusionLimited(
-    BaseInterfaceOxygenLeadAcid, diffusion_limited.LeadingOrder
+    BaseInterfaceOxygenLeadAcid, diffusion_limited.BaseLeadingOrderDiffusionLimited
 ):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
@@ -114,10 +114,22 @@ class LeadingOrderDiffusionLimited(
         super().__init__(param, domain)
 
 
-class FullDiffusionLimited(BaseInterfaceOxygenLeadAcid, diffusion_limited.Full):
+class FullDiffusionLimited(
+    BaseInterfaceOxygenLeadAcid, diffusion_limited.BaseFullDiffusionLimited
+):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
     :class:`kinetics.BaseFullDiffusionLimited` (for kinetics)
+    """
+
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
+
+
+class NoReaction(BaseInterfaceOxygenLeadAcid, kinetics.BaseNoReaction):
+    """
+    Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
+    :class:`kinetics.BaseNoReaction` (for kinetics)
     """
 
     def __init__(self, param, domain):

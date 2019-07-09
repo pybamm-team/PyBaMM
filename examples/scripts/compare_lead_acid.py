@@ -11,11 +11,11 @@ models = [
         {"surface form": "differential", "side reactions": ["oxygen"]},
         name="LOQS model with side reactions",
     ),
-    pybamm.lead_acid.NewmanTiedemann(
-        {"side reactions": ["oxygen"]},
-        name="Newman-Tiedemann model with side reactions",
-    ),
-    pybamm.lead_acid.NewmanTiedemann(),
+    # pybamm.lead_acid.NewmanTiedemann(
+    #     {"side reactions": ["oxygen"]},
+    #     name="Newman-Tiedemann model with side reactions",
+    # ),
+    # pybamm.lead_acid.NewmanTiedemann(),
     # pybamm.lead_acid.Composite(),
     # pybamm.lead_acid.NewmanTiedemann(),
 ]
@@ -27,7 +27,8 @@ geometry = models[-1].default_geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": -20,
+        "Current function": pybamm.GetConstantCurrent(current=0),
+        # "Typical current density": 0,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
@@ -61,10 +62,13 @@ output_variables = [
         "Average negative electrode interfacial current density [A.m-2]",
         "Average positive electrode interfacial current density [A.m-2]",
     ],
+    [
+        "Average negative electrode oxygen interfacial current density [A.m-2]",
+        "Average positive electrode oxygen interfacial current density [A.m-2]",
+    ],
     "Electrolyte concentration [mol.m-3]",
     "Oxygen concentration [mol.m-3]",
     "Electrolyte current density [A.m-2]",
-    "Electrolyte potential [V]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)

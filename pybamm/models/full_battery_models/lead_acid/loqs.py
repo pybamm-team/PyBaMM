@@ -126,6 +126,12 @@ class LOQS(BaseModel):
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(
                 self.param
             )
+            self.submodels[
+                "positive oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Positive")
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
 
     @property
     def default_spatial_methods(self):

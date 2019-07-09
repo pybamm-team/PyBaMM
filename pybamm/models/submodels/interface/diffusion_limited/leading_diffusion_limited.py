@@ -5,7 +5,7 @@ import pybamm
 from .base_diffusion_limited import BaseModel
 
 
-class LeadingOrder(BaseModel):
+class BaseLeadingOrderDiffusionLimited(BaseModel):
     """
     Leading-order submodel for diffusion-limited kinetics
 
