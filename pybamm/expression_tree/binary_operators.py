@@ -407,21 +407,17 @@ class MatrixMultiplication(BinaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        # I think we only need the case where left is an array and right
+        # We only need the case where left is an array and right
         # is a (slice of a) state vector, e.g. for discretised spatial
-        # operators of the form D @ u
+        # operators of the form D @ u (also catch cases of (-D) @ u)
         left, right = self.orphans
-        if isinstance(left, pybamm.Array):
+        if isinstance(left, pybamm.Array) or (
+            isinstance(left, pybamm.Negate) and isinstance(left.child, pybamm.Array)
+        ):
             left = pybamm.Matrix(csr_matrix(left.evaluate()))
             jac = left @ right.jac(variable)
             # Remove domain as matrix multiplies which come from an integral
             # end up getting the child domains back which throws an error
-            jac.domain = []
-            return jac
-        elif isinstance(left, pybamm.Negate) and isinstance(left.child, pybamm.Array):
-            # Catch cases of (-D) @ u
-            left = pybamm.Matrix(csr_matrix(left.evaluate()))
-            jac = left @ right.jac(variable)
             jac.domain = []
             return jac
         else:
@@ -636,7 +632,6 @@ class Outer(BinaryOperator):
             )
         # cannot have Variable, StateVector or Matrix in the right symbol, as these
         # can already be 2D objects (so we can't take an outer product with them)
-        # Note: Allowing variable seems to be OK
         if right.has_symbol_of_class(
             (pybamm.Variable, pybamm.StateVector, pybamm.Matrix)
         ):
