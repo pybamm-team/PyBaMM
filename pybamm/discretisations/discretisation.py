@@ -275,17 +275,32 @@ class Discretisation(object):
             Dictionary of processed boundary conditions
 
         """
+
         processed_bcs = {}
+
+        # process and set pybamm.variables first incase required
+        # in discrisation of other boundary conditions
         for key, bcs in model.boundary_conditions.items():
-            processed_bcs[key.id] = {}
-            for side, bc in bcs.items():
-                eqn, typ = bc
-                pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
-                processed_eqn = self.process_symbol(eqn)
-                processed_bcs[key.id][side] = (processed_eqn, typ)
-                self.bcs.update(processed_bcs)
+            if isinstance(key, pybamm.Variable):
+                processed_bcs.update(self._process_bc_entry(key, bcs))
+
+        self.bcs.update(processed_bcs)
+
+        for key, bcs in model.boundary_conditions.items():
+            if not isinstance(key, pybamm.Variable):
+                processed_bcs.update(self._process_bc_entry(key, bcs))
 
         return processed_bcs
+
+    def _process_bc_entry(self, key, bcs):
+        processed_entry = {key.id: {}}
+        for side, bc in bcs.items():
+            eqn, typ = bc
+            pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
+            processed_eqn = self.process_symbol(eqn)
+            processed_entry[key.id][side] = (processed_eqn, typ)
+
+        return processed_entry
 
     def process_rhs_and_algebraic(self, model):
         """Discretise model equations - differential ('rhs') and algebraic.
