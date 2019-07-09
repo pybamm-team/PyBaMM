@@ -236,24 +236,24 @@ class TestSimplify(unittest.TestCase):
             sym.simplify()
 
         # A + A = 2A (#323)
-        a = pybamm.Variable("A")
+        a = pybamm.Parameter("A")
         expr = (a + a).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 2)
-        self.assertIsInstance(expr.children[1], pybamm.Variable)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (a + a + a + a).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 4)
-        self.assertIsInstance(expr.children[1], pybamm.Variable)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (a - a + a - a + a + a).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 2)
-        self.assertIsInstance(expr.children[1], pybamm.Variable)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         # A - A = 0 (#323)
         expr = (a - a).simplify()
@@ -461,8 +461,9 @@ class TestSimplify(unittest.TestCase):
 
         # A - A = 0 (#323)
         expr = (a - a).simplify()
-        self.assertIsInstance(expr, pybamm.Scalar)
-        self.assertEqual(expr.evaluate(), 0)
+        self.assertIsInstance(expr, pybamm.Vector)
+        self.assertEqual(expr.shape, a.shape)
+        np.testing.assert_array_equal(expr.evaluate(), 0)
 
         # zero matrix
         m1 = pybamm.Matrix(np.zeros((300, 300)))
@@ -489,6 +490,20 @@ class TestSimplify(unittest.TestCase):
             np.testing.assert_array_equal(
                 expr_simp.evaluate(y=np.ones(300)), -m2.evaluate()
             )
+
+    def test_matrix_divide_simplify(self):
+        m = pybamm.Matrix(np.random.rand(300, 200))
+        zero = pybamm.Scalar(0)
+
+        expr1 = (zero / m).simplify()
+        self.assertIsInstance(expr1, pybamm.Matrix)
+        self.assertEqual(expr1.shape, m.shape)
+        np.testing.assert_array_equal(expr1.evaluate(), 0)
+
+        expr2 = (m / zero).simplify()
+        self.assertIsInstance(expr2, pybamm.Matrix)
+        self.assertEqual(expr2.shape, m.shape)
+        np.testing.assert_array_equal(expr2.evaluate(), np.inf)
 
     def test_domain_concatenation_simplify(self):
         # create discretisation

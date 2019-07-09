@@ -25,10 +25,11 @@ class BaseFullDiffusionLimited(BaseModel):
         super().__init__(param, domain)
 
     def _get_diffusion_limited_current_density(self, variables):
+        param = self.param
         if self.domain == "Negative":
             N_ox_s_p = variables["Oxygen flux"].orphans[1]
             N_ox_neg_sep_interface = N_ox_s_p[0]
 
-            j = -N_ox_neg_sep_interface / self.param.C_e / self.param.s_ox_Ox
+            j = -N_ox_neg_sep_interface / param.C_e / param.s_ox_Ox / param.l_n
 
         return j

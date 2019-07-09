@@ -41,6 +41,14 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(param["Reference temperature [K]"], 294.85)
         self.assertEqual(param["Negative electrode width [m]"], 0.5)
 
+    def test_check_parameter_values(self):
+        # Can't provide a current density of 0, as this will cause a ZeroDivision error
+        bad_values = {"Typical current density": 0}
+        with self.assertRaisesRegex(
+            ValueError, "Typical current density cannot be zero."
+        ):
+            pybamm.ParameterValues(bad_values)
+
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
         # process parameter

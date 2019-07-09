@@ -576,8 +576,7 @@ class Symbol(anytree.NodeMixin):
         """
         Shape of an object for cases where it cannot be evaluated directly. If a symbol
         cannot be evaluated directly (e.g. it is a `Variable` or `Parameter`), it is
-        instead given an arbitrary domain-dependent shape from the dictionary
-        `pybamm.DOMAIN_SIZES_FOR_TESTING` (note that this only works for some domains)
+        instead given an arbitrary domain-dependent shape.
         """
         evaluated_self = self.evaluate_for_shape()
         if isinstance(evaluated_self, numbers.Number):

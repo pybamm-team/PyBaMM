@@ -11,11 +11,11 @@ models = [
         {"surface form": "differential", "side reactions": ["oxygen"]},
         name="LOQS model with side reactions",
     ),
-    # pybamm.lead_acid.NewmanTiedemann(
-    #     {"side reactions": ["oxygen"]},
-    #     name="Newman-Tiedemann model with side reactions",
-    # ),
-    # pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.NewmanTiedemann(
+        {"side reactions": ["oxygen"]},
+        name="Newman-Tiedemann model with side reactions",
+    ),
+    pybamm.lead_acid.NewmanTiedemann(),
     # pybamm.lead_acid.Composite(),
     # pybamm.lead_acid.NewmanTiedemann(),
 ]
@@ -28,7 +28,7 @@ param = models[0].default_parameter_values
 param.update(
     {
         "Current function": pybamm.GetConstantCurrent(current=0),
-        # "Typical current density": 0,
+        # "Typical current density": 20,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
