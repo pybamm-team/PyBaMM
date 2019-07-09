@@ -415,7 +415,7 @@ class Discretisation(object):
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
-            new_var_eqn_dict[eqn_key].shape
+            new_var_eqn_dict[eqn_key].test_shape()
 
         return new_var_eqn_dict
 
@@ -465,8 +465,10 @@ class Discretisation(object):
             if child.domain != []:
                 child_spatial_method = self._spatial_methods[child.domain[0]]
             if isinstance(symbol, pybamm.Gradient):
-                return child_spatial_method.gradient(child, disc_child, self.bcs)
-
+                try:
+                    return child_spatial_method.gradient(child, disc_child, self.bcs)
+                except UnboundLocalError:
+                    import ipdb; ipdb.set_trace()
             elif isinstance(symbol, pybamm.Divergence):
                 return child_spatial_method.divergence(child, disc_child, self.bcs)
 

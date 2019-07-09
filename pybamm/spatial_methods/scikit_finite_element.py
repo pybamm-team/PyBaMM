@@ -54,7 +54,19 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh
-        return pybamm.Vector(symbol_mesh[0].npts, domain=symbol.domain)
+        if symbol.name == "y":
+            vector = pybamm.Vector(
+                symbol_mesh["current collector"][0].nodes["y"], domain=symbol.domain
+            )
+        elif symbol.name == "z":
+            vector = pybamm.Vector(
+                symbol_mesh["current collector"][0].nodes["z"], domain=symbol.domain
+            )
+        else:
+            raise pybamm.GeometryError(
+                "Spatial variable must be 'y' or 'z' not {}".format(symbol.name)
+            )
+        return vector
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.

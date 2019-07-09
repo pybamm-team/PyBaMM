@@ -76,6 +76,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             var.x_p: 35,
             var.r_n: 10,
             var.r_p: 10,
+            var.y: 10,
             var.z: 10,
         }
 
@@ -265,6 +266,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Spatial
         var = pybamm.standard_spatial_vars
         L_x = pybamm.geometric_parameters.L_x
+        L_y = pybamm.geometric_parameters.L_y
+        L_z = pybamm.geometric_parameters.L_z
         self.variables.update(
             {
                 "x": var.x,
@@ -277,6 +280,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "x_p [m]": var.x_p * L_x,
             }
         )
+        if self.options["bc_options"]["dimensionality"] == 1:
+            self.variables.update({"y": var.y, "y [m]": var.y * L_y})
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            self.variables.update(
+                {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
+            )
 
     def build_model(self):
 
