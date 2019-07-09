@@ -11,7 +11,11 @@ models = [
         {"surface form": "differential", "side reactions": ["oxygen"]},
         name="LOQS model with side reactions",
     ),
-    pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
+    pybamm.lead_acid.NewmanTiedemann(
+        {"side reactions": ["oxygen"]},
+        name="Newman-Tiedemann model with side reactions",
+    ),
+    pybamm.lead_acid.NewmanTiedemann(),
     # pybamm.lead_acid.Composite(),
     # pybamm.lead_acid.NewmanTiedemann(),
 ]

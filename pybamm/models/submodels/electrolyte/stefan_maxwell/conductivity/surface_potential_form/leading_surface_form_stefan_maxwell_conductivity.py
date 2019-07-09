@@ -93,7 +93,9 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         )
 
         sum_j_av = variables[
-            "Average " + self.domain.lower() + " electrode interfacial current density"
+            "Average "
+            + self.domain.lower()
+            + " electrode total interfacial current density"
         ]
         delta_phi = variables[
             "Average " + self.domain.lower() + " electrode surface potential difference"
@@ -134,7 +136,9 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         )
 
         sum_j_av = variables[
-            "Average " + self.domain.lower() + " electrode interfacial current density"
+            "Average "
+            + self.domain.lower()
+            + " electrode total interfacial current density"
         ]
         delta_phi = variables[
             "Average " + self.domain.lower() + " electrode surface potential difference"

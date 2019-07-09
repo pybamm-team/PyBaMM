@@ -1,6 +1,7 @@
 #
 # Leading-order diffusion limited kinetics
 #
+import pybamm
 from .base_diffusion_limited import BaseModel
 
 
