@@ -21,25 +21,27 @@ class BaseInterface(pybamm.BaseSubModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def _get_average_interfacial_current_density(self, variables):
+    def _get_average_total_interfacial_current_density(self, variables):
         """
-        Method to obtain the average interfacial current density.
+        Method to obtain the average total interfacial current density.
         """
 
         i_boundary_cc = variables["Current collector current density"]
 
         if self.domain == "Negative":
-            j_av = i_boundary_cc / pybamm.geometric_parameters.l_n
+            j_total_average = i_boundary_cc / pybamm.geometric_parameters.l_n
 
         elif self.domain == "Positive":
-            j_av = -i_boundary_cc / pybamm.geometric_parameters.l_p
+            j_total_average = -i_boundary_cc / pybamm.geometric_parameters.l_p
 
-        return j_av
+        return j_total_average
 
-    def _get_standard_interfacial_current_variables(self, j, j_av):
+    def _get_standard_interfacial_current_variables(self, j):
 
         i_typ = self.param.i_typ
-        # Broadcast if necessary
+
+        # Average, and broadcast if necessary
+        j_av = pybamm.average(j)
         if j.domain in [[], ["current collector"]]:
             j = pybamm.Broadcast(j, self.domain_for_broadcast)
 
@@ -52,6 +54,21 @@ class BaseInterface(pybamm.BaseSubModel):
             "Average "
             + self.domain.lower()
             + " electrode interfacial current density [A.m-2]": i_typ * j_av,
+        }
+
+        return variables
+
+    def _get_standard_total_interfacial_current_variables(self, j_tot_av):
+
+        i_typ = self.param.i_typ
+
+        variables = {
+            "Average "
+            + self.domain.lower()
+            + " electrode total interfacial current density": j_tot_av,
+            "Average "
+            + self.domain.lower()
+            + " electrode total interfacial current density [A.m-2]": i_typ * j_tot_av,
         }
 
         return variables

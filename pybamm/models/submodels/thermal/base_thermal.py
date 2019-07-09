@@ -19,9 +19,10 @@ class BaseModel(pybamm.BaseSubModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_standard_fundamental_variables(self, T, T_av):
+    def _get_standard_fundamental_variables(self, T):
         param = self.param
         T_n, T_s, T_p = T.orphans
+        T_av = pybamm.average(T)
 
         q = self._flux_law(T)
 
@@ -136,4 +137,3 @@ class BaseModel(pybamm.BaseSubModel):
         T, _, _ = self._unpack(variables)
 
         self.initial_conditions = {T: self.param.T_init}
-

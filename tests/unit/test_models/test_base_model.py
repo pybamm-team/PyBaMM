@@ -377,15 +377,18 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
         # check parameters are read in ok
         model = pybamm.BaseBatteryModel()
         self.assertEqual(
-            model.default_parameter_values['Reference temperature [K]'], 298.15)
+            model.default_parameter_values["Reference temperature [K]"], 298.15
+        )
 
         # change path and try again
         import os
+
         cwd = os.getcwd()
-        os.chdir('..')
+        os.chdir("..")
         model = pybamm.BaseBatteryModel()
         self.assertEqual(
-            model.default_parameter_values['Reference temperature [K]'], 298.15)
+            model.default_parameter_values["Reference temperature [K]"], 298.15
+        )
         os.chdir(cwd)
 
 
@@ -395,4 +398,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()
