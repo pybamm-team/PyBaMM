@@ -71,12 +71,21 @@ class LOQS(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        self.submodels[
-            "negative interface"
-        ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Negative")
-        self.submodels[
-            "positive interface"
-        ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Positive")
+        if self.options["surface form"] is False:
+            self.submodels[
+                "negative interface"
+            ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Negative")
+            self.submodels[
+                "positive interface"
+            ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Positive")
+        else:
+            self.submodels[
+                "negative interface"
+            ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Negative")
+
+            self.submodels[
+                "positive interface"
+            ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Positive")
 
     def set_negative_electrode_submodel(self):
 
@@ -93,10 +102,25 @@ class LOQS(BaseModel):
     def set_electrolyte_submodel(self):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
+        surf_form = electrolyte.conductivity.surface_potential_form
 
-        self.submodels[
-            "electrolyte conductivity"
-        ] = electrolyte.conductivity.LeadingOrder(self.param)
+        if self.options["surface form"] is False:
+            self.submodels[
+                "electrolyte conductivity"
+            ] = electrolyte.conductivity.LeadingOrder(self.param)
+        elif self.options["surface form"] == "differential":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + " electrolyte conductivity"
+                ] = surf_form.LeadingOrderDifferential(self.param, domain)
+        elif self.options["surface form"] == "algebraic":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + " electrolyte conductivity"
+                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
+
+        else:
+            raise pybamm.OptionError("'capacitance' must be either 'True' or 'False'")
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.LeadingOrder(
             self.param, self.reactions
@@ -112,11 +136,18 @@ class LOQS(BaseModel):
 
     @property
     def default_geometry(self):
-        return pybamm.Geometry("1D macro")
+        if self.options["bc_options"]["dimensionality"] == 0:
+            return pybamm.Geometry("1D macro")
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            return pybamm.Geometry("1+1D macro")
 
     @property
     def default_solver(self):
         """
         Create and return the default solver for this model
         """
-        return pybamm.ScipySolver()
+
+        if self.options["surface form"] == "algebraic":
+            return pybamm.ScikitsDaeSolver()
+        else:
+            return pybamm.ScipySolver()

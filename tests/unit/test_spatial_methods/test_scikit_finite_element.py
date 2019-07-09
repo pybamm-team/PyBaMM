@@ -122,21 +122,19 @@ class TestScikitFiniteElement(unittest.TestCase):
         var_disc = disc.process_symbol(var)
         z_vertices = mesh["current collector"][0].coordinates[1, :]
         np.testing.assert_array_almost_equal(
-            var_disc.evaluate(None, z_vertices),
-            z_vertices[:, np.newaxis]
+            var_disc.evaluate(None, z_vertices), z_vertices[:, np.newaxis]
         )
 
         # linear u = 6*y (to test coordinates to degree of freedom mapping)
         y_vertices = mesh["current collector"][0].coordinates[0, :]
         np.testing.assert_array_almost_equal(
-            var_disc.evaluate(None, 6 * y_vertices),
-            6 * y_vertices[:, np.newaxis]
+            var_disc.evaluate(None, 6 * y_vertices), 6 * y_vertices[:, np.newaxis]
         )
 
         # mixed u = y*z (to test coordinates to degree of freedom mapping)
         np.testing.assert_array_almost_equal(
             var_disc.evaluate(None, y_vertices * z_vertices),
-            y_vertices[:, np.newaxis] * z_vertices[:, np.newaxis]
+            y_vertices[:, np.newaxis] * z_vertices[:, np.newaxis],
         )
 
         # laplace of u = sin(pi*z)
@@ -158,9 +156,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         mass_disc = disc.process_symbol(mass)
         soln = -np.pi ** 2 * u
         np.testing.assert_array_almost_equal(
-            eqn_zz_disc.evaluate(None, u),
-            mass_disc.entries @ soln,
-            decimal=3
+            eqn_zz_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=3
         )
 
         # laplace of u = cos(pi*y)*sin(pi*z)
@@ -183,9 +179,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         mass_disc = disc.process_symbol(mass)
         soln = -np.pi ** 2 * u
         np.testing.assert_array_almost_equal(
-            laplace_eqn_disc.evaluate(None, u),
-            mass_disc.entries @ soln,
-            decimal=2
+            laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=2
         )
 
     def test_definite_integral(self):
@@ -235,4 +229,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

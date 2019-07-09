@@ -91,10 +91,10 @@ class Scikit2DSubMesh:
         # get degrees of freedom which correspond to tabs and set normals on tabs
         self.normal = {}
         self.negative_tab = self.basis.get_dofs(
-            lambda y, z: self.on_boundary(y, z, tabs, "negative")
+            lambda x: self.on_boundary(x[0], x[1], tabs["negative"])
         ).all()
         self.positive_tab = self.basis.get_dofs(
-            lambda y, z: self.on_boundary(y, z, tabs, "positive")
+            lambda x: self.on_boundary(x[0], x[1], tabs["positive"])
         ).all()
 
     def on_boundary(self, y, z, tabs, domain):

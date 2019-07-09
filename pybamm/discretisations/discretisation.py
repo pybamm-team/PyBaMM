@@ -86,6 +86,7 @@ class Discretisation(object):
         self.set_variable_slices(variables)
 
         # set boundary conditions (only need key ids for boundary_conditions)
+        model = self.set_internal_boundary_conditions(model)
         self.bcs = self.process_boundary_conditions(model)
 
         # set up inplace vs not inplace
@@ -96,6 +97,8 @@ class Discretisation(object):
         else:
             # create a blank model so that original model is unchanged
             model_disc = pybamm.BaseModel()
+
+        model_disc.bcs = self.bcs
 
         # Process initial condtions
         ics, concat_ics = self.process_initial_conditions(model)
@@ -166,6 +169,68 @@ class Discretisation(object):
 
         # reset discretised_symbols
         self._discretised_symbols = {}
+
+    def set_internal_boundary_conditions(self, model):
+        """
+        A method to set the internal boundary conditions for the submodel.
+        These are required to properly calculate the gradient.
+        Note: this method modifies the state of self.boundary_conditions.
+        """
+
+        def boundary_gradient(left_orphan, right_orphan):
+
+            left_domain = left_orphan.domain[0]
+            right_domain = right_orphan.domain[0]
+
+            left_submesh = self._spatial_methods[left_domain].mesh[left_domain][0]
+            right_submesh = self._spatial_methods[right_domain].mesh[right_domain][0]
+
+            x_left = left_submesh.nodes[-1]
+            x_right = right_submesh.nodes[0]
+
+            dy = pybamm.Index(right_orphan, 0) - pybamm.Index(left_orphan, -1)
+            dx = x_right - x_left
+
+            return dy / dx
+
+        bc_key_ids = [key.id for key in list(model.boundary_conditions.keys())]
+
+        internal_bcs = {}
+        for var in model.boundary_conditions.keys():
+            if isinstance(var, pybamm.Concatenation):
+                children = var.children
+
+                first_child = children[0]
+                first_orphan = first_child.new_copy()
+                next_child = children[1]
+                next_orphan = next_child.new_copy()
+
+                lbc = model.boundary_conditions[var]["left"]
+                rbc = (boundary_gradient(first_orphan, next_orphan), "Neumann")
+
+                if first_child.id not in bc_key_ids:
+                    internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
+
+                for i, _ in enumerate(children[1:-1]):
+                    current_child = next_child
+                    current_orphan = next_orphan
+                    next_child = children[i + 2]
+                    next_orphan = next_child.new_copy()
+
+                    lbc = rbc
+                    rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
+                    if current_child.id not in bc_key_ids:
+                        internal_bcs.update(
+                            {current_child: {"left": lbc, "right": rbc}}
+                        )
+
+                lbc = rbc
+                rbc = model.boundary_conditions[var]["right"]
+                if children[-1].id not in bc_key_ids:
+                    internal_bcs.update({children[-1]: {"left": lbc, "right": rbc}})
+
+        model.boundary_conditions.update(internal_bcs)
+        return model
 
     def process_initial_conditions(self, model):
         """Discretise model initial_conditions.

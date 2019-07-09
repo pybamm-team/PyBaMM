@@ -95,6 +95,11 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             "Electrolyte current density [A.m-2]": i_typ * i_e,
         }
 
+        if isinstance(i_e, pybamm.Concatenation):
+            i_e_n, _, i_e_p = i_e.orphans
+            variables.update(self._get_domain_current_variables(i_e_n, "Negative"))
+            variables.update(self._get_domain_current_variables(i_e_p, "Positive"))
+
         return variables
 
     def _get_split_overpotential(self, eta_c_av, delta_phi_e_av):
@@ -146,8 +151,16 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables which can be derived from the surface potential difference.
         """
 
+        if self.domain == "Negative":
+            ocp_ref = self.param.U_n_ref
+        elif self.domain == "Positive":
+            ocp_ref = self.param.U_p_ref
         pot_scale = self.param.potential_scale
+
+        # Average, and broadcast if necessary
         delta_phi_av = pybamm.average(delta_phi)
+        if delta_phi.domain in [[], ["current collector"]]:
+            delta_phi = pybamm.Broadcast(delta_phi, self.domain_for_broadcast)
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
@@ -155,15 +168,17 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             + self.domain.lower()
             + " electrode surface potential difference": delta_phi_av,
             self.domain
-            + " electrode surface potential difference [V]": delta_phi * pot_scale,
+            + " electrode surface potential difference [V]": ocp_ref
+            + delta_phi * pot_scale,
             "Average "
             + self.domain.lower()
-            + " electrode surface potential difference [V]": delta_phi_av * pot_scale,
+            + " electrode surface potential difference [V]": ocp_ref
+            + delta_phi_av * pot_scale,
         }
 
         return variables
 
-    def _get_domain_potential_variables(self, phi_e, domain):
+    def _get_domain_potential_variables(self, phi_e, domain=None):
         """
         A private function to obtain the standard variables which
         can be derived from the potential in the electrolyte split
@@ -173,8 +188,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         ----------
         phi_e : :class:`pybamm.Symbol`
             The potential in the electrolyte within the domain 'domain'.
-        domain : str
-            The domain, either: 'Negative', 'Separator', or 'Positive'
 
         Returns
         -------
@@ -182,22 +195,23 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables which can be derived from the potential in the
             electrolyte in domain 'domain'.
         """
+        domain = domain or self.domain
 
         pot_scale = self.param.potential_scale
         phi_e_av = pybamm.average(phi_e)
 
         variables = {
-            self.domain + " electrolyte potential": phi_e,
-            self.domain + " electrolyte potential [V]": phi_e * pot_scale,
-            "Average " + self.domain.lower() + " electrolyte potential": phi_e_av,
+            domain + " electrolyte potential": phi_e,
+            domain + " electrolyte potential [V]": phi_e * pot_scale,
+            "Average " + domain.lower() + " electrolyte potential": phi_e_av,
             "Average "
-            + self.domain.lower()
+            + domain.lower()
             + " electrolyte potential [V]": phi_e_av * pot_scale,
         }
 
         return variables
 
-    def _get_domain_current_variables(self, i_e, domain):
+    def _get_domain_current_variables(self, i_e, domain=None):
         """
         A private function to obtain the standard variables which
         can be derived from the current in the electrolyte split
@@ -207,8 +221,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         ----------
         i_e : :class:`pybamm.Symbol`
             The current in the electrolyte within the domain 'domain'.
-        domain : str
-            The domain, either: 'Negative', 'Separator', or 'Positive'
 
         Returns
         -------
@@ -216,12 +228,13 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables which can be derived from the current in the
             electrolyte in domain 'domain'.
         """
+        domain = domain or self.domain
 
         i_typ = self.param.i_typ
 
         variables = {
-            self.domain + " electrolyte current density": i_e,
-            self.domain + " electrolyte current density [V]": i_e * i_typ,
+            domain + " electrolyte current density": i_e,
+            domain + " electrolyte current density [V]": i_e * i_typ,
         }
 
         return variables

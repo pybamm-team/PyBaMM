@@ -22,7 +22,10 @@ class TestFull(unittest.TestCase):
         }
 
         spf = pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form
-        submodel = spf.Full(param, "Negative")
+        submodel = spf.FullAlgebraic(param, "Negative")
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+        submodel = spf.FullDifferential(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -36,7 +39,10 @@ class TestFull(unittest.TestCase):
             "Positive electrolyte concentration": a_p,
             "Positive electrode interfacial current density": a_p,
         }
-        submodel = spf.Full(param, "Positive")
+        submodel = spf.FullAlgebraic(param, "Positive")
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+        submodel = spf.FullDifferential(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -47,4 +53,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

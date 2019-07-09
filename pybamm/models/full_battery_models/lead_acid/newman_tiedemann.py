@@ -25,9 +25,9 @@ class NewmanTiedemann(BaseModel):
         self.set_current_collector_submodel()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
-        self.set_negative_electrode_submodel()
         self.set_convection_submodel()
         self.set_electrolyte_submodel()
+        self.set_negative_electrode_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
 
@@ -56,30 +56,48 @@ class NewmanTiedemann(BaseModel):
         )
 
     def set_negative_electrode_submodel(self):
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Negative"
-        )
+        if self.options["surface form"] is False:
+            submodel = pybamm.electrode.ohm.Full(self.param, "Negative")
+        else:
+            submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
+        self.submodels["negative electrode"] = submodel
 
     def set_positive_electrode_submodel(self):
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Positive"
-        )
+        if self.options["surface form"] is False:
+            submodel = pybamm.electrode.ohm.Full(self.param, "Positive")
+        else:
+            submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
+        self.submodels["positive electrode"] = submodel
 
     def set_electrolyte_submodel(self):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
+        surf_form = electrolyte.conductivity.surface_potential_form
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
-            self.param
-        )
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
 
-        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-            self.param
-        )
+        if self.options["surface form"] is False:
+            self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
+                self.param
+            )
+        elif self.options["surface form"] == "differential":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + " electrolyte conductivity"
+                ] = surf_form.FullDifferential(self.param, domain)
+        elif self.options["surface form"] == "algebraic":
+            for domain in ["Negative", "Separator", "Positive"]:
+                self.submodels[
+                    domain.lower() + " electrolyte conductivity"
+                ] = surf_form.FullAlgebraic(self.param, domain)
 
     @property
     def default_solver(self):
         """
         Create and return the default solver for this model
         """
-        return pybamm.ScikitsDaeSolver()
+        # Different solver depending on whether we solve ODEs or DAEs
+        if self.options["surface form"] == "differential":
+            return pybamm.ScipySolver()
+        else:
+            return pybamm.ScikitsDaeSolver()

@@ -23,15 +23,13 @@ class Isothermal(BaseModel):
 
     def get_fundamental_variables(self):
 
-        T_av = pybamm.Scalar(0)
-
-        T_n = pybamm.Broadcast(T_av, ["negative electrode"])
-        T_s = pybamm.Broadcast(T_av, ["separator"])
-        T_p = pybamm.Broadcast(T_av, ["positive electrode"])
+        T_n = pybamm.Broadcast(0, ["negative electrode"])
+        T_s = pybamm.Broadcast(0, ["separator"])
+        T_p = pybamm.Broadcast(0, ["positive electrode"])
 
         T = pybamm.Concatenation(T_n, T_s, T_p)
 
-        variables = self._get_standard_fundamental_variables(T, T_av)
+        variables = self._get_standard_fundamental_variables(T)
         return variables
 
     def _flux_law(self, T):
@@ -43,4 +41,3 @@ class Isothermal(BaseModel):
 
     def set_initial_conditions(self, variables):
         return {}
-

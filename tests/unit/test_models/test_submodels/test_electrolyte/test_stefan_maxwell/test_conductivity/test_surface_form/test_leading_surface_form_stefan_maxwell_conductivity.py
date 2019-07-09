@@ -19,11 +19,14 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Negative electrode porosity": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative electrode interfacial current density": a_n,
-            "Average negative electrode interfacial current density": a,
+            "Average negative electrode total interfacial current density": a,
         }
 
         spf = pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form
-        submodel = spf.LeadingOrder(param, "Negative")
+        submodel = spf.LeadingOrderAlgebraic(param, "Negative")
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+        submodel = spf.LeadingOrderDifferential(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -36,9 +39,12 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Positive electrode porosity": a_p,
             "Positive electrolyte concentration": a_p,
             "Positive electrode interfacial current density": a_p,
-            "Average positive electrode interfacial current density": a,
+            "Average positive electrode total interfacial current density": a,
         }
-        submodel = spf.LeadingOrder(param, "Positive")
+        submodel = spf.LeadingOrderAlgebraic(param, "Positive")
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+        submodel = spf.LeadingOrderDifferential(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -49,4 +55,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

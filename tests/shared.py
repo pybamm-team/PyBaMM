@@ -96,7 +96,7 @@ def get_1p1d_mesh_for_testing(xpts=None, zpts=15):
 
 
 def get_2p1d_mesh_for_testing(
-    xpts=None, ypts=15, zpts=15, cc_submesh=pybamm.Scikit2DSubMesh,
+    xpts=None, ypts=15, zpts=15, cc_submesh=pybamm.Scikit2DSubMesh
 ):
     geometry = pybamm.Geometry("2+1D macro")
     return get_mesh_for_testing(

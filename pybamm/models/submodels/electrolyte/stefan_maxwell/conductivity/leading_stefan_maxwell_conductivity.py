@@ -26,6 +26,10 @@ class LeadingOrder(BaseModel):
         ocp_n_av = variables["Average negative electrode open circuit potential"]
         eta_r_n_av = variables["Average negative electrode reaction overpotential"]
         phi_s_n_av = variables["Average negative electrode potential"]
+        phi_e_av = phi_s_n_av - eta_r_n_av - ocp_n_av
+        return self._get_coupled_variables_from_potential(variables, phi_e_av)
+
+    def _get_coupled_variables_from_potential(self, variables, phi_e_av):
         i_boundary_cc = variables["Current collector current density"]
 
         param = self.param
@@ -34,7 +38,6 @@ class LeadingOrder(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        phi_e_av = phi_s_n_av - eta_r_n_av - ocp_n_av
         phi_e_n = pybamm.Broadcast(
             phi_e_av, ["negative electrode"], broadcast_type="primary"
         )

@@ -44,6 +44,21 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.Discretisation(None, None)
         self.assertEqual(disc._spatial_methods, {})
 
+    def test_add_internal_boundary_conditions(self):
+        model = pybamm.BaseModel()
+        c_e = pybamm.standard_variables.c_e
+        lbc = (pybamm.Scalar(0), "Neumann")
+        rbc = (pybamm.Scalar(0), "Neumann")
+        model.boundary_conditions = {c_e: {"left": lbc, "right": rbc}}
+
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.SpatialMethod}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        model = disc.set_internal_boundary_conditions(model)
+
+        for child in c_e.children:
+            self.assertTrue(child in model.boundary_conditions.keys())
+
     def test_discretise_slicing(self):
         # create discretisation
         mesh = get_mesh_for_testing()
@@ -775,4 +790,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()
