@@ -35,14 +35,9 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
     known_evals = {t: {} for t in t_sol}
     for var, eqn in variables.items():
         pybamm.logger.debug("Post-processing {}".format(var))
-        try:
-            processed_variables[var] = ProcessedVariable(
-                eqn, t_sol, y_sol, mesh, interp_kind, known_evals
-            )
-        except:
-            processed_variables[var] = ProcessedVariable(
-                eqn, t_sol, y_sol, mesh, interp_kind, known_evals
-            )
+        processed_variables[var] = ProcessedVariable(
+            eqn, t_sol, y_sol, mesh, interp_kind, known_evals
+        )
 
         for t in known_evals:
             known_evals[t].update(processed_variables[var].known_evals[t])

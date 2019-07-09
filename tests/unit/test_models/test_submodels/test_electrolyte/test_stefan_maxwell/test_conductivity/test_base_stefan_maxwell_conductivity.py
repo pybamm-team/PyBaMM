@@ -7,6 +7,9 @@ import tests
 import unittest
 
 
+pybamm.settings.debug_mode = True
+
+
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
         submodel = pybamm.electrolyte.stefan_maxwell.conductivity.BaseModel(None)

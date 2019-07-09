@@ -19,6 +19,7 @@ class TestFull(unittest.TestCase):
             "Negative electrode porosity": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative electrode interfacial current density": a_n,
+            "Electrolyte potential": pybamm.Concatenation(a_n, a_s, a_p),
         }
 
         spf = pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form

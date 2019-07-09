@@ -283,6 +283,7 @@ class Discretisation(object):
                 pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
                 processed_eqn = self.process_symbol(eqn)
                 processed_bcs[key.id][side] = (processed_eqn, typ)
+                self.bcs.update(processed_bcs)
 
         return processed_bcs
 
