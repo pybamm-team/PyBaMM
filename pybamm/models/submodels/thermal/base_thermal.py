@@ -64,7 +64,6 @@ class BaseModel(pybamm.BaseSubModel):
         i_s_n = variables["Negative electrode current density"]
         i_s_p = variables["Positive electrode current density"]
         phi_s_n = variables["Negative electrode potential"]
-        phi_s_s = pybamm.Broadcast(0, ["separator"])
         phi_s_p = variables["Positive electrode potential"]
 
         # TODO: add ohmic heating from solid and electrolyte
