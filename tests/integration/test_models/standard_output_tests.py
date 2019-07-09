@@ -445,6 +445,11 @@ class PotentialTests(BaseOutputTest):
             "Positive electrode surface potential difference [V]"
         ]
 
+        self.grad_phi_e = variables["Gradient of electrolyte potential"]
+        self.grad_phi_e_n = variables["Gradient of negative electrolyte potential"]
+        self.grad_phi_e_s = variables["Gradient of separator electrolyte potential"]
+        self.grad_phi_e_p = variables["Gradient of positive electrolyte potential"]
+
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
         average negative electrode potential is less than or equal to zero."""
@@ -478,6 +483,20 @@ class PotentialTests(BaseOutputTest):
         # TODO: these tests with averages
 
         np.testing.assert_array_less(-self.phi_s_p(self.t, self.x_p), 0)
+
+    def test_gradient_splitting(self):
+
+        t, x_n, x_s, x_p, x = self.t, self.x_n, self.x_s, self.x_p, self.x
+        grad_phi_e_combined = np.concatenate(
+            (
+                self.grad_phi_e_n(t, x_n),
+                self.grad_phi_e_s(t, x_s),
+                self.grad_phi_e_p(t, x_p),
+            ),
+            axis=0,
+        )
+
+        np.testing.assert_array_equal(self.grad_phi_e(t, x), grad_phi_e_combined)
 
     def test_all(self):
         self.test_negative_electrode_potential_profile()
