@@ -171,9 +171,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         "electrode conductivities"
         # neg dimensional
         np.testing.assert_almost_equal(
-            values.process_symbol(param.sigma_n_dim).evaluate(None, None),
-            100,
-            3,
+            values.process_symbol(param.sigma_n_dim).evaluate(None, None), 100, 3
         )
 
         # neg dimensionless (old sigma_n / old_Lambda ) (this is different to values
@@ -292,4 +290,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

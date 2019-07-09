@@ -25,9 +25,8 @@ class Full(BaseModel):
 
     def get_fundamental_variables(self):
         c_e = pybamm.standard_variables.c_e
-        c_e_av = pybamm.average(c_e)
 
-        return self._get_standard_concentration_variables(c_e, c_e_av)
+        return self._get_standard_concentration_variables(c_e)
 
     def get_coupled_variables(self, variables):
 

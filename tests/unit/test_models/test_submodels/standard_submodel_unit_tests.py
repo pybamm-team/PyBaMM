@@ -44,4 +44,3 @@ class StandardSubModelTests(object):
         self.test_set_boundary_conditions()
         self.test_set_initial_conditions()
         self.test_set_events()
-

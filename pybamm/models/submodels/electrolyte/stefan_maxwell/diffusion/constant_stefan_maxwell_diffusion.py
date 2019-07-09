@@ -22,13 +22,12 @@ class ConstantConcentration(BaseModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        c_e_av = pybamm.Scalar(1)
-        c_e_n = pybamm.Broadcast(c_e_av, ["negative electrode"])
-        c_e_s = pybamm.Broadcast(c_e_av, ["separator"])
-        c_e_p = pybamm.Broadcast(c_e_av, ["positive electrode"])
+        c_e_n = pybamm.Broadcast(1, ["negative electrode"])
+        c_e_s = pybamm.Broadcast(1, ["separator"])
+        c_e_p = pybamm.Broadcast(1, ["positive electrode"])
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-        variables = self._get_standard_concentration_variables(c_e, c_e_av)
+        variables = self._get_standard_concentration_variables(c_e)
 
         N_e = pybamm.Broadcast(
             0, ["negative electrode", "separator", "positive electrode"]

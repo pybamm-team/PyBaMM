@@ -31,7 +31,7 @@ class LeadingOrder(BaseModel):
         c_e_p = pybamm.Broadcast(c_e_av, ["positive electrode"])
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-        return self._get_standard_concentration_variables(c_e, c_e_av)
+        return self._get_standard_concentration_variables(c_e)
 
     def get_coupled_variables(self, variables):
 

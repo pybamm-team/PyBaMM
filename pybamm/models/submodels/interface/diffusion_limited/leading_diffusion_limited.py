@@ -1,8 +1,6 @@
 #
 # Leading-order diffusion limited kinetics
 #
-
-import pybamm
 from .base_diffusion_limited import BaseModel
 
 
@@ -18,7 +16,7 @@ class LeadingOrder(BaseModel):
         The domain to implement the model, either: 'Negative' or 'Positive'.
 
 
-    **Extends:** :class:`pybamm.interface.BaseInterface`
+    **Extends:** :class:`pybamm.interface.diffusion_limited.BaseModel`
     """
 
     def __init__(self, param, domain):

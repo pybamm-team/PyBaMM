@@ -52,9 +52,7 @@ class TestDiscretise(unittest.TestCase):
         model.boundary_conditions = {c_e: {"left": lbc, "right": rbc}}
 
         mesh = get_mesh_for_testing()
-        spatial_methods = {
-            "macroscale": pybamm.SpatialMethod,
-        }
+        spatial_methods = {"macroscale": pybamm.SpatialMethod}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         model = disc.set_internal_boundary_conditions(model)
 
@@ -790,4 +788,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()
