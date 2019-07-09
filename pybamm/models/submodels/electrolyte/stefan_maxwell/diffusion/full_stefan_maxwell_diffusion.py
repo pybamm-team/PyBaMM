@@ -71,17 +71,6 @@ class Full(BaseModel):
             * (-pybamm.div(N_e) / param.C_e + source_term - c_e * deps_dt)
         }
 
-    def set_boundary_conditions(self, variables):
-
-        c_e = variables["Electrolyte concentration"]
-
-        self.boundary_conditions = {
-            c_e: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            }
-        }
-
     def set_initial_conditions(self, variables):
 
         c_e = variables["Electrolyte concentration"]

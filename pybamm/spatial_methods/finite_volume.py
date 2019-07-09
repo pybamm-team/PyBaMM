@@ -535,8 +535,11 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # inner product takes fluxes from edges to nodes
         if isinstance(bin_op, pybamm.Inner):
-            disc_left = self.edge_to_node(disc_left)
-            disc_right = self.edge_to_node(disc_right)
+            if left_evaluates_on_edges:
+                disc_left = self.edge_to_node(disc_left)
+            if right_evaluates_on_edges:
+                disc_right = self.edge_to_node(disc_right)
+
         # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging
         elif left_evaluates_on_edges == right_evaluates_on_edges:

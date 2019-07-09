@@ -7,6 +7,8 @@ import tests
 import numpy as np
 import unittest
 
+pybamm.settings.debug_mode = True
+
 
 class TestSPMe(unittest.TestCase):
     def test_basic_processing(self):
