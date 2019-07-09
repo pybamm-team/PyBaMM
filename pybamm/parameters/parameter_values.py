@@ -69,13 +69,10 @@ class ParameterValues(dict):
         self._processed_symbols = {}
 
     def check_parameter_values(self, values):
-        if (
-            "Typical current density" in values
-            and values["Typical current density"] == 0
-        ):
+        if "Typical current [A]" in values and values["Typical current [A]"] == 0:
             raise ValueError(
                 """
-                Typical current density cannot be zero. A possible alternative is to set
+                "Typical current [A]" cannot be zero. A possible alternative is to set
                 "Current function" to `pybamm.GetConstantCurrent(current=0)` instead
                 """
             )
