@@ -80,10 +80,7 @@ class Symbol(anytree.NodeMixin):
                 or issubclass(pybamm.BinaryOperator, type(x))
                 for x in self.pre_order()
             ):
-                try: 
-                    self.test_shape()
-                except: 
-                    self.test_shape()
+                self.test_shape()
 
     @property
     def children(self):

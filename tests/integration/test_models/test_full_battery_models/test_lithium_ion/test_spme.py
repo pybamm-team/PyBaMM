@@ -12,11 +12,11 @@ pybamm.settings.debug_mode = True
 
 
 class TestSPMe(unittest.TestCase):
-    # def test_basic_processing(self):
-    #     options = {"thermal": None}
-    #     model = pybamm.lithium_ion.SPMe(options)
-    #     modeltest = tests.StandardModelTest(model)
-    #     modeltest.test_all()
+    def test_basic_processing(self):
+        options = {"thermal": None}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
 
     # def test_optimisations(self):
     #     options = {"thermal": None}
