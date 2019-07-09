@@ -378,10 +378,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             V = pybamm.BoundaryValue(phi_s_p, "right")
             V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
         elif self.options["bc_options"]["dimensionality"] == 1:
-            # TO DO: add for lithium-ion. Think this is working for old lead acid?
-            raise NotImplementedError(
-                "One-dimensional current collector submodel not implemented."
-            )
+            # TO DO: add terminal voltage in 1plus1D
+            phi_s_p = self.variables["Positive electrode potential"]
+            phi_s_p_dim = self.variables["Positive electrode potential [V]"]
+            V = pybamm.BoundaryValue(phi_s_p, "right")
+            V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
         elif self.options["bc_options"]["dimensionality"] == 2:
             phi_s_cn = self.variables["Negative current collector potential"]
             phi_s_cp = self.variables["Positive current collector potential"]

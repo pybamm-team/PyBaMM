@@ -88,8 +88,7 @@ class Scikit2DSubMesh:
         self.basis = skfem.InteriorBasis(self.fem_mesh, self.element)
         self.facet_basis = skfem.FacetBasis(self.fem_mesh, self.element)
 
-        # get degrees of freedom which correspond to tabs and set normals on tabs
-        self.normal = {}
+        # get degrees of freedom which correspond to tabs
         self.negative_tab = self.basis.get_dofs(
             lambda x: self.on_boundary(x[0], x[1], tabs["negative"])
         ).all()
@@ -97,11 +96,12 @@ class Scikit2DSubMesh:
             lambda x: self.on_boundary(x[0], x[1], tabs["positive"])
         ).all()
 
-    def on_boundary(self, y, z, tabs, domain):
+    def on_boundary(self, y, z, tab):
         """
         A method to get the degrees of freedom corresponding to the subdomains
         for the tabs.
         """
+
         l_y = self.edges["y"][-1]
         l_z = self.edges["z"][-1]
 
@@ -112,34 +112,30 @@ class Scikit2DSubMesh:
             return x > interval[0] - tol and x < interval[1] + tol
 
         # Tab on top
-        if near(tabs[domain]["z_centre"], l_z):
-            self.normal[domain + "_tab"] = 1
-            tab_left = tabs[domain]["y_centre"] - tabs[domain]["width"] / 2
-            tab_right = tabs[domain]["y_centre"] + tabs[domain]["width"] / 2
+        if near(tab["z_centre"], l_z):
+            tab_left = tab["y_centre"] - tab["width"] / 2
+            tab_right = tab["y_centre"] + tab["width"] / 2
             return [
                 near(Z, l_z) and between(Y, [tab_left, tab_right]) for Y, Z in zip(y, z)
             ]
         # Tab on bottom
-        elif near(tabs[domain]["z_centre"], 0):
-            self.normal[domain + "_tab"] = -1
-            tab_left = tabs[domain]["y_centre"] - tabs[domain]["width"] / 2
-            tab_right = tabs[domain]["y_centre"] + tabs[domain]["width"] / 2
+        elif near(tab["z_centre"], 0):
+            tab_left = tab["y_centre"] - tab["width"] / 2
+            tab_right = tab["y_centre"] + tab["width"] / 2
             return [
                 near(Z, 0) and between(Y, [tab_left, tab_right]) for Y, Z in zip(y, z)
             ]
         # Tab on left
-        elif near(tabs[domain]["y_centre"], 0):
-            self.normal[domain + "_tab"] = -1
-            tab_bottom = tabs[domain]["z_centre"] - tabs[domain]["width"] / 2
-            tab_top = tabs[domain]["z_centre"] + tabs[domain]["width"] / 2
+        elif near(tab["y_centre"], 0):
+            tab_bottom = tab["z_centre"] - tab["width"] / 2
+            tab_top = tab["z_centre"] + tab["width"] / 2
             return [
                 near(Y, 0) and between(Z, [tab_bottom, tab_top]) for Y, Z in zip(y, z)
             ]
         # Tab on right
-        elif near(tabs[domain]["y_centre"], l_y):
-            self.normal[domain + "_tab"] = 1
-            tab_bottom = tabs[domain]["z_centre"] - tabs[domain]["width"] / 2
-            tab_top = tabs[domain]["z_centre"] + tabs[domain]["width"] / 2
+        elif near(tab["y_centre"], l_y):
+            tab_bottom = tab["z_centre"] - tab["width"] / 2
+            tab_top = tab["z_centre"] + tab["width"] / 2
             return [
                 near(Y, l_y) and between(Z, [tab_bottom, tab_top]) for Y, Z in zip(y, z)
             ]

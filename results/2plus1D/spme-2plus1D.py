@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import sys
 
 # set logging level
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
 # load (2+1D) SPMe model
 options = {"bc_options": {"dimensionality": 2}}
