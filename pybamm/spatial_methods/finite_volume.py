@@ -411,13 +411,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             if rbc_value.evaluates_to_number():
                 rbc_i = rbc_value
             else:
-                try:
-                    rbc_i = rbc_value[i]
-                except ValueError:
-                    import ipdb
-
-                    ipdb.set_trace()
-
+                rbc_i = rbc_value[i]
             if lbc_type == "Dirichlet":
                 left_ghost_constant = 2 * lbc_i
             elif lbc_type == "Neumann":

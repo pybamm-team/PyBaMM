@@ -38,6 +38,7 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model -- simulate one hour discharge
+# Note: This solve takes approx 3 mins. on a desktop, so need to be patient...
 tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 t_end = 3600 / tau.evaluate(0)
 t_eval = np.linspace(0, t_end, 120)

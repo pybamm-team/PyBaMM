@@ -599,7 +599,6 @@ def surf(variable, set_domain=False):
         out = pybamm.Broadcast(
             child_surf, ["negative electrode"], broadcast_type="primary"
         )
-        # out.domain = ["negative electrode"]
     elif variable.domain == ["positive electrode"] and isinstance(
         variable, pybamm.Broadcast
     ):
@@ -607,7 +606,6 @@ def surf(variable, set_domain=False):
         out = pybamm.Broadcast(
             child_surf, ["positive electrode"], broadcast_type="primary"
         )
-        # out.domain = ["positive electrode"]
     else:
         out = boundary_value(variable, "right")
         if set_domain:

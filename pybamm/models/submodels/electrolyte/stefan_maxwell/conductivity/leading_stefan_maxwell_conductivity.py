@@ -55,8 +55,8 @@ class LeadingOrder(BaseModel):
         variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))
         variables.update(self._get_standard_current_variables(i_e))
 
-        eta_c_av = 0 * i_boundary_cc  # concentration overpotential
-        delta_phi_e_av = 0 * i_boundary_cc  # ohmic losses
+        eta_c_av = pybamm.Scalar(0)  # concentration overpotential
+        delta_phi_e_av = pybamm.Scalar(0)  # ohmic losses
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
         return variables

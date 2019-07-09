@@ -101,19 +101,6 @@ class SpatialMethod:
 
         return out
 
-        # if symbol.domain == ["current collector"]:
-        #     out = pybamm.Outer(
-        #         symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
-        #     )
-        # elif symbol.domain == ["negative particle"] or symbol.domain == [
-        #     "positive particle"
-        # ]:
-        #     out = pybamm.Outer(
-        #         symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
-        #     )
-        # else:
-        #     out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
-
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """
         Implements the gradient for a spatial method.
