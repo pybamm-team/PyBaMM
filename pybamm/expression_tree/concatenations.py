@@ -161,12 +161,6 @@ class DomainConcatenation(Concatenation):
         # Convert any constant symbols in children to a Vector of the right size for
         # concatenation
         children = list(children)
-        for idx, child in enumerate(children):
-            if child.is_constant() and child.evaluates_to_number():
-                children[idx] = pybamm.Vector(
-                    child.evaluate()
-                    * np.ones_like(mesh.combine_submeshes(*child.domain)[0].nodes)
-                )
 
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain concatenation")

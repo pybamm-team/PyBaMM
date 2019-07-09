@@ -71,9 +71,6 @@ class BaseModel(BaseInterface):
     def _get_exchange_current_density(self, variables):
         raise NotImplementedError
 
-    def _get_kinetics(self, j0, ne, eta_r):
-        raise NotImplementedError
-
     def _get_open_circuit_potential(self, variables):
         raise NotImplementedError
 
