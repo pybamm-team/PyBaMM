@@ -26,11 +26,9 @@ class Full(BaseModel):
 
     def _get_diffusion_limited_current_density(self, variables):
         if self.domain == "Negative":
-            import ipdb
+            N_ox_s_p = variables["Oxygen flux"].orphans[1]
+            N_ox_neg_sep_interface = N_ox_s_p[0]
 
-            ipdb.set_trace()
-            N_ox = variables["Oxygen flux"]
-
-            j = -self.param.l_p * j_p / self.param.l_n
+            j = -N_ox_neg_sep_interface / self.param.C_e / self.param.s_ox_Ox
 
         return j

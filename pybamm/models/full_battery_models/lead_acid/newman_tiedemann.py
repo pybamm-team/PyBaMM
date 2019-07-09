@@ -18,13 +18,12 @@ class NewmanTiedemann(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None):
+    def __init__(self, options=None, name="Newman-Tiedemann model"):
         super().__init__(options)
-        self.name = "Newman-Tiedemann model"
+        self.name = name
 
         self.set_reactions()
         self.set_current_collector_submodel()
-        self.set_side_reaction_submodels()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
         self.set_convection_submodel()
@@ -32,6 +31,7 @@ class NewmanTiedemann(BaseModel):
         self.set_negative_electrode_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
+        self.set_side_reaction_submodels()
 
         self.build_model()
 
@@ -97,6 +97,9 @@ class NewmanTiedemann(BaseModel):
 
     def set_side_reaction_submodels(self):
         if "oxygen" in self.options["side reactions"]:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Full(
+                self.param, self.reactions
+            )
             self.submodels[
                 "positive oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
@@ -104,9 +107,6 @@ class NewmanTiedemann(BaseModel):
                 "negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
                 self.param, "Negative"
-            )
-            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Full(
-                self.param, self.reactions
             )
         else:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(

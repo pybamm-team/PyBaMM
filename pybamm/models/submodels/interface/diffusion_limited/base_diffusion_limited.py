@@ -49,11 +49,14 @@ class BaseModel(BaseInterface):
         ocp, dUdT = self._get_open_circuit_potential(variables)
         eta_r = delta_phi_s - ocp
 
-        j_av = self._get_average_interfacial_current_density(variables)
-        # j = j_av + (j - pybamm.average(j))  # enforce true average
+        # Get interfacial current densities
         j = self._get_diffusion_limited_current_density(variables)
+        j_tot_av = self._get_average_total_interfacial_current_density(variables)
 
-        variables.update(self._get_standard_interfacial_current_variables(j, j_av))
+        variables.update(self._get_standard_interfacial_current_variables(j))
+        variables.update(
+            self._get_standard_total_interfacial_current_variables(j_tot_av)
+        )
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))

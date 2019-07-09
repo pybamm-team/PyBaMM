@@ -19,9 +19,9 @@ class Composite(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None):
+    def __init__(self, options=None, name="Composite model"):
         super().__init__(options)
-        self.name = "Composite model"
+        self.name = name
 
         self.set_current_collector_submodel()
         self.set_interfacial_submodel()

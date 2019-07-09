@@ -18,9 +18,9 @@ class LOQS(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None):
+    def __init__(self, options=None, name="LOQS model"):
         super().__init__(options)
-        self.name = "LOQS model"
+        self.name = name
         self.use_jacobian = False
 
         self.set_reactions()
@@ -111,6 +111,9 @@ class LOQS(BaseModel):
 
     def set_side_reaction_submodels(self):
         if "oxygen" in self.options["side reactions"]:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.LeadingOrder(
+                self.param, self.reactions
+            )
             self.submodels[
                 "positive oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
@@ -118,9 +121,6 @@ class LOQS(BaseModel):
                 "negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.LeadingOrderDiffusionLimited(
                 self.param, "Negative"
-            )
-            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.LeadingOrder(
-                self.param, self.reactions
             )
         else:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(

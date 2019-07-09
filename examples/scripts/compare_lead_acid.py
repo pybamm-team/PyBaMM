@@ -2,12 +2,14 @@ import numpy as np
 import pybamm
 
 pybamm.set_logging_level("DEBUG")
+pybamm.settings.debug_mode = True
 
 # load models
 models = [
     pybamm.lead_acid.LOQS(),
     pybamm.lead_acid.LOQS(
-        {"surface form": "differential", "side reactions": ["oxygen"]}
+        {"surface form": "differential", "side reactions": ["oxygen"]},
+        name="LOQS model with side reactions",
     ),
     pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
     # pybamm.lead_acid.Composite(),
