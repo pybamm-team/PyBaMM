@@ -465,10 +465,8 @@ class Discretisation(object):
             if child.domain != []:
                 child_spatial_method = self._spatial_methods[child.domain[0]]
             if isinstance(symbol, pybamm.Gradient):
-                try:
-                    return child_spatial_method.gradient(child, disc_child, self.bcs)
-                except UnboundLocalError:
-                    import ipdb; ipdb.set_trace()
+                return child_spatial_method.gradient(child, disc_child, self.bcs)
+
             elif isinstance(symbol, pybamm.Divergence):
                 return child_spatial_method.divergence(child, disc_child, self.bcs)
 
