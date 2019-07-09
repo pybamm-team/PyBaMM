@@ -2,6 +2,7 @@
 # Class for leading-order surface form electrolyte conductivity employing stefan-maxwell
 #
 import pybamm
+
 from ..leading_stefan_maxwell_conductivity import LeadingOrder
 
 
@@ -69,6 +70,18 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
 
         else:
             return variables
+
+    # def set_boundary_conditions(self, variables):
+    #     pass
+    def set_boundary_conditions(self, variables):
+        if self.domain == "Negative":
+            phi_e = variables["Electrolyte potential"]
+            self.boundary_conditions = {
+                phi_e: {
+                    "left": (pybamm.Scalar(0), "Neumann"),
+                    "right": (pybamm.Scalar(0), "Neumann"),
+                }
+            }
 
 
 class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):

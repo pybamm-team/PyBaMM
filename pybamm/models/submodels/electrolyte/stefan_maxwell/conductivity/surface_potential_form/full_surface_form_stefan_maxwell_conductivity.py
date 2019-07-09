@@ -106,6 +106,15 @@ class BaseModel(BaseStefanMaxwellConductivity):
         else:
             raise pybamm.DomainError
 
+        if self.domain == "Negative":
+            phi_e = variables["Electrolyte potential"]
+            self.boundary_conditions = {
+                phi_e: {
+                    "left": (pybamm.Scalar(0), "Neumann"),
+                    "right": (pybamm.Scalar(0), "Neumann"),
+                }
+            }
+
         # TODO: check if we still need the boundary conditions for c_e, once we have
         # internal boundary conditions
         self.boundary_conditions = {
