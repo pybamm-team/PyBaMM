@@ -136,9 +136,10 @@ class OdeSolver(pybamm.BaseSolver):
 
             for var, eqn in model.variables.items():
                 try:
-                    eqn.jac(y)
+                    eqn.jac(y).shape
                 except:
-                    print(var.name)
+                    print(var)
+                    eqn.jac(y)
             pybamm.logger.info("Calculating jacobian")
             jac_rhs = concatenated_rhs.jac(y)
             if model.use_simplify:

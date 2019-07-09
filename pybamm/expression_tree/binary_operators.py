@@ -5,7 +5,7 @@ import pybamm
 
 import autograd.numpy as np
 import numbers
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import issparse, csr_matrix, kron
 
 
 def is_scalar_zero(expr):
@@ -611,6 +611,7 @@ class Outer(BinaryOperator):
             left.domain != ["current collector"]
             and left.domain != ["negative particle"]
             and left.domain != ["positive particle"]
+            and left.domain != []
         ):
             raise pybamm.DomainError(
                 """left child domain must be 'current collector', 'negative particle',
@@ -639,7 +640,14 @@ class Outer(BinaryOperator):
 
     def jac(self, variable):
         """ See :meth:`pybamm.Symbol.jac()`. """
-        raise NotImplementedError("jac not implemented for symbol of type 'Outer'")
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
+            # right cannot be a StateVector, so no need for product rule
+            left, right = self.orphans
+            # make sure left child keeps same domain
+            left.domain = self.left.domain
+            return pybamm.Kron(left.jac(variable), right)
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
@@ -651,6 +659,37 @@ class Outer(BinaryOperator):
         # Make sure left child keeps same domain
         left.domain = self.left.domain
         return pybamm.Outer(left, right)
+
+
+class Kron(BinaryOperator):
+    """A node in the expression tree representing a (sparse) kronecker product operator
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+
+        super().__init__("kronecker product", left, right)
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        return "kron({!s}, {!s})".format(self.left, self.right)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        raise NotImplementedError("diff not implemented for symbol of type 'Kron'")
+
+    def jac(self, variable):
+        """ See :meth:`pybamm.Symbol.jac()`. """
+        raise NotImplementedError("jac not implemented for symbol of type 'Kron'")
+
+    def _binary_evaluate(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        return kron(left, right)
+
+    def _binary_simplify(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator.simplify()`. """
+        return pybamm.Kron(left, right)
 
 
 def outer(left, right):

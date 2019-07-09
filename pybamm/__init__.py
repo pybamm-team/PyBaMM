@@ -64,6 +64,7 @@ from .expression_tree.binary_operators import (
     Inner,
     inner,
     Outer,
+    Kron,
     outer,
     source,
 )
