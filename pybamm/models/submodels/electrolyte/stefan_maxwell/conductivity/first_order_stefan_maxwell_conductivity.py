@@ -1,7 +1,6 @@
 #
-# Class for the composite electrolyte potential employing stefan-maxwell
+# Class for the first-order electrolyte potential employing stefan-maxwell
 #
-import pybamm
 from .base_higher_order_stefan_maxwell_conductivity import BaseHigherOrder
 
 

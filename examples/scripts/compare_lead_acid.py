@@ -5,9 +5,9 @@ pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.Composite(),
-    pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.LOQS({"convection": True}),
+    pybamm.lead_acid.Composite({"convection": True}),
+    # pybamm.lead_acid.NewmanTiedemann({"convection": True}),
 ]
 
 # create geometry
@@ -54,7 +54,7 @@ output_variables = [
     "Electrolyte concentration [mol.m-3]",
     "Porosity",
     "Electrolyte current density [A.m-2]",
-    "Electrolyte potential [V]",
+    "Volume-averaged velocity",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)

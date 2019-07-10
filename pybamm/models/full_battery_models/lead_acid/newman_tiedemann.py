@@ -27,8 +27,7 @@ class NewmanTiedemann(BaseModel):
         self.set_porosity_submodel()
         self.set_convection_submodel()
         self.set_electrolyte_submodel()
-        self.set_negative_electrode_submodel()
-        self.set_positive_electrode_submodel()
+        self.set_solid_submodel()
         self.set_thermal_submodel()
         self.set_side_reaction_submodels()
 
@@ -56,19 +55,16 @@ class NewmanTiedemann(BaseModel):
             self.param, "Positive"
         )
 
-    def set_negative_electrode_submodel(self):
+    def set_solid_submodel(self):
         if self.options["surface form"] is False:
-            submodel = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
+            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
+            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
         else:
-            submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
-        self.submodels["negative electrode"] = submodel
+            submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
+            submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
 
-    def set_positive_electrode_submodel(self):
-        if self.options["surface form"] is False:
-            submodel = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
-        else:
-            submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
-        self.submodels["positive electrode"] = submodel
+        self.submodels["negative electrode"] = submod_n
+        self.submodels["positive electrode"] = submod_p
 
     def set_electrolyte_submodel(self):
 

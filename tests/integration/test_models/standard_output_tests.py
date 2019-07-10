@@ -463,6 +463,9 @@ class PotentialTests(BaseOutputTest):
         potential and electrolyte potential"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
+        import ipdb
+
+        ipdb.set_trace()
         np.testing.assert_array_almost_equal(
             self.phi_s_n(t, x_n) - self.phi_e_n(t, x_n), self.delta_phi_n(t, x_n)
         )

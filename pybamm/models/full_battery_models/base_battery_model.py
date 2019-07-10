@@ -121,7 +121,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "first-order potential": "linear",
             "side reactions": [],
             "interfacial surface area": "constant",
-            "Voltage": "On",
+            "higher-order concentration": "composite",
         }
         if self._extra_options is None:
             options = default_options
