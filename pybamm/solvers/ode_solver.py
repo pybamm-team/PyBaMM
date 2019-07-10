@@ -136,7 +136,7 @@ class OdeSolver(pybamm.BaseSolver):
 
             for var, eqn in model.variables.items():
                 try:
-                    eqn.jac(y).shape
+                    eqn.simplify().jac(y).shape
                 except:
                     print(var)
                     eqn.jac(y)

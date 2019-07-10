@@ -68,25 +68,33 @@ class CombinedOrder(BaseModel):
         )
 
         phi_e_n = (
-            phi_e_const
-            + chi_av * pybamm.log(c_e_n / c_e_av)
+            pybamm.Broadcast(phi_e_const, ["negative electrode"])
+            + chi_av
+            * pybamm.log(c_e_n / pybamm.Broadcast(c_e_av, ["negative electrode"]))
             - (i_boundary_cc * param.C_e / param.gamma_e)
-            * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n_av * l_n) + l_n / kappa_s_av)
+            * (
+                (x_n ** 2 - l_n ** 2)
+                / (2 * pybamm.Broadcast(kappa_n_av, ["negative electrode"]) * l_n)
+                + pybamm.Broadcast(l_n / kappa_s_av, ["negative electrode"])
+            )
         )
 
         phi_e_s = (
-            phi_e_const
-            + chi_av * pybamm.log(c_e_s / c_e_av)
-            - (i_boundary_cc * param.C_e / param.gamma_e) * (x_s / kappa_s_av)
+            pybamm.Broadcast(phi_e_const, ["separator"])
+            + chi_av * pybamm.log(c_e_s / pybamm.Broadcast(c_e_av, ["separator"]))
+            - (i_boundary_cc * param.C_e / param.gamma_e)
+            * (x_s / pybamm.Broadcast(kappa_s_av, ["separator"]))
         )
 
         phi_e_p = (
-            phi_e_const
-            + chi_av * pybamm.log(c_e_p / c_e_av)
+            pybamm.Broadcast(phi_e_const, ["positive electrode"])
+            + chi_av
+            * pybamm.log(c_e_p / pybamm.Broadcast(c_e_av, ["positive electrode"]))
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * (
-                (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p_av * l_p)
-                + (1 - l_p) / kappa_s_av
+                (x_p * (2 - x_p) + l_p ** 2 - 1)
+                / (2 * pybamm.Broadcast(kappa_p_av, ["positive electrode"]) * l_p)
+                + pybamm.Broadcast((1 - l_p) / kappa_s_av, ["positive electrode"])
             )
         )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
