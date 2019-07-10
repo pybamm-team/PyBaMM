@@ -34,8 +34,9 @@ class BaseHigherOrder(BaseModel):
         i_boundary_cc = variables["Current collector current density"]
         c_e = variables["Electrolyte concentration"]
         c_e_av = variables["Average electrolyte concentration"]
-        ocp_n_av = variables["Average negative electrode open circuit potential"]
-        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
+        delta_phi_n_av = variables[
+            "Average negative electrode surface potential difference"
+        ]
         phi_s_n_av = variables["Average negative electrode potential"]
         eps_n_av = variables["Average negative electrode porosity"]
         eps_s_av = variables["Average separator porosity"]
@@ -65,8 +66,7 @@ class BaseHigherOrder(BaseModel):
 
         # electrolyte potential
         phi_e_const = (
-            -ocp_n_av
-            - eta_r_n_av
+            -delta_phi_n_av
             + phi_s_n_av
             - chi_av
             * pybamm.average(

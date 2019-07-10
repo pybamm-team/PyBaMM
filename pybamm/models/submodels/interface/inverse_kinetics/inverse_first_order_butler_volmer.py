@@ -51,16 +51,16 @@ class BaseInverseFirstOrderButlerVolmer(BaseInterface):
         # Update exchange current density and ocp with new concentration
         j0 = self._get_exchange_current_density(variables)
         ocp, dUdT = self._get_open_circuit_potential(variables)
-        eta_r = delta_phi - c_e
+        eta_r = delta_phi - ocp
 
         # Update variables dictionary
         # variables.update(self._get_standard_interfacial_current_variables(j))
         # variables.update(self._get_standard_exchange_current_variables(j0))
-        # variables.update(self._get_standard_overpotential_variables(eta_r))
+        variables.update(self._get_standard_overpotential_variables(eta_r))
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
-        # variables.update(self._get_standard_ocp_variables(ocp, dUdT))
+        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         if (
             "Negative electrode" + self.reaction_name + " interfacial current density"

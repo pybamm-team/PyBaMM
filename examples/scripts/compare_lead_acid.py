@@ -6,7 +6,7 @@ pybamm.set_logging_level("DEBUG")
 # load models
 models = [
     pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.Composite({"surface form": "algebraic"}),
+    pybamm.lead_acid.Composite({"surface form": "differential"}),
     pybamm.lead_acid.NewmanTiedemann(),
 ]
 
@@ -53,8 +53,8 @@ output_variables = [
     ],
     "Electrolyte concentration [mol.m-3]",
     "Porosity",
-    "Electrolyte current density [A.m-2]",
-    "Volume-averaged velocity",
+    "Electrolyte potential [V]",
+    "Negative electrode potential [V]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)

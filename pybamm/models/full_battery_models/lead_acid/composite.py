@@ -116,12 +116,12 @@ class HigherOrderBaseModel(BaseModel):
         Set full interface submodel, to get spatially heterogeneous interfacial current
         densities
         """
-        self.submodels[
-            "negative interface"
-        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(self.param, "Negative")
-        self.submodels[
-            "positive interface"
-        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(self.param, "Positive")
+        self.submodels["negative interface"] = pybamm.interface.lead_acid.ButlerVolmer(
+            self.param, "Negative"
+        )
+        self.submodels["positive interface"] = pybamm.interface.lead_acid.ButlerVolmer(
+            self.param, "Positive"
+        )
 
     def set_full_convection_submodel(self):
         """
