@@ -67,7 +67,6 @@ class BaseModel(pybamm.BaseSubModel):
         phi_s_n = variables["Negative electrode potential"]
         phi_s_p = variables["Positive electrode potential"]
 
-        # TODO: add ohmic heating from solid and electrolyte
         Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
         Q_ohm_s_s = pybamm.Broadcast(0, ["separator"])
         Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
