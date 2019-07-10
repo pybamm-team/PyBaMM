@@ -11,10 +11,10 @@ class SPMe(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, options=None):
-        super().__init__(options)
-        self.name = "Single Particle Model with electrolyte"
+    def __init__(self, options=None, name="Single Particle Model with electrolyte"):
+        super().__init__(options, name)
 
+        self.set_reactions()
         self.set_current_collector_submodel()
         self.set_porosity_submodel()
         self.set_convection_submodel()
@@ -103,7 +103,9 @@ class SPMe(BaseModel):
         self.submodels[
             "electrolyte conductivity"
         ] = electrolyte.conductivity.CombinedOrder(self.param)
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+            self.param, self.reactions
+        )
 
     @property
     def default_geometry(self):

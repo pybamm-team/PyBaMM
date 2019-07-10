@@ -341,6 +341,8 @@ class Discretisation(object):
         :class:`pybamm.Matrix`
             The mass matrix
         """
+        pybamm.logger.debug("Create mass matrix")
+
         # Create list of mass matrices for each equation to be put into block
         # diagonal mass matrix for the model
         mass_list = []

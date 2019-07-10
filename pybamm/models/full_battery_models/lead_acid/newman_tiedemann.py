@@ -18,10 +18,10 @@ class NewmanTiedemann(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None):
-        super().__init__(options)
-        self.name = "Newman-Tiedemann model"
+    def __init__(self, options=None, name="Newman-Tiedemann model"):
+        super().__init__(options, name)
 
+        self.set_reactions()
         self.set_current_collector_submodel()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
@@ -30,6 +30,7 @@ class NewmanTiedemann(BaseModel):
         self.set_negative_electrode_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
+        self.set_side_reaction_submodels()
 
         self.build_model()
 
@@ -57,14 +58,14 @@ class NewmanTiedemann(BaseModel):
 
     def set_negative_electrode_submodel(self):
         if self.options["surface form"] is False:
-            submodel = pybamm.electrode.ohm.Full(self.param, "Negative")
+            submodel = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
         else:
             submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
         self.submodels["negative electrode"] = submodel
 
     def set_positive_electrode_submodel(self):
         if self.options["surface form"] is False:
-            submodel = pybamm.electrode.ohm.Full(self.param, "Positive")
+            submodel = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
         else:
             submodel = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
         self.submodels["positive electrode"] = submodel
@@ -74,22 +75,48 @@ class NewmanTiedemann(BaseModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
         surf_form = electrolyte.conductivity.surface_potential_form
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+            self.param, self.reactions
+        )
 
         if self.options["surface form"] is False:
             self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-                self.param
+                self.param, self.reactions
             )
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullDifferential(self.param, domain)
+                ] = surf_form.FullDifferential(self.param, domain, self.reactions)
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullAlgebraic(self.param, domain)
+                ] = surf_form.FullAlgebraic(self.param, domain, self.reactions)
+
+    def set_side_reaction_submodels(self):
+        if "oxygen" in self.options["side reactions"]:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Full(
+                self.param, self.reactions
+            )
+            self.submodels[
+                "positive oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
+                self.param, "Negative"
+            )
+        else:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(
+                self.param
+            )
+            self.submodels[
+                "positive oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Positive")
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
 
     @property
     def default_solver(self):

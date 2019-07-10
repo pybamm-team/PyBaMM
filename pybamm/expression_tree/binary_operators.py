@@ -348,15 +348,15 @@ class Multiplication(BinaryOperator):
 
         # anything multiplied by a scalar zero returns a scalar zero
         if is_scalar_zero(left):
-            if isinstance(right, pybamm.Array):
+            if right.shape_for_testing == ():
+                return pybamm.Scalar(0)
+            else:
                 return pybamm.Array(np.zeros(right.shape))
-            else:
-                return pybamm.Scalar(0)
         if is_scalar_zero(right):
-            if isinstance(left, pybamm.Array):
-                return pybamm.Array(np.zeros(left.shape))
-            else:
+            if left.shape_for_testing == ():
                 return pybamm.Scalar(0)
+            else:
+                return pybamm.Array(np.zeros(left.shape))
 
         # if one of the children is a zero matrix, we have to be careful about shapes
         if is_matrix_zero(left) or is_matrix_zero(right):
@@ -477,11 +477,17 @@ class Division(BinaryOperator):
 
         # zero divided by anything returns zero
         if is_scalar_zero(left):
-            return pybamm.Scalar(0)
+            if right.shape_for_testing == ():
+                return pybamm.Scalar(0)
+            else:
+                return pybamm.Array(np.zeros(right.shape))
 
         # anything divided by zero returns inf
         if is_scalar_zero(right):
-            return pybamm.Scalar(np.inf)
+            if left.shape_for_testing == ():
+                return pybamm.Scalar(np.inf)
+            else:
+                return pybamm.Array(np.inf * np.ones(left.shape))
 
         # anything divided by one is itself
         if is_one(right):

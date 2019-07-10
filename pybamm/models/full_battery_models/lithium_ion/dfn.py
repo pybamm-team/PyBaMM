@@ -12,10 +12,10 @@ class DFN(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, options=None):
-        super().__init__(options)
-        self.name = "Doyle-Fuller-Newman model"
+    def __init__(self, options=None, name="Doyle-Fuller-Newman model"):
+        super().__init__(options, name)
 
+        self.set_reactions()
         self.set_current_collector_submodel()
         self.set_porosity_submodel()
         self.set_convection_submodel()
@@ -62,10 +62,10 @@ class DFN(BaseModel):
     def set_solid_submodel(self):
 
         self.submodels["negative electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Negative"
+            self.param, "Negative", self.reactions
         )
         self.submodels["positive electrode"] = pybamm.electrode.ohm.Full(
-            self.param, "Positive"
+            self.param, "Positive", self.reactions
         )
 
     def set_electrolyte_submodel(self):
@@ -73,9 +73,11 @@ class DFN(BaseModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
         self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Full(
-            self.param
+            self.param, self.reactions
         )
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+            self.param, self.reactions
+        )
 
     @property
     def default_geometry(self):

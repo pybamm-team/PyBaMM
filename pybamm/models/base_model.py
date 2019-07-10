@@ -38,9 +38,8 @@ class BaseModel(object):
 
     """
 
-    def __init__(self):
-        # Default name
-        self.name = "Unnamed Model"
+    def __init__(self, name="Unnamed model"):
+        self.name = name
 
         # Initialise empty model
         self._rhs = {}

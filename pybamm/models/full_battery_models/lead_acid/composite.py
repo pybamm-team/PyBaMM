@@ -19,10 +19,10 @@ class Composite(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None):
-        super().__init__(options)
-        self.name = "Composite model"
+    def __init__(self, options=None, name="Composite model"):
+        super().__init__(options, name)
 
+        self.set_reactions()
         self.set_current_collector_submodel()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
@@ -80,7 +80,9 @@ class Composite(BaseModel):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
-        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(self.param)
+        self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+            self.param, self.reactions
+        )
 
         self.submodels[
             "electrolyte conductivity"

@@ -35,8 +35,13 @@ class TestLeadAcidLOQS(unittest.TestCase):
 
 
 class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
-    def test_well_posed(self):
+    def test_well_posed_differential(self):
         options = {"surface form": "differential", "side reactions": ["oxygen"]}
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
+
+    def test_well_posed_algebraic(self):
+        options = {"surface form": "algebraic", "side reactions": ["oxygen"]}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 

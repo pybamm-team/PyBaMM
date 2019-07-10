@@ -18,9 +18,8 @@ class LOQS(BaseModel):
     **Extends:** :class:`pybamm.lead_acid.BaseModel`
     """
 
-    def __init__(self, options=None):
-        super().__init__(options)
-        self.name = "LOQS model"
+    def __init__(self, options=None, name="LOQS model"):
+        super().__init__(options, name)
         self.use_jacobian = False
 
         self.set_reactions()
@@ -32,25 +31,9 @@ class LOQS(BaseModel):
         self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
+        self.set_side_reaction_submodels()
 
         self.build_model()
-
-    def set_reactions(self):
-
-        # Should probably refactor as this is a bit clunky at the moment
-        # Maybe each reaction as a Reaction class so we can just list names of classes
-        self.reactions = {
-            "main": {
-                "neg": {
-                    "s_plus": self.param.s_n,
-                    "j": "Average negative electrode interfacial current density",
-                },
-                "pos": {
-                    "s_plus": self.param.s_p,
-                    "j": "Average positive electrode interfacial current density",
-                },
-            }
-        }
 
     def set_current_collector_submodel(self):
 
@@ -112,19 +95,42 @@ class LOQS(BaseModel):
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderDifferential(self.param, domain)
+                ] = surf_form.LeadingOrderDifferential(
+                    self.param, domain, self.reactions
+                )
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
-
-        else:
-            raise pybamm.OptionError("'capacitance' must be either 'True' or 'False'")
+                ] = surf_form.LeadingOrderAlgebraic(self.param, domain, self.reactions)
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.LeadingOrder(
             self.param, self.reactions
         )
+
+    def set_side_reaction_submodels(self):
+        if "oxygen" in self.options["side reactions"]:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.LeadingOrder(
+                self.param, self.reactions
+            )
+            self.submodels[
+                "positive oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.LeadingOrderDiffusionLimited(
+                self.param, "Negative"
+            )
+        else:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(
+                self.param
+            )
+            self.submodels[
+                "positive oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Positive")
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
 
     @property
     def default_spatial_methods(self):

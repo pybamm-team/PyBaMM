@@ -21,12 +21,18 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Negative electrode interfacial current density": a_n,
             "Average negative electrode total interfacial current density": a,
         }
-
+        icd = " interfacial current density"
+        reactions = {
+            "main": {
+                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
+                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
+            }
+        }
         spf = pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form
-        submodel = spf.LeadingOrderAlgebraic(param, "Negative")
+        submodel = spf.LeadingOrderAlgebraic(param, "Negative", reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-        submodel = spf.LeadingOrderDifferential(param, "Negative")
+        submodel = spf.LeadingOrderDifferential(param, "Negative", reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -41,10 +47,10 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Positive electrode interfacial current density": a_p,
             "Average positive electrode total interfacial current density": a,
         }
-        submodel = spf.LeadingOrderAlgebraic(param, "Positive")
+        submodel = spf.LeadingOrderAlgebraic(param, "Positive", reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-        submodel = spf.LeadingOrderDifferential(param, "Positive")
+        submodel = spf.LeadingOrderDifferential(param, "Positive", reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
