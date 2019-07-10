@@ -26,6 +26,7 @@ class TestSPM(unittest.TestCase):
         self.assertIn("current collector", model.default_geometry)
         pybamm.settings.debug_mode = True
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_well_posed_2plus1D(self):
         # Shape tests needs debugging for 2plus1D -- model works ok, but shape
         # test not right

@@ -5,9 +5,9 @@ pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS({"convection": True}),
-    pybamm.lead_acid.Composite({"convection": True}),
-    # pybamm.lead_acid.NewmanTiedemann({"convection": True}),
+    pybamm.lead_acid.LOQS(),
+    pybamm.lead_acid.Composite({"surface form": "algebraic"}),
+    pybamm.lead_acid.NewmanTiedemann(),
 ]
 
 # create geometry

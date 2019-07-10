@@ -42,8 +42,9 @@ class BaseInterfaceLeadAcid(BaseInterface):
         """
         c_e = variables[self.domain + " electrolyte concentration"]
         # If c_e was broadcast, take only the orphan
+        # Multiply by 1 for the purpose of first-order kinetics (change the id)
         if isinstance(c_e, pybamm.Broadcast):
-            c_e = c_e.orphans[0]
+            c_e = 1 * c_e.orphans[0]
 
         if self.domain == "Negative":
             j0 = self.param.j0_n_S_ref * c_e
@@ -74,8 +75,9 @@ class BaseInterfaceLeadAcid(BaseInterface):
 
         c_e = variables[self.domain + " electrolyte concentration"]
         # If c_e was broadcast, take only the orphan
+        # Multiply by 1 for the purpose of first-order kinetics (change the id)
         if isinstance(c_e, pybamm.Broadcast):
-            c_e = c_e.orphans[0]
+            c_e = 1 * c_e.orphans[0]
 
         if self.domain == "Negative":
             ocp = self.param.U_n(c_e)

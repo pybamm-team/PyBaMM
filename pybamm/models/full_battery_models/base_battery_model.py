@@ -130,11 +130,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         }
         options = default_options
         # any extra options overwrite the default options
-        for name, opt in extra_options.items():
-            if name in default_options:
-                options[name] = opt
-            else:
-                raise pybamm.OptionError("option {} not recognised".format(name))
+        if extra_options is not None:
+            for name, opt in extra_options.items():
+                if name in default_options:
+                    options[name] = opt
+                else:
+                    raise pybamm.OptionError("option {} not recognised".format(name))
 
         # Some standard checks to make sure options are compatible
         if (

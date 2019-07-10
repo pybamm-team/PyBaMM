@@ -39,10 +39,7 @@ class HigherOrderBaseModel(BaseModel):
         self.set_thermal_submodel()
 
         self.build_model()
-
-        import ipdb
-
-        ipdb.set_trace()
+        self.use_jacobian = False
         # # Massive hack for consistent delta_phi = phi_s - phi_e
         # # This needs to be corrected
         # for domain in ["Negative", "Positive"]:
@@ -60,6 +57,11 @@ class HigherOrderBaseModel(BaseModel):
             "Average electrolyte concentration",
             "Average negative electrode surface potential difference",
             "Average positive electrode surface potential difference",
+            "Negative electrode interfacial current density",
+            "Positive electrode interfacial current density",
+            "Porosity",
+            "Porosity change",
+            "Volume-averaged velocity",
         ]:
             self.variables[
                 "Leading-order " + variable.lower()
@@ -74,12 +76,12 @@ class HigherOrderBaseModel(BaseModel):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
-        if self.options["higher-order concentration"] == "composite":
-            self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
+        if self.options["higher-order concentration"] == "first-order":
+            self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FirstOrder(
                 self.param, self.reactions
             )
-        elif self.options["higher-order concentration"] == "first-order":
-            self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FirstOrder(
+        elif self.options["higher-order concentration"] == "composite":
+            self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Composite(
                 self.param, self.reactions
             )
 

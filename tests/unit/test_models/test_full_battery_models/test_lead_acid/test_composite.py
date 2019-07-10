@@ -22,7 +22,7 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
 
-    def test_well_posed_differential(self):
+    def test_well_posed_algebraic(self):
         options = {"surface form": "algebraic"}
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()

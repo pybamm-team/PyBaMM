@@ -13,6 +13,7 @@ class TestLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
         options = {"thermal": None, "convection": False}
         pybamm.set_logging_level("DEBUG")
+        pybamm.setting.debug_mode = True
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
