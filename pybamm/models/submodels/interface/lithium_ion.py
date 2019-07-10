@@ -72,7 +72,6 @@ class BaseInterfaceLithiumIon(BaseInterface):
 
         """
         c_s_surf = variables[self.domain + " particle surface concentration"]
-        # c_s_surf = pybamm.surf(c_s, set_domain=True)
 
         if self.domain == "Negative":
             ocp = self.param.U_n(c_s_surf)

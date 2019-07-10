@@ -89,8 +89,8 @@ class Function(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol._diff()`. """
         return Function(autograd.elementwise_grad(self.function), *children)
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
 
         if all(child.evaluates_to_number() for child in self.children):
             # if children all evaluate to numbers the return zeros

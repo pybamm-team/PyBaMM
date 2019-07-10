@@ -90,8 +90,8 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.Symbol._diff()`. """
         return -self.child.diff(variable)
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         return -self.child.jac(variable)
 
     def _unary_evaluate(self, child):
@@ -173,8 +173,8 @@ class Index(UnaryOperator):
         if isinstance(index, int):
             self.domain = []
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
 
         # if child.jac returns a matrix of zeros, this subsequently gives a bug
         # when trying to simplify the node Index(child_jac). Instead, search the
@@ -596,14 +596,16 @@ def surf(variable, set_domain=False):
         variable, pybamm.Broadcast
     ):
         child_surf = boundary_value(variable.orphans[0], "right")
-        out = pybamm.Broadcast(child_surf, ["negative electrode"])
-        out.domain = ["negative electrode"]
+        out = pybamm.Broadcast(
+            child_surf, ["negative electrode"], broadcast_type="primary"
+        )
     elif variable.domain == ["positive electrode"] and isinstance(
         variable, pybamm.Broadcast
     ):
         child_surf = boundary_value(variable.orphans[0], "right")
-        out = pybamm.Broadcast(child_surf, ["positive electrode"])
-        out.domain = ["positive electrode"]
+        out = pybamm.Broadcast(
+            child_surf, ["positive electrode"], broadcast_type="primary"
+        )
     else:
         out = boundary_value(variable, "right")
         if set_domain:

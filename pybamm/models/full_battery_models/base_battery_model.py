@@ -76,6 +76,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             var.x_p: 35,
             var.r_n: 10,
             var.r_p: 10,
+            var.y: 10,
             var.z: 10,
         }
 
@@ -265,6 +266,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Spatial
         var = pybamm.standard_spatial_vars
         L_x = pybamm.geometric_parameters.L_x
+        L_y = pybamm.geometric_parameters.L_y
+        L_z = pybamm.geometric_parameters.L_z
         self.variables.update(
             {
                 "x": var.x,
@@ -277,6 +280,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "x_p [m]": var.x_p * L_x,
             }
         )
+        if self.options["bc_options"]["dimensionality"] == 1:
+            self.variables.update({"y": var.y, "y [m]": var.y * L_y})
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            self.variables.update(
+                {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
+            )
 
     def build_model(self):
 
@@ -390,10 +399,35 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # terminal voltage
-        phi_s_p = self.variables["Positive electrode potential"]
-        phi_s_p_dim = self.variables["Positive electrode potential [V]"]
-        V = pybamm.BoundaryValue(phi_s_p, "right")
-        V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
+        if self.options["bc_options"]["dimensionality"] == 0:
+            phi_s_p = self.variables["Positive electrode potential"]
+            phi_s_p_dim = self.variables["Positive electrode potential [V]"]
+            V = pybamm.BoundaryValue(phi_s_p, "right")
+            V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            # TO DO: add terminal voltage in 1plus1D
+            phi_s_p = self.variables["Positive electrode potential"]
+            phi_s_p_dim = self.variables["Positive electrode potential [V]"]
+            V = pybamm.BoundaryValue(phi_s_p, "right")
+            V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            phi_s_cn = self.variables["Negative current collector potential"]
+            phi_s_cp = self.variables["Positive current collector potential"]
+            phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
+            phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
+            # In 2D left corresponds to the negative tab and right the positive tab
+            V = pybamm.BoundaryValue(phi_s_cp, "right") - pybamm.BoundaryValue(
+                phi_s_cn, "left"
+            )
+            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right") - pybamm.BoundaryValue(
+                phi_s_cn_dim, "left"
+            )
+        else:
+            raise pybamm.ModelError(
+                "Dimension of current collectors must be 0, 1, or 2, not {}".format(
+                    self.options["bc_options"]["dimensionality"]
+                )
+            )
 
         # TODO: add current collector losses to the voltage in 3D
 
