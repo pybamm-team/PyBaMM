@@ -39,10 +39,7 @@ class BaseInverseButlerVolmer(BaseInterface):
         elif self.domain == "Positive":
             ne = self.param.ne_p
 
-        try:
-            eta_r = (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
-        except pybamm.ShapeError:
-            import ipdb; ipdb.set_trace()    
+        eta_r = (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
 
         delta_phi = eta_r + ocp
 

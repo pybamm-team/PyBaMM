@@ -386,6 +386,16 @@ class Symbol(anytree.NodeMixin):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
+            jac = self._jac(variable)
+            # jacobian removes the domain
+            jac.domain = []
+            return jac
+
+    def _jac(self, variable):
+        "Default behaviour for jacobian, overriden by Binary and Unary Operators"
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
             return pybamm.Scalar(0)
 
     def _base_evaluate(self, t=None, y=None):

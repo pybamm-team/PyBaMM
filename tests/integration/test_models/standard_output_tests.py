@@ -177,7 +177,10 @@ class VoltageTests(BaseOutputTest):
         elif self.operating_condition == "off":
             np.testing.assert_array_equal(self.eta_r_av(self.t), 0)
             np.testing.assert_array_equal(self.eta_e_av(self.t), 0)
-            np.testing.assert_array_equal(self.delta_phi_s_av(self.t), 0)
+            # For some reason SPM gives delta_phi_s_av ~ 1e-17
+            np.testing.assert_array_almost_equal(
+                self.delta_phi_s_av(self.t), 0, decimal=16
+            )
 
     def test_ocps(self):
         """ Testing that:

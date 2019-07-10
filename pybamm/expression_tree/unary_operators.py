@@ -90,8 +90,8 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.Symbol._diff()`. """
         return -self.child.diff(variable)
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         return -self.child.jac(variable)
 
     def _unary_evaluate(self, child):
@@ -173,8 +173,8 @@ class Index(UnaryOperator):
         if isinstance(index, int):
             self.domain = []
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
 
         # if child.jac returns a matrix of zeros, this subsequently gives a bug
         # when trying to simplify the node Index(child_jac). Instead, search the

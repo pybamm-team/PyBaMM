@@ -101,7 +101,9 @@ class BaseInterface(pybamm.BaseSubModel):
         if j0.domain == []:
             j0 = pybamm.Broadcast(j0, self.domain_for_broadcast)
         elif j0.domain == ["current collector"]:
-            j0 = pybamm.Broadcast(j0, self.domain_for_broadcast, broadcast_type="primary")
+            j0 = pybamm.Broadcast(
+                j0, self.domain_for_broadcast, broadcast_type="primary"
+            )
 
         variables = {
             self.domain + " electrode exchange current density": j0,
@@ -142,7 +144,9 @@ class BaseInterface(pybamm.BaseSubModel):
         if eta_r.domain == []:
             eta_r = pybamm.Broadcast(eta_r, self.domain_for_broadcast)
         elif eta_r.domain == ["current collector"]:
-            eta_r = pybamm.Broadcast(eta_r, self.domain_for_broadcast, broadcast_type="primary")
+            eta_r = pybamm.Broadcast(
+                eta_r, self.domain_for_broadcast, broadcast_type="primary"
+            )
 
         variables = {
             self.domain + " electrode reaction overpotential": eta_r,
@@ -170,7 +174,9 @@ class BaseInterface(pybamm.BaseSubModel):
         if delta_phi.domain == []:
             delta_phi = pybamm.Broadcast(delta_phi, self.domain_for_broadcast)
         elif delta_phi.domain == ["current collector"]:
-            delta_phi = pybamm.Broadcast(delta_phi, self.domain_for_broadcast, broadcast_type="primary")
+            delta_phi = pybamm.Broadcast(
+                delta_phi, self.domain_for_broadcast, broadcast_type="primary"
+            )
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
@@ -212,7 +218,9 @@ class BaseInterface(pybamm.BaseSubModel):
         if ocp.domain == []:
             ocp = pybamm.Broadcast(ocp, self.domain_for_broadcast)
         elif ocp.domain == ["current collector"]:
-            ocp = pybamm.Broadcast(ocp, self.domain_for_broadcast, broadcast_type="primary")
+            ocp = pybamm.Broadcast(
+                ocp, self.domain_for_broadcast, broadcast_type="primary"
+            )
         dUdT_av = pybamm.average(dUdT)
 
         if self.domain == "Negative":
