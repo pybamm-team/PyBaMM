@@ -38,13 +38,17 @@ class LeadingOrder(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        phi_e_n = pybamm.Broadcast(phi_e_av, ["negative electrode"])
-        phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"])
-        phi_e_p = pybamm.Broadcast(phi_e_av, ["positive electrode"])
+        phi_e_n = pybamm.Broadcast(
+            phi_e_av, ["negative electrode"], broadcast_type="primary"
+        )
+        phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"], broadcast_type="primary")
+        phi_e_p = pybamm.Broadcast(
+            phi_e_av, ["positive electrode"], broadcast_type="primary"
+        )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
-        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
+        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"], broadcast_type="primary")
         i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 

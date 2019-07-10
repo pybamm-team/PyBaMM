@@ -9,11 +9,7 @@ import unittest
 
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
-        submodel = pybamm.current_collector.BaseModel(None, "Negative")
-        std_tests = tests.StandardSubModelTests(submodel)
-        std_tests.test_all()
-
-        submodel = pybamm.current_collector.BaseModel(None, "Positive")
+        submodel = pybamm.current_collector.BaseModel(None)
         std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()
 

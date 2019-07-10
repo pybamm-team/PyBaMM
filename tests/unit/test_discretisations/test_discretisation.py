@@ -662,7 +662,9 @@ class TestDiscretise(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         # scalar
-        broad = disc._spatial_methods[whole_cell[0]].broadcast(a, whole_cell)
+        broad = disc._spatial_methods[whole_cell[0]].broadcast(
+            a, whole_cell, broadcast_type="full"
+        )
         np.testing.assert_array_equal(
             broad.evaluate(), 7 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
         )
@@ -686,7 +688,7 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable("var", ["current collector"])
         disc = get_1p1d_discretisation_for_testing()
         mesh = disc.mesh
-        broad = pybamm.Broadcast(var, "separator")
+        broad = pybamm.Broadcast(var, "separator", broadcast_type="primary")
 
         disc.set_variable_slices([var])
         broad_disc = disc.process_symbol(broad)

@@ -189,7 +189,7 @@ class FiniteVolume(pybamm.SpatialMethod):
     def integral(self, domain, symbol, discretised_symbol):
         """Vector-vector dot product to implement the integral operator. """
         # Calculate integration vector
-        integration_vector = self.definite_integral_vector(domain)
+        integration_vector = self.definite_integral_matrix(domain)
 
         # Check for spherical domains
         submesh_list = self.mesh.combine_submeshes(*symbol.domain)
@@ -204,7 +204,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def definite_integral_vector(self, domain):
+    def definite_integral_matrix(self, domain):
         """
         Vector for finite-volume implementation of the definite integral
 
@@ -221,18 +221,25 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Vector`
-            The finite volume integral vector for the domain
+        :class:`pybamm.Matrix`
+            The finite volume integral matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh_list = self.mesh.combine_submeshes(*domain)
 
-        # Create vector of ones using submesh
-        vector = np.array([])
-        for submesh in submesh_list:
-            vector = np.append(vector, submesh.d_edges * np.ones_like(submesh.nodes))
+        # Create vector of ones for primary domain submesh
+        submesh = submesh_list[0]
+        vector = submesh.d_edges * np.ones_like(submesh.nodes)
 
-        return pybamm.Matrix(vector[np.newaxis, :])
+        # repeat matrix for each node in secondary dimensions
+        second_dim_len = len(submesh_list)
+        # generate full matrix from the submatrix
+        # Convert to csr_matrix so that we can take the index (row-slicing), which is
+        # not supported by the default kron format
+        # Note that this makes column-slicing inefficient, but this should not be an
+        # issue
+        matrix = csr_matrix(kron(eye(second_dim_len), vector))
+        return pybamm.Matrix(matrix)
 
     def indefinite_integral(self, domain, symbol, discretised_symbol):
         """Implementation of the indefinite integral operator. """
@@ -405,7 +412,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 rbc_i = rbc_value
             else:
                 rbc_i = rbc_value[i]
-
             if lbc_type == "Dirichlet":
                 left_ghost_constant = 2 * lbc_i
             elif lbc_type == "Neumann":
