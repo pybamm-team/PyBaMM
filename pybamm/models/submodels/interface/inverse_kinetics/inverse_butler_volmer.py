@@ -30,7 +30,9 @@ class BaseInverseButlerVolmer(BaseInterface):
 
         j0 = self._get_exchange_current_density(variables)
         j_tot_av = self._get_average_total_interfacial_current_density(variables)
-        # j = pybamm.Broadcast(j_tot_av, [self.domain.lower() + " electrode"])
+        j = pybamm.Broadcast(
+            j_tot_av, [self.domain.lower() + " electrode"], broadcast_type="primary"
+        )
 
         if self.domain == "Negative":
             ne = self.param.ne_n

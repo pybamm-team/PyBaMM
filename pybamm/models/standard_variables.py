@@ -36,6 +36,18 @@ delta_phi_p_av = pybamm.Variable(
     "Average positive electrode surface potential difference"
 )
 
+# current collector variables
+phi_s_cn = pybamm.Variable(
+    "Negative current collector potential", domain="current collector"
+)
+phi_s_cp = pybamm.Variable(
+    "Positive current collector potential", domain="current collector"
+)
+i_boundary_cc = pybamm.Variable(
+    "Current collector current density", domain="current collector"
+)
+
+
 # Particle concentration
 c_s_n = pybamm.Variable("Negative particle concentration", ["negative particle"])
 c_s_p = pybamm.Variable("Positive particle concentration", ["positive particle"])

@@ -18,8 +18,8 @@ class Uniform(BaseModel):
     **Extends:** :class:`pybamm.current_collector.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param):
+        super().__init__(param)
 
     def get_fundamental_variables(self):
 

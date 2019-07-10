@@ -67,7 +67,7 @@ class HigherOrderBaseModel(BaseModel):
 
     def set_current_collector_submodel(self):
         self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param, "Negative"
+            self.param
         )
 
     def set_electrolyte_diffusion_submodel(self):

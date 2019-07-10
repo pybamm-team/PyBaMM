@@ -92,7 +92,12 @@ class ProcessedVariable(object):
         else:
             self.base_eval = base_variable.evaluate(t_sol[0], y_sol[:, 0])
 
-        if (
+        # handle 2D (in space) finite element variables differently
+        if "current collector" in self.domain:
+            if isinstance(self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh):
+                self.initialise_3D_scikit_fem()
+        # check variable shape
+        elif (
             isinstance(self.base_eval, numbers.Number)
             or len(self.base_eval.shape) == 0
             or self.base_eval.shape[0] == 1
@@ -261,6 +266,45 @@ class ProcessedVariable(object):
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
             (x_sol, r_sol, self.t_sol),
+            entries,
+            method=self.interp_kind,
+            fill_value=np.nan,
+        )
+
+    def initialise_3D_scikit_fem(self):
+        # NOTE: use independent variable names x, z for spatial dimension
+        # instead of y, z to avoid confusion with the solution vector y_sol
+        x_sol = self.mesh[self.domain[0]][0].edges["y"]
+        len_x = len(x_sol)
+        z_sol = self.mesh[self.domain[0]][0].edges["z"]
+        len_z = len(z_sol)
+        entries = np.empty((len_x, len_z, len(self.t_sol)))
+
+        # Evaluate the base_variable index-by-index
+        for idx in range(len(self.t_sol)):
+            t = self.t_sol[idx]
+            y = self.y_sol[:, idx]
+            if self.known_evals:
+                eval_and_known_evals = self.base_variable.evaluate(
+                    t, y, self.known_evals[t]
+                )
+                entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_x, len_z])
+                self.known_evals[t] = eval_and_known_evals[1]
+            else:
+                entries[:, :, idx] = np.reshape(
+                    self.base_variable.evaluate(t, y), [len_x, len_z]
+                )
+
+        # assign attributes for reference
+        self.entries = entries
+        self.dimensions = 3
+        self.x_sol = x_sol
+        self.z_sol = z_sol
+        self.t_x_z_sol = (self.t_sol, x_sol, z_sol)
+
+        # set up interpolation
+        self._interpolation_function = interp.RegularGridInterpolator(
+            (x_sol, z_sol, self.t_sol),
             entries,
             method=self.interp_kind,
             fill_value=np.nan,
