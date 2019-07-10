@@ -430,7 +430,6 @@ def simplify_multiplication_division(myclass, left, right):
                 new_nodes.append(child)
                 new_types.append(typ)
         new_nodes = fold_multiply(new_nodes, new_types)
-
         return new_nodes
 
     if numerator_has_mat_mul and denominator_has_mat_mul:
@@ -581,13 +580,10 @@ class Simplification(object):
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
             # process children
-
             new_left = self.simplify(left)
             new_right = self.simplify(right)
-
             # _binary_simplify defined in derived classes for specific rules
             new_symbol = symbol._binary_simplify(new_left, new_right)
-
             new_symbol.domain = symbol.domain
             return simplify_if_constant(new_symbol)
 
