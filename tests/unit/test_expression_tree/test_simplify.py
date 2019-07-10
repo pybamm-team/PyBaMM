@@ -591,7 +591,7 @@ class TestSimplify(unittest.TestCase):
         )
         self.assertEqual(pybamm.inner(a2, a3).simplify().evaluate(), 3)
         self.assertEqual(pybamm.inner(a3, a2).simplify().evaluate(), 3)
-        self.assertEqual(pybamm.inner(a3, a3).simplify().evaluate(), 9)        
+        self.assertEqual(pybamm.inner(a3, a3).simplify().evaluate(), 9)
 
 
 if __name__ == "__main__":
