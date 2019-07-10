@@ -210,6 +210,27 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def internal_neumann_condition(
+        self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
+    ):
+        """
+        A method to find the internal neumann conditions between two symbols
+        on adjacent subdomains.
+
+        Parameters
+        ----------
+        left_symbol_disc : :class:`pybamm.Symbol`
+            The discretised symbol on the left subdomain
+        right_symbol_disc : :class:`pybamm.Symbol`
+            The discretised symbol on the right subdomain
+        left_mesh : list
+            The mesh on the left subdomain
+        right_mesh : list
+            The mesh on the right subdomain
+        """
+
+        raise NotImplementedError
+
     def boundary_value_or_flux(self, symbol, discretised_child):
         """
         Returns the boundary value or flux using the approriate expression for the

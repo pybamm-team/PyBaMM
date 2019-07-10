@@ -25,6 +25,11 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
         divergence_matrix = pybamm.Matrix(eye(n))
         return divergence_matrix @ discretised_symbol
 
+    def internal_neumann_condition(
+        self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
+    ):
+        return pybamm.Scalar(0)
+
     def mass_matrix(self, symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:

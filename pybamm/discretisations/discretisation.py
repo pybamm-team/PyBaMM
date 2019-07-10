@@ -177,22 +177,6 @@ class Discretisation(object):
         Note: this method modifies the state of self.boundary_conditions.
         """
 
-        # def boundary_gradient(left_orphan, right_orphan):
-
-        #     left_domain = left_orphan.domain[0]
-        #     right_domain = right_orphan.domain[0]
-
-        #     left_submesh = self._spatial_methods[left_domain].mesh[left_domain][0]
-        #     right_submesh = self._spatial_methods[right_domain].mesh[right_domain][0]
-
-        #     x_left = left_submesh.nodes[-1]
-        #     x_right = right_submesh.nodes[0]
-
-        #     dy = pybamm.Index(right_orphan, 0) - pybamm.Index(left_orphan, -1)
-        #     dx = x_right - x_left
-
-        #     return dy / dx
-        
         def boundary_gradient(left_symbol, right_symbol):
 
             left_domain = left_symbol.domain[0]
@@ -444,10 +428,8 @@ class Discretisation(object):
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
-            try:
-                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
-            except:
-                new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+
+            new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
             new_var_eqn_dict[eqn_key].test_shape()
 
@@ -471,10 +453,7 @@ class Discretisation(object):
         try:
             return self._discretised_symbols[symbol.id]
         except KeyError:
-            try:
-                discretised_symbol = self._process_symbol(symbol)
-            except:
-                discretised_symbol = self._process_symbol(symbol)
+            discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
             return discretised_symbol
 

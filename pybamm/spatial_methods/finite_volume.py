@@ -69,14 +69,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         if symbol.id in boundary_conditions:
             bcs = boundary_conditions[symbol.id]
             # add ghost nodes
-            try:
-                discretised_symbol = self.add_ghost_nodes(
-                    symbol, discretised_symbol, bcs
-                )
-            except:
-                discretised_symbol = self.add_ghost_nodes(
-                    symbol, discretised_symbol, bcs
-                )
+            discretised_symbol = self.add_ghost_nodes(
+                symbol, discretised_symbol, bcs
+            )
             # edit domain
             # edit domain
             domain = (
