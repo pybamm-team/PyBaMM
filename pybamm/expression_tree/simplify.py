@@ -359,18 +359,6 @@ def simplify_multiplication_division(myclass, left, right):
 
     flatten(None, myclass, left, right, True, myclass == pybamm.MatrixMultiplication)
 
-    for num in numerator:
-        try:
-            num.shape
-        except:
-            num.shape
-
-    for dom in denominator:
-        try:
-            dom.shape
-        except:
-            dom.shape
-
     # check if there is a matrix multiply in the numerator (if so we can't reorder it)
     numerator_has_mat_mul = any(
         [typ == pybamm.MatrixMultiplication for typ in numerator_types + [myclass]]
@@ -441,16 +429,7 @@ def simplify_multiplication_division(myclass, left, right):
             else:
                 new_nodes.append(child)
                 new_types.append(typ)
-                try:
-                    fold_multiply(new_nodes, new_types).shape
-                except:
-                    fold_multiply(new_nodes, new_types)
         new_nodes = fold_multiply(new_nodes, new_types)
-
-        try:
-            new_nodes.shape
-        except:
-            new_nodes
 
         return new_nodes
 
@@ -478,11 +457,6 @@ def simplify_multiplication_division(myclass, left, right):
                     constant_denominator_expr = None
 
         new_numerator = simplify_with_mat_mul(numerator, numerator_types)
-
-        try:
-            new_numerator.shape
-        except:
-            new_numerator.shape
 
         # result = constant_numerator_expr * new_numerator / nonconst_denominator_expr
         # need to take into accound that terms can be None
@@ -570,10 +544,6 @@ def simplify_multiplication_division(myclass, left, right):
         if nonconst_denominator_expr is not None:
             result = result / nonconst_denominator_expr
 
-    try:
-        result.shape
-    except:
-        result.shape
     return result
 
 
@@ -612,22 +582,11 @@ class Simplification(object):
             left, right = symbol.children
             # process children
 
-            try:
-                new_left = self.simplify(left)
-            except:
-                new_left = self.simplify(left)
-
-            try:
-                new_right = self.simplify(right)
-            except:
-                new_right = self.simplify(right)
+            new_left = self.simplify(left)
+            new_right = self.simplify(right)
 
             # _binary_simplify defined in derived classes for specific rules
-            try:
-                new_symbol = symbol._binary_simplify(new_left, new_right)
-            except:
-                new_symbol = symbol._binary_simplify(new_left, new_right)
-                new_symbol = symbol._binary_simplify(new_left, new_right)
+            new_symbol = symbol._binary_simplify(new_left, new_right)
 
             new_symbol.domain = symbol.domain
             return simplify_if_constant(new_symbol)
