@@ -403,11 +403,7 @@ class MatrixMultiplication(BinaryOperator):
             isinstance(left, pybamm.Negate) and isinstance(left.child, pybamm.Array)
         ):
             left = pybamm.Matrix(csr_matrix(left.evaluate()))
-            jac = left @ right.jac(variable)
-            # Remove domain as matrix multiplies which come from an integral
-            # end up getting the child domains back which throws an error
-            jac.domain = []
-            return jac
+            return left @ right.jac(variable)
         else:
             raise NotImplementedError(
                 """jac of 'MatrixMultiplication' is only

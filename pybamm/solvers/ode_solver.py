@@ -134,12 +134,6 @@ class OdeSolver(pybamm.BaseSolver):
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))
 
-            # for var, eqn in model.variables.items():
-            # try:
-            #     eqn.simplify().jac(y).shape
-            # except:
-            #     print(var)
-            #     eqn.jac(y)
             pybamm.logger.info("Calculating jacobian")
             jac_rhs = concatenated_rhs.jac(y)
             if model.use_simplify:
