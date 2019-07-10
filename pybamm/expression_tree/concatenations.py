@@ -123,8 +123,8 @@ class NumpyConcatenation(Concatenation):
             concat_fun=np.concatenate
         )
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         children = self.cached_children
         if len(children) == 0:
             return pybamm.Scalar(0)
@@ -227,8 +227,8 @@ class DomainConcatenation(Concatenation):
 
         return vector
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         children = self.cached_children
         if len(children) == 0:
             return pybamm.Scalar(0)

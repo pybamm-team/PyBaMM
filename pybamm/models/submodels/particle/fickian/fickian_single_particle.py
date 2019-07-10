@@ -27,14 +27,20 @@ class SingleParticle(BaseModel):
     def get_fundamental_variables(self):
         if self.domain == "Negative":
             c_s_xav = pybamm.standard_variables.c_s_n_xav
-            c_s = pybamm.Broadcast(c_s_xav, ["negative electrode"])
+            c_s = pybamm.Broadcast(
+                c_s_xav, ["negative electrode"], broadcast_type="primary"
+            )
 
         elif self.domain == "Positive":
             c_s_xav = pybamm.standard_variables.c_s_p_xav
-            c_s = pybamm.Broadcast(c_s_xav, ["positive electrode"])
+            c_s = pybamm.Broadcast(
+                c_s_xav, ["positive electrode"], broadcast_type="primary"
+            )
 
         N_s_xav = self._flux_law(c_s_xav)
-        N_s = pybamm.Broadcast(N_s_xav, [self.domain.lower() + " electrode"])
+        N_s = pybamm.Broadcast(
+            N_s_xav, [self._domain.lower() + " electrode"], broadcast_type="primary"
+        )
 
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))

@@ -85,6 +85,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
             symbol_str = "np.outer({}, {}).reshape(-1, 1)".format(
                 children_vars[0], children_vars[1]
             )
+        elif isinstance(symbol, pybamm.Kron):
+            symbol_str = "scipy.sparse.kron({}, {})".format(
+                children_vars[0], children_vars[1]
+            )
         else:
             symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 
