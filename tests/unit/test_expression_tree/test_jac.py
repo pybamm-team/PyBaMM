@@ -260,6 +260,17 @@ class TestJacobian(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             b.jac(None)
 
+    def test_jac_of_inner(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        y = pybamm.Variable("y")
+        self.assertEqual(pybamm.inner(a, b).jac(y).evaluate(), 0)
+        self.assertEqual(pybamm.inner(a, y).jac(y).evaluate(), 1)
+        self.assertEqual(pybamm.inner(y, b).jac(y).evaluate(), 2)
+        vec = pybamm.StateVector(slice(0, 2))
+        jac = pybamm.inner(a * vec, b * vec).jac(vec).evaluate(y=np.ones(2)).toarray()
+        np.testing.assert_array_equal(jac, 4 * np.eye(2))
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

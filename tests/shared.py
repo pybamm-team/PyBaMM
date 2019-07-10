@@ -137,16 +137,17 @@ def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
-def get_discretisation_for_testing(xpts=None, rpts=10, mesh=None):
+def get_discretisation_for_testing(
+    xpts=None, rpts=10, mesh=None, cc_method=SpatialMethodForTesting
+):
     if mesh is None:
         mesh = get_mesh_for_testing(xpts=xpts, rpts=rpts)
     spatial_methods = {
         "macroscale": SpatialMethodForTesting,
         "negative particle": SpatialMethodForTesting,
         "positive particle": SpatialMethodForTesting,
-        "current collector": SpatialMethodForTesting,
+        "current collector": cc_method,
     }
-
     return pybamm.Discretisation(mesh, spatial_methods)
 
 
@@ -160,5 +161,6 @@ def get_1p1d_discretisation_for_testing(xpts=None, zpts=15):
 
 def get_2p1d_discretisation_for_testing(xpts=None, ypts=15, zpts=15):
     return get_discretisation_for_testing(
-        mesh=get_2p1d_mesh_for_testing(xpts, ypts, zpts)
+        mesh=get_2p1d_mesh_for_testing(xpts, ypts, zpts),
+        cc_method=pybamm.ScikitFiniteElement,
     )
