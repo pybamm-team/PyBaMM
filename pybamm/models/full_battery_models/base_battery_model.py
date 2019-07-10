@@ -14,8 +14,8 @@ class BaseBatteryModel(pybamm.BaseModel):
     **Extends:** :class:`pybamm.BaseModel`
     """
 
-    def __init__(self, options=None):
-        super().__init__()
+    def __init__(self, options=None, name="Unnamed battery model"):
+        super().__init__(name)
         self._extra_options = options
         self.set_standard_output_variables()
         self.submodels = OrderedDict()  # ordered dict not default in 3.5

@@ -16,8 +16,8 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     """
 
-    def __init__(self, options=None):
-        super().__init__(options)
+    def __init__(self, options=None, name="Unnamed lead-acid model"):
+        super().__init__(options, name)
         self.param = pybamm.standard_parameters_lead_acid
 
     @property

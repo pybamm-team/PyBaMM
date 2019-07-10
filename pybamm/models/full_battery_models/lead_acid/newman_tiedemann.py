@@ -19,8 +19,7 @@ class NewmanTiedemann(BaseModel):
     """
 
     def __init__(self, options=None, name="Newman-Tiedemann model"):
-        super().__init__(options)
-        self.name = name
+        super().__init__(options, name)
 
         self.set_reactions()
         self.set_current_collector_submodel()

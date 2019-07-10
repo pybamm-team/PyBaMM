@@ -13,8 +13,8 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     """
 
-    def __init__(self, options=None):
-        super().__init__(options)
+    def __init__(self, options=None, name="Unnamed lithium-ion model"):
+        super().__init__(options, name)
         self.param = pybamm.standard_parameters_lithium_ion
 
     def set_standard_output_variables(self):
@@ -75,7 +75,13 @@ class BaseModel(pybamm.BaseBatteryModel):
         icd = " interfacial current density"
         self.reactions = {
             "main": {
-                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
+                "Negative": {
+                    "s": 1 - self.param.t_plus,
+                    "aj": "Negative electrode" + icd,
+                },
+                "Positive": {
+                    "s": 1 - self.param.t_plus,
+                    "aj": "Positive electrode" + icd,
+                },
             }
         }

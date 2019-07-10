@@ -20,8 +20,7 @@ class Composite(BaseModel):
     """
 
     def __init__(self, options=None, name="Composite model"):
-        super().__init__(options)
-        self.name = name
+        super().__init__(options, name)
 
         self.set_reactions()
         self.set_current_collector_submodel()

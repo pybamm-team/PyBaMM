@@ -11,9 +11,8 @@ class SPM(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, options=None):
-        super().__init__(options)
-        self.name = "Single particle model"
+    def __init__(self, options=None, name="Single Particle Model"):
+        super().__init__(options, name)
 
         self.set_current_collector_submodel()
         self.set_porosity_submodel()

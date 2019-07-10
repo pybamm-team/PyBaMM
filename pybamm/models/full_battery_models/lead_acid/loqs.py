@@ -19,8 +19,7 @@ class LOQS(BaseModel):
     """
 
     def __init__(self, options=None, name="LOQS model"):
-        super().__init__(options)
-        self.name = name
+        super().__init__(options, name)
         self.use_jacobian = False
 
         self.set_reactions()

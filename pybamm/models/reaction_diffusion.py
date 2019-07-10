@@ -12,15 +12,7 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
     """
 
     def __init__(self, options=None):
-
-        if not options:
-            options = {}
-
-        options.update(
-            {"Voltage": "Off"}
-        )  # annoying option only for reaction diffusion
-        super().__init__(options)
-        self.name = "Reaction diffusion model"
+        super().__init__(options, "Reaction diffusion model")
         # NOTE: set_standard_output_variables sets the lead acid timescales,
         # so if paramaters are changed here the timescale in the method
         # set_standard_output_variables may need to be altered
