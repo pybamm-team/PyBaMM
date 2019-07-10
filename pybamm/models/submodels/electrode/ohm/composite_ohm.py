@@ -1,13 +1,13 @@
 #
-# Combined leading and first order model for Ohm's law in the electrode
+# Composite model for Ohm's law in the electrode
 #
 import pybamm
 
 from .base_ohm import BaseModel
 
 
-class CombinedOrder(BaseModel):
-    """An explicit combined leading and first order solution to solid phase
+class Composite(BaseModel):
+    """An explicit composite leading and first order solution to solid phase
     current conservation with ohm's law. Note that the returned current density is
     only the leading order approximation.
 

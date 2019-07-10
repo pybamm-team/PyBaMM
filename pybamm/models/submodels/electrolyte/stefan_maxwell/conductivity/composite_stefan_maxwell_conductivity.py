@@ -1,13 +1,13 @@
 #
-# Class for the combined electrolyte potential employing stefan-maxwell
+# Class for the composite electrolyte potential employing stefan-maxwell
 #
 import pybamm
 from .base_stefan_maxwell_conductivity import BaseModel
 
 
-class CombinedOrder(BaseModel):
+class Composite(BaseModel):
     """Class for conservation of charge in the electrolyte employing the
-    Stefan-Maxwell constitutive equations. (Combined refers to a combined
+    Stefan-Maxwell constitutive equations. (Composite refers to a composite
     leading and first-order expression from the asymptotic reduction)
 
     Parameters
@@ -21,6 +21,9 @@ class CombinedOrder(BaseModel):
 
     def __init__(self, param, domain=None):
         super().__init__(param, domain)
+
+    def _first_order_macinnes_function(self, x):
+        return pybamm.log(x)
 
     def get_coupled_variables(self, variables):
         i_boundary_cc = variables["Current collector current density"]
@@ -60,7 +63,8 @@ class CombinedOrder(BaseModel):
             -ocp_n_av
             - eta_r_n_av
             + phi_s_n_av
-            - chi_av * pybamm.average(pybamm.log(c_e_n / c_e_av))
+            - chi_av
+            * pybamm.average(self._first_order_macinnes_function(c_e_n / c_e_av))
             - (
                 (i_boundary_cc * param.C_e * l_n / param.gamma_e)
                 * (1 / (3 * kappa_n_av) - 1 / kappa_s_av)
@@ -69,20 +73,20 @@ class CombinedOrder(BaseModel):
 
         phi_e_n = (
             phi_e_const
-            + chi_av * pybamm.log(c_e_n / c_e_av)
+            + chi_av * self._first_order_macinnes_function(c_e_n / c_e_av)
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * ((x_n ** 2 - l_n ** 2) / (2 * kappa_n_av * l_n) + l_n / kappa_s_av)
         )
 
         phi_e_s = (
             phi_e_const
-            + chi_av * pybamm.log(c_e_s / c_e_av)
+            + chi_av * self._first_order_macinnes_function(c_e_s / c_e_av)
             - (i_boundary_cc * param.C_e / param.gamma_e) * (x_s / kappa_s_av)
         )
 
         phi_e_p = (
             phi_e_const
-            + chi_av * pybamm.log(c_e_p / c_e_av)
+            + chi_av * self._first_order_macinnes_function(c_e_p / c_e_av)
             - (i_boundary_cc * param.C_e / param.gamma_e)
             * (
                 (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * kappa_p_av * l_p)
@@ -94,8 +98,8 @@ class CombinedOrder(BaseModel):
 
         # concentration overpotential
         eta_c_av = chi_av * (
-            pybamm.average(pybamm.log(c_e_p / c_e_av))
-            - pybamm.average(pybamm.log(c_e_n / c_e_av))
+            pybamm.average(self._first_order_macinnes_function(c_e_p / c_e_av))
+            - pybamm.average(self._first_order_macinnes_function(c_e_n / c_e_av))
         )
 
         # average electrolyte ohmic losses

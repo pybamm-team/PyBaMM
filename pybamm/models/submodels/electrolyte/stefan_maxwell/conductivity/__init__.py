@@ -1,5 +1,5 @@
 from .base_stefan_maxwell_conductivity import BaseModel
-from .combined_stefan_maxwell_conductivity import CombinedOrder
+from .composite_stefan_maxwell_conductivity import Composite
 from .full_stefan_maxwell_conductivity import Full
 from .leading_stefan_maxwell_conductivity import LeadingOrder
 

@@ -1,12 +1,12 @@
 #
-# Class for combined leading and first order pressure driven convection
+# Class for composite pressure driven convection
 #
 import pybamm
 from .base_convection import BaseModel
 
 
-class CombinedOrder(BaseModel):
-    """Class for combined leading and first-order pressure-driven convection
+class Composite(BaseModel):
+    """Class for composite pressure-driven convection
 
     Parameters
     ----------
@@ -40,4 +40,3 @@ class CombinedOrder(BaseModel):
         variables.update(self._get_standard_vertical_velocity_variables(dVbox_dz))
 
         return variables
-
