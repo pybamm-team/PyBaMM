@@ -5,10 +5,10 @@ import pybamm
 from .base_higher_order_stefan_maxwell_conductivity import BaseHigherOrder
 
 
-class Composite(BaseHigherOrder):
+class FirstOrder(BaseHigherOrder):
     """Class for conservation of charge in the electrolyte employing the
-    Stefan-Maxwell constitutive equations. (Composite refers to a composite
-    leading and first-order expression from the asymptotic reduction)
+    Stefan-Maxwell constitutive equations. (First order refers to a first-order
+    expression from the asymptotic reduction)
 
     Parameters
     ----------
@@ -22,5 +22,5 @@ class Composite(BaseHigherOrder):
         super().__init__(param, domain)
 
     def _higher_order_macinnes_function(self, x):
-        "Use log for composite higher order terms"
-        return pybamm.log(x)
+        "Linear higher order terms"
+        return x

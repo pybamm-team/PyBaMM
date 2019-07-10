@@ -86,7 +86,7 @@ class Composite(BaseModel):
 
         self.submodels[
             "electrolyte conductivity"
-        ] = electrolyte.conductivity.Composite(self.param)
+        ] = electrolyte.conductivity.FirstOrder(self.param)
 
     @property
     def default_solver(self):
