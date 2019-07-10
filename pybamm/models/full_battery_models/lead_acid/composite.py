@@ -35,11 +35,12 @@ class HigherOrderBaseModel(BaseModel):
         # Update interface, porosity and convection with full potentials
         self.set_full_interface_submodel()
         self.set_full_convection_submodel()
-        self.set_full_porosity_submodel()
+        # TODO: fix jacobian when using full porosity model
+        # self.set_full_porosity_submodel()
         self.set_thermal_submodel()
 
         self.build_model()
-        self.use_jacobian = False
+
         # # Massive hack for consistent delta_phi = phi_s - phi_e
         # # This needs to be corrected
         # for domain in ["Negative", "Positive"]:
@@ -115,12 +116,12 @@ class HigherOrderBaseModel(BaseModel):
         Set full interface submodel, to get spatially heterogeneous interfacial current
         densities
         """
-        self.submodels["negative interface"] = pybamm.interface.lead_acid.ButlerVolmer(
-            self.param, "Negative"
-        )
-        self.submodels["positive interface"] = pybamm.interface.lead_acid.ButlerVolmer(
-            self.param, "Positive"
-        )
+        self.submodels[
+            "negative interface"
+        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(self.param, "Negative")
+        self.submodels[
+            "positive interface"
+        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(self.param, "Positive")
 
     def set_full_convection_submodel(self):
         """

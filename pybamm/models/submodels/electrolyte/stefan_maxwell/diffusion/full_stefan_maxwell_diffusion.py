@@ -72,9 +72,6 @@ class Full(BaseModel):
             for reaction in self.reactions.values()
         )
 
-        import ipdb
-
-        ipdb.set_trace()
         self.rhs = {
             c_e: (1 / eps)
             * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_dt)

@@ -42,7 +42,11 @@ class BaseInverseFirstOrderButlerVolmer(BaseInterface):
         # Solve first-order linear problem for first-order potential
         c_e_1_av = (pybamm.average(c_e) - c_e_0) / self.param.C_e
         delta_phi_1_av = -j_0.diff(c_e_0) * c_e_1_av / j_0.diff(delta_phi_0)
-        delta_phi = delta_phi_0 + self.param.C_e * delta_phi_1_av
+        delta_phi = pybamm.Broadcast(
+            delta_phi_0 + self.param.C_e * delta_phi_1_av,
+            self.domain_for_broadcast,
+            broadcast_type="primary",
+        )
 
         # Update exchange current density and ocp with new concentration
         j0 = self._get_exchange_current_density(variables)

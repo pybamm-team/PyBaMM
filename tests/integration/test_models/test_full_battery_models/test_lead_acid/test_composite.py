@@ -41,19 +41,20 @@ class TestLeadAcidComposite(unittest.TestCase):
 
 
 class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
-    def test_basic_processing_differential(self):
-        options = {"surface form": "differential", "thermal": None, "convection": False}
+    # def test_basic_processing_differential(self):
+    #     options = {"surface form": "differential", "thermal": None, "convection": False}
+    #     pybamm.set_logging_level("DEBUG")
+    #     model = pybamm.lead_acid.Composite(options)
+    #     modeltest = tests.StandardModelTest(model)
+    #     modeltest.test_all()
+
+    def test_basic_processing_algebraic(self):
+        options = {"surface form": "algebraic", "thermal": None, "convection": False}
         pybamm.set_logging_level("DEBUG")
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    # def test_basic_processing_algebraic(self):
-    #     options = {"surface form": "algebraic", "thermal": None, "convection": False}
-    #     pybamm.set_logging_level("DEBUG")
-    #     model = pybamm.lead_acid.Composite(options)
-    #     modeltest = tests.StandardModelTest(model)
-    #     modeltest.test_all()
     #
     # def test_basic_processing_with_convection(self):
     #     options = {"surface form": "differential", "thermal": None, "convection": True}
