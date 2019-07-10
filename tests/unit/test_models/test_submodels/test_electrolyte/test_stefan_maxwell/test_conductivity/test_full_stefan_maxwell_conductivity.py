@@ -14,9 +14,21 @@ class TestFull(unittest.TestCase):
         variables = {
             "Porosity": a,
             "Electrolyte concentration": a,
-            "Interfacial current density": a,
+            "Negative electrode interfacial current density": pybamm.Broadcast(
+                a, "negative electrode"
+            ),
+            "Positive electrode interfacial current density": pybamm.Broadcast(
+                a, "positive electrode"
+            ),
         }
-        submodel = pybamm.electrolyte.stefan_maxwell.conductivity.Full(param)
+        icd = " interfacial current density"
+        reactions = {
+            "main": {
+                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
+                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
+            }
+        }
+        submodel = pybamm.electrolyte.stefan_maxwell.conductivity.Full(param, reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

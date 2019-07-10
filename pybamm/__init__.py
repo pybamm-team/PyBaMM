@@ -155,12 +155,13 @@ from .models.simple_ode_model import SimpleODEModel
 from .models.submodels.base_submodel import BaseSubModel
 
 from .models.submodels import (
+    convection,
+    current_collector,
     electrolyte,
     electrode,
-    particle,
-    current_collector,
-    convection,
     interface,
+    oxygen_diffusion,
+    particle,
     porosity,
     thermal,
 )

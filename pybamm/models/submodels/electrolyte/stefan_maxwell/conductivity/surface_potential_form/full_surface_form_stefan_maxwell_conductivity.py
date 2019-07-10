@@ -21,8 +21,8 @@ class BaseModel(BaseStefanMaxwellConductivity):
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reactions):
+        super().__init__(param, domain, reactions)
 
     def get_fundamental_variables(self):
         if self.domain == "Negative":
@@ -31,8 +31,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
             return {}
         elif self.domain == "Positive":
             delta_phi = pybamm.standard_variables.delta_phi_p
-        else:
-            raise pybamm.DomainError
 
         variables = self._get_standard_surface_potential_difference_variables(delta_phi)
 
@@ -47,8 +45,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
             delta_phi_e_init = self.param.U_n(self.param.c_n_init)
         elif self.domain == "Positive":
             delta_phi_e_init = self.param.U_p(self.param.c_p_init)
-        else:
-            raise pybamm.DomainError
 
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 
@@ -102,9 +98,6 @@ class BaseModel(BaseStefanMaxwellConductivity):
             rbc = (flux_right, "Neumann")
             lbc_c_e = (c_e_flux, "Neumann")
             rbc_c_e = (pybamm.Scalar(0), "Neumann")
-
-        else:
-            raise pybamm.DomainError
 
         # TODO: check if we still need the boundary conditions for c_e, once we have
         # internal boundary conditions
@@ -252,8 +245,8 @@ class FullAlgebraic(BaseModel):
      **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseFull`
     """  # noqa: E501
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reactions):
+        super().__init__(param, domain, reactions)
 
     def set_algebraic(self, variables):
         if self.domain == "Separator":
@@ -261,9 +254,11 @@ class FullAlgebraic(BaseModel):
 
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
-        j = variables[self.domain + " electrode interfacial current density"]
-
-        self.algebraic[delta_phi] = pybamm.div(i_e) - j
+        sum_j = sum(
+            variables[reaction[self.domain]["aj"]]
+            for reaction in self.reactions.values()
+        )
+        self.algebraic[delta_phi] = pybamm.div(i_e) - sum_j
 
 
 class FullDifferential(BaseModel):
@@ -281,8 +276,8 @@ class FullDifferential(BaseModel):
 
     """  # noqa: E501
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reactions):
+        super().__init__(param, domain, reactions)
 
     def set_rhs(self, variables):
         if self.domain == "Separator":
@@ -295,6 +290,9 @@ class FullDifferential(BaseModel):
 
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
-        j = variables[self.domain + " electrode interfacial current density"]
+        sum_j = sum(
+            variables[reaction[self.domain]["aj"]]
+            for reaction in self.reactions.values()
+        )
 
-        self.rhs[delta_phi] = 1 / C_dl * (pybamm.div(i_e) - j)
+        self.rhs[delta_phi] = 1 / C_dl * (pybamm.div(i_e) - sum_j)

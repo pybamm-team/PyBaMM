@@ -20,8 +20,8 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
-    def __init__(self, param, domain=None):
-        super().__init__(param, domain)
+    def __init__(self, param, reactions):
+        super().__init__(param, reactions=reactions)
 
     def get_fundamental_variables(self):
         phi_e = pybamm.standard_variables.phi_e
@@ -47,9 +47,16 @@ class Full(BaseModel):
     def set_algebraic(self, variables):
         phi_e = variables["Electrolyte potential"]
         i_e = variables["Electrolyte current density"]
-        j = variables["Interfacial current density"]
+        sum_j = sum(
+            pybamm.Concatenation(
+                variables[reaction["Negative"]["aj"]],
+                pybamm.Broadcast(0, "separator"),
+                variables[reaction["Positive"]["aj"]],
+            )
+            for reaction in self.reactions.values()
+        )
 
-        self.algebraic = {phi_e: pybamm.div(i_e) - j}
+        self.algebraic = {phi_e: pybamm.div(i_e) - sum_j}
 
     def set_initial_conditions(self, variables):
         phi_e = variables["Electrolyte potential"]

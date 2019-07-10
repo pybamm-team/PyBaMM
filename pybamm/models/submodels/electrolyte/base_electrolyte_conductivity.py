@@ -17,8 +17,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain=None):
+    def __init__(self, param, domain=None, reactions=None):
         super().__init__(param, domain)
+        self.reactions = reactions
 
     def _get_standard_potential_variables(self, phi_e, phi_e_av):
         """

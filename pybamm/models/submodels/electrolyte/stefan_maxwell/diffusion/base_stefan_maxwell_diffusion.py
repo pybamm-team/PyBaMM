@@ -18,8 +18,8 @@ class BaseModel(BaseElectrolyteDiffusion):
     **Extends:** :class:`pybamm.electrolyte.BaseElectrolyteDiffusion`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, reactions):
+        super().__init__(param, reactions)
 
     def set_boundary_conditions(self, variables):
 

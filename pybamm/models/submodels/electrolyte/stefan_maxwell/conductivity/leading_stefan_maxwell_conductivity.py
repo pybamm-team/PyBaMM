@@ -19,8 +19,8 @@ class LeadingOrder(BaseModel):
     **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
-    def __init__(self, param, domain=None):
-        super().__init__(param, domain)
+    def __init__(self, param, domain=None, reactions=None):
+        super().__init__(param, domain, reactions)
 
     def get_coupled_variables(self, variables):
         ocp_n_av = variables["Average negative electrode open circuit potential"]

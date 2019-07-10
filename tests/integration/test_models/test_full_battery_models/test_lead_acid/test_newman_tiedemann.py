@@ -41,7 +41,7 @@ class TestLeadAcidNewmanTiedemann(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
 
-class TestLeadAcidNewmanTiedemannCapacitance(unittest.TestCase):
+class TestLeadAcidNewmanTiedemannSurfaceForm(unittest.TestCase):
     def test_basic_processing_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.NewmanTiedemann(options)

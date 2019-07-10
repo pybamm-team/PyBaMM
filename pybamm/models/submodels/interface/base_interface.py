@@ -21,6 +21,16 @@ class BaseInterface(pybamm.BaseSubModel):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
+    def _get_delta_phi_s(self, variables):
+        "Calculate delta_phi_s, and derived variables, using phi_s and phi_e"
+        phi_s = variables[self.domain + " electrode potential"]
+        phi_e = variables[self.domain + " electrolyte potential"]
+        delta_phi_s = phi_s - phi_e
+        variables.update(
+            self._get_standard_surface_potential_difference_variables(delta_phi_s)
+        )
+        return variables
+
     def _get_average_total_interfacial_current_density(self, variables):
         """
         Method to obtain the average total interfacial current density.
@@ -48,14 +58,23 @@ class BaseInterface(pybamm.BaseSubModel):
             j = pybamm.Broadcast(j, self.domain_for_broadcast, broadcast_type="primary")
 
         variables = {
-            self.domain + " electrode interfacial current density": j,
+            self.domain
+            + " electrode"
+            + self.reaction_name
+            + " interfacial current density": j,
             "Average "
             + self.domain.lower()
-            + " electrode interfacial current density": j_av,
-            self.domain + " interfacial current density [A.m-2]": i_typ * j,
+            + " electrode"
+            + self.reaction_name
+            + " interfacial current density": j_av,
+            self.domain
+            + self.reaction_name
+            + " interfacial current density [A.m-2]": i_typ * j,
             "Average "
             + self.domain.lower()
-            + " electrode interfacial current density [A.m-2]": i_typ * j_av,
+            + " electrode"
+            + self.reaction_name
+            + " interfacial current density [A.m-2]": i_typ * j_av,
         }
 
         return variables
@@ -84,12 +103,17 @@ class BaseInterface(pybamm.BaseSubModel):
         j_p = variables["Positive electrode interfacial current density"]
         j = pybamm.Concatenation(j_n, j_s, j_p)
 
-        variables.update(
-            {
+        if self.reaction_name == "":
+            variables = {
                 "Interfacial current density": j,
                 "Interfacial current density [A.m-2]": i_typ * j,
             }
-        )
+        else:
+            reaction_name = self.reaction_name[1:].capitalize()
+            variables = {
+                reaction_name + " interfacial current density": j,
+                reaction_name + " interfacial current density [A.m-2]": i_typ * j,
+            }
 
         return variables
 
@@ -106,14 +130,24 @@ class BaseInterface(pybamm.BaseSubModel):
             )
 
         variables = {
-            self.domain + " electrode exchange current density": j0,
+            self.domain
+            + " electrode"
+            + self.reaction_name
+            + " exchange current density": j0,
             "Average "
             + self.domain.lower()
-            + " electrode exchange current density": j0_av,
-            self.domain + " electrode exchange current density [A.m-2]": i_typ * j0,
+            + " electrode"
+            + self.reaction_name
+            + " exchange current density": j0_av,
+            self.domain
+            + " electrode"
+            + self.reaction_name
+            + " exchange current density [A.m-2]": i_typ * j0,
             "Average "
             + self.domain.lower()
-            + " electrode exchange current density [A.m-2]": i_typ * j0_av,
+            + " electrode"
+            + self.reaction_name
+            + " exchange current density [A.m-2]": i_typ * j0_av,
         }
 
         return variables
@@ -127,12 +161,17 @@ class BaseInterface(pybamm.BaseSubModel):
         j0_p = variables["Positive electrode exchange current density"]
         j0 = pybamm.Concatenation(j0_n, j0_s, j0_p)
 
-        variables.update(
-            {
+        if self.reaction_name == "":
+            variables = {
                 "Exchange current density": j0,
                 "Exchange current density [A.m-2]": i_typ * j0,
             }
-        )
+        else:
+            reaction_name = self.reaction_name[1:].capitalize()
+            variables = {
+                reaction_name + " exchange current density": j0,
+                reaction_name + " exchange current density [A.m-2]": i_typ * j0,
+            }
 
         return variables
 
@@ -149,14 +188,24 @@ class BaseInterface(pybamm.BaseSubModel):
             )
 
         variables = {
-            self.domain + " electrode reaction overpotential": eta_r,
+            self.domain
+            + " electrode"
+            + self.reaction_name
+            + " reaction overpotential": eta_r,
             "Average "
             + self.domain.lower()
-            + " electrode reaction overpotential": eta_r_av,
-            self.domain + " electrode reaction overpotential [V]": eta_r * pot_scale,
+            + " electrode"
+            + self.reaction_name
+            + " reaction overpotential": eta_r_av,
+            self.domain
+            + " electrode"
+            + self.reaction_name
+            + " reaction overpotential [V]": eta_r * pot_scale,
             "Average "
             + self.domain.lower()
-            + " electrode reaction overpotential [V]": eta_r_av * pot_scale,
+            + " electrode"
+            + self.reaction_name
+            + " reaction overpotential [V]": eta_r_av * pot_scale,
         }
 
         return variables
@@ -231,14 +280,24 @@ class BaseInterface(pybamm.BaseSubModel):
             ocp_av_dim = self.param.U_p_ref + self.param.potential_scale * ocp_av
 
         variables = {
-            self.domain + " electrode open circuit potential": ocp,
-            self.domain + " electrode open circuit potential [V]": ocp_dim,
+            self.domain
+            + " electrode"
+            + self.reaction_name
+            + " open circuit potential": ocp,
+            self.domain
+            + " electrode"
+            + self.reaction_name
+            + " open circuit potential [V]": ocp_dim,
             "Average "
             + self.domain.lower()
-            + " electrode open circuit potential": ocp_av,
+            + " electrode"
+            + self.reaction_name
+            + " open circuit potential": ocp_av,
             "Average "
             + self.domain.lower()
-            + " electrode open circuit potential [V]": ocp_av_dim,
+            + " electrode"
+            + self.reaction_name
+            + " open circuit potential [V]": ocp_av_dim,
             self.domain + " electrode entropic change": dUdT,
             "Average " + self.domain.lower() + " electrode entropic change": dUdT_av,
         }

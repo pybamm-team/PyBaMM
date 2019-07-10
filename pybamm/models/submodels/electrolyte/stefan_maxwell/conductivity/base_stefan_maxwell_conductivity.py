@@ -18,8 +18,8 @@ class BaseModel(BaseElectrolyteConductivity):
     **Extends:** :class:`pybamm.electrolyte.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, domain=None):
-        super().__init__(param, domain)
+    def __init__(self, param, domain=None, reactions=None):
+        super().__init__(param, domain, reactions)
 
     def set_boundary_conditions(self, variables):
         phi_e = variables["Electrolyte potential"]

@@ -55,8 +55,12 @@ class BaseInverseButlerVolmer(BaseInterface):
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         if (
-            "Negative electrode interfacial current density" in variables
-            and "Positive electrode interfacial current density" in variables
+            "Negative electrode" + self.reaction_name + " interfacial current density"
+            in variables
+            and "Positive electrode"
+            + self.reaction_name
+            + " interfacial current density"
+            in variables
         ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)

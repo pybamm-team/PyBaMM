@@ -14,8 +14,8 @@ class BaseBatteryModel(pybamm.BaseModel):
     **Extends:** :class:`pybamm.BaseModel`
     """
 
-    def __init__(self, options=None):
-        super().__init__()
+    def __init__(self, options=None, name="Unnamed battery model"):
+        super().__init__(name)
         self._extra_options = options
         self.set_standard_output_variables()
         self.submodels = OrderedDict()  # ordered dict not default in 3.5
@@ -290,27 +290,45 @@ class BaseBatteryModel(pybamm.BaseModel):
     def build_model(self):
 
         # Get the fundamental variables
-        for name, submodel in self.submodels.items():
-            pybamm.logger.debug("Getting fundamental variables for {}".format(name))
+        for submodel_name, submodel in self.submodels.items():
+            pybamm.logger.debug(
+                "Getting fundamental variables for {} ({})".format(
+                    submodel_name, self.name
+                )
+            )
             self.variables.update(submodel.get_fundamental_variables())
 
         # Get coupled variables
-        for name, submodel in self.submodels.items():
-            pybamm.logger.debug("Getting coupled variables for {}".format(name))
+        for submodel_name, submodel in self.submodels.items():
+            pybamm.logger.debug(
+                "Getting coupled variables for {} ({})".format(submodel_name, self.name)
+            )
             self.variables.update(submodel.get_coupled_variables(self.variables))
 
             # Set model equations
-        for name, submodel in self.submodels.items():
-            pybamm.logger.debug("Setting rhs for {}".format(name))
+        for submodel_name, submodel in self.submodels.items():
+            pybamm.logger.debug(
+                "Setting rhs for {} ({})".format(submodel_name, self.name)
+            )
             submodel.set_rhs(self.variables)
-            pybamm.logger.debug("Setting algebraic for {}".format(name))
+            pybamm.logger.debug(
+                "Setting algebraic for {} ({})".format(submodel_name, self.name)
+            )
             submodel.set_algebraic(self.variables)
-            pybamm.logger.debug("Setting boundary conditions for {}".format(name))
+            pybamm.logger.debug(
+                "Setting boundary conditions for {} ({})".format(
+                    submodel_name, self.name
+                )
+            )
             submodel.set_boundary_conditions(self.variables)
-            pybamm.logger.debug("Setting initial conditions for {}".format(name))
+            pybamm.logger.debug(
+                "Setting initial conditions for {} ({})".format(
+                    submodel_name, self.name
+                )
+            )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
-            pybamm.logger.debug("Updating {}".format(name))
+            pybamm.logger.debug("Updating {} ({})".format(submodel_name, self.name))
             self.update(submodel)
 
         pybamm.logger.debug("Setting voltage variables")

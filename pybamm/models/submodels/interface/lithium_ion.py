@@ -22,6 +22,7 @@ class BaseInterfaceLithiumIon(BaseInterface):
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
+        self.reaction_name = ""  # empty reaction name, assumed to be the main reaction
 
     def _get_exchange_current_density(self, variables):
         """
@@ -54,6 +55,22 @@ class BaseInterfaceLithiumIon(BaseInterface):
         return j0
 
     def _get_open_circuit_potential(self, variables):
+        """
+        A private function to obtain the open circuit potential and entropic change
+
+        Parameters
+        ----------
+        variables: dict
+            The variables in the full model.
+
+        Returns
+        -------
+        ocp : :class:`pybamm.Symbol`
+            The open-circuit potential
+        dUdT : :class:`pybamm.Symbol`
+            The entropic change in open-circuit potential due to temperature
+
+        """
         c_s_surf = variables[self.domain + " particle surface concentration"]
 
         if self.domain == "Negative":
@@ -65,6 +82,13 @@ class BaseInterfaceLithiumIon(BaseInterface):
             dUdT = self.param.dUdT_p(c_s_surf)
 
         return ocp, dUdT
+
+    def _get_number_of_electrons_in_reaction(self):
+        if self.domain == "Negative":
+            ne = self.param.ne_n
+        elif self.domain == "Positive":
+            ne = self.param.ne_p
+        return ne
 
 
 class ButlerVolmer(BaseInterfaceLithiumIon, kinetics.BaseButlerVolmer):
