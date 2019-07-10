@@ -209,14 +209,14 @@ def simplify_multiplication_division(myclass, left, right):
     groups of constant children (that produce a value) and simplify them
 
     The purpose of this function is to simplify expressions of the type (1 * c / 2),
-    which should simplify to (0.5 * c). The former expression consists of a Divsion,
+    which should simplify to (0.5 * c). The former expression consists of a Division,
     with a left child of a Multiplication containing a Scalar and a Parameter, and a
     right child consisting of a Scalar. For this case, this function will first flatten
     the expression to a list of the bottom level children on the numerator (i.e.
     [Scalar(1), Parameter(c)]) and their operators (i.e. [None, Multiplication]), as
     well as those children on the denominator (i.e. [Scalar(2)]. After this, all the
     constant children on the numerator and denominator (i.e. Scalar(1) and Scalar(2))
-    will be combined appropriatly, in this case to Scalar(0.5), and combined with the
+    will be combined appropriately, in this case to Scalar(0.5), and combined with the
     nonconstant children (i.e. Parameter(c))
 
     Note that this function will flatten the expression tree until a symbol is found
@@ -347,6 +347,18 @@ def simplify_multiplication_division(myclass, left, right):
 
     flatten(None, myclass, left, right, True, myclass == pybamm.MatrixMultiplication)
 
+    for num in numerator:
+        try:
+            num.shape
+        except:
+            num.shape
+
+    for dom in denominator:
+        try:
+            dom.shape
+        except:
+            dom.shape
+
     # check if there is a matrix multiply in the numerator (if so we can't reorder it)
     numerator_has_mat_mul = any(
         [typ == pybamm.MatrixMultiplication for typ in numerator_types + [myclass]]
@@ -417,7 +429,17 @@ def simplify_multiplication_division(myclass, left, right):
             else:
                 new_nodes.append(child)
                 new_types.append(typ)
+                try:
+                    fold_multiply(new_nodes, new_types).shape
+                except:
+                    fold_multiply(new_nodes, new_types)
         new_nodes = fold_multiply(new_nodes, new_types)
+
+        try:
+            new_nodes.shape
+        except:
+            new_nodes
+
         return new_nodes
 
     if numerator_has_mat_mul and denominator_has_mat_mul:
@@ -444,6 +466,11 @@ def simplify_multiplication_division(myclass, left, right):
                     constant_denominator_expr = None
 
         new_numerator = simplify_with_mat_mul(numerator, numerator_types)
+
+        try:
+            new_numerator.shape
+        except:
+            new_numerator.shape
 
         # result = constant_numerator_expr * new_numerator / nonconst_denominator_expr
         # need to take into accound that terms can be None
@@ -531,6 +558,10 @@ def simplify_multiplication_division(myclass, left, right):
         if nonconst_denominator_expr is not None:
             result = result / nonconst_denominator_expr
 
+    try:
+        result.shape
+    except:
+        result.shape
     return result
 
 
@@ -583,6 +614,7 @@ class Simplification(object):
             try:
                 new_symbol = symbol._binary_simplify(new_left, new_right)
             except:
+                new_symbol = symbol._binary_simplify(new_left, new_right)
                 new_symbol = symbol._binary_simplify(new_left, new_right)
 
             new_symbol.domain = symbol.domain

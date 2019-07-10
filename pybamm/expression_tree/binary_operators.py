@@ -381,6 +381,12 @@ class Multiplication(BinaryOperator):
         if is_one(right):
             return left
 
+        
+        try: 
+            pybamm.simplify_multiplication_division(self.__class__, left, right)
+        except: 
+            pybamm.simplify_multiplication_division(self.__class__, left, right)
+
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
 
 
