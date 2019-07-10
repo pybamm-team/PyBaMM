@@ -568,10 +568,23 @@ class Simplification(object):
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
             # process children
-            new_left = self.simplify(left)
-            new_right = self.simplify(right)
+
+            try:
+                new_left = self.simplify(left)
+            except:
+                new_left = self.simplify(left)
+
+            try:
+                new_right = self.simplify(right)
+            except:
+                new_right = self.simplify(right)
+
             # _binary_simplify defined in derived classes for specific rules
-            new_symbol = symbol._binary_simplify(new_left, new_right)
+            try:
+                new_symbol = symbol._binary_simplify(new_left, new_right)
+            except:
+                new_symbol = symbol._binary_simplify(new_left, new_right)
+
             new_symbol.domain = symbol.domain
             return simplify_if_constant(new_symbol)
 
