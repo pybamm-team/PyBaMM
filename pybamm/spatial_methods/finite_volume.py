@@ -73,7 +73,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 symbol, discretised_symbol, bcs
             )
             # edit domain
-            # edit domain
             domain = (
                 [domain[0] + "_left ghost cell"]
                 + domain
