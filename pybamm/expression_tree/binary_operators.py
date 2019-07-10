@@ -649,6 +649,7 @@ class Outer(BinaryOperator):
 
 class Kron(BinaryOperator):
     """A node in the expression tree representing a (sparse) kronecker product operator
+
     **Extends:** :class:`BinaryOperator`
     """
 
