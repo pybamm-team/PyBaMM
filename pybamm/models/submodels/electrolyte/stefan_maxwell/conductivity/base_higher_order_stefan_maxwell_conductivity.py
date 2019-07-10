@@ -24,6 +24,9 @@ class BaseHigherOrder(BaseModel):
         "Function to differentiate between composite and first-order models"
         raise NotImplementedError
 
+    def unpack(self, variables):
+        raise NotImplementedError
+
     def get_coupled_variables(self, variables):
         # NOTE: the heavy use of Broadcast and outer in this method is mainly so
         # that products are handled correctly when using 1 or 2D current collector
@@ -31,9 +34,10 @@ class BaseHigherOrder(BaseModel):
         # In the future, multiply will automatically handle switching between
         # normal multiply and outer products as appropriate.
 
+        c_e_av = self.unpack(variables)
+
         i_boundary_cc = variables["Current collector current density"]
         c_e = variables["Electrolyte concentration"]
-        c_e_av = variables["Average electrolyte concentration"]
         delta_phi_n_av = variables[
             "Average negative electrode surface potential difference"
         ]
@@ -41,7 +45,6 @@ class BaseHigherOrder(BaseModel):
         eps_n_av = variables["Average negative electrode porosity"]
         eps_s_av = variables["Average separator porosity"]
         eps_p_av = variables["Average positive electrode porosity"]
-
         c_e_n, c_e_s, c_e_p = c_e.orphans
 
         param = self.param

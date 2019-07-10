@@ -40,8 +40,10 @@ class BaseInverseButlerVolmer(BaseInterface):
             ne = self.param.ne_p
 
         eta_r = (2 / ne) * pybamm.Function(np.arcsinh, j_tot_av / (2 * j0))
-
         delta_phi = eta_r + ocp
+
+        j0 = self._get_exchange_current_density(variables, times_one=True)
+        ocp = self._get_open_circuit_potential(variables, times_one=True)[0]
         j = 2 * j0 * pybamm.sinh(ne / 2 * (delta_phi - ocp))
 
         variables.update(self._get_standard_interfacial_current_variables(j))

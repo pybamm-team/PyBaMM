@@ -23,3 +23,8 @@ class FirstOrder(BaseHigherOrder):
     def _higher_order_macinnes_function(self, x):
         "Linear higher order terms"
         return x
+
+    def unpack(self, variables):
+        "Unpack variables and return leading-order average values"
+        c_e_av = variables["Leading-order average electrolyte concentration"]
+        return c_e_av

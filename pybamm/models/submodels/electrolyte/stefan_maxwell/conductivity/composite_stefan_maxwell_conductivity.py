@@ -24,3 +24,8 @@ class Composite(BaseHigherOrder):
     def _higher_order_macinnes_function(self, x):
         "Use log for composite higher order terms"
         return pybamm.log(x)
+
+    def unpack(self, variables):
+        "Unpack variables and return average values"
+        c_e_av = variables["Average electrolyte concentration"]
+        return c_e_av

@@ -25,7 +25,7 @@ class BaseInterfaceOxygenLeadAcid(BaseInterface):
         super().__init__(param, domain)
         self.reaction_name = " oxygen"
 
-    def _get_exchange_current_density(self, variables):
+    def _get_exchange_current_density(self, variables, times_one=False):
         """
         A private function to obtain the exchange current density for a lead acid
         deposition reaction.
@@ -52,7 +52,7 @@ class BaseInterfaceOxygenLeadAcid(BaseInterface):
 
         return j0
 
-    def _get_open_circuit_potential(self, variables):
+    def _get_open_circuit_potential(self, variables, times_one=False):
         """
         A private function to obtain the open circuit potential and entropic change
 

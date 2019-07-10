@@ -30,7 +30,7 @@ class BaseFirstOrderButlerVolmer(BaseInterface):
         # Unpack
         # Multiply c_e_0 by 1 to change its id slightly and thus avoid clash with
         # the c_e_0 in delta_phi_0
-        c_e_0 = 1 * variables["Leading-order average electrolyte concentration"]
+        c_e_0 = variables["Leading-order average electrolyte concentration"] * 1
         delta_phi_0 = variables[
             "Leading-order average "
             + self.domain.lower()

@@ -22,12 +22,12 @@ class BaseInterface(pybamm.BaseSubModel):
         super().__init__(param, domain)
 
     def _get_delta_phi(self, variables):
-        "Calculate delta_phi_s, and derived variables, using phi_s and phi_e"
+        "Calculate delta_phi, and derived variables, using phi_s and phi_e"
         phi_s = variables[self.domain + " electrode potential"]
         phi_e = variables[self.domain + " electrolyte potential"]
-        delta_phi_s = phi_s - phi_e
+        delta_phi = phi_s - phi_e
         variables.update(
-            self._get_standard_surface_potential_difference_variables(delta_phi_s)
+            self._get_standard_surface_potential_difference_variables(delta_phi)
         )
         return variables
 

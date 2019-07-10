@@ -46,16 +46,16 @@ class Composite(BaseModel):
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
         elif self.domain == "Positive":
-            ocp_p_av = variables["Average positive electrode open circuit potential"]
-            eta_r_p_av = variables["Average positive electrode reaction overpotential"]
+            delta_phi_p_av = variables[
+                "Average positive electrode surface potential difference"
+            ]
             phi_e_p_av = variables["Average positive electrolyte potential"]
 
             sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b
             sigma_eff_av = pybamm.average(sigma_eff)
 
             const = (
-                ocp_p_av
-                + eta_r_p_av
+                delta_phi_p_av
                 + phi_e_p_av
                 - (i_boundary_cc / 6 / l_p / sigma_eff_av)
                 * (2 * l_p ** 2 - 6 * l_p + 3)

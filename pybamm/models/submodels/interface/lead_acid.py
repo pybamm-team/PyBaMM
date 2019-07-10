@@ -25,7 +25,7 @@ class BaseInterfaceLeadAcid(BaseInterface):
         super().__init__(param, domain)
         self.reaction_name = ""  # empty reaction name, assumed to be the main reaction
 
-    def _get_exchange_current_density(self, variables):
+    def _get_exchange_current_density(self, variables, times_one=False):
         """
         A private function to obtain the exchange current density for a lead acid
         deposition reaction.
@@ -44,7 +44,9 @@ class BaseInterfaceLeadAcid(BaseInterface):
         # If c_e was broadcast, take only the orphan
         # Multiply by 1 for the purpose of first-order kinetics (change the id)
         if isinstance(c_e, pybamm.Broadcast):
-            c_e = 1 * c_e.orphans[0]
+            c_e = c_e.orphans[0]
+            if times_one:
+                c_e *= 1
 
         if self.domain == "Negative":
             j0 = self.param.j0_n_S_ref * c_e
@@ -55,7 +57,7 @@ class BaseInterfaceLeadAcid(BaseInterface):
 
         return j0
 
-    def _get_open_circuit_potential(self, variables):
+    def _get_open_circuit_potential(self, variables, times_one=False):
         """
         A private function to obtain the open circuit potential and entropic change
 
@@ -77,7 +79,9 @@ class BaseInterfaceLeadAcid(BaseInterface):
         # If c_e was broadcast, take only the orphan
         # Multiply by 1 for the purpose of first-order kinetics (change the id)
         if isinstance(c_e, pybamm.Broadcast):
-            c_e = 1 * c_e.orphans[0]
+            c_e = c_e.orphans[0]
+            if times_one:
+                c_e *= 1
 
         if self.domain == "Negative":
             ocp = self.param.U_n(c_e)
