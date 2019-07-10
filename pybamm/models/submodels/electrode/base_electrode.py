@@ -50,7 +50,7 @@ class BaseElectrode(pybamm.BaseSubModel):
                 param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_av
             )
             V = pybamm.BoundaryValue(phi_s, "right")
-            delta_phi_s = phi_s - V
+            delta_phi_s = phi_s - pybamm.Broadcast(V, ["positive electrode"])
 
         delta_phi_s_av = pybamm.average(delta_phi_s)
         delta_phi_s_dim = delta_phi_s * param.potential_scale
