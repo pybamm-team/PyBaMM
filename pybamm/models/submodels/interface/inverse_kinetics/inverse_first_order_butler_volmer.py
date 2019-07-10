@@ -7,7 +7,7 @@ import autograd.numpy as np
 from ..base_interface import BaseInterface
 
 
-class BaseInverseButlerVolmer(BaseInterface):
+class BaseInverseFirstOrderButlerVolmer(BaseInterface):
     """
     A base submodel that implements the inverted form of the Butler-Volmer relation to
     solve for the reaction overpotential.
@@ -26,21 +26,15 @@ class BaseInverseButlerVolmer(BaseInterface):
         super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
+
+        # Update exchange current density and ocp with new concentration
+        j0 = self._get_exchange_current_density(variables)
         ocp, dUdT = self._get_open_circuit_potential(variables)
 
-        j0 = self._get_exchange_current_density(variables)
-        j_tot_av = self._get_average_total_interfacial_current_density(variables)
-        # j = pybamm.Broadcast(j_tot_av, [self.domain.lower() + " electrode"])
-
-        if self.domain == "Negative":
-            ne = self.param.ne_n
-        elif self.domain == "Positive":
-            ne = self.param.ne_p
-
-        eta_r = (2 / ne) * pybamm.Function(np.arcsinh, j_tot_av / (2 * j0))
-
-        delta_phi = eta_r + ocp
-        j = 2 * j0 * pybamm.sinh(ne / 2 * (delta_phi - ocp))
+        # Solve first-order linear problem for first-order potential
+        c_e_1_av = (pybamm.average(c_e) - c_e_0) / param.C_e
+        delta_phi_1_av = -j_0.diff(c_e_0) * c_e_1_av / j_0.diff(delta_phi_0)
+        delta_phi = delta_phi_0 + param.C_e * delta_phi_1_av
 
         variables.update(self._get_standard_interfacial_current_variables(j))
         variables.update(

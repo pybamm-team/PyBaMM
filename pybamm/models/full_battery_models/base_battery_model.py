@@ -16,7 +16,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
-        self._extra_options = options
+        self.options = options
         self.set_standard_output_variables()
         self.submodels = OrderedDict()  # ordered dict not default in 3.5
 
@@ -113,6 +113,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, extra_options):
         default_options = {
             "bc_options": {"dimensionality": 0},
             "surface form": False,
@@ -123,11 +127,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             "interfacial surface area": "constant",
             "higher-order concentration": "composite",
         }
-        if self._extra_options is None:
-            options = default_options
-        else:
-            # any extra options overwrite the default options
-            options = {**default_options, **self._extra_options}
+        options = default_options
+        # any extra options overwrite the default options
+        for name, opt in extra_options.items():
+            if name in default_options:
+                options[name] = opt
+            else:
+                raise pybamm.OptionError("option {} not recognised".format(name))
 
         # Some standard checks to make sure options are compatible
         if (
@@ -147,7 +153,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     )
                 )
 
-        return options
+        self._options = options
 
     def set_standard_output_variables(self):
         # Standard output variables
@@ -283,7 +289,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
-                "Getting fundamental variables for {} ({})".format(
+                "Getting fundamental variables for {} submodel ({})".format(
                     submodel_name, self.name
                 )
             )
@@ -292,28 +298,32 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Get coupled variables
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
-                "Getting coupled variables for {} ({})".format(submodel_name, self.name)
+                "Getting coupled variables for {} submodel ({})".format(
+                    submodel_name, self.name
+                )
             )
             self.variables.update(submodel.get_coupled_variables(self.variables))
 
             # Set model equations
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
-                "Setting rhs for {} ({})".format(submodel_name, self.name)
+                "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
             )
             submodel.set_rhs(self.variables)
             pybamm.logger.debug(
-                "Setting algebraic for {} ({})".format(submodel_name, self.name)
+                "Setting algebraic for {} submodel ({})".format(
+                    submodel_name, self.name
+                )
             )
             submodel.set_algebraic(self.variables)
             pybamm.logger.debug(
-                "Setting boundary conditions for {} ({})".format(
+                "Setting boundary conditions for {} submodel ({})".format(
                     submodel_name, self.name
                 )
             )
             submodel.set_boundary_conditions(self.variables)
             pybamm.logger.debug(
-                "Setting initial conditions for {} ({})".format(
+                "Setting initial conditions for {} submodel ({})".format(
                     submodel_name, self.name
                 )
             )

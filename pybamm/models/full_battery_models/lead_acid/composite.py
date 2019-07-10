@@ -22,12 +22,9 @@ class HigherOrderBaseModel(BaseModel):
     def __init__(self, options=None, name="Composite model"):
         super().__init__(options, name)
 
-        leading_order_model = pybamm.lead_acid.LOQS(options)
-        self.update(leading_order_model)
-
+        self.set_leading_order_model()
         self.set_reactions()
         self.set_current_collector_submodel()
-        self.set_convection_submodel()
         # Electrolyte submodel to get first-order concentrations
         self.set_electrolyte_diffusion_submodel()
         # Average interface submodel to get average first-order potential differences
@@ -35,8 +32,9 @@ class HigherOrderBaseModel(BaseModel):
         # Electrolyte and solid submodels to get full first-order potentials
         self.set_electrolyte_conductivity_submodel()
         self.set_solid_submodel()
-        # Update interface and porosity with full potentials
+        # Update interface, porosity and convection with full potentials
         self.set_full_interface_submodel()
+        self.set_full_convection_submodel()
         self.set_full_porosity_submodel()
         self.set_thermal_submodel()
 
@@ -55,16 +53,22 @@ class HigherOrderBaseModel(BaseModel):
         #     var = s._get_standard_surface_potential_difference_variables(delta_phi)
         #     self.variables.update(var)
 
+    def set_leading_order_model(self):
+        leading_order_model = pybamm.lead_acid.LOQS(self.options)
+        self.update(leading_order_model)
+        for variable in [
+            "Average electrolyte concentration",
+            "Average negative electrode surface potential difference",
+            "Average positive electrode surface potential difference",
+        ]:
+            self.variables[
+                "Leading-order " + variable.lower()
+            ] = leading_order_model.variables[variable]
+
     def set_current_collector_submodel(self):
         self.submodels["current collector"] = pybamm.current_collector.Uniform(
             self.param, "Negative"
         )
-
-    def set_convection_submodel(self):
-        if self.options["convection"] is False:
-            self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
-        if self.options["convection"] is True:
-            self.submodels["convection"] = pybamm.convection.Composite(self.param)
 
     def set_electrolyte_diffusion_submodel(self):
 
@@ -82,12 +86,12 @@ class HigherOrderBaseModel(BaseModel):
     def set_average_interfacial_submodel(self):
         self.submodels[
             "average negative interface"
-        ] = pybamm.interface.lead_acid.FirstOrderInverseButlerVolmer(
+        ] = pybamm.interface.lead_acid.InverseFirstOrderButlerVolmer(
             self.param, "Negative"
         )
         self.submodels[
             "average positive interface"
-        ] = pybamm.interface.lead_acid.FirstOrderInverseButlerVolmer(
+        ] = pybamm.interface.lead_acid.InverseFirstOrderButlerVolmer(
             self.param, "Positive"
         )
 
@@ -115,6 +119,18 @@ class HigherOrderBaseModel(BaseModel):
         self.submodels["positive interface"] = pybamm.interface.lead_acid.ButlerVolmer(
             self.param, "Positive"
         )
+
+    def set_full_convection_submodel(self):
+        """
+        Update convection submodel, now that we have the spatially heterogeneous
+        interfacial current densities
+        """
+        if self.options["convection"] is False:
+            self.submodels["full convection"] = pybamm.convection.NoConvection(
+                self.param
+            )
+        if self.options["convection"] is True:
+            self.submodels["full convection"] = pybamm.convection.Composite(self.param)
 
     def set_full_porosity_submodel(self):
         """
