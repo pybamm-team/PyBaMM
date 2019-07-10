@@ -46,6 +46,8 @@ class HigherOrderBaseModel(BaseModel):
             self.options, name="LOQS model (for composite model)"
         )
         self.update(leading_order_model)
+
+        # Leading-order variables
         for variable in [
             "Average electrolyte concentration",
             "Average negative electrode surface potential difference",
@@ -59,6 +61,11 @@ class HigherOrderBaseModel(BaseModel):
             self.variables[
                 "Leading-order " + variable.lower()
             ] = leading_order_model.variables[variable]
+        self.variables[
+            "Leading-order electrolyte concentration change"
+        ] = leading_order_model.rhs[
+            leading_order_model.variables["Average electrolyte concentration"]
+        ]
 
     def set_current_collector_submodel(self):
         self.submodels["current collector"] = pybamm.current_collector.Uniform(
