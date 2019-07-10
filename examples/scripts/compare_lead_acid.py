@@ -1,12 +1,12 @@
 import numpy as np
 import pybamm
 
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
 # load models
 models = [
     pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.Composite({"surface form": "differential"}),
+    pybamm.lead_acid.Composite({"surface form": "algebraic"}),
     pybamm.lead_acid.NewmanTiedemann(),
 ]
 

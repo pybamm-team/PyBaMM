@@ -25,19 +25,19 @@ class BaseModel(BaseInterface):
         super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
-        # Calculate delta_phi_s from phi_s and phi_e if it isn't already known
+        # Calculate delta_phi from phi_s and phi_e if it isn't already known
         if self.domain + " electrode surface potential difference" not in variables:
-            variables = self._get_delta_phi_s(variables)
-        delta_phi_s = variables[self.domain + " electrode surface potential difference"]
-        # If delta_phi_s was broadcast, take only the orphan
-        if isinstance(delta_phi_s, pybamm.Broadcast):
-            delta_phi_s = delta_phi_s.orphans[0]
+            variables = self._get_delta_phi(variables)
+        delta_phi = variables[self.domain + " electrode surface potential difference"]
+        # If delta_phi was broadcast, take only the orphan
+        if isinstance(delta_phi, pybamm.Broadcast):
+            delta_phi = delta_phi.orphans[0]
 
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
         ocp, dUdT = self._get_open_circuit_potential(variables)
-        eta_r = delta_phi_s - ocp
+        eta_r = delta_phi - ocp
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
 

@@ -41,18 +41,10 @@ class HigherOrderBaseModel(BaseModel):
 
         self.build_model()
 
-        # # Massive hack for consistent delta_phi = phi_s - phi_e
-        # # This needs to be corrected
-        # for domain in ["Negative", "Positive"]:
-        #     phi_s = self.variables[domain + " electrode potential"]
-        #     phi_e = self.variables[domain + " electrolyte potential"]
-        #     delta_phi = phi_s - phi_e
-        #     s = self.submodels[domain.lower() + " interface"]
-        #     var = s._get_standard_surface_potential_difference_variables(delta_phi)
-        #     self.variables.update(var)
-
     def set_leading_order_model(self):
-        leading_order_model = pybamm.lead_acid.LOQS(self.options)
+        leading_order_model = pybamm.lead_acid.LOQS(
+            self.options, name="LOQS model (for composite model)"
+        )
         self.update(leading_order_model)
         for variable in [
             "Average electrolyte concentration",
@@ -116,12 +108,12 @@ class HigherOrderBaseModel(BaseModel):
         Set full interface submodel, to get spatially heterogeneous interfacial current
         densities
         """
-        self.submodels["negative interface"] = pybamm.interface.lead_acid.ButlerVolmer(
-            self.param, "Negative"
-        )
-        self.submodels["positive interface"] = pybamm.interface.lead_acid.ButlerVolmer(
-            self.param, "Positive"
-        )
+        self.submodels[
+            "negative interface"
+        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(self.param, "Negative")
+        self.submodels[
+            "positive interface"
+        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(self.param, "Positive")
 
     def set_full_convection_submodel(self):
         """

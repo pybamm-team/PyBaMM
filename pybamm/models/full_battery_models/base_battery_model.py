@@ -295,6 +295,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
 
     def build_model(self):
+        pybamm.logger.info("Building {}".format(self.name))
 
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
@@ -339,7 +340,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             submodel.set_initial_conditions(self.variables)
             submodel.set_events(self.variables)
-            pybamm.logger.debug("Updating {} ({})".format(submodel_name, self.name))
+            pybamm.logger.debug(
+                "Updating {} submodel ({})".format(submodel_name, self.name)
+            )
             self.update(submodel)
 
         pybamm.logger.debug("Setting voltage variables")
