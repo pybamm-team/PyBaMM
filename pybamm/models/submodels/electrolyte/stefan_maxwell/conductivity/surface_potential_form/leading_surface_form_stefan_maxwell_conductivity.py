@@ -63,8 +63,6 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
         else:
             return variables
 
-    # def set_boundary_conditions(self, variables):
-    #     pass
     def set_boundary_conditions(self, variables):
         if self.domain == "Negative":
             phi_e = variables["Electrolyte potential"]

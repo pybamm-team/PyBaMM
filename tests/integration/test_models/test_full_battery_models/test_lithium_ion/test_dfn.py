@@ -8,9 +8,6 @@ import numpy as np
 import unittest
 
 
-pybamm.settings.debug_mode = True
-
-
 @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestDFN(unittest.TestCase):
     def test_basic_processing(self):
