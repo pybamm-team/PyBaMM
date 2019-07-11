@@ -8,6 +8,10 @@ import numpy as np
 
 
 class TestCurrentFunctions(unittest.TestCase):
+    def test_base_current(self):
+        function = pybamm.GetCurrent()
+        self.assertEqual(function(10), 1)
+
     def test_constant_current(self):
         function = pybamm.GetConstantCurrent(current=4)
         assert isinstance(function(0), numbers.Number)
