@@ -40,6 +40,10 @@ class TestSPM(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             model = pybamm.lithium_ion.SPM(options)
 
+        options = {"bc_options": {"dimensionality": 5}}
+        with self.assertRaises(pybamm.ModelError):
+            model = pybamm.lithium_ion.SPM(options)
+
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
         options = {"thermal": None}

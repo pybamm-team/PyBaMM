@@ -572,6 +572,42 @@ class TestSimplify(unittest.TestCase):
         exp4 = pybamm.Division(pybamm.Division(outer, 2 * u), 2 * u)
         self.assertIsInstance(exp4.simplify(), pybamm.Multiplication)
 
+    def test_simplify_kron(self):
+        A = pybamm.Matrix(np.eye(2))
+        b = pybamm.Vector(np.array([[4], [5]]))
+        kron = pybamm.Kron(A, b)
+        kron_simp = kron.simplify()
+        self.assertIsInstance(kron_simp, pybamm.Matrix)
+        np.testing.assert_array_equal(
+            kron_simp.evaluate().toarray(), np.kron(A.entries, b.entries)
+        )
+
+    def test_simplify_inner(self):
+        a1 = pybamm.Scalar(0)
+        M1 = pybamm.Matrix(np.zeros((10, 10)))
+        v1 = pybamm.Vector(np.ones(10))
+        a2 = pybamm.Scalar(1)
+        M2 = pybamm.Matrix(np.ones((10, 10)))
+        a3 = pybamm.Scalar(3)
+
+        np.testing.assert_array_equal(
+            pybamm.inner(a1, M2).simplify().evaluate(), M1.entries
+        )
+        self.assertEqual(pybamm.inner(a1, a2).simplify().evaluate(), 0)
+        np.testing.assert_array_equal(
+            pybamm.inner(M2, a1).simplify().evaluate(), M1.entries
+        )
+        self.assertEqual(pybamm.inner(a2, a1).simplify().evaluate(), 0)
+        np.testing.assert_array_equal(
+            pybamm.inner(M1, a3).simplify().evaluate().toarray(), M1.entries
+        )
+        np.testing.assert_array_equal(
+            pybamm.inner(v1, a3).simplify().evaluate(), 3 * v1.entries
+        )
+        self.assertEqual(pybamm.inner(a2, a3).simplify().evaluate(), 3)
+        self.assertEqual(pybamm.inner(a3, a2).simplify().evaluate(), 3)
+        self.assertEqual(pybamm.inner(a3, a3).simplify().evaluate(), 9)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
