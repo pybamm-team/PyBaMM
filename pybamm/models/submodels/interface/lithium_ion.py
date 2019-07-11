@@ -1,6 +1,7 @@
 #
 # Lithium-ion interface classes
 #
+import pybamm
 from .base_interface import BaseInterface
 from . import inverse_kinetics, kinetics
 
@@ -41,6 +42,11 @@ class BaseInterfaceLithiumIon(BaseInterface):
         """
         c_s_surf = variables[self.domain + " particle surface concentration"]
         c_e = variables[self.domain + " electrolyte concentration"]
+        # If c_e or c_s_surf was broadcast, take only the orphan
+        if isinstance(c_s_surf, pybamm.Broadcast):
+            c_s_surf = c_s_surf.orphans[0]
+        if isinstance(c_e, pybamm.Broadcast):
+            c_e = c_e.orphans[0]
 
         if self.domain == "Negative":
             prefactor = 1 / self.param.C_r_n
@@ -72,6 +78,9 @@ class BaseInterfaceLithiumIon(BaseInterface):
 
         """
         c_s_surf = variables[self.domain + " particle surface concentration"]
+        # If c_s_surf was broadcast, take only the orphan
+        if isinstance(c_s_surf, pybamm.Broadcast):
+            c_s_surf = c_s_surf.orphans[0]
 
         if self.domain == "Negative":
             ocp = self.param.U_n(c_s_surf)
