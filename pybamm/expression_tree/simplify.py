@@ -567,11 +567,13 @@ class Simplification(object):
         :class:`pybamm.Symbol`
         Simplified symbol
         """
+
         try:
             return self._simplified_symbols[symbol.id]
         except KeyError:
             simplified_symbol = self._simplify(symbol)
             self._simplified_symbols[symbol.id] = simplified_symbol
+
             return simplified_symbol
 
     def _simplify(self, symbol):

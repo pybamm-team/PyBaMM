@@ -375,12 +375,14 @@ def D_p(c_s_p, T):
 
 def m_n(T):
     "Dimensionless negative reaction rate"
-    return m_n_dimensional(T) / m_n_ref_dimensional
+    T_dim = Delta_T * T + T_ref
+    return m_n_dimensional(T_dim) / m_n_ref_dimensional
 
 
 def m_p(T):
     "Dimensionless positive reaction rate"
-    return m_p_dimensional(T) / m_p_ref_dimensional
+    T_dim = Delta_T * T + T_ref
+    return m_p_dimensional(T_dim) / m_p_ref_dimensional
 
 
 def U_n(c_s_n):

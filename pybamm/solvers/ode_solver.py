@@ -130,6 +130,9 @@ class OdeSolver(pybamm.BaseSolver):
 
         y0 = model.concatenated_initial_conditions[:, 0]
 
+        # Hacky reset becuase event['Minimum voltage'] gives T_ref a domain...
+        simp._simplified_symbols = {}
+
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))

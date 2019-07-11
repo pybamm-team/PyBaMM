@@ -188,6 +188,10 @@ class Function(pybamm.Symbol):
             # If self.function() is a constant current then simplify to scalar
             return pybamm.Scalar(self.function.parameters_eval["Current [A]"])
         else:
+            try:
+                pybamm.Function(self.function, *simplified_children)
+            except:
+                pybamm.Function(self.function, *simplified_children)
             return pybamm.Function(self.function, *simplified_children)
 
 
