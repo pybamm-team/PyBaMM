@@ -19,6 +19,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._extra_options = options
         self.set_standard_output_variables()
         self.submodels = OrderedDict()  # ordered dict not default in 3.5
+        self._built = False
 
     @property
     def default_parameter_values(self):
@@ -332,7 +333,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.update(submodel)
 
         pybamm.logger.debug("Setting voltage variables")
-        # self.set_voltage_variables()
+        self.set_voltage_variables()
+
+        self._built = True
 
     def set_thermal_submodel(self):
 
@@ -466,6 +469,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         :class:`pybamm.Symbol`
             Processed symbol
         """
+        if not self._built:
+            self.build_model()
+
         # Set up parameters
         geometry = self.default_geometry
         parameter_values = self.default_parameter_values
@@ -474,7 +480,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Set up discretisation
         mesh = pybamm.Mesh(geometry, self.default_submesh_types, self.default_var_pts)
         disc = pybamm.Discretisation(mesh, self.default_spatial_methods)
-        self.build_model()
         variables = list(self.rhs.keys()) + list(self.algebraic.keys())
         disc.set_variable_slices(variables)
 
