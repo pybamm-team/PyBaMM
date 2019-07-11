@@ -21,11 +21,11 @@ class BaseInterfaceLeadAcid(BaseInterface):
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, inverse=False):
         super().__init__(param, domain)
         self.reaction_name = ""  # empty reaction name, assumed to be the main reaction
 
-    def _get_exchange_current_density(self, variables, times_one=False):
+    def _get_exchange_current_density(self, variables):
         """
         A private function to obtain the exchange current density for a lead acid
         deposition reaction.
@@ -42,11 +42,8 @@ class BaseInterfaceLeadAcid(BaseInterface):
         """
         c_e = variables[self.domain + " electrolyte concentration"]
         # If c_e was broadcast, take only the orphan
-        # Multiply by 1 for the purpose of first-order kinetics (change the id)
         if isinstance(c_e, pybamm.Broadcast):
             c_e = c_e.orphans[0]
-            if times_one:
-                c_e *= 1
 
         if self.domain == "Negative":
             j0 = self.param.j0_n_S_ref * c_e
@@ -57,7 +54,7 @@ class BaseInterfaceLeadAcid(BaseInterface):
 
         return j0
 
-    def _get_open_circuit_potential(self, variables, times_one=False):
+    def _get_open_circuit_potential(self, variables):
         """
         A private function to obtain the open circuit potential and entropic change
 
@@ -77,11 +74,8 @@ class BaseInterfaceLeadAcid(BaseInterface):
 
         c_e = variables[self.domain + " electrolyte concentration"]
         # If c_e was broadcast, take only the orphan
-        # Multiply by 1 for the purpose of first-order kinetics (change the id)
         if isinstance(c_e, pybamm.Broadcast):
             c_e = c_e.orphans[0]
-            if times_one:
-                c_e *= 1
 
         if self.domain == "Negative":
             ocp = self.param.U_n(c_e)
@@ -118,8 +112,8 @@ class FirstOrderButlerVolmer(
     :class:`kinetics.BaseFirstOrderButlerVolmer` (for kinetics)
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, inverse=False):
+        super().__init__(param, domain, inverse)
 
 
 class InverseButlerVolmer(
@@ -128,18 +122,6 @@ class InverseButlerVolmer(
     """
     Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
     :class:`inverse_kinetics.BaseInverseButlerVolmer` (for kinetics)
-    """
-
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
-
-
-class InverseFirstOrderButlerVolmer(
-    BaseInterfaceLeadAcid, inverse_kinetics.BaseInverseFirstOrderButlerVolmer
-):
-    """
-    Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
-    :class:`inverse_kinetics.BaseInverseFirstOrderButlerVolmer` (for kinetics)
     """
 
     def __init__(self, param, domain):

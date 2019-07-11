@@ -6,7 +6,7 @@ import pybamm
 from ..base_interface import BaseInterface
 
 
-class BaseModel(BaseInterface):
+class BaseKinetics(BaseInterface):
     """
     Base submodel for kinetics
 
@@ -34,9 +34,9 @@ class BaseModel(BaseInterface):
             delta_phi = delta_phi.orphans[0]
 
         # Get exchange-current density
-        j0 = self._get_exchange_current_density(variables, times_one=True)
+        j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp, dUdT = self._get_open_circuit_potential(variables, times_one=True)
+        ocp, dUdT = self._get_open_circuit_potential(variables)
         eta_r = delta_phi - ocp
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
@@ -70,11 +70,11 @@ class BaseModel(BaseInterface):
 
         return variables
 
-    def _get_exchange_current_density(self, variables, times_one=False):
+    def _get_exchange_current_density(self, variables):
         raise NotImplementedError
 
     def _get_kinetics(self, j0, ne, eta_r):
         raise NotImplementedError
 
-    def _get_open_circuit_potential(self, variables, times_one=False):
+    def _get_open_circuit_potential(self, variables):
         raise NotImplementedError

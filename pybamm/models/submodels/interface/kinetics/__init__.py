@@ -1,5 +1,5 @@
-from .base_kinetics import BaseModel
-from .butler_volmer import BaseButlerVolmer
-from .first_order_butler_volmer import BaseFirstOrderButlerVolmer
+from .base_kinetics import BaseKinetics
+from .base_first_order_kinetics import BaseFirstOrderKinetics
+from .butler_volmer import BaseButlerVolmer, BaseFirstOrderButlerVolmer
 from .tafel import BaseForwardTafel, BaseBackwardTafel
 from .no_reaction import BaseNoReaction

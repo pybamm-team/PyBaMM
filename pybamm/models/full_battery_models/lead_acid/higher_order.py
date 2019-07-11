@@ -88,13 +88,13 @@ class HigherOrderBaseModel(BaseModel):
     def set_average_interfacial_submodel(self):
         self.submodels[
             "average negative interface"
-        ] = pybamm.interface.lead_acid.InverseFirstOrderButlerVolmer(
-            self.param, "Negative"
+        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(
+            self.param, "Negative", inverse=True
         )
         self.submodels[
             "average positive interface"
-        ] = pybamm.interface.lead_acid.InverseFirstOrderButlerVolmer(
-            self.param, "Positive"
+        ] = pybamm.interface.lead_acid.FirstOrderButlerVolmer(
+            self.param, "Positive", inverse=True
         )
 
     def set_electrolyte_conductivity_submodel(self):

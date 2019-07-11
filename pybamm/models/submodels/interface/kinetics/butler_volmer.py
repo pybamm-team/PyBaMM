@@ -3,10 +3,11 @@
 #
 
 import pybamm
-from .base_kinetics import BaseModel
+from .base_kinetics import BaseKinetics
+from .base_first_order_kinetics import BaseFirstOrderKinetics
 
 
-class BaseButlerVolmer(BaseModel):
+class BaseButlerVolmer(BaseKinetics):
     """
     Base submodel which implements the forward Butler-Volmer equation:
 
@@ -24,8 +25,13 @@ class BaseButlerVolmer(BaseModel):
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, inverse=False):
         super().__init__(param, domain)
 
     def _get_kinetics(self, j0, ne, eta_r):
         return 2 * j0 * pybamm.sinh((ne / 2) * eta_r)
+
+
+class BaseFirstOrderButlerVolmer(BaseButlerVolmer, BaseFirstOrderKinetics):
+    def __init__(self, param, domain, inverse=False):
+        super().__init__(param, domain, inverse)
