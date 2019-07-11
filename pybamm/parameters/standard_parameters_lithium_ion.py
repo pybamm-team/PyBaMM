@@ -109,7 +109,7 @@ E_r_n = pybamm.thermal_parameters.E_r_n
 E_r_p = pybamm.thermal_parameters.E_r_p
 E_D_s_n = pybamm.thermal_parameters.E_D_s_n
 E_D_s_p = pybamm.thermal_parameters.E_D_s_p
-E_d_e = pybamm.thermal_parameters.E_d_e
+E_D_e = pybamm.thermal_parameters.E_D_e
 E_k_e = pybamm.thermal_parameters.E_k_e
 
 # velocity scale
@@ -119,24 +119,28 @@ velocity_scale = pybamm.Scalar(1)
 "2. Dimensional Functions"
 
 
-def D_e_dimensional(c_e):
+def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    return pybamm.FunctionParameter("Electrolyte diffusivity", c_e)
+    return pybamm.FunctionParameter("Electrolyte diffusivity", c_e, T, T_ref, E_D_e, R)
 
 
-def kappa_e_dimensional(c_e):
+def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    return pybamm.FunctionParameter("Electrolyte conductivity", c_e)
+    return pybamm.FunctionParameter("Electrolyte conductivity", c_e, T, T_ref, E_k_e, R)
 
 
-def D_n_dimensional(c_n):
+def D_n_dimensional(c_n, T):
     "Dimensional diffusivity in negative particle"
-    return pybamm.FunctionParameter("Negative electrode diffusivity", c_n)
+    return pybamm.FunctionParameter(
+        "Negative electrode diffusivity", c_n, T, T_ref, E_D_s_n, R
+    )
 
 
-def D_p_dimensional(c_p):
+def D_p_dimensional(c_p, T):
     "Dimensional diffusivity in positive particle"
-    return pybamm.FunctionParameter("Positive electrode diffusivity", c_p)
+    return pybamm.FunctionParameter(
+        "Positive electrode diffusivity", c_p, T, T_ref, E_r_p, R
+    )
 
 
 def m_n_dimensional(T):
@@ -340,29 +344,29 @@ T_init = pybamm.thermal_parameters.T_init
 "5. Dimensionless Functions"
 
 
-def D_e(c_e):
+def D_e(c_e, T):
     "Dimensionless electrolyte diffusivity"
     c_e_dimensional = c_e * c_e_typ
-    return D_e_dimensional(c_e_dimensional) / D_e_dimensional(c_e_typ)
+    return D_e_dimensional(c_e_dimensional, T) / D_e_dimensional(c_e_typ, T_ref)
 
 
-def kappa_e(c_e):
+def kappa_e(c_e, T):
     "Dimensionless electrolyte conductivity"
     c_e_dimensional = c_e * c_e_typ
-    kappa_scale = F ** 2 * D_e_dimensional(c_e_typ) * c_e_typ / (R * T_ref)
-    return kappa_e_dimensional(c_e_dimensional) / kappa_scale
+    kappa_scale = F ** 2 * D_e_dimensional(c_e_typ, T_ref) * c_e_typ / (R * T_ref)
+    return kappa_e_dimensional(c_e_dimensional, T) / kappa_scale
 
 
-def D_n(c_s_n):
+def D_n(c_s_n, T):
     "Dimensionless negative particle diffusivity"
     c_s_n_dimensional = c_s_n * c_n_max
-    return D_n_dimensional(c_s_n_dimensional) / D_n_dimensional(c_n_max)
+    return D_n_dimensional(c_s_n_dimensional, T) / D_n_dimensional(c_n_max, T_ref)
 
 
 def D_p(c_s_p):
     "Dimensionless positive particle diffusivity"
     c_s_p_dimensional = c_s_p * c_p_max
-    return D_p_dimensional(c_s_p_dimensional) / D_p_dimensional(c_p_max)
+    return D_p_dimensional(c_s_p_dimensional, T) / D_p_dimensional(c_p_max, T_ref)
 
 
 def m_n(T):
