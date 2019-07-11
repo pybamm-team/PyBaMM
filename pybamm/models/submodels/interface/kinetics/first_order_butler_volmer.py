@@ -24,6 +24,12 @@ class BaseFirstOrderButlerVolmer(BaseInterface):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
+    def dj_dc(self, variables):
+        return j.diff(c_e)
+
+    def dj_ddeltaphi(self, variables):
+        return j.diff(delta_phi)
+
     def get_coupled_variables(self, variables):
         # Update delta_phi with new phi_e and phi_s
         # variables = self._get_delta_phi(variables)
