@@ -91,6 +91,7 @@ class LOQS(BaseModel):
             self.submodels[
                 "electrolyte conductivity"
             ] = electrolyte.conductivity.LeadingOrder(self.param)
+
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
@@ -98,6 +99,7 @@ class LOQS(BaseModel):
                 ] = surf_form.LeadingOrderDifferential(
                     self.param, domain, self.reactions
                 )
+
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[

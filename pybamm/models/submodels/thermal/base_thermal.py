@@ -59,18 +59,22 @@ class BaseModel(pybamm.BaseSubModel):
         dUdT_n = variables["Negative electrode entropic change"]
         dUdT_p = variables["Positive electrode entropic change"]
 
-        # i_e = variables["Electrolyte current density"]
-        # phi_e = variables["Electrolyte potential"]
+        i_e = variables["Electrolyte current density"]
+        phi_e = variables["Electrolyte potential"]
 
-        # phi_s_n = variables["Negative electrode potential"]
-        # phi_s_s = pybamm.Broadcast(0, ["separator"])
-        # phi_s_p = variables["Positive electrode potential"]
-        # phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+        i_s_n = variables["Negative electrode current density"]
+        i_s_p = variables["Positive electrode current density"]
+        phi_s_n = variables["Negative electrode potential"]
+        phi_s_p = variables["Positive electrode potential"]
 
-        # TODO: add ohmic heating from solid and electrolyte
-        # Q_ohm = -i_s * pybamm.grad(phi_s) - i_e * pybamm.grad(phi_e)
-        # Q_ohm = -pybamm.inner(i_e, pybamm.grad(phi_e))
-        Q_ohm = pybamm.Scalar(0)
+        Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
+        Q_ohm_s_s = pybamm.Broadcast(0, ["separator"])
+        Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
+        Q_ohm_s = pybamm.Concatenation(Q_ohm_s_n, Q_ohm_s_s, Q_ohm_s_p)
+
+        Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
+
+        Q_ohm = Q_ohm_s + Q_ohm_e
 
         Q_rxn_n = j_n * eta_r_n
         Q_rxn_p = j_p * eta_r_p

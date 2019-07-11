@@ -10,6 +10,8 @@ from tests import (
     get_discretisation_for_testing,
     get_1p1d_discretisation_for_testing,
 )
+from tests.shared import SpatialMethodForTesting
+
 from scipy.sparse import block_diag
 
 
@@ -46,18 +48,23 @@ class TestDiscretise(unittest.TestCase):
 
     def test_add_internal_boundary_conditions(self):
         model = pybamm.BaseModel()
-        c_e = pybamm.standard_variables.c_e
+        c_e_n = pybamm.Broadcast(0, ["negative electrode"])
+        c_e_s = pybamm.Broadcast(0, ["separator"])
+        c_e_p = pybamm.Broadcast(0, ["positive electrode"])
+        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
         lbc = (pybamm.Scalar(0), "Neumann")
         rbc = (pybamm.Scalar(0), "Neumann")
         model.boundary_conditions = {c_e: {"left": lbc, "right": rbc}}
 
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.SpatialMethod}
+        spatial_methods = {"macroscale": SpatialMethodForTesting}
+
         disc = pybamm.Discretisation(mesh, spatial_methods)
-        model = disc.set_internal_boundary_conditions(model)
+        disc.bcs = disc.process_boundary_conditions(model)
+        disc.set_internal_boundary_conditions(model)
 
         for child in c_e.children:
-            self.assertTrue(child in model.boundary_conditions.keys())
+            self.assertTrue(child.id in disc.bcs.keys())
 
     def test_discretise_slicing(self):
         # create discretisation

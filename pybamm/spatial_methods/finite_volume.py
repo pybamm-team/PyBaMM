@@ -69,7 +69,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         if symbol.id in boundary_conditions:
             bcs = boundary_conditions[symbol.id]
             # add ghost nodes
-            discretised_symbol = self.add_ghost_nodes(symbol, discretised_symbol, bcs)
+            discretised_symbol = self.add_ghost_nodes(
+                symbol, discretised_symbol, bcs
+            )
             # edit domain
             domain = (
                 [domain[0] + "_left ghost cell"]
@@ -321,6 +323,52 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return pybamm.Matrix(matrix)
 
+    def internal_neumann_condition(
+        self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
+    ):
+        """
+        A method to find the internal neumann conditions between two symbols
+        on adjacent subdomains.
+
+        Parameters
+        ----------
+        left_symbol_disc : :class:`pybamm.Symbol`
+            The discretised symbol on the left subdomain
+        right_symbol_disc : :class:`pybamm.Symbol`
+            The discretised symbol on the right subdomain
+        left_mesh : list
+            The mesh on the left subdomain
+        right_mesh : list
+            The mesh on the right subdomain
+        """
+
+        left_npts = left_mesh[0].npts
+        right_npts = right_mesh[0].npts
+
+        sec_pts = len(left_mesh)
+
+        if sec_pts != len(right_mesh):
+            raise pybamm.DomainError(
+                """Number of secondary points in subdomains do not match"""
+            )
+
+        left_sub_matrix = np.zeros((1, left_npts))
+        left_sub_matrix[0][left_npts - 1] = 1
+        left_matrix = pybamm.Matrix(csr_matrix(kron(eye(sec_pts), left_sub_matrix)))
+
+        right_sub_matrix = np.zeros((1, right_npts))
+        right_sub_matrix[0][0] = 1
+        right_matrix = pybamm.Matrix(csr_matrix(kron(eye(sec_pts), right_sub_matrix)))
+
+        right_copy = right_symbol_disc.new_copy()
+        left_copy = left_symbol_disc.new_copy()
+        right_copy.domain = []
+        left_copy.domain = []
+        dy = right_matrix @ right_copy - left_matrix @ left_copy
+        dx = right_mesh[0].nodes[0] - left_mesh[0].nodes[-1]
+
+        return dy / dx
+
     def indefinite_integral_matrix_nodes(self, domain):
         """
         Matrix for finite-volume implementation of the indefinite integral where the
@@ -541,8 +589,11 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # inner product takes fluxes from edges to nodes
         if isinstance(bin_op, pybamm.Inner):
-            disc_left = self.edge_to_node(disc_left)
-            disc_right = self.edge_to_node(disc_right)
+            if left_evaluates_on_edges:
+                disc_left = self.edge_to_node(disc_left)
+            if right_evaluates_on_edges:
+                disc_right = self.edge_to_node(disc_right)
+
         # If neither child evaluates on edges, or both children have gradients,
         # no need to do any averaging
         elif left_evaluates_on_edges == right_evaluates_on_edges:
