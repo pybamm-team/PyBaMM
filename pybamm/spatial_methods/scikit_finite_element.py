@@ -56,11 +56,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         symbol_mesh = self.mesh
         if symbol.name == "y":
             vector = pybamm.Vector(
-                symbol_mesh["current collector"][0].nodes["y"], domain=symbol.domain
+                symbol_mesh["current collector"][0].edges["y"], domain=symbol.domain
             )
         elif symbol.name == "z":
             vector = pybamm.Vector(
-                symbol_mesh["current collector"][0].nodes["z"], domain=symbol.domain
+                symbol_mesh["current collector"][0].edges["z"], domain=symbol.domain
             )
         else:
             raise pybamm.GeometryError(
