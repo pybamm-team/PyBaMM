@@ -60,6 +60,15 @@ class LeadingOrder(BaseModel):
 
         return variables
 
+    def set_boundary_conditions(self, variables):
+
+        phi_s = variables[self.domain + " electrode potential"]
+
+        lbc = (pybamm.Scalar(0), "Neumann")
+        rbc = (pybamm.Scalar(0), "Neumann")
+
+        self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
+
     @property
     def default_solver(self):
         """

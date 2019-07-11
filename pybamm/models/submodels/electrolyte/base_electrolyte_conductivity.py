@@ -69,6 +69,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             + pot_scale * phi_e_p_av,
             "Average electrolyte overpotential": eta_e_av,
             "Average electrolyte overpotential [V]": pot_scale * eta_e_av,
+            "Gradient of negative electrolyte potential": pybamm.grad(phi_e_n),
+            "Gradient of separator electrolyte potential": pybamm.grad(phi_e_s),
+            "Gradient of positive electrolyte potential": pybamm.grad(phi_e_p),
+            "Gradient of electrolyte potential": pybamm.grad(phi_e),
         }
 
         return variables
