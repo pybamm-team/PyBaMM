@@ -1,4 +1,4 @@
-import autograd.np as np
+import autograd.numpy as np
 
 
 def lico2_diffusivity_Dualfoil(sto, T, T_inf, E_D_s, R_g):
@@ -32,4 +32,6 @@ def lico2_diffusivity_Dualfoil(sto, T, T_inf, E_D_s, R_g):
     D_ref = 1 * 10 ** (-13)
     arrhenius = np.exp(E_D_s / R_g * (1 / T_inf - 1 / T))
 
-    return D_ref * arrhenius
+    correct_shape = 0 * sto
+
+    return D_ref * arrhenius + correct_shape

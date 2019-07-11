@@ -44,7 +44,7 @@ class SingleParticle(BaseModel):
     def get_coupled_variables(self, variables):
 
         c_s_xav = variables[
-            "X-averaged " + self.domain.lower() + " particle concentration"
+            "X-average " + self.domain.lower() + " particle concentration"
         ]
         T_k_av = variables["Average " + self.domain.lower() + " electrode temperature"]
 

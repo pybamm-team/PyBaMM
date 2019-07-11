@@ -32,5 +32,7 @@ def graphite_mcmb2528_diffusivity_Dualfoil(sto, T, T_inf, E_D_s, R_g):
     D_ref = 3.9 * 10 ** (-14)
     arrhenius = np.exp(E_D_s / R_g * (1 / T_inf - 1 / T))
 
-    return D_ref * arrhenius
+    correct_shape = 0 * sto
+
+    return D_ref * arrhenius + correct_shape
 

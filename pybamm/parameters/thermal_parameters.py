@@ -45,7 +45,7 @@ rho_eff_dim = pybamm.Parameter("Lumped effective thermal density [J.K-1.m-3]")
 lambda_eff_dim = pybamm.Parameter("Effective thermal conductivity [W.m-1.K-1]")
 
 # Activation energies
-E_r_n = pybamm.Parameters("Negative reaction rate activation energy [J.mol-1]")
+E_r_n = pybamm.Parameter("Negative reaction rate activation energy [J.mol-1]")
 E_r_p = pybamm.Parameter("Positive reaction rate activation energy [J.mol-1]")
 E_D_s_n = pybamm.Parameter("Negative solid diffusion activation energy [J.mol-1]")
 E_D_s_p = pybamm.Parameter("Positive solid diffusion activation energy [J.mol-1]")

@@ -211,11 +211,11 @@ tau_r_n = F / (m_n_ref_dimensional * a_n_dim * c_e_typ ** 0.5)
 tau_r_p = F / (m_p_ref_dimensional * a_p_dim * c_e_typ ** 0.5)
 
 # Electrolyte diffusion timescale
-tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ)
+tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ, T_ref)
 
 # Particle diffusion timescales
-tau_diffusion_n = R_n ** 2 / D_n_dimensional(c_n_max)
-tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max)
+tau_diffusion_n = R_n ** 2 / D_n_dimensional(c_n_max, T_ref)
+tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max, T_ref)
 
 # Thermal diffusion timescale
 tau_th_yz = pybamm.thermal_parameters.tau_th_yz
@@ -347,26 +347,30 @@ T_init = pybamm.thermal_parameters.T_init
 def D_e(c_e, T):
     "Dimensionless electrolyte diffusivity"
     c_e_dimensional = c_e * c_e_typ
-    return D_e_dimensional(c_e_dimensional, T) / D_e_dimensional(c_e_typ, T_ref)
+    T_dim = Delta_T * T + T_ref
+    return D_e_dimensional(c_e_dimensional, T_dim) / D_e_dimensional(c_e_typ, T_ref)
 
 
 def kappa_e(c_e, T):
     "Dimensionless electrolyte conductivity"
     c_e_dimensional = c_e * c_e_typ
     kappa_scale = F ** 2 * D_e_dimensional(c_e_typ, T_ref) * c_e_typ / (R * T_ref)
-    return kappa_e_dimensional(c_e_dimensional, T) / kappa_scale
+    T_dim = Delta_T * T + T_ref
+    return kappa_e_dimensional(c_e_dimensional, T_dim) / kappa_scale
 
 
 def D_n(c_s_n, T):
     "Dimensionless negative particle diffusivity"
     c_s_n_dimensional = c_s_n * c_n_max
-    return D_n_dimensional(c_s_n_dimensional, T) / D_n_dimensional(c_n_max, T_ref)
+    T_dim = Delta_T * T + T_ref
+    return D_n_dimensional(c_s_n_dimensional, T_dim) / D_n_dimensional(c_n_max, T_ref)
 
 
-def D_p(c_s_p):
+def D_p(c_s_p, T):
     "Dimensionless positive particle diffusivity"
     c_s_p_dimensional = c_s_p * c_p_max
-    return D_p_dimensional(c_s_p_dimensional, T) / D_p_dimensional(c_p_max, T_ref)
+    T_dim = Delta_T * T + T_ref
+    return D_p_dimensional(c_s_p_dimensional, T_dim) / D_p_dimensional(c_p_max, T_ref)
 
 
 def m_n(T):

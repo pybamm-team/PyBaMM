@@ -1,4 +1,4 @@
-import autograd.np as np
+import autograd.numpy as np
 
 
 def lico2_electrolyte_reaction_rate(T, T_inf, E_r, R_g):
