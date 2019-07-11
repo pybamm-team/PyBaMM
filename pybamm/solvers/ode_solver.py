@@ -125,13 +125,34 @@ class OdeSolver(pybamm.BaseSolver):
             # create simplified rhs and event expressions
             pybamm.logger.info("Simplifying RHS")
             concatenated_rhs = simp.simplify(concatenated_rhs)
+
+            T_ref = model.variables["Cell temperature [K]"].children[1]
+            if T_ref.id in list(simp._simplified_symbols.keys()):
+                if simp._simplified_symbols[T_ref.id].domain != []:
+                    pybamm.logger.info(
+                        """The domain of T_ref is not empty after simplifying concatenated_rhs. Resetting simplified symbols..."""
+                    )
+                    simp._simplified_symbols = {}
+
             pybamm.logger.info("Simplifying events")
-            events = {name: simp.simplify(event) for name, event in events.items()}
+            # events = {name: simp.simplify(event) for name, event in events.items()}
 
         y0 = model.concatenated_initial_conditions[:, 0]
 
-        # Hacky reset becuase event['Minimum voltage'] gives T_ref a domain...
-        simp._simplified_symbols = {}
+        for name, event in events.items():
+            T_ref = model.variables["Cell temperature [K]"].children[1]
+
+            events[name] = simp.simplify(event)
+
+            if T_ref.id in list(simp._simplified_symbols.keys()):
+                if simp._simplified_symbols[T_ref.id].domain != []:
+                    pybamm.logger.info(
+                        """The domain of T_ref is not empty after event {}.
+                        Resetting simplified symbols...""".format(
+                            name
+                        )
+                    )
+                    simp._simplified_symbols = {}
 
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
