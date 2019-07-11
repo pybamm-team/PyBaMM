@@ -1,4 +1,4 @@
-import autograd.np as np
+import autograd.numpy as np
 
 
 def electrolyte_conductivity_Capiglia1999(c_e, T, T_inf, E_k_e, R_g):
