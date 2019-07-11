@@ -25,7 +25,7 @@ class BaseButlerVolmer(BaseKinetics):
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, inverse=False):
+    def __init__(self, param, domain):
         super().__init__(param, domain)
 
     def _get_kinetics(self, j0, ne, eta_r):
@@ -33,5 +33,5 @@ class BaseButlerVolmer(BaseKinetics):
 
 
 class BaseFirstOrderButlerVolmer(BaseButlerVolmer, BaseFirstOrderKinetics):
-    def __init__(self, param, domain, inverse=False):
-        super().__init__(param, domain, inverse)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)

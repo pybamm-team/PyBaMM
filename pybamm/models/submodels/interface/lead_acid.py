@@ -21,7 +21,7 @@ class BaseInterfaceLeadAcid(BaseInterface):
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, inverse=False):
+    def __init__(self, param, domain):
         super().__init__(param, domain)
         self.reaction_name = ""  # empty reaction name, assumed to be the main reaction
 
@@ -112,8 +112,20 @@ class FirstOrderButlerVolmer(
     :class:`kinetics.BaseFirstOrderButlerVolmer` (for kinetics)
     """
 
-    def __init__(self, param, domain, inverse=False):
-        super().__init__(param, domain, inverse)
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
+
+
+class InverseFirstOrderButlerVolmer(
+    BaseInterfaceLeadAcid, inverse_kinetics.BaseInverseFirstOrderButlerVolmer
+):
+    """
+    Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
+    :class:`kinetics.BaseInverseFirstOrderButlerVolmer` (for kinetics)
+    """
+
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
 
 
 class InverseButlerVolmer(

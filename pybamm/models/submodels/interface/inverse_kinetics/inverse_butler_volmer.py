@@ -5,6 +5,8 @@
 import pybamm
 import autograd.numpy as np
 from ..base_interface import BaseInterface
+from .base_inverse_first_order_kinetics import BaseInverseFirstOrderKinetics
+from ..kinetics.butler_volmer import BaseButlerVolmer
 
 
 class BaseInverseButlerVolmer(BaseInterface):
@@ -75,3 +77,10 @@ class BaseInverseButlerVolmer(BaseInterface):
 
     def _get_open_circuit_potential(self, variables):
         raise NotImplementedError
+
+
+class BaseInverseFirstOrderButlerVolmer(
+    BaseButlerVolmer, BaseInverseFirstOrderKinetics
+):
+    def __init__(self, param, domain):
+        super().__init__(param, domain)

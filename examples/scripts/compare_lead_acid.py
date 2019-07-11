@@ -7,7 +7,7 @@ pybamm.set_logging_level("INFO")
 models = [
     pybamm.lead_acid.LOQS(),
     pybamm.lead_acid.Composite(),
-    pybamm.lead_acid.Composite({"surface form": "differential"}),
+    pybamm.lead_acid.Composite({"surface form": "algebraic"}),
     pybamm.lead_acid.NewmanTiedemann(),
 ]
 
