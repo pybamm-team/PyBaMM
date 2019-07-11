@@ -32,11 +32,12 @@ class Full(BaseModel):
 
     def get_coupled_variables(self, variables):
         param = self.param
+        T = variables["Cell temperature"]
         eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
         phi_e = variables["Electrolyte potential"]
 
-        i_e = (param.kappa_e(c_e) * (eps ** param.b) * param.gamma_e / param.C_e) * (
+        i_e = (param.kappa_e(c_e, T) * (eps ** param.b) * param.gamma_e / param.C_e) * (
             param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
 

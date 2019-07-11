@@ -37,12 +37,27 @@ class SingleParticle(BaseModel):
                 c_s_xav, ["positive electrode"], broadcast_type="primary"
             )
 
-        N_s_xav = self._flux_law(c_s_xav)
+        variables = self._get_standard_concentration_variables(c_s, c_s_xav)
+
+        return variables
+
+    def get_coupled_variables(self, variables):
+
+        c_s_xav = variables[
+            "X-averaged " + self.domain.lower() + " particle concentration"
+        ]
+        T_k_av = variables["Average " + self.domain.lower() + " electrode temperature"]
+
+        if self.domain == "Negative":
+            D_s = self.param.D_n(c_s_xav, T_k_av)
+        elif self.domain == "Positive":
+            D_s = self.param.D_p(c_s_xav, T_k_av)
+
+        N_s_xav = D_s * self._flux_law(c_s_xav)
         N_s = pybamm.Broadcast(
             N_s_xav, [self._domain.lower() + " electrode"], broadcast_type="primary"
         )
 
-        variables = self._get_standard_concentration_variables(c_s, c_s_xav)
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables
