@@ -332,7 +332,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.update(submodel)
 
         pybamm.logger.debug("Setting voltage variables")
-        self.set_voltage_variables()
+        # self.set_voltage_variables()
 
     def set_thermal_submodel(self):
 
@@ -449,3 +449,37 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
+
+    def process_parameters_and_discretise(self, symbol):
+        """
+        Process parameters and discretise a symbol using default parameter values,
+        geometry, etc. Note that the model needs to be built first for this to be
+        possible.
+
+        Parameters
+        ----------
+        symbol : :class:`pybamm.Symbol`
+            Symbol to be processed
+
+        Returns
+        -------
+        :class:`pybamm.Symbol`
+            Processed symbol
+        """
+        # Set up parameters
+        geometry = self.default_geometry
+        parameter_values = self.default_parameter_values
+        parameter_values.process_geometry(geometry)
+
+        # Set up discretisation
+        mesh = pybamm.Mesh(geometry, self.default_submesh_types, self.default_var_pts)
+        disc = pybamm.Discretisation(mesh, self.default_spatial_methods)
+        self.build_model()
+        variables = list(self.rhs.keys()) + list(self.algebraic.keys())
+        disc.set_variable_slices(variables)
+
+        # Process
+        param_symbol = parameter_values.process_symbol(symbol)
+        disc_symbol = disc.process_symbol(param_symbol)
+
+        return disc_symbol
