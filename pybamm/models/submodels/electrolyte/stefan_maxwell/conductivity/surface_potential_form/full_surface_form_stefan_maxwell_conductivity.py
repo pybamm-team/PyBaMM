@@ -106,6 +106,17 @@ class BaseModel(BaseStefanMaxwellConductivity):
             c_e: {"left": lbc_c_e, "right": rbc_c_e},
         }
 
+        if self.domain == "Negative":
+            phi_e = variables["Electrolyte potential"]
+            self.boundary_conditions.update(
+                {
+                    phi_e: {
+                        "left": (pybamm.Scalar(0), "Neumann"),
+                        "right": (pybamm.Scalar(0), "Neumann"),
+                    }
+                }
+            )
+
     def _get_conductivities(self, variables):
         param = self.param
         eps = variables[self.domain + " electrode porosity"]

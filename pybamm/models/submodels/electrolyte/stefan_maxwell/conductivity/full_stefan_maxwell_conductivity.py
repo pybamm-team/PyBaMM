@@ -58,16 +58,6 @@ class Full(BaseModel):
 
         self.algebraic = {phi_e: pybamm.div(i_e) - sum_j}
 
-    def set_boundary_conditions(self, variables):
-        phi_e = variables["Electrolyte potential"]
-
-        self.boundary_conditions = {
-            phi_e: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            }
-        }
-
     def set_initial_conditions(self, variables):
         phi_e = variables["Electrolyte potential"]
         self.initial_conditions = {phi_e: -self.param.U_n(self.param.c_n_init)}

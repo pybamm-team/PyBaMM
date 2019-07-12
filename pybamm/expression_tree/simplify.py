@@ -215,14 +215,14 @@ def simplify_multiplication_division(myclass, left, right):
     groups of constant children (that produce a value) and simplify them
 
     The purpose of this function is to simplify expressions of the type (1 * c / 2),
-    which should simplify to (0.5 * c). The former expression consists of a Divsion,
+    which should simplify to (0.5 * c). The former expression consists of a Division,
     with a left child of a Multiplication containing a Scalar and a Parameter, and a
     right child consisting of a Scalar. For this case, this function will first flatten
     the expression to a list of the bottom level children on the numerator (i.e.
     [Scalar(1), Parameter(c)]) and their operators (i.e. [None, Multiplication]), as
     well as those children on the denominator (i.e. [Scalar(2)]. After this, all the
     constant children on the numerator and denominator (i.e. Scalar(1) and Scalar(2))
-    will be combined appropriatly, in this case to Scalar(0.5), and combined with the
+    will be combined appropriately, in this case to Scalar(0.5), and combined with the
     nonconstant children (i.e. Parameter(c))
 
     Note that this function will flatten the expression tree until a symbol is found

@@ -49,6 +49,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             phi_s_av_dim = (
                 param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_av
             )
+
             v = pybamm.BoundaryValue(phi_s, "right")
             delta_phi_s = phi_s - pybamm.Broadcast(
                 v, ["positive electrode"], broadcast_type="primary"
@@ -71,6 +72,9 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Average "
             + self.domain.lower()
             + " electrode ohmic losses [V]": delta_phi_s_av_dim,
+            "Gradient of "
+            + self.domain.lower()
+            + " electrode potential": pybamm.grad(phi_s),
         }
 
         return variables
