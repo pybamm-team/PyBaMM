@@ -99,7 +99,7 @@ class BaseHigherOrder(BaseModel):
             )
             - pybamm.outer(
                 i_boundary_cc * (param.C_e / param.gamma_e) / kappa_n_av,
-                (x_n ** 2 - l_n ** 2) / 2,
+                (x_n ** 2 - l_n ** 2) / (2 * l_n),
             )
             - pybamm.outer(
                 i_boundary_cc * (param.C_e / param.gamma_e) / kappa_s_av,
