@@ -145,7 +145,6 @@ class Function(pybamm.Symbol):
         if self.takes_no_params is True:
             return self.function()
         else:
-            self.function(*evaluated_children)
             return self.function(*evaluated_children)
 
     def new_copy(self):
