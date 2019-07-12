@@ -157,16 +157,6 @@ def m_p_dimensional(T):
     )
 
 
-def U_n_dimensional(sto):
-    "Dimensional open-circuit voltage in the negative electrode [V]"
-    return pybamm.FunctionParameter("Negative electrode OCV", sto)
-
-
-def U_p_dimensional(sto):
-    "Dimensional open-circuit voltage in the positive electrode [V]"
-    return pybamm.FunctionParameter("Positive electrode OCV", sto)
-
-
 def dUdT_n_dimensional(sto):
     "Dimensional entropic change of the negative electrode open circuit voltage [V.K-1]"
     return pybamm.FunctionParameter(
@@ -181,11 +171,23 @@ def dUdT_p_dimensional(sto):
     )
 
 
-# can maybe improve ref value at some stage
-U_n_ref = U_n_dimensional(pybamm.Scalar(0.7))
+def U_n_dimensional(sto, T):
+    "Dimensional open-circuit voltage in the negative electrode [V]"
+    u_ref = pybamm.FunctionParameter("Negative electrode OCV", sto)
+    return u_ref + (T - T_ref) * dUdT_n_dimensional(sto)
+
+
+def U_p_dimensional(sto, T):
+    "Dimensional open-circuit voltage in the positive electrode [V]"
+    u_ref = pybamm.FunctionParameter("Positive electrode OCV", sto)
+    return u_ref + (T - T_ref) * dUdT_p_dimensional(sto)
+
 
 # can maybe improve ref value at some stage
-U_p_ref = U_p_dimensional(pybamm.Scalar(0.7))
+U_n_ref = U_n_dimensional(pybamm.Scalar(0.7), T_ref)
+
+# can maybe improve ref value at some stage
+U_p_ref = U_p_dimensional(pybamm.Scalar(0.7), T_ref)
 
 m_n_ref_dimensional = m_n_dimensional(T_ref)
 m_p_ref_dimensional = m_p_dimensional(T_ref)
@@ -385,16 +387,16 @@ def m_p(T):
     return m_p_dimensional(T_dim) / m_p_ref_dimensional
 
 
-def U_n(c_s_n):
+def U_n(c_s_n, T):
     "Dimensionless open-circuit potential in the negative electrode"
     sto = c_s_n
-    return (U_n_dimensional(sto) - U_n_ref) / potential_scale
+    return (U_n_dimensional(sto, T) - U_n_ref) / potential_scale
 
 
-def U_p(c_s_p):
+def U_p(c_s_p, T):
     "Dimensionless open-circuit potential in the positive electrode"
     sto = c_s_p
-    return (U_p_dimensional(sto) - U_p_ref) / potential_scale
+    return (U_p_dimensional(sto, T) - U_p_ref) / potential_scale
 
 
 def dUdT_n(c_s_n):

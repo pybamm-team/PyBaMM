@@ -73,13 +73,14 @@ class BaseInterfaceLithiumIon(BaseInterface):
 
         """
         c_s_surf = variables[self.domain + " particle surface concentration"]
+        T = variables[self.domain + " electrode temperature"]
 
         if self.domain == "Negative":
-            ocp = self.param.U_n(c_s_surf)
+            ocp = self.param.U_n(c_s_surf, T)
             dUdT = self.param.dUdT_n(c_s_surf)
 
         elif self.domain == "Positive":
-            ocp = self.param.U_p(c_s_surf)
+            ocp = self.param.U_p(c_s_surf, T)
             dUdT = self.param.dUdT_p(c_s_surf)
 
         return ocp, dUdT

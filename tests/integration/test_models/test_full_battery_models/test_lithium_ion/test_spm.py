@@ -6,9 +6,6 @@ import tests
 import numpy as np
 import unittest
 
-pybamm.set_logging_level("INFO")
-# pybamm.settings.debug_mode = True
-
 
 class TestSPM(unittest.TestCase):
     def test_basic_processing(self):
