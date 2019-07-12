@@ -222,8 +222,8 @@ def U_p_dimensional(c_e, T):
 D_e_typ = D_e_dimensional(c_e_typ, T_ref)
 rho_typ = rho_dimensional(c_e_typ)
 mu_typ = mu_dimensional(c_e_typ)
-U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(1), T_ref)
-U_p_ref = pybamm.FunctionParameter("Positive electrode OCV", pybamm.Scalar(1), T_ref)
+U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(1))
+U_p_ref = pybamm.FunctionParameter("Positive electrode OCV", pybamm.Scalar(1))
 
 
 # --------------------------------------------------------------------------------------
