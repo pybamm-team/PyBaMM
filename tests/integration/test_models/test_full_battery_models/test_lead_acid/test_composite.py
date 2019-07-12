@@ -13,8 +13,6 @@ class TestLeadAcidComposite(unittest.TestCase):
         options = {"thermal": None, "convection": False}
         model = pybamm.lead_acid.Composite(options)
         parameter_values = model.default_parameter_values
-        parameter_values["Positive electrode conductivity [S.m-1]"] = 1e6
-        parameter_values["Negative electrode conductivity [S.m-1]"] = 1e6
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 

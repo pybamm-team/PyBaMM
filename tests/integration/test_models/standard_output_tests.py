@@ -553,7 +553,7 @@ class CurrentTests(BaseOutputTest):
             self.j_n_av(self.t), self.i_cell / self.l_n, decimal=4
         )
         np.testing.assert_array_almost_equal(
-            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=3
+            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=4
         )
 
     def test_conservation(self):

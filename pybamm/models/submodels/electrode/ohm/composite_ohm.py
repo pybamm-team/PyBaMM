@@ -56,7 +56,7 @@ class Composite(BaseModel):
             const = (
                 delta_phi_p_av
                 + phi_e_p_av
-                - (i_boundary_cc / sigma_eff) * (l_p - l_p ** 3 / 3)
+                + (i_boundary_cc / sigma_eff) * (1 - l_p / 3)
             )
 
             phi_s = (
