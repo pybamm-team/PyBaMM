@@ -33,7 +33,6 @@ class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
         ]
         c_e_0 = variables["Leading-order average electrolyte concentration"]
         c_e = variables[self.domain + " electrolyte concentration"]
-        c_e_1 = (c_e - c_e_0) / self.param.C_e
 
         dj_dc_0 = self._get_dj_ce(variables)
         dj_ddeltaphi_0 = self._get_dj_ddeltaphi(variables)

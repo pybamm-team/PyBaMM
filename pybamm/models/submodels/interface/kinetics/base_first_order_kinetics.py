@@ -1,8 +1,6 @@
 #
 # First-order Butler-Volmer kinetics
 #
-
-import pybamm
 from .base_kinetics import BaseKinetics
 
 
@@ -34,7 +32,8 @@ class BaseFirstOrderKinetics(BaseKinetics):
         dj_ddeltaphi_0 = self._get_dj_ddeltaphi(variables)
 
         # Update delta_phi with new phi_e and phi_s
-        # variables = self._get_delta_phi(variables)
+        variables = self._get_delta_phi(variables)
+
         delta_phi_0 = variables[
             "Leading-order average "
             + self.domain.lower()
@@ -86,7 +85,6 @@ class BaseFirstOrderKinetics(BaseKinetics):
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
-        c_e = variables["Leading-order average electrolyte concentration"] * 1
         return j.diff(delta_phi)
 
     def _get_kinetics_for_first_order(self, variables):

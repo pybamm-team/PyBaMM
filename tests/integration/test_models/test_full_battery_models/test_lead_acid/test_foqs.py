@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid composite model
+# Tests for the lead-acid FOQS model
 #
 import pybamm
 import tests
@@ -8,22 +8,22 @@ import unittest
 import numpy as np
 
 
-class TestLeadAcidComposite(unittest.TestCase):
+class TestLeadAcidFOQS(unittest.TestCase):
     def test_basic_processing(self):
         options = {"thermal": None, "convection": False}
-        model = pybamm.lead_acid.Composite(options)
+        model = pybamm.lead_acid.FOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
         options = {"thermal": None, "convection": True}
-        model = pybamm.lead_acid.Composite(options)
+        model = pybamm.lead_acid.FOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_optimisations(self):
         options = {"thermal": None, "convection": False}
-        model = pybamm.lead_acid.Composite(options)
+        model = pybamm.lead_acid.FOQS(options)
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
@@ -37,31 +37,31 @@ class TestLeadAcidComposite(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
 
-class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
+class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
     # def test_basic_processing_differential(self):
     #     options = {"surface form": "differential", "thermal": None, "convection": False}
     #     pybamm.set_logging_level("DEBUG")
-    #     model = pybamm.lead_acid.Composite(options)
+    #     model = pybamm.lead_acid.FOQS(options)
     #     modeltest = tests.StandardModelTest(model)
     #     modeltest.test_all()
 
     def test_basic_processing_algebraic(self):
         options = {"surface form": "algebraic", "thermal": None, "convection": False}
         pybamm.set_logging_level("DEBUG")
-        model = pybamm.lead_acid.Composite(options)
+        model = pybamm.lead_acid.FOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     #
     # def test_basic_processing_with_convection(self):
     #     options = {"surface form": "differential", "thermal": None, "convection": True}
-    #     model = pybamm.lead_acid.Composite(options)
+    #     model = pybamm.lead_acid.FOQS(options)
     #     modeltest = tests.StandardModelTest(model)
     #     modeltest.test_all()
     #
     # def test_optimisations(self):
     #     options = {"surface form": "differential", "thermal": None, "convection": False}
-    #     model = pybamm.lead_acid.Composite(options)
+    #     model = pybamm.lead_acid.FOQS(options)
     #     optimtest = tests.OptimisationsTest(model)
     #
     #     original = optimtest.evaluate_model()

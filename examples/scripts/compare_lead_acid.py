@@ -6,8 +6,9 @@ pybamm.set_logging_level("INFO")
 # load models
 models = [
     pybamm.lead_acid.LOQS(),
+    pybamm.lead_acid.FOQS(),
     pybamm.lead_acid.Composite(),
-    pybamm.lead_acid.Composite({"surface form": "algebraic"}),
+    # pybamm.lead_acid.Composite({"surface form": "algebraic"}),
     pybamm.lead_acid.NewmanTiedemann(),
 ]
 
@@ -54,8 +55,8 @@ output_variables = [
     ],
     "Average negative electrode surface potential difference [V]",
     "Average positive electrode surface potential difference [V]",
-    "Electrolyte potential [V]",
-    "Positive electrode potential [V]",
+    "Electrolyte concentration",
+    "Electrolyte flux",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
