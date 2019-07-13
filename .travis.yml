@@ -235,7 +235,7 @@ script:
   - if [[ $PYBAMM_UNIT == true ]]; then python run-tests.py --unit --folder all; fi;
   - if [[ $PYBAMM_DOCS == true ]]; then python run-tests.py --doctest; fi;
   - if [[ $PYBAMM_STYLE == true ]]; then python -m flake8; fi;
-  - if [[ $PYBAMM_COVER == true ]]; then coverage run run-tests.py --unit; fi;
+  - if [[ $PYBAMM_COVER == true ]]; then coverage run run-tests.py --nosub; fi;
   - if [[ $PYBAMM_EXAMPLES == true ]]; then travis_wait 120 python run-tests.py --examples; fi;
 
 after_success:
