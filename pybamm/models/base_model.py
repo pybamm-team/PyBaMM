@@ -40,6 +40,7 @@ class BaseModel(object):
 
     def __init__(self, name="Unnamed model"):
         self.name = name
+        self.options = {}
 
         # Initialise empty model
         self._rhs = {}
@@ -191,6 +192,14 @@ class BaseModel(object):
     @property
     def set_of_parameters(self):
         return self._set_of_parameters
+
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, options):
+        self._options = options
 
     def __getitem__(self, key):
         return self.rhs[key]

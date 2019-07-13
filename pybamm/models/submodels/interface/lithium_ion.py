@@ -1,7 +1,6 @@
 #
 # Lithium-ion interface classes
 #
-import pybamm
 from .base_interface import BaseInterface
 from . import inverse_kinetics, kinetics
 

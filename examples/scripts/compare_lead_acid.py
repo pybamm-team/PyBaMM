@@ -9,7 +9,7 @@ models = [
     # pybamm.lead_acid.FOQS(),
     pybamm.lead_acid.Composite(),
     # pybamm.lead_acid.Composite({"surface form": "algebraic"}),
-    # pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.NewmanTiedemann(),
 ]
 
 # create geometry
@@ -24,6 +24,8 @@ param.update(
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
         "Positive electrode reference exchange-current density [A.m-2]": 0.006,
+        # "Maximum porosity of negative electrode": 0.92,
+        # "Maximum porosity of positive electrode": 0.92,
     }
 )
 for model in models:
