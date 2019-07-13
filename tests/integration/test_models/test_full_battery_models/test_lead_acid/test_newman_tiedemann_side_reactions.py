@@ -9,6 +9,7 @@ import numpy as np
 
 
 class TestLeadAcidNewmanTiedemannSideReactions(unittest.TestCase):
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_basic_processing(self):
         options = {"side reactions": ["oxygen"]}
         model = pybamm.lead_acid.NewmanTiedemann(options)
