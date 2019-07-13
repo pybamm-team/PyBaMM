@@ -17,9 +17,11 @@ class TestComposite(unittest.TestCase):
             "Negative electrode interfacial current density": pybamm.Broadcast(
                 a, ["negative electrode"]
             ),
+            "Average negative electrode interfacial current density": a,
             "Positive electrode interfacial current density": pybamm.Broadcast(
                 a, ["positive electrode"]
             ),
+            "Average positive electrode interfacial current density": a,
         }
         submodel = pybamm.convection.Composite(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

@@ -51,12 +51,6 @@ class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_basic_processing_with_convection(self):
-        options = {"surface form": "differential", "thermal": None, "convection": True}
-        model = pybamm.lead_acid.FOQS(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-
     def test_optimisations(self):
         options = {"surface form": "differential", "thermal": None, "convection": False}
         model = pybamm.lead_acid.FOQS(options)
