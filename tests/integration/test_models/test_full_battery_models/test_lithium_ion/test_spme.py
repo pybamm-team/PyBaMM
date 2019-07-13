@@ -47,6 +47,7 @@ class TestSPMe(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
     def test_thermal(self):
+        pybamm.settings.debug_mode = True
         options = {"thermal": "lumped"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
