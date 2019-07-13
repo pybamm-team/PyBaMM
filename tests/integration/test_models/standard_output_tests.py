@@ -20,12 +20,16 @@ class StandardOutputTests(object):
         self.disc = disc
         self.solution = solution
 
-        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
             self.chemistry = "Lithium-ion"
-        elif isinstance(self.model, pybamm.LeadAcidBaseModel):
+        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
             self.chemistry = "Lead acid"
 
-        current_sign = np.sign(parameter_values["Typical current [A]"])
+        # Only for constant current
+        current_sign = np.sign(
+            parameter_values["Current function"].parameters_eval["Current [A]"]
+        )
+
         if current_sign == 1:
             self.operating_condition = "discharge"
         elif current_sign == -1:
@@ -79,7 +83,7 @@ class BaseOutputTest(object):
         self.x_p_edge = disc.mesh["positive electrode"][0].edges
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell)[0].edges
 
-        if isinstance(self.model, pybamm.LithiumIonBaseModel):
+        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
             self.r_n = disc.mesh["negative particle"][0].nodes
             self.r_p = disc.mesh["positive particle"][0].nodes
             self.r_n_edge = disc.mesh["negative particle"][0].edges
@@ -88,9 +92,15 @@ class BaseOutputTest(object):
         # Useful parameters
         self.l_n = param.process_symbol(pybamm.geometric_parameters.l_n).evaluate()
         self.l_p = param.process_symbol(pybamm.geometric_parameters.l_p).evaluate()
-        self.i_cell = param.process_symbol(
-            pybamm.electrical_parameters.current_with_time
-        ).evaluate(self.t)
+
+        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
+            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
+        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
+            current_param = pybamm.standard_parameters_lead_acid.current_with_time
+        else:
+            current_param = pybamm.electrical_parameters.current_with_time
+
+        self.i_cell = param.process_symbol(current_param).evaluate(self.t)
 
     def get_var(self, var):
         "Helper function to reduce repeated code."
@@ -136,7 +146,7 @@ class VoltageTests(BaseOutputTest):
             - charge: eta_r_n < 0, eta_r_p > 0
             - off: eta_r_n == 0, eta_r_p == 0
             """
-        tol = 0.001
+        tol = 0.01
         t, x_n, x_p = self.t, self.x_n, self.x_p
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(-self.eta_r_n(t, x_n), tol)
@@ -167,7 +177,10 @@ class VoltageTests(BaseOutputTest):
         elif self.operating_condition == "off":
             np.testing.assert_array_equal(self.eta_r_av(self.t), 0)
             np.testing.assert_array_equal(self.eta_e_av(self.t), 0)
-            np.testing.assert_array_equal(self.delta_phi_s_av(self.t), 0)
+            # For some reason SPM gives delta_phi_s_av ~ 1e-17
+            np.testing.assert_array_almost_equal(
+                self.delta_phi_s_av(self.t), 0, decimal=16
+            )
 
     def test_ocps(self):
         """ Testing that:
@@ -235,7 +248,7 @@ class VoltageTests(BaseOutputTest):
             + self.eta_r_av(self.t)
             + self.eta_e_av(self.t)
             + self.delta_phi_s_av(self.t),
-            decimal=3,
+            decimal=2,
         )
 
     def test_all(self):
@@ -346,8 +359,8 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         # self.c_e_s_av = variables["Average separator electrolyte concentration"]
         # self.c_e_p_av = variables["Average positive electrolyte concentration"]
 
-        # self.N_e = variables["Electrolyte flux"]
-        self.N_e_hat = variables["Reduced cation flux"]
+        self.N_e_hat = variables["Electrolyte flux"]
+        # self.N_e_hat = variables["Reduced cation flux"]
 
     def test_concentration_limit(self):
         "Test that the electrolyte concentration is always greater than zero."
@@ -435,6 +448,11 @@ class PotentialTests(BaseOutputTest):
             "Positive electrode surface potential difference [V]"
         ]
 
+        self.grad_phi_e = variables["Gradient of electrolyte potential"]
+        self.grad_phi_e_n = variables["Gradient of negative electrolyte potential"]
+        self.grad_phi_e_s = variables["Gradient of separator electrolyte potential"]
+        self.grad_phi_e_p = variables["Gradient of positive electrolyte potential"]
+
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
         average negative electrode potential is less than or equal to zero."""
@@ -469,6 +487,20 @@ class PotentialTests(BaseOutputTest):
 
         np.testing.assert_array_less(-self.phi_s_p(self.t, self.x_p), 0)
 
+    def test_gradient_splitting(self):
+
+        t, x_n, x_s, x_p, x = self.t, self.x_n, self.x_s, self.x_p, self.x
+        grad_phi_e_combined = np.concatenate(
+            (
+                self.grad_phi_e_n(t, x_n),
+                self.grad_phi_e_s(t, x_s),
+                self.grad_phi_e_p(t, x_p),
+            ),
+            axis=0,
+        )
+
+        np.testing.assert_array_equal(self.grad_phi_e(t, x), grad_phi_e_combined)
+
     def test_all(self):
         self.test_negative_electrode_potential_profile()
         self.test_positive_electrode_potential_profile()
@@ -481,7 +513,7 @@ class CurrentTests(BaseOutputTest):
         variables = self.model.variables
 
         self.j = variables["Interfacial current density"]
-        self.j0 = variables["Exchange-current density"]
+        self.j0 = variables["Exchange current density"]
 
         self.j_n = variables["Negative electrode interfacial current density"]
         self.j_p = variables["Positive electrode interfacial current density"]
@@ -492,8 +524,8 @@ class CurrentTests(BaseOutputTest):
             "Average positive electrode interfacial current density"
         ]
 
-        self.j0_n = variables["Negative electrode exchange-current density"]
-        self.j0_p = variables["Positive electrode exchange-current density"]
+        self.j0_n = variables["Negative electrode exchange current density"]
+        self.j0_p = variables["Positive electrode exchange current density"]
 
         self.i_s_n = variables["Negative electrode current density"]
         self.i_s_p = variables["Positive electrode current density"]
@@ -515,11 +547,17 @@ class CurrentTests(BaseOutputTest):
         current density"""
         t, x_n, x_s, x_p = self.t, self.x_n, self.x_s, self.x_p
 
-        current_param = pybamm.electrical_parameters.current_with_time
+        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
+            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
+        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
+            current_param = pybamm.standard_parameters_lead_acid.current_with_time
+        else:
+            current_param = pybamm.electrical_parameters.current_with_time
+
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         for x in [x_n, x_s, x_p]:
             np.testing.assert_array_almost_equal(
-                self.i_s(t, x) + self.i_e(t, x), i_cell, decimal=3
+                self.i_s(t, x) + self.i_e(t, x), i_cell, decimal=2
             )
         np.testing.assert_array_almost_equal(
             self.i_s(t, x_n), self.i_s_n(t, x_n), decimal=3
@@ -532,9 +570,15 @@ class CurrentTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
 
-        current_param = pybamm.electrical_parameters.current_with_time
+        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
+            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
+        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
+            current_param = pybamm.standard_parameters_lead_acid.current_with_time
+        else:
+            current_param = pybamm.electrical_parameters.current_with_time
+
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
-        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=3)
+        np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=2)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[-1]), 0, decimal=4)
         np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[-1]), i_cell, decimal=3)
         np.testing.assert_array_almost_equal(self.i_s_p(t, x_p[0]), 0, decimal=4)
@@ -544,7 +588,7 @@ class CurrentTests(BaseOutputTest):
         self.test_current_density_boundaries()
         # Skip average current test if capacitance is used, since average interfacial
         # current density will be affected slightly by capacitance effects
-        if self.model.options["capacitance"] != "differential":
+        if self.model.options["surface form"] != "differential":
             self.test_interfacial_current_average()
 
 

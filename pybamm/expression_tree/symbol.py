@@ -11,16 +11,34 @@ import autograd.numpy as np
 from anytree.exporter import DotExporter
 
 
-def evaluate_for_shape_using_domain(domain):
+def evaluate_for_shape_using_domain(domain, typ="vector"):
     """
     Return a vector of the appropriate shape, based on the domain.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
+
+    Empty domain has size 1.
+    If the domain falls within the list of standard battery domains, the size is read
+    from a dictionary of standard domain sizes. Otherwise, the hash of the domain string
+    is used to generate a `random` domain size.
     """
+    fixed_domain_sizes = {
+        "current collector": 3,
+        "negative particle": 5,
+        "positive particle": 7,
+        "negative electrode": 11,
+        "separator": 13,
+        "positive electrode": 17,
+    }
     if domain == []:
         size = 1
+    elif all(dom in fixed_domain_sizes for dom in domain):
+        size = sum(fixed_domain_sizes[dom] for dom in domain)
     else:
         size = sum(hash(dom) % 100 for dom in domain)
-    return np.nan * np.ones((size, 1))
+    if typ == "vector":
+        return np.nan * np.ones((size, 1))
+    elif typ == "matrix":
+        return np.nan * np.ones((size, size))
 
 
 class Symbol(anytree.NodeMixin):
@@ -368,6 +386,16 @@ class Symbol(anytree.NodeMixin):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
+            jac = self._jac(variable)
+            # jacobian removes the domain
+            jac.domain = []
+            return jac
+
+    def _jac(self, variable):
+        "Default behaviour for jacobian, overriden by Binary and Unary Operators"
+        if variable.id == self.id:
+            return pybamm.Scalar(1)
+        else:
             return pybamm.Scalar(0)
 
     def _base_evaluate(self, t=None, y=None):
@@ -501,6 +529,8 @@ class Symbol(anytree.NodeMixin):
             self.has_symbol_of_class(pybamm.Gradient)
             and not self.has_symbol_of_class(pybamm.Divergence)
             and not self.has_symbol_of_class(pybamm.IndefiniteIntegral)
+            and not self.has_symbol_of_class(pybamm.Inner)
+            and not self.has_symbol_of_class(pybamm.Index)
         )
 
     def has_symbol_of_class(self, symbol_class):
@@ -556,8 +586,7 @@ class Symbol(anytree.NodeMixin):
         """
         Shape of an object for cases where it cannot be evaluated directly. If a symbol
         cannot be evaluated directly (e.g. it is a `Variable` or `Parameter`), it is
-        instead given an arbitrary domain-dependent shape from the dictionary
-        `pybamm.DOMAIN_SIZES_FOR_TESTING` (note that this only works for some domains)
+        instead given an arbitrary domain-dependent shape.
         """
         evaluated_self = self.evaluate_for_shape()
         if isinstance(evaluated_self, numbers.Number):

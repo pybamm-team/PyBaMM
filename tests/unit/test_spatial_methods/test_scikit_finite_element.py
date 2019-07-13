@@ -19,8 +19,6 @@ class TestScikitFiniteElement(unittest.TestCase):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
             spatial_method.indefinite_integral(None, None, None)
-        with self.assertRaises(NotImplementedError):
-            spatial_method.boundary_value_or_flux(None, None)
 
     def test_discretise_equations(self):
         # get mesh
@@ -124,21 +122,19 @@ class TestScikitFiniteElement(unittest.TestCase):
         var_disc = disc.process_symbol(var)
         z_vertices = mesh["current collector"][0].coordinates[1, :]
         np.testing.assert_array_almost_equal(
-            var_disc.evaluate(None, z_vertices),
-            z_vertices[:, np.newaxis]
+            var_disc.evaluate(None, z_vertices), z_vertices[:, np.newaxis]
         )
 
         # linear u = 6*y (to test coordinates to degree of freedom mapping)
         y_vertices = mesh["current collector"][0].coordinates[0, :]
         np.testing.assert_array_almost_equal(
-            var_disc.evaluate(None, 6 * y_vertices),
-            6 * y_vertices[:, np.newaxis]
+            var_disc.evaluate(None, 6 * y_vertices), 6 * y_vertices[:, np.newaxis]
         )
 
         # mixed u = y*z (to test coordinates to degree of freedom mapping)
         np.testing.assert_array_almost_equal(
             var_disc.evaluate(None, y_vertices * z_vertices),
-            y_vertices[:, np.newaxis] * z_vertices[:, np.newaxis]
+            y_vertices[:, np.newaxis] * z_vertices[:, np.newaxis],
         )
 
         # laplace of u = sin(pi*z)
@@ -160,9 +156,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         mass_disc = disc.process_symbol(mass)
         soln = -np.pi ** 2 * u
         np.testing.assert_array_almost_equal(
-            eqn_zz_disc.evaluate(None, u),
-            mass_disc.entries @ soln,
-            decimal=3
+            eqn_zz_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=3
         )
 
         # laplace of u = cos(pi*y)*sin(pi*z)
@@ -185,9 +179,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         mass_disc = disc.process_symbol(mass)
         soln = -np.pi ** 2 * u
         np.testing.assert_array_almost_equal(
-            laplace_eqn_disc.evaluate(None, u),
-            mass_disc.entries @ soln,
-            decimal=2
+            laplace_eqn_disc.evaluate(None, u), mass_disc.entries @ soln, decimal=2
         )
 
     def test_definite_integral(self):
@@ -211,6 +203,25 @@ class TestScikitFiniteElement(unittest.TestCase):
             integral_eqn_disc.evaluate(None, y_test), 6 * ly * lz
         )
 
+    def test_left_right(self):
+        mesh = get_2p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="current collector")
+        extrap_left = pybamm.BoundaryValue(var, "left")
+        extrap_right = pybamm.BoundaryValue(var, "right")
+        disc.set_variable_slices([var])
+        extrap_left_disc = disc.process_symbol(extrap_left)
+        extrap_right_disc = disc.process_symbol(extrap_right)
+
+        # check constant returns constant at tab
+        constant_y = np.ones(mesh["current collector"][0].npts)
+        self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 1)
+        self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
@@ -218,4 +229,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

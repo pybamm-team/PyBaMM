@@ -3,6 +3,7 @@
 #
 import numpy as np
 import pybamm
+from scipy.sparse import csr_matrix
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -89,8 +90,8 @@ class Negate(UnaryOperator):
         """ See :meth:`pybamm.Symbol._diff()`. """
         return -self.child.diff(variable)
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         return -self.child.jac(variable)
 
     def _unary_evaluate(self, child):
@@ -143,7 +144,11 @@ class Index(UnaryOperator):
 
     def __init__(self, child, index, name=None):
         self.index = index
-        if isinstance(index, int):
+        if index == -1:
+            self.slice = slice(index, None)
+            if name is None:
+                name = "Index[-1]"
+        elif isinstance(index, int):
             self.slice = slice(index, index + 1)
             if name is None:
                 name = "Index[" + str(index) + "]"
@@ -157,15 +162,33 @@ class Index(UnaryOperator):
         else:
             raise TypeError("index must be integer or slice")
 
-        if self.slice.stop > child.size:
+        if self.slice in (slice(0, 1), slice(-1, None)):
+            pass
+        elif self.slice.stop > child.size:
             raise ValueError("slice size exceeds child size")
 
         super().__init__(name, child)
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
-        child_jac = self.child.jac(variable)
-        return Index(child_jac, self.index)
+        # no domain for integer value
+        if isinstance(index, int):
+            self.domain = []
+
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
+
+        # if child.jac returns a matrix of zeros, this subsequently gives a bug
+        # when trying to simplify the node Index(child_jac). Instead, search the
+        # tree for StateVectors and return a matrix of zeros of the correct size
+        # if none are found.
+        if all([not (isinstance(n, pybamm.StateVector)) for n in self.pre_order()]):
+            variable_y_indices = np.arange(
+                variable.y_slice.start, variable.y_slice.stop
+            )
+            jac = csr_matrix((1, np.size(variable_y_indices)))
+            return pybamm.Matrix(jac)
+        else:
+            child_jac = self.child.jac(variable)
+            return Index(child_jac, self.index)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -282,16 +305,7 @@ class Mass(SpatialOperator):
         super().__init__("mass", child)
 
     def evaluate_for_shape(self):
-        """
-        Return a matrix of the appropriate shape, based on the domain.
-        Domain 'sizes' can clash, but are unlikely to, and won't cause failures
-        if they do.
-        """
-        if self.domain == []:
-            size = 1
-        else:
-            size = sum(hash(dom) % 100 for dom in self.domain)
-        return np.nan * np.ones((size, size))
+        return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
 
 
 class Integral(SpatialOperator):
@@ -578,12 +592,28 @@ def surf(variable, set_domain=False):
     :class:`GetSurfaceValue`
         the surface value of ``variable``
     """
-    out = boundary_value(variable, "right")
-    if set_domain:
-        if variable.domain == ["negative particle"]:
-            out.domain = ["negative electrode"]
-        elif variable.domain == ["positive particle"]:
-            out.domain = ["positive electrode"]
+    if variable.domain == ["negative electrode"] and isinstance(
+        variable, pybamm.Broadcast
+    ):
+        child_surf = boundary_value(variable.orphans[0], "right")
+        out = pybamm.Broadcast(
+            child_surf, ["negative electrode"], broadcast_type="primary"
+        )
+    elif variable.domain == ["positive electrode"] and isinstance(
+        variable, pybamm.Broadcast
+    ):
+        child_surf = boundary_value(variable.orphans[0], "right")
+        out = pybamm.Broadcast(
+            child_surf, ["positive electrode"], broadcast_type="primary"
+        )
+    else:
+        out = boundary_value(variable, "right")
+        if set_domain:
+            if variable.domain == ["negative particle"]:
+                out.domain = ["negative electrode"]
+            elif variable.domain == ["positive particle"]:
+                out.domain = ["positive electrode"]
+
     return out
 
 
@@ -636,6 +666,12 @@ def average(symbol):
         elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             x = pybamm.standard_spatial_vars.x
             l = pybamm.Scalar(1)
+        elif symbol.domain == ["negative particle"]:
+            x = pybamm.standard_spatial_vars.x_n
+            l = pybamm.geometric_parameters.l_n
+        elif symbol.domain == ["positive particle"]:
+            x = pybamm.standard_spatial_vars.x_p
+            l = pybamm.geometric_parameters.l_p
         else:
             raise pybamm.DomainError("domain '{}' not recognised".format(symbol.domain))
 

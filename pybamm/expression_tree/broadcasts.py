@@ -24,13 +24,19 @@ class Broadcast(pybamm.SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, domain, name=None):
+    def __init__(self, child, domain, name=None, broadcast_type="full"):
         # Convert child to scalar if it is a number
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
 
         # Check domain
-        if child.domain not in [[], domain, ["current collector"]]:
+        if child.domain not in [
+            [],
+            domain,
+            ["current collector"],
+            ["negative particle"],
+            ["positive particle"],
+        ]:
             raise pybamm.DomainError(
                 """
                 Domain of a broadcasted child must be [], ['current collector'],
@@ -41,6 +47,10 @@ class Broadcast(pybamm.SpatialOperator):
             )
         if name is None:
             name = "broadcast"
+
+        # set type of broadcast
+        self.broadcast_type = broadcast_type
+
         super().__init__(name, child)
         # overwrite child domain ([]) with specified broadcasting domain
         self.domain = domain
@@ -48,12 +58,12 @@ class Broadcast(pybamm.SpatialOperator):
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
-        return Broadcast(child, self.domain)
+        return Broadcast(child, self.domain, broadcast_type=self.broadcast_type)
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
-        return Broadcast(child, self.domain)
+        return Broadcast(child, self.domain, broadcast_type=self.broadcast_type)
 
     def evaluate_for_shape(self):
         """
@@ -62,7 +72,15 @@ class Broadcast(pybamm.SpatialOperator):
         """
         child_eval = self.children[0].evaluate_for_shape()
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
-        if self.children[0].domain == ["current collector"]:
+
+        if self.broadcast_type == "primary":
             return np.outer(child_eval, vec).reshape(-1, 1)
-        else:
+        elif self.broadcast_type == "full":
             return child_eval * vec
+        else:
+            raise KeyError(
+                """Broadcast type must be either: 'primary' or 'full' and not {}.
+                 Support for 'secondary' will be added in the future""".format(
+                    self.broadcast_type
+                )
+            )

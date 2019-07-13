@@ -2,11 +2,15 @@ Submodels
 =========
 
 .. toctree::
+    :maxdepth: 1
 
-  electrode
-  electrolyte_current
-  electrolyte_diffusion
-  interface
-  particle
-  porosity
-  potential
+    base_submodel
+    current_collector/index
+    convection/index
+    electrode/index
+    electrolyte/index
+    interface/index
+    oxygen_diffusion/index
+    particle/index
+    porosity/index
+    thermal/index

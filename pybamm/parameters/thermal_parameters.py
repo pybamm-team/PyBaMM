@@ -60,11 +60,24 @@ rho_s = rho_s_dim * c_p_s_dim / rho_eff_dim
 rho_p = rho_p_dim * c_p_p_dim / rho_eff_dim
 rho_cp = rho_cp_dim * c_p_cp_dim / rho_eff_dim
 
+rho_k = pybamm.Concatenation(
+    pybamm.Broadcast(rho_n, ["negative electrode"]),
+    pybamm.Broadcast(rho_s, ["separator"]),
+    pybamm.Broadcast(rho_p, ["positive electrode"]),
+)
+
 lambda_cn = lambda_cn_dim / lambda_eff_dim
 lambda_n = lambda_n_dim / lambda_eff_dim
 lambda_s = lambda_s_dim / lambda_eff_dim
 lambda_p = lambda_p_dim / lambda_eff_dim
 lambda_cp = lambda_cp_dim / lambda_eff_dim
+
+lambda_k = pybamm.Concatenation(
+    pybamm.Broadcast(lambda_n, ["negative electrode"]),
+    pybamm.Broadcast(lambda_s, ["separator"]),
+    pybamm.Broadcast(lambda_p, ["positive electrode"]),
+)
+
 
 Theta = Delta_T / T_ref
 h = h_dim * pybamm.geometric_parameters.L_x / lambda_eff_dim

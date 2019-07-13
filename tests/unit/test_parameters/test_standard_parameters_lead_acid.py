@@ -17,7 +17,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_all_defined(self):
         parameters = pybamm.standard_parameters_lead_acid
-        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         output_file = "results/2019_08_sulzer_thesis/parameters.txt"
         pybamm.print_parameters(parameters, parameter_values, output_file)
         # test print_parameters with dict and without C-rate
@@ -31,7 +31,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_parameters_defaults_lead_acid(self):
         # Load parameters to be tested
         parameters = pybamm.standard_parameters_lead_acid
-        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         param_eval = pybamm.print_parameters(parameters, parameter_values)
         param_eval = {k: v[0] for k, v in param_eval.items()}
 
@@ -72,35 +72,37 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
     def test_current_functions(self):
         # create current functions
-        dimensional_current = (
+        dimensional_current_density = (
             pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
         )
-        dimensionless_current = pybamm.standard_parameters_lead_acid.current_with_time
+        dimensionless_current_density = (
+            pybamm.standard_parameters_lead_acid.current_density_with_time
+        )
 
         # process
         parameter_values = pybamm.ParameterValues(
             {
                 "Electrode height [m]": 0.1,
                 "Electrode depth [m]": 0.1,
+                "Negative electrode width [m]": 1,
+                "Separator width [m]": 1,
+                "Positive electrode width [m]": 1,
+                "Typical electrolyte concentration [mol.m-3]": 1,
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
+                "Current function": pybamm.GetConstantCurrent(),
             }
         )
-        dimensional_current_eval = parameter_values.process_symbol(dimensional_current)
-        dimensionless_current_eval = parameter_values.process_symbol(
-            dimensionless_current
+        dimensional_current_density_eval = parameter_values.process_symbol(
+            dimensional_current_density
+        )
+        dimensionless_current_density_eval = parameter_values.process_symbol(
+            dimensionless_current_density
         )
         self.assertAlmostEqual(
-            dimensional_current_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1)
+            dimensional_current_density_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1)
         )
-        self.assertEqual(dimensionless_current_eval.evaluate(t=3), 1)
+        self.assertEqual(dimensionless_current_density_eval.evaluate(t=3), 1)
 
     def test_functions_lead_acid(self):
         # Load parameters to be tested
@@ -120,13 +122,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             "input/parameters/lead-acid/default.csv",
             {
                 "Typical current [A]": 1,
-                "Current function": os.path.join(
-                    os.getcwd(),
-                    "pybamm",
-                    "parameters",
-                    "standard_current_functions",
-                    "constant_current.py",
-                ),
+                "Current function": pybamm.GetConstantCurrent(),
                 "Electrolyte diffusivity": os.path.join(
                     input_path, "electrolyte_diffusivity_Gu1997.py"
                 ),
@@ -160,7 +156,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_update_initial_state_of_charge(self):
         # Load parameters to be tested
         parameters = pybamm.standard_parameters_lead_acid
-        parameter_values = pybamm.LeadAcidBaseModel().default_parameter_values
+        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         param_eval = pybamm.print_parameters(parameters, parameter_values)
         param_eval = {k: v[0] for k, v in param_eval.items()}
 
@@ -189,4 +185,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

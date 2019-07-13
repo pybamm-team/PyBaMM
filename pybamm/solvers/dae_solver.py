@@ -17,12 +17,18 @@ class DaeSolver(pybamm.BaseSolver):
         The method to use to find initial conditions (default is "lm")
     tolerance : float, optional
         The tolerance for the initial-condition solver (default is 1e-8).
+    max_steps: int, optional
+        The maximum number of steps the solver will take before terminating
+        (defualt is 1000).
     """
 
-    def __init__(self, method=None, tol=1e-8, root_method="lm", root_tol=1e-6):
+    def __init__(
+        self, method=None, tol=1e-8, root_method="lm", root_tol=1e-6, max_steps=1000
+    ):
         super().__init__(method, tol)
         self.root_method = root_method
         self.root_tol = root_tol
+        self.max_steps = max_steps
 
     @property
     def root_method(self):
@@ -39,6 +45,14 @@ class DaeSolver(pybamm.BaseSolver):
     @root_tol.setter
     def root_tol(self, tol):
         self._root_tol = tol
+
+    @property
+    def max_steps(self):
+        return self._max_steps
+
+    @max_steps.setter
+    def max_steps(self, max_steps):
+        self._max_steps = max_steps
 
     def solve(self, model, t_eval):
         """Calculate the solution of the model at specified times.
@@ -62,6 +76,9 @@ class DaeSolver(pybamm.BaseSolver):
         )
         set_up_time = timer.time() - start_time
 
+        # get mass matrix entries
+        mass_matrix = model.mass_matrix.entries
+
         def residuals(t, y, ydot):
             pybamm.logger.debug(
                 "Evaluating residuals for {} at t={}".format(model.name, t)
@@ -73,7 +90,7 @@ class DaeSolver(pybamm.BaseSolver):
             # turn into 1D arrays
             rhs_eval = rhs_eval[:, 0]
             alg_eval = alg_eval[:, 0]
-            return np.concatenate((rhs_eval - ydot[: rhs_eval.shape[0]], alg_eval))
+            return np.concatenate((rhs_eval, alg_eval)) - mass_matrix @ ydot
 
         # Create event-dependent function to evaluate events
         def event_fun(event):
@@ -101,7 +118,7 @@ class DaeSolver(pybamm.BaseSolver):
             y0,
             t_eval,
             events=events,
-            mass_matrix=model.mass_matrix.entries,
+            mass_matrix=mass_matrix,
             jacobian=jacobian,
         )
         # Assign times

@@ -236,24 +236,24 @@ class TestSimplify(unittest.TestCase):
             sym.simplify()
 
         # A + A = 2A (#323)
-        a = pybamm.Variable("A")
+        a = pybamm.Parameter("A")
         expr = (a + a).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 2)
-        self.assertIsInstance(expr.children[1], pybamm.Variable)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (a + a + a + a).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 4)
-        self.assertIsInstance(expr.children[1], pybamm.Variable)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (a - a + a - a + a + a).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
         self.assertEqual(expr.children[0].evaluate(), 2)
-        self.assertIsInstance(expr.children[1], pybamm.Variable)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         # A - A = 0 (#323)
         expr = (a - a).simplify()
@@ -461,8 +461,9 @@ class TestSimplify(unittest.TestCase):
 
         # A - A = 0 (#323)
         expr = (a - a).simplify()
-        self.assertIsInstance(expr, pybamm.Scalar)
-        self.assertEqual(expr.evaluate(), 0)
+        self.assertIsInstance(expr, pybamm.Vector)
+        self.assertEqual(expr.shape, a.shape)
+        np.testing.assert_array_equal(expr.evaluate(), 0)
 
         # zero matrix
         m1 = pybamm.Matrix(np.zeros((300, 300)))
@@ -489,6 +490,20 @@ class TestSimplify(unittest.TestCase):
             np.testing.assert_array_equal(
                 expr_simp.evaluate(y=np.ones(300)), -m2.evaluate()
             )
+
+    def test_matrix_divide_simplify(self):
+        m = pybamm.Matrix(np.random.rand(300, 200))
+        zero = pybamm.Scalar(0)
+
+        expr1 = (zero / m).simplify()
+        self.assertIsInstance(expr1, pybamm.Matrix)
+        self.assertEqual(expr1.shape, m.shape)
+        np.testing.assert_array_equal(expr1.evaluate(), 0)
+
+        expr2 = (m / zero).simplify()
+        self.assertIsInstance(expr2, pybamm.Matrix)
+        self.assertEqual(expr2.shape, m.shape)
+        np.testing.assert_array_equal(expr2.evaluate(), np.inf)
 
     def test_domain_concatenation_simplify(self):
         # create discretisation
@@ -540,6 +555,59 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(outer_simp, pybamm.Vector)
         np.testing.assert_array_equal(outer_simp.evaluate(), 2 * np.ones((15, 1)))
 
+    def test_simplify_divide_outer(self):
+        u = pybamm.Scalar(1)
+        v = pybamm.StateVector(slice(0, 5), domain="current collector")
+        outer = pybamm.Outer(v, u)
+
+        exp1 = pybamm.Division(pybamm.Division(outer, u), u)
+        self.assertIsInstance(exp1.simplify(), pybamm.Outer)
+
+        exp2 = pybamm.Division(pybamm.Division(outer, 2 * u), u)
+        self.assertIsInstance(exp2.simplify(), pybamm.Multiplication)
+
+        exp3 = pybamm.Division(pybamm.Division(outer, u), 2 * u)
+        self.assertIsInstance(exp3.simplify(), pybamm.Multiplication)
+
+        exp4 = pybamm.Division(pybamm.Division(outer, 2 * u), 2 * u)
+        self.assertIsInstance(exp4.simplify(), pybamm.Multiplication)
+
+    def test_simplify_kron(self):
+        A = pybamm.Matrix(np.eye(2))
+        b = pybamm.Vector(np.array([[4], [5]]))
+        kron = pybamm.Kron(A, b)
+        kron_simp = kron.simplify()
+        self.assertIsInstance(kron_simp, pybamm.Matrix)
+        np.testing.assert_array_equal(
+            kron_simp.evaluate().toarray(), np.kron(A.entries, b.entries)
+        )
+
+    def test_simplify_inner(self):
+        a1 = pybamm.Scalar(0)
+        M1 = pybamm.Matrix(np.zeros((10, 10)))
+        v1 = pybamm.Vector(np.ones(10))
+        a2 = pybamm.Scalar(1)
+        M2 = pybamm.Matrix(np.ones((10, 10)))
+        a3 = pybamm.Scalar(3)
+
+        np.testing.assert_array_equal(
+            pybamm.inner(a1, M2).simplify().evaluate(), M1.entries
+        )
+        self.assertEqual(pybamm.inner(a1, a2).simplify().evaluate(), 0)
+        np.testing.assert_array_equal(
+            pybamm.inner(M2, a1).simplify().evaluate(), M1.entries
+        )
+        self.assertEqual(pybamm.inner(a2, a1).simplify().evaluate(), 0)
+        np.testing.assert_array_equal(
+            pybamm.inner(M1, a3).simplify().evaluate().toarray(), M1.entries
+        )
+        np.testing.assert_array_equal(
+            pybamm.inner(v1, a3).simplify().evaluate(), 3 * v1.entries
+        )
+        self.assertEqual(pybamm.inner(a2, a3).simplify().evaluate(), 3)
+        self.assertEqual(pybamm.inner(a3, a2).simplify().evaluate(), 3)
+        self.assertEqual(pybamm.inner(a3, a3).simplify().evaluate(), 9)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
@@ -547,4 +615,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

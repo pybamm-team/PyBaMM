@@ -14,15 +14,12 @@ import unittest
 import subprocess
 
 
-def run_code_tests(executable=None, folder: str = "unit"):
+def run_code_tests(folder: str = "unit"):
     """
     Runs tests, exits if they don't finish.
 
     Parameters
     ----------
-    executable : str (default None)
-        If given, tests are run in subprocesses using the given executable (e.g.
-        'python2' or 'python3').
     folder : str
         Which folder to run the tests from (unit, integration or both ('all'))
 
@@ -33,25 +30,8 @@ def run_code_tests(executable=None, folder: str = "unit"):
         tests = "tests/" + folder
         if folder == "unit":
             pybamm.settings.debug_mode = True
-    if executable is None:
-        suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
-        unittest.TextTestRunner(verbosity=2).run(suite)
-    else:
-        print("Running {} tests with executable '{}'".format(folder, executable))
-        cmd = [executable] + ["-m", "unittest", "discover", "-v", tests]
-        p = subprocess.Popen(cmd)
-        try:
-            ret = p.wait()
-        except KeyboardInterrupt:
-            try:
-                p.terminate()
-            except OSError:
-                pass
-            p.wait()
-            print("")
-            sys.exit(1)
-        if ret != 0:
-            sys.exit(ret)
+    suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
+    unittest.TextTestRunner(verbosity=2).run(suite)
 
 
 def run_flake8():
@@ -300,21 +280,6 @@ if __name__ == "__main__":
         action="store_true",
         help="Run unit tests using the `python` interpreter.",
     )
-    parser.add_argument(
-        "--unit2",
-        action="store_true",
-        help="Run unit tests using the `python2` interpreter.",
-    )
-    parser.add_argument(
-        "--unit3",
-        action="store_true",
-        help="Run unit tests using the `python3` interpreter.",
-    )
-    parser.add_argument(
-        "--nosub",
-        action="store_true",
-        help="Run unit tests without starting a subprocess.",
-    )
     # Daily tests vs unit tests
     parser.add_argument(
         "--folder",
@@ -367,17 +332,7 @@ if __name__ == "__main__":
     # Unit tests
     if args.unit:
         has_run = True
-        run_code_tests("python", folder)
-    if args.unit2:
-        raise NotImplementedError
-        has_run = True
-        run_code_tests("python2", folder)
-    if args.unit3:
-        has_run = True
-        run_code_tests("python3", folder)
-    if args.nosub:
-        has_run = True
-        run_code_tests(folder=folder)
+        run_code_tests(folder)
     # Flake8
     if args.flake8:
         has_run = True
@@ -400,7 +355,7 @@ if __name__ == "__main__":
     if args.quick:
         has_run = True
         run_flake8()
-        run_code_tests(folder=folder)
+        run_code_tests(folder)
         run_doc_tests()
     # Help
     if not has_run:

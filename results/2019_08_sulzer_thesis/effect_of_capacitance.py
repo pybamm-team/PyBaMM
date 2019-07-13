@@ -108,7 +108,7 @@ def plot_errors(all_variables, t_eval, Crates):
 
         for j, (model, variables) in enumerate(models_variables.items()):
             options = dict(model[1])
-            if options["capacitance"] is False:
+            if options["surface form"] is False:
                 base_model_results = models_variables[model]
                 continue
             if k == 0:

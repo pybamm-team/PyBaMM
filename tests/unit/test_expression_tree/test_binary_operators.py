@@ -92,8 +92,22 @@ class TestBinaryOperators(unittest.TestCase):
             pybamm.Outer(v, y)
         with self.assertRaises(NotImplementedError):
             outer_fun.diff(None)
+
+    def test_kron(self):
+        # Kron class
+        A = pybamm.Matrix(np.eye(2))
+        b = pybamm.Vector(np.array([[4], [5]]))
+        kron = pybamm.Kron(A, b)
+        np.testing.assert_array_equal(
+            kron.evaluate().toarray(), np.kron(A.entries, b.entries)
+        )
+
+        # failures
         with self.assertRaises(NotImplementedError):
-            outer_fun.jac(None)
+            kron.diff(None)
+
+        with self.assertRaises(NotImplementedError):
+            kron.jac(None)
 
     def test_known_eval(self):
         # Scalars
@@ -155,6 +169,13 @@ class TestBinaryOperators(unittest.TestCase):
         matmul = a @ b
         with self.assertRaises(NotImplementedError):
             matmul.diff(a)
+
+        # inner
+        self.assertEqual(pybamm.inner(a, b).diff(a).evaluate(y=y), 3)
+        self.assertEqual(pybamm.inner(a, b).diff(b).evaluate(y=y), 5)
+        self.assertEqual(pybamm.inner(a, b).diff(pybamm.inner(a, b)).evaluate(y=y), 1)
+        self.assertEqual(pybamm.inner(a, a).diff(a).evaluate(y=y), 10)
+        self.assertEqual(pybamm.inner(a, a).diff(b).evaluate(y=y), 0)
 
         # division
         self.assertEqual((a / b).diff(a).evaluate(y=y), 1 / 3)
@@ -257,6 +278,46 @@ class TestBinaryOperators(unittest.TestCase):
             (pybammS1 / pybammv1).evaluate().toarray(), S1.toarray() / v1
         )
 
+    def test_inner(self):
+        model = pybamm.lithium_ion.BaseModel()
+
+        phi_s = pybamm.standard_variables.phi_s_n
+        i = pybamm.grad(phi_s)
+
+        model.rhs = {phi_s: pybamm.inner(i, i)}
+        model.boundary_conditions = {
+            phi_s: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        model.initial_conditions = {phi_s: pybamm.Scalar(0)}
+
+        model.variables = {"inner": pybamm.inner(i, i)}
+
+        # load parameter values and process model and geometry
+        param = model.default_parameter_values
+        geometry = model.default_geometry
+        param.process_model(model)
+        param.process_geometry(geometry)
+
+        # set mesh
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+
+        # discretise model
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+        # check doesn't evaluate on edges anymore
+        self.assertEqual(model.variables["inner"].evaluates_on_edges(), False)
+
+    def test_source_error(self):
+        # test error with domain not current collector
+        v = pybamm.Vector(np.ones(5), domain="current collector")
+        w = pybamm.Vector(2 * np.ones(3), domain="test")
+        with self.assertRaisesRegex(pybamm.DomainError, "finite element method"):
+            pybamm.source(v, w)
+
 
 class TestIsZero(unittest.TestCase):
     def test_is_scalar_zero(self):
@@ -287,4 +348,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

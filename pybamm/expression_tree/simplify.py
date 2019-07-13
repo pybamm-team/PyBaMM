@@ -70,6 +70,9 @@ def simplify_addition_subtraction(myclass, left, right):
 
         outputs to lists `numerator` and `numerator_types`
 
+        Note that domains are all set to [] as we do not wish to consider domains once
+        simplifications are applied
+
         e.g.
 
         (1 + 2) + 3       -> [1, 2, 3]    and [None, Addition, Addition]
@@ -77,6 +80,9 @@ def simplify_addition_subtraction(myclass, left, right):
         1 - (2 + 3)       -> [1, 2, 3]    and [None, Subtraction, Subtraction]
         (1 + 2) - (2 + 3) -> [1, 2, 2, 3] and [None, Addition, Subtraction, Subtraction]
         """
+
+        left_child.domain = []
+        right_child.domain = []
         for side, child in [("left", left_child), ("right", right_child)]:
             if isinstance(child, (pybamm.Addition, pybamm.Subtraction)):
                 left, right = child.orphans
@@ -209,14 +215,14 @@ def simplify_multiplication_division(myclass, left, right):
     groups of constant children (that produce a value) and simplify them
 
     The purpose of this function is to simplify expressions of the type (1 * c / 2),
-    which should simplify to (0.5 * c). The former expression consists of a Divsion,
+    which should simplify to (0.5 * c). The former expression consists of a Division,
     with a left child of a Multiplication containing a Scalar and a Parameter, and a
     right child consisting of a Scalar. For this case, this function will first flatten
     the expression to a list of the bottom level children on the numerator (i.e.
     [Scalar(1), Parameter(c)]) and their operators (i.e. [None, Multiplication]), as
     well as those children on the denominator (i.e. [Scalar(2)]. After this, all the
     constant children on the numerator and denominator (i.e. Scalar(1) and Scalar(2))
-    will be combined appropriatly, in this case to Scalar(0.5), and combined with the
+    will be combined appropriately, in this case to Scalar(0.5), and combined with the
     nonconstant children (i.e. Parameter(c))
 
     Note that this function will flatten the expression tree until a symbol is found
@@ -264,6 +270,9 @@ def simplify_multiplication_division(myclass, left, right):
         Note that multiplication *within* matrix multiplications, e.g. a@(b*c), are not
         flattened into a@b*c, as this would be incorrect (see #253)
 
+        Note that the domains are all set to [] as we do not wish to consider domains
+        once simplifications are applied
+
         outputs to lists `numerator`, `denominator` and `numerator_types`
 
         e.g.
@@ -272,6 +281,9 @@ def simplify_multiplication_division(myclass, left, right):
         (1 @ 2) / 3 ->  [1, 2]       [3]       [None, MatrixMultiplication]
         1 / (c / 2) ->  [1, 2]       [c]       [None, Multiplication]
         """
+
+        left_child.domain = []
+        right_child.domain = []
         for side, child in [("left", left_child), ("right", right_child)]:
 
             if side == "left":

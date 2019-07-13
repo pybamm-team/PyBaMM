@@ -5,7 +5,7 @@ import pickle
 import matplotlib.pyplot as plt
 
 # change working directory to the root of pybamm
-os.chdir(pybamm.__path__[0] + "/..")
+os.chdir(pybamm.root_dir())
 
 # dictionary of available comsol results
 C_rates = {"01": 0.1, "05": 0.5, "1": 1, "2": 2, "3": 3}
@@ -37,15 +37,15 @@ plt.subplots_adjust(left=-0.1)
 discharge_curve = plt.subplot(211)
 plt.xlim([0, 26])
 plt.ylim([3.2, 3.9])
-plt.xlabel(r"Discharge Capacity (Ah)")
-plt.ylabel("Voltage (V)")
-plt.title(r"Comsol $\cdots$ PyBaMM $-$")
+plt.xlabel(r"Discharge Capacity (Ah)", fontsize=20)
+plt.ylabel("Voltage (V)", fontsize=20)
+plt.title(r"Comsol $\cdots$ PyBaMM $-$", fontsize=20)
 voltage_difference_plot = plt.subplot(212)
 plt.xlim([0, 26])
 plt.yscale("log")
 plt.grid(True)
-plt.xlabel(r"Discharge Capacity (Ah)")
-plt.ylabel(r"$\vert V - V_{comsol} \vert$")
+plt.xlabel(r"Discharge Capacity (Ah)", fontsize=20)
+plt.ylabel(r"$\vert V - V_{comsol} \vert$", fontsize=20)
 
 for key, C_rate in C_rates.items():
 

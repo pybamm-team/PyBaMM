@@ -10,6 +10,8 @@ from tests import (
     get_discretisation_for_testing,
     get_1p1d_discretisation_for_testing,
 )
+from tests.shared import SpatialMethodForTesting
+
 from scipy.sparse import block_diag
 
 
@@ -43,6 +45,26 @@ class TestDiscretise(unittest.TestCase):
     def test_no_mesh(self):
         disc = pybamm.Discretisation(None, None)
         self.assertEqual(disc._spatial_methods, {})
+
+    def test_add_internal_boundary_conditions(self):
+        model = pybamm.BaseModel()
+        c_e_n = pybamm.Broadcast(0, ["negative electrode"])
+        c_e_s = pybamm.Broadcast(0, ["separator"])
+        c_e_p = pybamm.Broadcast(0, ["positive electrode"])
+        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        lbc = (pybamm.Scalar(0), "Neumann")
+        rbc = (pybamm.Scalar(0), "Neumann")
+        model.boundary_conditions = {c_e: {"left": lbc, "right": rbc}}
+
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": SpatialMethodForTesting}
+
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.bcs = disc.process_boundary_conditions(model)
+        disc.set_internal_boundary_conditions(model)
+
+        for child in c_e.children:
+            self.assertTrue(child.id in disc.bcs.keys())
 
     def test_discretise_slicing(self):
         # create discretisation
@@ -647,7 +669,9 @@ class TestDiscretise(unittest.TestCase):
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
         # scalar
-        broad = disc._spatial_methods[whole_cell[0]].broadcast(a, whole_cell)
+        broad = disc._spatial_methods[whole_cell[0]].broadcast(
+            a, whole_cell, broadcast_type="full"
+        )
         np.testing.assert_array_equal(
             broad.evaluate(), 7 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])
         )
@@ -671,7 +695,7 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable("var", ["current collector"])
         disc = get_1p1d_discretisation_for_testing()
         mesh = disc.mesh
-        broad = pybamm.Broadcast(var, "separator")
+        broad = pybamm.Broadcast(var, "separator", broadcast_type="primary")
 
         disc.set_variable_slices([var])
         broad_disc = disc.process_symbol(broad)
@@ -773,4 +797,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

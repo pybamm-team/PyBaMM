@@ -4,7 +4,7 @@
 import pybamm
 
 
-class SimpleODEModel(pybamm.StandardBatteryBaseModel):
+class SimpleODEModel(pybamm.BaseBatteryModel):
     """A model consisting of only ODEs.
     Useful for testing solution when variables have domain '[]', and for testing
     broadcasting.
@@ -14,8 +14,7 @@ class SimpleODEModel(pybamm.StandardBatteryBaseModel):
     """
 
     def __init__(self):
-        super().__init__()
-        self.name = "Simple ODE Model"
+        super().__init__(None, "Simple ODE Model")
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # Create variables: domain is explicitly empty since these variables are only

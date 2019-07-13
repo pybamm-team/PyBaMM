@@ -1,0 +1,172 @@
+#
+# Class for the combined electrolyte potential employing stefan-maxwell
+#
+import pybamm
+from .base_stefan_maxwell_conductivity import BaseModel
+
+
+class CombinedOrder(BaseModel):
+    """Class for conservation of charge in the electrolyte employing the
+    Stefan-Maxwell constitutive equations. (Combined refers to a combined
+    leading and first-order expression from the asymptotic reduction)
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+
+
+    **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
+    """
+
+    def __init__(self, param, domain=None):
+        super().__init__(param, domain)
+
+    def get_coupled_variables(self, variables):
+        # NOTE: the heavy use of Broadcast and outer in this method is mainly so
+        # that products are handled correctly when using 1 or 2D current collector
+        # models. In standard 1D battery models outer behaves as a normal multiply.
+        # In the future, multiply will automatically handle switching between
+        # normal multiply and outer products as appropriate.
+
+        i_boundary_cc = variables["Current collector current density"]
+        c_e = variables["Electrolyte concentration"]
+        c_e_av = variables["Average electrolyte concentration"]
+        ocp_n_av = variables["Average negative electrode open circuit potential"]
+        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
+        phi_s_n_av = variables["Average negative electrode potential"]
+        eps_n_av = variables["Average negative electrode porosity"]
+        eps_s_av = variables["Average separator porosity"]
+        eps_p_av = variables["Average positive electrode porosity"]
+
+        c_e_n, c_e_s, c_e_p = c_e.orphans
+
+        param = self.param
+        l_n = param.l_n
+        l_p = param.l_p
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_s = pybamm.standard_spatial_vars.x_s
+        x_p = pybamm.standard_spatial_vars.x_p
+
+        # bulk conductivities
+        kappa_n_av = param.kappa_e(c_e_av) * eps_n_av ** param.b
+        kappa_s_av = param.kappa_e(c_e_av) * eps_s_av ** param.b
+        kappa_p_av = param.kappa_e(c_e_av) * eps_p_av ** param.b
+
+        chi_av = param.chi(c_e_av)
+
+        # electrolyte current
+        i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
+        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"], broadcast_type="primary")
+        i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
+        i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
+
+        # electrolyte potential
+        phi_e_const = (
+            -ocp_n_av
+            - eta_r_n_av
+            + phi_s_n_av
+            - chi_av
+            * pybamm.average(
+                pybamm.log(
+                    c_e_n
+                    / pybamm.Broadcast(
+                        c_e_av, ["negative electrode"], broadcast_type="primary"
+                    )
+                )
+            )
+            - (
+                (i_boundary_cc * param.C_e * l_n / param.gamma_e)
+                * (1 / (3 * kappa_n_av) - 1 / kappa_s_av)
+            )
+        )
+
+        phi_e_n = (
+            pybamm.Broadcast(
+                phi_e_const, ["negative electrode"], broadcast_type="primary"
+            )
+            + chi_av
+            * pybamm.log(
+                c_e_n
+                / pybamm.Broadcast(
+                    c_e_av, ["negative electrode"], broadcast_type="primary"
+                )
+            )
+            - pybamm.outer(
+                i_boundary_cc * (param.C_e / param.gamma_e) / kappa_n_av,
+                (x_n ** 2 - l_n ** 2) / 2,
+            )
+            - pybamm.outer(
+                i_boundary_cc * (param.C_e / param.gamma_e) / kappa_s_av,
+                pybamm.Broadcast(l_n, ["negative electrode"], broadcast_type="primary"),
+            )
+        )
+
+        phi_e_s = (
+            pybamm.Broadcast(phi_e_const, ["separator"], broadcast_type="primary")
+            + chi_av
+            * pybamm.log(
+                c_e_s
+                / pybamm.Broadcast(c_e_av, ["separator"], broadcast_type="primary")
+            )
+            - pybamm.outer(i_boundary_cc * param.C_e / param.gamma_e / kappa_s_av, x_s)
+        )
+
+        phi_e_p = (
+            pybamm.Broadcast(
+                phi_e_const, ["positive electrode"], broadcast_type="primary"
+            )
+            + chi_av
+            * pybamm.log(
+                c_e_p
+                / pybamm.Broadcast(
+                    c_e_av, ["positive electrode"], broadcast_type="primary"
+                )
+            )
+            - pybamm.outer(
+                i_boundary_cc * (param.C_e / param.gamma_e) / kappa_p_av,
+                (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * l_p),
+            )
+            - pybamm.outer(
+                i_boundary_cc * (param.C_e / param.gamma_e) / kappa_s_av,
+                pybamm.Broadcast(
+                    1 - l_p, ["positive electrode"], broadcast_type="primary"
+                ),
+            )
+        )
+
+        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+        phi_e_av = pybamm.average(phi_e)
+
+        # concentration overpotential
+        eta_c_av = chi_av * (
+            pybamm.average(
+                pybamm.log(
+                    c_e_p
+                    / pybamm.Broadcast(
+                        c_e_av, ["positive electrode"], broadcast_type="primary"
+                    )
+                )
+            )
+            - pybamm.average(
+                pybamm.log(
+                    c_e_n
+                    / pybamm.Broadcast(
+                        c_e_av, ["negative electrode"], broadcast_type="primary"
+                    )
+                )
+            )
+        )
+
+        # average electrolyte ohmic losses
+        delta_phi_e_av = -(param.C_e * i_boundary_cc / param.gamma_e) * (
+            param.l_n / (3 * kappa_n_av)
+            + param.l_s / (kappa_s_av)
+            + param.l_p / (3 * kappa_p_av)
+        )
+
+        variables.update(self._get_standard_potential_variables(phi_e, phi_e_av))
+        variables.update(self._get_standard_current_variables(i_e))
+        variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
+
+        return variables

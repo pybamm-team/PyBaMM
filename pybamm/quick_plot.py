@@ -92,7 +92,7 @@ class QuickPlot(object):
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
-            if isinstance(models[0], pybamm.LithiumIonBaseModel):
+            if isinstance(models[0], pybamm.lithium_ion.BaseModel):
                 output_variables = [
                     "Negative particle surface concentration",
                     "Electrolyte concentration",
@@ -103,7 +103,7 @@ class QuickPlot(object):
                     "Positive electrode potential [V]",
                     "Terminal voltage [V]",
                 ]
-            elif isinstance(models[0], pybamm.LeadAcidBaseModel):
+            elif isinstance(models[0], pybamm.lead_acid.BaseModel):
                 output_variables = [
                     "Interfacial current density [A.m-2]",
                     "Electrolyte concentration [mol.m-3]",

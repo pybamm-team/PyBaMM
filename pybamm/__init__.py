@@ -14,7 +14,7 @@ import os
 VERSION_INT = 0, 0, 0
 VERSION = ".".join([str(x) for x in VERSION_INT])
 if sys.version_info[0] < 3:
-    del (x)  # Before Python3, list comprehension iterators leaked
+    del x  # Before Python3, list comprehension iterators leaked
 
 #
 # Expose pybamm version
@@ -61,7 +61,10 @@ from .expression_tree.binary_operators import (
     Multiplication,
     MatrixMultiplication,
     Division,
+    Inner,
+    inner,
     Outer,
+    Kron,
     outer,
     source,
 )
@@ -110,6 +113,7 @@ from .expression_tree.vector import Vector, StateVector
 
 from .expression_tree.exceptions import (
     DomainError,
+    OptionError,
     ModelError,
     SolverError,
     ShapeError,
@@ -133,37 +137,34 @@ from .expression_tree.evaluate import (
 #
 # Model classes
 #
+from .models.base_model import BaseModel
 from .models import standard_variables
-from .models.base_models import (
-    BaseModel,
-    StandardBatteryBaseModel,
-    SubModel,
-    LeadAcidBaseModel,
-    LithiumIonBaseModel,
-)
+
+# Battery models
+from .models.full_battery_models.base_battery_model import BaseBatteryModel
+from .models.full_battery_models import lead_acid
+from .models.full_battery_models import lithium_ion
+
+# Other models
 from .models.reaction_diffusion import ReactionDiffusionModel
 from .models.simple_ode_model import SimpleODEModel
-from .models import lead_acid
-from .models import lithium_ion
 
 #
 # Submodel classes
 #
+from .models.submodels.base_submodel import BaseSubModel
+
 from .models.submodels import (
+    convection,
     current_collector,
+    electrolyte,
     electrode,
-    electrolyte_current,
-    electrolyte_diffusion,
     interface,
+    oxygen_diffusion,
     particle,
     porosity,
-    potential,
-    velocity,
-    vertical,
+    thermal,
 )
-
-# Derived submodel classes
-from .models.submodels import interface_lead_acid, oxygen_diffusion
 
 #
 # Parameters class and methods
@@ -221,6 +222,16 @@ from .solvers.scikits_ode_solver import ScikitsOdeSolver
 from .solvers.scikits_ode_solver import have_scikits_odes
 
 #
+# Current profiles
+#
+from .parameters.standard_current_functions.base_current import GetCurrent
+from .parameters.standard_current_functions.get_constant_current import (
+    GetConstantCurrent,
+)
+from .parameters.standard_current_functions.get_user_current import GetUserCurrent
+from .parameters.standard_current_functions.get_current_data import GetCurrentData
+
+#
 # other
 #
 from .processed_variable import post_process_variables, ProcessedVariable
@@ -229,4 +240,4 @@ from .quick_plot import QuickPlot
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
 #
-del (sys)
+del sys

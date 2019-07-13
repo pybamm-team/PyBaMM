@@ -244,17 +244,41 @@ class TestSymbol(unittest.TestCase):
         )
 
     def test_symbol_visualise(self):
+
         param = pybamm.standard_parameters_lithium_ion
 
-        c_e = pybamm.standard_variables.c_e
-        variables = {"Electrolyte concentration": c_e}
-        onen = pybamm.Broadcast(1, ["negative electrode"])
-        onep = pybamm.Broadcast(1, ["positive electrode"])
-        reactions = {
-            "main": {"neg": {"s": 1, "aj": onen}, "pos": {"s": 1, "aj": onep}}
+        one_n = pybamm.Broadcast(1, ["negative electrode"])
+        one_p = pybamm.Broadcast(1, ["positive electrode"])
+
+        zero_n = pybamm.Broadcast(0, ["negative electrode"])
+        zero_s = pybamm.Broadcast(0, ["separator"])
+        zero_p = pybamm.Broadcast(0, ["positive electrode"])
+
+        deps_dt = pybamm.Concatenation(zero_n, zero_s, zero_p)
+
+        v_box = pybamm.Scalar(0)
+
+        variables = {
+            "Porosity": param.epsilon,
+            "Porosity change": deps_dt,
+            "Volume-averaged velocity": v_box,
+            "Negative electrode interfacial current density": one_n,
+            "Positive electrode interfacial current density": one_p,
         }
-        model = pybamm.electrolyte_diffusion.StefanMaxwell(param)
-        model.set_differential_system(variables, reactions)
+        icd = " interfacial current density"
+        reactions = {
+            "main": {
+                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
+                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
+            }
+        }
+        model = pybamm.electrolyte.stefan_maxwell.diffusion.Full(param, reactions)
+        variables.update(model.get_fundamental_variables())
+        variables.update(model.get_coupled_variables(variables))
+
+        model.set_rhs(variables)
+
+        c_e = pybamm.standard_variables.c_e
         rhs = model.rhs[c_e]
         rhs.visualise("StefanMaxwell_test.png")
         self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
@@ -323,6 +347,13 @@ class TestSymbol(unittest.TestCase):
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing
         )
 
+        var = pybamm.Variable("var", domain=["random domain", "other domain"])
+        broadcast = pybamm.Broadcast(0, domain=["random domain", "other domain"])
+        self.assertEqual(var.shape_for_testing, broadcast.shape_for_testing)
+        self.assertEqual(
+            (var + broadcast).shape_for_testing, broadcast.shape_for_testing
+        )
+
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):
             sym.shape_for_testing
@@ -343,4 +374,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

@@ -5,7 +5,9 @@
 Standard parameters for lithium-ion battery models
 """
 import pybamm
+import numpy as np
 from scipy import constants
+
 
 # --------------------------------------------------------------------------------------
 "File Layout:"
@@ -14,6 +16,7 @@ from scipy import constants
 # 3. Scalings
 # 4. Dimensionless Parameters
 # 5. Dimensionless Functions
+# 6. Input Current
 
 # --------------------------------------------------------------------------------------
 "1. Dimensional Parameters"
@@ -53,10 +56,6 @@ n_electrodes_parallel = pybamm.electrical_parameters.n_electrodes_parallel
 i_typ = pybamm.electrical_parameters.i_typ
 voltage_low_cut_dimensional = pybamm.electrical_parameters.voltage_low_cut_dimensional
 voltage_high_cut_dimensional = pybamm.electrical_parameters.voltage_high_cut_dimensional
-current_with_time = pybamm.electrical_parameters.current_with_time
-dimensional_current_density_with_time = (
-    pybamm.electrical_parameters.dimensional_current_density_with_time
-)
 
 # Electrolyte properties
 c_e_typ = pybamm.Parameter("Typical electrolyte concentration [mol.m-3]")
@@ -76,6 +75,11 @@ sigma_cp_dimensional = pybamm.Parameter(
 # Microscale geometry
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
+a_k_dim = pybamm.Concatenation(
+    pybamm.Broadcast(a_n_dim, ["negative electrode"]),
+    pybamm.Broadcast(0, ["separator"]),
+    pybamm.Broadcast(a_p_dim, ["positive electrode"]),
+)
 R_n = pybamm.geometric_parameters.R_n
 R_p = pybamm.geometric_parameters.R_p
 b = pybamm.geometric_parameters.b
@@ -105,6 +109,9 @@ c_p_init_dimensional = pybamm.Parameter(
 
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
+
+# velocity scale
+velocity_scale = pybamm.Scalar(1)
 
 # --------------------------------------------------------------------------------------
 "2. Dimensional Functions"
@@ -212,6 +219,7 @@ l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+
 l_cp = pybamm.geometric_parameters.l_cp
 delta = pybamm.geometric_parameters.delta
 
@@ -282,14 +290,26 @@ rho_s = pybamm.thermal_parameters.rho_s
 rho_p = pybamm.thermal_parameters.rho_p
 rho_cp = pybamm.thermal_parameters.rho_cp
 
+rho_k = pybamm.thermal_parameters.rho_k
+rho = rho_n * l_n + rho_s * l_s + rho_p * l_p
+
 lambda_cn = pybamm.thermal_parameters.lambda_cn
 lambda_n = pybamm.thermal_parameters.lambda_n
 lambda_s = pybamm.thermal_parameters.lambda_s
 lambda_p = pybamm.thermal_parameters.lambda_p
 lambda_cp = pybamm.thermal_parameters.lambda_cp
 
+lambda_k = pybamm.thermal_parameters.lambda_k
+
 Theta = pybamm.thermal_parameters.Theta
 h = pybamm.thermal_parameters.h
+B = (
+    i_typ
+    * R
+    * T_ref
+    * tau_th_yz
+    / (pybamm.thermal_parameters.rho_eff_dim * F * Delta_T * L_x)
+)
 
 # Initial conditions
 c_e_init = c_e_init_dimensional / c_e_typ
@@ -349,3 +369,20 @@ def dUdT_p(c_s_p):
     "Dimensionless entropic change in positive open-circuit potential"
     sto = c_s_p
     return dUdT_p_dimensional(sto) * Delta_T / potential_scale
+
+
+# --------------------------------------------------------------------------------------
+"6. Input current"
+dimensional_current_with_time = pybamm.FunctionParameter(
+    "Current function", pybamm.t * tau_discharge
+)
+dimensional_current_density_with_time = dimensional_current_with_time / (
+    n_electrodes_parallel * pybamm.geometric_parameters.A_cc
+)
+
+current_with_time = (
+    dimensional_current_with_time / I_typ * pybamm.Function(np.sign, I_typ)
+)
+current_density_with_time = (
+    dimensional_current_density_with_time / i_typ * pybamm.Function(np.sign, I_typ)
+)
