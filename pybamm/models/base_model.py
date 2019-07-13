@@ -192,6 +192,14 @@ class BaseModel(object):
     def set_of_parameters(self):
         return self._set_of_parameters
 
+    @property
+    def options(self):
+        return {}
+
+    @options.setter
+    def options(self, options):
+        self._options = options
+
     def __getitem__(self, key):
         return self.rhs[key]
 

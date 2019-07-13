@@ -50,19 +50,19 @@ def plot_voltages(all_variables, t_eval, Crates):
         # Linestyles
         linestyles = ["k-", "b-.", "r--"]
         for j, (model_name, variables) in enumerate(models_variables.items()):
-            if k == 0:
-                label = labels[j]
-            else:
-                label = None
+            # if k == 0:
+            #     label = labels[j]
+            # else:
+            #     label = None
             if k % m == 0:
                 ax.set_ylabel("Voltage [V]")
-            # if k == 1 and j == 2:
-            #     ax.legend(
-            #         labels,
-            #         ncol=len(Crates),
-            #         loc="lower center",
-            #         bbox_to_anchor=(0.5, -0.4),
-            #     )
+            if k == 1 and j == 2:
+                ax.legend(
+                    labels,
+                    ncol=len(Crates),
+                    loc="lower center",
+                    bbox_to_anchor=(0.5, -0.4),
+                )
 
             ax.plot(
                 variables["Time [s]"](t_eval),
@@ -144,13 +144,12 @@ def compare_voltages(args, models):
 def convergence_studies(args, models):
     t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
     skips = [120, 240]
-    all_npts = [x for x in range(10, 260, 10) if x not in skips]
-    # all_npts_calc = [x for x in range(250, 350, 10) if x not in skips]
+    all_npts = [x for x in range(10, 100, 10) if x not in skips]
 
     # Get data
     Crate = 1
     if args.compute:
-        convergence_study(models, Crate, t_eval, all_npts_calc, save_folder)
+        convergence_study(models, Crate, t_eval, all_npts, save_folder)
 
     # Load data
     grid_points = []

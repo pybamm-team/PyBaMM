@@ -94,7 +94,6 @@ def convergence_study(models, Crate, t_eval, all_npts, save_folder=None):
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 
         # discretise models
-        discs = {}
         for model in models:
             model_disc = disc.process_model(model, inplace=False)
             solution = model.default_solver.solve(model_disc, t_eval)
