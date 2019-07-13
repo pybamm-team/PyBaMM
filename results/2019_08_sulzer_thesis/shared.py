@@ -4,25 +4,27 @@
 import pickle
 import pybamm
 
+#
+# def options_to_tuple(options):
+#     bc_options = tuple(options["bc_options"].items())
+#     side_reactions = tuple(options["side reactions"])
+#     other_options = tuple(
+#         {
+#             k: v
+#             for k, v in options.items()
+#             if k not in ["bc_options", "side reactions"]
+#         }.items()
+#     )
+#     return (*bc_options, *side_reactions, *other_options)
 
-def options_to_tuple(options):
-    bc_options = tuple(options["bc_options"].items())
-    side_reactions = tuple(options["side reactions"])
-    other_options = tuple(
-        {
-            k: v
-            for k, v in options.items()
-            if k not in ["bc_options", "side reactions"]
-        }.items()
-    )
-    return (*bc_options, *side_reactions, *other_options)
 
-
-def model_comparison(models, Crates, t_eval):
+def model_comparison(models, Crates, t_eval, extra_parameter_values=None):
     " Solve models at a range of Crates "
     # load parameter values and geometry
     geometry = models[0].default_geometry
+    extra_parameter_values = extra_parameter_values or {}
     param = models[0].default_parameter_values
+    param.update(extra_parameter_values)
 
     # Process parameters (same parameters for all models)
     for model in models:
@@ -56,7 +58,7 @@ def model_comparison(models, Crates, t_eval):
                 model.variables, solution.t, solution.y, mesh
             )
             vars["solution"] = solution
-            all_variables[Crate][(model.name, options_to_tuple(model.options))] = vars
+            all_variables[Crate][model.name] = vars
 
     return all_variables, t_eval
 
@@ -101,7 +103,7 @@ def convergence_study(models, Crate, t_eval, all_npts, save_folder=None):
                 model_disc.variables, solution.t, solution.y, mesh
             )
             variables["solution"] = solution
-            model_variables[(model.name, options_to_tuple(model.options))] = variables
+            model_variables[model.name] = variables
 
         filename = save_folder + "Crate={}_npts={}.pickle".format(Crate, npts)
         with open(filename, "wb") as f:
