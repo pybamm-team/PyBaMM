@@ -36,7 +36,7 @@ def run_code_tests(executable=None, folder: str = "unit"):
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
         print("Running {} tests with executable 'python'".format(folder))
-        cmd = [executable] + ["-m", "unittest", "discover", "-v", tests]
+        cmd = ["python", "-m", "unittest", "discover", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
             ret = p.wait()
