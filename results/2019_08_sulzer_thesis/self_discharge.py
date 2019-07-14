@@ -38,7 +38,7 @@ def plot_voltages(all_variables, t_eval, linestyles, file_name):
         for j, (model, variables) in enumerate(models_variables.items()):
             ax.plot(
                 variables["Time [h]"](t_eval),
-                variables["Terminal voltage [V]"](t_eval) * 6,
+                variables["Terminal voltage [V]"](t_eval),
                 linestyles[j],
             )
     ax.legend(labels, loc="best")
@@ -47,7 +47,7 @@ def plot_voltages(all_variables, t_eval, linestyles, file_name):
 
 
 def compare_voltages(all_variables, t_eval):
-    linestyles = ["r:", "k-", "g--"]
+    linestyles = ["b:", "k-", "r--"]
     file_name = "self_discharge.eps"
     plot_voltages(all_variables, t_eval, linestyles, file_name)
 
@@ -59,13 +59,13 @@ if __name__ == "__main__":
     if args.compute:
         pybamm.set_logging_level("INFO")
         models = [
-            pybamm.lead_acid.NewmanTiedemann(name="Full, without side reactions"),
+            pybamm.lead_acid.NewmanTiedemann(name="Full, without oxygen"),
             pybamm.lead_acid.NewmanTiedemann(
-                {"side reactions": ["oxygen"]}, name="Full, with side reactions"
+                {"side reactions": ["oxygen"]}, name="Full, with oxygen"
             ),
             pybamm.lead_acid.LOQS(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]},
-                name="Leading-order, with side reactions",
+                name="Leading-order, with side oxygen",
             ),
         ]
         Crates = [1]

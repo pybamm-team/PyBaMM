@@ -108,3 +108,38 @@ def convergence_study(models, Crate, t_eval, all_npts, save_folder=None):
         filename = save_folder + "Crate={}_npts={}.pickle".format(Crate, npts)
         with open(filename, "wb") as f:
             pickle.dump(model_variables, f, pickle.HIGHEST_PROTOCOL)
+
+
+def simulation(models, t_eval, extra_parameter_values=None, disc_only=False):
+
+    # create geometry
+    geometry = models[-1].default_geometry
+
+    # load parameter values and process models and geometry
+    param = models[0].default_parameter_values
+    extra_parameter_values = extra_parameter_values or {}
+    param.update(extra_parameter_values)
+    for model in models:
+        param.process_model(model)
+    param.process_geometry(geometry)
+
+    # set mesh
+    var = pybamm.standard_spatial_vars
+    var_pts = {var.x_n: 25, var.x_s: 41, var.x_p: 34}
+    mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
+
+    # discretise models
+    for model in models:
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+
+    if disc_only:
+        return model, mesh
+
+    # solve model
+    solutions = [None] * len(models)
+    for i, model in enumerate(models):
+        solution = model.default_solver.solve(model, t_eval)
+        solutions[i] = solution
+
+    return models, mesh, solutions

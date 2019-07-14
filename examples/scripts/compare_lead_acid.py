@@ -1,5 +1,6 @@
 import numpy as np
 import pybamm
+import pickle
 
 pybamm.set_logging_level("DEBUG")
 
@@ -10,7 +11,7 @@ models = [
     # pybamm.lead_acid.Composite(),
     # pybamm.lead_acid.Composite({"surface form": "algebraic"}),
     pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
-    pybamm.lead_acid.NewmanTiedemann(),
+    # pybamm.lead_acid.NewmanTiedemann(),
 ]
 
 # create geometry
@@ -21,7 +22,7 @@ param = models[0].default_parameter_values
 param.update(
     {
         # "Bruggeman coefficient": 0.001,
-        "Current function": pybamm.GetConstantCurrent(current=0),
+        # "Current function": pybamm.GetConstantCurrent(current=0),
         "Typical current [A]": -20,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
@@ -46,7 +47,7 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 1000, 100)
+t_eval = np.linspace(0, 2, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
@@ -60,7 +61,7 @@ output_variables = [
     "Average negative electrode reaction overpotential [V]",
     "Average positive electrode reaction overpotential [V]",
     "Electrolyte concentration",
-    "Electrolyte flux",
+    "Oxygen concentration [mol.m-3]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)

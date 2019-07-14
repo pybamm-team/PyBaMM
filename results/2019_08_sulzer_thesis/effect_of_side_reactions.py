@@ -38,7 +38,7 @@ def plot_voltages(all_variables, t_eval, linestyles, file_name):
         for j, (model, variables) in enumerate(models_variables.items()):
             ax.plot(
                 variables["Time [h]"](t_eval),
-                variables["Terminal voltage [V]"](t_eval) * 6,
+                variables["Terminal voltage [V]"](t_eval),
                 linestyles[j],
             )
     # ax = plt.subplot(111)
@@ -55,7 +55,7 @@ def plot_voltages(all_variables, t_eval, linestyles, file_name):
 
 
 def compare_voltages(all_variables, t_eval):
-    linestyles = ["k-", "b--"]
+    linestyles = ["b:", "k-"]
     file_name = "effect_of_side_reactions.eps"
     plot_voltages(all_variables, t_eval, linestyles, file_name)
 
@@ -67,9 +67,9 @@ if __name__ == "__main__":
     if args.compute:
         pybamm.set_logging_level("INFO")
         models = [
-            pybamm.lead_acid.NewmanTiedemann(name="Without side reactions"),
+            pybamm.lead_acid.NewmanTiedemann(name="Without oxygen"),
             pybamm.lead_acid.NewmanTiedemann(
-                {"side reactions": ["oxygen"]}, name="With side reactions"
+                {"side reactions": ["oxygen"]}, name="With oxygen"
             ),
         ]
         Crates = [-1]

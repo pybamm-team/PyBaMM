@@ -66,7 +66,7 @@ def plot_voltages(all_variables, t_eval, Crates):
 
             ax.plot(
                 variables["Time [s]"](t_eval),
-                variables["Terminal voltage [V]"](t_eval) * 6,
+                variables["Terminal voltage [V]"](t_eval),
                 linestyles[j],
             )
             inset.plot(

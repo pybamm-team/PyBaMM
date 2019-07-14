@@ -467,6 +467,10 @@ class BaseBatteryModel(pybamm.BaseModel):
         voltage = self.variables["Terminal voltage"]
         self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
 
+        # Mutliply by 6 for lead-acid battery
+        if isinstance(self, pybamm.lead_acid.BaseModel):
+            self.variables["Terminal voltage [V]"] *= 6
+
     def process_parameters_and_discretise(self, symbol):
         """
         Process parameters and discretise a symbol using default parameter values,

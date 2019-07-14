@@ -7,7 +7,7 @@ import numpy as np
 import pickle
 import pybamm
 from config import OUTPUT_DIR
-from shared import model_comparison
+from shared import model_comparison, simulation
 
 
 def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
@@ -46,19 +46,12 @@ def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
             if model in models:
                 ax.plot(
                     variables["Time [h]"](t_eval),
-                    variables["Terminal voltage [V]"](t_eval) * 6,
+                    variables["Terminal voltage [V]"](t_eval),
                     linestyles[j],
                 )
     ax.legend(labels, bbox_to_anchor=(1.05, 2), loc=2)
     fig.tight_layout()
     # plt.show()
-    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
-
-
-def plot_variables(all_variables, t_eval, variables, models, linestyles, file_name):
-    plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
-    plot.plot(0.5)
-    plot.tight_layout()
     plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
@@ -76,17 +69,8 @@ def compare_voltages_quasistatic(all_variables, t_eval):
     plot_voltages(all_variables, t_eval, models, linestyles, file_name)
 
 
-def plot_states(all_variables, t_eval):
-    mesh = 1
-    solutions = 1
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
-    args = parser.parse_args()
-    if args.compute:
-        pybamm.set_logging_level("INFO")
+def voltage_results(compute):
+    if compute:
         models = [
             pybamm.lead_acid.NewmanTiedemann(name="Full"),
             pybamm.lead_acid.LOQS(name="Leading-order"),
@@ -106,3 +90,54 @@ if __name__ == "__main__":
         (all_variables, t_eval) = pickle.load(f)
     compare_voltages_composite(all_variables, t_eval)
     compare_voltages_quasistatic(all_variables, t_eval)
+
+
+def plot_variables(compute, Crate):
+    filename = "discharge_asymptotics_data_{}C.pickle".format(Crate)
+    models = [
+        pybamm.lead_acid.NewmanTiedemann(name="Full"),
+        pybamm.lead_acid.LOQS(name="Leading-order"),
+        pybamm.lead_acid.FOQS(name="First-order"),
+        pybamm.lead_acid.Composite(name="Composite"),
+    ]
+    t_eval = np.linspace(0, 1, 100)
+    param = {"Bruggeman coefficient": 0.001, "Typical current [A]": Crate * 17}
+    if compute:
+        models, mesh, solutions = simulation(
+            models, t_eval, extra_parameter_values=param
+        )
+        with open(filename, "wb") as f:
+            pickle.dump(solutions, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        with open(filename, "rb") as f:
+            model, mesh = simulation(
+                models, t_eval, extra_parameter_values=param, disc_only=True
+            )
+            solutions = pickle.load(f)
+    output_variables = [
+        "Electrolyte concentration [mol.m-3]",
+        "Electrolyte potential [V]",
+        "Interfacial current density [A.m-2]",
+        "Terminal voltage [V]",
+    ]
+    plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+
+    filename = "discharge_states/{}C".format(Crate)
+    for t in range(0, 7):
+        tt = t / 10
+        plot.plot(tt, dynamic=False, figsize=(12, 7))
+        # plt.show()
+        plt.savefig(
+            OUTPUT_DIR + "{}_t=0pt{}.eps".format(filename, t), format="eps", dpi=1000
+        )
+
+
+if __name__ == "__main__":
+    pybamm.set_logging_level("INFO")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
+    args = parser.parse_args()
+    # voltage_results(args.compute)
+    Crates = [1, 5]
+    for Crate in Crates:
+        plot_variables(args.compute, Crate)
