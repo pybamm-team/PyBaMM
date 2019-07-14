@@ -1,5 +1,5 @@
 #
-# Simulations: charge of a lead-acid battery
+# Simulations: effect of side reactions for charge of a lead-acid battery
 #
 import argparse
 import matplotlib.pyplot as plt
@@ -10,28 +10,21 @@ from config import OUTPUT_DIR
 from shared import model_comparison
 
 
-def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
+def plot_voltages(all_variables, t_eval, linestyles, file_name):
     # Plot
     n = int(len(all_variables) // np.sqrt(len(all_variables)))
     m = int(np.ceil(len(all_variables) / n))
-    fig, axes = plt.subplots(n, m, figsize=(8, 4.5))
+    fig, axes = plt.subplots(n, m, figsize=(6, 4))
     labels = [model for model in [x for x in all_variables.values()][0].keys()]
     for k, (Crate, models_variables) in enumerate(all_variables.items()):
-        ax = axes.flat[k]
+        # ax = axes.flat[k]
+        ax = axes
         t_max = max(
             np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
         )
         ax.set_xlim([0, t_max])
         ax.set_ylim([12, 15])
         ax.set_xlabel("Time [h]")
-        ax.set_title(
-            "\\textbf{{{}C}} ($\\mathcal{{C}}_e={}$)".format(-Crate, -Crate * 0.6)
-        )
-        # ax.set_title(
-        #     "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
-        #         chr(97 + k), Crate, Crate * 0.6
-        #     )
-        # )
 
         # Hide the right and top spines
         ax.spines["right"].set_visible(False)
@@ -43,16 +36,15 @@ def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
         if k % m == 0:
             ax.set_ylabel("Voltage [V]")
         for j, (model, variables) in enumerate(models_variables.items()):
-            if model in models:
-                ax.plot(
-                    variables["Time [h]"](t_eval),
-                    variables["Terminal voltage [V]"](t_eval) * 6,
-                    linestyles[j],
-                )
+            ax.plot(
+                variables["Time [h]"](t_eval),
+                variables["Terminal voltage [V]"](t_eval) * 6,
+                linestyles[j],
+            )
     # ax = plt.subplot(111)
     # box = ax.get_position()
     # ax.set_position([box.x0, box.y0, box.width * 0.6, box.height])
-    ax.legend(labels, bbox_to_anchor=(1.05, 2), loc=2)
+    ax.legend(labels, loc="best")
     fig.tight_layout()
     # plt.subplots_adjust(right=0.2)
     # plt.subplots_adjust(
@@ -63,10 +55,9 @@ def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
 
 
 def compare_voltages(all_variables, t_eval):
-    models = ["Full", "Leading-order"]
-    linestyles = ["k-", "g--"]
-    file_name = "charge_voltage_comparison.eps"
-    plot_voltages(all_variables, t_eval, models, linestyles, file_name)
+    linestyles = ["k-", "b--"]
+    file_name = "effect_of_side_reactions.eps"
+    plot_voltages(all_variables, t_eval, linestyles, file_name)
 
 
 if __name__ == "__main__":
@@ -76,27 +67,24 @@ if __name__ == "__main__":
     if args.compute:
         pybamm.set_logging_level("INFO")
         models = [
+            pybamm.lead_acid.NewmanTiedemann(name="Without side reactions"),
             pybamm.lead_acid.NewmanTiedemann(
-                {"side reactions": ["oxygen"]}, name="Full"
-            ),
-            pybamm.lead_acid.LOQS(
-                {"surface form": "algebraic", "side reactions": ["oxygen"]},
-                name="Leading-order",
+                {"side reactions": ["oxygen"]}, name="With side reactions"
             ),
         ]
-        Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
+        Crates = [-1]
         extra_parameter_values = {
             "Positive electrode"
             + "reference exchange-current density (oxygen) [A.m-2]": 1e-24,
             "Initial State of Charge": 0.5,
         }
-        t_eval = np.linspace(0, 2, 100)
+        t_eval = np.linspace(0, 1.25, 100)
         all_variables, t_eval = model_comparison(
             models, Crates, t_eval, extra_parameter_values=extra_parameter_values
         )
-        with open("charge_asymptotics_data.pickle", "wb") as f:
+        with open("effect_of_side_reactions.pickle", "wb") as f:
             data = (all_variables, t_eval)
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-    with open("charge_asymptotics_data.pickle", "rb") as f:
+    with open("effect_of_side_reactions.pickle", "rb") as f:
         (all_variables, t_eval) = pickle.load(f)
     compare_voltages(all_variables, t_eval)

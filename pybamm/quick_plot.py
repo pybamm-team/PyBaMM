@@ -204,7 +204,7 @@ class QuickPlot(object):
                 y_max += 1
             self.axis[key] = [x_min, x_max, y_min, y_max]
 
-    def plot(self, t):
+    def plot(self, t, dynamic=True):
         """Produces a quick plot with the internal states at time t.
 
         Parameters
@@ -291,7 +291,11 @@ class QuickPlot(object):
                     fontsize=8,
                     loc="upper center",
                 )
-        self.fig.legend(loc="lower right")
+        if dynamic is True:
+            self.fig.legend(loc="lower right")
+        else:
+            ax.legend(labels, bbox_to_anchor=(1.05, 2), loc=2)
+            self.fig.tight_layout()
 
     def dynamic_plot(self, testing=False):
         """

@@ -49,16 +49,16 @@ def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
                     variables["Terminal voltage [V]"](t_eval) * 6,
                     linestyles[j],
                 )
-    # ax = plt.subplot(111)
-    # box = ax.get_position()
-    # ax.set_position([box.x0, box.y0, box.width * 0.6, box.height])
     ax.legend(labels, bbox_to_anchor=(1.05, 2), loc=2)
     fig.tight_layout()
-    # plt.subplots_adjust(right=0.2)
-    # plt.subplots_adjust(
-    #     top=0.92, bottom=0.3, left=0.10, right=0.9, hspace=0.5, wspace=0.5
-    # )
     # plt.show()
+    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+
+
+def plot_variables(all_variables, t_eval, variables, models, linestyles, file_name):
+    plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+    plot.plot(0.5)
+    plot.tight_layout()
     plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
@@ -76,6 +76,11 @@ def compare_voltages_quasistatic(all_variables, t_eval):
     plot_voltages(all_variables, t_eval, models, linestyles, file_name)
 
 
+def plot_states(all_variables, t_eval):
+    mesh = 1
+    solutions = 1
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
@@ -89,6 +94,7 @@ if __name__ == "__main__":
             pybamm.lead_acid.Composite(name="Composite"),
         ]
         Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+        t_eval = np.linspace(0, 1, 100)
         extra_parameter_values = {"Bruggeman coefficient": 0.001}
         all_variables, t_eval = model_comparison(
             models, Crates, t_eval, extra_parameter_values=extra_parameter_values
