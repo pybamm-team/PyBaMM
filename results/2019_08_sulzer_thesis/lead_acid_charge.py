@@ -57,23 +57,23 @@ def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
 def plot_interfacial_currents(models_variables, t_eval, models, file_name):
     fig, ax = plt.subplots(1, 1, figsize=(8, 4.5))
     output_vars = [
-        "Average negative electrode interfacial current density",
         "Average positive electrode interfacial current density",
-        "Average negative electrode oxygen interfacial current density",
         "Average positive electrode oxygen interfacial current density",
+        "Average negative electrode oxygen interfacial current density",
+        "Average negative electrode interfacial current density",
     ]
     labels = [
-        "Negative current (main)",
-        "Positive current (main)",
-        "Negative current (oxygen)",
-        "Positive current (oxygen)",
+        "Positive electrode (main)",
+        "Positive electrode (oxygen)",
+        "Negative electrode (oxygen)",
+        "Negative electrode (main)",
     ]
     t_max = max(np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values())
     ax.set_xlim([0, t_max])
     # ax.set_ylim([12, 15])
     ax.set_xlabel("Time [h]")
-    ax.set_title("Interfacial current densities")
-    linestyles = ["-", "--", "-.", ":"]
+    ax.set_ylabel("Interfacial current densities")
+    linestyles = ["--", ":", "-.", "-"]
     colors = ["k", "r"]
     for j, (model, variables) in enumerate(models_variables.items()):
         if model in models:
@@ -117,17 +117,14 @@ def compare_voltages(compute):
     else:
         with open("charge_asymptotics_data.pickle", "rb") as f:
             (all_variables, t_eval) = pickle.load(f)
-    import ipdb
-
-    ipdb.set_trace()
     models = ["Full", "Leading-order"]
     linestyles = ["k-", "r--"]
     file_name = "charge_voltage_comparison.eps"
     # plot_voltages(all_variables, t_eval, models, linestyles, file_name)
     ###
-    file_name = "charge_interfacial_currents.eps"
-    models = ["Full"]
-    plot_interfacial_currents(all_variables[-1], t_eval, models, file_name)
+    # file_name = "charge_interfacial_currents.eps"
+    # models = ["Full"]
+    # plot_interfacial_currents(all_variables[-1], t_eval, models, file_name)
     file_name = "charge_interfacial_currents_comparison.eps"
     models = ["Full", "Leading-order"]
     plot_interfacial_currents(all_variables[-1], t_eval, models, file_name)
