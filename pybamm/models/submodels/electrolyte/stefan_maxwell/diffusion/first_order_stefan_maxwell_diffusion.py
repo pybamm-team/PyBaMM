@@ -34,7 +34,7 @@ class FirstOrder(BaseModel):
         # Unpack
         eps_0 = variables["Leading-order porosity"]
         c_e_0 = variables["Leading-order average electrolyte concentration"]
-        v_box_0 = variables["Leading-order volume-averaged velocity"]
+        # v_box_0 = variables["Leading-order volume-averaged velocity"]
         deps_0_dt = variables["Leading-order porosity change"]
         dc_e_0_dt = variables["Leading-order electrolyte concentration change"]
         eps_n_0, eps_s_0, eps_p_0 = [e.orphans[0] for e in eps_0.orphans]
