@@ -7,7 +7,7 @@ import numpy as np
 import pickle
 import pybamm
 from config import OUTPUT_DIR
-from shared import model_comparison
+from shared_solutions import model_comparison
 
 
 def plot_voltages(all_variables, t_eval, linestyles, file_name):

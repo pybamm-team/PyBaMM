@@ -9,7 +9,7 @@ import pybamm
 from collections import defaultdict
 from config import OUTPUT_DIR
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from shared import model_comparison, convergence_study
+from shared_solutions import model_comparison, convergence_study
 
 save_folder = "results/2019_08_sulzer_thesis/data/capacitance_results/"
 

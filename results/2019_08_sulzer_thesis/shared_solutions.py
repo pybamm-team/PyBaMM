@@ -1,21 +1,8 @@
 #
-# Simulations: discharge of a lead-acid battery
+# Simulations
 #
 import pickle
 import pybamm
-
-#
-# def options_to_tuple(options):
-#     bc_options = tuple(options["bc_options"].items())
-#     side_reactions = tuple(options["side reactions"])
-#     other_options = tuple(
-#         {
-#             k: v
-#             for k, v in options.items()
-#             if k not in ["bc_options", "side reactions"]
-#         }.items()
-#     )
-#     return (*bc_options, *side_reactions, *other_options)
 
 
 def model_comparison(models, Crates, t_eval, extra_parameter_values=None):

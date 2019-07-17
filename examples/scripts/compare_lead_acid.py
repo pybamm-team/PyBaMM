@@ -1,6 +1,5 @@
 import numpy as np
 import pybamm
-import pickle
 
 pybamm.set_logging_level("DEBUG")
 
