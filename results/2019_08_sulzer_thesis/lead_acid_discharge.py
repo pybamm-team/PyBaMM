@@ -22,7 +22,7 @@ def plot_voltages(all_variables, t_eval):
     file_name = "discharge_voltage_comparison.eps"
     n = int(len(all_variables) // np.sqrt(len(all_variables)))
     m = int(np.ceil(len(all_variables) / n))
-    fig, axes = plt.subplots(n, m, figsize=(8, 4.5))
+    fig, axes = plt.subplots(n, m, figsize=(6.4, 4.5))
     labels = [model for model in [x for x in all_variables.values()][0].keys()]
     for k, (Crate, models_variables) in enumerate(all_variables.items()):
         ax = axes.flat[k]
@@ -45,6 +45,7 @@ def plot_voltages(all_variables, t_eval):
         # Only show ticks on the left and bottom spines
         ax.yaxis.set_ticks_position("left")
         ax.xaxis.set_ticks_position("bottom")
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         if k % m == 0:
             ax.set_ylabel("Voltage [V]")
         for j, (model, variables) in enumerate(models_variables.items()):
@@ -53,52 +54,49 @@ def plot_voltages(all_variables, t_eval):
                 variables["Terminal voltage [V]"](t_eval),
                 linestyles[j],
             )
-    fig.legend(labels, bbox_to_anchor=(0.5, -0.1), loc="lower center", ncol=len(labels))
-    fig.tight_layout()
+    fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
+    plt.subplots_adjust(bottom=0.25, right=0.95, hspace=1.1, wspace=0.4)
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
     else:
         plt.show()
 
 
-def plot_variables(compute, Crate):
-    filename = "discharge_asymptotics_data_{}C.pickle".format(Crate)
-    models = [
-        pybamm.lead_acid.NewmanTiedemann(name="Full"),
-        pybamm.lead_acid.LOQS(name="Leading-order"),
-        pybamm.lead_acid.FOQS(name="First-order"),
-        pybamm.lead_acid.Composite(name="Composite"),
-    ]
-    t_eval = np.linspace(0, 1, 100)
-    param = {"Bruggeman coefficient": 0.001, "Typical current [A]": Crate * 17}
-    if compute:
-        models, mesh, solutions = simulation(
-            models, t_eval, extra_parameter_values=param
-        )
-        with open(filename, "wb") as f:
-            pickle.dump(solutions, f, pickle.HIGHEST_PROTOCOL)
-    else:
-        with open(filename, "rb") as f:
-            model, mesh = simulation(
-                models, t_eval, extra_parameter_values=param, disc_only=True
-            )
-            solutions = pickle.load(f)
-    output_variables = [
-        "Electrolyte concentration [mol.m-3]",
-        "Electrolyte potential [V]",
-        "Interfacial current density [A.m-2]",
-        "Terminal voltage [V]",
-    ]
-    plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+def plot_variables(all_variables, t_eval):
+    # Plot
+    linestyles = ["k-", "g--", "r:", "b-."]
+    file_name = "discharge_electrolyte_comparison.eps"
+    n = 3
+    m = 3
+    fig, axes = plt.subplots(n, m, figsize=(6.4, 6.4))
+    labels = [model for model in [x for x in all_variables.values()][0].keys()]
+    for k, (Crate, models_variables) in enumerate(all_variables.items()):
+        ax = axes.flat[k]
+        x_max = models_variables["x [m]"][-1]
+        ax.set_xlim([0, x_max])
+        # ax.set_ylim([10.5, 13])
+        # ax.set_title(
+        #     "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
+        #         chr(97 + k), Crate, Crate * 0.6
+        #     )
+        # )
 
-    filename = "discharge_states/{}C".format(Crate)
-    for t in range(0, 7):
-        tt = t / 10
-        plot.plot(tt, dynamic=False, figsize=(12, 7))
-        # plt.show()
-        plt.savefig(
-            OUTPUT_DIR + "{}_t=0pt{}.eps".format(filename, t), format="eps", dpi=1000
-        )
+        if k > (m - 1) * n:
+            ax.set_xlabel("x [m]")
+        if k % m == 0:
+            ax.set_ylabel("25% SoC")
+        for j, (model, variables) in enumerate(models_variables.items()):
+            ax.plot(
+                variables["x [m]"](t_eval),
+                variables["Electrolyte concentration [Molar]"](t_eval),
+                linestyles[j],
+            )
+    fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
+    plt.subplots_adjust(bottom=0.25, right=0.95, hspace=1.1, wspace=0.4)
+    if OUTPUT_DIR is not None:
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
