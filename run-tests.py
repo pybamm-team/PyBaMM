@@ -14,15 +14,16 @@ import unittest
 import subprocess
 
 
-def run_code_tests(folder: str = "unit"):
+def run_code_tests(executable=None, folder: str = "unit"):
     """
     Runs tests, exits if they don't finish.
-
     Parameters
     ----------
+    executable : bool (default False)
+        If True, tests are run in subprocesses using the executable 'python'.
+        Must be True for travis tests (otherwise tests always 'pass')
     folder : str
         Which folder to run the tests from (unit, integration or both ('all'))
-
     """
     if folder == "all":
         tests = "tests/"
@@ -30,8 +31,25 @@ def run_code_tests(folder: str = "unit"):
         tests = "tests/" + folder
         if folder == "unit":
             pybamm.settings.debug_mode = True
-    suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    if executable is False:
+        suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
+        unittest.TextTestRunner(verbosity=2).run(suite)
+    else:
+        print("Running {} tests with executable 'python'".format(folder))
+        cmd = ["python", "-m", "unittest", "discover", "-v", tests]
+        p = subprocess.Popen(cmd)
+        try:
+            ret = p.wait()
+        except KeyboardInterrupt:
+            try:
+                p.terminate()
+            except OSError:
+                pass
+            p.wait()
+            print("")
+            sys.exit(1)
+        if ret != 0:
+            sys.exit(ret)
 
 
 def run_flake8():
@@ -280,6 +298,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Run unit tests using the `python` interpreter.",
     )
+    parser.add_argument(
+        "--nosub",
+        action="store_true",
+        help="Run unit tests without starting a subprocess.",
+    )
     # Daily tests vs unit tests
     parser.add_argument(
         "--folder",
@@ -332,7 +355,10 @@ if __name__ == "__main__":
     # Unit tests
     if args.unit:
         has_run = True
-        run_code_tests(folder)
+        run_code_tests(True, folder)
+    if args.nosub:
+        has_run = True
+        run_code_tests(folder=folder)
     # Flake8
     if args.flake8:
         has_run = True
