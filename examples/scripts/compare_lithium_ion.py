@@ -1,7 +1,5 @@
 import pybamm
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pylab as plt
 
 # load models
 options = {"thermal": None}
