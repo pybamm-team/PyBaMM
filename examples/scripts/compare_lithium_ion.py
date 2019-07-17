@@ -13,9 +13,7 @@ models = [
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current [A]": 0.3})
-pybamm.set_logging_level("INFO")
-param.update({"Typical current [A]": 1})
+param["Typical current [A]"] = 1.0
 for model in models:
     param.process_model(model)
 
@@ -36,8 +34,7 @@ for model in models:
 solutions = [None] * len(models)
 t_eval = np.linspace(0, 0.17, 100)
 for i, model in enumerate(models):
-    solution = model.default_solver.solve(model, t_eval)
-    solutions[i] = solution
+    solutions[i] = model.default_solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(models, mesh, solutions)
