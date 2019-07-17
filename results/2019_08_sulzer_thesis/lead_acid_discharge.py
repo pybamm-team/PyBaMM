@@ -7,23 +7,31 @@ import numpy as np
 import pickle
 import pybamm
 from config import OUTPUT_DIR
-from shared import model_comparison
+from shared import model_comparison, simulation
 
 
-def plot_voltages(all_variables, t_eval):
+def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
     # Plot
-    plt.subplots(figsize=(6, 4))
     n = int(len(all_variables) // np.sqrt(len(all_variables)))
-    m = np.ceil(len(all_variables) / n)
-    for k, Crate in enumerate(all_variables.keys()):
-        models_variables = all_variables[Crate]
+    m = int(np.ceil(len(all_variables) / n))
+    fig, axes = plt.subplots(n, m, figsize=(8, 4.5))
+    labels = [model for model in [x for x in all_variables.values()][0].keys()]
+    for k, (Crate, models_variables) in enumerate(all_variables.items()):
+        ax = axes.flat[k]
         t_max = max(
             np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
         )
-        ax = plt.subplot(n, m, k + 1)
-        plt.axis([0, t_max, 10.5, 13])
-        plt.xlabel("Time [h]")
-        plt.title("\\textbf{{({})}} {}C".format(chr(97 + k), Crate))
+        ax.set_xlim([0, t_max])
+        ax.set_ylim([10.5, 13])
+        ax.set_xlabel("Time [h]")
+        ax.set_title(
+            "\\textbf{{{}C}} ($\\mathcal{{C}}_e={}$)".format(Crate, Crate * 0.6)
+        )
+        # ax.set_title(
+        #     "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
+        #         chr(97 + k), Crate, Crate * 0.6
+        #     )
+        # )
 
         # Hide the right and top spines
         ax.spines["right"].set_visible(False)
@@ -32,42 +40,104 @@ def plot_voltages(all_variables, t_eval):
         # Only show ticks on the left and bottom spines
         ax.yaxis.set_ticks_position("left")
         ax.xaxis.set_ticks_position("bottom")
-        for model, variables in models_variables.items():
-            if k == 0:
-                label = model[0]
-            else:
-                label = None
-            if k % m == 0:
-                plt.ylabel("Voltage [V]")
-
-            plt.plot(
-                variables["Time [h]"](t_eval),
-                variables["Terminal voltage [V]"](t_eval) * 6,
-                label=label,
-            )
-        # plt.legend(loc="upper right")
-    file_name = "discharge_voltage_comparison.eps".format(Crate)
+        if k % m == 0:
+            ax.set_ylabel("Voltage [V]")
+        for j, (model, variables) in enumerate(models_variables.items()):
+            if model in models:
+                ax.plot(
+                    variables["Time [h]"](t_eval),
+                    variables["Terminal voltage [V]"](t_eval),
+                    linestyles[j],
+                )
+    ax.legend(labels, bbox_to_anchor=(1.05, 2), loc=2)
+    fig.tight_layout()
+    # plt.show()
     plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
-    args = parser.parse_args()
-    t_eval = np.linspace(0, 1, 100)
-    if args.compute:
-        pybamm.set_logging_level("INFO")
+def compare_voltages_composite(all_variables, t_eval):
+    models = ["Full", "Leading-order", "First-order", "Composite"]
+    linestyles = ["k-", "g--", "r:", "b-."]
+    file_name = "discharge_voltage_comparison.eps"
+    plot_voltages(all_variables, t_eval, models, linestyles, file_name)
+
+
+def compare_voltages_quasistatic(all_variables, t_eval):
+    models = ["Full", "Leading-order", "First-order"]
+    linestyles = ["k-", "g--", "r:"]
+    file_name = "discharge_voltage_comparison_quasistatic.eps"
+    plot_voltages(all_variables, t_eval, models, linestyles, file_name)
+
+
+def voltage_results(compute):
+    if compute:
         models = [
-            pybamm.lead_acid.LOQS(),
-            pybamm.lead_acid.Composite(),
-            pybamm.lead_acid.NewmanTiedemann(),
+            pybamm.lead_acid.NewmanTiedemann(name="Full"),
+            pybamm.lead_acid.LOQS(name="Leading-order"),
+            pybamm.lead_acid.FOQS(name="First-order"),
+            pybamm.lead_acid.Composite(name="Composite"),
         ]
         Crates = [0.1, 0.2, 0.5, 1, 2, 5]
-        all_variables, t_eval = model_comparison(models, Crates, t_eval)
+        t_eval = np.linspace(0, 1, 100)
+        extra_parameter_values = {"Bruggeman coefficient": 0.001}
+        all_variables, t_eval = model_comparison(
+            models, Crates, t_eval, extra_parameter_values=extra_parameter_values
+        )
         with open("discharge_asymptotics_data.pickle", "wb") as f:
             data = (all_variables, t_eval)
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-
     with open("discharge_asymptotics_data.pickle", "rb") as f:
         (all_variables, t_eval) = pickle.load(f)
-    plot_voltages(all_variables, t_eval)
+    compare_voltages_composite(all_variables, t_eval)
+    compare_voltages_quasistatic(all_variables, t_eval)
+
+
+def plot_variables(compute, Crate):
+    filename = "discharge_asymptotics_data_{}C.pickle".format(Crate)
+    models = [
+        pybamm.lead_acid.NewmanTiedemann(name="Full"),
+        pybamm.lead_acid.LOQS(name="Leading-order"),
+        pybamm.lead_acid.FOQS(name="First-order"),
+        pybamm.lead_acid.Composite(name="Composite"),
+    ]
+    t_eval = np.linspace(0, 1, 100)
+    param = {"Bruggeman coefficient": 0.001, "Typical current [A]": Crate * 17}
+    if compute:
+        models, mesh, solutions = simulation(
+            models, t_eval, extra_parameter_values=param
+        )
+        with open(filename, "wb") as f:
+            pickle.dump(solutions, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        with open(filename, "rb") as f:
+            model, mesh = simulation(
+                models, t_eval, extra_parameter_values=param, disc_only=True
+            )
+            solutions = pickle.load(f)
+    output_variables = [
+        "Electrolyte concentration [mol.m-3]",
+        "Electrolyte potential [V]",
+        "Interfacial current density [A.m-2]",
+        "Terminal voltage [V]",
+    ]
+    plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
+
+    filename = "discharge_states/{}C".format(Crate)
+    for t in range(0, 7):
+        tt = t / 10
+        plot.plot(tt, dynamic=False, figsize=(12, 7))
+        # plt.show()
+        plt.savefig(
+            OUTPUT_DIR + "{}_t=0pt{}.eps".format(filename, t), format="eps", dpi=1000
+        )
+
+
+if __name__ == "__main__":
+    pybamm.set_logging_level("INFO")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
+    args = parser.parse_args()
+    # voltage_results(args.compute)
+    Crates = [1, 5]
+    for Crate in Crates:
+        plot_variables(args.compute, Crate)

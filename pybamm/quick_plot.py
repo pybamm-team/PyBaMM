@@ -58,7 +58,7 @@ class QuickPlot(object):
         Labels for the different models. Defaults to model names
     """
 
-    def __init__(self, models, mesh, solutions, output_variables=None, labels=None):
+    def __init__(self, models, mesh, solutions, output_variables=None):
         # Pre-process models and solutions
         if isinstance(models, pybamm.BaseModel):
             models = [models]
@@ -74,7 +74,7 @@ class QuickPlot(object):
             raise ValueError("must provide the same number of models and solutions")
 
         # Set labels
-        self.labels = labels or [model.name for model in models]
+        self.labels = [model.name for model in models]
 
         # Scales (default to 1 if information not in model)
         variables = models[0].variables
@@ -204,7 +204,7 @@ class QuickPlot(object):
                 y_max += 1
             self.axis[key] = [x_min, x_max, y_min, y_max]
 
-    def plot(self, t):
+    def plot(self, t, dynamic=True, figsize=(15, 8)):
         """Produces a quick plot with the internal states at time t.
 
         Parameters
@@ -216,14 +216,14 @@ class QuickPlot(object):
         import matplotlib.pyplot as plt
 
         t /= self.time_scale
-        self.fig, self.ax = plt.subplots(self.n_rows, self.n_cols, figsize=(15, 8))
+        self.fig, self.ax = plt.subplots(self.n_rows, self.n_cols, figsize=figsize)
         plt.tight_layout()
         plt.subplots_adjust(left=-0.1)
         self.plots = {}
         self.time_lines = {}
 
-        colors = ["r", "b", "k", "g"]
-        linestyles = ["-", ":", "--", "-."]
+        colors = ["k-", "g--", "r:", "b-."]  # ["k", "g", "r", "b"]
+        linestyles = ["-", "--", ":", "-."]
         fontsize = 42 // self.n_cols
 
         for k, (key, variable_lists) in enumerate(self.variables.items()):
@@ -253,9 +253,9 @@ class QuickPlot(object):
                         self.plots[key][i][j], = ax.plot(
                             x_value * self.x_scale,
                             variable(t, x_value),
+                            colors[i],
                             lw=2,
-                            color=colors[i],
-                            linestyle=linestyles[j],
+                            # linestyle=linestyles[j],
                             label=label,
                         )
             else:
@@ -271,9 +271,9 @@ class QuickPlot(object):
                         self.plots[key][i][j], = ax.plot(
                             full_t * self.time_scale,
                             variable(full_t),
+                            colors[i],
                             lw=2,
-                            color=colors[i],
-                            linestyle=linestyles[j],
+                            # linestyle=linestyles[j],
                             label=label,
                         )
                 y_min, y_max = self.axis[key][2:]
@@ -291,7 +291,10 @@ class QuickPlot(object):
                     fontsize=8,
                     loc="upper center",
                 )
-        self.fig.legend(loc="lower right")
+        if dynamic is True:
+            self.fig.legend(loc="lower right", fontsize=21)
+        else:
+            ax.legend(self.labels, bbox_to_anchor=(1.05, 1.5), loc=2, fontsize=21)
 
     def dynamic_plot(self, testing=False):
         """
