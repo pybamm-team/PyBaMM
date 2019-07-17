@@ -6,12 +6,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import pybamm
-from config import OUTPUT_DIR
 from shared import model_comparison, simulation
 
+try:
+    from config import OUTPUT_DIR
+except ImportError:
+    OUTPUT_DIR = None
 
-def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
+OUTPUT_DIR = None
+
+
+def plot_voltages(all_variables, t_eval):
     # Plot
+    linestyles = ["k-", "g--", "r:", "b-."]
+    file_name = "discharge_voltage_comparison.eps"
     n = int(len(all_variables) // np.sqrt(len(all_variables)))
     m = int(np.ceil(len(all_variables) / n))
     fig, axes = plt.subplots(n, m, figsize=(8, 4.5))
@@ -25,13 +33,10 @@ def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
         ax.set_ylim([10.5, 13])
         ax.set_xlabel("Time [h]")
         ax.set_title(
-            "\\textbf{{{}C}} ($\\mathcal{{C}}_e={}$)".format(Crate, Crate * 0.6)
+            "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
+                chr(97 + k), Crate, Crate * 0.6
+            )
         )
-        # ax.set_title(
-        #     "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
-        #         chr(97 + k), Crate, Crate * 0.6
-        #     )
-        # )
 
         # Hide the right and top spines
         ax.spines["right"].set_visible(False)
@@ -43,53 +48,17 @@ def plot_voltages(all_variables, t_eval, models, linestyles, file_name):
         if k % m == 0:
             ax.set_ylabel("Voltage [V]")
         for j, (model, variables) in enumerate(models_variables.items()):
-            if model in models:
-                ax.plot(
-                    variables["Time [h]"](t_eval),
-                    variables["Terminal voltage [V]"](t_eval),
-                    linestyles[j],
-                )
-    ax.legend(labels, bbox_to_anchor=(1.05, 2), loc=2)
+            ax.plot(
+                variables["Time [h]"](t_eval),
+                variables["Terminal voltage [V]"](t_eval),
+                linestyles[j],
+            )
+    fig.legend(labels, bbox_to_anchor=(0.5, -0.1), loc="lower center", ncol=len(labels))
     fig.tight_layout()
-    # plt.show()
-    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
-
-
-def compare_voltages_composite(all_variables, t_eval):
-    models = ["Full", "Leading-order", "First-order", "Composite"]
-    linestyles = ["k-", "g--", "r:", "b-."]
-    file_name = "discharge_voltage_comparison.eps"
-    plot_voltages(all_variables, t_eval, models, linestyles, file_name)
-
-
-def compare_voltages_quasistatic(all_variables, t_eval):
-    models = ["Full", "Leading-order", "First-order"]
-    linestyles = ["k-", "g--", "r:"]
-    file_name = "discharge_voltage_comparison_quasistatic.eps"
-    plot_voltages(all_variables, t_eval, models, linestyles, file_name)
-
-
-def voltage_results(compute):
-    if compute:
-        models = [
-            pybamm.lead_acid.NewmanTiedemann(name="Full"),
-            pybamm.lead_acid.LOQS(name="Leading-order"),
-            pybamm.lead_acid.FOQS(name="First-order"),
-            pybamm.lead_acid.Composite(name="Composite"),
-        ]
-        Crates = [0.1, 0.2, 0.5, 1, 2, 5]
-        t_eval = np.linspace(0, 1, 100)
-        extra_parameter_values = {"Bruggeman coefficient": 0.001}
-        all_variables, t_eval = model_comparison(
-            models, Crates, t_eval, extra_parameter_values=extra_parameter_values
-        )
-        with open("discharge_asymptotics_data.pickle", "wb") as f:
-            data = (all_variables, t_eval)
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-    with open("discharge_asymptotics_data.pickle", "rb") as f:
-        (all_variables, t_eval) = pickle.load(f)
-    compare_voltages_composite(all_variables, t_eval)
-    compare_voltages_quasistatic(all_variables, t_eval)
+    if OUTPUT_DIR is not None:
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+    else:
+        plt.show()
 
 
 def plot_variables(compute, Crate):
@@ -137,7 +106,26 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    # voltage_results(args.compute)
-    Crates = [1, 5]
-    for Crate in Crates:
-        plot_variables(args.compute, Crate)
+    if args.compute:
+        models = [
+            pybamm.lead_acid.NewmanTiedemann(name="Full"),
+            pybamm.lead_acid.LOQS(name="LOQS"),
+            pybamm.lead_acid.FOQS(name="FOQS"),
+            pybamm.lead_acid.Composite(name="Composite"),
+        ]
+        Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+        t_eval = np.linspace(0, 1, 100)
+        extra_parameter_values = {"Bruggeman coefficient": 0.001}
+        all_variables, t_eval = model_comparison(
+            models, Crates, t_eval, extra_parameter_values=extra_parameter_values
+        )
+        with open("discharge_asymptotics_data.pickle", "wb") as f:
+            data = (all_variables, t_eval)
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        with open("discharge_asymptotics_data.pickle", "rb") as f:
+            (all_variables, t_eval) = pickle.load(f)
+    plot_voltages(all_variables, t_eval)
+    # Crates = [1, 5]
+    # for Crate in Crates:
+    #     plot_variables(args.compute, Crate)

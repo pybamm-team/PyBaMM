@@ -71,7 +71,7 @@ def plot_voltages(all_variables, t_eval, Crates):
             )
             inset.plot(
                 variables["Time [s]"](t_eval[:40]),
-                variables["Terminal voltage [V]"](t_eval[:40]) * 6,
+                variables["Terminal voltage [V]"](t_eval[:40]),
                 linestyles[j],
             )
     file_name = "capacitance_voltage_comparison.eps".format(Crate)
