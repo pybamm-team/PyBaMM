@@ -15,6 +15,7 @@ class TestSPM(unittest.TestCase):
         modeltest.test_all()
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    @unittest.skipIf(pybamm.have_scikit_fem(), "scikits.odes not installed")
     def test_basic_processing_2plus1D(self):
         options = {"bc_options": {"dimensionality": 2}}
         model = pybamm.lithium_ion.SPM(options)
