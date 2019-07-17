@@ -60,7 +60,7 @@ output_variables = [
     ],
     "Average negative electrode reaction overpotential [V]",
     "Average positive electrode reaction overpotential [V]",
-    "Electrolyte concentration",
+    "State of Charge",
     "Oxygen concentration [mol.m-3]",
     "Terminal voltage [V]",
 ]

@@ -349,6 +349,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         pybamm.logger.debug("Setting voltage variables")
         self.set_voltage_variables()
 
+        pybamm.logger.debug("Setting SoC variables")
+        self.set_soc_variables()
+
         self._built = True
 
     def set_thermal_submodel(self):
@@ -469,6 +472,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Cut-off voltage
         voltage = self.variables["Terminal voltage"]
         self.events["Minimum voltage"] = voltage - self.param.voltage_low_cut
+
+    def set_soc_variables(self):
+        """
+        Set variables relating to the state of charge.
+        This function is overriden by the base battery models
+        """
+        pass
 
     def process_parameters_and_discretise(self, symbol):
         """

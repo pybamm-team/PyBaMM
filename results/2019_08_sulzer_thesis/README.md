@@ -1,6 +1,7 @@
 # Results: Valentin Sulzer's Thesis
 
-This folder contains the scripts used to generate results for Valentin Sulzers thesis
+This folder contains the scripts used to generate results for Valentin Sulzer's thesis
+The plots were formatted using a formatting file `matplotlibrc` identical to [this one](_matplotlibrc) (but not included in the GitHub repo to avoid clashes with different formatting files)
 
 ## Chapter 2 - Model
 
