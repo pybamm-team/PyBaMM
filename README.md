@@ -15,7 +15,7 @@ PyBaMM comes with a number of [detailed examples](examples/README.md), hosted he
 github. In addition, there is a [full API documentation](http://pybamm.readthedocs.io/),
 hosted on [Read The Docs](readthedocs.io). A set of slides giving an overview of PyBaMM
 can be found
-[here](https://github.com/pybamm-team/pybamm_summary_slides/blob/master/pybamm.pd://github.com/pybamm-team/pybamm_summary_slides/blob/master/pybamm.pdf)
+[here](https://github.com/pybamm-team/pybamm_summary_slides/blob/master/pybamm.pdf)
 
 ## How can I obtain & install PyBaMM?
 
