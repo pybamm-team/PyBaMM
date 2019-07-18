@@ -23,13 +23,23 @@ def plot_voltages(all_variables, t_eval):
     m = int(np.ceil(len(all_variables) / n))
     fig, axes = plt.subplots(n, m, figsize=(6.4, 4.5))
     labels = [model for model in [x for x in all_variables.values()][0].keys()]
+    y_min = min(
+        np.nanmin(variables["Terminal voltage [V]"](t_eval))
+        for models_variables in all_variables.values()
+        for variables in models_variables.values()
+    )
+    y_max = 1.02 * max(
+        np.nanmax(variables["Terminal voltage [V]"](t_eval))
+        for models_variables in all_variables.values()
+        for variables in models_variables.values()
+    )
     for k, (Crate, models_variables) in enumerate(all_variables.items()):
         ax = axes.flat[k]
         t_max = max(
             np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
         )
         ax.set_xlim([0, t_max])
-        ax.set_ylim([10.5, 13])
+        ax.set_ylim([y_min, y_max])
         ax.set_xlabel("Time [h]")
         ax.set_title(
             "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
@@ -146,9 +156,9 @@ def lead_acid_discharge(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    # plot_voltages(all_variables, t_eval)
+    plot_voltages(all_variables, t_eval)
     # plot_variables(all_variables, t_eval)
-    plot_voltage_breakdown(all_variables, t_eval)
+    # plot_voltage_breakdown(all_variables, t_eval)
 
 
 if __name__ == "__main__":

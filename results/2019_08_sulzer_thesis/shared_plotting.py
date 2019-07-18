@@ -27,14 +27,16 @@ def plot_variable(
     y_min = pybamm.ax_min(
         [
             np.nanmin(variables[variable](t_eval, x))
-            for models_variables in all_variables.values()
+            for Crate, models_variables in all_variables.items()
+            if Crate in Crates
             for variables in models_variables.values()
         ]
     )
     y_max = pybamm.ax_max(
         [
             np.nanmax(variables[variable](t_eval, x))
-            for models_variables in all_variables.values()
+            for Crate, models_variables in all_variables.items()
+            if Crate in Crates
             for variables in models_variables.values()
         ]
     )
