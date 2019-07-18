@@ -153,7 +153,7 @@ def plot_voltage_breakdown(all_variables, t_eval):
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
 
 
-def lead_acid_discharge(compute):
+def lead_acid_discharge_states(compute):
     if compute:
         models = [
             pybamm.lead_acid.NewmanTiedemann(name="Full"),
@@ -178,9 +178,35 @@ def lead_acid_discharge(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    # plot_voltages(all_variables, t_eval)
-    # plot_variables(all_variables, t_eval)
+    plot_voltages(all_variables, t_eval)
+    plot_variables(all_variables, t_eval)
     plot_voltage_breakdown(all_variables, t_eval)
+
+
+def lead_acid_discharge_times_and_errors(compute):
+    if compute:
+        models = [
+            pybamm.lead_acid.NewmanTiedemann(name="Full"),
+            pybamm.lead_acid.LOQS(name="LOQS"),
+            pybamm.lead_acid.FOQS(name="FOQS"),
+            pybamm.lead_acid.Composite(name="Composite"),
+        ]
+        Crates = [0.1, 0.2]
+        npts = [10, 20]
+        t_eval = np.linspace(0, 1, 100)
+        times_and_voltages = model_comparison(models, Crates, t_eval)
+        with open("discharge_asymptotics_times_and_errors.pickle", "wb") as f:
+            data = times_and_voltages
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        try:
+            with open("discharge_asymptotics_times_and_errors.pickle", "rb") as f:
+                times_and_voltages = pickle.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Run script with '--compute' first to generate results"
+            )
+    plot_errors(times_and_voltages)
 
 
 if __name__ == "__main__":
@@ -188,5 +214,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    lead_acid_discharge(args.compute)
+    # lead_acid_discharge_states(args.compute)
+    lead_acid_discharge_times_and_errors(args.compute)
     plt.show()

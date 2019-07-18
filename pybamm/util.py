@@ -5,6 +5,7 @@
 # (see https://github.com/pints-team/pints)
 #
 import importlib
+import numpy as np
 import os
 import sys
 import timeit
@@ -151,3 +152,11 @@ def load_function(filename):
         )
 
     return getattr(module_object, valid_module)
+
+
+def rmse(x, y):
+    "Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs"
+    # Check lengths
+    if len(x) != len(y):
+        raise ValueError("Vectors must have the same length")
+    return np.sqrt(np.nanmean((x - y) ** 2))
