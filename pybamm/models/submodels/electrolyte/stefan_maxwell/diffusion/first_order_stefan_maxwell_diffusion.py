@@ -37,10 +37,8 @@ class FirstOrder(BaseModel):
         # v_box_0 = variables["Leading-order volume-averaged velocity"]
         deps_0_dt = variables["Leading-order porosity change"]
         dc_e_0_dt = variables["Leading-order electrolyte concentration change"]
-        eps_n_0, _, eps_p_0 = [e.orphans[0] for e in eps_0.orphans]
-        deps_n_0_dt, deps_s_0_dt, deps_p_0_dt = [
-            de.orphans[0] for de in deps_0_dt.orphans
-        ]
+        eps_n_0, eps_s_0, eps_p_0 = [e.orphans[0] for e in eps_0.orphans]
+        deps_n_0_dt, _, deps_p_0_dt = [de.orphans[0] for de in deps_0_dt.orphans]
 
         # Combined time derivatives
         d_epsc_n_0_dt = c_e_0 * deps_n_0_dt + eps_n_0 * dc_e_0_dt
