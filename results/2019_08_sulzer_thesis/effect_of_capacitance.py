@@ -83,9 +83,6 @@ def plot_voltages(all_variables, t_eval, Crates):
 
 
 def plot_errors(all_variables, t_eval, Crates):
-    def rmse(predictions, targets):
-        return np.sqrt(np.nanmean((predictions - targets) ** 2))
-
     # Only use some Crates
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     # Plot

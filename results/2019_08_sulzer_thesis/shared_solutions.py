@@ -1,7 +1,6 @@
 #
 # Simulations
 #
-import pickle
 import pybamm
 
 
@@ -50,21 +49,14 @@ def model_comparison(models, Crates, t_eval, extra_parameter_values=None):
     return all_variables, t_eval
 
 
-def convergence_study(models, Crate, t_eval, all_npts, save_folder=None):
+def convergence_study(models, Crates, all_npts, t_eval, extra_parameter_values=None):
     " Solve models at a range of number of grid points "
     # load parameter values and geometry
     geometry = models[0].default_geometry
     param = models[0].default_parameter_values
-    current = Crate * 17
-    # Update parameters with a different porosity
-    param.update(
-        {
-            "Typical current [A]": current,
-            "Maximum porosity of negative electrode": 0.92,
-            "Maximum porosity of separator": 0.92,
-            "Maximum porosity of positive electrode": 0.92,
-        }
-    )
+    # Update parameters
+    extra_parameter_values = extra_parameter_values or {}
+    param.update(extra_parameter_values)
 
     # Process parameters (same parameters for all models)
     for model in models:
@@ -74,27 +66,42 @@ def convergence_study(models, Crate, t_eval, all_npts, save_folder=None):
     # set mesh
     var = pybamm.standard_spatial_vars
 
-    # solve model for range of Crates
+    # solve model for range of Crates and npts
+    models_times_and_voltages = {model.name: {} for model in models}
     for npts in all_npts:
-        model_variables = {}
         pybamm.logger.info("Setting number of grid points to {}".format(npts))
         var_pts = {var.x_n: npts, var.x_s: npts, var.x_p: npts}
         mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 
-        # discretise models
+        # discretise models, store discretised model and discretisation
+        models_disc = {}
+        discs = {}
         for model in models:
-            model_disc = disc.process_model(model, inplace=False)
-            solution = model.default_solver.solve(model_disc, t_eval)
-            variables = pybamm.post_process_variables(
-                model_disc.variables, solution.t, solution.y, mesh
-            )
-            variables["solution"] = solution
-            model_variables[model.name] = variables
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            models_times_and_voltages[model.name][npts] = {}
+            models_disc[model.name] = disc.process_model(model, inplace=False)
+            discs[model.name] = disc
 
-        filename = save_folder + "Crate={}_npts={}.pickle".format(Crate, npts)
-        with open(filename, "wb") as f:
-            pickle.dump(model_variables, f, pickle.HIGHEST_PROTOCOL)
+        # Solve for a range of C-rates
+        for Crate in Crates:
+            current = Crate * 17
+            pybamm.logger.info("Setting typical current to {} A".format(current))
+            param.update({"Typical current [A]": current})
+            for model in models:
+                model_disc = models_disc[model.name]
+                disc = discs[model.name]
+                param.update_model(model_disc, disc)
+                solution = model.default_solver.solve(model_disc, t_eval)
+                voltage = pybamm.ProcessedVariable(
+                    model_disc.variables["Terminal voltage [V]"], solution.t, solution.y
+                )(t_eval)
+                variables = {
+                    "Terminal voltage [V]": voltage,
+                    "solution object": solution,
+                }
+                models_times_and_voltages[model.name][npts][Crate] = variables
+
+        return models_times_and_voltages
 
 
 def simulation(models, t_eval, extra_parameter_values=None, disc_only=False):

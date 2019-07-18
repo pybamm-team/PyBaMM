@@ -7,7 +7,8 @@ import numpy as np
 import pickle
 import pybamm
 import shared_plotting
-from shared_solutions import model_comparison
+from collections import defaultdict
+from shared_solutions import model_comparison, convergence_study
 
 try:
     from config import OUTPUT_DIR
@@ -94,7 +95,6 @@ def plot_voltage_breakdown(all_variables, t_eval):
     # Plot
     Crates = [0.1, 2, 5]
     model = "Composite"
-    linestyles = ["k-", "g--", "r:", "b-."]
     file_name = "discharge_voltage_breakdown.eps"
     n = int(len(Crates) // np.sqrt(len(Crates)))
     m = int(np.ceil(len(Crates) / n))
@@ -183,30 +183,78 @@ def lead_acid_discharge_states(compute):
     plot_voltage_breakdown(all_variables, t_eval)
 
 
+def plot_errors(models_times_and_voltages):
+    npts = 20
+    linestyles = ["k-", "g--", "r:", "b-."]
+    Crates = defaultdict(list)
+    voltage_errors = defaultdict(list)
+    fig, ax = plt.subplots(1, 1)
+    for i, (model, times_and_voltages) in enumerate(models_times_and_voltages.items()):
+        if model != "Full":
+            for Crate, variables in times_and_voltages[npts].items():
+                Crates[model].append(Crate)
+                full_voltage = models_times_and_voltages["Full"][npts][Crate][
+                    "Terminal voltage [V]"
+                ]
+                reduced_voltage = variables["Terminal voltage [V]"]
+                voltage_errors[model].append(pybamm.rmse(full_voltage, reduced_voltage))
+            ax.semilogx(
+                Crates[model], voltage_errors[model], linestyles[i], label=model
+            )
+    ax.set_xlabel("C-rate")
+    ax.set_ylabel("RMSE [V]")
+    ax.legend(loc="best")
+    file_name = "discharge_asymptotics_rmse.eps"
+    if OUTPUT_DIR is not None:
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+
+
+def plot_times(models_times_and_voltages):
+    Crate = 1
+    linestyles = ["k-", "g--", "r:", "b-."]
+    all_npts = defaultdict(list)
+    solver_time = defaultdict(list)
+    fig, ax = plt.subplots(1, 1)
+    for i, (model, times_and_voltages) in enumerate(models_times_and_voltages.items()):
+        for npts, Crates_variables in times_and_voltages.items():
+            all_npts[model].append(npts * 3)
+            solver_time = times_and_voltages[npts][Crate]["solution object"].solve_time
+            solver_time[model].append(solver_time)
+        ax.loglog(all_npts[model], solver_time[model], linestyles[i], label=model)
+    ax.set_xlabel("Number of grid points")
+    ax.set_ylabel("Solver time [s]")
+    ax.legend(loc="best")
+    file_name = "discharge_asymptotics_solver_times.eps"
+    if OUTPUT_DIR is not None:
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+
+
 def lead_acid_discharge_times_and_errors(compute):
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann(name="Full"),
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "algebraic"}, name="Full"
+            ),
             pybamm.lead_acid.LOQS(name="LOQS"),
             pybamm.lead_acid.FOQS(name="FOQS"),
             pybamm.lead_acid.Composite(name="Composite"),
         ]
-        Crates = [0.1, 0.2]
-        npts = [10, 20]
+        Crates = np.linspace(0.01, 5, 5)
+        all_npts = [20]
         t_eval = np.linspace(0, 1, 100)
-        times_and_voltages = model_comparison(models, Crates, t_eval)
+        models_times_and_voltages = convergence_study(models, Crates, all_npts, t_eval)
         with open("discharge_asymptotics_times_and_errors.pickle", "wb") as f:
-            data = times_and_voltages
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(models_times_and_voltages, f, pickle.HIGHEST_PROTOCOL)
     else:
         try:
             with open("discharge_asymptotics_times_and_errors.pickle", "rb") as f:
-                times_and_voltages = pickle.load(f)
+                models_times_and_voltages = pickle.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    plot_errors(times_and_voltages)
+    plot_errors(models_times_and_voltages)
+    # plot_times(models_times_and_voltages)
 
 
 if __name__ == "__main__":
