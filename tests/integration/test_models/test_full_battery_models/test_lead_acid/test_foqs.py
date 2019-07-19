@@ -10,6 +10,7 @@ import numpy as np
 
 class TestLeadAcidFOQS(unittest.TestCase):
     def test_basic_processing(self):
+        pybamm.set_logging_level("INFO")
         options = {"thermal": None, "convection": False}
         model = pybamm.lead_acid.FOQS(options)
         modeltest = tests.StandardModelTest(model)

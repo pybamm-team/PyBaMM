@@ -74,9 +74,7 @@ class FirstOrder(BaseModel):
 
         # Concentrations
         c_e_n_1 = rhs_n / (2 * D_e_n) * (x_n ** 2 - l_n ** 2)
-        c_e_s_1 = (rhs_s / (2 * D_e_s) * (x_s - l_n) ** 2) + (
-            rhs_n / D_e_s * l_n * (x_s - l_n)
-        )
+        c_e_s_1 = (rhs_s / 2 * (x_s - l_n) ** 2 + rhs_n * l_n * (x_s - l_n)) / D_e_s
         c_e_p_1 = (
             (rhs_p / (2 * D_e_p) * ((x_p - 1) ** 2 - l_p ** 2))
             + (rhs_s * l_s ** 2 / (2 * D_e_s))
@@ -84,9 +82,15 @@ class FirstOrder(BaseModel):
         )
 
         # Correct for integral
-        epsc_e_n_1_av = eps_n_0 * pybamm.Integral(c_e_n_1, x_n)
-        epsc_e_s_1_av = eps_s_0 * pybamm.Integral(c_e_s_1, x_s)
-        epsc_e_p_1_av = eps_p_0 * pybamm.Integral(c_e_p_1, x_p)
+        epsc_e_n_1_av = eps_n_0 * (-rhs_n * l_n ** 3 / (3 * D_e_n))
+        epsc_e_s_1_av = (
+            eps_s_0 * (rhs_s * l_s ** 3 / 6 + rhs_n * l_n * l_s ** 2 / 2) / D_e_s
+        )
+        epsc_e_p_1_av = eps_p_0 * (
+            -rhs_p * l_p ** 3 / (3 * D_e_p)
+            + (rhs_s * l_s ** 2 * l_p / (2 * D_e_s))
+            + (rhs_n * l_n * l_s * l_p / D_e_s)
+        )
         A_k = -(epsc_e_n_1_av + epsc_e_s_1_av + epsc_e_p_1_av) / (
             l_n * eps_n_0 + l_s * eps_s_0 + l_p * eps_p_0
         )
