@@ -58,6 +58,7 @@ def plot_voltage_breakdown(all_variables, t_eval):
 
 
 def discharge_states(compute):
+    savefile = "discharge_asymptotics_data.pickle"
     if compute:
         models = [
             pybamm.lead_acid.NewmanTiedemann(name="Full"),
@@ -71,12 +72,12 @@ def discharge_states(compute):
         all_variables, t_eval = model_comparison(
             models, Crates, t_eval, extra_parameter_values=extra_parameter_values
         )
-        with open("discharge_asymptotics_data.pickle", "wb") as f:
+        with open(savefile, "wb") as f:
             data = (all_variables, t_eval)
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
     else:
         try:
-            with open("discharge_asymptotics_data.pickle", "rb") as f:
+            with open(savefile, "rb") as f:
                 (all_variables, t_eval) = pickle.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(
@@ -114,20 +115,7 @@ def plot_errors(models_times_and_voltages):
 
 
 def plot_times(models_times_and_voltages):
-    Crate = 1
-    linestyles = ["k-", "g--", "r:", "b-."]
-    all_npts = defaultdict(list)
-    solver_time = defaultdict(list)
-    fig, ax = plt.subplots(1, 1)
-    for i, (model, times_and_voltages) in enumerate(models_times_and_voltages.items()):
-        for npts, Crates_variables in times_and_voltages.items():
-            all_npts[model].append(npts * 3)
-            solver_time = times_and_voltages[npts][Crate]["solution object"].solve_time
-            solver_time[model].append(solver_time)
-        ax.loglog(all_npts[model], solver_time[model], linestyles[i], label=model)
-    ax.set_xlabel("Number of grid points")
-    ax.set_ylabel("Solver time [s]")
-    ax.legend(loc="best")
+    shared_plotting.plot_times(models_times_and_voltages, Crate=1)
     file_name = "discharge_asymptotics_solver_times.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")

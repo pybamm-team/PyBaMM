@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import pybamm
-from collections import defaultdict
+import shared_plotting
 from config import OUTPUT_DIR
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from shared_solutions import model_comparison, convergence_study
@@ -14,179 +14,147 @@ from shared_solutions import model_comparison, convergence_study
 save_folder = "results/2019_08_sulzer_thesis/data/capacitance_results/"
 
 
-def plot_voltages(all_variables, t_eval, Crates):
-    # Only use some Crates
-    all_variables = {k: v for k, v in all_variables.items() if k in Crates}
-    # Plot
-    plt.subplots()
-    n = int(len(all_variables) // np.sqrt(len(all_variables)))
-    m = np.ceil(len(all_variables) / n)
-    for k, (Crate, models_variables) in enumerate(all_variables.items()):
-        t_max = max(
-            np.nanmax(var["Time [s]"](t_eval)) for var in models_variables.values()
-        )
-        ax = plt.subplot(n, m, k + 1)
-        plt.axis([0, t_max, 10.5, 14])
-        ax.set_xlabel("Time [s]")
-        if len(Crates) > 1:
-            plt.title("\\textbf{{({})}} {} C".format(chr(97 + k), Crate), y=-0.4)
-        labels = [
-            "(i) direct formulation",
-            "(ii) capacitance formulation (differential)",
-            "(iii) capacitance formulation (algebraic)",
-        ]
-
-        # Hide the right and top spines
-        ax.spines["right"].set_visible(False)
-        ax.spines["top"].set_visible(False)
-
-        # Only show ticks on the left and bottom spines
-        ax.yaxis.set_ticks_position("left")
-        ax.xaxis.set_ticks_position("bottom")
-
-        # Add inset plot
-        inset = inset_axes(ax, width="40%", height="40%", loc=1, borderpad=0)
-
-        # Linestyles
-        linestyles = ["k-", "b-.", "r--"]
-        for j, (model_name, variables) in enumerate(models_variables.items()):
-            # if k == 0:
-            #     label = labels[j]
-            # else:
-            #     label = None
-            if k % m == 0:
-                ax.set_ylabel("Voltage [V]")
-            if k == 1 and j == 2:
-                ax.legend(
-                    labels,
-                    ncol=len(Crates),
-                    loc="lower center",
-                    bbox_to_anchor=(0.5, -0.4),
-                )
-
-            ax.plot(
-                variables["Time [s]"](t_eval),
-                variables["Terminal voltage [V]"](t_eval),
-                linestyles[j],
-            )
-            inset.plot(
-                variables["Time [s]"](t_eval[:40]),
-                variables["Terminal voltage [V]"](t_eval[:40]),
-                linestyles[j],
-            )
-    file_name = "capacitance_voltage_comparison.eps".format(Crate)
-    plt.subplots_adjust(
-        top=0.92, bottom=0.3, left=0.10, right=0.9, hspace=0.5, wspace=0.5
+def plot_voltages(all_variables, t_eval):
+    linestyles = ["k-", "b-.", "r--"]
+    fig, axes = shared_plotting.plot_voltages(
+        all_variables, t_eval, linestyles=linestyles
     )
-    # plt.show()
-    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+
+    # Add inset plot
+    for k, (Crate, models_variables) in enumerate(all_variables.items()):
+        ax = axes.flat[k]
+        y_min, y_max = ax.get_ylim()
+        ax.set_ylim([y_min, 13.6])
+        inset = inset_axes(ax, width="40%", height="40%", loc=1, borderpad=0)
+        for j, (model, variables) in enumerate(models_variables.items()):
+            time = variables["Time [s]"](t_eval)
+            capacitance_indices = np.where(time < 50)
+            time = time[capacitance_indices]
+            voltage = variables["Terminal voltage [V]"](t_eval)[capacitance_indices]
+            inset.plot(time, voltage, linestyles[j])
+            inset.set_xlabel("Time [s]", fontsize=10)
+            inset.set_xlim([0, 3])
+
+    file_name = "capacitance_voltage_comparison.eps"
+    if OUTPUT_DIR is not None:
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
 
 
 def plot_errors(all_variables, t_eval, Crates):
+    # Linestyles
+    linestyles = ["k-", "b-.", "r--"]
     # Only use some Crates
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     # Plot
-    plt.subplots()
+    fig, ax = plt.subplots(1, 1)
     for k, (Crate, models_variables) in enumerate(all_variables.items()):
-        ax = plt.subplot(1, 1, 1)
-        ax.set_xlabel("Time [s]")
+        ax.set_xlabel("Time [h]")
         ax.set_ylabel("Error [V]")
 
-        # Hide the right and top spines
-        ax.spines["right"].set_visible(False)
-        ax.spines["top"].set_visible(False)
-
-        # Only show ticks on the left and bottom spines
-        ax.yaxis.set_ticks_position("left")
-        ax.xaxis.set_ticks_position("bottom")
-
-        # Linestyles
-        linestyles = ["k-", "b-.", "r--"]
-
         for j, (model, variables) in enumerate(models_variables.items()):
-            options = dict(model[1])
-            if options["surface form"] is False:
+            if model == "direct form":
                 base_model_results = models_variables[model]
                 continue
-            if k == 0:
-                label = model[0]
-            else:
-                label = None
-
             error = np.abs(
                 variables["Terminal voltage [V]"](t_eval)
                 - base_model_results["Terminal voltage [V]"](t_eval)
             )
-            ax.loglog(variables["Time [s]"](t_eval), error, linestyles[j], label=label)
-        plt.legend(["(ii) differential", "(iii) algebraic"], loc="upper right")
+            ax.loglog(variables["Time [h]"](t_eval), error, linestyles[j], label=model)
+        ax.legend(loc="best")
     file_name = "capacitance_errors_voltages.eps".format(Crate)
-    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+    if OUTPUT_DIR is not None:
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def compare_voltages(args, models):
-    t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
-    Crates = [0.5, 1, 2]
-    if args.compute:
+def discharge_states(compute):
+    savefile = "effect_of_capacitance_data.pickle"
+    if compute:
+        models = [
+            pybamm.lead_acid.NewmanTiedemann(name="direct form"),
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "differential"},
+                name="capacitance form\n(differential)",
+            ),
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "algebraic"}, name="capacitance form\n(algebraic)"
+            ),
+        ]
+        Crates = [0.1, 1, 5]
+        t_eval = np.concatenate(
+            [np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]]
+        )
         all_variables, t_eval = model_comparison(models, Crates, t_eval)
-        with open("capacitance_data.pickle", "wb") as f:
+        with open(savefile, "wb") as f:
             data = (all_variables, t_eval)
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        try:
+            with open(savefile, "rb") as f:
+                (all_variables, t_eval) = pickle.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Run script with '--compute' first to generate results"
+            )
+    plot_voltages(all_variables, t_eval)
+    plot_errors(all_variables, t_eval, [5])
 
-    with open("capacitance_data.pickle", "rb") as f:
-        (all_variables, t_eval) = pickle.load(f)
-    plot_voltages(all_variables, t_eval, Crates)
-    # plot_errors(all_variables, t_eval, Crates)
 
-
-def convergence_studies(args, models):
-    t_eval = np.concatenate([np.logspace(-6, -3, 50), np.linspace(0.001, 1, 100)[1:]])
-    skips = [120, 240]
-    all_npts = [x for x in range(10, 100, 10) if x not in skips]
-
-    # Get data
-    Crate = 1
-    if args.compute:
-        convergence_study(models, Crate, t_eval, all_npts, save_folder)
-
-    # Load data
-    grid_points = []
-    all_times = defaultdict(list)
-    for npts in all_npts:
-        filename = save_folder + "Crate={}_npts={}.pickle".format(Crate, npts)
-        with open(filename, "rb") as f:
-            model_variables = pickle.load(f)
-            for model_options, variables in model_variables.items():
-                all_times[model_options].append(variables["solution"].solve_time)
-            # Use any of the variables to get the number of grid points
-            grid_points.append(variables["Electrolyte concentration"].x_sol.size)
-
-    # Plot
-    fig, ax = plt.subplots()
-    linestyles = ["k-", "b-.", "r--"]
-    labels = [
-        "(i) direct formulation",
-        "(ii) capacitance formulation (differential)",
-        "(iii) capacitance formulation (algebraic)",
-    ]
-    for j, times in enumerate(all_times.values()):
-        ax.loglog(grid_points, times, linestyles[j], label=labels[j])
-    ax.set_xlabel("Number of grid points")
-    ax.set_ylabel("Time [s]")
-    ax.legend()
+def plot_times(models_times_and_voltages):
+    shared_plotting.plot_times(
+        models_times_and_voltages, Crate=1, linestyles=["k-", "b-.", "r--"]
+    )
     file_name = "capacitance_solver_times.eps"
-    plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
-    # plt.show()
+    if OUTPUT_DIR is not None:
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+
+
+def discharge_times_and_errors(compute):
+    savefile = "capacitance_times_and_errors.pickle"
+    if compute:
+        try:
+            with open(savefile, "rb") as f:
+                models_times_and_voltages = pickle.load(f)
+        except FileNotFoundError:
+            models_times_and_voltages = pybamm.get_infinite_nested_dict()
+        models = [
+            pybamm.lead_acid.NewmanTiedemann(name="direct form"),
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "differential"},
+                name="capacitance form\n(differential)",
+            ),
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "algebraic"}, name="capacitance form\n(algebraic)"
+            ),
+        ]
+        Crates = [1]
+        all_npts = np.linspace(10, 100, 2)
+        t_eval = np.linspace(0, 1, 100)
+        new_models_times_and_voltages = convergence_study(
+            models, Crates, all_npts, t_eval
+        )
+        import ipdb
+
+        ipdb.set_trace()
+        models_times_and_voltages.update(new_models_times_and_voltages)
+        with open(savefile, "wb") as f:
+            pickle.dump(models_times_and_voltages, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        try:
+            with open(savefile, "rb") as f:
+                models_times_and_voltages = pickle.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Run script with '--compute' first to generate results"
+            )
+    # plot_errors(models_times_and_voltages)
+    plot_times(models_times_and_voltages)
 
 
 if __name__ == "__main__":
+    pybamm.set_logging_level("INFO")
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    pybamm.set_logging_level("INFO")
-    models = [
-        pybamm.lead_acid.NewmanTiedemann(),
-        pybamm.lead_acid.NewmanTiedemann({"capacitance": "differential"}),
-        pybamm.lead_acid.NewmanTiedemann({"capacitance": "algebraic"}),
-    ]
-    compare_voltages(args, models)
-    # convergence_studies(args, models)
+    # discharge_states(args.compute)
+    discharge_times_and_errors(args.compute)
+    plt.show()

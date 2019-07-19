@@ -69,7 +69,7 @@ def plot_interfacial_currents(models_variables, t_eval):
 
 def plot_variables(all_variables, t_eval):
     # Set up
-    Crates = [-1]
+    Crates = [-0.1, -1, -5]
     times = np.linspace(0, 2, 4)
     var_file_names = {
         "Electrolyte concentration [Molar]"
@@ -101,7 +101,7 @@ def charge_states(compute):
                 name="With oxygen",
             ),
         ]
-        Crates = [-1]
+        Crates = [-0.1, -1, -5]
         t_eval = np.linspace(0, 2, 100)
         extra_parameter_values = {
             "Positive electrode"
@@ -124,7 +124,7 @@ def charge_states(compute):
             )
     plot_voltages(all_variables, t_eval)
     plot_interfacial_currents(all_variables[-1], t_eval)
-    # plot_variables(all_variables, t_eval)
+    plot_variables(all_variables, t_eval)
 
 
 if __name__ == "__main__":

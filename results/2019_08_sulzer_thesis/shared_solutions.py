@@ -91,7 +91,10 @@ def convergence_study(models, Crates, all_npts, t_eval, extra_parameter_values=N
                 model_disc = models_disc[model.name]
                 disc = discs[model.name]
                 param.update_model(model_disc, disc)
-                solution = model.default_solver.solve(model_disc, t_eval)
+                try:
+                    solution = model.default_solver.solve(model_disc, t_eval)
+                except pybamm.SolverError:
+                    continue
                 voltage = pybamm.ProcessedVariable(
                     model_disc.variables["Terminal voltage [V]"], solution.t, solution.y
                 )(t_eval)
@@ -101,7 +104,7 @@ def convergence_study(models, Crates, all_npts, t_eval, extra_parameter_values=N
                 }
                 models_times_and_voltages[model.name][npts][Crate] = variables
 
-        return models_times_and_voltages
+    return models_times_and_voltages
 
 
 def simulation(models, t_eval, extra_parameter_values=None, disc_only=False):

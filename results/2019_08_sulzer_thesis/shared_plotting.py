@@ -4,11 +4,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pybamm
+from collections import defaultdict
 
 
-def plot_voltages(all_variables, t_eval):
+def plot_voltages(all_variables, t_eval, linestyles=None):
     # Plot
-    linestyles = ["k-", "g--", "r:", "b-."]
+    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
     n = int(len(all_variables) // np.sqrt(len(all_variables)))
     m = int(np.ceil(len(all_variables) / n))
     fig, axes = plt.subplots(n, m, figsize=(6.4, 4.5))
@@ -43,16 +44,19 @@ def plot_voltages(all_variables, t_eval):
                     chr(97 + k), abs(Crate), abs(Crate) * 0.6
                 )
             )
-            # Hide the right and top spines
-            ax.spines["right"].set_visible(False)
-            ax.spines["top"].set_visible(False)
-
-            # Only show ticks on the left and bottom spines
-            ax.yaxis.set_ticks_position("left")
-            ax.xaxis.set_ticks_position("bottom")
+            # # Hide the right and top spines
+            # ax.spines["right"].set_visible(False)
+            # ax.spines["top"].set_visible(False)
+            #
+            # # Only show ticks on the left and bottom spines
+            # ax.yaxis.set_ticks_position("left")
+            # ax.xaxis.set_ticks_position("bottom")
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         if k % m == 0:
             ax.set_ylabel("Voltage [V]")
+        else:
+            ax.set_yticklabels([])
+
         for j, (model, variables) in enumerate(models_variables.items()):
             ax.plot(
                 variables["Time [h]"](t_eval),
@@ -64,8 +68,9 @@ def plot_voltages(all_variables, t_eval):
         fig.tight_layout()
     else:
         leg = fig.legend(labels, loc="lower center", ncol=len(labels))
-        plt.subplots_adjust(bottom=0.25, right=0.95, hspace=1.1, wspace=0.4)
+        plt.subplots_adjust(bottom=0.25, right=0.95, hspace=1.1, wspace=0.3)
     leg.get_frame().set_edgecolor("k")
+    return fig, axes
 
 
 def plot_variable(all_variables, times, variable, limits_exceptions=None):
@@ -123,9 +128,15 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None):
 
             # y-axis
             if i == 0:
-                soc = [x for x in models_variables.values()][0]["State of Charge"](time)
-                ax.set_ylabel("{}\% SoC".format(int(soc)), rotation=0, labelpad=30)
-                ax.yaxis.get_label().set_verticalalignment("center")
+                for variables in models_variables.values():
+                    try:
+                        soc = variables["State of Charge"](time)
+                        ax.set_ylabel(
+                            "{}\% SoC".format(int(soc)), rotation=0, labelpad=30
+                        )
+                        ax.yaxis.get_label().set_verticalalignment("center")
+                    except ValueError:
+                        pass
             else:
                 ax.set_yticklabels([])
 
@@ -192,4 +203,26 @@ def plot_voltage_breakdown(all_variables, t_eval, model, Crates):
         labels, bbox_to_anchor=(1.05, 0.5), loc="center left", frameon=True
     )
     leg.get_frame().set_edgecolor("k")
+    fig.tight_layout()
+
+
+def plot_times(models_times_and_voltages, Crate=1, linestyles=None):
+    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    all_npts = defaultdict(list)
+    solver_times = defaultdict(list)
+    fig, ax = plt.subplots(1, 1)
+    for i, (model, times_and_voltages) in enumerate(models_times_and_voltages.items()):
+        for npts, Crates_variables in times_and_voltages.items():
+            try:
+                solver_time = times_and_voltages[npts][Crate][
+                    "solution object"
+                ].solve_time
+            except KeyError:
+                continue
+            all_npts[model].append(npts * 3)
+            solver_times[model].append(solver_time)
+        ax.loglog(all_npts[model], solver_times[model], linestyles[i], label=model)
+    ax.set_xlabel("Number of grid points")
+    ax.set_ylabel("Solver time [s]")
+    ax.legend(loc="best")
     fig.tight_layout()
