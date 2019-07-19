@@ -243,7 +243,7 @@ class VoltageTests(BaseOutputTest):
         )
 
         np.testing.assert_array_almost_equal(
-            self.voltage(self.t),
+            self.voltage(self.t) / 6,
             self.ocv_av(self.t)
             + self.eta_r_av(self.t)
             + self.eta_e_av(self.t)

@@ -173,17 +173,13 @@ def get_infinite_nested_dict():
 
     Example
     -------
+    >>> import pybamm
     >>> d = pybamm.get_infinite_nested_dict()
     >>> d["a"] = 1
-    >>> d
-    defaultdict(<function pybamm.util.get_infinite_nested_dict()>, {'a': 1})
+    >>> d["a"]
+    1
     >>> d["b"]["c"]["d"] = 2
-    >>> d
-    defaultdict(<function pybamm.util.get_infinite_nested_dict()>,
-                {'a': 1,
-                 'b': defaultdict(<function pybamm.util.get_infinite_nested_dict()>,
-                             {'c': defaultdict(<function pybamm.util.get_infinite_nested_dict()>,
-                                          {'d': 2})})})
-
-    """  # noqa: E501
+    >>> d["b"]["c"] == {"d": 2}
+    True
+    """
     return defaultdict(get_infinite_nested_dict)
