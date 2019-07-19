@@ -305,6 +305,44 @@ class TestProcessedVariable(unittest.TestCase):
         ):
             pybamm.ProcessedVariable(mat, t, y, disc.mesh)
 
+    def test_call_failure(self):
+        # x domain
+        t = pybamm.t
+        var = pybamm.Variable("var x", domain=["negative electrode", "separator"])
+        x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = x_sol[:, np.newaxis] * np.linspace(0, 5)
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        with self.assertRaisesRegex(
+            ValueError, "x cannot be None for macroscale variable"
+        ):
+            processed_var(0)
+
+        # r domain
+        var = pybamm.Variable("var r", domain=["negative particle"])
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        r_sol = disc.process_symbol(r).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = r_sol[:, np.newaxis] * np.linspace(0, 5)
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        with self.assertRaisesRegex(
+            ValueError, "r cannot be None for microscale variable"
+        ):
+            processed_var(0)
+        with self.assertRaisesRegex(
+            ValueError, "r cannot be None for microscale variable"
+        ):
+            processed_var(0, 1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
