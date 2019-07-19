@@ -320,6 +320,7 @@ class ProcessedVariable(object):
             return self.call_3D(t, x, r)
 
     def call_2D(self, t, x, r):
+        "Evaluate a 2D variable"
         if self.scale == "micro":
             if r is not None:
                 return self._interpolation_function(t, r)
@@ -332,6 +333,7 @@ class ProcessedVariable(object):
                 raise ValueError("x cannot be None for macroscale variable")
 
     def call_3D(self, t, x, r):
+        "Evaluate a 3D variable"
         if isinstance(x, np.ndarray):
             if isinstance(r, np.ndarray) and isinstance(t, np.ndarray):
                 x = x[:, np.newaxis, np.newaxis]

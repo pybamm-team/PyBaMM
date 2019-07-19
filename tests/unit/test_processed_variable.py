@@ -307,7 +307,6 @@ class TestProcessedVariable(unittest.TestCase):
 
     def test_call_failure(self):
         # x domain
-        t = pybamm.t
         var = pybamm.Variable("var x", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
         disc = tests.get_discretisation_for_testing()
@@ -330,7 +329,6 @@ class TestProcessedVariable(unittest.TestCase):
         disc.set_variable_slices([var])
         r_sol = disc.process_symbol(r).entries[:, 0]
         var_sol = disc.process_symbol(var)
-        t_sol = np.linspace(0, 1)
         y_sol = r_sol[:, np.newaxis] * np.linspace(0, 5)
 
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
