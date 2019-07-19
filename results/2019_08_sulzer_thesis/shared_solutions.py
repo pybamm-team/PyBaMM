@@ -40,11 +40,11 @@ def model_comparison(models, Crates, t_eval, extra_parameter_values=None):
         for model in models:
             param.update_model(model, discs[model])
             solution = model.default_solver.solve(model, t_eval)
-            vars = pybamm.post_process_variables(
+            variables = pybamm.post_process_variables(
                 model.variables, solution.t, solution.y, mesh
             )
-            vars["solution"] = solution
-            all_variables[Crate][model.name] = vars
+            variables["solution"] = solution
+            all_variables[Crate][model.name] = variables
 
     return all_variables, t_eval
 

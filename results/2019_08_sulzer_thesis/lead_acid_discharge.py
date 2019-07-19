@@ -109,6 +109,7 @@ def plot_errors(models_times_and_voltages):
     ax.set_xlabel("C-rate")
     ax.set_ylabel("RMSE [V]")
     ax.legend(loc="best")
+    fig.tight_layout()
     file_name = "discharge_asymptotics_rmse.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")

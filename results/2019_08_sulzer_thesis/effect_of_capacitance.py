@@ -16,17 +16,17 @@ save_folder = "results/2019_08_sulzer_thesis/data/capacitance_results/"
 
 def plot_voltages(all_variables, t_eval):
     linestyles = ["k-", "b-.", "r--"]
-    fig, axes = shared_plotting.plot_voltages(
+    _, axes = shared_plotting.plot_voltages(
         all_variables, t_eval, linestyles=linestyles
     )
 
     # Add inset plot
     for k, (Crate, models_variables) in enumerate(all_variables.items()):
         ax = axes.flat[k]
-        y_min, y_max = ax.get_ylim()
+        y_min = ax.get_ylim()[0]
         ax.set_ylim([y_min, 13.6])
         inset = inset_axes(ax, width="40%", height="40%", loc=1, borderpad=0)
-        for j, (model, variables) in enumerate(models_variables.items()):
+        for j, variables in enumerate(models_variables.values()):
             time = variables["Time [s]"](t_eval)
             capacitance_indices = np.where(time < 50)
             time = time[capacitance_indices]
@@ -61,6 +61,7 @@ def plot_errors(all_variables, t_eval, Crates):
             )
             ax.loglog(variables["Time [h]"](t_eval), error, linestyles[j], label=model)
         ax.legend(loc="best")
+    fig.tight_layout()
     file_name = "capacitance_errors_voltages.eps".format(Crate)
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)

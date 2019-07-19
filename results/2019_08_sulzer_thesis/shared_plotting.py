@@ -141,7 +141,7 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None):
                 ax.set_yticklabels([])
 
             # Plot
-            for j, (model, variables) in enumerate(models_variables.items()):
+            for j, variables in enumerate(models_variables.values()):
                 ax.plot(x_dim, variables[variable](time, x), linestyles[j])
     leg = fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
     leg.get_frame().set_edgecolor("k")
@@ -194,7 +194,7 @@ def plot_voltage_breakdown(all_variables, t_eval, model, Crates):
         ax.fill_between(time, ocv, initial_ocv)
         top = ocv
         # Plot
-        for j, overpotential in enumerate(overpotentials):
+        for overpotential in overpotentials:
             bottom = top + variables[overpotential](t_eval) * 6
             ax.fill_between(time, bottom, top)
             top = bottom
@@ -212,7 +212,7 @@ def plot_times(models_times_and_voltages, Crate=1, linestyles=None):
     solver_times = defaultdict(list)
     fig, ax = plt.subplots(1, 1)
     for i, (model, times_and_voltages) in enumerate(models_times_and_voltages.items()):
-        for npts, Crates_variables in times_and_voltages.items():
+        for npts in times_and_voltages.keys():
             try:
                 solver_time = times_and_voltages[npts][Crate][
                     "solution object"
