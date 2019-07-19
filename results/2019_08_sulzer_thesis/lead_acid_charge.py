@@ -7,7 +7,7 @@ import numpy as np
 import pickle
 import pybamm
 import shared_plotting
-from shared_solutions import model_comparison, simulation
+from shared_solutions import model_comparison
 
 try:
     from config import OUTPUT_DIR
@@ -23,7 +23,7 @@ def plot_voltages(all_variables, t_eval):
 
 
 def plot_interfacial_currents(models_variables, t_eval):
-    models = ["Full", "Leading-order"]
+    models = ["Full", "LOQS"]
     file_name = "charge_interfacial_current_density_comparison.eps"
     fig, ax = plt.subplots(1, 1)
     output_vars = [
@@ -40,7 +40,6 @@ def plot_interfacial_currents(models_variables, t_eval):
     ]
     t_max = max(np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values())
     ax.set_xlim([0, t_max])
-    # ax.set_ylim([12, 15])
     ax.set_xlabel("Time [h]")
     ax.set_ylabel("Interfacial current densities")
     linestyles = ["--", ":", "-.", "-"]
@@ -56,12 +55,12 @@ def plot_interfacial_currents(models_variables, t_eval):
                     color=colors[j],
                 )
     leg1 = ax.legend(
-        [plots[("Full", 3)], plots[("Leading-order", 3)]],
-        ["Full", "Leading-order"],
+        [plots[("Full", 3)], plots[("LOQS", 3)]],
+        ["Full", "LOQS"],
         loc="center left",
         bbox_to_anchor=(1, 0.25),
     )
-    leg2 = ax.legend(labels, loc="center left", bbox_to_anchor=(1, 0.75))
+    ax.legend(labels, loc="center left", bbox_to_anchor=(1, 0.75))
     ax.add_artist(leg1)
     fig.tight_layout()
     if OUTPUT_DIR is not None:
@@ -73,18 +72,18 @@ def plot_variables(all_variables, t_eval):
     Crates = [-0.1, -2, -5]
     times = np.linspace(0, 2, 4)
     var_file_names = {
-        "Electrolyte concentration [Molar]": "charge_electrolyte_concentration_comparison.eps",
+        "Electrolyte concentration [Molar]"
+        + "": "charge_electrolyte_concentration_comparison.eps",
         "Oxygen concentration [Molar]": "charge_oxygen_concentration_comparison.eps",
     }
     limits_exceptions = {"Electrolyte concentration [Molar]": {"min": 0}}
+    all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     for var, file_name in var_file_names.items():
         if var in limits_exceptions:
             exceptions = limits_exceptions[var]
         else:
             exceptions = {}
-        shared_plotting.plot_variable(
-            all_variables, t_eval, times, Crates, var, exceptions
-        )
+        shared_plotting.plot_variable(all_variables, times, var, exceptions)
         if OUTPUT_DIR is not None:
             plt.savefig(
                 OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight"
@@ -100,7 +99,7 @@ def plot_voltage_breakdown(all_variables, t_eval):
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
 
 
-def lead_acid_charge_states(compute):
+def charge_states(compute):
     if compute:
         models = [
             pybamm.lead_acid.NewmanTiedemann(
@@ -142,6 +141,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    lead_acid_charge_states(args.compute)
-    # lead_acid_charge_times_and_errors(args.compute)
+    charge_states(args.compute)
+    # charge_times_and_errors(args.compute)
     plt.show()

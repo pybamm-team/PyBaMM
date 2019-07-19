@@ -16,10 +16,6 @@ except ImportError:
     OUTPUT_DIR = None
 
 
-def nested_dict():
-    return defaultdict(nested_dict)
-
-
 def plot_voltages(all_variables, t_eval):
     shared_plotting.plot_voltages(all_variables, t_eval)
     file_name = "discharge_voltage_comparison.eps"
@@ -32,19 +28,20 @@ def plot_variables(all_variables, t_eval):
     Crates = [0.1, 2, 5]
     times = np.linspace(0, 0.5, 4)
     var_file_names = {
-        "Electrolyte concentration [Molar]": "discharge_electrolyte_concentration_comparison.eps",
+        "Electrolyte concentration [Molar]"
+        + "": "discharge_electrolyte_concentration_comparison.eps",
         "Electrolyte potential [V]": "discharge_electrolyte_potential_comparison.eps",
-        "Interfacial current density": "discharge_interfacial_current_density_comparison.eps",
+        "Interfacial current density"
+        + "": "discharge_interfacial_current_density_comparison.eps",
     }
     limits_exceptions = {"Electrolyte concentration [Molar]": {"min": 0}}
+    all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     for var, file_name in var_file_names.items():
         if var in limits_exceptions:
             exceptions = limits_exceptions[var]
         else:
             exceptions = {}
-        shared_plotting.plot_variable(
-            all_variables, t_eval, times, Crates, var, exceptions
-        )
+        shared_plotting.plot_variable(all_variables, times, var, exceptions)
         if OUTPUT_DIR is not None:
             plt.savefig(
                 OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight"
@@ -60,7 +57,7 @@ def plot_voltage_breakdown(all_variables, t_eval):
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
 
 
-def lead_acid_discharge_states(compute):
+def discharge_states(compute):
     if compute:
         models = [
             pybamm.lead_acid.NewmanTiedemann(name="Full"),
@@ -85,9 +82,9 @@ def lead_acid_discharge_states(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    plot_voltages(all_variables, t_eval)
+    # plot_voltages(all_variables, t_eval)
     plot_variables(all_variables, t_eval)
-    plot_voltage_breakdown(all_variables, t_eval)
+    # plot_voltage_breakdown(all_variables, t_eval)
 
 
 def plot_errors(models_times_and_voltages):
@@ -136,15 +133,14 @@ def plot_times(models_times_and_voltages):
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
 
 
-def lead_acid_discharge_times_and_errors(compute):
+def discharge_times_and_errors(compute):
     savefile = "discharge_asymptotics_times_and_errors.pickle"
     if compute:
         try:
             with open(savefile, "rb") as f:
                 models_times_and_voltages = pickle.load(f)
         except FileNotFoundError:
-            models_times_and_voltages = nested_dict()
-        models_times_and_voltages = nested_dict()
+            models_times_and_voltages = pybamm.get_infinite_nested_dict()
         models = [
             pybamm.lead_acid.NewmanTiedemann(
                 {"surface form": "algebraic"}, name="Full"
@@ -159,9 +155,6 @@ def lead_acid_discharge_times_and_errors(compute):
         new_models_times_and_voltages = convergence_study(
             models, Crates, all_npts, t_eval
         )
-        import ipdb
-
-        ipdb.set_trace()
         models_times_and_voltages.update(new_models_times_and_voltages)
         with open(savefile, "wb") as f:
             pickle.dump(models_times_and_voltages, f, pickle.HIGHEST_PROTOCOL)
@@ -182,6 +175,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    # lead_acid_discharge_states(args.compute)
-    lead_acid_discharge_times_and_errors(args.compute)
+    discharge_states(args.compute)
+    # discharge_times_and_errors(args.compute)
     plt.show()

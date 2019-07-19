@@ -13,7 +13,7 @@ def plot_voltages(all_variables, t_eval):
     m = int(np.ceil(len(all_variables) / n))
     fig, axes = plt.subplots(n, m, figsize=(6.4, 4.5))
     labels = [model for model in [x for x in all_variables.values()][0].keys()]
-    y_min = min(
+    y_min = 0.98 * min(
         np.nanmin(variables["Terminal voltage [V]"](t_eval))
         for models_variables in all_variables.values()
         for variables in models_variables.values()
@@ -23,27 +23,33 @@ def plot_voltages(all_variables, t_eval):
         for models_variables in all_variables.values()
         for variables in models_variables.values()
     )
+    # Strict voltage cut-offs
+    y_min = max(y_min, 10.5)
+    y_max = min(y_max, 14.5)
     for k, (Crate, models_variables) in enumerate(all_variables.items()):
-        ax = axes.flat[k]
+        if len(all_variables) == 1:
+            ax = axes
+        else:
+            ax = axes.flat[k]
         t_max = max(
             np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
         )
         ax.set_xlim([0, t_max])
         ax.set_ylim([y_min, y_max])
         ax.set_xlabel("Time [h]")
-        ax.set_title(
-            "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
-                chr(97 + k), abs(Crate), abs(Crate) * 0.6
+        if len(all_variables) > 1:
+            ax.set_title(
+                "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
+                    chr(97 + k), abs(Crate), abs(Crate) * 0.6
+                )
             )
-        )
+            # Hide the right and top spines
+            ax.spines["right"].set_visible(False)
+            ax.spines["top"].set_visible(False)
 
-        # Hide the right and top spines
-        ax.spines["right"].set_visible(False)
-        ax.spines["top"].set_visible(False)
-
-        # Only show ticks on the left and bottom spines
-        ax.yaxis.set_ticks_position("left")
-        ax.xaxis.set_ticks_position("bottom")
+            # Only show ticks on the left and bottom spines
+            ax.yaxis.set_ticks_position("left")
+            ax.xaxis.set_ticks_position("bottom")
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         if k % m == 0:
             ax.set_ylabel("Voltage [V]")
@@ -53,15 +59,20 @@ def plot_voltages(all_variables, t_eval):
                 variables["Terminal voltage [V]"](t_eval),
                 linestyles[j],
             )
-    leg = fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
+    if len(all_variables) == 1:
+        leg = ax.legend(labels, loc="best")
+        fig.tight_layout()
+    else:
+        leg = fig.legend(labels, loc="lower center", ncol=len(labels))
+        plt.subplots_adjust(bottom=0.25, right=0.95, hspace=1.1, wspace=0.4)
     leg.get_frame().set_edgecolor("k")
-    plt.subplots_adjust(bottom=0.25, right=0.95, hspace=1.1, wspace=0.4)
 
 
-def plot_variable(all_variables, t_eval, times, Crates, variable, limits_exceptions):
+def plot_variable(all_variables, times, variable, limits_exceptions=None):
     linestyles = ["k-", "g--", "r:", "b-."]
     n = len(times)
-    m = len(Crates)
+    m = len(all_variables)
+    Crates = list(all_variables.keys())
     labels = [model for model in [x for x in all_variables.values()][0].keys()]
     x = all_variables[Crates[0]][labels[0]]["x"](0, np.linspace(0, 1))[:, 0]
     x_dim = all_variables[Crates[0]][labels[0]]["x [m]"](0, np.linspace(0, 1))[:, 0]
@@ -71,17 +82,15 @@ def plot_variable(all_variables, t_eval, times, Crates, variable, limits_excepti
     # Default limits
     y_min = pybamm.ax_min(
         [
-            np.nanmin(variables[variable](t_eval, x))
+            np.nanmin(variables[variable](times, x))
             for Crate, models_variables in all_variables.items()
-            if Crate in Crates
             for variables in models_variables.values()
         ]
     )
     y_max = pybamm.ax_max(
         [
-            np.nanmax(variables[variable](t_eval, x))
+            np.nanmax(variables[variable](times, x))
             for Crate, models_variables in all_variables.items()
-            if Crate in Crates
             for variables in models_variables.values()
         ]
     )
@@ -92,8 +101,7 @@ def plot_variable(all_variables, t_eval, times, Crates, variable, limits_excepti
         y_max = limits_exceptions["max"]
 
     # Plot
-    for i, Crate in enumerate(Crates):
-        models_variables = all_variables[Crate]
+    for i, (Crate, models_variables) in enumerate(all_variables.items()):
         for j, time in enumerate(times):
             ax = axes[j, i]
             ax.set_xlim([x_dim[0], x_dim[-1]])
