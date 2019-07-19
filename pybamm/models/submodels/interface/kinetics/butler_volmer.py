@@ -35,3 +35,21 @@ class BaseButlerVolmer(BaseKinetics):
 class BaseFirstOrderButlerVolmer(BaseButlerVolmer, BaseFirstOrderKinetics):
     def __init__(self, param, domain):
         super().__init__(param, domain)
+
+    def _get_dj_dc(self, variables):
+        "See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc`"
+        c_e, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+            variables
+        )
+        eta_r = delta_phi - ocp
+        return (2 * j0.diff(c_e) * pybamm.sinh((ne / 2) * eta_r)) - (
+            2 * j0 * (ne / 2) * ocp.diff(c_e) * pybamm.cosh((ne / 2) * eta_r)
+        )
+
+    def _get_dj_ddeltaphi(self, variables):
+        "See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi`"
+        c_e, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+            variables
+        )
+        eta_r = delta_phi - ocp
+        return 2 * j0 * (ne / 2) * pybamm.cosh((ne / 2) * eta_r)

@@ -82,21 +82,22 @@ class FirstOrder(BaseModel):
         )
 
         # Correct for integral
-        epsc_e_n_1_av = eps_n_0 * (-rhs_n * l_n ** 3 / (3 * D_e_n))
-        epsc_e_s_1_av = (
-            eps_s_0 * (rhs_s * l_s ** 3 / 6 + rhs_n * l_n * l_s ** 2 / 2) / D_e_s
-        )
-        epsc_e_p_1_av = eps_p_0 * (
+        c_e_n_1_av = -rhs_n * l_n ** 3 / (3 * D_e_n)
+        c_e_s_1_av = (rhs_s * l_s ** 3 / 6 + rhs_n * l_n * l_s ** 2 / 2) / D_e_s
+        c_e_p_1_av = (
             -rhs_p * l_p ** 3 / (3 * D_e_p)
             + (rhs_s * l_s ** 2 * l_p / (2 * D_e_s))
             + (rhs_n * l_n * l_s * l_p / D_e_s)
         )
-        A_k = -(epsc_e_n_1_av + epsc_e_s_1_av + epsc_e_p_1_av) / (
+        A_e = -(eps_n_0 * c_e_n_1_av + eps_s_0 * c_e_s_1_av + eps_p_0 * c_e_p_1_av) / (
             l_n * eps_n_0 + l_s * eps_s_0 + l_p * eps_p_0
         )
-        c_e_n_1 += A_k
-        c_e_s_1 += A_k
-        c_e_p_1 += A_k
+        c_e_n_1 += A_e
+        c_e_s_1 += A_e
+        c_e_p_1 += A_e
+        c_e_n_1_av += A_e
+        c_e_s_1_av += A_e
+        c_e_p_1_av += A_e
 
         # Update variables
         c_e = pybamm.Concatenation(
@@ -105,6 +106,14 @@ class FirstOrder(BaseModel):
             pybamm.Broadcast(c_e_0, "positive electrode") + param.C_e * c_e_p_1,
         )
         variables.update(self._get_standard_concentration_variables(c_e))
+        # Update with analytical expressions for first-order averages
+        variables.update(
+            {
+                "Average first-order negative electrolyte concentration": c_e_n_1_av,
+                "Average first-order separator electrolyte concentration": c_e_s_1_av,
+                "Average first-order positive electrolyte concentration": c_e_p_1_av,
+            }
+        )
 
         N_e = pybamm.Concatenation(
             param.C_e * N_e_n_1, param.C_e * N_e_s_1, param.C_e * N_e_p_1

@@ -2,7 +2,6 @@
 # First-order Butler-Volmer kinetics
 #
 
-import pybamm
 from ..kinetics.base_first_order_kinetics import BaseFirstOrderKinetics
 
 
@@ -31,13 +30,22 @@ class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
+        # try:
+        #     c_e_1_av = variables[
+        #         "Average first-order "
+        #         + self.domain.lower()
+        #         + " electrolyte concentration"
+        #     ]
+        # except KeyError:
         c_e_0 = variables["Leading-order average electrolyte concentration"]
-        c_e = variables[self.domain + " electrolyte concentration"]
+        c_e_av = variables[
+            "Average " + self.domain.lower() + " electrolyte concentration"
+        ]
+        c_e_1_av = (c_e_av - c_e_0) / self.param.C_e
 
-        dj_dc_0 = self._get_dj_ce(variables)
+        dj_dc_0 = self._get_dj_dc(variables)
         dj_ddeltaphi_0 = self._get_dj_ddeltaphi(variables)
 
-        c_e_1_av = (pybamm.average(c_e) - c_e_0) / self.param.C_e
         delta_phi_1_av = -dj_dc_0 * c_e_1_av / dj_ddeltaphi_0
         delta_phi = delta_phi_0 + self.param.C_e * delta_phi_1_av
 
