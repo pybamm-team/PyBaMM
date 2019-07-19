@@ -70,6 +70,13 @@ class TestUtil(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "same length"):
             pybamm.rmse(np.ones(5), np.zeros(3))
 
+    def test_infinite_nested_dict(self):
+        d = pybamm.get_infinite_nested_dict()
+        d[1][2][3] = "x"
+        self.assertEqual(d[1][2][3], "x")
+        d[4][5] = "y"
+        self.assertEqual(d[4][5], "y")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

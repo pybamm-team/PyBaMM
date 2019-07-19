@@ -11,6 +11,7 @@ import sys
 import timeit
 import pathlib
 import pybamm
+from collections import defaultdict
 
 
 def root_dir():
@@ -160,3 +161,29 @@ def rmse(x, y):
     if len(x) != len(y):
         raise ValueError("Vectors must have the same length")
     return np.sqrt(np.nanmean((x - y) ** 2))
+
+
+def get_infinite_nested_dict():
+    """
+    Return a dictionary that allows infinite nesting without having to define level by
+    level.
+
+    See:
+    https://stackoverflow.com/questions/651794/whats-the-best-way-to-initialize-a-dict-of-dicts-in-python/652226#652226
+
+    Example
+    -------
+    >>> d = pybamm.get_infinite_nested_dict()
+    >>> d["a"] = 1
+    >>> d
+    defaultdict(<function pybamm.util.get_infinite_nested_dict()>, {'a': 1})
+    >>> d["b"]["c"]["d"] = 2
+    >>> d
+    defaultdict(<function pybamm.util.get_infinite_nested_dict()>,
+                {'a': 1,
+                 'b': defaultdict(<function pybamm.util.get_infinite_nested_dict()>,
+                             {'c': defaultdict(<function pybamm.util.get_infinite_nested_dict()>,
+                                          {'d': 2})})})
+
+    """
+    return defaultdict(get_infinite_nested_dict)

@@ -16,6 +16,10 @@ except ImportError:
     OUTPUT_DIR = None
 
 
+def nested_dict():
+    return defaultdict(nested_dict)
+
+
 def plot_voltages(all_variables, t_eval):
     shared_plotting.plot_voltages(all_variables, t_eval)
     file_name = "discharge_voltage_comparison.eps"
@@ -133,24 +137,37 @@ def plot_times(models_times_and_voltages):
 
 
 def lead_acid_discharge_times_and_errors(compute):
+    savefile = "discharge_asymptotics_times_and_errors.pickle"
     if compute:
+        try:
+            with open(savefile, "rb") as f:
+                models_times_and_voltages = pickle.load(f)
+        except FileNotFoundError:
+            models_times_and_voltages = nested_dict()
+        models_times_and_voltages = nested_dict()
         models = [
             pybamm.lead_acid.NewmanTiedemann(
                 {"surface form": "algebraic"}, name="Full"
             ),
             pybamm.lead_acid.LOQS(name="LOQS"),
-            pybamm.lead_acid.FOQS(name="FOQS"),
-            pybamm.lead_acid.Composite(name="Composite"),
+            # pybamm.lead_acid.FOQS(name="FOQS"),
+            # pybamm.lead_acid.Composite(name="Composite"),
         ]
-        Crates = np.linspace(0.01, 5, 5)
+        Crates = np.linspace(0.01, 5, 2)
         all_npts = [20]
         t_eval = np.linspace(0, 1, 100)
-        models_times_and_voltages = convergence_study(models, Crates, all_npts, t_eval)
-        with open("discharge_asymptotics_times_and_errors.pickle", "wb") as f:
+        new_models_times_and_voltages = convergence_study(
+            models, Crates, all_npts, t_eval
+        )
+        import ipdb
+
+        ipdb.set_trace()
+        models_times_and_voltages.update(new_models_times_and_voltages)
+        with open(savefile, "wb") as f:
             pickle.dump(models_times_and_voltages, f, pickle.HIGHEST_PROTOCOL)
     else:
         try:
-            with open("discharge_asymptotics_times_and_errors.pickle", "rb") as f:
+            with open(savefile, "rb") as f:
                 models_times_and_voltages = pickle.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(
@@ -165,6 +182,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    lead_acid_discharge_states(args.compute)
-    # lead_acid_discharge_times_and_errors(args.compute)
+    # lead_acid_discharge_states(args.compute)
+    lead_acid_discharge_times_and_errors(args.compute)
     plt.show()
