@@ -6,10 +6,10 @@ import pybamm
 import autograd.numpy as np
 from .base_inverse_kinetics import BaseInverseKinetics
 from .base_inverse_first_order_kinetics import BaseInverseFirstOrderKinetics
-from ..kinetics.butler_volmer import BaseButlerVolmer
+from ..kinetics.butler_volmer import ButlerVolmer
 
 
-class BaseInverseButlerVolmer(BaseInverseKinetics, BaseButlerVolmer):
+class InverseButlerVolmer(BaseInverseKinetics, ButlerVolmer):
     """
     A base submodel that implements the inverted form of the Butler-Volmer relation to
     solve for the reaction overpotential.
@@ -22,7 +22,7 @@ class BaseInverseButlerVolmer(BaseInverseKinetics, BaseButlerVolmer):
         The domain(s) in which to compute the interfacial current. Default is None,
         in which case j.domain is used.
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseButlerVolmer`
+    **Extends:** :class:`pybamm.interface.kinetics.ButlerVolmer`
 
     """
 
@@ -33,8 +33,6 @@ class BaseInverseButlerVolmer(BaseInverseKinetics, BaseButlerVolmer):
         return (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
 
 
-class BaseInverseFirstOrderButlerVolmer(
-    BaseInverseFirstOrderKinetics, BaseButlerVolmer
-):
+class InverseFirstOrderButlerVolmer(BaseInverseFirstOrderKinetics, ButlerVolmer):
     def __init__(self, param, domain):
         super().__init__(param, domain)

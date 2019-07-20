@@ -7,7 +7,7 @@ from .base_kinetics import BaseKinetics
 from .base_first_order_kinetics import BaseFirstOrderKinetics
 
 
-class BaseButlerVolmer(BaseKinetics):
+class ButlerVolmer(BaseKinetics):
     """
     Base submodel which implements the forward Butler-Volmer equation:
 
@@ -50,6 +50,6 @@ class BaseButlerVolmer(BaseKinetics):
         return 2 * j0 * (ne / 2) * pybamm.cosh((ne / 2) * eta_r)
 
 
-class BaseFirstOrderButlerVolmer(BaseButlerVolmer, BaseFirstOrderKinetics):
+class FirstOrderButlerVolmer(ButlerVolmer, BaseFirstOrderKinetics):
     def __init__(self, param, domain):
         super().__init__(param, domain)

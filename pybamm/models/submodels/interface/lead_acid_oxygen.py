@@ -82,10 +82,10 @@ class BaseInterfaceOxygenLeadAcid(BaseInterface):
         return self.param.ne_Ox
 
 
-class ForwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.BaseForwardTafel):
+class ForwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.ForwardTafel):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseForwardTafel` (for kinetics)
+    :class:`kinetics.ForwardTafel` (for kinetics)
     """
 
     def __init__(self, param, domain):
@@ -116,10 +116,10 @@ class FullDiffusionLimited(
         super().__init__(param, domain)
 
 
-class NoReaction(BaseInterfaceOxygenLeadAcid, kinetics.BaseNoReaction):
+class NoReaction(BaseInterfaceOxygenLeadAcid, kinetics.NoReaction):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseNoReaction` (for kinetics)
+    :class:`kinetics.NoReaction` (for kinetics)
     """
 
     def __init__(self, param, domain):

@@ -19,7 +19,7 @@ class BaseInverseKinetics(BaseInterface):
         The domain(s) in which to compute the interfacial current. Default is None,
         in which case j.domain is used.
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseButlerVolmer`
+    **Extends:** :class:`pybamm.interface.kinetics.ButlerVolmer`
 
     """
 
