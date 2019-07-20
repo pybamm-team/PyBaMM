@@ -17,7 +17,7 @@ class LeadingOrder(BaseModel):
     reactions : dict
         Dictionary of reaction terms
 
-    **Extends:** :class:`pybamm.oxygen.stefan_maxwell.diffusion.BaseModel`
+    **Extends:** :class:`pybamm.oxgen_diffusion.BaseModel`
     """
 
     def __init__(self, param, reactions):

@@ -3,29 +3,12 @@
 #
 import pybamm
 
-from .base_oxygen_diffusion import BaseModel
+from .full_oxygen_diffusion import Full
 
 
-def separator_and_positive_only(variable):
-    """Return only the separator and positive electrode children
-
-    Parameters
-    ----------
-    variable : :class:`pybamm.Concatenation`
-        Concatenation of variables in negative, separator, positive
-
-    Returns
-    -------
-    :class:`pybamm.Concatenation`
-        Concatenation of variables in separator and positive only
-    """
-    _, var_s, var_p = variable.orphans
-    return pybamm.Concatenation(var_s, var_p)
-
-
-class Full(BaseModel):
-    """Class for conservation of mass of oxygen. (Full refers to unreduced by
-    asymptotic methods)
+class Composite(Full):
+    """Class for conservation of mass of oxygen. (Composite refers to composite
+    expansion in asymptotic methods)
     In this model, extremely fast oxygen kinetics in the negative electrode imposes
     zero oxygen concentration there, and so the oxygen variable only lives in the
     separator and positive electrode. The boundary condition at the negative electrode/
@@ -38,7 +21,7 @@ class Full(BaseModel):
     reactions : dict
         Dictionary of reaction terms
 
-    **Extends:** :class:`pybamm.oxygen_diffusion.BaseModel`
+    **Extends:** :class:`pybamm.oxygen_diffusion.Full`
     """
 
     def __init__(self, param, reactions):
