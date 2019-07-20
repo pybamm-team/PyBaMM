@@ -27,6 +27,7 @@ class HigherOrderBaseModel(BaseModel):
         self.set_current_collector_submodel()
         # Electrolyte submodel to get first-order concentrations
         self.set_electrolyte_diffusion_submodel()
+        self.set_other_species_diffusion_submodels()
         # Average interface submodel to get average first-order potential differences
         self.set_average_interfacial_submodel()
         # Electrolyte and solid submodels to get full first-order potentials
@@ -55,6 +56,8 @@ class HigherOrderBaseModel(BaseModel):
             "Average positive electrode surface potential difference",
             "Negative electrode interfacial current density",
             "Positive electrode interfacial current density",
+            "Negative electrode oxygen interfacial current density",
+            "Positive electrode oxygen interfacial current density",
             "Porosity",
             "Porosity change",
             "Volume-averaged velocity",
@@ -84,6 +87,16 @@ class HigherOrderBaseModel(BaseModel):
         elif self.options["higher-order concentration"] == "composite":
             self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Composite(
                 self.param, self.reactions
+            )
+
+    def set_other_species_diffusion_submodels(self):
+        if "oxygen" in self.options["side reactions"]:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
+                self.param, self.reactions
+            )
+        else:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(
+                self.param
             )
 
     def set_average_interfacial_submodel(self):

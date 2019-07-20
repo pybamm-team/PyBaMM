@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from .full_oxygen_diffusion import Full
+from .full_oxygen_diffusion import Full, separator_and_positive_only
 
 
 class Composite(Full):
@@ -27,24 +27,9 @@ class Composite(Full):
     def __init__(self, param, reactions):
         super().__init__(param, reactions)
 
-    def get_fundamental_variables(self):
-        # Oxygen concentration (oxygen concentration is zero in the negative electrode)
-        c_ox_n = pybamm.Broadcast(0, "negative electrode")
-        c_ox_s = pybamm.Variable("Separator oxygen concentration", ["separator"])
-        c_ox_p = pybamm.Variable(
-            "Positive oxygen concentration", ["positive electrode"]
-        )
-        c_ox_s_p = pybamm.Concatenation(c_ox_s, c_ox_p)
-        variables = {"Separator and positive electrode oxygen concentration": c_ox_s_p}
-
-        c_ox = pybamm.Concatenation(c_ox_n, c_ox_s, c_ox_p)
-        variables.update(self._get_standard_concentration_variables(c_ox))
-
-        return variables
-
     def get_coupled_variables(self, variables):
 
-        eps = separator_and_positive_only(variables["Porosity"])
+        eps = separator_and_positive_only(variables["Leading-order porosity"])
         c_ox = variables["Separator and positive electrode oxygen concentration"]
         # TODO: allow charge and convection?
         v_box = pybamm.Scalar(0)
@@ -62,40 +47,27 @@ class Composite(Full):
         return variables
 
     def set_rhs(self, variables):
+        "Composite reaction-diffusion with source terms from leading order"
 
         param = self.param
 
-        eps = separator_and_positive_only(variables["Porosity"])
-        deps_dt = separator_and_positive_only(variables["Porosity change"])
+        eps_0 = separator_and_positive_only(variables["Leading-order porosity"])
+        deps_0_dt = separator_and_positive_only(
+            variables["Leading-order porosity change"]
+        )
         c_ox = variables["Separator and positive electrode oxygen concentration"]
         N_ox = variables["Oxygen flux"].orphans[1]
 
-        source_terms = sum(
+        source_terms_0 = sum(
             pybamm.Concatenation(
                 pybamm.Broadcast(0, "separator"),
-                reaction["Positive"]["s_ox"] * variables[reaction["Positive"]["aj"]],
+                reaction["Positive"]["s_ox"]
+                * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
             )
             for reaction in self.reactions.values()
         )
 
         self.rhs = {
-            c_ox: (1 / eps)
-            * (-pybamm.div(N_ox) / param.C_e + source_terms - c_ox * deps_dt)
+            c_ox: (1 / eps_0)
+            * (-pybamm.div(N_ox) / param.C_e + source_terms_0 - c_ox * deps_0_dt)
         }
-
-    def set_boundary_conditions(self, variables):
-
-        c_ox = variables["Separator and positive electrode oxygen concentration"]
-
-        self.boundary_conditions = {
-            c_ox: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            }
-        }
-
-    def set_initial_conditions(self, variables):
-
-        c_ox = variables["Separator and positive electrode oxygen concentration"]
-
-        self.initial_conditions = {c_ox: self.param.c_ox_init}
