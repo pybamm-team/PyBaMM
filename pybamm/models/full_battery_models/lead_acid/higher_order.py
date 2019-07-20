@@ -26,6 +26,7 @@ class HigherOrderBaseModel(BaseModel):
         self.set_reactions()
         self.set_current_collector_submodel()
         # Electrolyte submodel to get first-order concentrations
+        self.set_other_species_diffusion_submodels()
         self.set_electrolyte_diffusion_submodel()
         # Average interface submodel to get average first-order potential differences
         self.set_average_interfacial_submodel()
@@ -74,6 +75,19 @@ class HigherOrderBaseModel(BaseModel):
         self.submodels["current collector"] = pybamm.current_collector.Uniform(
             self.param
         )
+
+    def set_other_species_diffusion_submodels(self):
+        if "oxygen" in self.options["side reactions"]:
+            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
+                self.param, self.reactions
+            )
+            # Very hacky!!! update leading-order current before working out electrolyte
+            # concentration
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
+                self.param, "Negative"
+            )
 
     def set_electrolyte_diffusion_submodel(self):
 
@@ -130,19 +144,19 @@ class HigherOrderBaseModel(BaseModel):
 
         # Oxygen
         if "oxygen" in self.options["side reactions"]:
-            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
-                self.param, self.reactions
-            )
+            # self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
+            #     self.param, self.reactions
+            # )
             self.submodels[
                 "positive oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.FirstOrderForwardTafel(
                 self.param, "Positive"
             )
-            self.submodels[
-                "negative oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
-                self.param, "Negative"
-            )
+            # self.submodels[
+            #     "negative oxygen interface"
+            # ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
+            #     self.param, "Negative"
+            # )
 
     def set_full_convection_submodel(self):
         """

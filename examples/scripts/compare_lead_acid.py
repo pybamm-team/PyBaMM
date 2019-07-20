@@ -21,6 +21,7 @@ geometry = models[-1].default_geometry
 param = models[0].default_parameter_values
 param.update(
     {
+        # "Bruggeman coefficient": 0.001,
         "Typical current [A]": -20,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
@@ -54,6 +55,8 @@ output_variables = [
     [
         "Average positive electrode interfacial current density",
         "Average positive electrode oxygen interfacial current density",
+        "Average negative electrode interfacial current density",
+        "Average negative electrode oxygen interfacial current density",
     ],
     "Average negative electrode reaction overpotential [V]",
     "Average positive electrode reaction overpotential [V]",
