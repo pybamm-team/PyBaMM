@@ -9,7 +9,7 @@ from .base_inverse_first_order_kinetics import BaseInverseFirstOrderKinetics
 from ..kinetics.butler_volmer import BaseButlerVolmer
 
 
-class BaseInverseButlerVolmer(BaseInterface):
+class BaseInverseButlerVolmer(BaseButlerVolmer):
     """
     A base submodel that implements the inverted form of the Butler-Volmer relation to
     solve for the reaction overpotential.
@@ -75,12 +75,6 @@ class BaseInverseButlerVolmer(BaseInterface):
             )
 
         return variables
-
-    def _get_exchange_current_density(self, variables):
-        raise NotImplementedError
-
-    def _get_open_circuit_potential(self, variables):
-        raise NotImplementedError
 
 
 class BaseInverseFirstOrderButlerVolmer(

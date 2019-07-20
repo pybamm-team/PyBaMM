@@ -9,7 +9,7 @@ models = [
     pybamm.lead_acid.FOQS(),
     pybamm.lead_acid.Composite(),
     # pybamm.lead_acid.Composite({"surface form": "algebraic"}),
-    # pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.NewmanTiedemann(),
 ]
 
 # create geometry

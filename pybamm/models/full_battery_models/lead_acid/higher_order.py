@@ -46,6 +46,7 @@ class HigherOrderBaseModel(BaseModel):
             self.options, name="LOQS model (for composite model)"
         )
         self.update(leading_order_model)
+        self.reaction_submodels = leading_order_model.reaction_submodels
 
         # Leading-order variables
         for variable in [
@@ -92,10 +93,16 @@ class HigherOrderBaseModel(BaseModel):
             self.param, "Negative"
         )
         self.submodels[
+            "average negative interface"
+        ].reaction_submodels = self.reaction_submodels["Negative"]
+        self.submodels[
             "average positive interface"
         ] = pybamm.interface.lead_acid.InverseFirstOrderButlerVolmer(
             self.param, "Positive"
         )
+        self.submodels[
+            "average positive interface"
+        ].reaction_submodels = self.reaction_submodels["Positive"]
 
     def set_electrolyte_conductivity_submodel(self):
         self.submodels[

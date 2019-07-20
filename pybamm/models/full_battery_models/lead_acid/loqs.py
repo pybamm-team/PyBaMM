@@ -69,6 +69,10 @@ class LOQS(BaseModel):
             self.submodels[
                 "positive interface"
             ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Positive")
+        self.reaction_submodels = {
+            "Negative": [self.submodels["negative interface"]],
+            "Positive": [self.submodels["positive interface"]],
+        }
 
     def set_negative_electrode_submodel(self):
 
@@ -133,6 +137,12 @@ class LOQS(BaseModel):
             self.submodels[
                 "negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
+        self.reaction_submodels["Negative"].append(
+            self.submodels["negative oxygen interface"]
+        )
+        self.reaction_submodels["Positive"].append(
+            self.submodels["positive oxygen interface"]
+        )
 
     @property
     def default_spatial_methods(self):

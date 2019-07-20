@@ -78,3 +78,41 @@ class BaseKinetics(BaseInterface):
 
     def _get_open_circuit_potential(self, variables):
         raise NotImplementedError
+
+    def _get_dj_dc(self, variables):
+        """
+        Default to calculate derivative of interfacial current density with respect to
+        concentration. Can be overwritten by specific kinetic functions.
+        """
+        c_e, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+            variables
+        )
+        j = self._get_kinetics(j0, ne, delta_phi - ocp)
+        return j.diff(c_e)
+
+    def _get_dj_ddeltaphi(self, variables):
+        """
+        Default to calculate derivative of interfacial current density with respect to
+        surface potential difference. Can be overwritten by specific kinetic functions.
+        """
+        _, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+            variables
+        )
+        j = self._get_kinetics(j0, ne, delta_phi - ocp)
+        return j.diff(delta_phi)
+
+    def _get_interface_variables_for_first_order(self, variables):
+        c_e_0 = variables["Leading-order average electrolyte concentration"] * 1
+        hacked_variables = {
+            **variables,
+            self.domain + " electrolyte concentration": c_e_0,
+        }
+        delta_phi = variables[
+            "Leading-order average "
+            + self.domain.lower()
+            + " electrode surface potential difference"
+        ]
+        j0 = self._get_exchange_current_density(hacked_variables)
+        ne = self._get_number_of_electrons_in_reaction()
+        ocp = self._get_open_circuit_potential(hacked_variables)[0]
+        return c_e_0, delta_phi, j0, ne, ocp
