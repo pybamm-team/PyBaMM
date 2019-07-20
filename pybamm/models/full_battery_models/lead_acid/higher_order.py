@@ -91,17 +91,13 @@ class HigherOrderBaseModel(BaseModel):
     def set_average_interfacial_submodel(self):
         self.submodels[
             "average negative interface"
-        ] = pybamm.interface.lead_acid.InverseFirstOrderButlerVolmer(
-            self.param, "Negative"
-        )
+        ] = pybamm.interface.lead_acid.InverseFirstOrderKinetics(self.param, "Negative")
         self.submodels[
             "average negative interface"
         ].reaction_submodels = self.reaction_submodels["Negative"]
         self.submodels[
             "average positive interface"
-        ] = pybamm.interface.lead_acid.InverseFirstOrderButlerVolmer(
-            self.param, "Positive"
-        )
+        ] = pybamm.interface.lead_acid.InverseFirstOrderKinetics(self.param, "Positive")
         self.submodels[
             "average positive interface"
         ].reaction_submodels = self.reaction_submodels["Positive"]

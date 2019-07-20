@@ -43,7 +43,7 @@ class ButlerVolmer(BaseKinetics):
 
     def _get_dj_ddeltaphi(self, variables):
         "See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi`"
-        c_e, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+        _, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
             variables
         )
         eta_r = delta_phi - ocp

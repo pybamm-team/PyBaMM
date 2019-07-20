@@ -31,8 +31,3 @@ class InverseButlerVolmer(BaseInverseKinetics, ButlerVolmer):
 
     def _get_inverse_kinetics(self, j, j0, ne):
         return (2 / ne) * pybamm.Function(np.arcsinh, j / (2 * j0))
-
-
-class InverseFirstOrderButlerVolmer(BaseInverseFirstOrderKinetics, ButlerVolmer):
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
