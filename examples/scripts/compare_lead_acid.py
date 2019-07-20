@@ -52,8 +52,8 @@ for i, model in enumerate(models):
 # plot
 output_variables = [
     [
-        "Average negative electrode interfacial current density [A.m-2]",
         "Average positive electrode interfacial current density [A.m-2]",
+        "Average positive electrode oxygen interfacial current density [A.m-2]",
     ],
     "Average negative electrode surface potential difference [V]",
     "Average positive electrode surface potential difference [V]",

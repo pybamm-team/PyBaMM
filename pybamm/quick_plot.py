@@ -236,27 +236,18 @@ class QuickPlot(object):
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             self.plots[key] = defaultdict(dict)
             # Set labels for the first subplot only (avoid repetition)
-            if k == 0:
-                labels = self.labels
-            else:
-                labels = [None] * len(self.labels)
             if variable_lists[0][0].dimensions == 2:
                 # 2D plot: plot as a function of x at time t
                 ax.set_xlabel("Position [m]", fontsize=fontsize)
                 x_value = self.x_values[key]
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
-                        if j == 0:
-                            label = labels[i]
-                        else:
-                            label = None
                         self.plots[key][i][j], = ax.plot(
                             x_value * self.x_scale,
                             variable(t, x_value),
                             lw=2,
                             color=colors[i],
                             linestyle=linestyles[j],
-                            label=label,
                         )
             else:
                 # 1D plot: plot as a function of time, indicating time t with a line
@@ -264,17 +255,12 @@ class QuickPlot(object):
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         full_t = self.ts[i]
-                        if j == 0:
-                            label = labels[i]
-                        else:
-                            label = None
                         self.plots[key][i][j], = ax.plot(
                             full_t * self.time_scale,
                             variable(full_t),
                             lw=2,
                             color=colors[i],
                             linestyle=linestyles[j],
-                            label=label,
                         )
                 y_min, y_max = self.axis[key][2:]
                 self.time_lines[key], = ax.plot(
@@ -287,11 +273,12 @@ class QuickPlot(object):
             else:
                 ax.legend(
                     [split_long_string(s, 6) for s in key],
-                    bbox_to_anchor=(0.5, 1.2),
+                    bbox_to_anchor=(0.5, 1),
                     fontsize=8,
-                    loc="upper center",
+                    loc="lower center",
                 )
-        self.fig.legend(loc="lower right")
+            if k == len(self.variables) - 1:
+                ax.legend(self.labels, loc="upper right", bbox_to_anchor=(1, -0.2))
 
     def dynamic_plot(self, testing=False):
         """
@@ -310,9 +297,10 @@ class QuickPlot(object):
         self.sfreq = Slider(axfreq, "Time", 0, self.max_t, valinit=0)
         self.sfreq.on_changed(self.update)
 
-        plt.subplots_adjust(
-            top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
-        )
+        # plt.subplots_adjust(
+        #     top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
+        # )
+        self.fig.tight_layout()
 
         if not testing:  # pragma: no cover
             plt.show()
