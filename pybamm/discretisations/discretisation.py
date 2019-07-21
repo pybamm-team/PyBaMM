@@ -531,12 +531,7 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            try:
-                new_symbol = spatial_method.concatenation(new_children)
-            except:
-                import ipdb
-
-                ipdb.set_trace()
+            new_symbol = spatial_method.concatenation(new_children)
 
             return new_symbol
 
