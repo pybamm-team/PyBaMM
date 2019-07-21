@@ -82,6 +82,9 @@ class Symbol(anytree.NodeMixin):
             ):
                 self.test_shape()
 
+        # Prepare for caching the slow function has_symbol_of_classes
+        self._cached_has_symbol_of_classes = {}
+
     @property
     def children(self):
         """
@@ -539,7 +542,12 @@ class Symbol(anytree.NodeMixin):
         symbol_classes : pybamm class or iterable of classes
             The classes to test the symbol against
         """
-        return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
+        try:
+            return self._cached_has_symbol_of_classes[symbol_classes]
+        except KeyError:
+            out = any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
+            self._cached_has_symbol_of_classes[symbol_classes] = out
+            return out
 
     def simplify(self, simplified_symbols=None):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
