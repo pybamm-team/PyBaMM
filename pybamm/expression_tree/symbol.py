@@ -527,24 +527,6 @@ class Symbol(anytree.NodeMixin):
         """
         # Default behaviour: return False
         return False
-        # try:
-        #     out = self._evaluates_on_edges
-        #     import ipdb
-        #
-        #     ipdb.set_trace()
-        #     return out
-        # except AttributeError:
-        #     self._evaluates_on_edges = self.has_symbol_of_classes(
-        #         pybamm.Gradient
-        #     ) and not self.has_symbol_of_classes(
-        #         (
-        #             pybamm.Divergence,
-        #             pybamm.IndefiniteIntegral,
-        #             pybamm.Inner,
-        #             pybamm.Index,
-        #         )
-        #     )
-        #     return self._evaluates_on_edges
 
     def has_symbol_of_classes(self, symbol_classes):
         """Returns True if equation has a term of the class(es) `symbol_class`.
@@ -589,7 +571,6 @@ class Symbol(anytree.NodeMixin):
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
             evaluated_self = self.evaluate(0, y)
-            success = True
         # If that fails, fall back to calculating how big y should really be
         except ValueError:
             state_vectors_in_node = [
