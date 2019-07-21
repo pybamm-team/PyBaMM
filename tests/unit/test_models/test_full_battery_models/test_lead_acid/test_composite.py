@@ -42,6 +42,32 @@ class TestLeadAcidComposite(unittest.TestCase):
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
+class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
+    def test_well_posed_differential(self):
+        options = {"surface form": "differential", "side reactions": ["oxygen"]}
+        model = pybamm.lead_acid.Composite(options)
+        model.check_well_posedness()
+
+    def test_well_posed_algebraic(self):
+        options = {"surface form": "algebraic", "side reactions": ["oxygen"]}
+        model = pybamm.lead_acid.Composite(options)
+        model.check_well_posedness()
+
+    def test_varying_surface_area(self):
+        options = {
+            "surface form": "differential",
+            "side reactions": ["oxygen"],
+            "interfacial surface area": "varying",
+        }
+        model = pybamm.lead_acid.Composite(options)
+        model.check_well_posedness()
+
+    def test_incompatible_options(self):
+        options = {"side reactions": ["something"]}
+        with self.assertRaises(pybamm.ModelError):
+            pybamm.lead_acid.Composite(options)
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
