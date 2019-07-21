@@ -52,8 +52,15 @@ class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
             reaction_submodel._get_dj_ddeltaphi(variables)
             for reaction_submodel in self.reaction_submodels
         )
+        sum_j_diffusion_limited_first_order = sum(
+            reaction_submodel._get_j_diffusion_limited_first_order(variables)
+            for reaction_submodel in self.reaction_submodels
+        )
 
-        delta_phi_1_av = -sum_dj_dc_0 * c_e_1_av / sum_dj_ddeltaphi_0
+        delta_phi_1_av = (
+            -(sum_dj_dc_0 * c_e_1_av + sum_j_diffusion_limited_first_order)
+            / sum_dj_ddeltaphi_0
+        )
         delta_phi = delta_phi_0 + self.param.C_e * delta_phi_1_av
 
         # Update variables dictionary

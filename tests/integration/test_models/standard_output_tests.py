@@ -102,16 +102,6 @@ class BaseOutputTest(object):
 
         self.i_cell = param.process_symbol(current_param).evaluate(self.t)
 
-    def get_var(self, var):
-        "Helper function to reduce repeated code."
-        pybamm.logger.debug("Processing {} for {}".format(var, self.model.name))
-        return pybamm.ProcessedVariable(
-            self.model.variables[var],
-            self.solution.t,
-            self.solution.y,
-            mesh=self.disc.mesh,
-        )
-
 
 class VoltageTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):

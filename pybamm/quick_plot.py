@@ -130,6 +130,22 @@ class QuickPlot(object):
         self.n_cols = int(np.ceil(len(output_variables) / self.n_rows))
 
         # Process output variables into a form that can be plotted
+        processed_variables = {}
+        for i, model in enumerate(models):
+            variables_to_process = {}
+            for variable_list in output_variables:
+                # Make sure we always have a list of lists of variables
+                if isinstance(variable_list, str):
+                    variable_list = [variable_list]
+                # Add all variables to the list of variables that should be processed
+                variables_to_process.update(
+                    {var: model.variables[var] for var in variable_list}
+                )
+            processed_variables[model] = pybamm.post_process_variables(
+                variables_to_process, solutions[i].t, solutions[i].y, mesh
+            )
+
+        # Prepare dictionary of variables
         for k, variable_list in enumerate(output_variables):
             # Make sure we always have a list of lists of variables
             if isinstance(variable_list, str):
@@ -143,10 +159,7 @@ class QuickPlot(object):
             for i, model in enumerate(models):
                 # self.variables is a dictionary of lists of lists
                 self.variables[key][i] = [
-                    pybamm.ProcessedVariable(
-                        model.variables[var], solutions[i].t, solutions[i].y, mesh
-                    )
-                    for var in variable_list
+                    processed_variables[model][var] for var in variable_list
                 ]
 
             # Make sure variables have the same dimensions and domain
