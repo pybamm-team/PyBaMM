@@ -28,7 +28,10 @@ class BaseFirstOrderKinetics(BaseKinetics):
         c_e_0 = variables["Leading-order average electrolyte concentration"]
         c_e = variables[self.domain + " electrolyte concentration"]
         c_e_1 = (
-            c_e - pybamm.Broadcast(c_e_0, self.domain_for_broadcast)
+            c_e
+            - pybamm.Broadcast(
+                c_e_0, self.domain_for_broadcast, broadcast_type="primary"
+            )
         ) / self.param.C_e
 
         dj_dc_0 = self._get_dj_dc(variables)
@@ -44,7 +47,10 @@ class BaseFirstOrderKinetics(BaseKinetics):
         ]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         delta_phi_1 = (
-            delta_phi - pybamm.Broadcast(delta_phi_0, self.domain_for_broadcast)
+            delta_phi
+            - pybamm.Broadcast(
+                delta_phi_0, self.domain_for_broadcast, broadcast_type="primary"
+            )
         ) / self.param.C_e
 
         j_0 = variables[

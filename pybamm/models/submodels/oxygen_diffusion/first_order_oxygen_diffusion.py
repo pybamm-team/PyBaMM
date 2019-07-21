@@ -44,11 +44,6 @@ class FirstOrder(BaseModel):
         D_ox_s = (eps_s_0 ** param.b) * param.curlyD_ox
         D_ox_p = (eps_p_0 ** param.b) * param.curlyD_ox
 
-        # Fluxes
-        N_ox_n_1 = pybamm.Broadcast(0, "negative electrode")
-        N_ox_s_1 = pybamm.Broadcast(0, "separator")
-        N_ox_p_1 = pybamm.Broadcast(0, "positive electrode")
-
         # Reactions
         sj_ox_p = sum(
             reaction["Positive"]["s_ox"]
@@ -57,6 +52,11 @@ class FirstOrder(BaseModel):
             ]
             for reaction in self.reactions.values()
         )
+
+        # Fluxes
+        N_ox_n_1 = pybamm.Broadcast(0, "negative electrode")
+        N_ox_s_1 = -pybamm.Broadcast(sj_ox_p * l_p, "separator")
+        N_ox_p_1 = sj_ox_p * (x_p - 1)
 
         # Concentrations
         c_ox_n_1 = pybamm.Broadcast(0, "negative electrode")

@@ -20,6 +20,9 @@ class Broadcast(pybamm.SpatialOperator):
         the domain to broadcast the child to
     name : str
         name of the node
+    broadcast_type : str, optional
+        Whether to broadcast to the full domain (primary and secondary) or only in the
+        primary direction. Default is "full".
 
     **Extends:** :class:`SpatialOperator`
     """

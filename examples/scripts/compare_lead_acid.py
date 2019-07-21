@@ -1,7 +1,7 @@
 import numpy as np
 import pybamm
 
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
 # load models
 models = [
@@ -22,8 +22,8 @@ geometry = models[-1].default_geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        # "Bruggeman coefficient": 0.001,
-        "Typical current [A]": -20,
+        "Bruggeman coefficient": 0.001,
+        "Typical current [A]": -80,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
@@ -59,10 +59,12 @@ output_variables = [
         "Average negative electrode interfacial current density",
         "Average negative electrode oxygen interfacial current density",
     ],
-    "Average negative electrode reaction overpotential [V]",
-    "Average positive electrode reaction overpotential [V]",
+    # "Average negative electrode reaction overpotential [V]",
+    # "Average positive electrode reaction overpotential [V]",
     "Electrolyte concentration",
+    "Electrolyte flux",
     "Oxygen concentration",
+    "Oxygen flux",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
