@@ -9,7 +9,9 @@ c_e_s = pybamm.Variable("Separator electrolyte concentration", ["separator"])
 c_e_p = pybamm.Variable("Positive electrolyte concentration", ["positive electrode"])
 c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
-c_e_av = pybamm.Variable("Average electrolyte concentration")
+c_e_av = pybamm.Variable(
+    "Average electrolyte concentration", domain="current collector"
+)
 
 # Electrolyte potential
 phi_e_n = pybamm.Variable("Negative electrolyte potential", ["negative electrode"])
@@ -65,9 +67,13 @@ eps_p = pybamm.Variable("Positive electrode porosity", domain=["positive electro
 eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
 # Piecewise constant (for asymptotic models)
-eps_n_pc = pybamm.Variable("Average negative electrode porosity")
-eps_s_pc = pybamm.Variable("Average separator porosity")
-eps_p_pc = pybamm.Variable("Average positive electrode porosity")
+eps_n_pc = pybamm.Variable(
+    "Average negative electrode porosity", domain="current collector"
+)
+eps_s_pc = pybamm.Variable("Average separator porosity", domain="current collector")
+eps_p_pc = pybamm.Variable(
+    "Average positive electrode porosity", domain="current collector"
+)
 
 eps_piecewise_constant = pybamm.Concatenation(
     pybamm.Broadcast(eps_n_pc, ["negative electrode"]),

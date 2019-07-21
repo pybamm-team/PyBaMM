@@ -143,9 +143,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
             and options["surface form"] is False
         ):
-            if options["bc_options"]["dimensionality"] == 1:
+            if options["bc_options"]["dimensionality"] in [1, 2]:
                 raise pybamm.OptionError(
-                    "must use surface formulation to solve {!s} in 2D".format(self)
+                    "must use surface formulation to solve {!s} in 2 or 3D".format(self)
                 )
             if len(options["side reactions"]) > 0:
                 raise pybamm.OptionError(

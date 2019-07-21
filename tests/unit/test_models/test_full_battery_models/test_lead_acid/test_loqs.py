@@ -30,7 +30,10 @@ class TestLeadAcidLOQS(unittest.TestCase):
 
     def test_incompatible_options(self):
         options = {"bc_options": {"dimensionality": 1}}
-        with self.assertRaises(pybamm.OptionError):
+        with self.assertRaisesRegex(pybamm.OptionError, "must use surface formulation"):
+            pybamm.lead_acid.LOQS(options)
+        options = {"surface form": "bad surface form"}
+        with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
             pybamm.lead_acid.LOQS(options)
 
 

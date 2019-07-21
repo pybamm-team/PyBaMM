@@ -1,20 +1,21 @@
 import numpy as np
 import pybamm
+import sys
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
-    pybamm.lead_acid.LOQS({"bc_options": {"dimensionality": 2}}),
-    pybamm.lead_acid.LOQS(),
+    pybamm.lead_acid.LOQS(
+        {"surface form": "differential", "bc_options": {"dimensionality": 1}},
+        name="3D LOQS model",
+    ),
+    # pybamm.lead_acid.LOQS(),
     # pybamm.lead_acid.FOQS(),
     # pybamm.lead_acid.Composite(),
     # # pybamm.lead_acid.Composite({"surface form": "algebraic"}),
     # pybamm.lead_acid.NewmanTiedemann(),
 ]
-
-# create geometry
-geometry = models[-1].default_geometry
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
@@ -29,15 +30,17 @@ param.update(
 )
 for model in models:
     param.process_model(model)
-param.process_geometry(geometry)
 
 # set mesh
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 25, var.x_s: 41, var.x_p: 34}
-mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
 
 # discretise models
+sys.setrecursionlimit(10000)
 for model in models:
+    geometry = model.default_geometry
+    param.process_geometry(geometry)
+    var = pybamm.standard_spatial_vars
+    var_pts = {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
+    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
 

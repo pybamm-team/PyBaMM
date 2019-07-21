@@ -28,7 +28,7 @@ class SingleParticlePotentialPair(BaseModel):
 
         variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
 
-        # TO DO: grad not implemented for 2D yet
+        # TODO: grad not implemented for 2D yet
         i_cc = pybamm.Scalar(0)
         i_boundary_cc = pybamm.standard_variables.i_boundary_cc
 
@@ -96,8 +96,6 @@ class SingleParticlePotentialPair(BaseModel):
                 "right": (pos_tab_bc, "Neumann"),
             },
         }
-
-        return variables
 
     def set_initial_conditions(self, variables):
 

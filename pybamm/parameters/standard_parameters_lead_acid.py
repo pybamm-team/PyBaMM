@@ -262,6 +262,14 @@ l_p = pybamm.geometric_parameters.l_p
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
 
+# Tab geometry
+l_tab_n = pybamm.geometric_parameters.l_tab_n
+centre_y_tab_n = pybamm.geometric_parameters.centre_y_tab_n
+centre_z_tab_n = pybamm.geometric_parameters.centre_z_tab_n
+l_tab_p = pybamm.geometric_parameters.l_tab_p
+centre_y_tab_p = pybamm.geometric_parameters.centre_y_tab_p
+centre_z_tab_p = pybamm.geometric_parameters.centre_z_tab_p
+
 # Diffusive kinematic relationship coefficient
 omega_i = c_e_typ * M_e / rho_typ * (t_plus + M_minus / M_e)
 # Migrative kinematic relationship coefficient (electrolyte)
@@ -285,6 +293,8 @@ omega_c_hy = c_e_typ * M_hy / rho_typ * (1 - M_w * V_hy / V_w * M_hy)
 # Electrode Properties
 sigma_n = sigma_n_dim * potential_scale / current_scale / L_x
 sigma_p = sigma_p_dim * potential_scale / current_scale / L_x
+sigma_n_dash = sigma_n * delta ** 2
+sigma_p_dash = sigma_p * delta ** 2
 delta_pore_n = 1 / (a_n_dim * L_x)
 delta_pore_p = 1 / (a_p_dim * L_x)
 Q_n_max = Q_n_max_dimensional / (c_e_typ * F)
