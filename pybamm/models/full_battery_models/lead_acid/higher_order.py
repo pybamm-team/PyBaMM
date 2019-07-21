@@ -86,13 +86,10 @@ class HigherOrderBaseModel(BaseModel):
                 self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
                     self.param, self.reactions
                 )
-            # Very hacky!!! update leading-order current before working out electrolyte
-            # concentration
-            self.submodels[
-                "negative oxygen interface"
-            ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
-                self.param, "Negative"
-            )
+            elif self.options["higher-order concentration"] == "composite extended":
+                self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
+                    self.param, self.reactions, extended=True
+                )
 
     def set_electrolyte_diffusion_submodel(self):
 
@@ -105,6 +102,10 @@ class HigherOrderBaseModel(BaseModel):
         elif self.options["higher-order concentration"] == "composite":
             self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Composite(
                 self.param, self.reactions
+            )
+        elif self.options["higher-order concentration"] == "composite extended":
+            self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Composite(
+                self.param, self.reactions, extended=True
             )
 
     def set_average_interfacial_submodel(self):
@@ -235,4 +236,19 @@ class Composite(HigherOrderBaseModel):
         if options is None:
             options = {}
         options = {**options, "higher-order concentration": "composite"}
+        super().__init__(options, name)
+
+
+class CompositeExtended(HigherOrderBaseModel):
+    """Extended composite model for lead-acid.
+    Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
+
+    **Extends:** :class:`pybamm.lead_acid.HigherOrderBaseModel`
+    """
+
+    def __init__(self, options=None, name="Extended composite model"):
+        # Update options
+        if options is None:
+            options = {}
+        options = {**options, "higher-order concentration": "composite extended"}
         super().__init__(options, name)

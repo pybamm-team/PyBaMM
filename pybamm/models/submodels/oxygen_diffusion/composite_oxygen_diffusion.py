@@ -20,12 +20,15 @@ class Composite(Full):
         The parameters to use for this submodel
     reactions : dict
         Dictionary of reaction terms
+    extended : bool
+        Whether to include feedback from the first-order terms
 
     **Extends:** :class:`pybamm.oxygen_diffusion.Full`
     """
 
-    def __init__(self, param, reactions):
+    def __init__(self, param, reactions, extended=False):
         super().__init__(param, reactions)
+        self.extended = extended
 
     def get_coupled_variables(self, variables):
 
@@ -58,14 +61,24 @@ class Composite(Full):
         c_ox = variables["Separator and positive electrode oxygen concentration"]
         N_ox = variables["Oxygen flux"].orphans[1]
 
-        source_terms_0 = sum(
-            pybamm.Concatenation(
-                pybamm.Broadcast(0, "separator"),
-                reaction["Positive"]["s_ox"]
-                * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
+        if self.extended is False:
+            source_terms_0 = sum(
+                pybamm.Concatenation(
+                    pybamm.Broadcast(0, "separator"),
+                    reaction["Positive"]["s_ox"]
+                    * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
+                )
+                for reaction in self.reactions.values()
             )
-            for reaction in self.reactions.values()
-        )
+        else:
+            source_terms_0 = sum(
+                pybamm.Concatenation(
+                    pybamm.Broadcast(0, "separator"),
+                    reaction["Positive"]["s_ox"]
+                    * variables[reaction["Positive"]["aj"]],
+                )
+                for reaction in self.reactions.values()
+            )
 
         self.rhs = {
             c_ox: (1 / eps_0)

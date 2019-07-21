@@ -17,12 +17,15 @@ class Composite(Full):
         The parameters to use for this submodel
     reactions : dict
         Dictionary of reaction terms
+    extended : bool
+        Whether to include feedback from the first-order terms
 
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.diffusion.Full`
     """
 
-    def __init__(self, param, reactions):
+    def __init__(self, param, reactions, extended=False):
         super().__init__(param, reactions)
+        self.extended = extended
 
     def get_coupled_variables(self, variables):
 
@@ -55,17 +58,28 @@ class Composite(Full):
         deps_0_dt = variables["Leading-order porosity change"]
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
-        source_terms_0 = sum(
-            pybamm.Concatenation(
-                reaction["Negative"]["s"]
-                * variables["Leading-order " + reaction["Negative"]["aj"].lower()],
-                pybamm.Broadcast(0, "separator"),
-                reaction["Positive"]["s"]
-                * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
+        if self.extended is False:
+            source_terms_0 = sum(
+                pybamm.Concatenation(
+                    reaction["Negative"]["s"]
+                    * variables["Leading-order " + reaction["Negative"]["aj"].lower()],
+                    pybamm.Broadcast(0, "separator"),
+                    reaction["Positive"]["s"]
+                    * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
+                )
+                / param.gamma_e
+                for reaction in self.reactions.values()
             )
-            / param.gamma_e
-            for reaction in self.reactions.values()
-        )
+        else:
+            source_terms_0 = sum(
+                pybamm.Concatenation(
+                    reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
+                    pybamm.Broadcast(0, "separator"),
+                    reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
+                )
+                / param.gamma_e
+                for reaction in self.reactions.values()
+            )
 
         self.rhs = {
             c_e: (1 / eps_0)

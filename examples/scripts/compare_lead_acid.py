@@ -11,6 +11,9 @@ models = [
     pybamm.lead_acid.Composite(
         {"surface form": "algebraic", "side reactions": ["oxygen"]}
     ),
+    pybamm.lead_acid.CompositeExtended(
+        {"surface form": "algebraic", "side reactions": ["oxygen"]}
+    ),
     # pybamm.lead_acid.Composite({"surface form": "algebraic"}),
     pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
 ]
