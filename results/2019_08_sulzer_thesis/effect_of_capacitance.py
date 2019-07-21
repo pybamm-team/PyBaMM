@@ -30,7 +30,7 @@ def plot_voltages(all_variables, t_eval):
             time = variables["Time [s]"](t_eval)
             capacitance_indices = np.where(time < 50)
             time = time[capacitance_indices]
-            voltage = variables["Terminal voltage [V]"](t_eval)[capacitance_indices]
+            voltage = variables["Battery voltage [V]"](t_eval)[capacitance_indices]
             inset.plot(time, voltage, linestyles[j])
             inset.set_xlabel("Time [s]", fontsize=10)
             inset.set_xlim([0, 3])
@@ -56,8 +56,8 @@ def plot_errors(all_variables, t_eval, Crates):
                 base_model_results = models_variables[model]
                 continue
             error = np.abs(
-                variables["Terminal voltage [V]"](t_eval)
-                - base_model_results["Terminal voltage [V]"](t_eval)
+                variables["Battery voltage [V]"](t_eval)
+                - base_model_results["Battery voltage [V]"](t_eval)
             )
             ax.loglog(variables["Time [h]"](t_eval), error, linestyles[j], label=model)
         ax.legend(loc="best")

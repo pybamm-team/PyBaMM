@@ -94,22 +94,20 @@ class BaseInterfaceLeadAcid(BaseInterface):
         return ne
 
 
-class ButlerVolmer(BaseInterfaceLeadAcid, kinetics.BaseButlerVolmer):
+class ButlerVolmer(BaseInterfaceLeadAcid, kinetics.ButlerVolmer):
     """
     Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseButlerVolmer` (for kinetics)
+    :class:`kinetics.ButlerVolmer` (for kinetics)
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
 
-class FirstOrderButlerVolmer(
-    BaseInterfaceLeadAcid, kinetics.BaseFirstOrderButlerVolmer
-):
+class FirstOrderButlerVolmer(BaseInterfaceLeadAcid, kinetics.FirstOrderButlerVolmer):
     """
     Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseFirstOrderButlerVolmer` (for kinetics)
+    :class:`kinetics.FirstOrderButlerVolmer` (for kinetics)
     """
 
     def __init__(self, param, domain):
@@ -117,23 +115,21 @@ class FirstOrderButlerVolmer(
 
 
 class InverseFirstOrderButlerVolmer(
-    BaseInterfaceLeadAcid, inverse_kinetics.BaseInverseFirstOrderButlerVolmer
+    BaseInterfaceLeadAcid, inverse_kinetics.InverseFirstOrderButlerVolmer
 ):
     """
     Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseInverseFirstOrderButlerVolmer` (for kinetics)
+    :class:`kinetics.InverseFirstOrderButlerVolmer` (for kinetics)
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
 
-class InverseButlerVolmer(
-    BaseInterfaceLeadAcid, inverse_kinetics.BaseInverseButlerVolmer
-):
+class InverseButlerVolmer(BaseInterfaceLeadAcid, inverse_kinetics.InverseButlerVolmer):
     """
     Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
-    :class:`inverse_kinetics.BaseInverseButlerVolmer` (for kinetics)
+    :class:`inverse_kinetics.InverseButlerVolmer` (for kinetics)
     """
 
     def __init__(self, param, domain):

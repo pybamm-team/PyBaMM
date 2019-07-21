@@ -29,6 +29,18 @@ class TestLeadAcidComposite(unittest.TestCase):
         pybamm.settings.debug_mode = True
         model.check_well_posedness()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    def test_default_solver(self):
+        options = {"surface form": "differential"}
+        model = pybamm.lead_acid.Composite(options)
+        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
+        options = {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+        model = pybamm.lead_acid.Composite(options)
+        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
+        options = {"surface form": "algebraic"}
+        model = pybamm.lead_acid.Composite(options)
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

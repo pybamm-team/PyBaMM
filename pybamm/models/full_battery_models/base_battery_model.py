@@ -462,7 +462,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Average solid phase ohmic losses": delta_phi_s_av,
                 "Average solid phase ohmic losses [V]": delta_phi_s_av_dim,
                 "Terminal voltage": V,
-                "Terminal voltage [V]": V_dim
+                "Terminal voltage [V]": V_dim,
+                "Battery voltage [V]": V_dim
                 * pybamm.Parameter(
                     "Number of cells connected in series to make a battery"
                 ),

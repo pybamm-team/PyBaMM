@@ -1,5 +1,5 @@
 No Reaction
 ===========
 
-.. autoclass:: pybamm.interface.kinetics.BaseNoReaction
+.. autoclass:: pybamm.interface.kinetics.NoReaction
     :members:

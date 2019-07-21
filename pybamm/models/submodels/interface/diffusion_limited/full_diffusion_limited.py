@@ -4,7 +4,7 @@
 from .base_diffusion_limited import BaseModel
 
 
-class BaseFullDiffusionLimited(BaseModel):
+class FullDiffusionLimited(BaseModel):
     """
     Full submodel for diffusion-limited kinetics
 

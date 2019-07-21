@@ -315,19 +315,33 @@ class ProcessedVariable(object):
         if self.dimensions == 1:
             return self._interpolation_function(t)
         elif self.dimensions == 2:
-            if self.scale == "micro":
+            return self.call_2D(t, x, r)
+        elif self.dimensions == 3:
+            return self.call_3D(t, x, r)
+
+    def call_2D(self, t, x, r):
+        "Evaluate a 2D variable"
+        if self.scale == "micro":
+            if r is not None:
                 return self._interpolation_function(t, r)
             else:
+                raise ValueError("r cannot be None for microscale variable")
+        else:
+            if x is not None:
                 return self._interpolation_function(t, x)
-        elif self.dimensions == 3:
-            if isinstance(x, np.ndarray):
-                if isinstance(r, np.ndarray) and isinstance(t, np.ndarray):
-                    x = x[:, np.newaxis, np.newaxis]
-                    r = r[:, np.newaxis]
-                elif isinstance(r, np.ndarray) or isinstance(t, np.ndarray):
-                    x = x[:, np.newaxis]
             else:
-                if isinstance(r, np.ndarray) and isinstance(t, np.ndarray):
-                    r = r[:, np.newaxis]
+                raise ValueError("x cannot be None for macroscale variable")
 
-            return self._interpolation_function((x, r, t))
+    def call_3D(self, t, x, r):
+        "Evaluate a 3D variable"
+        if isinstance(x, np.ndarray):
+            if isinstance(r, np.ndarray) and isinstance(t, np.ndarray):
+                x = x[:, np.newaxis, np.newaxis]
+                r = r[:, np.newaxis]
+            elif isinstance(r, np.ndarray) or isinstance(t, np.ndarray):
+                x = x[:, np.newaxis]
+        else:
+            if isinstance(r, np.ndarray) and isinstance(t, np.ndarray):
+                r = r[:, np.newaxis]
+
+        return self._interpolation_function((x, r, t))

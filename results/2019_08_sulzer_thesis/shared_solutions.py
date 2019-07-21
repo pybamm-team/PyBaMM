@@ -96,10 +96,10 @@ def convergence_study(models, Crates, all_npts, t_eval, extra_parameter_values=N
                 except pybamm.SolverError:
                     continue
                 voltage = pybamm.ProcessedVariable(
-                    model_disc.variables["Terminal voltage [V]"], solution.t, solution.y
+                    model_disc.variables["Battery voltage [V]"], solution.t, solution.y
                 )(t_eval)
                 variables = {
-                    "Terminal voltage [V]": voltage,
+                    "Battery voltage [V]": voltage,
                     "solution object": solution,
                 }
                 models_times_and_voltages[model.name][npts][Crate] = variables

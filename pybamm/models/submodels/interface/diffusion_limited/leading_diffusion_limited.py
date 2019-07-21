@@ -4,7 +4,7 @@
 from .base_diffusion_limited import BaseModel
 
 
-class BaseLeadingOrderDiffusionLimited(BaseModel):
+class LeadingOrderDiffusionLimited(BaseModel):
     """
     Leading-order submodel for diffusion-limited kinetics
 

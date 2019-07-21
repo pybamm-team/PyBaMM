@@ -6,7 +6,7 @@ import pybamm
 from .base_kinetics import BaseKinetics
 
 
-class BaseNoReaction(BaseKinetics):
+class NoReaction(BaseKinetics):
     """
     Base submodel for when no reaction occurs
 

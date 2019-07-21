@@ -15,12 +15,12 @@ def plot_voltages(all_variables, t_eval, linestyles=None):
     fig, axes = plt.subplots(n, m, figsize=(6.4, 4.5))
     labels = [model for model in [x for x in all_variables.values()][0].keys()]
     y_min = 0.98 * min(
-        np.nanmin(variables["Terminal voltage [V]"](t_eval))
+        np.nanmin(variables["Battery voltage [V]"](t_eval))
         for models_variables in all_variables.values()
         for variables in models_variables.values()
     )
     y_max = 1.02 * max(
-        np.nanmax(variables["Terminal voltage [V]"](t_eval))
+        np.nanmax(variables["Battery voltage [V]"](t_eval))
         for models_variables in all_variables.values()
         for variables in models_variables.values()
     )
@@ -57,10 +57,10 @@ def plot_voltages(all_variables, t_eval, linestyles=None):
         else:
             ax.set_yticklabels([])
 
-        for j, (model, variables) in enumerate(models_variables.items()):
+        for j, variables in enumerate(models_variables.values()):
             ax.plot(
                 variables["Time [h]"](t_eval),
-                variables["Terminal voltage [V]"](t_eval),
+                variables["Battery voltage [V]"](t_eval),
                 linestyles[j],
             )
     if len(all_variables) == 1:
@@ -161,11 +161,11 @@ def plot_voltage_breakdown(all_variables, t_eval, model, Crates):
         "Average electrolyte ohmic losses [V]",
     ]
     y_min = 0.95 * min(
-        np.nanmin(models_variables[model]["Terminal voltage [V]"](t_eval))
+        np.nanmin(models_variables[model]["Battery voltage [V]"](t_eval))
         for models_variables in all_variables.values()
     )
     y_max = 1.05 * max(
-        np.nanmax(models_variables[model]["Terminal voltage [V]"](t_eval))
+        np.nanmax(models_variables[model]["Battery voltage [V]"](t_eval))
         for models_variables in all_variables.values()
     )
     for k, Crate in enumerate(Crates):
@@ -198,7 +198,7 @@ def plot_voltage_breakdown(all_variables, t_eval, model, Crates):
             bottom = top + variables[overpotential](t_eval) * 6
             ax.fill_between(time, bottom, top)
             top = bottom
-        ax.plot(time, variables["Terminal voltage [V]"](t_eval), "k--")
+        ax.plot(time, variables["Battery voltage [V]"](t_eval), "k--")
     leg = axes.flat[-1].legend(
         labels, bbox_to_anchor=(1.05, 0.5), loc="center left", frameon=True
     )

@@ -28,7 +28,7 @@ class BaseFirstOrderKinetics(BaseKinetics):
         c_e = variables[self.domain + " electrolyte concentration"]
         c_e_1 = (c_e - c_e_0) / self.param.C_e
 
-        dj_dc_0 = self._get_dj_ce(variables)
+        dj_dc_0 = self._get_dj_dc(variables)
         dj_ddeltaphi_0 = self._get_dj_ddeltaphi(variables)
 
         # Update delta_phi with new phi_e and phi_s
@@ -72,34 +72,3 @@ class BaseFirstOrderKinetics(BaseKinetics):
             )
 
         return variables
-
-    def _get_dj_ce(self, variables):
-        j = self._get_kinetics_for_first_order(variables)
-        c_e = variables["Leading-order average electrolyte concentration"] * 1
-        return j.diff(c_e)
-
-    def _get_dj_ddeltaphi(self, variables):
-        j = self._get_kinetics_for_first_order(variables)
-        delta_phi = variables[
-            "Leading-order average "
-            + self.domain.lower()
-            + " electrode surface potential difference"
-        ]
-        return j.diff(delta_phi)
-
-    def _get_kinetics_for_first_order(self, variables):
-        c_e_0 = variables["Leading-order average electrolyte concentration"] * 1
-        hacked_variables = {
-            **variables,
-            self.domain + " electrolyte concentration": c_e_0,
-        }
-        delta_phi = variables[
-            "Leading-order average "
-            + self.domain.lower()
-            + " electrode surface potential difference"
-        ]
-        j0 = self._get_exchange_current_density(hacked_variables)
-        ne = self._get_number_of_electrons_in_reaction()
-        ocp = self._get_open_circuit_potential(hacked_variables)[0]
-        eta_r = delta_phi - ocp
-        return self._get_kinetics(j0, ne, eta_r)

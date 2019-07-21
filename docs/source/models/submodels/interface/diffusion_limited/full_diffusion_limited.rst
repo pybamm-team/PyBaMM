@@ -1,5 +1,5 @@
 Full Model
 ==========
 
-.. autoclass:: pybamm.interface.diffusion_limited.BaseFullDiffusionLimited
+.. autoclass:: pybamm.interface.diffusion_limited.FullDiffusionLimited
     :members:

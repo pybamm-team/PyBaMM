@@ -99,9 +99,9 @@ def plot_errors(models_times_and_voltages):
             for Crate, variables in times_and_voltages[npts].items():
                 Crates[model].append(Crate)
                 full_voltage = models_times_and_voltages["Full"][npts][Crate][
-                    "Terminal voltage [V]"
+                    "Battery voltage [V]"
                 ]
-                reduced_voltage = variables["Terminal voltage [V]"]
+                reduced_voltage = variables["Battery voltage [V]"]
                 voltage_errors[model].append(pybamm.rmse(full_voltage, reduced_voltage))
             ax.semilogx(
                 Crates[model], voltage_errors[model], linestyles[i], label=model
