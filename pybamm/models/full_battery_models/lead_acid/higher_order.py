@@ -26,8 +26,8 @@ class HigherOrderBaseModel(BaseModel):
         self.set_reactions()
         self.set_current_collector_submodel()
         # Electrolyte submodel to get first-order concentrations
-        self.set_other_species_diffusion_submodels()
         self.set_electrolyte_diffusion_submodel()
+        self.set_other_species_diffusion_submodels()
         # Average interface submodel to get average first-order potential differences
         self.set_average_interfacial_submodel()
         # Electrolyte and solid submodels to get full first-order potentials
@@ -76,21 +76,6 @@ class HigherOrderBaseModel(BaseModel):
             self.param
         )
 
-    def set_other_species_diffusion_submodels(self):
-        if "oxygen" in self.options["side reactions"]:
-            if self.options["higher-order concentration"] == "first-order":
-                self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.FirstOrder(
-                    self.param, self.reactions
-                )
-            elif self.options["higher-order concentration"] == "composite":
-                self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
-                    self.param, self.reactions
-                )
-            elif self.options["higher-order concentration"] == "composite extended":
-                self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
-                    self.param, self.reactions, extended=True
-                )
-
     def set_electrolyte_diffusion_submodel(self):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
@@ -107,6 +92,21 @@ class HigherOrderBaseModel(BaseModel):
             self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Composite(
                 self.param, self.reactions, extended=True
             )
+
+    def set_other_species_diffusion_submodels(self):
+        if "oxygen" in self.options["side reactions"]:
+            if self.options["higher-order concentration"] == "first-order":
+                self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.FirstOrder(
+                    self.param, self.reactions
+                )
+            elif self.options["higher-order concentration"] == "composite":
+                self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
+                    self.param, self.reactions
+                )
+            elif self.options["higher-order concentration"] == "composite extended":
+                self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
+                    self.param, self.reactions, extended=True
+                )
 
     def set_average_interfacial_submodel(self):
         self.submodels[
@@ -150,19 +150,16 @@ class HigherOrderBaseModel(BaseModel):
 
         # Oxygen
         if "oxygen" in self.options["side reactions"]:
-            # self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
-            #     self.param, self.reactions
-            # )
             self.submodels[
                 "positive oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.FirstOrderForwardTafel(
                 self.param, "Positive"
             )
-            # self.submodels[
-            #     "negative oxygen interface"
-            # ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
-            #     self.param, "Negative"
-            # )
+            self.submodels[
+                "negative oxygen interface"
+            ] = pybamm.interface.lead_acid_oxygen.FullDiffusionLimited(
+                self.param, "Negative"
+            )
 
     def set_full_convection_submodel(self):
         """
