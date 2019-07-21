@@ -245,9 +245,11 @@ class BaseModel(object):
         self.check_well_determined(post_discretisation)
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
+        self.check_default_variables_dictionaries()
         # Can't check variables after discretising, since Variable objects get replaced
         # by StateVector objects
-        if post_discretisation is False:
+        # Checking variables is slow, so only do it in debug mode
+        if pybamm.settings.debug_mode is True and post_discretisation is False:
             self.check_variables()
 
     def check_well_determined(self, post_discretisation):
@@ -354,7 +356,7 @@ class BaseModel(object):
                         )
                     )
 
-    def check_variables(self):
+    def check_default_variables_dictionaries(self):
         """ Chec that the right variables are provided. """
         missing_vars = []
         for output, expression in self._variables.items():
@@ -372,6 +374,7 @@ class BaseModel(object):
             for output in missing_vars:
                 del self._variables[output]
 
+    def check_variables(self):
         # Create list of all Variable nodes that appear in the model's list of variables
         all_vars = {}
         for eqn in self.variables.values():
