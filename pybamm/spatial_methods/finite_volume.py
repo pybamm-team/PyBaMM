@@ -358,16 +358,19 @@ class FiniteVolume(pybamm.SpatialMethod):
         right_sub_matrix[0][0] = 1
         right_matrix = pybamm.Matrix(csr_matrix(kron(eye(sec_pts), right_sub_matrix)))
 
-        # right_copy = right_symbol_disc.new_copy()
-        # left_copy = left_symbol_disc.new_copy()
-        right_domain = right_symbol_disc.domain
+        # Remove domains to avoid clash
         left_domain = left_symbol_disc.domain
-        right_symbol_disc.domain = []
+        right_domain = right_symbol_disc.domain
         left_symbol_disc.domain = []
+        right_symbol_disc.domain = []
+
+        # Finite volume derivative
         dy = right_matrix @ right_symbol_disc - left_matrix @ left_symbol_disc
-        right_symbol_disc.domain = right_domain
-        left_symbol_disc.domain = left_domain
         dx = right_mesh[0].nodes[0] - left_mesh[0].nodes[-1]
+
+        # Change domains back
+        left_symbol_disc.domain = left_domain
+        right_symbol_disc.domain = right_domain
 
         return dy / dx
 

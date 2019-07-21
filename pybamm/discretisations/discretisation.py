@@ -74,7 +74,8 @@ class Discretisation(object):
 
         """
         # Check well-posedness to avoid obscure errors
-        model.check_well_posedness()
+        if pybamm.settings.debug_mode is True:
+            model.check_well_posedness()
 
         pybamm.logger.info("Start discretising {}".format(model.name))
 
@@ -188,44 +189,43 @@ class Discretisation(object):
             left_symbol_disc = self.process_symbol(left_symbol)
             right_symbol_disc = self.process_symbol(right_symbol)
 
-            return self._spatial_methods[left_domain].internal_neumann_condition(
+            out = self._spatial_methods[left_domain].internal_neumann_condition(
                 left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
             )
+            return out
 
         bc_key_ids = list(self.bcs.keys())
 
         internal_bcs = {}
         for var in model.boundary_conditions.keys():
             if isinstance(var, pybamm.Concatenation):
-                # import ipdb
-                #
-                # ipdb.set_trace()
                 children = var.children
 
+                # Note that we do not need to take orphans as the symbols will be
+                # processed anyway (which creates new symbols)
                 first_child = children[0]
-                first_orphan = first_child.new_copy()
                 next_child = children[1]
-                next_orphan = next_child.new_copy()
 
                 lbc = self.bcs[var.id]["left"]
-                rbc = (boundary_gradient(first_orphan, next_orphan), "Neumann")
+                rbc = (boundary_gradient(first_child, next_child), "Neumann")
 
+                # First child
                 if first_child.id not in bc_key_ids:
                     internal_bcs.update({first_child.id: {"left": lbc, "right": rbc}})
 
+                # Middle children
                 for i, _ in enumerate(children[1:-1]):
                     current_child = next_child
-                    current_orphan = next_orphan
                     next_child = children[i + 2]
-                    next_orphan = next_child.new_copy()
 
                     lbc = rbc
-                    rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
+                    rbc = (boundary_gradient(current_child, next_child), "Neumann")
                     if current_child.id not in bc_key_ids:
                         internal_bcs.update(
                             {current_child.id: {"left": lbc, "right": rbc}}
                         )
 
+                # Last child
                 lbc = rbc
                 rbc = self.bcs[var.id]["right"]
                 if children[-1].id not in bc_key_ids:
@@ -531,7 +531,12 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            new_symbol = spatial_method.concatenation(new_children)
+            try:
+                new_symbol = spatial_method.concatenation(new_children)
+            except:
+                import ipdb
+
+                ipdb.set_trace()
 
             return new_symbol
 
