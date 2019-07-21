@@ -30,7 +30,7 @@ class TestLeadAcidLOQS(unittest.TestCase):
 
     def test_incompatible_options(self):
         options = {"bc_options": {"dimensionality": 1}}
-        with self.assertRaises(pybamm.ModelError):
+        with self.assertRaises(pybamm.OptionError):
             pybamm.lead_acid.LOQS(options)
 
 
@@ -56,7 +56,7 @@ class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
 
     def test_incompatible_options(self):
         options = {"side reactions": ["something"]}
-        with self.assertRaises(pybamm.ModelError):
+        with self.assertRaises(pybamm.OptionError):
             pybamm.lead_acid.LOQS(options)
 
 

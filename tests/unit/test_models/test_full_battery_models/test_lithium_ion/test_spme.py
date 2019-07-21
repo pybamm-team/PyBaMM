@@ -39,7 +39,7 @@ class TestSPMe(unittest.TestCase):
             model = pybamm.lithium_ion.SPMe(options)
 
         options = {"bc_options": {"dimensionality": 5}}
-        with self.assertRaises(pybamm.ModelError):
+        with self.assertRaises(pybamm.OptionError):
             model = pybamm.lithium_ion.SPM(options)
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")

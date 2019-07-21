@@ -144,17 +144,27 @@ class BaseBatteryModel(pybamm.BaseModel):
             and options["surface form"] is False
         ):
             if options["bc_options"]["dimensionality"] == 1:
-                raise pybamm.ModelError(
+                raise pybamm.OptionError(
                     "must use surface formulation to solve {!s} in 2D".format(self)
                 )
             if len(options["side reactions"]) > 0:
-                raise pybamm.ModelError(
+                raise pybamm.OptionError(
                     """
                     must use surface formulation to solve {!s} with side reactions
                     """.format(
                         self
                     )
                 )
+        if options["surface form"] not in [False, "differential", "algebraic"]:
+            raise pybamm.OptionError(
+                "surface form '{}' not recognised".format(options["surface form"])
+            )
+        if options["bc_options"]["dimensionality"] not in [0, 1, 2]:
+            raise pybamm.OptionError(
+                "Dimension of current collectors must be 0, 1, or 2, not {}".format(
+                    options["bc_options"]["dimensionality"]
+                )
+            )
 
         self._options = options
 
