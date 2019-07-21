@@ -71,6 +71,7 @@ class BaseInterface(pybamm.BaseSubModel):
             + self.reaction_name
             + " interfacial current density": j_av,
             self.domain
+            + " electrode"
             + self.reaction_name
             + " interfacial current density [A.m-2]": j_scale * j,
             "Average "

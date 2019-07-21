@@ -7,6 +7,7 @@ pybamm.set_logging_level("INFO")
 models = [
     pybamm.lead_acid.LOQS({"surface form": "algebraic", "side reactions": ["oxygen"]}),
     # pybamm.lead_acid.FOQS({"surface form": "algebraic", "side reactions": ["oxygen"]}),
+    pybamm.lead_acid.FOQS({"surface form": "algebraic", "side reactions": ["oxygen"]}),
     pybamm.lead_acid.Composite(
         {"surface form": "algebraic", "side reactions": ["oxygen"]}
     ),

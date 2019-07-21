@@ -78,9 +78,14 @@ class HigherOrderBaseModel(BaseModel):
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
-            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
-                self.param, self.reactions
-            )
+            if self.options["higher-order concentration"] == "first-order":
+                self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.FirstOrder(
+                    self.param, self.reactions
+                )
+            elif self.options["higher-order concentration"] == "composite":
+                self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
+                    self.param, self.reactions
+                )
             # Very hacky!!! update leading-order current before working out electrolyte
             # concentration
             self.submodels[
