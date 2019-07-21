@@ -291,14 +291,14 @@ class TestSymbol(unittest.TestCase):
         div_eqn = pybamm.div(var)
         grad_div_eqn = pybamm.div(grad_eqn)
         algebraic_eqn = 2 * var + 3
-        self.assertTrue(grad_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertFalse(grad_eqn.has_symbol_of_class(pybamm.Divergence))
-        self.assertFalse(div_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertTrue(div_eqn.has_symbol_of_class(pybamm.Divergence))
-        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Divergence))
-        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Divergence))
+        self.assertTrue(grad_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertFalse(grad_eqn.has_symbol_of_classes(pybamm.Divergence))
+        self.assertFalse(div_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertTrue(div_eqn.has_symbol_of_classes(pybamm.Divergence))
+        self.assertTrue(grad_div_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertTrue(grad_div_eqn.has_symbol_of_classes(pybamm.Divergence))
+        self.assertFalse(algebraic_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertFalse(algebraic_eqn.has_symbol_of_classes(pybamm.Divergence))
 
     def test_orphans(self):
         a = pybamm.Scalar(1)

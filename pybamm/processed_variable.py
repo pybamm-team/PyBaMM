@@ -193,7 +193,7 @@ class ProcessedVariable(object):
         )
 
     def initialise_3D(self):
-        if self.base_variable.has_symbol_of_class(pybamm.Outer):
+        if self.base_variable.has_symbol_of_classes(pybamm.Outer):
             # bit of a hack for now
             len_x = self.mesh.combine_submeshes(*self.domain)[0].npts
         else:
@@ -211,7 +211,7 @@ class ProcessedVariable(object):
                 )
 
                 # another hack sorry
-                if self.base_variable.has_symbol_of_class(pybamm.Outer):
+                if self.base_variable.has_symbol_of_classes(pybamm.Outer):
                     temporary = np.reshape(eval_and_known_evals[0], [len_r, len_x])
                     entries[:, :, idx] = np.transpose(temporary)
                 else:
@@ -227,12 +227,12 @@ class ProcessedVariable(object):
         # Process the discretisation to get x values
         if self.domain == [
             "negative electrode"
-        ] and self.base_variable.has_symbol_of_class(pybamm.Outer):
+        ] and self.base_variable.has_symbol_of_classes(pybamm.Outer):
             nodes = self.mesh.combine_submeshes(*["negative particle"])[0].nodes
             edges = self.mesh.combine_submeshes(*["negative particle"])[0].edges
         elif self.domain == [
             "positive electrode"
-        ] and self.base_variable.has_symbol_of_class(pybamm.Outer):
+        ] and self.base_variable.has_symbol_of_classes(pybamm.Outer):
             nodes = self.mesh.combine_submeshes(*["positive particle"])[0].nodes
             edges = self.mesh.combine_submeshes(*["positive particle"])[0].edges
         else:

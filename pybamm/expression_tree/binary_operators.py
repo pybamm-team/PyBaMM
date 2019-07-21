@@ -616,7 +616,7 @@ class Outer(BinaryOperator):
             )
         # cannot have Variable, StateVector or Matrix in the right symbol, as these
         # can already be 2D objects (so we can't take an outer product with them)
-        if right.has_symbol_of_class(
+        if right.has_symbol_of_classes(
             (pybamm.Variable, pybamm.StateVector, pybamm.Matrix)
         ):
             raise TypeError(

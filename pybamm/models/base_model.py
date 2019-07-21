@@ -245,7 +245,10 @@ class BaseModel(object):
         self.check_well_determined(post_discretisation)
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
-        self.check_variables()
+        # Can't check variables after discretising, since Variable objects get replaced
+        # by StateVector objects
+        if post_discretisation is False:
+            self.check_variables()
 
     def check_well_determined(self, post_discretisation):
         """ Check that the model is not under- or over-determined. """
@@ -330,9 +333,9 @@ class BaseModel(object):
 
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_symbol_of_class(
+            if eqn.has_symbol_of_classes(
                 (pybamm.Gradient, pybamm.Divergence)
-            ) and not eqn.has_symbol_of_class(pybamm.Integral):
+            ) and not eqn.has_symbol_of_classes(pybamm.Integral):
                 # I have relaxed this check for now so that the lumped temperature
                 # equation doesn't raise errors (this has and average in it)
 

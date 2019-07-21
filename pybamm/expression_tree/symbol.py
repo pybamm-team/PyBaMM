@@ -525,17 +525,21 @@ class Symbol(anytree.NodeMixin):
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
         """
-        return (
-            self.has_symbol_of_class(pybamm.Gradient)
-            and not self.has_symbol_of_class(pybamm.Divergence)
-            and not self.has_symbol_of_class(pybamm.IndefiniteIntegral)
-            and not self.has_symbol_of_class(pybamm.Inner)
-            and not self.has_symbol_of_class(pybamm.Index)
+        return self.has_symbol_of_classes(
+            pybamm.Gradient
+        ) and not self.has_symbol_of_classes(
+            (pybamm.Divergence, pybamm.IndefiniteIntegral, pybamm.Inner, pybamm.Index)
         )
 
-    def has_symbol_of_class(self, symbol_class):
-        """Returns True if equation has a term of the class(es) `symbol_class`."""
-        return any(isinstance(symbol, symbol_class) for symbol in self.pre_order())
+    def has_symbol_of_classes(self, symbol_classes):
+        """Returns True if equation has a term of the class(es) `symbol_class`.
+
+        Parameters
+        ----------
+        symbol_classes : pybamm class or iterable of classes
+            The classes to test the symbol against
+        """
+        return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
     def simplify(self, simplified_symbols=None):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
