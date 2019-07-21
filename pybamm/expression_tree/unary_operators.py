@@ -71,6 +71,10 @@ class UnaryOperator(pybamm.Symbol):
         """
         return self.children[0].evaluate_for_shape()
 
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return self.child.evaluates_on_edges()
+
 
 class Negate(UnaryOperator):
     """A node in the expression tree representing a `-` negation operator
@@ -215,6 +219,10 @@ class Index(UnaryOperator):
     def evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()[self.slice]
 
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
+
 
 class SpatialOperator(UnaryOperator):
     """A node in the expression tree representing a unary spatial operator
@@ -272,6 +280,10 @@ class Gradient(SpatialOperator):
     def __init__(self, child):
         super().__init__("grad", child)
 
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return True
+
 
 class Divergence(SpatialOperator):
     """A node in the expression tree representing a div operator
@@ -281,6 +293,10 @@ class Divergence(SpatialOperator):
 
     def __init__(self, child):
         super().__init__("div", child)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
 
 
 class Laplacian(SpatialOperator):
@@ -292,6 +308,10 @@ class Laplacian(SpatialOperator):
 
     def __init__(self, child):
         super().__init__("laplacian", child)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
 
 
 class Mass(SpatialOperator):
@@ -390,6 +410,10 @@ class Integral(SpatialOperator):
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
 
 
 class IndefiniteIntegral(Integral):

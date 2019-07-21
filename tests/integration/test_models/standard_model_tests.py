@@ -45,7 +45,8 @@ class StandardModelTest(object):
             self.parameter_values = parameter_values
         self.parameter_values.process_model(self.model)
         # Model should still be well-posed after processing
-        self.model.check_well_posedness()
+        # Set post_discretisation to True for fast test
+        self.model.check_well_posedness(post_discretisation=True)
         # No Parameter or FunctionParameter nodes in the model
         for eqn in {**self.model.rhs, **self.model.algebraic}.values():
             if any(
@@ -119,7 +120,7 @@ class StandardModelTest(object):
         self.param = param
         param.update_model(self.model, self.disc)
         # Model should still be well-posed after processing
-        self.model.check_well_posedness()
+        self.model.check_well_posedness(post_discretisation=True)
 
 
 class OptimisationsTest(object):

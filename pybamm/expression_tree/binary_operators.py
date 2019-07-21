@@ -150,6 +150,10 @@ class BinaryOperator(pybamm.Symbol):
         """ Perform binary operation on nodes 'left' and 'right'. """
         raise NotImplementedError
 
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return self.left.evaluates_on_edges() or self.right.evaluates_on_edges()
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator
@@ -578,6 +582,10 @@ class Inner(BinaryOperator):
             return left
 
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
 
 
 def inner(left, right):

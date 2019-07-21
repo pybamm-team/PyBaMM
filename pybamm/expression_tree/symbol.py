@@ -525,11 +525,8 @@ class Symbol(anytree.NodeMixin):
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
         """
-        return self.has_symbol_of_classes(
-            pybamm.Gradient
-        ) and not self.has_symbol_of_classes(
-            (pybamm.Divergence, pybamm.IndefiniteIntegral, pybamm.Inner, pybamm.Index)
-        )
+        # Default behaviour: return False
+        return False
 
     def has_symbol_of_classes(self, symbol_classes):
         """Returns True if equation has a term of the class(es) `symbol_class`.
@@ -570,16 +567,23 @@ class Symbol(anytree.NodeMixin):
         Shape of an object, found by evaluating it with appropriate t and y.
         """
         # Default behaviour is to try to evaluate the object directly
-        state_vectors_in_node = [
-            x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
-        ]
-        if state_vectors_in_node == []:
-            y = None
-        else:
-            min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
-            # Pick a y that won't cause RuntimeWarnings
-            y = np.linspace(0.1, 0.9, min_y_size)
-        evaluated_self = self.evaluate(0, y)
+        # Try with some large y
+        try:
+            y = np.linspace(0.1, 0.9, int(1e4))
+            evaluated_self = self.evaluate(0, y)
+        # If that fails, fall back to calculating how big y should really be
+        except ValueError:
+            state_vectors_in_node = [
+                x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
+            ]
+            if state_vectors_in_node == []:
+                y = None
+            else:
+                min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
+                # Pick a y that won't cause RuntimeWarnings
+                y = np.linspace(0.1, 0.9, min_y_size)
+
+        # Return shape of evaluated object
         if isinstance(evaluated_self, numbers.Number):
             return ()
         else:
