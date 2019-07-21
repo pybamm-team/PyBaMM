@@ -192,12 +192,14 @@ class Discretisation(object):
                 left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
             )
 
-        # bc_key_ids = [key.id for key in list(model.boundary_conditions.keys())]
         bc_key_ids = list(self.bcs.keys())
 
         internal_bcs = {}
         for var in model.boundary_conditions.keys():
             if isinstance(var, pybamm.Concatenation):
+                # import ipdb
+                #
+                # ipdb.set_trace()
                 children = var.children
 
                 first_child = children[0]
@@ -431,7 +433,7 @@ class Discretisation(object):
 
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
-            new_var_eqn_dict[eqn_key].test_shape()
+            # new_var_eqn_dict[eqn_key].test_shape()
 
         return new_var_eqn_dict
 
