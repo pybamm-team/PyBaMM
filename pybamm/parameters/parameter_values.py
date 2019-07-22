@@ -280,7 +280,9 @@ class ParameterValues(dict):
             new_child = self.process_symbol(symbol.child)
             if isinstance(symbol, pybamm.Broadcast):
                 new_symbol = pybamm.Broadcast(
-                    new_child, symbol.domain, broadcast_type=symbol.broadcast_type
+                    new_child,
+                    symbol.broadcast_domain,
+                    broadcast_type=symbol.broadcast_type,
                 )
             elif isinstance(symbol, pybamm.Integral):
                 new_symbol = symbol.__class__(new_child, symbol.integration_variable)

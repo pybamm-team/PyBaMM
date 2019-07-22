@@ -86,18 +86,12 @@ class SpatialMethod:
             )
 
         elif broadcast_type == "secondary":
-            raise NotImplementedError
+            # Secondary broadcast type is just a flag for shape tests, so we just return
+            # the symbol itself.
+            out = symbol
 
         elif broadcast_type == "full":
             out = symbol * pybamm.Vector(np.ones(full_pts_for_broadcast), domain=domain)
-
-        else:
-            raise KeyError(
-                """Broadcast type must be either: 'primary', 'secondary', or 'full' and
-                not {}""".format(
-                    broadcast_type
-                )
-            )
 
         return out
 

@@ -4,9 +4,18 @@
 import pybamm
 
 # Electrolyte concentration
-c_e_n = pybamm.Variable("Negative electrolyte concentration", ["negative electrode"])
-c_e_s = pybamm.Variable("Separator electrolyte concentration", ["separator"])
-c_e_p = pybamm.Variable("Positive electrolyte concentration", ["positive electrode"])
+c_e_n = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Negative electrolyte concentration", ["negative electrode"]),
+    "current collector",
+)
+c_e_s = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Separator electrolyte concentration", ["separator"]),
+    "current collector",
+)
+c_e_p = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Positive electrolyte concentration", ["positive electrode"]),
+    "current collector",
+)
 c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
 c_e_av = pybamm.Variable(
@@ -76,9 +85,9 @@ eps_p_pc = pybamm.Variable(
 )
 
 eps_piecewise_constant = pybamm.Concatenation(
-    pybamm.Broadcast(eps_n_pc, ["negative electrode"], broadcast_type="primary"),
-    pybamm.Broadcast(eps_s_pc, ["separator"], broadcast_type="primary"),
-    pybamm.Broadcast(eps_p_pc, ["positive electrode"], broadcast_type="primary"),
+    pybamm.PrimaryBroadcast(eps_n_pc, ["negative electrode"]),
+    pybamm.PrimaryBroadcast(eps_s_pc, ["separator"]),
+    pybamm.PrimaryBroadcast(eps_p_pc, ["positive electrode"]),
 )
 
 # Electrolyte pressure

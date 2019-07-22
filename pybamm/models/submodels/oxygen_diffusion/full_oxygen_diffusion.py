@@ -46,10 +46,14 @@ class Full(BaseModel):
 
     def get_fundamental_variables(self):
         # Oxygen concentration (oxygen concentration is zero in the negative electrode)
-        c_ox_n = pybamm.Broadcast(0, "negative electrode")
-        c_ox_s = pybamm.Variable("Separator oxygen concentration", ["separator"])
-        c_ox_p = pybamm.Variable(
-            "Positive oxygen concentration", ["positive electrode"]
+        c_ox_n = pybamm.FullBroadcast(0, "negative electrode")
+        c_ox_s = pybamm.SecondaryBroadcast(
+            pybamm.Variable("Separator oxygen concentration", ["separator"]),
+            "current collector",
+        )
+        c_ox_p = pybamm.SecondaryBroadcast(
+            pybamm.Variable("Positive oxygen concentration", ["positive electrode"]),
+            "current collector",
         )
         c_ox_s_p = pybamm.Concatenation(c_ox_s, c_ox_p)
         variables = {"Separator and positive electrode oxygen concentration": c_ox_s_p}

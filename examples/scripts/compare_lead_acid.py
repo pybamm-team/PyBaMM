@@ -12,9 +12,9 @@ models = [
     # ),
     pybamm.lead_acid.LOQS(),
     # pybamm.lead_acid.FOQS(),
-    # pybamm.lead_acid.Composite(),
+    pybamm.lead_acid.Composite(),
     # # pybamm.lead_acid.Composite({"surface form": "algebraic"}),
-    # pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.NewmanTiedemann(),
 ]
 
 # load parameter values and process models and geometry

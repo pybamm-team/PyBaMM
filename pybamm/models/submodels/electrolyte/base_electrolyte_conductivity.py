@@ -168,11 +168,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         delta_phi_av = pybamm.average(delta_phi)
         if delta_phi.domain == []:
-            delta_phi = pybamm.Broadcast(delta_phi, self.domain_for_broadcast)
+            delta_phi = pybamm.FullBroadcast(delta_phi, self.domain_for_broadcast)
         elif delta_phi.domain == ["current collector"]:
-            delta_phi = pybamm.Broadcast(
-                delta_phi, self.domain_for_broadcast, broadcast_type="primary"
-            )
+            delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,

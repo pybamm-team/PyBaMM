@@ -385,10 +385,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "Average positive electrode open circuit potential [V]"
         ]
 
-        ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
-        ocp_n_left_dim = pybamm.BoundaryValue(ocp_n_dim, "left")
-        ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
-        ocp_p_right_dim = pybamm.BoundaryValue(ocp_p_dim, "right")
+        ocp_n_left = pybamm.boundary_value(ocp_n, "left")
+        ocp_n_left_dim = pybamm.boundary_value(ocp_n_dim, "left")
+        ocp_p_right = pybamm.boundary_value(ocp_p, "right")
+        ocp_p_right_dim = pybamm.boundary_value(ocp_p_dim, "right")
 
         ocv_av = ocp_p_av - ocp_n_av
         ocv_av_dim = ocp_p_av_dim - ocp_n_av_dim

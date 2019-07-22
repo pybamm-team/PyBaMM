@@ -39,9 +39,8 @@ class Composite(BaseModel):
 
         if self._domain == "Negative":
             sigma_eff = self.param.sigma_n * (1 - eps) ** self.param.b
-            phi_s = (
-                pybamm.outer(i_boundary_cc, x_n * (x_n - 2 * l_n) / (2 * l_n))
-                / sigma_eff
+            phi_s = pybamm.outer(
+                i_boundary_cc / sigma_eff, x_n * (x_n - 2 * l_n) / (2 * l_n)
             )
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
@@ -59,12 +58,10 @@ class Composite(BaseModel):
                 + (i_boundary_cc / sigma_eff) * (1 - l_p / 3)
             )
 
-            phi_s = (
-                pybamm.Broadcast(
-                    const, ["positive electrode"], broadcast_type="primary"
-                )
-                - pybamm.outer(i_boundary_cc, x_p + (x_p - 1) ** 2 / (2 * l_p))
-                / sigma_eff
+            phi_s = pybamm.PrimaryBroadcast(
+                const, ["positive electrode"]
+            ) - pybamm.outer(
+                i_boundary_cc / sigma_eff, x_p + (x_p - 1) ** 2 / (2 * l_p)
             )
             i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 

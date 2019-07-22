@@ -29,6 +29,8 @@ def evaluate_for_shape_using_domain(domain, typ="vector"):
         "separator": 13,
         "positive electrode": 17,
     }
+    if isinstance(domain, str):
+        domain = [domain]
     if domain == []:
         size = 1
     elif all(dom in fixed_domain_sizes for dom in domain):

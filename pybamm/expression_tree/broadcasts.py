@@ -27,57 +27,85 @@ class Broadcast(pybamm.SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, domain, name=None, broadcast_type="full"):
+    def __init__(self, child, broadcast_domain, broadcast_type="full", name=None):
         # Convert child to scalar if it is a number
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
 
-        # Check domain
-        if child.domain not in [
-            [],
-            domain,
-            ["current collector"],
-            ["negative particle"],
-            ["positive particle"],
-        ]:
-            raise pybamm.DomainError(
-                """
-                Domain of a broadcasted child must be [], ['current collector'],
-                or same as 'domain' ('{}'), but is '{}'
-                """.format(
-                    domain, child.domain
-                )
-            )
         if name is None:
             name = "broadcast"
 
-        # set type of broadcast
-        self.check_and_set_broadcast_type(child, broadcast_type)
-
-        super().__init__(name, child)
-        # overwrite child domain ([]) with specified broadcasting domain
-        self.domain = domain
-
-    def check_and_set_broadcast_type(self, child, broadcast_type):
-        """
-        Set broadcast type, performing basic checks to make sure it is compatible with
-        the child
-        """
-        if child.domain == ["current collector"] and broadcast_type == "full":
-            raise ValueError(
-                "Variables on the current collector must be broadcast to 'primary' only"
-            )
+        # perform some basic checks and set attributes
+        domain = self.check_and_set_domain_and_broadcast_type(
+            child, broadcast_domain, broadcast_type
+        )
         self.broadcast_type = broadcast_type
+        self.broadcast_domain = broadcast_domain
+        super().__init__(name, child, domain)
+
+    def check_and_set_domain_and_broadcast_type(
+        self, child, broadcast_domain, broadcast_type
+    ):
+        """
+        Set broadcast domain and broadcast type, performing basic checks to make sure
+        it is compatible with the child
+        """
+        # Acceptable broadcast types
+        if broadcast_type not in ["primary", "secondary", "full"]:
+            raise KeyError(
+                """Broadcast type must be either: 'primary', 'secondary', or 'full' and
+            not {}""".format(
+                    broadcast_type
+                )
+            )
+
+        # Secondary broadcast to current collector is acceptable
+        if broadcast_type == "secondary":
+            if broadcast_domain == "current collector":
+                domain = child.domain
+            else:
+                raise pybamm.DomainError
+
+        # Otherwise only some domains can be broadcast
+        else:
+            if child.domain not in [
+                [],
+                broadcast_domain,
+                ["current collector"],
+                ["negative particle"],
+                ["positive particle"],
+            ]:
+                raise pybamm.DomainError(
+                    """
+                    Domain of a broadcasted child must be [], ['current collector'],
+                    ["negative particle"], ["positive particle"] or same as
+                    'broadcast_domain' ('{}'), but is '{}'
+                    """.format(
+                        broadcast_domain, child.domain
+                    )
+                )
+            domain = broadcast_domain
+
+        # Variables on the current collector can only be broadcast to 'primary'
+        if broadcast_type == "full":
+            if child.domain == ["current collector"]:
+                raise ValueError(
+                    """
+                    Variables on the current collector must be broadcast to 'primary'
+                    only
+                    """
+                )
+        return domain
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
-        return Broadcast(child, self.domain, broadcast_type=self.broadcast_type)
+        return Broadcast(child, self.broadcast_domain, self.broadcast_type)
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
-        return Broadcast(child, self.domain, broadcast_type=self.broadcast_type)
+        return Broadcast(child, self.broadcast_domain, self.broadcast_type)
 
     def evaluate_for_shape(self):
         """
@@ -89,12 +117,31 @@ class Broadcast(pybamm.SpatialOperator):
 
         if self.broadcast_type == "primary":
             return np.outer(child_eval, vec).reshape(-1, 1)
+        elif self.broadcast_type == "secondary":
+            return np.outer(
+                pybamm.evaluate_for_shape_using_domain(self.broadcast_domain),
+                child_eval,
+            ).reshape(-1, 1)
         elif self.broadcast_type == "full":
             return child_eval * vec
-        else:
-            raise KeyError(
-                """Broadcast type must be either: 'primary' or 'full' and not {}.
-                 Support for 'secondary' will be added in the future""".format(
-                    self.broadcast_type
-                )
-            )
+
+
+class PrimaryBroadcast(Broadcast):
+    "A class for primary broadcasts"
+
+    def __init__(self, child, broadcast_domain, name=None):
+        super().__init__(child, broadcast_domain, "primary", name)
+
+
+class SecondaryBroadcast(Broadcast):
+    "A class for secondary broadcasts"
+
+    def __init__(self, child, broadcast_domain, name=None):
+        super().__init__(child, broadcast_domain, "secondary", name)
+
+
+class FullBroadcast(Broadcast):
+    "A class for full broadcasts"
+
+    def __init__(self, child, broadcast_domain, name=None):
+        super().__init__(child, broadcast_domain, "full", name)

@@ -23,8 +23,10 @@ class UnaryOperator(pybamm.Symbol):
 
     """
 
-    def __init__(self, name, child):
-        super().__init__(name, children=[child], domain=child.domain)
+    def __init__(self, name, child, domain=None):
+        if domain is None:
+            domain = child.domain
+        super().__init__(name, children=[child], domain=domain)
         self.child = self.children[0]
 
     def __str__(self):
@@ -245,8 +247,8 @@ class SpatialOperator(UnaryOperator):
 
     """
 
-    def __init__(self, name, child):
-        super().__init__(name, child)
+    def __init__(self, name, child, domain=None):
+        super().__init__(name, child, domain)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -373,9 +375,8 @@ class Integral(SpatialOperator):
             name += " {}".format(child.domain)
 
         self._integration_variable = integration_variable
-        super().__init__(name, child)
         # integrating removes the domain
-        self.domain = []
+        super().__init__(name, child, domain=[])
 
     @property
     def integration_variable(self):
@@ -476,8 +477,7 @@ class BoundaryOperator(SpatialOperator):
         self.side = side
         # Domain of Boundary must be ([]) so that expressions can be formed
         # of boundary values of variables in different domains
-        super().__init__(name, child)
-        self.domain = []
+        super().__init__(name, child, domain=[])
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -607,36 +607,36 @@ def surf(variable, set_domain=False):
     Parameters
     ----------
 
-    variable : :class:`Symbol`
+    variable : :class:`pybamm.Symbol`
         the surface value of this variable will be returned
 
     Returns
     -------
-
-    :class:`GetSurfaceValue`
+    :class:`pybamm.BoundaryValue`
         the surface value of ``variable``
     """
-    if variable.domain == ["negative electrode"] and isinstance(
-        variable, pybamm.Broadcast
-    ):
-        child_surf = boundary_value(variable.orphans[0], "right")
-        out = pybamm.Broadcast(
-            child_surf, ["negative electrode"], broadcast_type="primary"
-        )
-    elif variable.domain == ["positive electrode"] and isinstance(
-        variable, pybamm.Broadcast
-    ):
-        child_surf = boundary_value(variable.orphans[0], "right")
-        out = pybamm.Broadcast(
-            child_surf, ["positive electrode"], broadcast_type="primary"
-        )
-    else:
-        out = boundary_value(variable, "right")
-        if set_domain:
-            if variable.domain == ["negative particle"]:
-                out.domain = ["negative electrode"]
-            elif variable.domain == ["positive particle"]:
-                out.domain = ["positive electrode"]
+    if variable.domain in [["negative electrode"], ["positive electrode"]]:
+        if (
+            isinstance(variable, pybamm.Broadcast)
+            and variable.broadcast_type == "secondary"
+        ):
+            orphan = variable.orphans[0]
+            if isinstance(variable, pybamm.Broadcast):
+                child_surf = boundary_value(orphan.orphans[0], "right")
+                out = pybamm.SecondaryBroadcast(
+                    pybamm.PrimaryBroadcast(child_surf, orphan.broadcast_domain),
+                    variable.broadcast_domain,
+                )
+        elif isinstance(variable, pybamm.PrimaryBroadcast):
+            child_surf = boundary_value(variable.orphans[0], "right")
+            out = pybamm.PrimaryBroadcast(child_surf, variable.domain)
+        else:
+            out = boundary_value(variable, "right")
+            if set_domain:
+                if variable.domain == ["negative particle"]:
+                    out.domain = ["negative electrode"]
+                elif variable.domain == ["positive particle"]:
+                    out.domain = ["positive electrode"]
 
     return out
 
@@ -660,12 +660,15 @@ def average(symbol):
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
+    elif isinstance(symbol, pybamm.Broadcast) and symbol.broadcast_type != "secondary":
         return symbol.orphans[0]
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif (
         isinstance(symbol, pybamm.Concatenation)
-        and all(isinstance(child, pybamm.Broadcast) for child in symbol.children)
+        and all(
+            isinstance(child, pybamm.Broadcast) and child.broadcast_type != "secondary"
+            for child in symbol.children
+        )
         and symbol.domain == ["negative electrode", "separator", "positive electrode"]
     ):
         a, b, c = [orp.orphans[0] for orp in symbol.orphans]
@@ -723,7 +726,7 @@ def boundary_value(symbol, side):
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its boundary value is its child
-    if isinstance(symbol, pybamm.Broadcast):
+    if isinstance(symbol, pybamm.Broadcast) and symbol.broadcast_type != "secondary":
         return symbol.orphans[0]
     # Otherwise, calculate boundary value
     else:

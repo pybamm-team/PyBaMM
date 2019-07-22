@@ -31,16 +31,12 @@ class LeadingOrder(BaseModel):
         j_n = variables["Negative electrode interfacial current density"].orphans[0]
         j_p = variables["Positive electrode interfacial current density"].orphans[0]
 
-        deps_dt_n = pybamm.Broadcast(
-            -self.param.beta_surf_n * j_n,
-            ["negative electrode"],
-            broadcast_type="primary",
+        deps_dt_n = pybamm.PrimaryBroadcast(
+            -self.param.beta_surf_n * j_n, ["negative electrode"]
         )
-        deps_dt_s = pybamm.Broadcast(0, ["separator"], broadcast_type="primary")
-        deps_dt_p = pybamm.Broadcast(
-            -self.param.beta_surf_p * j_p,
-            ["positive electrode"],
-            broadcast_type="primary",
+        deps_dt_s = pybamm.PrimaryBroadcast(0, ["separator"])
+        deps_dt_p = pybamm.PrimaryBroadcast(
+            -self.param.beta_surf_p * j_p, ["positive electrode"]
         )
 
         deps_dt = pybamm.Concatenation(deps_dt_n, deps_dt_s, deps_dt_p)

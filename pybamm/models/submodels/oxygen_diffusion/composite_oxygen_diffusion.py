@@ -32,18 +32,18 @@ class Composite(Full):
 
     def get_coupled_variables(self, variables):
 
-        eps = separator_and_positive_only(variables["Leading-order porosity"])
+        eps_0 = separator_and_positive_only(variables["Leading-order porosity"])
         c_ox = variables["Separator and positive electrode oxygen concentration"]
         # TODO: allow charge and convection?
         v_box = pybamm.Scalar(0)
 
         param = self.param
 
-        N_ox_diffusion = -(eps ** param.b) * param.curlyD_ox * pybamm.grad(c_ox)
+        N_ox_diffusion = -(eps_0 ** param.b) * param.curlyD_ox * pybamm.grad(c_ox)
 
-        N_ox = N_ox_diffusion + c_ox * v_box
+        N_ox = N_ox_diffusion  # + c_ox * v_box
         # Flux in the negative electrode is zero
-        N_ox = pybamm.Concatenation(pybamm.Broadcast(0, "negative electrode"), N_ox)
+        N_ox = pybamm.Concatenation(pybamm.FullBroadcast(0, "negative electrode"), N_ox)
 
         variables.update(self._get_standard_flux_variables(N_ox))
 

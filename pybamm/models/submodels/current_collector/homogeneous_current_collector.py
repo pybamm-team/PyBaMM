@@ -23,9 +23,11 @@ class Uniform(BaseModel):
 
     def get_fundamental_variables(self):
 
-        i_cc = pybamm.Scalar(0)
+        i_cc = pybamm.SecondaryBroadcast(pybamm.Scalar(0), "current collector")
 
-        i_boundary_cc = self.param.current_with_time
+        i_boundary_cc = pybamm.PrimaryBroadcast(
+            self.param.current_with_time, "current collector"
+        )
 
         variables = self._get_standard_current_variables(i_cc, i_boundary_cc)
 

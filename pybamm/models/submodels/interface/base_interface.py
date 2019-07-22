@@ -56,9 +56,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         j_av = pybamm.average(j)
         if j.domain == []:
-            j = pybamm.Broadcast(j, self.domain_for_broadcast)
+            j = pybamm.FullBroadcast(j, self.domain_for_broadcast)
         elif j.domain == ["current collector"]:
-            j = pybamm.Broadcast(j, self.domain_for_broadcast, broadcast_type="primary")
+            j = pybamm.PrimaryBroadcast(j, self.domain_for_broadcast)
 
         variables = {
             self.domain
@@ -141,11 +141,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         j0_av = pybamm.average(j0)
         if j0.domain == []:
-            j0 = pybamm.Broadcast(j0, self.domain_for_broadcast)
+            j0 = pybamm.FullBroadcast(j0, self.domain_for_broadcast)
         elif j0.domain == ["current collector"]:
-            j0 = pybamm.Broadcast(
-                j0, self.domain_for_broadcast, broadcast_type="primary"
-            )
+            j0 = pybamm.PrimaryBroadcast(j0, self.domain_for_broadcast)
 
         variables = {
             self.domain
@@ -205,11 +203,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         eta_r_av = pybamm.average(eta_r)
         if eta_r.domain == []:
-            eta_r = pybamm.Broadcast(eta_r, self.domain_for_broadcast)
+            eta_r = pybamm.FullBroadcast(eta_r, self.domain_for_broadcast)
         elif eta_r.domain == ["current collector"]:
-            eta_r = pybamm.Broadcast(
-                eta_r, self.domain_for_broadcast, broadcast_type="primary"
-            )
+            eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
         variables = {
             self.domain
@@ -245,11 +241,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         delta_phi_av = pybamm.average(delta_phi)
         if delta_phi.domain == []:
-            delta_phi = pybamm.Broadcast(delta_phi, self.domain_for_broadcast)
+            delta_phi = pybamm.FullBroadcast(delta_phi, self.domain_for_broadcast)
         elif delta_phi.domain == ["current collector"]:
-            delta_phi = pybamm.Broadcast(
-                delta_phi, self.domain_for_broadcast, broadcast_type="primary"
-            )
+            delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
@@ -289,11 +283,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         ocp_av = pybamm.average(ocp)
         if ocp.domain == []:
-            ocp = pybamm.Broadcast(ocp, self.domain_for_broadcast)
+            ocp = pybamm.FullBroadcast(ocp, self.domain_for_broadcast)
         elif ocp.domain == ["current collector"]:
-            ocp = pybamm.Broadcast(
-                ocp, self.domain_for_broadcast, broadcast_type="primary"
-            )
+            ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
         dUdT_av = pybamm.average(dUdT)
 
         if self.domain == "Negative":
