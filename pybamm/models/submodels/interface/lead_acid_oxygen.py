@@ -42,7 +42,7 @@ class BaseInterfaceOxygenLeadAcid(BaseInterface):
         """
         c_e = variables[self.domain + " electrolyte concentration"]
         # If c_e was broadcast, take only the orphan
-        if isinstance(c_e, pybamm.Broadcast):
+        if isinstance(c_e, pybamm.Broadcast) and c_e.broadcast_type != "secondary":
             c_e = c_e.orphans[0]
 
         if self.domain == "Negative":

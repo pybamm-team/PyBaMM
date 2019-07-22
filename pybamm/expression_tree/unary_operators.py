@@ -449,7 +449,7 @@ class IndefiniteIntegral(Integral):
     **Extends:** :class:`Integral`
     """
 
-    def __init__(self, child, integration_variable):
+    def __init__(self, child, integration_variable, domain=None):
         if isinstance(integration_variable, list):
             if len(integration_variable) > 1:
                 raise NotImplementedError(

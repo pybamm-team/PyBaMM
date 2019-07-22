@@ -123,9 +123,15 @@ class BaseModel(pybamm.BaseSubModel):
 
         # Simple formula for velocity in the separator
         dVbox_dz = pybamm.Concatenation(
-            pybamm.Broadcast(0, "negative electrode"),
-            pybamm.PrimaryBroadcast(-d_vbox_s__dx, "separator"),
-            pybamm.Broadcast(0, "positive electrode"),
+            pybamm.SecondaryBroadcast(
+                pybamm.Broadcast(0, "negative electrode"), "current collector"
+            ),
+            pybamm.SecondaryBroadcast(
+                pybamm.PrimaryBroadcast(-d_vbox_s__dx, "separator"), "current collector"
+            ),
+            pybamm.SecondaryBroadcast(
+                pybamm.Broadcast(0, "positive electrode"), "current collector"
+            ),
         )
         v_box_s = pybamm.outer(d_vbox_s__dx, (x_s - l_n)) + pybamm.PrimaryBroadcast(
             v_box_n_right, "separator"

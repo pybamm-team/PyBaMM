@@ -122,9 +122,18 @@ eps_piecewise_constant = pybamm.Concatenation(
 )
 
 # Electrolyte pressure
-pressure_n = pybamm.Variable("Negative electrolyte pressure", ["negative electrode"])
-pressure_s = pybamm.Variable("Separator electrolyte pressure", ["separator"])
-pressure_p = pybamm.Variable("Positive electrolyte pressure", ["positive electrode"])
+pressure_n = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Negative electrolyte pressure", ["negative electrode"]),
+    "current collector",
+)
+pressure_s = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Separator electrolyte pressure", ["separator"]),
+    "current collector",
+)
+pressure_p = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Positive electrolyte pressure", ["positive electrode"]),
+    "current collector",
+)
 pressure = pybamm.Concatenation(pressure_n, pressure_s, pressure_p)
 
 # Temperature

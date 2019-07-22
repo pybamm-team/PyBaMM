@@ -51,7 +51,9 @@ class Full(BaseModel):
         sum_j = sum(
             pybamm.Concatenation(
                 variables[reaction["Negative"]["aj"]],
-                pybamm.Broadcast(0, "separator"),
+                pybamm.SecondaryBroadcast(
+                    pybamm.Broadcast(0, "separator"), "current collector"
+                ),
                 variables[reaction["Positive"]["aj"]],
             )
             for reaction in self.reactions.values()
