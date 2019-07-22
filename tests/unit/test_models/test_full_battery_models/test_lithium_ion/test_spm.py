@@ -15,8 +15,7 @@ class TestSPM(unittest.TestCase):
         options = {"thermal": None}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
-        self.assertTrue("negative particle" in model.default_geometry)
-        self.assertNotIn("current collector", model.default_geometry)
+        self.assertIn("negative particle", model.default_geometry)
 
         # Shape tests needs debugging for 2plus1D -- model works ok, but shape
         # test not right

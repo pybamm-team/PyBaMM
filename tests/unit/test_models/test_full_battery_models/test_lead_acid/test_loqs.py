@@ -20,13 +20,13 @@ class TestLeadAcidLOQS(unittest.TestCase):
         options = {"thermal": None}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
-        self.assertTrue("negative particle" not in model.default_geometry)
+        self.assertNotIn("negative particle", model.default_geometry)
 
     def test_default_spatial_methods(self):
         options = {"thermal": None}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_spatial_methods, dict)
-        self.assertTrue("negative particle" not in model.default_geometry)
+        self.assertNotIn("negative particle", model.default_geometry)
 
     def test_incompatible_options(self):
         options = {"bc_options": {"dimensionality": 1}}
@@ -94,7 +94,7 @@ class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
     def test_default_geometry(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.LOQS(options)
-        self.assertNotIn("current collector", model.default_geometry)
+        self.assertIn("current collector", model.default_geometry)
         options["bc_options"] = {"dimensionality": 1}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIn("current collector", model.default_geometry)

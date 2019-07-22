@@ -37,7 +37,9 @@ class Composite(Full):
 
         param = self.param
 
-        N_e_diffusion = -(eps_0 ** param.b) * param.D_e(c_e_0) * pybamm.grad(c_e)
+        N_e_diffusion = -pybamm.outer(
+            (eps_0 ** param.b) * param.D_e(c_e_0), pybamm.grad(c_e)
+        )
         # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
         # N_e_convection = c_e * v_box_0
 

@@ -30,9 +30,9 @@ class TestBroadcasts(unittest.TestCase):
             pybamm.Broadcast(b, ["separator"])
 
     def test_broadcast_type(self):
-        import ipdb
-
-        ipdb.set_trace()
+        a = pybamm.Symbol("a", domain="current collector")
+        with self.assertRaisesRegex(ValueError, "Variables on the current collector"):
+            pybamm.Broadcast(a, "electrode")
 
 
 if __name__ == "__main__":

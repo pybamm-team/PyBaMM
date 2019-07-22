@@ -89,7 +89,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive electrode": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
         }
 
     @property
@@ -98,7 +98,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
-            "current collector": pybamm.FiniteVolume,
+            "current collector": pybamm.ZeroDimensionalMethod,
         }
 
     @property
@@ -106,12 +106,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         """
         Create and return the default solver for this model
         """
-        try:
-            default_solver = pybamm.ScikitsOdeSolver()
-        except ImportError:
-            default_solver = pybamm.ScipySolver()
-
-        return default_solver
+        return pybamm.ScipySolver()
 
     @property
     def options(self):
