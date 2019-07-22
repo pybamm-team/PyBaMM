@@ -71,6 +71,7 @@ class BaseInterface(pybamm.BaseSubModel):
             + self.reaction_name
             + " interfacial current density": j_av,
             self.domain
+            + " electrode"
             + self.reaction_name
             + " interfacial current density [A.m-2]": j_scale * j,
             "Average "
@@ -79,6 +80,13 @@ class BaseInterface(pybamm.BaseSubModel):
             + self.reaction_name
             + " interfacial current density [A.m-2]": j_scale * j_av,
         }
+
+        ####### VERY VERY HACKY!!! ##########
+        # if self.domain == "Negative" and self.reaction_name == " oxygen":
+        #     variables[
+        #         "Leading-order negative electrode oxygen interfacial current density"
+        #     ] = j
+        #####################################
 
         return variables
 

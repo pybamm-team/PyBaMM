@@ -21,7 +21,8 @@ models = [
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 20,
+        "Bruggeman coefficient": 0.001,
+        "Typical current [A]": -20,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
@@ -46,7 +47,7 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 1, 100)
+t_eval = np.linspace(0, 5, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
