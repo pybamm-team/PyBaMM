@@ -54,16 +54,18 @@ class FirstOrder(BaseModel):
         )
 
         # Fluxes
-        N_ox_n_1 = pybamm.Broadcast(0, "negative electrode")
-        N_ox_s_1 = -pybamm.Broadcast(sj_ox_p * l_p, "separator")
-        N_ox_p_1 = sj_ox_p * (x_p - 1)
+        N_ox_n_1 = pybamm.SecondaryBroadcast(
+            pybamm.Broadcast(0, "negative electrode"), "current collector"
+        )
+        N_ox_s_1 = -pybamm.PrimaryBroadcast(sj_ox_p * l_p, "separator")
+        N_ox_p_1 = pybamm.outer(sj_ox_p, x_p - 1)
 
         # Concentrations
         c_ox_n_1 = pybamm.Broadcast(0, "negative electrode")
-        c_ox_s_1 = sj_ox_p * l_p * (x_s - l_n) / D_ox_s
-        c_ox_p_1 = -sj_ox_p * (
-            ((x_p - 1) ** 2 - l_p ** 2) / (2 * D_ox_p) - l_p * l_s / D_ox_s
-        )
+        c_ox_s_1 = pybamm.outer(sj_ox_p * l_p / D_ox_s, x_s - l_n)
+        c_ox_p_1 = pybamm.outer(
+            -sj_ox_p / (2 * D_ox_p), (x_p - 1) ** 2 - l_p ** 2
+        ) + pybamm.PrimaryBroadcast(sj_ox_p * l_p * l_s / D_ox_s, "positive electrode")
 
         # Update variables
         c_ox = pybamm.Concatenation(
