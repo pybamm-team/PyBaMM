@@ -23,21 +23,42 @@ c_e_av = pybamm.Variable(
 )
 
 # Electrolyte potential
-phi_e_n = pybamm.Variable("Negative electrolyte potential", ["negative electrode"])
-phi_e_s = pybamm.Variable("Separator electrolyte potential", ["separator"])
-phi_e_p = pybamm.Variable("Positive electrolyte potential", ["positive electrode"])
+phi_e_n = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Negative electrolyte potential", ["negative electrode"]),
+    "current collector",
+)
+phi_e_s = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Separator electrolyte potential", ["separator"]),
+    "current collector",
+)
+phi_e_p = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Positive electrolyte potential", ["positive electrode"]),
+    "current collector",
+)
 phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
 # Electrode potential
-phi_s_n = pybamm.Variable("Negative electrode potential", ["negative electrode"])
-phi_s_p = pybamm.Variable("Positive electrode potential", ["positive electrode"])
+phi_s_n = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Negative electrode potential", ["negative electrode"]),
+    "current collector",
+)
+phi_s_p = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Positive electrode potential", ["positive electrode"]),
+    "current collector",
+)
 
 # Potential difference
-delta_phi_n = pybamm.Variable(
-    "Negative electrode surface potential difference", ["negative electrode"]
+delta_phi_n = pybamm.SecondaryBroadcast(
+    pybamm.Variable(
+        "Negative electrode surface potential difference", ["negative electrode"]
+    ),
+    "current collector",
 )
-delta_phi_p = pybamm.Variable(
-    "Positive electrode surface potential difference", ["positive electrode"]
+delta_phi_p = pybamm.SecondaryBroadcast(
+    pybamm.Variable(
+        "Positive electrode surface potential difference", ["positive electrode"]
+    ),
+    "current collector",
 )
 
 delta_phi_n_av = pybamm.Variable(
@@ -72,9 +93,17 @@ c_s_p_xav = pybamm.Variable(
 )
 
 # Porosity
-eps_n = pybamm.Variable("Negative electrode porosity", domain=["negative electrode"])
-eps_s = pybamm.Variable("Separator porosity", domain=["separator"])
-eps_p = pybamm.Variable("Positive electrode porosity", domain=["positive electrode"])
+eps_n = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Negative electrode porosity", domain=["negative electrode"]),
+    "current collector",
+)
+eps_s = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Separator porosity", domain=["separator"]), "current collector"
+)
+eps_p = pybamm.SecondaryBroadcast(
+    pybamm.Variable("Positive electrode porosity", domain=["positive electrode"]),
+    "current collector",
+)
 eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
 # Piecewise constant (for asymptotic models)

@@ -30,7 +30,10 @@ class BaseKinetics(BaseInterface):
             variables = self._get_delta_phi(variables)
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         # If delta_phi was broadcast, take only the orphan
-        if isinstance(delta_phi, pybamm.Broadcast):
+        if (
+            isinstance(delta_phi, pybamm.Broadcast)
+            and delta_phi.broadcast_type != "secondary"
+        ):
             delta_phi = delta_phi.orphans[0]
 
         # Get exchange-current density
