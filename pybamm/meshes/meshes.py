@@ -44,8 +44,8 @@ class Mesh(dict):
                     if prim_sec != "tabs":
                         for var in list(geometry[domain][prim_sec].keys()):
                             # Raise error if the number of points for a particular
-                            # variable haven't been provided, unless that variable doesn't
-                            # appear in the geometry
+                            # variable haven't been provided, unless that variable
+                            # doesn't appear in the geometry
                             if (
                                 var.id not in var_id_pts.keys()
                                 and var.domain[0] in geometry.keys()

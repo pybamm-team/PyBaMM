@@ -41,10 +41,12 @@ delta_phi_p = pybamm.Variable(
 )
 
 delta_phi_n_av = pybamm.Variable(
-    "Average negative electrode surface potential difference"
+    "Average negative electrode surface potential difference",
+    domain="current collector",
 )
 delta_phi_p_av = pybamm.Variable(
-    "Average positive electrode surface potential difference"
+    "Average positive electrode surface potential difference",
+    domain="current collector",
 )
 
 # current collector variables

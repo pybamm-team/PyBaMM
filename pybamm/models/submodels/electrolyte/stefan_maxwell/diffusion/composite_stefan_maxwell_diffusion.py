@@ -67,27 +67,32 @@ class Composite(Full):
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
         if self.extended is False:
-            source_terms_0 = sum(
-                pybamm.Concatenation(
-                    reaction["Negative"]["s"]
-                    * variables["Leading-order " + reaction["Negative"]["aj"].lower()],
-                    pybamm.Broadcast(0, "separator"),
-                    reaction["Positive"]["s"]
-                    * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
-                )
-                / param.gamma_e
+            neg_reactions = sum(
+                reaction["Negative"]["s"]
+                * variables["Leading-order " + reaction["Negative"]["aj"].lower()]
+                for reaction in self.reactions.values()
+            )
+            pos_reactions = sum(
+                reaction["Positive"]["s"]
+                * variables["Leading-order " + reaction["Positive"]["aj"].lower()]
                 for reaction in self.reactions.values()
             )
         else:
-            source_terms_0 = sum(
-                pybamm.Concatenation(
-                    reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
-                    pybamm.Broadcast(0, "separator"),
-                    reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
-                )
-                / param.gamma_e
+            neg_reactions = sum(
+                reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]]
                 for reaction in self.reactions.values()
             )
+            pos_reactions = sum(
+                reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]]
+                for reaction in self.reactions.values()
+            )
+        sep_reactions = pybamm.SecondaryBroadcast(
+            pybamm.Broadcast(0, "separator"), "current collector"
+        )
+        source_terms_0 = (
+            pybamm.Concatenation(neg_reactions, sep_reactions, pos_reactions)
+            / param.gamma_e
+        )
 
         self.rhs = {
             c_e: (1 / eps_0)

@@ -62,23 +62,22 @@ class Composite(Full):
         N_ox = variables["Oxygen flux"].orphans[1]
 
         if self.extended is False:
-            source_terms_0 = sum(
-                pybamm.Concatenation(
-                    pybamm.Broadcast(0, "separator"),
-                    reaction["Positive"]["s_ox"]
-                    * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
-                )
+            pos_reactions = sum(
+                reaction["Positive"]["s_ox"]
+                * variables["Leading-order " + reaction["Positive"]["aj"].lower()]
                 for reaction in self.reactions.values()
             )
         else:
-            source_terms_0 = sum(
-                pybamm.Concatenation(
-                    pybamm.Broadcast(0, "separator"),
-                    reaction["Positive"]["s_ox"]
-                    * variables[reaction["Positive"]["aj"]],
-                )
+            pos_reactions = sum(
+                reaction["Positive"]["s_ox"] * variables[reaction["Positive"]["aj"]]
                 for reaction in self.reactions.values()
             )
+        sep_reactions = pybamm.SecondaryBroadcast(
+            pybamm.Broadcast(0, "separator"), "current collector"
+        )
+        source_terms_0 = (
+            pybamm.Concatenation(sep_reactions, pos_reactions) / param.gamma_e
+        )
 
         self.rhs = {
             c_ox: (1 / eps_0)
