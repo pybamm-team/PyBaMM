@@ -5,7 +5,6 @@
 import pybamm
 import autograd.numpy as np
 from .base_inverse_kinetics import BaseInverseKinetics
-from .base_inverse_first_order_kinetics import BaseInverseFirstOrderKinetics
 from ..kinetics.butler_volmer import ButlerVolmer
 
 

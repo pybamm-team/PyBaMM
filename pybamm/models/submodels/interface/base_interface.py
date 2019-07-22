@@ -81,13 +81,6 @@ class BaseInterface(pybamm.BaseSubModel):
             + " interfacial current density [A.m-2]": j_scale * j_av,
         }
 
-        ####### VERY VERY HACKY!!! ##########
-        # if self.domain == "Negative" and self.reaction_name == " oxygen":
-        #     variables[
-        #         "Leading-order negative electrode oxygen interfacial current density"
-        #     ] = j
-        #####################################
-
         return variables
 
     def _get_standard_total_interfacial_current_variables(self, j_tot_av):
