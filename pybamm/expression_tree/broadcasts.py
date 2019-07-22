@@ -43,6 +43,17 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_domain = broadcast_domain
         super().__init__(name, child, domain)
 
+    def __repr__(self):
+        """returns the string `__class__(id, name, children, domain)`"""
+        return "{!s}({}, {!s}, children={!s}, domain={!s}, broadcast_type={!s})".format(
+            self.__class__.__name__,
+            hex(self.id),
+            self._name,
+            [str(child) for child in self.children],
+            [str(subdomain) for subdomain in self.domain],
+            self.broadcast_type,
+        )
+
     def check_and_set_domain_and_broadcast_type(
         self, child, broadcast_domain, broadcast_type
     ):

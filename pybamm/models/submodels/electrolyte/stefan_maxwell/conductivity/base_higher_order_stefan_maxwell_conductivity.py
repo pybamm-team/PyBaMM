@@ -62,6 +62,14 @@ class BaseHigherOrder(BaseModel):
         kappa_p_av = param.kappa_e(c_e_av) * eps_p_av ** param.b
 
         chi_av = param.chi(c_e_av)
+        if chi_av.domain == ["current collector"]:
+            chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
+            chi_av_s = pybamm.PrimaryBroadcast(chi_av, "separator")
+            chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")
+        else:
+            chi_av_n = chi_av
+            chi_av_s = chi_av
+            chi_av_p = chi_av
 
         # electrolyte current
         i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
@@ -70,9 +78,6 @@ class BaseHigherOrder(BaseModel):
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte potential
-        import ipdb
-
-        ipdb.set_trace()
         phi_e_const = (
             -delta_phi_n_av
             + phi_s_n_av
@@ -93,7 +98,7 @@ class BaseHigherOrder(BaseModel):
         phi_e_n = (
             pybamm.PrimaryBroadcast(phi_e_const, "negative electrode")
             + (
-                pybamm.PrimaryBroadcast(chi_av, "negative electrode")
+                chi_av_n
                 * self._higher_order_macinnes_function(
                     c_e_n / pybamm.PrimaryBroadcast(c_e_av, "negative electrode")
                 )
@@ -109,7 +114,7 @@ class BaseHigherOrder(BaseModel):
         )
 
         phi_e_s = pybamm.PrimaryBroadcast(phi_e_const, "separator") + (
-            pybamm.PrimaryBroadcast(chi_av, "separator")
+            chi_av_s
             * self._higher_order_macinnes_function(
                 c_e_s / pybamm.PrimaryBroadcast(c_e_av, "separator")
             )
@@ -119,7 +124,7 @@ class BaseHigherOrder(BaseModel):
         phi_e_p = (
             pybamm.PrimaryBroadcast(phi_e_const, "positive electrode")
             + (
-                pybamm.PrimaryBroadcast(chi_av, "positive electrode")
+                chi_av_p
                 * self._higher_order_macinnes_function(
                     c_e_p / pybamm.PrimaryBroadcast(c_e_av, "positive electrode")
                 )

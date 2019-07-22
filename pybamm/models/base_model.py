@@ -386,8 +386,22 @@ class BaseModel(object):
         for var in {**self.rhs, **self.algebraic}.keys():
             if isinstance(var, pybamm.Variable):
                 var_ids_in_keys.add(var.id)
+            # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                var_ids_in_keys.update([x.id for x in var.children])
+                for child in var.children:
+                    # Key can be a secondary broadcast
+                    if (
+                        isinstance(child, pybamm.Broadcast)
+                        and child.broadcast_type == "secondary"
+                    ):
+                        var_ids_in_keys.add(child.child.id)
+                    else:
+                        var_ids_in_keys.add(child.id)
+            # Key can be a secondary broadcast
+            elif (
+                isinstance(var, pybamm.Broadcast) and var.broadcast_type == "secondary"
+            ):
+                var_ids_in_keys.add(var.child.id)
         for var_id, var in all_vars.items():
             if var_id not in var_ids_in_keys:
                 raise pybamm.ModelError(

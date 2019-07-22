@@ -350,10 +350,20 @@ class Integral(SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, integration_variable):
+    def __init__(self, child, integration_variable, domain=None):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]
 
+        if domain is None:
+            # integral of a child on an electrode domain goes to the current collector
+            if child.domain[0] in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]:
+                domain = "current collector"
+            else:
+                domain = []
         name = "integral"
         for var in integration_variable:
             if isinstance(var, pybamm.SpatialVariable):
@@ -375,8 +385,7 @@ class Integral(SpatialOperator):
             name += " {}".format(child.domain)
 
         self._integration_variable = integration_variable
-        # integrating removes the domain
-        super().__init__(name, child, domain=[])
+        super().__init__(name, child, domain=domain)
 
     @property
     def integration_variable(self):
@@ -401,15 +410,19 @@ class Integral(SpatialOperator):
     def _unary_simplify(self, simplified_child):
         """ See :meth:`UnaryOperator._unary_simplify()`. """
 
-        return self.__class__(simplified_child, self.integration_variable)
+        return self.__class__(
+            simplified_child, self.integration_variable, domain=self.domain
+        )
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
-        return self.__class__(child, self.integration_variable)
+        return self.__class__(child, self.integration_variable, domain=self.domain)
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        # child_size = self.child.size_for_testing
+        # domain_size = pybamm.domain_size(self.child.domain)
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
     def evaluates_on_edges(self):
@@ -444,15 +457,14 @@ class IndefiniteIntegral(Integral):
                 )
             else:
                 integration_variable = integration_variable[0]
-        super().__init__(child, integration_variable)
+        # the integrated variable has the same domain as the child
+        super().__init__(child, integration_variable, domain=child.domain)
         # Overwrite the name
         self.name = "{} integrated w.r.t {}".format(
             child.name, integration_variable.name
         )
         if isinstance(integration_variable, pybamm.SpatialVariable):
             self.name += " on {}".format(integration_variable.domain)
-        # the integrated variable has the same domain as the child
-        self.domain = child.domain
 
     def evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
@@ -475,9 +487,13 @@ class BoundaryOperator(SpatialOperator):
 
     def __init__(self, name, child, side):
         self.side = side
-        # Domain of Boundary must be ([]) so that expressions can be formed
-        # of boundary values of variables in different domains
-        super().__init__(name, child, domain=[])
+        # boundary operator of a child on an electrode domain goes to the current
+        # collector
+        if child.domain[0] in ["negative electrode", "separator", "positive electrode"]:
+            domain = "current collector"
+        else:
+            domain = []
+        super().__init__(name, child, domain=domain)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -600,44 +616,47 @@ def laplacian(expression):
 #
 
 
-def surf(variable, set_domain=False):
+def surf(symbol, set_domain=False):
     """convenience function for creating a right :class:`BoundaryValue`, usually in the
     spherical geometry
 
     Parameters
     ----------
 
-    variable : :class:`pybamm.Symbol`
-        the surface value of this variable will be returned
+    symbol : :class:`pybamm.Symbol`
+        the surface value of this symbol will be returned
 
     Returns
     -------
     :class:`pybamm.BoundaryValue`
-        the surface value of ``variable``
+        the surface value of ``symbol``
     """
-    if variable.domain in [["negative electrode"], ["positive electrode"]]:
+    if symbol.domain in [["negative electrode"], ["positive electrode"]]:
         if (
-            isinstance(variable, pybamm.Broadcast)
-            and variable.broadcast_type == "secondary"
+            isinstance(symbol, pybamm.Broadcast)
+            and symbol.broadcast_type == "secondary"
         ):
-            orphan = variable.orphans[0]
-            if isinstance(variable, pybamm.Broadcast):
+            orphan = symbol.orphans[0]
+            if isinstance(symbol, pybamm.Broadcast):
                 child_surf = boundary_value(orphan.orphans[0], "right")
                 out = pybamm.SecondaryBroadcast(
                     pybamm.PrimaryBroadcast(child_surf, orphan.broadcast_domain),
-                    variable.broadcast_domain,
+                    symbol.broadcast_domain,
                 )
-        elif isinstance(variable, pybamm.PrimaryBroadcast):
-            child_surf = boundary_value(variable.orphans[0], "right")
-            out = pybamm.PrimaryBroadcast(child_surf, variable.domain)
+        elif isinstance(symbol, pybamm.PrimaryBroadcast):
+            child_surf = boundary_value(symbol.orphans[0], "right")
+            out = pybamm.PrimaryBroadcast(child_surf, symbol.domain)
         else:
-            out = boundary_value(variable, "right")
+            out = boundary_value(symbol, "right")
             if set_domain:
-                if variable.domain == ["negative particle"]:
+                if symbol.domain == ["negative particle"]:
                     out.domain = ["negative electrode"]
-                elif variable.domain == ["positive particle"]:
+                elif symbol.domain == ["positive particle"]:
                     out.domain = ["positive electrode"]
+    else:
+        import ipdb
 
+        ipdb.set_trace()
     return out
 
 

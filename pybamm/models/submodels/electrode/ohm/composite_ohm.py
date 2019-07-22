@@ -36,6 +36,8 @@ class Composite(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         eps = variables[self.domain + " electrode porosity"].orphans[0]
+        if isinstance(eps, pybamm.Broadcast):
+            eps = eps.orphans[0]
 
         if self._domain == "Negative":
             sigma_eff = self.param.sigma_n * (1 - eps) ** self.param.b

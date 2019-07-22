@@ -11,10 +11,9 @@ import autograd.numpy as np
 from anytree.exporter import DotExporter
 
 
-def evaluate_for_shape_using_domain(domain, typ="vector"):
+def domain_size(domain):
     """
-    Return a vector of the appropriate shape, based on the domain.
-    Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
+    Get the domain size.
 
     Empty domain has size 1.
     If the domain falls within the list of standard battery domains, the size is read
@@ -37,10 +36,24 @@ def evaluate_for_shape_using_domain(domain, typ="vector"):
         size = sum(fixed_domain_sizes[dom] for dom in domain)
     else:
         size = sum(hash(dom) % 100 for dom in domain)
+    return size
+
+
+def create_object_of_size(size, typ="vector"):
+    "Return object, consisting of NaNs, of the right shape"
     if typ == "vector":
         return np.nan * np.ones((size, 1))
     elif typ == "matrix":
         return np.nan * np.ones((size, size))
+
+
+def evaluate_for_shape_using_domain(domain, typ="vector"):
+    """
+    Return a vector of the appropriate shape, based on the domain.
+    Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
+    """
+    size = domain_size(domain)
+    return create_object_of_size(size, typ)
 
 
 class Symbol(anytree.NodeMixin):
@@ -590,6 +603,13 @@ class Symbol(anytree.NodeMixin):
             return ()
         else:
             return evaluated_self.shape
+
+    @property
+    def size_for_testing(self):
+        """
+        Size of an object, based on shape for testing
+        """
+        return np.prod(self.shape_for_testing)
 
     @property
     def shape_for_testing(self):
