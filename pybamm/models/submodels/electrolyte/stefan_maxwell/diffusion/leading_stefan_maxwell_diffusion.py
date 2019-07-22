@@ -26,9 +26,13 @@ class LeadingOrder(BaseModel):
 
     def get_fundamental_variables(self):
         c_e_av = pybamm.standard_variables.c_e_av
-        c_e_n = pybamm.Broadcast(c_e_av, ["negative electrode"])
-        c_e_s = pybamm.Broadcast(c_e_av, ["separator"])
-        c_e_p = pybamm.Broadcast(c_e_av, ["positive electrode"])
+        c_e_n = pybamm.Broadcast(
+            c_e_av, ["negative electrode"], broadcast_type="primary"
+        )
+        c_e_s = pybamm.Broadcast(c_e_av, ["separator"], broadcast_type="primary")
+        c_e_p = pybamm.Broadcast(
+            c_e_av, ["positive electrode"], broadcast_type="primary"
+        )
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
         return self._get_standard_concentration_variables(c_e)

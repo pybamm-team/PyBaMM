@@ -142,8 +142,9 @@ class Mesh(dict):
         submeshes = [
             (domain, submesh_list)
             for domain, submesh_list in self.items()
-            if domain != "time"
-            and not isinstance(submesh_list[0], pybamm.Scikit2DSubMesh)
+            if not isinstance(
+                submesh_list[0], (pybamm.SubMesh0D, pybamm.Scikit2DSubMesh)
+            )
         ]
         for domain, submesh_list in submeshes:
 

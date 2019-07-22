@@ -52,11 +52,22 @@ class Broadcast(pybamm.SpatialOperator):
             name = "broadcast"
 
         # set type of broadcast
-        self.broadcast_type = broadcast_type
+        self.check_and_set_broadcast_type(child, broadcast_type)
 
         super().__init__(name, child)
         # overwrite child domain ([]) with specified broadcasting domain
         self.domain = domain
+
+    def check_and_set_broadcast_type(self, child, broadcast_type):
+        """
+        Set broadcast type, performing basic checks to make sure it is compatible with
+        the child
+        """
+        if child.domain == ["current collector"] and broadcast_type == "full":
+            raise ValueError(
+                "Variables on the current collector must be broadcast to 'primary' only"
+            )
+        self.broadcast_type = broadcast_type
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """

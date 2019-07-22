@@ -29,6 +29,11 @@ class TestBroadcasts(unittest.TestCase):
         with self.assertRaises(pybamm.DomainError):
             pybamm.Broadcast(b, ["separator"])
 
+    def test_broadcast_type(self):
+        import ipdb
+
+        ipdb.set_trace()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

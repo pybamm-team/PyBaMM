@@ -162,7 +162,10 @@ class LOQS(BaseModel):
     @property
     def default_spatial_methods(self):
         base_spatial_methods = {"macroscale": pybamm.FiniteVolume}
-        if self.options["bc_options"]["dimensionality"] in [0, 1]:
+        if self.options["bc_options"]["dimensionality"] == 0:
+            # 0D submesh - use base spatial method
+            base_spatial_methods["current collector"] = pybamm.SpatialMethod
+        if self.options["bc_options"]["dimensionality"] == 1:
             base_spatial_methods["current collector"] = pybamm.FiniteVolume
         elif self.options["bc_options"]["dimensionality"] == 2:
             base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
@@ -175,7 +178,9 @@ class LOQS(BaseModel):
             "separator": pybamm.Uniform1DSubMesh,
             "positive electrode": pybamm.Uniform1DSubMesh,
         }
-        if self.options["bc_options"]["dimensionality"] in [0, 1]:
+        if self.options["bc_options"]["dimensionality"] == 0:
+            base_submeshes["current collector"] = pybamm.SubMesh0D
+        elif self.options["bc_options"]["dimensionality"] == 1:
             base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
         elif self.options["bc_options"]["dimensionality"] == 2:
             base_submeshes["current collector"] = pybamm.Scikit2DSubMesh

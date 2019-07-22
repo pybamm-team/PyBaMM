@@ -199,7 +199,8 @@ from .geometry import standard_spatial_vars
 #
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
-from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+from .meshes.zero_dimensional_submeshes import SubMesh0D
+from .meshes.one_dimensional_submeshes import SubMesh1D, Uniform1DSubMesh
 from .meshes.scikit_fem_submeshes import Scikit2DSubMesh, have_scikit_fem
 
 #
