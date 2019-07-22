@@ -294,12 +294,7 @@ class SpatialMethod:
         # behaviour that the mass matrix is the identity.
 
         # Create appropriate submesh by combining submeshes in domain
-        try:
-            submesh = self.mesh.combine_submeshes(*symbol.domain)
-        except:
-            import ipdb
-
-            ipdb.set_trace()
+        submesh = self.mesh.combine_submeshes(*symbol.domain)
 
         # Get number of points in primary dimension
         n = submesh[0].npts

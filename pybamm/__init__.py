@@ -207,6 +207,7 @@ from .meshes.scikit_fem_submeshes import Scikit2DSubMesh, have_scikit_fem
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
+from .spatial_methods.zero_dimensional_method import ZeroDimensionalMethod
 from .spatial_methods.finite_volume import FiniteVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 

@@ -16,7 +16,7 @@ class Composite(BaseHigherOrder):
         The parameters to use for this submodel
     domain : str, optional
         The domain in which the model holds
-        
+
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.BaseHigerOrder`
     """
 

@@ -164,7 +164,7 @@ class LOQS(BaseModel):
         base_spatial_methods = {"macroscale": pybamm.FiniteVolume}
         if self.options["bc_options"]["dimensionality"] == 0:
             # 0D submesh - use base spatial method
-            base_spatial_methods["current collector"] = pybamm.SpatialMethod
+            base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod
         if self.options["bc_options"]["dimensionality"] == 1:
             base_spatial_methods["current collector"] = pybamm.FiniteVolume
         elif self.options["bc_options"]["dimensionality"] == 2:

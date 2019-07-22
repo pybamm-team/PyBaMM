@@ -1,13 +1,12 @@
 #
-# Class for two-dimensional current collectors
+# Base class for current collectors with surface formulation
 #
-import pybamm
 from ..base_current_collector import BaseModel
 
 
 class BaseSurfaceForm(BaseModel):
-    """A submodel for Ohm's law plus conservation of current in the current collectors,
-    which uses the voltage-current relationship from the SPM(e).
+    """A base submodel for Ohm's law plus conservation of current in the current
+    collectors, using the surface formulation.
 
     Parameters
     ----------
