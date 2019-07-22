@@ -338,6 +338,7 @@ class TestBaseModel(unittest.TestCase):
             self.assertIsNotNone(item)
 
         # check error raised if undefined variable in list of Variables
+        pybamm.settings.debug_mode = True
         model = pybamm.BaseModel()
         model.rhs = {c: -c}
         model.initial_conditions = {c: 1}
