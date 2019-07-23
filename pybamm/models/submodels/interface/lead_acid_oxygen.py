@@ -82,10 +82,10 @@ class BaseInterfaceOxygenLeadAcid(BaseInterface):
         return self.param.ne_Ox
 
 
-class ForwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.BaseForwardTafel):
+class ForwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.ForwardTafel):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseForwardTafel` (for kinetics)
+    :class:`kinetics.ForwardTafel` (for kinetics)
     """
 
     def __init__(self, param, domain):
@@ -93,11 +93,11 @@ class ForwardTafel(BaseInterfaceOxygenLeadAcid, kinetics.BaseForwardTafel):
 
 
 class LeadingOrderDiffusionLimited(
-    BaseInterfaceOxygenLeadAcid, diffusion_limited.BaseLeadingOrderDiffusionLimited
+    BaseInterfaceOxygenLeadAcid, diffusion_limited.LeadingOrderDiffusionLimited
 ):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseLeadingOrderDiffusionLimited` (for kinetics)
+    :class:`kinetics.LeadingOrderDiffusionLimited` (for kinetics)
     """
 
     def __init__(self, param, domain):
@@ -105,21 +105,21 @@ class LeadingOrderDiffusionLimited(
 
 
 class FullDiffusionLimited(
-    BaseInterfaceOxygenLeadAcid, diffusion_limited.BaseFullDiffusionLimited
+    BaseInterfaceOxygenLeadAcid, diffusion_limited.FullDiffusionLimited
 ):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseFullDiffusionLimited` (for kinetics)
+    :class:`kinetics.FullDiffusionLimited` (for kinetics)
     """
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
 
-class NoReaction(BaseInterfaceOxygenLeadAcid, kinetics.BaseNoReaction):
+class NoReaction(BaseInterfaceOxygenLeadAcid, kinetics.NoReaction):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.BaseNoReaction` (for kinetics)
+    :class:`kinetics.NoReaction` (for kinetics)
     """
 
     def __init__(self, param, domain):

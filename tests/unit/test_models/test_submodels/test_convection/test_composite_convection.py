@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestCombinedOrder(unittest.TestCase):
+class TestComposite(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
 
@@ -17,11 +17,13 @@ class TestCombinedOrder(unittest.TestCase):
             "Negative electrode interfacial current density": pybamm.Broadcast(
                 a, ["negative electrode"]
             ),
+            "Average negative electrode interfacial current density": a,
             "Positive electrode interfacial current density": pybamm.Broadcast(
                 a, ["positive electrode"]
             ),
+            "Average positive electrode interfacial current density": a,
         }
-        submodel = pybamm.convection.CombinedOrder(param)
+        submodel = pybamm.convection.Composite(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

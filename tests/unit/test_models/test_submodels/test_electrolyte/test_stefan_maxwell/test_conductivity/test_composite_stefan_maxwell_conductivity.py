@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestCombinedOrder(unittest.TestCase):
+class TestComposite(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
         a = pybamm.Scalar(0)
@@ -18,13 +18,13 @@ class TestCombinedOrder(unittest.TestCase):
             "Electrolyte concentration": c_e,
             "Average electrolyte concentration": a,
             "Average negative electrode potential": a,
-            "Average negative electrode open circuit potential": a,
-            "Average negative electrode reaction overpotential": a,
+            "Average negative electrode surface potential difference": a,
             "Average negative electrode porosity": a,
             "Average separator porosity": a,
             "Average positive electrode porosity": a,
+            "Average cell temperature": a,
         }
-        submodel = pybamm.electrolyte.stefan_maxwell.conductivity.CombinedOrder(param)
+        submodel = pybamm.electrolyte.stefan_maxwell.conductivity.Composite(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

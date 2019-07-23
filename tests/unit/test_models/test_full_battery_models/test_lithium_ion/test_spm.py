@@ -45,7 +45,7 @@ class TestSPM(unittest.TestCase):
 
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
-        options = {"thermal": None, "Voltage": "On"}
+        options = {"thermal": None}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
         # Shape tests needs debugging for 2plus1D -- model works ok, but shape

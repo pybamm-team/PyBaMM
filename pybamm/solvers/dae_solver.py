@@ -130,6 +130,13 @@ class DaeSolver(pybamm.BaseSolver):
         termination = self.get_termination_reason(solution, model_events)
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
+        pybamm.logger.info(
+            "Set-up time: {}, Solve time: {}, Total time: {}".format(
+                timer.format(solution.set_up_time),
+                timer.format(solution.solve_time),
+                timer.format(solution.total_time),
+            )
+        )
         return solution
 
     def set_up(self, model):

@@ -65,9 +65,9 @@ eps_p = pybamm.Variable("Positive electrode porosity", domain=["positive electro
 eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
 # Piecewise constant (for asymptotic models)
-eps_n_pc = pybamm.Variable("Negative electrode porosity")
-eps_s_pc = pybamm.Variable("Separator porosity")
-eps_p_pc = pybamm.Variable("Positive electrode porosity")
+eps_n_pc = pybamm.Variable("Average negative electrode porosity")
+eps_s_pc = pybamm.Variable("Average separator porosity")
+eps_p_pc = pybamm.Variable("Average positive electrode porosity")
 
 eps_piecewise_constant = pybamm.Concatenation(
     pybamm.Broadcast(eps_n_pc, ["negative electrode"]),

@@ -1,26 +1,31 @@
 #
-# Class for the combined electrolyte potential employing stefan-maxwell
+# Base class for higher order electrolyte potential employing stefan-maxwell
 #
 import pybamm
 from .base_stefan_maxwell_conductivity import BaseModel
 
 
-class CombinedOrder(BaseModel):
-    """Class for conservation of charge in the electrolyte employing the
-    Stefan-Maxwell constitutive equations. (Combined refers to a combined
-    leading and first-order expression from the asymptotic reduction)
+class BaseHigherOrder(BaseModel):
+    """Base class for conservation of charge in the electrolyte employing the
+    Stefan-Maxwell constitutive equations.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
 
-
-    **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
+    **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.BaseModel`
     """
 
     def __init__(self, param, domain=None):
         super().__init__(param, domain)
+
+    def _higher_order_macinnes_function(self, x):
+        "Function to differentiate between composite and first-order models"
+        raise NotImplementedError
+
+    def unpack(self, variables):
+        raise NotImplementedError
 
     def get_coupled_variables(self, variables):
         # NOTE: the heavy use of Broadcast and outer in this method is mainly so
@@ -29,11 +34,13 @@ class CombinedOrder(BaseModel):
         # In the future, multiply will automatically handle switching between
         # normal multiply and outer products as appropriate.
 
+        c_e_av = self.unpack(variables)
+
         i_boundary_cc = variables["Current collector current density"]
         c_e = variables["Electrolyte concentration"]
-        c_e_av = variables["Average electrolyte concentration"]
-        ocp_n_av = variables["Average negative electrode open circuit potential"]
-        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
+        delta_phi_n_av = variables[
+            "Average negative electrode surface potential difference"
+        ]
         phi_s_n_av = variables["Average negative electrode potential"]
         eps_n_av = variables["Average negative electrode porosity"]
         eps_s_av = variables["Average separator porosity"]
@@ -64,12 +71,11 @@ class CombinedOrder(BaseModel):
 
         # electrolyte potential
         phi_e_const = (
-            -ocp_n_av
-            - eta_r_n_av
+            -delta_phi_n_av
             + phi_s_n_av
             - chi_av
             * pybamm.average(
-                pybamm.log(
+                self._higher_order_macinnes_function(
                     c_e_n
                     / pybamm.Broadcast(
                         c_e_av, ["negative electrode"], broadcast_type="primary"
@@ -87,7 +93,7 @@ class CombinedOrder(BaseModel):
                 phi_e_const, ["negative electrode"], broadcast_type="primary"
             )
             + chi_av
-            * pybamm.log(
+            * self._higher_order_macinnes_function(
                 c_e_n
                 / pybamm.Broadcast(
                     c_e_av, ["negative electrode"], broadcast_type="primary"
@@ -95,7 +101,7 @@ class CombinedOrder(BaseModel):
             )
             - pybamm.outer(
                 i_boundary_cc * (param.C_e / param.gamma_e) / kappa_n_av,
-                (x_n ** 2 - l_n ** 2) / 2,
+                (x_n ** 2 - l_n ** 2) / (2 * l_n),
             )
             - pybamm.outer(
                 i_boundary_cc * (param.C_e / param.gamma_e) / kappa_s_av,
@@ -106,7 +112,7 @@ class CombinedOrder(BaseModel):
         phi_e_s = (
             pybamm.Broadcast(phi_e_const, ["separator"], broadcast_type="primary")
             + chi_av
-            * pybamm.log(
+            * self._higher_order_macinnes_function(
                 c_e_s
                 / pybamm.Broadcast(c_e_av, ["separator"], broadcast_type="primary")
             )
@@ -118,7 +124,7 @@ class CombinedOrder(BaseModel):
                 phi_e_const, ["positive electrode"], broadcast_type="primary"
             )
             + chi_av
-            * pybamm.log(
+            * self._higher_order_macinnes_function(
                 c_e_p
                 / pybamm.Broadcast(
                     c_e_av, ["positive electrode"], broadcast_type="primary"
@@ -142,7 +148,7 @@ class CombinedOrder(BaseModel):
         # concentration overpotential
         eta_c_av = chi_av * (
             pybamm.average(
-                pybamm.log(
+                self._higher_order_macinnes_function(
                     c_e_p
                     / pybamm.Broadcast(
                         c_e_av, ["positive electrode"], broadcast_type="primary"
@@ -150,7 +156,7 @@ class CombinedOrder(BaseModel):
                 )
             )
             - pybamm.average(
-                pybamm.log(
+                self._higher_order_macinnes_function(
                     c_e_n
                     / pybamm.Broadcast(
                         c_e_av, ["negative electrode"], broadcast_type="primary"

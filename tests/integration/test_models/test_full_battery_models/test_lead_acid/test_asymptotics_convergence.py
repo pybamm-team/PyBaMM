@@ -84,8 +84,8 @@ class TestAsymptoticConvergence(unittest.TestCase):
         loqs_rates = np.log2(loqs_errs[:-1] / loqs_errs[1:])
         np.testing.assert_array_less(0.99 * np.ones_like(loqs_rates), loqs_rates)
         # Composite not converging as expected
-        # comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
-        # np.testing.assert_array_less(0.99 * np.ones_like(comp_rates), comp_rates)
+        comp_rates = np.log2(comp_errs[:-1] / comp_errs[1:])
+        np.testing.assert_array_less(0.99 * np.ones_like(comp_rates), comp_rates)
         # Check composite more accurate than loqs
         np.testing.assert_array_less(comp_errs, loqs_errs)
 

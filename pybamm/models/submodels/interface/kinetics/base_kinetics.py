@@ -25,19 +25,19 @@ class BaseModel(BaseInterface):
         super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
-        # Calculate delta_phi_s from phi_s and phi_e if it isn't already known
+        # Calculate delta_phi from phi_s and phi_e if it isn't already known
         if self.domain + " electrode surface potential difference" not in variables:
-            variables = self._get_delta_phi_s(variables)
-        delta_phi_s = variables[self.domain + " electrode surface potential difference"]
-        # If delta_phi_s was broadcast, take only the orphan
-        if isinstance(delta_phi_s, pybamm.Broadcast):
-            delta_phi_s = delta_phi_s.orphans[0]
+            variables = self._get_delta_phi(variables)
+        delta_phi = variables[self.domain + " electrode surface potential difference"]
+        # If delta_phi was broadcast, take only the orphan
+        if isinstance(delta_phi, pybamm.Broadcast):
+            delta_phi = delta_phi.orphans[0]
 
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
         ocp, dUdT = self._get_open_circuit_potential(variables)
-        eta_r = delta_phi_s - ocp
+        eta_r = delta_phi - ocp
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
 
@@ -78,3 +78,44 @@ class BaseModel(BaseInterface):
 
     def _get_open_circuit_potential(self, variables):
         raise NotImplementedError
+
+    def _get_dj_dc(self, variables):
+        """
+        Default to calculate derivative of interfacial current density with respect to
+        concentration. Can be overwritten by specific kinetic functions.
+        """
+        c_e, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+            variables
+        )
+        j = self._get_kinetics(j0, ne, delta_phi - ocp)
+        return j.diff(c_e)
+
+    def _get_dj_ddeltaphi(self, variables):
+        """
+        Default to calculate derivative of interfacial current density with respect to
+        surface potential difference. Can be overwritten by specific kinetic functions.
+        """
+        _, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
+            variables
+        )
+        j = self._get_kinetics(j0, ne, delta_phi - ocp)
+        return j.diff(delta_phi)
+
+    def _get_interface_variables_for_first_order(self, variables):
+        # This is a bit of a hack, but we need to multiply electrolyte concentration by
+        # one to differentiate it from the electrolyte concentration inside the
+        # surface potential difference when taking j.diff(c_e) later on
+        c_e_0 = variables["Leading-order average electrolyte concentration"] * 1
+        hacked_variables = {
+            **variables,
+            self.domain + " electrolyte concentration": c_e_0,
+        }
+        delta_phi = variables[
+            "Leading-order average "
+            + self.domain.lower()
+            + " electrode surface potential difference"
+        ]
+        j0 = self._get_exchange_current_density(hacked_variables)
+        ne = self._get_number_of_electrons_in_reaction()
+        ocp = self._get_open_circuit_potential(hacked_variables)[0]
+        return c_e_0, delta_phi, j0, ne, ocp

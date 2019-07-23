@@ -6,7 +6,7 @@ import pybamm
 from .base_kinetics import BaseModel
 
 
-class BaseForwardTafel(BaseModel):
+class ForwardTafel(BaseModel):
     """
     Base submodel which implements the forward Tafel equation:
 
@@ -21,7 +21,7 @@ class BaseForwardTafel(BaseModel):
         The domain to implement the model, either: 'Negative' or 'Positive'.
 
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
+    **Extends:** :class:`pybamm.interface.kinetics.BaseModel`
     """
 
     def __init__(self, param, domain):
@@ -31,7 +31,7 @@ class BaseForwardTafel(BaseModel):
         return j0 * pybamm.exp((ne / 2) * eta_r)
 
 
-class BaseBackwardTafel(BaseModel):
+class BackwardTafel(BaseModel):
     """
     Base submodel which implements the backward Tafel equation:
 
@@ -46,7 +46,7 @@ class BaseBackwardTafel(BaseModel):
         The domain to implement the model, either: 'Negative' or 'Positive'.
 
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
+    **Extends:** :class:`pybamm.interface.kinetics.BaseModel`
     """
 
     def __init__(self, param, domain):

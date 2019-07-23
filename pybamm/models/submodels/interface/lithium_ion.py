@@ -93,10 +93,10 @@ class BaseInterfaceLithiumIon(BaseInterface):
         return ne
 
 
-class ButlerVolmer(BaseInterfaceLithiumIon, kinetics.BaseButlerVolmer):
+class ButlerVolmer(BaseInterfaceLithiumIon, kinetics.ButlerVolmer):
     """
     Extends :class:`BaseInterfaceLithiumIon` (for exchange-current density, etc) and
-    :class:`kinetics.BaseButlerVolmer` (for kinetics)
+    :class:`kinetics.ButlerVolmer` (for kinetics)
     """
 
     def __init__(self, param, domain):
@@ -104,11 +104,11 @@ class ButlerVolmer(BaseInterfaceLithiumIon, kinetics.BaseButlerVolmer):
 
 
 class InverseButlerVolmer(
-    BaseInterfaceLithiumIon, inverse_kinetics.BaseInverseButlerVolmer
+    BaseInterfaceLithiumIon, inverse_kinetics.InverseButlerVolmer
 ):
     """
     Extends :class:`BaseInterfaceLithiumIon` (for exchange-current density, etc) and
-    :class:`inverse_kinetics.BaseInverseButlerVolmer` (for kinetics)
+    :class:`inverse_kinetics.InverseButlerVolmer` (for kinetics)
     """
 
     def __init__(self, param, domain):
