@@ -120,7 +120,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             current variables added.
         """
         i_s_n = variables["Negative electrode current density"]
-        i_s_s = pybamm.FullBroadcast(0, ["separator"])
+        i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         i_s_p = variables["Positive electrode current density"]
 
         i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)

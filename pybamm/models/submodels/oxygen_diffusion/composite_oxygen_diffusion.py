@@ -43,7 +43,9 @@ class Composite(Full):
 
         N_ox = N_ox_diffusion  # + c_ox * v_box
         # Flux in the negative electrode is zero
-        N_ox = pybamm.Concatenation(pybamm.FullBroadcast(0, "negative electrode"), N_ox)
+        N_ox = pybamm.Concatenation(
+            pybamm.FullBroadcast(0, "negative electrode", "current collector"), N_ox
+        )
 
         variables.update(self._get_standard_flux_variables(N_ox))
 

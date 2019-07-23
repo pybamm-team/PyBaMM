@@ -36,7 +36,9 @@ class LeadingOrder(BaseModel):
     def get_coupled_variables(self, variables):
 
         N_e = pybamm.FullBroadcast(
-            0, ["negative electrode", "separator", "positive electrode"]
+            0,
+            ["negative electrode", "separator", "positive electrode"],
+            "current collector",
         )
 
         variables.update(self._get_standard_flux_variables(N_e))

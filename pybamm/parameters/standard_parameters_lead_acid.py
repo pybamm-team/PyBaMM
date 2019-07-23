@@ -309,9 +309,9 @@ s_plus_p_S = s_plus_p_S_dim / ne_p_S
 s_n = -(s_plus_n_S + t_plus)  # Dimensionless rection rate (neg)
 s_p = -(s_plus_p_S + t_plus)  # Dimensionless rection rate (pos)
 s = pybamm.Concatenation(
-    pybamm.FullBroadcast(s_n, ["negative electrode"]),
-    pybamm.FullBroadcast(0, ["separator"]),
-    pybamm.FullBroadcast(s_p, ["positive electrode"]),
+    pybamm.FullBroadcast(s_n, ["negative electrode"], "current collector"),
+    pybamm.FullBroadcast(0, ["separator"], "current collector"),
+    pybamm.FullBroadcast(s_p, ["positive electrode"], "current collector"),
 )
 j0_n_S_ref = j0_n_S_ref_dimensional / interfacial_current_scale_n
 j0_p_S_ref = j0_p_S_ref_dimensional / interfacial_current_scale_p
@@ -343,9 +343,9 @@ U_p_Hy = (U_Hy_dim - U_p_ref) / potential_scale
 beta_surf_n = -c_e_typ * DeltaVsurf_n / ne_n_S  # Molar volume change (lead)
 beta_surf_p = -c_e_typ * DeltaVsurf_p / ne_p_S  # Molar volume change (lead dioxide)
 beta_surf = pybamm.Concatenation(
-    pybamm.FullBroadcast(beta_surf_n, ["negative electrode"]),
-    pybamm.FullBroadcast(0, ["separator"]),
-    pybamm.FullBroadcast(beta_surf_p, ["positive electrode"]),
+    pybamm.FullBroadcast(beta_surf_n, ["negative electrode"], "current collector"),
+    pybamm.FullBroadcast(0, ["separator"], "current collector"),
+    pybamm.FullBroadcast(beta_surf_p, ["positive electrode"], "current collector"),
 )
 beta_liq_n = -c_e_typ * DeltaVliq_n / ne_n_S  # Molar volume change (electrolyte, neg)
 beta_liq_p = -c_e_typ * DeltaVliq_p / ne_p_S  # Molar volume change (electrolyte, pos)
@@ -378,9 +378,9 @@ eps_n_init = eps_n_max - beta_surf_n * Q_e_max / l_n * (1 - q_init)
 eps_s_init = eps_s_max
 eps_p_init = eps_p_max + beta_surf_p * Q_e_max / l_p * (1 - q_init)
 eps_init = pybamm.Concatenation(
-    pybamm.FullBroadcast(eps_n_init, ["negative electrode"]),
-    pybamm.FullBroadcast(eps_s_init, ["separator"]),
-    pybamm.FullBroadcast(eps_p_init, ["positive electrode"]),
+    pybamm.FullBroadcast(eps_n_init, ["negative electrode"], "current collector"),
+    pybamm.FullBroadcast(eps_s_init, ["separator"], "current collector"),
+    pybamm.FullBroadcast(eps_p_init, ["positive electrode"], "current collector"),
 )
 curlyU_n_init = Q_e_max * (1.2 - q_init) / (Q_n_max * l_n)
 curlyU_p_init = Q_e_max * (1.2 - q_init) / (Q_p_max * l_p)

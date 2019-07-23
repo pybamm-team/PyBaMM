@@ -25,9 +25,13 @@ class LeadingOrder(BaseModel):
 
     def get_fundamental_variables(self):
         c_ox_av = pybamm.Variable("Average oxygen concentration")
-        c_ox_n = pybamm.FullBroadcast(c_ox_av, ["negative electrode"])
-        c_ox_s = pybamm.FullBroadcast(c_ox_av, ["separator"])
-        c_ox_p = pybamm.FullBroadcast(c_ox_av, ["positive electrode"])
+        c_ox_n = pybamm.FullBroadcast(
+            c_ox_av, ["negative electrode"], "current collector"
+        )
+        c_ox_s = pybamm.FullBroadcast(c_ox_av, ["separator"], "current collector")
+        c_ox_p = pybamm.FullBroadcast(
+            c_ox_av, ["positive electrode"], "current collector"
+        )
         c_ox = pybamm.Concatenation(c_ox_n, c_ox_s, c_ox_p)
 
         return self._get_standard_concentration_variables(c_ox)
@@ -35,7 +39,9 @@ class LeadingOrder(BaseModel):
     def get_coupled_variables(self, variables):
 
         N_ox = pybamm.FullBroadcast(
-            0, ["negative electrode", "separator", "positive electrode"]
+            0,
+            ["negative electrode", "separator", "positive electrode"],
+            "current collector",
         )
 
         variables.update(self._get_standard_flux_variables(N_ox))

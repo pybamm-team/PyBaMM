@@ -202,7 +202,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             x_s,
         )
 
-        i_e_s = pybamm.FullBroadcast(i_boundary_cc, ["separator"])
+        i_e_s = pybamm.FullBroadcast(i_boundary_cc, ["separator"], "current collector")
 
         variables.update(self._get_domain_potential_variables(phi_e_s))
         variables.update(self._get_domain_current_variables(i_e_s))

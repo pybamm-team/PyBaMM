@@ -56,7 +56,7 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         j_av = pybamm.average(j)
         if j.domain == []:
-            j = pybamm.FullBroadcast(j, self.domain_for_broadcast)
+            j = pybamm.FullBroadcast(j, self.domain_for_broadcast, "current collector")
         elif j.domain == ["current collector"]:
             j = pybamm.PrimaryBroadcast(j, self.domain_for_broadcast)
 
@@ -141,7 +141,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         j0_av = pybamm.average(j0)
         if j0.domain == []:
-            j0 = pybamm.FullBroadcast(j0, self.domain_for_broadcast)
+            j0 = pybamm.FullBroadcast(
+                j0, self.domain_for_broadcast, "current collector"
+            )
         elif j0.domain == ["current collector"]:
             j0 = pybamm.PrimaryBroadcast(j0, self.domain_for_broadcast)
 
@@ -203,7 +205,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         eta_r_av = pybamm.average(eta_r)
         if eta_r.domain == []:
-            eta_r = pybamm.FullBroadcast(eta_r, self.domain_for_broadcast)
+            eta_r = pybamm.FullBroadcast(
+                eta_r, self.domain_for_broadcast, "current collector"
+            )
         elif eta_r.domain == ["current collector"]:
             eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
@@ -241,7 +245,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         delta_phi_av = pybamm.average(delta_phi)
         if delta_phi.domain == []:
-            delta_phi = pybamm.FullBroadcast(delta_phi, self.domain_for_broadcast)
+            delta_phi = pybamm.FullBroadcast(
+                delta_phi, self.domain_for_broadcast, "current collector"
+            )
         elif delta_phi.domain == ["current collector"]:
             delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
 
@@ -283,7 +289,9 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         ocp_av = pybamm.average(ocp)
         if ocp.domain == []:
-            ocp = pybamm.FullBroadcast(ocp, self.domain_for_broadcast)
+            ocp = pybamm.FullBroadcast(
+                ocp, self.domain_for_broadcast, "current collector"
+            )
         elif ocp.domain == ["current collector"]:
             ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
         dUdT_av = pybamm.average(dUdT)

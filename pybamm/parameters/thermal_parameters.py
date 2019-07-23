@@ -69,9 +69,9 @@ rho_p = rho_p_dim * c_p_p_dim / rho_eff_dim
 rho_cp = rho_cp_dim * c_p_cp_dim / rho_eff_dim
 
 rho_k = pybamm.Concatenation(
-    pybamm.FullBroadcast(rho_n, ["negative electrode"]),
-    pybamm.FullBroadcast(rho_s, ["separator"]),
-    pybamm.FullBroadcast(rho_p, ["positive electrode"]),
+    pybamm.FullBroadcast(rho_n, ["negative electrode"], "current collector"),
+    pybamm.FullBroadcast(rho_s, ["separator"], "current collector"),
+    pybamm.FullBroadcast(rho_p, ["positive electrode"], "current collector"),
 )
 
 lambda_cn = lambda_cn_dim / lambda_eff_dim
@@ -81,9 +81,9 @@ lambda_p = lambda_p_dim / lambda_eff_dim
 lambda_cp = lambda_cp_dim / lambda_eff_dim
 
 lambda_k = pybamm.Concatenation(
-    pybamm.FullBroadcast(lambda_n, ["negative electrode"]),
-    pybamm.FullBroadcast(lambda_s, ["separator"]),
-    pybamm.FullBroadcast(lambda_p, ["positive electrode"]),
+    pybamm.FullBroadcast(lambda_n, ["negative electrode"], "current collector"),
+    pybamm.FullBroadcast(lambda_s, ["separator"], "current collector"),
+    pybamm.FullBroadcast(lambda_p, ["positive electrode"], "current collector"),
 )
 
 
