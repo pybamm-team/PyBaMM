@@ -37,7 +37,7 @@ class LeadingOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         if self.domain == "Negative":
-            phi_s = pybamm.Broadcast(0, ["negative electrode"])
+            phi_s = pybamm.FullBroadcast(0, ["negative electrode"])
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
         elif self.domain == "Positive":

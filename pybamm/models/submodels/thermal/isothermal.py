@@ -33,7 +33,7 @@ class Isothermal(BaseModel):
 
     def _flux_law(self, T):
         """Zero heat flux since temperature is constant"""
-        q = pybamm.Broadcast(
+        q = pybamm.FullBroadcast(
             pybamm.Scalar(0), ["negative electrode", "separator", "positive electrode"]
         )
         return q

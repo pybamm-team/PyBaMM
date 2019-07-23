@@ -51,12 +51,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             )
 
             v = pybamm.boundary_value(phi_s, "right")
-            try:
-                delta_phi_s = phi_s - pybamm.PrimaryBroadcast(v, ["positive electrode"])
-            except:
-                import ipdb
-
-                ipdb.set_trace()
+            delta_phi_s = phi_s - pybamm.PrimaryBroadcast(v, ["positive electrode"])
         delta_phi_s_av = pybamm.average(delta_phi_s)
         delta_phi_s_dim = delta_phi_s * param.potential_scale
         delta_phi_s_av_dim = delta_phi_s_av * param.potential_scale
@@ -125,7 +120,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             current variables added.
         """
         i_s_n = variables["Negative electrode current density"]
-        i_s_s = pybamm.Broadcast(0, ["separator"])
+        i_s_s = pybamm.FullBroadcast(0, ["separator"])
         i_s_p = variables["Positive electrode current density"]
 
         i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)

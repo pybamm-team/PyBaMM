@@ -36,8 +36,8 @@ class SimpleODEModel(pybamm.BaseBatteryModel):
         # Broadcast some of the variables
         self.variables = {
             "a": a,
-            "b broadcasted": pybamm.Broadcast(b, whole_cell),
-            "c broadcasted": pybamm.Broadcast(c, ["negative electrode", "separator"]),
+            "b broadcasted": pybamm.FullBroadcast(b, whole_cell),
+            "c broadcasted": pybamm.FullBroadcast(c, ["negative electrode", "separator"]),
         }
 
         "-----------------------------------------------------------------------------"

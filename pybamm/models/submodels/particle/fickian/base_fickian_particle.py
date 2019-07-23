@@ -25,9 +25,6 @@ class BaseModel(BaseParticle):
 
     def _flux_law(self, c, T):
 
-        import ipdb
-
-        ipdb.set_trace()
         if self.domain == "Negative":
             D = self.param.D_n(c, T)
         elif self.domain == "Positive":

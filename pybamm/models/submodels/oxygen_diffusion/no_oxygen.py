@@ -22,14 +22,14 @@ class NoOxygen(BaseModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        c_ox_n = pybamm.Broadcast(0, ["negative electrode"])
-        c_ox_s = pybamm.Broadcast(0, ["separator"])
-        c_ox_p = pybamm.Broadcast(0, ["positive electrode"])
+        c_ox_n = pybamm.FullBroadcast(0, ["negative electrode"])
+        c_ox_s = pybamm.FullBroadcast(0, ["separator"])
+        c_ox_p = pybamm.FullBroadcast(0, ["positive electrode"])
         c_ox = pybamm.Concatenation(c_ox_n, c_ox_s, c_ox_p)
 
         variables = self._get_standard_concentration_variables(c_ox)
 
-        N_e = pybamm.Broadcast(
+        N_e = pybamm.FullBroadcast(
             0, ["negative electrode", "separator", "positive electrode"]
         )
 

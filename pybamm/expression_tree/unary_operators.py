@@ -633,32 +633,34 @@ def surf(symbol, set_domain=False):
     :class:`pybamm.BoundaryValue`
         the surface value of ``symbol``
     """
-    if symbol.domain in [["negative electrode"], ["positive electrode"]]:
-        if (
-            isinstance(symbol, pybamm.Broadcast)
-            and symbol.broadcast_type == "secondary"
-        ):
-            orphan = symbol.orphans[0]
-            if isinstance(symbol, pybamm.Broadcast):
-                child_surf = boundary_value(orphan.orphans[0], "right")
-                out = pybamm.SecondaryBroadcast(
-                    pybamm.PrimaryBroadcast(child_surf, orphan.broadcast_domain),
-                    symbol.broadcast_domain,
-                )
-        elif isinstance(symbol, pybamm.PrimaryBroadcast):
-            child_surf = boundary_value(symbol.orphans[0], "right")
-            out = pybamm.PrimaryBroadcast(child_surf, symbol.domain)
-        else:
-            out = boundary_value(symbol, "right")
-            if set_domain:
-                if symbol.domain == ["negative particle"]:
-                    out.domain = ["negative electrode"]
-                elif symbol.domain == ["positive particle"]:
-                    out.domain = ["positive electrode"]
+    if symbol.domain in [["negative electrode"], ["positive electrode"]] and isinstance(
+        symbol, pybamm.SecondaryBroadcast
+    ):
+        orphan = symbol.orphans[0]
+        if isinstance(orphan, pybamm.PrimaryBroadcast):
+            child_surf = boundary_value(orphan.orphans[0], "right")
+            out = pybamm.FullBroadcast(
+                child_surf,
+                orphan.broadcast_domain,
+                secondary_domain=symbol.broadcast_domain,
+            )
+        # elif isinstance(symbol, pybamm.PrimaryBroadcast):
+        #     import ipdb
+        #
+        #     ipdb.set_trace()
+        #     child_surf = boundary_value(symbol.orphans[0], "right")
+        #     out = pybamm.PrimaryBroadcast(child_surf, symbol.domain)
     else:
-        import ipdb
-
-        ipdb.set_trace()
+        out = boundary_value(symbol, "right")
+        if set_domain:
+            if symbol.domain == ["negative particle"]:
+                out.domain = ["negative electrode"]
+            elif symbol.domain == ["positive particle"]:
+                out.domain = ["positive electrode"]
+    # else:
+    #     import ipdb
+    #
+    #     ipdb.set_trace()
     return out
 
 

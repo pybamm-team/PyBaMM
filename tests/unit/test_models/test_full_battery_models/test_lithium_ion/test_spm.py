@@ -17,22 +17,14 @@ class TestSPM(unittest.TestCase):
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertIn("negative particle", model.default_geometry)
 
-        # Shape tests needs debugging for 2plus1D -- model works ok, but shape
-        # test not right
-        pybamm.settings.debug_mode = False
         options = {"bc_options": {"dimensionality": 2}}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIn("current collector", model.default_geometry)
-        pybamm.settings.debug_mode = True
 
     def test_well_posed_2plus1D(self):
-        # Shape tests needs debugging for 2plus1D -- model works ok, but shape
-        # test not right
-        pybamm.settings.debug_mode = False
         options = {"bc_options": {"dimensionality": 2}}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
-        pybamm.settings.debug_mode = True
 
         options = {"bc_options": {"dimensionality": 1}}
         with self.assertRaises(NotImplementedError):
@@ -47,13 +39,10 @@ class TestSPM(unittest.TestCase):
         options = {"thermal": None}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
-        # Shape tests needs debugging for 2plus1D -- model works ok, but shape
-        # test not right
-        pybamm.settings.debug_mode = False
+
         options = {"bc_options": {"dimensionality": 2}}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
-        pybamm.settings.debug_mode = True
 
 
 if __name__ == "__main__":

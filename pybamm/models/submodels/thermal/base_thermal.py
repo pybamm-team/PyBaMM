@@ -79,7 +79,7 @@ class BaseModel(pybamm.BaseSubModel):
         phi_s_p = variables["Positive electrode potential"]
 
         Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
-        Q_ohm_s_s = pybamm.Broadcast(0, ["separator"])
+        Q_ohm_s_s = pybamm.FullBroadcast(0, ["separator"])
         Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
         Q_ohm_s = pybamm.Concatenation(Q_ohm_s_n, Q_ohm_s_s, Q_ohm_s_p)
 
@@ -90,13 +90,13 @@ class BaseModel(pybamm.BaseSubModel):
         Q_rxn_n = j_n * eta_r_n
         Q_rxn_p = j_p * eta_r_p
         Q_rxn = pybamm.Concatenation(
-            *[Q_rxn_n, pybamm.Broadcast(0, ["separator"]), Q_rxn_p]
+            *[Q_rxn_n, pybamm.FullBroadcast(0, ["separator"]), Q_rxn_p]
         )
 
         Q_rev_n = j_n * (param.Theta ** (-1) + T_n) * dUdT_n
         Q_rev_p = j_p * (param.Theta ** (-1) + T_p) * dUdT_p
         Q_rev = pybamm.Concatenation(
-            *[Q_rev_n, pybamm.Broadcast(0, ["separator"]), Q_rev_p]
+            *[Q_rev_n, pybamm.FullBroadcast(0, ["separator"]), Q_rev_p]
         )
 
         Q = Q_ohm + Q_rxn + Q_rev

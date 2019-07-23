@@ -89,8 +89,22 @@ i_boundary_cc = pybamm.Variable(
 
 
 # Particle concentration
-c_s_n = pybamm.Variable("Negative particle concentration", ["negative particle"])
-c_s_p = pybamm.Variable("Positive particle concentration", ["positive particle"])
+c_s_n = pybamm.SecondaryBroadcast(
+    pybamm.Variable(
+        "Negative particle concentration",
+        "negative particle",
+        secondary_domain="negative electrode",
+    ),
+    "current collector",
+)
+c_s_p = pybamm.SecondaryBroadcast(
+    pybamm.Variable(
+        "Positive particle concentration",
+        "positive particle",
+        secondary_domain="positive electrode",
+    ),
+    "current collector",
+)
 c_s_n_xav = pybamm.Variable(
     "X-average negative particle concentration", ["negative particle"]
 )
