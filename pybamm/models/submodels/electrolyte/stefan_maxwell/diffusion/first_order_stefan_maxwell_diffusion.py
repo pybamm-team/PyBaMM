@@ -32,6 +32,7 @@ class FirstOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
+        T_0 = variables["Leading-order cell temperature"]
         eps_0 = variables["Leading-order porosity"]
         c_e_0 = variables["Leading-order average electrolyte concentration"]
         # v_box_0 = variables["Leading-order volume-averaged velocity"]
@@ -48,24 +49,20 @@ class FirstOrder(BaseModel):
         # Right-hand sides
         rhs_n = d_epsc_n_0_dt - sum(
             reaction["Negative"]["s"]
-            * variables["Leading-order " + reaction["Negative"]["aj"].lower()].orphans[
-                0
-            ]
+            * variables["Leading-order average " + reaction["Negative"]["aj"].lower()]
             for reaction in self.reactions.values()
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = d_epsc_p_0_dt - sum(
             reaction["Positive"]["s"]
-            * variables["Leading-order " + reaction["Positive"]["aj"].lower()].orphans[
-                0
-            ]
+            * variables["Leading-order average " + reaction["Positive"]["aj"].lower()]
             for reaction in self.reactions.values()
         )
 
         # Diffusivities
-        D_e_n = (eps_n_0 ** param.b) * param.D_e(c_e_0)
-        D_e_s = (eps_s_0 ** param.b) * param.D_e(c_e_0)
-        D_e_p = (eps_p_0 ** param.b) * param.D_e(c_e_0)
+        D_e_n = (eps_n_0 ** param.b) * param.D_e(c_e_0, T_0)
+        D_e_s = (eps_s_0 ** param.b) * param.D_e(c_e_0, T_0)
+        D_e_p = (eps_p_0 ** param.b) * param.D_e(c_e_0, T_0)
 
         # Fluxes
         N_e_n_1 = -rhs_n * x_n

@@ -153,12 +153,12 @@ Delta_T = pybamm.Scalar(0)
 "2. Dimensional Functions"
 
 
-def D_e_dimensional(c_e):
+def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
     return pybamm.FunctionParameter("Electrolyte diffusivity", c_e)
 
 
-def kappa_e_dimensional(c_e):
+def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
     return pybamm.FunctionParameter("Electrolyte conductivity", c_e)
 
@@ -208,17 +208,17 @@ def mu_dimensional(c_e):
     return pybamm.FunctionParameter("Electrolyte viscosity", c_e)
 
 
-def U_n_dimensional(c_e):
+def U_n_dimensional(c_e, T):
     "Dimensional open-circuit voltage in the negative electrode [V]"
     return pybamm.FunctionParameter("Negative electrode OCV", m_dimensional(c_e))
 
 
-def U_p_dimensional(c_e):
+def U_p_dimensional(c_e, T):
     "Dimensional open-circuit voltage in the positive electrode [V]"
     return pybamm.FunctionParameter("Positive electrode OCV", m_dimensional(c_e))
 
 
-D_e_typ = D_e_dimensional(c_e_typ)
+D_e_typ = D_e_dimensional(c_e_typ, T_ref)
 rho_typ = rho_dimensional(c_e_typ)
 mu_typ = mu_dimensional(c_e_typ)
 U_n_ref = pybamm.FunctionParameter("Negative electrode OCV", pybamm.Scalar(1))
@@ -385,17 +385,17 @@ c_p_init = c_e_init
 "5. Dimensionless Functions"
 
 
-def D_e(c_e):
+def D_e(c_e, T):
     "Dimensionless electrolyte diffusivity"
     c_e_dimensional = c_e * c_e_typ
-    return D_e_dimensional(c_e_dimensional) / D_e_typ
+    return D_e_dimensional(c_e_dimensional, T_ref) / D_e_typ
 
 
-def kappa_e(c_e):
+def kappa_e(c_e, T):
     "Dimensionless electrolyte conductivity"
     c_e_dimensional = c_e * c_e_typ
     kappa_scale = F ** 2 * D_e_typ * c_e_typ / (R * T_ref)
-    return kappa_e_dimensional(c_e_dimensional) / kappa_scale
+    return kappa_e_dimensional(c_e_dimensional, T_ref) / kappa_scale
 
 
 # (1-2*t_plus) is for Nernst-Planck
@@ -413,16 +413,26 @@ def c_w(c_e):
     return c_w_dimensional(c_e_typ * c_e) / c_w_dimensional(c_e_typ)
 
 
-def U_n(c_e_n):
+def m_n(T):
+    "Dimensionless negative electrode reaction rate"
+    return 1
+
+
+def m_p(T):
+    "Dimensionless positive electrode reaction rate"
+    return 1
+
+
+def U_n(c_e_n, T):
     "Dimensionless open-circuit voltage in the negative electrode"
     c_e_n_dimensional = c_e_n * c_e_typ
-    return (U_n_dimensional(c_e_n_dimensional) - U_n_ref) / potential_scale
+    return (U_n_dimensional(c_e_n_dimensional, T_ref) - U_n_ref) / potential_scale
 
 
-def U_p(c_e_p):
+def U_p(c_e_p, T):
     "Dimensionless open-circuit voltage in the positive electrode"
     c_e_p_dimensional = c_e_p * c_e_typ
-    return (U_p_dimensional(c_e_p_dimensional) - U_p_ref) / potential_scale
+    return (U_p_dimensional(c_e_p_dimensional, T_ref) - U_p_ref) / potential_scale
 
 
 # --------------------------------------------------------------------------------------

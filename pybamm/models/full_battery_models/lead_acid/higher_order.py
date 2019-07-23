@@ -55,9 +55,14 @@ class HigherOrderBaseModel(BaseModel):
             "Average positive electrode surface potential difference",
             "Negative electrode interfacial current density",
             "Positive electrode interfacial current density",
+            "Average negative electrode interfacial current density",
+            "Average positive electrode interfacial current density",
+            "Average negative electrode oxygen interfacial current density",
+            "Average positive electrode oxygen interfacial current density",
             "Porosity",
             "Porosity change",
             "Volume-averaged velocity",
+            "Cell temperature",
         ]:
             self.variables[
                 "Leading-order " + variable.lower()
@@ -72,19 +77,6 @@ class HigherOrderBaseModel(BaseModel):
         self.submodels["current collector"] = pybamm.current_collector.Uniform(
             self.param
         )
-
-    def set_electrolyte_diffusion_submodel(self):
-
-        electrolyte = pybamm.electrolyte.stefan_maxwell
-
-        if self.options["higher-order concentration"] == "first-order":
-            self.submodels["electrolyte diffusion"] = electrolyte.diffusion.FirstOrder(
-                self.param, self.reactions
-            )
-        elif self.options["higher-order concentration"] == "composite":
-            self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Composite(
-                self.param, self.reactions
-            )
 
     def set_average_interfacial_submodel(self):
         self.submodels[
@@ -175,11 +167,14 @@ class FOQS(HigherOrderBaseModel):
     """
 
     def __init__(self, options=None, name="FOQS model"):
-        # Update options
-        if options is None:
-            options = {}
-        options = {**options, "higher-order concentration": "first-order"}
         super().__init__(options, name)
+
+    def set_electrolyte_diffusion_submodel(self):
+        self.submodels[
+            "electrolyte diffusion"
+        ] = pybamm.electrolyte.stefan_maxwell.diffusion.FirstOrder(
+            self.param, self.reactions
+        )
 
 
 class Composite(HigherOrderBaseModel):
@@ -197,8 +192,11 @@ class Composite(HigherOrderBaseModel):
     """
 
     def __init__(self, options=None, name="Composite model"):
-        # Update options
-        if options is None:
-            options = {}
-        options = {**options, "higher-order concentration": "composite"}
         super().__init__(options, name)
+
+    def set_electrolyte_diffusion_submodel(self):
+        self.submodels[
+            "electrolyte diffusion"
+        ] = pybamm.electrolyte.stefan_maxwell.diffusion.Composite(
+            self.param, self.reactions
+        )

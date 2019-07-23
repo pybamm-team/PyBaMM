@@ -45,6 +45,8 @@ class BaseHigherOrder(BaseModel):
         eps_n_av = variables["Average negative electrode porosity"]
         eps_s_av = variables["Average separator porosity"]
         eps_p_av = variables["Average positive electrode porosity"]
+        T_av = variables["Average cell temperature"]
+
         c_e_n, c_e_s, c_e_p = c_e.orphans
 
         param = self.param
@@ -55,9 +57,9 @@ class BaseHigherOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # bulk conductivities
-        kappa_n_av = param.kappa_e(c_e_av) * eps_n_av ** param.b
-        kappa_s_av = param.kappa_e(c_e_av) * eps_s_av ** param.b
-        kappa_p_av = param.kappa_e(c_e_av) * eps_p_av ** param.b
+        kappa_n_av = param.kappa_e(c_e_av, T_av) * eps_n_av ** param.b
+        kappa_s_av = param.kappa_e(c_e_av, T_av) * eps_s_av ** param.b
+        kappa_p_av = param.kappa_e(c_e_av, T_av) * eps_p_av ** param.b
 
         chi_av = param.chi(c_e_av)
 

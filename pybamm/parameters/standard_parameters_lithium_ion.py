@@ -85,12 +85,6 @@ R_p = pybamm.geometric_parameters.R_p
 b = pybamm.geometric_parameters.b
 
 # Electrochemical reactions
-m_n_dimensional = pybamm.Parameter(
-    "Negative electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
-)
-m_p_dimensional = pybamm.Parameter(
-    "Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5]"
-)
 ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
 ne_p = pybamm.Parameter("Positive electrode electrons in reaction")
 C_dl_dimensional = pybamm.Parameter("Double-layer capacity [F.m-2]")
@@ -110,6 +104,14 @@ c_p_init_dimensional = pybamm.Parameter(
 # thermal
 Delta_T = pybamm.thermal_parameters.Delta_T
 
+# Activation energies
+E_r_n = pybamm.thermal_parameters.E_r_n
+E_r_p = pybamm.thermal_parameters.E_r_p
+E_D_s_n = pybamm.thermal_parameters.E_D_s_n
+E_D_s_p = pybamm.thermal_parameters.E_D_s_p
+E_D_e = pybamm.thermal_parameters.E_D_e
+E_k_e = pybamm.thermal_parameters.E_k_e
+
 # velocity scale
 velocity_scale = pybamm.Scalar(1)
 
@@ -117,34 +119,42 @@ velocity_scale = pybamm.Scalar(1)
 "2. Dimensional Functions"
 
 
-def D_e_dimensional(c_e):
+def D_e_dimensional(c_e, T):
     "Dimensional diffusivity in electrolyte"
-    return pybamm.FunctionParameter("Electrolyte diffusivity", c_e)
+    return pybamm.FunctionParameter("Electrolyte diffusivity", c_e, T, T_ref, E_D_e, R)
 
 
-def kappa_e_dimensional(c_e):
+def kappa_e_dimensional(c_e, T):
     "Dimensional electrolyte conductivity"
-    return pybamm.FunctionParameter("Electrolyte conductivity", c_e)
+    return pybamm.FunctionParameter("Electrolyte conductivity", c_e, T, T_ref, E_k_e, R)
 
 
-def D_n_dimensional(c_n):
+def D_n_dimensional(c_n, T):
     "Dimensional diffusivity in negative particle"
-    return pybamm.FunctionParameter("Negative electrode diffusivity", c_n)
+    return pybamm.FunctionParameter(
+        "Negative electrode diffusivity", c_n, T, T_ref, E_D_s_n, R
+    )
 
 
-def D_p_dimensional(c_p):
+def D_p_dimensional(c_p, T):
     "Dimensional diffusivity in positive particle"
-    return pybamm.FunctionParameter("Positive electrode diffusivity", c_p)
+    return pybamm.FunctionParameter(
+        "Positive electrode diffusivity", c_p, T, T_ref, E_r_p, R
+    )
 
 
-def U_n_dimensional(sto):
-    "Dimensional open-circuit voltage in the negative electrode [V]"
-    return pybamm.FunctionParameter("Negative electrode OCV", sto)
+def m_n_dimensional(T):
+    "Dimensional negative reaction rate"
+    return pybamm.FunctionParameter(
+        "Negative electrode reaction rate", T, T_ref, E_r_n, R
+    )
 
 
-def U_p_dimensional(sto):
-    "Dimensional open-circuit voltage in the positive electrode [V]"
-    return pybamm.FunctionParameter("Positive electrode OCV", sto)
+def m_p_dimensional(T):
+    "Dimensional negative reaction rate"
+    return pybamm.FunctionParameter(
+        "Positive electrode reaction rate", T, T_ref, E_r_p, R
+    )
 
 
 def dUdT_n_dimensional(sto):
@@ -161,12 +171,26 @@ def dUdT_p_dimensional(sto):
     )
 
 
-# can maybe improve ref value at some stage
-U_n_ref = U_n_dimensional(pybamm.Scalar(0.7))
+def U_n_dimensional(sto, T):
+    "Dimensional open-circuit voltage in the negative electrode [V]"
+    u_ref = pybamm.FunctionParameter("Negative electrode OCV", sto)
+    return u_ref + (T - T_ref) * dUdT_n_dimensional(sto)
+
+
+def U_p_dimensional(sto, T):
+    "Dimensional open-circuit voltage in the positive electrode [V]"
+    u_ref = pybamm.FunctionParameter("Positive electrode OCV", sto)
+    return u_ref + (T - T_ref) * dUdT_p_dimensional(sto)
+
 
 # can maybe improve ref value at some stage
-U_p_ref = U_p_dimensional(pybamm.Scalar(0.7))
+U_n_ref = U_n_dimensional(pybamm.Scalar(0.7), T_ref)
 
+# can maybe improve ref value at some stage
+U_p_ref = U_p_dimensional(pybamm.Scalar(0.7), T_ref)
+
+m_n_ref_dimensional = m_n_dimensional(T_ref)
+m_p_ref_dimensional = m_p_dimensional(T_ref)
 
 # -------------------------------------------------------------------------------------
 "3. Scales"
@@ -185,15 +209,15 @@ interfacial_current_scale_p = i_typ / (a_p_dim * L_x)
 tau_discharge = F * c_n_max * L_x / i_typ
 
 # Reaction timescales
-tau_r_n = F / (m_n_dimensional * a_n_dim * c_e_typ ** 0.5)
-tau_r_p = F / (m_p_dimensional * a_p_dim * c_e_typ ** 0.5)
+tau_r_n = F / (m_n_ref_dimensional * a_n_dim * c_e_typ ** 0.5)
+tau_r_p = F / (m_p_ref_dimensional * a_p_dim * c_e_typ ** 0.5)
 
 # Electrolyte diffusion timescale
-tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ)
+tau_diffusion_e = L_x ** 2 / D_e_dimensional(c_e_typ, T_ref)
 
 # Particle diffusion timescales
-tau_diffusion_n = R_n ** 2 / D_n_dimensional(c_n_max)
-tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max)
+tau_diffusion_n = R_n ** 2 / D_n_dimensional(c_n_max, T_ref)
+tau_diffusion_p = R_p ** 2 / D_p_dimensional(c_p_max, T_ref)
 
 # Thermal diffusion timescale
 tau_th_yz = pybamm.thermal_parameters.tau_th_yz
@@ -322,41 +346,57 @@ T_init = pybamm.thermal_parameters.T_init
 "5. Dimensionless Functions"
 
 
-def D_e(c_e):
+def D_e(c_e, T):
     "Dimensionless electrolyte diffusivity"
     c_e_dimensional = c_e * c_e_typ
-    return D_e_dimensional(c_e_dimensional) / D_e_dimensional(c_e_typ)
+    T_dim = Delta_T * T + T_ref
+    return D_e_dimensional(c_e_dimensional, T_dim) / D_e_dimensional(c_e_typ, T_ref)
 
 
-def kappa_e(c_e):
+def kappa_e(c_e, T):
     "Dimensionless electrolyte conductivity"
     c_e_dimensional = c_e * c_e_typ
-    kappa_scale = F ** 2 * D_e_dimensional(c_e_typ) * c_e_typ / (R * T_ref)
-    return kappa_e_dimensional(c_e_dimensional) / kappa_scale
+    kappa_scale = F ** 2 * D_e_dimensional(c_e_typ, T_ref) * c_e_typ / (R * T_ref)
+    T_dim = Delta_T * T + T_ref
+    return kappa_e_dimensional(c_e_dimensional, T_dim) / kappa_scale
 
 
-def D_n(c_s_n):
+def D_n(c_s_n, T):
     "Dimensionless negative particle diffusivity"
     c_s_n_dimensional = c_s_n * c_n_max
-    return D_n_dimensional(c_s_n_dimensional) / D_n_dimensional(c_n_max)
+    T_dim = Delta_T * T + T_ref
+    return D_n_dimensional(c_s_n_dimensional, T_dim) / D_n_dimensional(c_n_max, T_ref)
 
 
-def D_p(c_s_p):
+def D_p(c_s_p, T):
     "Dimensionless positive particle diffusivity"
     c_s_p_dimensional = c_s_p * c_p_max
-    return D_p_dimensional(c_s_p_dimensional) / D_p_dimensional(c_p_max)
+    T_dim = Delta_T * T + T_ref
+    return D_p_dimensional(c_s_p_dimensional, T_dim) / D_p_dimensional(c_p_max, T_ref)
 
 
-def U_n(c_s_n):
+def m_n(T):
+    "Dimensionless negative reaction rate"
+    T_dim = Delta_T * T + T_ref
+    return m_n_dimensional(T_dim) / m_n_ref_dimensional
+
+
+def m_p(T):
+    "Dimensionless positive reaction rate"
+    T_dim = Delta_T * T + T_ref
+    return m_p_dimensional(T_dim) / m_p_ref_dimensional
+
+
+def U_n(c_s_n, T):
     "Dimensionless open-circuit potential in the negative electrode"
     sto = c_s_n
-    return (U_n_dimensional(sto) - U_n_ref) / potential_scale
+    return (U_n_dimensional(sto, T) - U_n_ref) / potential_scale
 
 
-def U_p(c_s_p):
+def U_p(c_s_p, T):
     "Dimensionless open-circuit potential in the positive electrode"
     sto = c_s_p
-    return (U_p_dimensional(sto) - U_p_ref) / potential_scale
+    return (U_p_dimensional(sto, T) - U_p_ref) / potential_scale
 
 
 def dUdT_n(c_s_n):
