@@ -48,12 +48,7 @@ class SingleParticle(BaseModel):
         ]
         T_k_av = variables["Average " + self.domain.lower() + " electrode temperature"]
 
-        if self.domain == "Negative":
-            D_s = self.param.D_n(c_s_xav, T_k_av)
-        elif self.domain == "Positive":
-            D_s = self.param.D_p(c_s_xav, T_k_av)
-
-        N_s_xav = D_s * self._flux_law(c_s_xav)
+        N_s_xav = self._flux_law(c_s_xav, T_k_av)
         N_s = pybamm.Broadcast(
             N_s_xav, [self._domain.lower() + " electrode"], broadcast_type="primary"
         )

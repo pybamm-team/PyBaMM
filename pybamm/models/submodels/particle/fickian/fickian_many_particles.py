@@ -39,14 +39,9 @@ class ManyParticles(BaseModel):
         c_s = variables[self.domain + " particle concentration"]
         T_k_av = variables["Average " + self.domain.lower() + " electrode temperature"]
 
-        if self.domain == "Negative":
-            D_s = self.param.D_n(c_s, T_k_av)
-        elif self.domain == "Positive":
-            D_s = self.param.D_p(c_s, T_k_av)
-
         # TODO: fix average so can do X-average N_s
-        # TODO: add full temperature instead of just average
-        N_s = D_s * self._flux_law(c_s)
+        # TODO: add full temperature instead of just electrode average
+        N_s = self._flux_law(c_s, T_k_av)
 
         variables.update(self._get_standard_flux_variables(N_s, N_s))
         return variables
