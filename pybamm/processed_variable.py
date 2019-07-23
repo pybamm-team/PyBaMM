@@ -93,9 +93,10 @@ class ProcessedVariable(object):
             self.base_eval = base_variable.evaluate(t_sol[0], y_sol[:, 0])
 
         # handle 2D (in space) finite element variables differently
-        if "current collector" in self.domain:
-            if isinstance(self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh):
-                self.initialise_3D_scikit_fem()
+        if "current collector" in self.domain and isinstance(
+            self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh
+        ):
+            self.initialise_3D_scikit_fem()
         # check variable shape
         elif (
             isinstance(self.base_eval, numbers.Number)

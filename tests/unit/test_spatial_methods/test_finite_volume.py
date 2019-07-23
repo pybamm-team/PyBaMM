@@ -171,11 +171,6 @@ class TestFiniteVolume(unittest.TestCase):
         extrap_right = pybamm.BoundaryValue(var, "right")
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, [])
-        # domain for boundary values must now be explicitly set
-        extrap_right.domain = ["current collector"]
-        disc.set_variable_slices([var])
-        extrap_right_disc = disc.process_symbol(extrap_right)
         self.assertEqual(extrap_right_disc.domain, ["current collector"])
 
     def test_discretise_diffusivity_times_spatial_operator(self):

@@ -56,9 +56,10 @@ class Full(BaseModel):
         T_n_left = pybamm.boundary_value(T, "left")
         T_p_right = pybamm.boundary_value(T, "right")
 
+        # TODO: check that changing lambda_k to lambda_n and lambda_p is ok here
         self.boundary_conditions = {
             T: {
-                "left": (-self.param.h * T_n_left / self.param.lambda_k, "Neumann"),
-                "right": (-self.param.h * T_p_right / self.param.lambda_k, "Neumann"),
+                "left": (-self.param.h * T_n_left / self.param.lambda_n, "Neumann"),
+                "right": (-self.param.h * T_p_right / self.param.lambda_p, "Neumann"),
             }
         }

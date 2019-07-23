@@ -10,7 +10,7 @@ import unittest
 class TestComposite(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
-        a = pybamm.Scalar(0)
+        a = pybamm.PrimaryBroadcast(0, "current collector")
         c_e = pybamm.standard_variables.c_e
 
         variables = {

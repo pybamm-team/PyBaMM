@@ -639,26 +639,26 @@ def surf(symbol, set_domain=False):
     :class:`pybamm.BoundaryValue`
         the surface value of ``symbol``
     """
+    original_symbol = symbol
     if isinstance(symbol, pybamm.SecondaryBroadcast):
-        orphan = symbol.orphans[0]
-        if orphan.domain in [
-            ["negative electrode"],
-            ["positive electrode"],
-        ] and isinstance(orphan, pybamm.PrimaryBroadcast):
-            child_surf = boundary_value(orphan.orphans[0], "right")
-            out = pybamm.FullBroadcast(
-                child_surf,
-                orphan.broadcast_domain,
-                secondary_domain=symbol.broadcast_domain,
-            )
-        else:
-            out = boundary_value(orphan, "right")
-            if set_domain:
-                if symbol.domain == ["negative particle"]:
-                    out.domain = ["negative electrode"]
-                elif symbol.domain == ["positive particle"]:
-                    out.domain = ["positive electrode"]
-            out = pybamm.SecondaryBroadcast(out, symbol.broadcast_domain)
+        symbol = symbol.orphans[0]
+        secondary_domain = original_symbol.broadcast_domain
+    else:
+        secondary_domain = None
+    if symbol.domain in [["negative electrode"], ["positive electrode"]] and isinstance(
+        symbol, pybamm.PrimaryBroadcast
+    ):
+        child_surf = boundary_value(symbol.orphans[0], "right")
+        out = pybamm.PrimaryBroadcast(child_surf, symbol.domain)
+    else:
+        out = boundary_value(symbol, "right")
+        if set_domain:
+            if original_symbol.domain == ["negative particle"]:
+                out.domain = ["negative electrode"]
+            elif original_symbol.domain == ["positive particle"]:
+                out.domain = ["positive electrode"]
+    if secondary_domain is not None:
+        out = pybamm.SecondaryBroadcast(out, secondary_domain)
     return out
 
 
