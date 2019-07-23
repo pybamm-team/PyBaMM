@@ -357,13 +357,16 @@ class Integral(SpatialOperator):
             integration_variable = [integration_variable]
 
         if domain is None:
+            if child.domain == []:
+                domain = []
             # integral of a child on an electrode domain goes to the current collector
-            if child.domain[0] in [
+            elif child.domain[0] in [
                 "negative electrode",
                 "separator",
                 "positive electrode",
             ]:
-                domain = "current collector"
+                domain = ["current collector"]
+            # for other domains, integral removes the domain
             else:
                 domain = []
         name = "integral"
@@ -412,19 +415,15 @@ class Integral(SpatialOperator):
     def _unary_simplify(self, simplified_child):
         """ See :meth:`UnaryOperator._unary_simplify()`. """
 
-        return self.__class__(
-            simplified_child, self.integration_variable, domain=self.domain
-        )
+        return self.__class__(simplified_child, self.integration_variable)
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
-        return self.__class__(child, self.integration_variable, domain=self.domain)
+        return self.__class__(child, self.integration_variable)
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
-        # child_size = self.child.size_for_testing
-        # domain_size = pybamm.domain_size(self.child.domain)
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
     def evaluates_on_edges(self):
@@ -489,10 +488,17 @@ class BoundaryOperator(SpatialOperator):
 
     def __init__(self, name, child, side):
         self.side = side
+        if child.domain == []:
+            domain = []
         # boundary operator of a child on an electrode domain goes to the current
         # collector
-        if child.domain[0] in ["negative electrode", "separator", "positive electrode"]:
-            domain = "current collector"
+        elif child.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ]:
+            domain = ["current collector"]
+        # for other domains, boundary value removes the domain
         else:
             domain = []
         super().__init__(name, child, domain=domain)
@@ -633,34 +639,26 @@ def surf(symbol, set_domain=False):
     :class:`pybamm.BoundaryValue`
         the surface value of ``symbol``
     """
-    if symbol.domain in [["negative electrode"], ["positive electrode"]] and isinstance(
-        symbol, pybamm.SecondaryBroadcast
-    ):
+    if isinstance(symbol, pybamm.SecondaryBroadcast):
         orphan = symbol.orphans[0]
-        if isinstance(orphan, pybamm.PrimaryBroadcast):
+        if orphan.domain in [
+            ["negative electrode"],
+            ["positive electrode"],
+        ] and isinstance(orphan, pybamm.PrimaryBroadcast):
             child_surf = boundary_value(orphan.orphans[0], "right")
             out = pybamm.FullBroadcast(
                 child_surf,
                 orphan.broadcast_domain,
                 secondary_domain=symbol.broadcast_domain,
             )
-        # elif isinstance(symbol, pybamm.PrimaryBroadcast):
-        #     import ipdb
-        #
-        #     ipdb.set_trace()
-        #     child_surf = boundary_value(symbol.orphans[0], "right")
-        #     out = pybamm.PrimaryBroadcast(child_surf, symbol.domain)
-    else:
-        out = boundary_value(symbol, "right")
-        if set_domain:
-            if symbol.domain == ["negative particle"]:
-                out.domain = ["negative electrode"]
-            elif symbol.domain == ["positive particle"]:
-                out.domain = ["positive electrode"]
-    # else:
-    #     import ipdb
-    #
-    #     ipdb.set_trace()
+        else:
+            out = boundary_value(orphan, "right")
+            if set_domain:
+                if symbol.domain == ["negative particle"]:
+                    out.domain = ["negative electrode"]
+                elif symbol.domain == ["positive particle"]:
+                    out.domain = ["positive electrode"]
+            out = pybamm.SecondaryBroadcast(out, symbol.broadcast_domain)
     return out
 
 

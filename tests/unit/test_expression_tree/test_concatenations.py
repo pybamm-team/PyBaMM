@@ -183,9 +183,9 @@ class TestConcatenations(unittest.TestCase):
         mesh = disc.mesh
 
         # Piecewise constant scalars
-        a = pybamm.Broadcast(1, domain=["negative electrode"])
-        b = pybamm.Broadcast(2, domain=["separator"])
-        c = pybamm.Broadcast(3, domain=["positive electrode"])
+        a = pybamm.Broadcast(1, ["negative electrode"])
+        b = pybamm.Broadcast(2, ["separator"])
+        c = pybamm.Broadcast(3, ["positive electrode"])
         conc = pybamm.Concatenation(a, b, c)
 
         self.assertEqual(
@@ -207,9 +207,9 @@ class TestConcatenations(unittest.TestCase):
         )
 
         # Piecewise constant functions of time
-        a_t = pybamm.Broadcast(pybamm.t, domain=["negative electrode"])
-        b_t = pybamm.Broadcast(2 * pybamm.t, domain=["separator"])
-        c_t = pybamm.Broadcast(3 * pybamm.t, domain=["positive electrode"])
+        a_t = pybamm.Broadcast(pybamm.t, ["negative electrode"])
+        b_t = pybamm.Broadcast(2 * pybamm.t, ["separator"])
+        c_t = pybamm.Broadcast(3 * pybamm.t, ["positive electrode"])
         conc = pybamm.Concatenation(a_t, b_t, c_t)
 
         self.assertEqual(

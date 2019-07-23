@@ -29,9 +29,11 @@ class TestSimplify(unittest.TestCase):
             pybamm.grad(a),
             pybamm.div(a),
             pybamm.Integral(a, pybamm.t),
-            pybamm.BoundaryValue(a, "right"),
-            pybamm.BoundaryGradient(a, "right"),
-            pybamm.Broadcast(a, "domain"),
+            pybamm.BoundaryValue(v_n, "right"),
+            pybamm.BoundaryGradient(v_n, "right"),
+            pybamm.PrimaryBroadcast(a, "domain"),
+            pybamm.SecondaryBroadcast(a, "domain"),
+            pybamm.FullBroadcast(a, "domain", "other domain"),
             pybamm.Concatenation(v_n, v_s),
             pybamm.NumpyConcatenation(a, b, v_s),
             pybamm.DomainConcatenation([v_n, v_s], mesh),
@@ -42,7 +44,12 @@ class TestSimplify(unittest.TestCase):
             pybamm.t,
             pybamm.Index(vec, 1),
         ]:
-            self.assertEqual(symbol.id, symbol.new_copy().id)
+            try:
+                self.assertEqual(symbol.id, symbol.new_copy().id)
+            except:
+                import ipdb
+
+                ipdb.set_trace()
 
 
 if __name__ == "__main__":

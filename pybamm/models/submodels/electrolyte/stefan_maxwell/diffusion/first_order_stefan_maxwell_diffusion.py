@@ -50,17 +50,13 @@ class FirstOrder(BaseModel):
         # Right-hand sides
         rhs_n = d_epsc_n_0_dt - sum(
             reaction["Negative"]["s"]
-            * variables["Leading-order " + reaction["Negative"]["aj"].lower()].orphans[
-                0
-            ]
+            * variables["Leading-order average " + reaction["Negative"]["aj"].lower()]
             for reaction in self.reactions.values()
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = d_epsc_p_0_dt - sum(
             reaction["Positive"]["s"]
-            * variables["Leading-order " + reaction["Positive"]["aj"].lower()].orphans[
-                0
-            ]
+            * variables["Leading-order average " + reaction["Positive"]["aj"].lower()]
             for reaction in self.reactions.values()
         )
 

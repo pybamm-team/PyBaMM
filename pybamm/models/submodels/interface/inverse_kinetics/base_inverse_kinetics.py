@@ -42,7 +42,7 @@ class BaseInverseKinetics(BaseInterface):
         elif self.domain == "Positive":
             ne = self.param.ne_p
 
-        eta_r = self._get_inverse_kinetics(j, j0, ne)
+        eta_r = self._get_overpotential(j, j0, ne)
         delta_phi = eta_r + ocp
 
         variables.update(self._get_standard_interfacial_current_variables(j))
@@ -73,5 +73,5 @@ class BaseInverseKinetics(BaseInterface):
 
         return variables
 
-    def _get_inverse_kinetics(self, j, j0, ne):
+    def _get_overpotential(self, j, j0, ne):
         raise NotImplementedError

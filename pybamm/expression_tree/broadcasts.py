@@ -8,21 +8,23 @@ import pybamm
 
 class Broadcast(pybamm.SpatialOperator):
     """A node in the expression tree representing a broadcasting operator.
-    Broadcasts a child (which *must* have empty domain) to a specified domain. After
-    discretisation, this will evaluate to an array of the right shape for the specified
-    domain.
+    Broadcasts a child to a specified domain. After discretisation, this will evaluate
+    to an array of the right shape for the specified domain.
 
     Parameters
     ----------
     child : :class:`Symbol`
         child node
-    domain : iterable of string
-        the domain to broadcast the child to
-    name : str
-        name of the node
+    broadcast_domain : iterable of str
+        Primary domain for broadcast. This will become the domain of the symbol
+    secondary_domain : iterable of str
+        Secondary domain for broadcast. Currently, this is only used for testing that
+        symbols have the right shape.
     broadcast_type : str, optional
         Whether to broadcast to the full domain (primary and secondary) or only in the
         primary direction. Default is "full".
+    name : str
+        name of the node
 
     **Extends:** :class:`SpatialOperator`
     """
@@ -66,12 +68,9 @@ class Broadcast(pybamm.SpatialOperator):
                 )
             )
 
-        # Secondary broadcast to current collector is acceptable
+        # Secondary broadcast gives child domain
         if broadcast_type == "secondary":
-            if broadcast_domain == "current collector":
-                domain = child.domain
-            else:
-                raise pybamm.DomainError
+            domain = child.domain
 
         # Otherwise only some domains can be broadcast
         else:
@@ -126,7 +125,7 @@ class Broadcast(pybamm.SpatialOperator):
             return np.outer(child_eval, vec).reshape(-1, 1)
         elif self.broadcast_type == "secondary":
             return np.outer(
-                pybamm.evaluate_for_shape_using_domain(self.broadcast_domain),
+                pybamm.evaluate_for_shape_using_domain(self.secondary_domain),
                 child_eval,
             ).reshape(-1, 1)
         elif self.broadcast_type == "full":
@@ -134,7 +133,23 @@ class Broadcast(pybamm.SpatialOperator):
 
 
 class PrimaryBroadcast(Broadcast):
-    "A class for primary broadcasts"
+    """A node in the expression tree representing a primary broadcasting operator.
+    Broadcasts in a `primary` dimension only. That is, makes explicit copies
+
+    Parameters
+    ----------
+    child : :class:`Symbol`
+        child node
+    broadcast_domain : iterable of str
+        Primary domain for broadcast. This will become the domain of the symbol
+    broadcast_type : str, optional
+        Whether to broadcast to the full domain (primary and secondary) or only in the
+        primary direction. Default is "full".
+    name : str
+        name of the node
+
+    **Extends:** :class:`SpatialOperator`
+    """
 
     def __init__(self, child, broadcast_domain, name=None):
         super().__init__(child, broadcast_domain, broadcast_type="primary", name=name)
@@ -185,7 +200,7 @@ class SecondaryBroadcast(Broadcast):
 class FullBroadcast(Broadcast):
     "A class for full broadcasts"
 
-    def __init__(self, child, broadcast_domain, secondary_domain=None, name=None):
+    def __init__(self, child, broadcast_domain, secondary_domain, name=None):
         super().__init__(
             child,
             broadcast_domain,

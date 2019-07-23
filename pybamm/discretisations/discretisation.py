@@ -227,14 +227,8 @@ class Discretisation(object):
             left_mesh = self._spatial_methods[left_domain].mesh[left_domain]
             right_mesh = self._spatial_methods[right_domain].mesh[right_domain]
 
-            try:
-                left_symbol_disc = self.process_symbol(left_symbol)
-                right_symbol_disc = self.process_symbol(right_symbol)
-            except:
-                import ipdb
-
-                ipdb.set_trace()
-                self.process_symbol(left_symbol)
+            left_symbol_disc = self.process_symbol(left_symbol)
+            right_symbol_disc = self.process_symbol(right_symbol)
             return self._spatial_methods[left_domain].internal_neumann_condition(
                 left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
             )

@@ -342,7 +342,7 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(concat.shape_for_testing, (30, 1))
 
         var = pybamm.Variable("var", domain="negative electrode")
-        broadcast = pybamm.Broadcast(0, domain="negative electrode")
+        broadcast = pybamm.Broadcast(0, "negative electrode")
         self.assertEqual(var.shape_for_testing, broadcast.shape_for_testing)
         self.assertEqual(
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing

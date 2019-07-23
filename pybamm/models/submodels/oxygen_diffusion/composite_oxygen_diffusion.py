@@ -35,7 +35,7 @@ class Composite(Full):
         eps_0 = separator_and_positive_only(variables["Leading-order porosity"])
         c_ox = variables["Separator and positive electrode oxygen concentration"]
         # TODO: allow charge and convection?
-        v_box = pybamm.Scalar(0)
+        # v_box = pybamm.Scalar(0)
 
         param = self.param
 

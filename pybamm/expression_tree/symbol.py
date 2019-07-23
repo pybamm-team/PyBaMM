@@ -273,7 +273,9 @@ class Symbol(anytree.NodeMixin):
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return "{!s}({}, {!s}, children={!s}, domain={!s})".format(
+        return (
+            "{!s}({}, {!s}, children={!s}, domain={!s}, secondary_domain={!s})"
+        ).format(
             self.__class__.__name__,
             hex(self.id),
             self._name,

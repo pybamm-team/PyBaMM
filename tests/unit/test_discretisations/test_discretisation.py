@@ -132,6 +132,7 @@ class TestDiscretise(unittest.TestCase):
             "macroscale": pybamm.SpatialMethod,
             "negative particle": pybamm.SpatialMethod,
             "positive particle": pybamm.SpatialMethod,
+            "current collector": pybamm.SpatialMethod,
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 

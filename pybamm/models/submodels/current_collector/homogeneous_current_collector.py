@@ -23,7 +23,8 @@ class Uniform(BaseModel):
 
     def get_fundamental_variables(self):
 
-        i_cc = pybamm.SecondaryBroadcast(pybamm.Scalar(0), "current collector")
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        i_cc = pybamm.FullBroadcast(pybamm.Scalar(0), whole_cell, "current collector")
 
         i_boundary_cc = pybamm.PrimaryBroadcast(
             self.param.current_with_time, "current collector"
