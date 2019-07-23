@@ -54,9 +54,6 @@ class SingleParticle(BaseModel):
             [self.domain.lower() + " particle"],
         )
 
-        import ipdb
-
-        ipdb.set_trace()
         N_s_xav = self._flux_law(c_s_xav, T_k_av)
         N_s = pybamm.SecondaryBroadcast(
             pybamm.PrimaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"]),

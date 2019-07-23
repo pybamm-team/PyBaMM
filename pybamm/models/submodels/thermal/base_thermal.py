@@ -22,9 +22,7 @@ class BaseModel(pybamm.BaseSubModel):
     def _get_standard_fundamental_variables(self, T):
         param = self.param
         T_n, T_s, T_p = T.orphans
-        import ipdb
 
-        ipdb.set_trace()
         T_av = pybamm.average(T)
 
         q = self._flux_law(T)

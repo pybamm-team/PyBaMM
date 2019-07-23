@@ -72,24 +72,7 @@ class Broadcast(pybamm.SpatialOperator):
         if broadcast_type == "secondary":
             domain = child.domain
 
-        # Otherwise only some domains can be broadcast
         else:
-            if child.domain not in [
-                [],
-                broadcast_domain,
-                ["current collector"],
-                ["negative particle"],
-                ["positive particle"],
-            ]:
-                raise pybamm.DomainError(
-                    """
-                    Domain of a broadcasted child must be [], ['current collector'],
-                    ["negative particle"], ["positive particle"] or same as
-                    'broadcast_domain' ('{}'), but is '{}'
-                    """.format(
-                        broadcast_domain, child.domain
-                    )
-                )
             domain = broadcast_domain
 
         # Variables on the current collector can only be broadcast to 'primary'

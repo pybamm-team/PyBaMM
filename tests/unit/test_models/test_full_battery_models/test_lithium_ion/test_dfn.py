@@ -17,6 +17,15 @@ class TestDFN(unittest.TestCase):
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("secondary" in model.default_geometry["negative particle"])
 
+    def test_thermal(self):
+        options = {"thermal": "lumped"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+        options = {"thermal": "full"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_default_solver(self):
         options = {"thermal": None}
