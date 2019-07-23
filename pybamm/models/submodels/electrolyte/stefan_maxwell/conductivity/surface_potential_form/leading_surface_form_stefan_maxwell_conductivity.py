@@ -44,9 +44,9 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             "Average " + self.domain.lower() + " electrode surface potential difference"
         ]
         if self.domain == "Negative":
-            delta_phi_init = self.param.U_n(self.param.c_n_init)
+            delta_phi_init = self.param.U_n(self.param.c_n_init, self.param.T_ref)
         elif self.domain == "Positive":
-            delta_phi_init = self.param.U_p(self.param.c_p_init)
+            delta_phi_init = self.param.U_p(self.param.c_p_init, self.param.T_ref)
 
         self.initial_conditions = {delta_phi: delta_phi_init}
 

@@ -109,6 +109,7 @@ class SingleParticlePotentialPair(BaseModel):
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
-            phi_s_cp: param.U_p(param.c_p_init) - param.U_n(param.c_n_init),
+            phi_s_cp: param.U_p(param.c_p_init, param.T_ref)
+            - param.U_n(param.c_n_init, param.T_ref),
             i_boundary_cc: applied_current / param.l_y / param.l_z,
         }
