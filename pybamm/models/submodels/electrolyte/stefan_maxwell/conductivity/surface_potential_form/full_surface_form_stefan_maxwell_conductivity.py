@@ -42,9 +42,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         delta_phi_e = variables[self.domain + " electrode surface potential difference"]
         if self.domain == "Negative":
-            delta_phi_e_init = self.param.U_n(self.param.c_n_init)
+            delta_phi_e_init = self.param.U_n(self.param.c_n_init, self.param.T_ref)
         elif self.domain == "Positive":
-            delta_phi_e_init = self.param.U_p(self.param.c_p_init)
+            delta_phi_e_init = self.param.U_p(self.param.c_p_init, self.param.T_ref)
 
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 
@@ -121,6 +121,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
         param = self.param
         eps = variables[self.domain + " electrode porosity"]
         c_e = variables[self.domain + " electrolyte concentration"]
+        T = variables[self.domain + " electrode temperature"]
         if self.domain == "Negative":
             sigma = param.sigma_n
         elif self.domain == "Positive":
@@ -128,9 +129,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         sigma_eff = sigma * (1 - eps) ** self.param.b
         conductivity = (
-            param.kappa_e(c_e)
+            param.kappa_e(c_e, T)
             * (eps ** param.b)
-            / (param.C_e / param.gamma_e + param.kappa_e(c_e) / sigma_eff)
+            / (param.C_e / param.gamma_e + param.kappa_e(c_e, T) / sigma_eff)
         )
 
         return conductivity, sigma_eff
@@ -176,9 +177,10 @@ class BaseModel(BaseStefanMaxwellConductivity):
         c_e_s = variables["Separator electrolyte concentration"]
         phi_e_n = variables["Negative electrolyte potential"]
         eps_s = variables["Separator porosity"]
+        T = variables["Separator temperature"]
 
         chi_e_s = param.chi(c_e_s)
-        kappa_s_eff = param.kappa_e(c_e_s) * (eps_s ** param.b)
+        kappa_s_eff = param.kappa_e(c_e_s, T) * (eps_s ** param.b)
 
         phi_e_s = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
             chi_e_s / c_e_s * pybamm.grad(c_e_s)

@@ -20,6 +20,7 @@ class TestFull(unittest.TestCase):
             "Positive electrode interfacial current density": pybamm.Broadcast(
                 a, "positive electrode"
             ),
+            "Cell temperature": a,
         }
         icd = " interfacial current density"
         reactions = {

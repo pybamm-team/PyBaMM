@@ -228,7 +228,6 @@ class TestSimplify(unittest.TestCase):
         # Spatial variable
         x = pybamm.SpatialVariable("x", ["negative electrode"])
         self.assertIsInstance(x.simplify(), pybamm.SpatialVariable)
-        self.assertEqual(x.simplify().id, x.id)
 
         # not implemented for Symbol
         sym = pybamm.Symbol("sym")

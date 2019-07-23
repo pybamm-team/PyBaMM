@@ -125,6 +125,7 @@ class OdeSolver(pybamm.BaseSolver):
             # create simplified rhs and event expressions
             pybamm.logger.info("Simplifying RHS")
             concatenated_rhs = simp.simplify(concatenated_rhs)
+
             pybamm.logger.info("Simplifying events")
             events = {name: simp.simplify(event) for name, event in events.items()}
 

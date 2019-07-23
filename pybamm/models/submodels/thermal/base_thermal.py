@@ -27,10 +27,21 @@ class BaseModel(pybamm.BaseSubModel):
         q = self._flux_law(T)
 
         variables = {
+            "Average negative electrode temperature": pybamm.average(T_n),
+            "Average negative electrode temperature [K]": param.Delta_T
+            * pybamm.average(T_n)
+            + param.T_ref,
             "Negative electrode temperature": T_n,
             "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
+            "Average separator temperature": pybamm.average(T_s),
+            "Average separator temperature [K]": param.Delta_T * pybamm.average(T_s)
+            + param.T_ref,
             "Separator temperature": T_s,
             "Separator temperature [K]": param.Delta_T * T_s + param.T_ref,
+            "Average positive electrode temperature": pybamm.average(T_p),
+            "Average positive electrode temperature [K]": param.Delta_T
+            * pybamm.average(T_p)
+            + param.T_ref,
             "Positive electrode temperature": T_p,
             "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
             "Cell temperature": T,
