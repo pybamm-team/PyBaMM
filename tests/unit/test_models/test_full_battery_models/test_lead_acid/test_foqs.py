@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid composite model
+# Tests for FOQS lead-acid model
 #
 import pybamm
 import unittest

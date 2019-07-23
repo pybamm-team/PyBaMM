@@ -1,5 +1,5 @@
 #
-# Tests for the lead-acid composite model
+# Tests for the lead-acid composite models
 #
 import pybamm
 import unittest
@@ -66,6 +66,15 @@ class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
         options = {"side reactions": ["something"]}
         with self.assertRaises(pybamm.ModelError):
             pybamm.lead_acid.Composite(options)
+
+
+class TestLeadAcidCompositeExtended(unittest.TestCase):
+    def test_well_posed(self):
+        # debug mode slows down the composite model a fair bit, so turn off
+        pybamm.settings.debug_mode = False
+        model = pybamm.lead_acid.Composite()
+        pybamm.settings.debug_mode = True
+        model.check_well_posedness()
 
 
 if __name__ == "__main__":
