@@ -2,10 +2,10 @@
 # First-order Butler-Volmer kinetics
 #
 import pybamm
-from .base_kinetics import BaseKinetics
+from .base_kinetics import BaseModel
 
 
-class BaseFirstOrderKinetics(BaseKinetics):
+class BaseFirstOrderKinetics(BaseModel):
     """
     Base first-order kinetics
 

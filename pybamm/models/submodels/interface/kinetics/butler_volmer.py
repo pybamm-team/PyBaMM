@@ -3,11 +3,11 @@
 #
 
 import pybamm
-from .base_kinetics import BaseKinetics
+from .base_kinetics import BaseModel
 from .base_first_order_kinetics import BaseFirstOrderKinetics
 
 
-class ButlerVolmer(BaseKinetics):
+class ButlerVolmer(BaseModel):
     """
     Base submodel which implements the forward Butler-Volmer equation:
 
@@ -22,7 +22,7 @@ class ButlerVolmer(BaseKinetics):
         The domain to implement the model, either: 'Negative' or 'Positive'.
 
 
-    **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
+    **Extends:** :class:`pybamm.interface.kinetics.BaseModel`
     """
 
     def __init__(self, param, domain):
@@ -32,7 +32,7 @@ class ButlerVolmer(BaseKinetics):
         return 2 * j0 * pybamm.sinh((ne / 2) * eta_r)
 
     def _get_dj_dc(self, variables):
-        "See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc`"
+        "See :meth:`pybamm.interface.kinetics.BaseModel._get_dj_dc`"
         c_e, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
             variables
         )
@@ -42,7 +42,7 @@ class ButlerVolmer(BaseKinetics):
         )
 
     def _get_dj_ddeltaphi(self, variables):
-        "See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi`"
+        "See :meth:`pybamm.interface.kinetics.BaseModel._get_dj_ddeltaphi`"
         _, delta_phi, j0, ne, ocp = self._get_interface_variables_for_first_order(
             variables
         )
