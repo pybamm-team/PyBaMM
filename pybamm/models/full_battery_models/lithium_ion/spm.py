@@ -33,9 +33,9 @@ class SPM(BaseModel):
                 self.param
             )
         elif self.options["bc_options"]["dimensionality"] == 1:
-            raise NotImplementedError(
-                "One-dimensional current collector submodel not implemented."
-            )
+            self.submodels[
+                "current collector"
+            ] = pybamm.current_collector.OneDimensionalCurrentCollector(self.param)
         elif self.options["bc_options"]["dimensionality"] == 2:
             self.submodels[
                 "current collector"

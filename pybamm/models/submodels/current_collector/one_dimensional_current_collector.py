@@ -37,34 +37,22 @@ class OneDimensionalCurrentCollector(BaseModel):
 
     def set_algebraic(self, variables):
 
-        ocp_p_av = variables["Average positive electrode open circuit potential"]
-        ocp_n_av = variables["Average negative electrode open circuit potential"]
-        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
-        eta_r_p_av = variables["Average positive electrode reaction overpotential"]
-        eta_e_av = variables["Average electrolyte overpotential"]
-        delta_phi_s_n_av = variables["Average negative electrode ohmic losses"]
-        delta_phi_s_p_av = variables["Average positive electrode ohmic losses"]
-
-        i_boundary_cc = variables["Current collector current density"]
-        v_boundary_cc = variables["Local current collector potential difference"]
-
-        # The voltage-current expression from the SPM(e)
-        local_voltage_expression = (
-            ocp_p_av
-            - ocp_n_av
-            + eta_r_p_av
-            - eta_r_n_av
-            + eta_e_av
-            + delta_phi_s_p_av
-            - delta_phi_s_n_av
-        )
-
-        self.algebraic = {i_boundary_cc: v_boundary_cc - local_voltage_expression}
-
-    def set_rhs(self, variables):
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
-        self.rhs = {phi_s_cn: 0, phi_s_cp: 0}
+        i_boundary_cc = variables["Current collector current density"]
+
+        param = self.param
+        applied_current = param.current_with_time
+
+        self.algebraic = {
+            phi_s_cn: phi_s_cn,
+            phi_s_cp: phi_s_cp
+            - (
+                param.U_p(param.c_p_init, param.T_ref)
+                - param.U_n(param.c_n_init, param.T_ref)
+            ),
+            i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z,
+        }
 
     def set_initial_conditions(self, variables):
 
