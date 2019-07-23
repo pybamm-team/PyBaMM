@@ -248,12 +248,10 @@ class TestSymbol(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
 
         one_n = pybamm.Broadcast(1, ["negative electrode"])
-        zero_s = pybamm.Broadcast(0, ["separator"])
         one_p = pybamm.Broadcast(1, ["positive electrode"])
 
-        j = pybamm.Concatenation(one_n, zero_s, one_p)
-
         zero_n = pybamm.Broadcast(0, ["negative electrode"])
+        zero_s = pybamm.Broadcast(0, ["separator"])
         zero_p = pybamm.Broadcast(0, ["positive electrode"])
 
         deps_dt = pybamm.Concatenation(zero_n, zero_s, zero_p)
@@ -263,18 +261,19 @@ class TestSymbol(unittest.TestCase):
         variables = {
             "Porosity": param.epsilon,
             "Porosity change": deps_dt,
-            "Interfacial current density": j,
             "Volume-averaged velocity": v_box,
+            "Negative electrode interfacial current density": one_n,
+            "Positive electrode interfacial current density": one_p,
+            "Cell temperature": pybamm.Concatenation(zero_n, zero_s, zero_p),
         }
-
-        # c_e = pybamm.standard_variables.c_e
-        # variables = {"Electrolyte concentration": c_e}
-        # onen = pybamm.Broadcast(1, ["negative electrode"])
-        # onep = pybamm.Broadcast(1, ["positive electrode"])
-        # reactions = {
-        #     "main": {"neg": {"s": 1, "aj": onen}, "pos": {"s": 1, "aj": onep}}
-
-        model = pybamm.electrolyte.stefan_maxwell.diffusion.Full(param)
+        icd = " interfacial current density"
+        reactions = {
+            "main": {
+                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
+                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
+            }
+        }
+        model = pybamm.electrolyte.stefan_maxwell.diffusion.Full(param, reactions)
         variables.update(model.get_fundamental_variables())
         variables.update(model.get_coupled_variables(variables))
 
@@ -376,4 +375,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

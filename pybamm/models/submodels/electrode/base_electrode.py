@@ -17,8 +17,8 @@ class BaseElectrode(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reactions=None):
+        super().__init__(param, domain, reactions)
 
     def _get_standard_potential_variables(self, phi_s):
         """
@@ -49,8 +49,11 @@ class BaseElectrode(pybamm.BaseSubModel):
             phi_s_av_dim = (
                 param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_av
             )
-            V = pybamm.BoundaryValue(phi_s, "right")
-            delta_phi_s = phi_s - V
+
+            v = pybamm.BoundaryValue(phi_s, "right")
+            delta_phi_s = phi_s - pybamm.Broadcast(
+                v, ["positive electrode"], broadcast_type="primary"
+            )
 
         delta_phi_s_av = pybamm.average(delta_phi_s)
         delta_phi_s_dim = delta_phi_s * param.potential_scale
@@ -69,6 +72,9 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Average "
             + self.domain.lower()
             + " electrode ohmic losses [V]": delta_phi_s_av_dim,
+            "Gradient of "
+            + self.domain.lower()
+            + " electrode potential": pybamm.grad(phi_s),
         }
 
         return variables

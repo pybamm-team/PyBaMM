@@ -8,11 +8,27 @@ import numpy as np
 
 
 class TestCurrentFunctions(unittest.TestCase):
+    def test_base_current(self):
+        function = pybamm.GetCurrent()
+        self.assertEqual(function(10), 1)
+
     def test_constant_current(self):
         function = pybamm.GetConstantCurrent(current=4)
         assert isinstance(function(0), numbers.Number)
         assert isinstance(function(np.zeros(3)), numbers.Number)
         assert isinstance(function(np.zeros([3, 3])), numbers.Number)
+
+        # test simplify
+        current = pybamm.electrical_parameters.current_with_time
+        parameter_values = pybamm.ParameterValues(
+            {
+                "Typical current [A]": 2,
+                "Typical timescale [s]": 1,
+                "Current function": pybamm.GetConstantCurrent(),
+            }
+        )
+        processed_current = parameter_values.process_symbol(current)
+        self.assertIsInstance(processed_current.simplify(), pybamm.Scalar)
 
     def test_get_current_data(self):
         # test units
@@ -106,4 +122,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

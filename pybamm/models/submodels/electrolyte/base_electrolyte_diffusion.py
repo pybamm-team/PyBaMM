@@ -16,10 +16,10 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, reactions=None):
+        super().__init__(param, reactions=reactions)
 
-    def _get_standard_concentration_variables(self, c_e, c_e_av):
+    def _get_standard_concentration_variables(self, c_e):
         """
         A private function to obtain the standard variables which
         can be derived from the concentration in the electrolyte.
@@ -40,6 +40,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         c_e_typ = self.param.c_e_typ
         c_e_n, c_e_s, c_e_p = c_e.orphans
+        c_e_av = pybamm.average(c_e)
 
         variables = {
             "Electrolyte concentration": c_e,
@@ -74,7 +75,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         """
 
         param = self.param
-        D_e_typ = param.D_e(param.c_e_typ)
+        D_e_typ = param.D_e(param.c_e_typ, param.T_ref)
         flux_scale = D_e_typ * param.c_e_typ / param.L_x
 
         variables = {

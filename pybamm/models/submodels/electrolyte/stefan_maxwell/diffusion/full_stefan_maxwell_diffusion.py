@@ -20,14 +20,13 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.diffusion.BaseModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, reactions):
+        super().__init__(param, reactions)
 
     def get_fundamental_variables(self):
         c_e = pybamm.standard_variables.c_e
-        c_e_av = pybamm.average(c_e)
 
-        return self._get_standard_concentration_variables(c_e, c_e_av)
+        return self._get_standard_concentration_variables(c_e)
 
     def get_coupled_variables(self, variables):
 
@@ -35,10 +34,11 @@ class Full(BaseModel):
         c_e = variables["Electrolyte concentration"]
         # i_e = variables["Electrolyte current density"]
         v_box = variables["Volume-averaged velocity"]
+        T = variables["Cell temperature"]
 
         param = self.param
 
-        N_e_diffusion = -(eps ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
+        N_e_diffusion = -(eps ** param.b) * param.D_e(c_e, T) * pybamm.grad(c_e)
         # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
         # N_e_convection = c_e * v_box
 
@@ -59,27 +59,23 @@ class Full(BaseModel):
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
         # i_e = variables["Electrolyte current density"]
-        j = variables["Interfacial current density"]
 
         # TODO: check lead acid version in new form
-        source_term = param.s / param.gamma_e * j
         # source_term = ((param.s - param.t_plus) / param.gamma_e) * pybamm.div(i_e)
         # source_term = pybamm.div(i_e) / param.gamma_e  # lithium-ion
+        source_terms = sum(
+            pybamm.Concatenation(
+                reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
+                pybamm.Broadcast(0, "separator"),
+                reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
+            )
+            / param.gamma_e
+            for reaction in self.reactions.values()
+        )
 
         self.rhs = {
             c_e: (1 / eps)
-            * (-pybamm.div(N_e) / param.C_e + source_term - c_e * deps_dt)
-        }
-
-    def set_boundary_conditions(self, variables):
-
-        c_e = variables["Electrolyte concentration"]
-
-        self.boundary_conditions = {
-            c_e: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            }
+            * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_dt)
         }
 
     def set_initial_conditions(self, variables):

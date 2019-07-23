@@ -11,11 +11,7 @@ class TestUniformModel(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lead_acid
 
-        submodel = pybamm.current_collector.Uniform(param, "Negative")
-        std_tests = tests.StandardSubModelTests(submodel)
-        std_tests.test_all()
-
-        submodel = pybamm.current_collector.Uniform(param, "Positive")
+        submodel = pybamm.current_collector.Uniform(param)
         std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()
 
@@ -26,4 +22,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

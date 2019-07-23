@@ -1298,8 +1298,8 @@ class TestFiniteVolume(unittest.TestCase):
         c_s_p_surf.domain = ["positive electrode"]
         c_s_n_surf_disc = disc.process_symbol(c_s_n_surf)
         c_s_p_surf_disc = disc.process_symbol(c_s_p_surf)
-        self.assertEqual(c_s_n_surf_disc.domain, ['negative electrode'])
-        self.assertEqual(c_s_p_surf_disc.domain, ['positive electrode'])
+        self.assertEqual(c_s_n_surf_disc.domain, ["negative electrode"])
+        self.assertEqual(c_s_p_surf_disc.domain, ["positive electrode"])
 
 
 if __name__ == "__main__":
@@ -1308,4 +1308,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

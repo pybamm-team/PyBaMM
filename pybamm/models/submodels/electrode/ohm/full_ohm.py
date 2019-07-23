@@ -19,8 +19,8 @@ class Full(BaseModel):
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reactions):
+        super().__init__(param, domain, reactions)
 
     def get_fundamental_variables(self):
 
@@ -59,9 +59,12 @@ class Full(BaseModel):
 
         phi_s = variables[self.domain + " electrode potential"]
         i_s = variables[self.domain + " electrode current density"]
-        j = variables[self.domain + " electrode interfacial current density"]
+        sum_j = sum(
+            variables[reaction[self.domain]["aj"]]
+            for reaction in self.reactions.values()
+        )
 
-        self.algebraic[phi_s] = pybamm.div(i_s) + j
+        self.algebraic[phi_s] = pybamm.div(i_s) + sum_j
 
     def set_boundary_conditions(self, variables):
 
@@ -86,12 +89,13 @@ class Full(BaseModel):
     def set_initial_conditions(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
+        T_ref = self.param.T_ref
 
         if self.domain == "Negative":
             phi_s_init = pybamm.Scalar(0)
         elif self.domain == "Positive":
-            phi_s_init = self.param.U_p(self.param.c_p_init) - self.param.U_n(
-                self.param.c_n_init
+            phi_s_init = self.param.U_p(self.param.c_p_init, T_ref) - self.param.U_n(
+                self.param.c_n_init, T_ref
             )
 
         self.initial_conditions[phi_s] = phi_s_init

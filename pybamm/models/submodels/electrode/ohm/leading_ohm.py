@@ -47,7 +47,9 @@ class LeadingOrder(BaseModel):
 
             v = ocp_p_av + eta_r_p_av + phi_e_p_av
 
-            phi_s = pybamm.Broadcast(v, ["positive electrode"])
+            phi_s = pybamm.Broadcast(
+                v, ["positive electrode"], broadcast_type="primary"
+            )
             i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))
@@ -57,6 +59,15 @@ class LeadingOrder(BaseModel):
             variables.update(self._get_standard_whole_cell_current_variables(variables))
 
         return variables
+
+    def set_boundary_conditions(self, variables):
+
+        phi_s = variables[self.domain + " electrode potential"]
+
+        lbc = (pybamm.Scalar(0), "Neumann")
+        rbc = (pybamm.Scalar(0), "Neumann")
+
+        self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
     @property
     def default_solver(self):

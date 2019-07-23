@@ -54,7 +54,19 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh
-        return pybamm.Vector(symbol_mesh[0].npts, domain=symbol.domain)
+        if symbol.name == "y":
+            vector = pybamm.Vector(
+                symbol_mesh["current collector"][0].edges["y"], domain=symbol.domain
+            )
+        elif symbol.name == "z":
+            vector = pybamm.Vector(
+                symbol_mesh["current collector"][0].edges["z"], domain=symbol.domain
+            )
+        else:
+            raise pybamm.GeometryError(
+                "Spatial variable must be 'y' or 'z' not {}".format(symbol.name)
+            )
+        return vector
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
@@ -103,6 +115,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             @skfem.linear_form
             def unit_bc_load_form(v, dv, w):
                 return v
+
             # assemble form
             unit_load = skfem.asm(unit_bc_load_form, mesh.facet_basis)
 
@@ -114,7 +127,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         elif lbc_type == "Dirichlet":
             lbc_load = np.zeros(mesh.npts)
             lbc_load[mesh.negative_tab] = 1
-            boundary_load = boundary_load + lbc_value * pybamm.Vector(lbc_load)
+            boundary_load = boundary_load - lbc_value * pybamm.Vector(lbc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -130,7 +143,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         elif rbc_type == "Dirichlet":
             rbc_load = np.zeros(mesh.npts)
             rbc_load[mesh.positive_tab] = 1
-            boundary_load = boundary_load + rbc_value * pybamm.Vector(rbc_load)
+            boundary_load = boundary_load - rbc_value * pybamm.Vector(rbc_load)
         else:
             raise ValueError(
                 "boundary condition must be Dirichlet or Neumann, not '{}'".format(
@@ -242,12 +255,52 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
     def boundary_value_or_flux(self, symbol, discretised_child):
         """
-        Uses linear extrapolation to get the boundary value or flux of a variable in the
-        Finite Element Method.
+        Returns the average value of the symbol over the negative tab ("left")
+        or the positive tab ("right") in the Finite Element Method.
 
-        See :meth:`pybamm.SpatialMethod.boundary_value`
+        Overwrites the default :meth:`pybamm.SpatialMethod.boundary_value`
         """
-        raise NotImplementedError
+
+        # Return average value on the negative tab for "left" and positive tab f
+        # or "right"
+        if isinstance(symbol, pybamm.BoundaryValue):
+
+            # get primary domain mesh
+            domain = symbol.children[0].domain[0]
+            mesh = self.mesh[domain][0]
+
+            # make form for the boundary integral
+            @skfem.linear_form
+            def integral_form(v, dv, w):
+                return v
+
+            # assemble
+            vector = skfem.asm(integral_form, mesh.facet_basis)
+            # vector of zeros -- entries which correspond to a tab will be filled
+            # from the assembled boundary integral vector to give the integral over
+            # the tab
+            boundary_val_vector = np.zeros(mesh.npts)
+
+            if symbol.side == "left":
+                boundary_val_vector[mesh.negative_tab] = vector[mesh.negative_tab]
+            elif symbol.side == "right":
+                boundary_val_vector[mesh.positive_tab] = vector[mesh.negative_tab]
+
+            # divide integration weights by (numerical) tab width to give average value
+            boundary_val_vector = boundary_val_vector / (
+                boundary_val_vector[np.newaxis, :] @ np.ones_like(vector)
+            )
+
+        elif isinstance(symbol, pybamm.BoundaryFlux):
+            raise NotImplementedError
+
+        # Return boundary value with domain given by symbol
+        boundary_value = (
+            pybamm.Matrix(boundary_val_vector[np.newaxis, :]) @ discretised_child
+        )
+        boundary_value.domain = symbol.domain
+
+        return boundary_value
 
     def mass_matrix(self, symbol, boundary_conditions):
         """

@@ -74,6 +74,26 @@ class TestProcessedVariable(unittest.TestCase):
             np.reshape(y_sol, [len(x_sol), len(r_sol), len(t_sol)]),
         )
 
+    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
+    def test_processed_variable_3D_scikit(self):
+        var = pybamm.Variable("var", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_2p1d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        y_sol = disc.process_symbol(y).entries[:, 0]
+        z_sol = disc.process_symbol(z).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            np.reshape(u_sol, [len(y_sol), len(z_sol), len(t_sol)]),
+        )
+
     def test_processed_var_1D_interpolation(self):
         # without spatial dependence
         t = pybamm.t
@@ -194,6 +214,40 @@ class TestProcessedVariable(unittest.TestCase):
             processed_var(t_sol, x_sol, r_sol).shape, (35, 10, 50)
         )
 
+    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
+    def test_processed_var_3D_scikit_interpolation(self):
+        var = pybamm.Variable("var", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_2p1d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        y_sol = disc.process_symbol(y).entries[:, 0]
+        z_sol = disc.process_symbol(z).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        u_sol = np.ones(var_sol.shape[0])[:, np.newaxis] * np.linspace(0, 5)
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
+        # 3 vectors
+        np.testing.assert_array_equal(
+            processed_var(t_sol, y_sol, z_sol).shape, (15, 15, 50)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t_sol, y_sol, z_sol),
+            np.reshape(u_sol, [len(y_sol), len(z_sol), len(t_sol)]),
+        )
+        # 2 vectors, 1 scalar
+        np.testing.assert_array_equal(processed_var(0.5, y_sol, z_sol).shape, (15, 15))
+        np.testing.assert_array_equal(processed_var(t_sol, 0.2, z_sol).shape, (15, 50))
+        np.testing.assert_array_equal(processed_var(t_sol, y_sol, 0.5).shape, (15, 50))
+        # 1 vectors, 2 scalar
+        np.testing.assert_array_equal(processed_var(0.5, 0.2, z_sol).shape, (15,))
+        np.testing.assert_array_equal(processed_var(0.5, y_sol, 0.5).shape, (15,))
+        np.testing.assert_array_equal(processed_var(t_sol, 0.2, 0.5).shape, (50,))
+        # 3 scalars
+        np.testing.assert_array_equal(processed_var(0.2, 0.2, 0.2).shape, ())
+
     def test_processed_variable_ode_pde_solution(self):
         # without space
         model = pybamm.BaseBatteryModel()
@@ -258,4 +312,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

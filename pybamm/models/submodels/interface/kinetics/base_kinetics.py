@@ -1,7 +1,8 @@
 #
-# Bulter volmer class
+# Base kinetics class
 #
 
+import pybamm
 from ..base_interface import BaseInterface
 
 
@@ -23,45 +24,42 @@ class BaseModel(BaseInterface):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
-    def _get_delta_phi_s(self, variables):
-        "Calculate delta_phi_s, and derived variables, using phi_s and phi_e"
-        phi_s = variables[self.domain + " electrode potential"]
-        phi_e = variables[self.domain + " electrolyte potential"]
-        delta_phi_s = phi_s - phi_e
-        variables.update(
-            self._get_standard_surface_potential_difference_variables(delta_phi_s)
-        )
-        return variables
-
     def get_coupled_variables(self, variables):
         # Calculate delta_phi_s from phi_s and phi_e if it isn't already known
         if self.domain + " electrode surface potential difference" not in variables:
             variables = self._get_delta_phi_s(variables)
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
+        # If delta_phi_s was broadcast, take only the orphan
+        if isinstance(delta_phi_s, pybamm.Broadcast):
+            delta_phi_s = delta_phi_s.orphans[0]
 
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        variables.update(self._get_standard_ocp_variables(variables))
-        ocp = variables[self.domain + " electrode open circuit potential"]
+        ocp, dUdT = self._get_open_circuit_potential(variables)
         eta_r = delta_phi_s - ocp
-
-        if self.domain == "Negative":
-            ne = self.param.ne_n
-        elif self.domain == "Positive":
-            ne = self.param.ne_p
+        # Get number of electrons in reaction
+        ne = self._get_number_of_electrons_in_reaction()
 
         j = self._get_kinetics(j0, ne, eta_r)
-        j_av = self._get_average_interfacial_current_density(variables)
-        # j = j_av + (j - pybamm.average(j))  # enforce true average
+        j_tot_av = self._get_average_total_interfacial_current_density(variables)
+        # j = j_tot_av + (j - pybamm.average(j))  # enforce true average
 
-        variables.update(self._get_standard_interfacial_current_variables(j, j_av))
+        variables.update(self._get_standard_interfacial_current_variables(j))
+        variables.update(
+            self._get_standard_total_interfacial_current_variables(j_tot_av)
+        )
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
+        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         if (
-            "Negative electrode interfacial current density" in variables
-            and "Positive electrode interfacial current density" in variables
+            "Negative electrode" + self.reaction_name + " interfacial current density"
+            in variables
+            and "Positive electrode"
+            + self.reaction_name
+            + " interfacial current density"
+            in variables
         ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)

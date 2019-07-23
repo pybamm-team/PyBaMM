@@ -41,8 +41,8 @@ class Vector(pybamm.Array):
 
         super().__init__(entries, name, domain, entries_string)
 
-    def jac(self, variable):
-        """ See :meth:`pybamm.Symbol.jac()`. """
+    def _jac(self, variable):
+        """ See :meth:`pybamm.Symbol._jac()`. """
         # Get indices of state vector
         variable_y_indices = np.arange(variable.y_slice.start, variable.y_slice.stop)
         # Return zeros of correct size
@@ -141,7 +141,7 @@ class StateVector(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return StateVector(self.y_slice, self.name, domain=[])
+        return StateVector(self.y_slice, self.name, domain=self.domain)
 
     def evaluate_for_shape(self):
         """

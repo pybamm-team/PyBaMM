@@ -53,7 +53,7 @@ class SpatialMethod:
         else:
             return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
-    def broadcast(self, symbol, domain):
+    def broadcast(self, symbol, domain, broadcast_type):
         """
         Broadcast symbol to a specified domain.
 
@@ -63,29 +63,42 @@ class SpatialMethod:
             The symbol to be broadcasted
         domain : iterable of strings
             The domain to broadcast to
+        broadcast_type : str
+            The type of broadcast, either: 'primary' or 'full'
 
         Returns
         -------
         broadcasted_symbol: class: `pybamm.Symbol`
             The discretised symbol of the correct size for the spatial method
         """
-        vector_size_1D = sum(self.mesh[dom][0].npts_for_broadcast for dom in domain)
-        vector_size_2D = sum(
+
+        primary_pts_for_broadcast = sum(
+            self.mesh[dom][0].npts_for_broadcast for dom in domain
+        )
+
+        full_pts_for_broadcast = sum(
             subdom.npts_for_broadcast for dom in domain for subdom in self.mesh[dom]
         )
 
-        if symbol.domain == ["current collector"]:
+        if broadcast_type == "primary":
             out = pybamm.Outer(
-                symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
+                symbol, pybamm.Vector(np.ones(primary_pts_for_broadcast), domain=domain)
             )
-        elif symbol.domain == ["negative particle"] or symbol.domain == [
-            "positive particle"
-        ]:
-            out = pybamm.Outer(
-                symbol, pybamm.Vector(np.ones(vector_size_1D), domain=domain)
-            )
+
+        elif broadcast_type == "secondary":
+            raise NotImplementedError
+
+        elif broadcast_type == "full":
+            out = symbol * pybamm.Vector(np.ones(full_pts_for_broadcast), domain=domain)
+
         else:
-            out = symbol * pybamm.Vector(np.ones(vector_size_2D), domain=domain)
+            raise KeyError(
+                """Broadcast type must be either: 'primary', 'secondary', or 'full' and
+                not {}""".format(
+                    broadcast_type
+                )
+            )
+
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -195,6 +208,27 @@ class SpatialMethod:
             Contains the result of acting the discretised indefinite integral on
             the child discretised_symbol
         """
+        raise NotImplementedError
+
+    def internal_neumann_condition(
+        self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
+    ):
+        """
+        A method to find the internal neumann conditions between two symbols
+        on adjacent subdomains.
+
+        Parameters
+        ----------
+        left_symbol_disc : :class:`pybamm.Symbol`
+            The discretised symbol on the left subdomain
+        right_symbol_disc : :class:`pybamm.Symbol`
+            The discretised symbol on the right subdomain
+        left_mesh : list
+            The mesh on the left subdomain
+        right_mesh : list
+            The mesh on the right subdomain
+        """
+
         raise NotImplementedError
 
     def boundary_value_or_flux(self, symbol, discretised_child):

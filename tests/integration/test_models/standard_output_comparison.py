@@ -25,8 +25,6 @@ class StandardOutputComparison(object):
             self.chemistry = "Lithium-ion"
         elif isinstance(self.models[0], pybamm.lead_acid.BaseModel):
             self.chemistry = "Lead acid"
-        elif isinstance(self.models[0], pybamm.OldLeadAcidBaseModel):
-            self.chemistry = "Lead acid"
 
         self.t = self.get_output_times()
         self.mesh = self.get_mesh()
@@ -140,6 +138,10 @@ class AveragesComparison(BaseOutputComparison):
         self.compare("Average positive electrode interfacial current density")
         # Concentration
         self.compare("Average electrolyte concentration")
+        # Porosity
+        self.compare("Average negative electrode porosity")
+        self.compare("Average separator porosity")
+        self.compare("Average positive electrode porosity")
 
 
 class VariablesComparison(BaseOutputComparison):

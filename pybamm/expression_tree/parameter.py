@@ -121,4 +121,3 @@ class FunctionParameter(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return sum(child.evaluate_for_shape() for child in self.children)
-

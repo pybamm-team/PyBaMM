@@ -19,13 +19,17 @@ class LeadingOrder(BaseModel):
     **Extends:** :class:`pybamm.BaseStefanMaxwellConductivity`
     """
 
-    def __init__(self, param, domain=None):
-        super().__init__(param, domain)
+    def __init__(self, param, domain=None, reactions=None):
+        super().__init__(param, domain, reactions)
 
     def get_coupled_variables(self, variables):
         ocp_n_av = variables["Average negative electrode open circuit potential"]
         eta_r_n_av = variables["Average negative electrode reaction overpotential"]
         phi_s_n_av = variables["Average negative electrode potential"]
+        phi_e_av = phi_s_n_av - eta_r_n_av - ocp_n_av
+        return self._get_coupled_variables_from_potential(variables, phi_e_av)
+
+    def _get_coupled_variables_from_potential(self, variables, phi_e_av):
         i_boundary_cc = variables["Current collector current density"]
 
         param = self.param
@@ -34,14 +38,17 @@ class LeadingOrder(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        phi_e_av = phi_s_n_av - eta_r_n_av - ocp_n_av
-        phi_e_n = pybamm.Broadcast(phi_e_av, ["negative electrode"])
-        phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"])
-        phi_e_p = pybamm.Broadcast(phi_e_av, ["positive electrode"])
+        phi_e_n = pybamm.Broadcast(
+            phi_e_av, ["negative electrode"], broadcast_type="primary"
+        )
+        phi_e_s = pybamm.Broadcast(phi_e_av, ["separator"], broadcast_type="primary")
+        phi_e_p = pybamm.Broadcast(
+            phi_e_av, ["positive electrode"], broadcast_type="primary"
+        )
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
-        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
+        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"], broadcast_type="primary")
         i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 

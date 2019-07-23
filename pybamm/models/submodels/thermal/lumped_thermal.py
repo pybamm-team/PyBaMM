@@ -29,7 +29,7 @@ class Lumped(BaseModel):
         T_p = pybamm.Broadcast(T_av, ["positive electrode"])
         T = pybamm.Concatenation(T_n, T_s, T_p)
 
-        variables = self._get_standard_fundamental_variables(T, T_av)
+        variables = self._get_standard_fundamental_variables(T)
         return variables
 
     def get_coupled_variables(self, variables):

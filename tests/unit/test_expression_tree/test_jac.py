@@ -56,6 +56,27 @@ class TestJacobian(unittest.TestCase):
         du_dv = u.jac(v).evaluate().toarray()
         np.testing.assert_array_equal(du_dv, jacobian)
 
+        # test Jacobian of Outer (must set domain to be 'current collector')
+        u.domain = ["current collector"]
+        func = pybamm.Outer(u, pybamm.Scalar(4))
+        jacobian = np.array([[4, 0, 0, 0], [0, 4, 0, 0]])
+        dfunc_dy = func.jac(y).evaluate(y=y0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        func = pybamm.Outer(u, pybamm.Vector(np.array([1, 2, 3])))
+        jacobian = np.array(
+            [
+                [1, 0, 0, 0],
+                [2, 0, 0, 0],
+                [3, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 2, 0, 0],
+                [0, 3, 0, 0],
+            ]
+        )
+        dfunc_dy = func.jac(y).evaluate(y=y0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
     def test_nonlinear(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
@@ -239,6 +260,17 @@ class TestJacobian(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             b.jac(None)
 
+    def test_jac_of_inner(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        y = pybamm.Variable("y")
+        self.assertEqual(pybamm.inner(a, b).jac(y).evaluate(), 0)
+        self.assertEqual(pybamm.inner(a, y).jac(y).evaluate(), 1)
+        self.assertEqual(pybamm.inner(y, b).jac(y).evaluate(), 2)
+        vec = pybamm.StateVector(slice(0, 2))
+        jac = pybamm.inner(a * vec, b * vec).jac(vec).evaluate(y=np.ones(2)).toarray()
+        np.testing.assert_array_equal(jac, 4 * np.eye(2))
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
@@ -246,4 +278,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()
