@@ -66,9 +66,7 @@ class Full(BaseModel):
         source_terms = sum(
             pybamm.Concatenation(
                 reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
-                pybamm.SecondaryBroadcast(
-                    pybamm.Broadcast(0, "separator"), "current collector"
-                ),
+                pybamm.FullBroadcast(0, "separator", "current collector"),
                 reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
             )
             / param.gamma_e

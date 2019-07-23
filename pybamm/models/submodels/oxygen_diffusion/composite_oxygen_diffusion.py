@@ -72,9 +72,7 @@ class Composite(Full):
                 reaction["Positive"]["s_ox"] * variables[reaction["Positive"]["aj"]]
                 for reaction in self.reactions.values()
             )
-        sep_reactions = pybamm.SecondaryBroadcast(
-            pybamm.Broadcast(0, "separator"), "current collector"
-        )
+        sep_reactions = pybamm.FullBroadcast(0, "separator", "current collector")
         source_terms_0 = (
             pybamm.Concatenation(sep_reactions, pos_reactions) / param.gamma_e
         )

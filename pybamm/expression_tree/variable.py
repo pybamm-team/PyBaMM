@@ -22,13 +22,19 @@ class Variable(pybamm.Symbol):
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=[]):
-        super().__init__(name, domain=domain)
+    def __init__(self, name, domain=None, secondary_domain=None):
+        if domain is None:
+            domain = []
+        if secondary_domain is None:
+            secondary_domain = []
+        super().__init__(name, domain=domain, secondary_domain=secondary_domain)
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return Variable(self.name, self.domain)
+        return Variable(self.name, self.domain, self.secondary_domain)
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
-        return pybamm.evaluate_for_shape_using_domain(self.domain)
+        return pybamm.evaluate_for_shape_using_domain(
+            self.domain, self.secondary_domain
+        )

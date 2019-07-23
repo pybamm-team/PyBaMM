@@ -23,10 +23,12 @@ class UnaryOperator(pybamm.Symbol):
 
     """
 
-    def __init__(self, name, child, domain=None):
+    def __init__(self, name, child, domain=None, secondary_domain=None):
         if domain is None:
             domain = child.domain
-        super().__init__(name, children=[child], domain=domain)
+        super().__init__(
+            name, children=[child], domain=domain, secondary_domain=secondary_domain
+        )
         self.child = self.children[0]
 
     def __str__(self):
@@ -247,8 +249,8 @@ class SpatialOperator(UnaryOperator):
 
     """
 
-    def __init__(self, name, child, domain=None):
-        super().__init__(name, child, domain)
+    def __init__(self, name, child, domain=None, secondary_domain=None):
+        super().__init__(name, child, domain, secondary_domain)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """

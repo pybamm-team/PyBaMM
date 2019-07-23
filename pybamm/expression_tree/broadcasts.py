@@ -27,7 +27,14 @@ class Broadcast(pybamm.SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, broadcast_domain, broadcast_type="full", name=None):
+    def __init__(
+        self,
+        child,
+        broadcast_domain,
+        secondary_domain=None,
+        broadcast_type="full",
+        name=None,
+    ):
         # Convert child to scalar if it is a number
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
@@ -41,7 +48,7 @@ class Broadcast(pybamm.SpatialOperator):
         )
         self.broadcast_type = broadcast_type
         self.broadcast_domain = broadcast_domain
-        super().__init__(name, child, domain)
+        super().__init__(name, child, domain, secondary_domain)
 
     def check_and_set_domain_and_broadcast_type(
         self, child, broadcast_domain, broadcast_type
@@ -130,7 +137,7 @@ class PrimaryBroadcast(Broadcast):
     "A class for primary broadcasts"
 
     def __init__(self, child, broadcast_domain, name=None):
-        super().__init__(child, broadcast_domain, "primary", name)
+        super().__init__(child, broadcast_domain, broadcast_type="primary", name=name)
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
@@ -139,13 +146,22 @@ class PrimaryBroadcast(Broadcast):
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
         return PrimaryBroadcast(child, self.broadcast_domain)
+
+    def evaluate_for_shape(self):
+        """
+        Returns a vector of NaNs to represent the shape of a Broadcast.
+        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
+        """
+        child_eval = self.children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
+        return np.outer(child_eval, vec).reshape(-1, 1)
 
 
 class SecondaryBroadcast(Broadcast):
     "A class for secondary broadcasts"
 
     def __init__(self, child, broadcast_domain, name=None):
-        super().__init__(child, broadcast_domain, "secondary", name)
+        super().__init__(child, broadcast_domain, broadcast_type="secondary", name=name)
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
@@ -154,18 +170,44 @@ class SecondaryBroadcast(Broadcast):
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
         return SecondaryBroadcast(child, self.broadcast_domain)
+
+    def evaluate_for_shape(self):
+        """
+        Returns a vector of NaNs to represent the shape of a Broadcast.
+        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
+        """
+        child_eval = self.children[0].evaluate_for_shape()
+        return np.outer(
+            pybamm.evaluate_for_shape_using_domain(self.broadcast_domain), child_eval
+        ).reshape(-1, 1)
 
 
 class FullBroadcast(Broadcast):
     "A class for full broadcasts"
 
-    def __init__(self, child, broadcast_domain, name=None):
-        super().__init__(child, broadcast_domain, "full", name)
+    def __init__(self, child, broadcast_domain, secondary_domain=None, name=None):
+        super().__init__(
+            child,
+            broadcast_domain,
+            secondary_domain=secondary_domain,
+            broadcast_type="full",
+            name=name,
+        )
 
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return FullBroadcast(child, self.broadcast_domain)
+        return FullBroadcast(child, self.broadcast_domain, self.secondary_domain)
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return FullBroadcast(child, self.broadcast_domain)
+        return FullBroadcast(child, self.broadcast_domain, self.secondary_domain)
+
+    def evaluate_for_shape(self):
+        """
+        Returns a vector of NaNs to represent the shape of a Broadcast.
+        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
+        """
+        child_eval = self.children[0].evaluate_for_shape()
+        vec = pybamm.evaluate_for_shape_using_domain(self.domain, self.secondary_domain)
+
+        return child_eval * vec

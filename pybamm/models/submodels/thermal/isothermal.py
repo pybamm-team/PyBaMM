@@ -23,16 +23,9 @@ class Isothermal(BaseModel):
 
     def get_fundamental_variables(self):
 
-        T_n = pybamm.SecondaryBroadcast(
-            pybamm.Broadcast(0, ["negative electrode"]), "current collector"
-        )
-        T_s = pybamm.SecondaryBroadcast(
-            pybamm.Broadcast(0, ["separator"]), "current collector"
-        )
-        T_p = pybamm.SecondaryBroadcast(
-            pybamm.Broadcast(0, ["positive electrode"]), "current collector"
-        )
-
+        T_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
+        T_s = pybamm.FullBroadcast(0, "separator", "current collector")
+        T_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
         T = pybamm.Concatenation(T_n, T_s, T_p)
 
         variables = self._get_standard_fundamental_variables(T)

@@ -34,8 +34,8 @@ class LeadingOrder(BaseModel):
         deps_dt_n = pybamm.PrimaryBroadcast(
             -self.param.beta_surf_n * j_n, ["negative electrode"]
         )
-        deps_dt_s = pybamm.SecondaryBroadcast(
-            pybamm.PrimaryBroadcast(0, ["separator"]), "current collector"
+        deps_dt_s = pybamm.FullBroadcast(
+            0, "separator", secondary_domain="current collector"
         )
         deps_dt_p = pybamm.PrimaryBroadcast(
             -self.param.beta_surf_p * j_p, ["positive electrode"]

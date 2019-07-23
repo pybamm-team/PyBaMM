@@ -50,7 +50,12 @@ from .settings import settings
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import Symbol, evaluate_for_shape_using_domain
+from .expression_tree.symbol import (
+    Symbol,
+    domain_size,
+    create_object_of_size,
+    evaluate_for_shape_using_domain,
+)
 from .expression_tree.binary_operators import (
     is_scalar_zero,
     is_matrix_zero,

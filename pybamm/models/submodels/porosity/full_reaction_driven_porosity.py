@@ -32,8 +32,8 @@ class Full(BaseModel):
         j_p = variables["Positive electrode interfacial current density"]
 
         deps_dt_n = -self.param.beta_surf_n * j_n
-        deps_dt_s = pybamm.SecondaryBroadcast(
-            pybamm.Broadcast(0, ["separator"]), "current collector"
+        deps_dt_s = pybamm.FullBroadcast(
+            0, "separator", secondary_domain="current collector"
         )
         deps_dt_p = -self.param.beta_surf_p * j_p
 

@@ -351,13 +351,10 @@ beta_liq_n = -c_e_typ * DeltaVliq_n / ne_n_S  # Molar volume change (electrolyte
 beta_liq_p = -c_e_typ * DeltaVliq_p / ne_p_S  # Molar volume change (electrolyte, pos)
 beta_n = beta_surf_n + beta_liq_n  # Total molar volume change (neg)
 beta_p = beta_surf_p + beta_liq_p  # Total molar volume change (pos)
-beta = pybamm.SecondaryBroadcast(
-    pybamm.Concatenation(
-        pybamm.Broadcast(beta_n, ["negative electrode"]),
-        pybamm.Broadcast(0, ["separator"]),
-        pybamm.Broadcast(beta_p, ["positive electrode"]),
-    ),
-    "current collector",
+beta = pybamm.Concatenation(
+    pybamm.FullBroadcast(beta_n, "negative electrode", "current collector"),
+    pybamm.FullBroadcast(0, "separator", "current collector"),
+    pybamm.FullBroadcast(beta_p, "positive electrode", "current collector"),
 )
 beta_Ox = -c_e_typ * (s_plus_Ox * V_plus + s_w_Ox * V_w + s_ox_Ox * V_ox)
 beta_Hy = -c_e_typ * (s_plus_Hy * V_plus + s_hy_Hy * V_hy)

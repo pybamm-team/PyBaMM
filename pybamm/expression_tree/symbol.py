@@ -30,7 +30,7 @@ def domain_size(domain):
     }
     if isinstance(domain, str):
         domain = [domain]
-    if domain == []:
+    if domain in [[], None]:
         size = 1
     elif all(dom in fixed_domain_sizes for dom in domain):
         size = sum(fixed_domain_sizes[dom] for dom in domain)
@@ -47,13 +47,14 @@ def create_object_of_size(size, typ="vector"):
         return np.nan * np.ones((size, size))
 
 
-def evaluate_for_shape_using_domain(domain, typ="vector"):
+def evaluate_for_shape_using_domain(domain, secondary_domain=None, typ="vector"):
     """
     Return a vector of the appropriate shape, based on the domain.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
     """
-    size = domain_size(domain)
-    return create_object_of_size(size, typ)
+    _domain_size = domain_size(domain)
+    _secondary_domain_size = domain_size(secondary_domain)
+    return create_object_of_size(_domain_size * _secondary_domain_size, typ)
 
 
 class Symbol(anytree.NodeMixin):
@@ -72,9 +73,20 @@ class Symbol(anytree.NodeMixin):
 
     """
 
-    def __init__(self, name, children=[], domain=[]):
+    def __init__(self, name, children=None, domain=None, secondary_domain=None):
         super(Symbol, self).__init__()
         self.name = name
+
+        if children is None:
+            children = []
+        if domain is None:
+            domain = []
+        elif isinstance(domain, str):
+            domain = [domain]
+        if secondary_domain is None:
+            secondary_domain = []
+        elif isinstance(secondary_domain, str):
+            secondary_domain = [secondary_domain]
 
         for child in children:
             # copy child before adding
@@ -84,6 +96,8 @@ class Symbol(anytree.NodeMixin):
         # cache children
         self.cached_children = super(Symbol, self).children
 
+        # Set secondary domain
+        self.secondary_domain = secondary_domain
         # Set domain (and hence id)
         self.domain = domain
 
@@ -160,6 +174,7 @@ class Symbol(anytree.NodeMixin):
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
+            + tuple(self.secondary_domain)
         )
 
     @property
@@ -264,6 +279,7 @@ class Symbol(anytree.NodeMixin):
             self._name,
             [str(child) for child in self.children],
             [str(subdomain) for subdomain in self.domain],
+            [str(subdomain) for subdomain in self.secondary_domain],
         )
 
     def __add__(self, other):
