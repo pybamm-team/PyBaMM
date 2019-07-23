@@ -30,13 +30,6 @@ class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
-        # try:
-        #     c_e_1_av = variables[
-        #         "Average first-order "
-        #         + self.domain.lower()
-        #         + " electrolyte concentration"
-        #     ]
-        # except KeyError:
         c_e_0 = variables["Leading-order average electrolyte concentration"]
         c_e_av = variables[
             "Average " + self.domain.lower() + " electrolyte concentration"

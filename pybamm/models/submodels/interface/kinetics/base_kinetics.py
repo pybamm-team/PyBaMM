@@ -6,7 +6,7 @@ import pybamm
 from ..base_interface import BaseInterface
 
 
-class BaseKinetics(BaseInterface):
+class BaseModel(BaseInterface):
     """
     Base submodel for kinetics
 
@@ -102,6 +102,9 @@ class BaseKinetics(BaseInterface):
         return j.diff(delta_phi)
 
     def _get_interface_variables_for_first_order(self, variables):
+        # This is a bit of a hack, but we need to multiply electrolyte concentration by
+        # one to differentiate it from the electrolyte concentration inside the
+        # surface potential difference when taking j.diff(c_e) later on
         c_e_0 = variables["Leading-order average electrolyte concentration"] * 1
         hacked_variables = {
             **variables,
