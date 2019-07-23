@@ -86,8 +86,8 @@ class Discretisation(object):
         self.set_variable_slices(variables)
 
         # set boundary conditions (only need key ids for boundary_conditions)
-        model = self.set_internal_boundary_conditions(model)
         self.bcs = self.process_boundary_conditions(model)
+        self.set_internal_boundary_conditions(model)
 
         # set up inplace vs not inplace
         if inplace:
@@ -105,15 +105,15 @@ class Discretisation(object):
         model_disc.initial_conditions = ics
         model_disc.concatenated_initial_conditions = concat_ics
 
-        # Process parabolic and elliptic equations
-        rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
-        model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
-        model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
-
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
         # model.initial_conditions and model.boundary_conditions
         model_disc.variables = self.process_dict(model.variables)
+
+        # Process parabolic and elliptic equations
+        rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
+        model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
+        model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
 
         # Process events
         processed_events = {}
@@ -177,23 +177,23 @@ class Discretisation(object):
         Note: this method modifies the state of self.boundary_conditions.
         """
 
-        def boundary_gradient(left_orphan, right_orphan):
+        def boundary_gradient(left_symbol, right_symbol):
 
-            left_domain = left_orphan.domain[0]
-            right_domain = right_orphan.domain[0]
+            left_domain = left_symbol.domain[0]
+            right_domain = right_symbol.domain[0]
 
-            left_submesh = self._spatial_methods[left_domain].mesh[left_domain][0]
-            right_submesh = self._spatial_methods[right_domain].mesh[right_domain][0]
+            left_mesh = self._spatial_methods[left_domain].mesh[left_domain]
+            right_mesh = self._spatial_methods[right_domain].mesh[right_domain]
 
-            x_left = left_submesh.nodes[-1]
-            x_right = right_submesh.nodes[0]
+            left_symbol_disc = self.process_symbol(left_symbol)
+            right_symbol_disc = self.process_symbol(right_symbol)
 
-            dy = pybamm.Index(right_orphan, 0) - pybamm.Index(left_orphan, -1)
-            dx = x_right - x_left
+            return self._spatial_methods[left_domain].internal_neumann_condition(
+                left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
+            )
 
-            return dy / dx
-
-        bc_key_ids = [key.id for key in list(model.boundary_conditions.keys())]
+        # bc_key_ids = [key.id for key in list(model.boundary_conditions.keys())]
+        bc_key_ids = list(self.bcs.keys())
 
         internal_bcs = {}
         for var in model.boundary_conditions.keys():
@@ -205,11 +205,11 @@ class Discretisation(object):
                 next_child = children[1]
                 next_orphan = next_child.new_copy()
 
-                lbc = model.boundary_conditions[var]["left"]
+                lbc = self.bcs[var.id]["left"]
                 rbc = (boundary_gradient(first_orphan, next_orphan), "Neumann")
 
                 if first_child.id not in bc_key_ids:
-                    internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
+                    internal_bcs.update({first_child.id: {"left": lbc, "right": rbc}})
 
                 for i, _ in enumerate(children[1:-1]):
                     current_child = next_child
@@ -221,16 +221,15 @@ class Discretisation(object):
                     rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
                     if current_child.id not in bc_key_ids:
                         internal_bcs.update(
-                            {current_child: {"left": lbc, "right": rbc}}
+                            {current_child.id: {"left": lbc, "right": rbc}}
                         )
 
                 lbc = rbc
-                rbc = model.boundary_conditions[var]["right"]
+                rbc = self.bcs[var.id]["right"]
                 if children[-1].id not in bc_key_ids:
-                    internal_bcs.update({children[-1]: {"left": lbc, "right": rbc}})
+                    internal_bcs.update({children[-1].id: {"left": lbc, "right": rbc}})
 
-        model.boundary_conditions.update(internal_bcs)
-        return model
+        self.bcs.update(internal_bcs)
 
     def process_initial_conditions(self, model):
         """Discretise model initial_conditions.
@@ -275,7 +274,11 @@ class Discretisation(object):
             Dictionary of processed boundary conditions
 
         """
+
         processed_bcs = {}
+
+        # process and set pybamm.variables first incase required
+        # in discrisation of other boundary conditions
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
             for side, bc in bcs.items():
@@ -285,6 +288,16 @@ class Discretisation(object):
                 processed_bcs[key.id][side] = (processed_eqn, typ)
 
         return processed_bcs
+
+    def _process_bc_entry(self, key, bcs):
+        processed_entry = {key.id: {}}
+        for side, bc in bcs.items():
+            eqn, typ = bc
+            pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
+            processed_eqn = self.process_symbol(eqn)
+            processed_entry[key.id][side] = (processed_eqn, typ)
+
+        return processed_entry
 
     def process_rhs_and_algebraic(self, model):
         """Discretise model equations - differential ('rhs') and algebraic.
@@ -341,6 +354,8 @@ class Discretisation(object):
         :class:`pybamm.Matrix`
             The mass matrix
         """
+        pybamm.logger.debug("Create mass matrix")
+
         # Create list of mass matrices for each equation to be put into block
         # diagonal mass matrix for the model
         mass_list = []
@@ -413,7 +428,10 @@ class Discretisation(object):
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
+
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
+
+            new_var_eqn_dict[eqn_key].test_shape()
 
         return new_var_eqn_dict
 
@@ -493,7 +511,9 @@ class Discretisation(object):
                 if symbol.domain == []:
                     symbol = disc_child * pybamm.Vector(np.array([1]))
                 else:
-                    symbol = spatial_method.broadcast(disc_child, symbol.domain)
+                    symbol = spatial_method.broadcast(
+                        disc_child, symbol.domain, symbol.broadcast_type
+                    )
                 return symbol
 
             elif isinstance(symbol, pybamm.BoundaryOperator):

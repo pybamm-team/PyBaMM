@@ -19,17 +19,29 @@ class BaseModel(pybamm.BaseSubModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_standard_fundamental_variables(self, T, T_av):
+    def _get_standard_fundamental_variables(self, T):
         param = self.param
         T_n, T_s, T_p = T.orphans
+        T_av = pybamm.average(T)
 
         q = self._flux_law(T)
 
         variables = {
+            "Average negative electrode temperature": pybamm.average(T_n),
+            "Average negative electrode temperature [K]": param.Delta_T
+            * pybamm.average(T_n)
+            + param.T_ref,
             "Negative electrode temperature": T_n,
             "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
+            "Average separator temperature": pybamm.average(T_s),
+            "Average separator temperature [K]": param.Delta_T * pybamm.average(T_s)
+            + param.T_ref,
             "Separator temperature": T_s,
             "Separator temperature [K]": param.Delta_T * T_s + param.T_ref,
+            "Average positive electrode temperature": pybamm.average(T_p),
+            "Average positive electrode temperature [K]": param.Delta_T
+            * pybamm.average(T_p)
+            + param.T_ref,
             "Positive electrode temperature": T_p,
             "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
             "Cell temperature": T,
@@ -58,18 +70,22 @@ class BaseModel(pybamm.BaseSubModel):
         dUdT_n = variables["Negative electrode entropic change"]
         dUdT_p = variables["Positive electrode entropic change"]
 
-        # i_e = variables["Electrolyte current density"]
-        # phi_e = variables["Electrolyte potential"]
+        i_e = variables["Electrolyte current density"]
+        phi_e = variables["Electrolyte potential"]
 
-        # phi_s_n = variables["Negative electrode potential"]
-        # phi_s_s = pybamm.Broadcast(0, ["separator"])
-        # phi_s_p = variables["Positive electrode potential"]
-        # phi_s = pybamm.Concatenation(phi_s_n, phi_s_s, phi_s_p)
+        i_s_n = variables["Negative electrode current density"]
+        i_s_p = variables["Positive electrode current density"]
+        phi_s_n = variables["Negative electrode potential"]
+        phi_s_p = variables["Positive electrode potential"]
 
-        # TODO: add ohmic heating from solid and electrolyte
-        # Q_ohm = -i_s * pybamm.grad(phi_s) - i_e * pybamm.grad(phi_e)
-        # Q_ohm = -pybamm.inner(i_e, pybamm.grad(phi_e))
-        Q_ohm = pybamm.Scalar(0)
+        Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
+        Q_ohm_s_s = pybamm.Broadcast(0, ["separator"])
+        Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
+        Q_ohm_s = pybamm.Concatenation(Q_ohm_s_n, Q_ohm_s_s, Q_ohm_s_p)
+
+        Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
+
+        Q_ohm = Q_ohm_s + Q_ohm_e
 
         Q_rxn_n = j_n * eta_r_n
         Q_rxn_p = j_p * eta_r_p
@@ -131,4 +147,3 @@ class BaseModel(pybamm.BaseSubModel):
         T, _, _ = self._unpack(variables)
 
         self.initial_conditions = {T: self.param.T_init}
-

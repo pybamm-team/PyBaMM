@@ -20,8 +20,28 @@ class BaseModel(BaseElectrode):
     **Extends:** :class:`pybamm.electrode.BaseElectrode`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reactions=None):
+        super().__init__(param, domain, reactions)
+
+    def set_boundary_conditions(self, variables):
+
+        phi_s = variables[self.domain + " electrode potential"]
+        eps = variables[self.domain + " electrode porosity"]
+        i_boundary_cc = variables["Current collector current density"]
+
+        if self.domain == "Negative":
+            lbc = (pybamm.Scalar(0), "Dirichlet")
+            rbc = (pybamm.Scalar(0), "Neumann")
+
+        elif self.domain == "Positive":
+            lbc = (pybamm.Scalar(0), "Neumann")
+            sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b
+            rbc = (
+                i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
+                "Neumann",
+            )
+
+        self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
     @property
     def default_solver(self):

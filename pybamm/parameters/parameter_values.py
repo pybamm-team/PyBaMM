@@ -60,10 +60,22 @@ class ParameterValues(dict):
         return {k: v for (k, v) in zip(df["Name [units]"], df["Value"])}
 
     def update(self, values):
+        # check parameter values
+        self.check_parameter_values(values)
+        # update
         for k, v in values.items():
             self[k] = v
         # reset processed symbols
         self._processed_symbols = {}
+
+    def check_parameter_values(self, values):
+        if "Typical current [A]" in values and values["Typical current [A]"] == 0:
+            raise ValueError(
+                """
+                "Typical current [A]" cannot be zero. A possible alternative is to set
+                "Current function" to `pybamm.GetConstantCurrent(current=0)` instead
+                """
+            )
 
     def process_model(self, model, processing="process"):
         """Assign parameter values to a model.
@@ -267,7 +279,9 @@ class ParameterValues(dict):
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.child)
             if isinstance(symbol, pybamm.Broadcast):
-                new_symbol = pybamm.Broadcast(new_child, symbol.domain)
+                new_symbol = pybamm.Broadcast(
+                    new_child, symbol.domain, broadcast_type=symbol.broadcast_type
+                )
             elif isinstance(symbol, pybamm.Integral):
                 new_symbol = symbol.__class__(new_child, symbol.integration_variable)
             elif isinstance(symbol, pybamm.BoundaryOperator):

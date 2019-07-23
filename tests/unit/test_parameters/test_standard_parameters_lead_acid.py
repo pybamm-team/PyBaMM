@@ -107,14 +107,26 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_functions_lead_acid(self):
         # Load parameters to be tested
         parameters = {
-            "D_e_1": pybamm.standard_parameters_lead_acid.D_e(pybamm.Scalar(1)),
-            "kappa_e_0": pybamm.standard_parameters_lead_acid.kappa_e(pybamm.Scalar(0)),
+            "D_e_1": pybamm.standard_parameters_lead_acid.D_e(
+                pybamm.Scalar(1), pybamm.Scalar(0)
+            ),
+            "kappa_e_0": pybamm.standard_parameters_lead_acid.kappa_e(
+                pybamm.Scalar(0), pybamm.Scalar(0)
+            ),
             "chi_1": pybamm.standard_parameters_lead_acid.chi(pybamm.Scalar(1)),
             "chi_0.5": pybamm.standard_parameters_lead_acid.chi(pybamm.Scalar(0.5)),
-            "U_n_1": pybamm.standard_parameters_lead_acid.U_n(pybamm.Scalar(1)),
-            "U_n_0.5": pybamm.standard_parameters_lead_acid.U_n(pybamm.Scalar(0.5)),
-            "U_p_1": pybamm.standard_parameters_lead_acid.U_p(pybamm.Scalar(1)),
-            "U_p_0.5": pybamm.standard_parameters_lead_acid.U_p(pybamm.Scalar(0.5)),
+            "U_n_1": pybamm.standard_parameters_lead_acid.U_n(
+                pybamm.Scalar(1), pybamm.Scalar(0)
+            ),
+            "U_n_0.5": pybamm.standard_parameters_lead_acid.U_n(
+                pybamm.Scalar(0.5), pybamm.Scalar(0)
+            ),
+            "U_p_1": pybamm.standard_parameters_lead_acid.U_p(
+                pybamm.Scalar(1), pybamm.Scalar(0)
+            ),
+            "U_p_0.5": pybamm.standard_parameters_lead_acid.U_p(
+                pybamm.Scalar(0.5), pybamm.Scalar(0)
+            ),
         }
         # Process
         input_path = os.path.join(os.getcwd(), "input", "parameters", "lead-acid")
@@ -185,4 +197,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

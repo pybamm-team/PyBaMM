@@ -23,6 +23,7 @@ class BaseInterfaceLeadAcid(BaseInterface):
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
+        self.reaction_name = ""  # empty reaction name, assumed to be the main reaction
 
     def _get_exchange_current_density(self, variables):
         """
@@ -40,6 +41,9 @@ class BaseInterfaceLeadAcid(BaseInterface):
             The exchange current density.
         """
         c_e = variables[self.domain + " electrolyte concentration"]
+        # If c_e was broadcast, take only the orphan
+        if isinstance(c_e, pybamm.Broadcast):
+            c_e = c_e.orphans[0]
 
         if self.domain == "Negative":
             j0 = self.param.j0_n_S_ref * c_e
@@ -50,51 +54,49 @@ class BaseInterfaceLeadAcid(BaseInterface):
 
         return j0
 
-    def _get_standard_ocp_variables(self, variables):
+    def _get_open_circuit_potential(self, variables):
         """
-        A private function to obtain the open circuit potential and
-        related standard variables.
+        A private function to obtain the open circuit potential and entropic change
 
         Parameters
         ----------
-        c_e : :class:`pybamm.Symbol`
-            The concentration in the electrolyte.
+        variables: dict
+            The variables in the full model.
 
         Returns
         -------
-        variables : dict
-            The variables dictionary including the open circuit potentials
-            and related standard variables.
+        ocp : :class:`pybamm.Symbol`
+            The open-circuit potential
+        dUdT : :class:`pybamm.Symbol`
+            The entropic change in open-circuit potential due to temperature
+
         """
 
         c_e = variables[self.domain + " electrolyte concentration"]
+        # If c_e was broadcast, take only the orphan
+        if isinstance(c_e, pybamm.Broadcast):
+            c_e = c_e.orphans[0]
+
         if self.domain == "Negative":
-            ocp = self.param.U_n(c_e)
-            ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
+            ocp = self.param.U_n(c_e, self.param.T_ref)
         elif self.domain == "Positive":
-            ocp = self.param.U_p(c_e)
-            ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
+            ocp = self.param.U_p(c_e, self.param.T_ref)
 
-        ocp_av = pybamm.average(ocp)
-        ocp_av_dim = pybamm.average(ocp_dim)
+        dUdT = pybamm.Scalar(0)
 
-        variables = {
-            self.domain + " electrode open circuit potential": ocp,
-            self.domain + " electrode open circuit potential [V]": ocp_dim,
-            "Average "
-            + self.domain.lower()
-            + " electrode open circuit potential": ocp_av,
-            "Average "
-            + self.domain.lower()
-            + " electrode open circuit potential [V]": ocp_av_dim,
-        }
+        return ocp, dUdT
 
-        return variables
+    def _get_number_of_electrons_in_reaction(self):
+        if self.domain == "Negative":
+            ne = self.param.ne_n
+        elif self.domain == "Positive":
+            ne = self.param.ne_p
+        return ne
 
 
 class ButlerVolmer(BaseInterfaceLeadAcid, kinetics.BaseButlerVolmer):
     """
-    Extends :class:`BaseInterfaceLeadIon` (for exchange-current density, etc) and
+    Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
     :class:`kinetics.BaseButlerVolmer` (for kinetics)
     """
 

@@ -81,7 +81,7 @@ class TestQuickPlot(unittest.TestCase):
 
         # SPM
         options = {"thermal": None, "Voltage": "on"}
-        for model in [pybamm.lithium_ion.SPM(options), pybamm.old_lead_acid.OldLOQS()]:
+        for model in [pybamm.lithium_ion.SPM(options), pybamm.lead_acid.LOQS()]:
             geometry = model.default_geometry
             param = model.default_parameter_values
             param.process_model(model)
@@ -114,4 +114,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

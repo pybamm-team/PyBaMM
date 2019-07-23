@@ -60,9 +60,7 @@ class QuickPlot(object):
 
     def __init__(self, models, mesh, solutions, output_variables=None, labels=None):
         # Pre-process models and solutions
-        if isinstance(models, pybamm.BaseModel) or isinstance(
-            models, pybamm.OldBaseModel
-        ):
+        if isinstance(models, pybamm.BaseModel):
             models = [models]
         elif not isinstance(models, list):
             raise TypeError("'models' must be 'pybamm.BaseModel' or list")

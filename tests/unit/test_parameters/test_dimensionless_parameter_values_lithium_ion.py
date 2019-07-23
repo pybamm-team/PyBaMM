@@ -55,7 +55,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         "reaction rates"
         # m_n*
         np.testing.assert_almost_equal(
-            values.process_symbol(param.m_n_dimensional).evaluate(None, None),
+            values.process_symbol(param.m_n_dimensional(param.T_ref)).evaluate(
+                None, None
+            ),
             2 * 10 ** (-5),
             8,
         )
@@ -68,7 +70,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # m_p*
         np.testing.assert_almost_equal(
-            values.process_symbol(param.m_p_dimensional).evaluate(None, None),
+            values.process_symbol(param.m_p_dimensional(param.T_ref)).evaluate(
+                None, None
+            ),
             6 * 10 ** (-7),
             8,
         )
@@ -85,9 +89,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         "particle dynamics"
         # neg diffusion coefficient
         np.testing.assert_almost_equal(
-            values.process_symbol(param.D_n_dimensional(param.c_n_init)).evaluate(
-                None, None
-            ),
+            values.process_symbol(
+                param.D_n_dimensional(param.c_n_init, param.T_ref)
+            ).evaluate(None, None),
             3.9 * 10 ** (-14),
             2,
         )
@@ -106,9 +110,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # pos diffusion coefficient
         np.testing.assert_almost_equal(
-            values.process_symbol(param.D_p_dimensional(param.c_p_init)).evaluate(
-                None, None
-            ),
+            values.process_symbol(
+                param.D_p_dimensional(param.c_p_init, param.T_ref)
+            ).evaluate(None, None),
             1 * 10 ** (-13),
             2,
         )
@@ -130,9 +134,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # match this one. We take this parameter excluding the exp(-0.65) in the
         # paper at the moment
         np.testing.assert_almost_equal(
-            values.process_symbol(param.D_e_dimensional(param.c_e_typ)).evaluate(
-                None, None
-            ),
+            values.process_symbol(
+                param.D_e_dimensional(param.c_e_typ, param.T_ref)
+            ).evaluate(None, None),
             5.34 * 10 ** (-10) * np.exp(-0.65),
             10,
         )
@@ -152,9 +156,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # electrolyte conductivity
         np.testing.assert_almost_equal(
-            values.process_symbol(param.kappa_e_dimensional(param.c_e_typ)).evaluate(
-                None, None
-            ),
+            values.process_symbol(
+                param.kappa_e_dimensional(param.c_e_typ, param.T_ref)
+            ).evaluate(None, None),
             1.1045,
             3,
         )
@@ -171,9 +175,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         "electrode conductivities"
         # neg dimensional
         np.testing.assert_almost_equal(
-            values.process_symbol(param.sigma_n_dim).evaluate(None, None),
-            100,
-            3,
+            values.process_symbol(param.sigma_n_dim).evaluate(None, None), 100, 3
         )
 
         # neg dimensionless (old sigma_n / old_Lambda ) (this is different to values
@@ -272,18 +274,19 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         param = pybamm.standard_parameters_lithium_ion
 
         c_test = pybamm.Scalar(0.5)
+        T_test = pybamm.Scalar(0)
 
-        values.process_symbol(param.U_n(c_test)).evaluate()
-        values.process_symbol(param.U_p(c_test)).evaluate()
+        values.process_symbol(param.U_n(c_test, T_test)).evaluate()
+        values.process_symbol(param.U_p(c_test, T_test)).evaluate()
         values.process_symbol(param.dUdT_n(c_test)).evaluate()
         values.process_symbol(param.dUdT_p(c_test)).evaluate()
 
-        values.process_symbol(param.D_p(c_test)).evaluate()
-        values.process_symbol(param.D_n(c_test)).evaluate()
+        values.process_symbol(param.D_p(c_test, T_test)).evaluate()
+        values.process_symbol(param.D_n(c_test, T_test)).evaluate()
 
         c_e_test = pybamm.Scalar(1)
-        values.process_symbol(param.D_e(c_e_test)).evaluate()
-        values.process_symbol(param.kappa_e(c_e_test)).evaluate()
+        values.process_symbol(param.D_e(c_e_test, T_test)).evaluate()
+        values.process_symbol(param.kappa_e(c_e_test, T_test)).evaluate()
 
 
 if __name__ == "__main__":
@@ -292,4 +295,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

@@ -44,7 +44,7 @@ class SurfaceForm(BaseModel):
             phi_e_s = variables["Separator electrolyte potential"]
             delta_phi_p = variables["Positive electrode surface potential difference"]
 
-            conductivity = param.sigma_n * (1 - eps) ** param.b
+            conductivity = param.sigma_p * (1 - eps) ** param.b
             phi_s = (
                 -pybamm.IndefiniteIntegral(i_s / conductivity, x_p)
                 + pybamm.boundary_value(phi_e_s, "right")
@@ -54,7 +54,10 @@ class SurfaceForm(BaseModel):
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 
-        if self.domain == "Positive":
+        if (
+            "Negative electrode current density" in variables
+            and "Positive electrode current density" in variables
+        ):
             variables.update(self._get_standard_whole_cell_current_variables(variables))
 
         return variables

@@ -16,8 +16,8 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     """
 
-    def __init__(self, options=None):
-        super().__init__(options)
+    def __init__(self, options=None, name="Unnamed lead-acid model"):
+        super().__init__(options, name)
         self.param = pybamm.standard_parameters_lead_acid
 
     @property
@@ -81,3 +81,31 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Discharge capacity [A.h]": I * pybamm.t * time_scale / 3600,
             }
         )
+
+    def set_reactions(self):
+
+        # Should probably refactor as this is a bit clunky at the moment
+        # Maybe each reaction as a Reaction class so we can just list names of classes
+        param = self.param
+        icd = " interfacial current density"
+        self.reactions = {
+            "main": {
+                "Negative": {"s": param.s_n, "aj": "Negative electrode" + icd},
+                "Positive": {"s": param.s_p, "aj": "Positive electrode" + icd},
+            }
+        }
+        if "oxygen" in self.options["side reactions"]:
+            self.reactions["oxygen"] = {
+                "Negative": {
+                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s_ox": -param.s_ox_Ox,
+                    "aj": "Negative electrode oxygen" + icd,
+                },
+                "Positive": {
+                    "s": -(param.s_plus_Ox + param.t_plus),
+                    "s_ox": -param.s_ox_Ox,
+                    "aj": "Positive electrode oxygen" + icd,
+                },
+            }
+            self.reactions["main"]["Negative"]["s_ox"] = 0
+            self.reactions["main"]["Positive"]["s_ox"] = 0

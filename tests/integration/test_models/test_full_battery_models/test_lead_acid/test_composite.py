@@ -8,7 +8,6 @@ import unittest
 import numpy as np
 
 
-@unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestLeadAcidComposite(unittest.TestCase):
     def test_basic_processing(self):
         options = {"thermal": None, "convection": False}

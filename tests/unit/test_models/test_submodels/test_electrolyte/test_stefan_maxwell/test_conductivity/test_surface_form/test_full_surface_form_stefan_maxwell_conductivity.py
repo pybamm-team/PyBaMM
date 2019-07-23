@@ -19,10 +19,22 @@ class TestFull(unittest.TestCase):
             "Negative electrode porosity": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative electrode interfacial current density": a_n,
+            "Electrolyte potential": pybamm.Concatenation(a_n, a_s, a_p),
+            "Negative electrode temperature": a_n,
+        }
+        icd = " interfacial current density"
+        reactions = {
+            "main": {
+                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
+                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
+            }
         }
 
         spf = pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form
-        submodel = spf.Full(param, "Negative")
+        submodel = spf.FullAlgebraic(param, "Negative", reactions)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+        submodel = spf.FullDifferential(param, "Negative", reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -35,8 +47,12 @@ class TestFull(unittest.TestCase):
             "Positive electrode porosity": a_p,
             "Positive electrolyte concentration": a_p,
             "Positive electrode interfacial current density": a_p,
+            "Positive electrode temperature": a_p,
         }
-        submodel = spf.Full(param, "Positive")
+        submodel = spf.FullAlgebraic(param, "Positive", reactions)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+        submodel = spf.FullDifferential(param, "Positive", reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -47,4 +63,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

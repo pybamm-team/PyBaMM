@@ -125,6 +125,7 @@ class OdeSolver(pybamm.BaseSolver):
             # create simplified rhs and event expressions
             pybamm.logger.info("Simplifying RHS")
             concatenated_rhs = simp.simplify(concatenated_rhs)
+
             pybamm.logger.info("Simplifying events")
             events = {name: simp.simplify(event) for name, event in events.items()}
 
@@ -133,6 +134,7 @@ class OdeSolver(pybamm.BaseSolver):
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))
+
             pybamm.logger.info("Calculating jacobian")
             jac_rhs = concatenated_rhs.jac(y)
             if model.use_simplify:
