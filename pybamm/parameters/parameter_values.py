@@ -285,21 +285,13 @@ class ParameterValues(dict):
 
         # Functions
         elif isinstance(symbol, pybamm.Function):
-            new_children = [None] * len(symbol.children)
-            for i, child in enumerate(symbol.children):
-                new_children[i] = self.process_symbol(child)
+            new_children = [self.process_symbol(child) for child in symbol.children]
             return symbol._function_new_copy(new_children)
+
         # Concatenations
         elif isinstance(symbol, pybamm.Concatenation):
-            new_children = []
-            for child in symbol.children:
-                new_child = self.process_symbol(child)
-                new_children.append(new_child)
-            if isinstance(symbol, pybamm.DomainConcatenation):
-                return pybamm.DomainConcatenation(new_children, symbol.mesh)
-            else:
-                # Concatenation or NumpyConcatenation
-                return symbol.__class__(*new_children)
+            new_children = [self.process_symbol(child) for child in symbol.children]
+            return symbol._concatenation_new_copy(new_children)
 
         else:
             # Backup option: return new copy of the object

@@ -176,4 +176,4 @@ T_p = pybamm.Variable(
     secondary_domain="current collector",
 )
 T = pybamm.Concatenation(T_n, T_s, T_p)
-T_av = pybamm.Variable("Average cell temperature")
+T_av = pybamm.Variable("Average cell temperature", domain="current collector")
