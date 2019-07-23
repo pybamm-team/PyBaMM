@@ -14,20 +14,20 @@ def electrolyte_conductivity_Capiglia1999(c_e, T, T_inf, E_k_e, R_g):
     .. [2] http://www.cchem.berkeley.edu/jsngrp/fortran.html
     Parameters
     ----------
-    c_e: :class: `pybamm.Symbol`
+    c_e: :class: `numpy.Array`
         Dimensional electrolyte concentration
-    T: :class: `pybamm.Symbol`
+    T: :class: `numpy.Array`
         Dimensional temperature
-    T_inf: :class: `pybamm.Parameter`
+    T_inf: double
         Reference temperature
-    E_k_e: :class: `pybamm.Parameter`
+    E_k_e: double
         Electrolyte conductivity activation energy
-    R_g: :class: `pybamm.Parameter`
+    R_g: double
         The ideal gas constant
 
     Returns
     -------
-    :`pybamm.Symbol`
+    :`numpy.Array`
         Solid diffusivity
     """
 

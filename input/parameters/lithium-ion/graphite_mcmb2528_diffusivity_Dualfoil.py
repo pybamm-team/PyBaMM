@@ -12,20 +12,20 @@ def graphite_mcmb2528_diffusivity_Dualfoil(sto, T, T_inf, E_D_s, R_g):
 
       Parameters
       ----------
-      sto: :class: `pybamm.Symbol`
+      sto: :class: `numpy.Array`
          Electrode stochiometry
-      T: :class: `pybamm.Symbol`
+      T: :class: `numpy.Array`
          Dimensional temperature
-      T_inf: :class: `pybamm.Parameter`
+      T_inf: double
          Reference temperature
-      E_D_s: :class: `pybamm.Parameter`
+      E_D_s: double
          Solid diffusion activation energy
-      R_g: :class: `pybamm.Parameter`
+      R_g: double
          The ideal gas constant
 
       Returns
       -------
-      :`pybamm.Symbol`
+      : double
          Solid diffusivity
    """
 

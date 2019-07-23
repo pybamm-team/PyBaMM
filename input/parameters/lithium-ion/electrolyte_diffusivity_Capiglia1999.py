@@ -15,20 +15,20 @@ def electrolyte_diffusivity_Capiglia1999(c_e, T, T_inf, E_D_e, R_g):
 
     Parameters
     ----------
-    c_e: :class: `pybamm.Symbol`
+    c_e: :class: `numpy.Array`
         Dimensional electrolyte concentration
-    T: :class: `pybamm.Symbol`
+    T: :class: `numpy.Array`
         Dimensional temperature
-    T_inf: :class: `pybamm.Parameter`
+    T_inf: double
         Reference temperature
-    E_D_e: :class: `pybamm.Parameter`
+    E_D_e: double
         Electrolyte diffusion activation energy
-    R_g: :class: `pybamm.Parameter`
+    R_g: double
         The ideal gas constant
 
     Returns
     -------
-    :`pybamm.Symbol`
+    :`numpy.Array`
         Solid diffusivity
     """
 

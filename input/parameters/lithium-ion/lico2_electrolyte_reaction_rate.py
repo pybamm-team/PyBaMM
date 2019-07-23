@@ -11,18 +11,18 @@ def lico2_electrolyte_reaction_rate(T, T_inf, E_r, R_g):
 
     Parameters
     ----------
-    T: :class: `pybamm.Symbol`
+    T: :class: `numpy.Array`
         Dimensional temperature
-    T_inf: :class: `pybamm.Parameter`
+    T_inf: double
         Reference temperature
-    E_r: :class: `pybamm.Parameter`
+    E_r: double
         Reaction activation energy
-    R_g: :class: `pybamm.Parameter`
+    R_g: double
         The ideal gas constant
 
     Returns
     -------
-    :`pybamm.Symbol`
+    : double
         Reaction rate
     """
     m_ref = 6 * 10 ** (-7)
