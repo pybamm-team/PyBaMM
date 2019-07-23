@@ -55,6 +55,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Positive electrode diffusivity": os.path.join(
                     input_path, "lico2_diffusivity_Dualfoil.py"
                 ),
+                "Negative electrode reaction rate": os.path.join(
+                    input_path, "graphite_electrolyte_reaction_rate.py"
+                ),
+                "Positive electrode reaction rate": os.path.join(
+                    input_path, "lico2_electrolyte_reaction_rate.py"
+                ),
                 "Negative electrode OCV entropic change": os.path.join(
                     input_path, "graphite_entropic_change_Moura.py"
                 ),

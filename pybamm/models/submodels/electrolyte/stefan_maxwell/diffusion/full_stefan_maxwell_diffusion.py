@@ -35,10 +35,11 @@ class Full(BaseModel):
         c_e = variables["Electrolyte concentration"]
         # i_e = variables["Electrolyte current density"]
         v_box = variables["Volume-averaged velocity"]
+        T = variables["Cell temperature"]
 
         param = self.param
 
-        N_e_diffusion = -(eps ** param.b) * param.D_e(c_e) * pybamm.grad(c_e)
+        N_e_diffusion = -(eps ** param.b) * param.D_e(c_e, T) * pybamm.grad(c_e)
         # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
         # N_e_convection = c_e * v_box
 

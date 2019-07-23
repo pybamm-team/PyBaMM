@@ -23,6 +23,7 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         self.param.epsilon_s = pybamm.Scalar(1)
         self.param.epsilon_p = pybamm.Scalar(1)
 
+        self.set_thermal_submodel()
         self.set_reactions()
         self.set_current_collector_submodel()
         self.set_convection_submodel()
@@ -31,6 +32,9 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         self.set_electrolyte_submodel()
 
         self.build_model()
+
+    def set_thermal_submodel(self):
+        self.submodels["thermal"] = pybamm.thermal.Isothermal(self.param)
 
     def set_current_collector_submodel(self):
 
