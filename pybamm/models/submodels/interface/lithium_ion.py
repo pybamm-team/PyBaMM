@@ -41,17 +41,13 @@ class BaseInterfaceLithiumIon(BaseInterface):
         """
         c_s_surf = variables[self.domain + " particle surface concentration"]
         c_e = variables[self.domain + " electrolyte concentration"]
-        # # If c_e or c_s_surf was broadcast, take only the orphan
-        # if isinstance(c_s_surf, pybamm.Broadcast):
-        #     c_s_surf = c_s_surf.orphans[0]
-        # if isinstance(c_e, pybamm.Broadcast):
-        #     c_e = c_e.orphans[0]
+        T = variables[self.domain + " electrode temperature"]
 
         if self.domain == "Negative":
-            prefactor = 1 / self.param.C_r_n
+            prefactor = self.param.m_n(T) / self.param.C_r_n
 
         elif self.domain == "Positive":
-            prefactor = self.param.gamma_p / self.param.C_r_p
+            prefactor = self.param.gamma_p * self.param.m_p(T) / self.param.C_r_p
 
         j0 = prefactor * (
             c_e ** (1 / 2) * c_s_surf ** (1 / 2) * (1 - c_s_surf) ** (1 / 2)
@@ -77,16 +73,14 @@ class BaseInterfaceLithiumIon(BaseInterface):
 
         """
         c_s_surf = variables[self.domain + " particle surface concentration"]
-        # # If c_s_surf was broadcast, take only the orphan
-        # if isinstance(c_s_surf, pybamm.Broadcast):
-        #     c_s_surf = c_s_surf.orphans[0]
+        T = variables[self.domain + " electrode temperature"]
 
         if self.domain == "Negative":
-            ocp = self.param.U_n(c_s_surf)
+            ocp = self.param.U_n(c_s_surf, T)
             dUdT = self.param.dUdT_n(c_s_surf)
 
         elif self.domain == "Positive":
-            ocp = self.param.U_p(c_s_surf)
+            ocp = self.param.U_p(c_s_surf, T)
             dUdT = self.param.dUdT_p(c_s_surf)
 
         return ocp, dUdT

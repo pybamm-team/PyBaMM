@@ -61,6 +61,7 @@ class HigherOrderBaseModel(BaseModel):
             "Porosity",
             "Porosity change",
             "Volume-averaged velocity",
+            "Cell temperature",
         ]:
             self.variables[
                 "Leading-order " + variable.lower()

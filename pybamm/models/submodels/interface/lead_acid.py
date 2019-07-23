@@ -78,9 +78,9 @@ class BaseInterfaceLeadAcid(BaseInterface):
             c_e = c_e.orphans[0]
 
         if self.domain == "Negative":
-            ocp = self.param.U_n(c_e)
+            ocp = self.param.U_n(c_e, self.param.T_ref)
         elif self.domain == "Positive":
-            ocp = self.param.U_p(c_e)
+            ocp = self.param.U_p(c_e, self.param.T_ref)
 
         dUdT = pybamm.Scalar(0)
 

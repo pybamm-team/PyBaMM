@@ -20,6 +20,7 @@ class TestFull(unittest.TestCase):
             "Negative electrolyte concentration": a_n,
             "Negative electrode interfacial current density": a_n,
             "Electrolyte potential": pybamm.Concatenation(a_n, a_s, a_p),
+            "Negative electrode temperature": a_n,
         }
         icd = " interfacial current density"
         reactions = {
@@ -46,6 +47,7 @@ class TestFull(unittest.TestCase):
             "Positive electrode porosity": a_p,
             "Positive electrolyte concentration": a_p,
             "Positive electrode interfacial current density": a_p,
+            "Positive electrode temperature": a_p,
         }
         submodel = spf.FullAlgebraic(param, "Positive", reactions)
         std_tests = tests.StandardSubModelTests(submodel, variables)
