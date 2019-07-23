@@ -78,7 +78,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             i_boundary_cc = i_boundary_cc.orphans[0]
 
         if self.domain == "Negative":
-            c_e_flux = pybamm.BoundaryFlux(c_e, "right")
+            c_e_flux = pybamm.BoundaryGradient(c_e, "right")
             flux_left = -pybamm.BoundaryValue(i_boundary_cc / sigma_eff, "left")
             flux_right = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "right"))
@@ -92,7 +92,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             rbc_c_e = (c_e_flux, "Neumann")
 
         elif self.domain == "Positive":
-            c_e_flux = pybamm.BoundaryFlux(c_e, "left")
+            c_e_flux = pybamm.BoundaryGradient(c_e, "left")
             flux_left = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "left"))
                 - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux
@@ -209,8 +209,8 @@ class BaseModel(BaseStefanMaxwellConductivity):
 
         # Update boundary conditions (for indefinite integral)
         self.boundary_conditions[c_e_s] = {
-            "left": (pybamm.BoundaryFlux(c_e_s, "left"), "Neumann"),
-            "right": (pybamm.BoundaryFlux(c_e_s, "right"), "Neumann"),
+            "left": (pybamm.BoundaryGradient(c_e_s, "left"), "Neumann"),
+            "right": (pybamm.BoundaryGradient(c_e_s, "right"), "Neumann"),
         }
 
         return variables

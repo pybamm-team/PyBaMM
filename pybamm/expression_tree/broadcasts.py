@@ -43,17 +43,6 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_domain = broadcast_domain
         super().__init__(name, child, domain)
 
-    def __repr__(self):
-        """returns the string `__class__(id, name, children, domain)`"""
-        return "{!s}({}, {!s}, children={!s}, domain={!s}, broadcast_type={!s})".format(
-            self.__class__.__name__,
-            hex(self.id),
-            self._name,
-            [str(child) for child in self.children],
-            [str(subdomain) for subdomain in self.domain],
-            self.broadcast_type,
-        )
-
     def check_and_set_domain_and_broadcast_type(
         self, child, broadcast_domain, broadcast_type
     ):
@@ -143,6 +132,14 @@ class PrimaryBroadcast(Broadcast):
     def __init__(self, child, broadcast_domain, name=None):
         super().__init__(child, broadcast_domain, "primary", name)
 
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+        return PrimaryBroadcast(child, self.broadcast_domain)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+        return PrimaryBroadcast(child, self.broadcast_domain)
+
 
 class SecondaryBroadcast(Broadcast):
     "A class for secondary broadcasts"
@@ -150,9 +147,25 @@ class SecondaryBroadcast(Broadcast):
     def __init__(self, child, broadcast_domain, name=None):
         super().__init__(child, broadcast_domain, "secondary", name)
 
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+        return SecondaryBroadcast(child, self.broadcast_domain)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+        return SecondaryBroadcast(child, self.broadcast_domain)
+
 
 class FullBroadcast(Broadcast):
     "A class for full broadcasts"
 
     def __init__(self, child, broadcast_domain, name=None):
         super().__init__(child, broadcast_domain, "full", name)
+
+    def _unary_simplify(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+        return FullBroadcast(child, self.broadcast_domain)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
+        return FullBroadcast(child, self.broadcast_domain)

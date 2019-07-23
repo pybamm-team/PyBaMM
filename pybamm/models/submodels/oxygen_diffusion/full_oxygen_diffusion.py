@@ -76,7 +76,12 @@ class Full(BaseModel):
 
         N_ox = N_ox_diffusion + c_ox * v_box
         # Flux in the negative electrode is zero
-        N_ox = pybamm.Concatenation(pybamm.Broadcast(0, "negative electrode"), N_ox)
+        N_ox = pybamm.Concatenation(
+            pybamm.SecondaryBroadcast(
+                pybamm.Broadcast(0, "negative electrode"), "current collector"
+            ),
+            N_ox,
+        )
 
         variables.update(self._get_standard_flux_variables(N_ox))
 
@@ -93,7 +98,9 @@ class Full(BaseModel):
 
         source_terms = sum(
             pybamm.Concatenation(
-                pybamm.Broadcast(0, "separator"),
+                pybamm.SecondaryBroadcast(
+                    pybamm.Broadcast(0, "separator"), "current collector"
+                ),
                 reaction["Positive"]["s_ox"] * variables[reaction["Positive"]["aj"]],
             )
             for reaction in self.reactions.values()

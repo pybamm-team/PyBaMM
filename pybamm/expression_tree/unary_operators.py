@@ -532,7 +532,7 @@ class BoundaryValue(BoundaryOperator):
         super().__init__("boundary value", child, side)
 
 
-class BoundaryFlux(BoundaryOperator):
+class BoundaryGradient(BoundaryOperator):
     """A node in the expression tree which gets the boundary flux of a variable.
 
     Parameters

@@ -88,7 +88,7 @@ from .expression_tree.unary_operators import (
     Mass,
     BoundaryOperator,
     BoundaryValue,
-    BoundaryFlux,
+    BoundaryGradient,
     Integral,
     IndefiniteIntegral,
     grad,

@@ -126,9 +126,7 @@ class BaseModel(pybamm.BaseSubModel):
             pybamm.SecondaryBroadcast(
                 pybamm.Broadcast(0, "negative electrode"), "current collector"
             ),
-            pybamm.SecondaryBroadcast(
-                pybamm.PrimaryBroadcast(-d_vbox_s__dx, "separator"), "current collector"
-            ),
+            pybamm.PrimaryBroadcast(-d_vbox_s__dx, "separator"),
             pybamm.SecondaryBroadcast(
                 pybamm.Broadcast(0, "positive electrode"), "current collector"
             ),

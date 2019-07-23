@@ -278,21 +278,7 @@ class ParameterValues(dict):
         # Unary operators
         elif isinstance(symbol, pybamm.UnaryOperator):
             new_child = self.process_symbol(symbol.child)
-            if isinstance(symbol, pybamm.Broadcast):
-                new_symbol = pybamm.Broadcast(
-                    new_child,
-                    symbol.broadcast_domain,
-                    broadcast_type=symbol.broadcast_type,
-                )
-            elif isinstance(symbol, pybamm.Integral):
-                new_symbol = symbol.__class__(new_child, symbol.integration_variable)
-            elif isinstance(symbol, pybamm.BoundaryOperator):
-                # BoundaryValue or BoundaryFlux
-                new_symbol = symbol.__class__(new_child, symbol.side)
-            elif isinstance(symbol, pybamm.Index):
-                new_symbol = symbol.__class__(new_child, symbol.index)
-            else:
-                new_symbol = symbol.__class__(new_child)
+            new_symbol = symbol._unary_new_copy(new_child)
             # ensure domain remains the same
             new_symbol.domain = symbol.domain
             return new_symbol

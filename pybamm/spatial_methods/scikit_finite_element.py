@@ -283,7 +283,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
                 boundary_val_vector[np.newaxis, :] @ np.ones_like(vector)
             )
 
-        elif isinstance(symbol, pybamm.BoundaryFlux):
+        elif isinstance(symbol, pybamm.BoundaryGradient):
             raise NotImplementedError
 
         # Return boundary value with domain given by symbol

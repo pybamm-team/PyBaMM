@@ -246,8 +246,8 @@ class SpatialMethod:
         """
         if any(len(self.mesh[dom]) > 1 for dom in discretised_child.domain):
             raise NotImplementedError("Cannot process 2D symbol in base spatial method")
-        if isinstance(symbol, pybamm.BoundaryFlux):
-            raise TypeError("Cannot process BoundaryFlux in base spatial method")
+        if isinstance(symbol, pybamm.BoundaryGradient):
+            raise TypeError("Cannot process BoundaryGradient in base spatial method")
         n = sum(self.mesh[dom][0].npts for dom in discretised_child.domain)
         if symbol.side == "left":
             # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point

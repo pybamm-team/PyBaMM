@@ -50,10 +50,10 @@ class TestSpatialMethod(unittest.TestCase):
 
     def test_broadcast_checks(self):
         child = pybamm.Symbol("sym", domain=["negative electrode"])
-        symbol = pybamm.BoundaryFlux(child, "left")
+        symbol = pybamm.BoundaryGradient(child, "left")
         mesh = get_mesh_for_testing()
         spatial_method = pybamm.SpatialMethod(mesh)
-        with self.assertRaisesRegex(TypeError, "Cannot process BoundaryFlux"):
+        with self.assertRaisesRegex(TypeError, "Cannot process BoundaryGradient"):
             spatial_method.boundary_value_or_flux(symbol, child)
 
         mesh = get_1p1d_mesh_for_testing()

@@ -110,7 +110,9 @@ class BaseInterface(pybamm.BaseSubModel):
         j_n = variables[
             "Negative electrode" + self.reaction_name + " interfacial current density"
         ]
-        j_s = pybamm.Broadcast(0, ["separator"])
+        j_s = pybamm.SecondaryBroadcast(
+            pybamm.Broadcast(0, ["separator"]), "current collector"
+        )
         j_p = variables[
             "Positive electrode" + self.reaction_name + " interfacial current density"
         ]
@@ -176,7 +178,9 @@ class BaseInterface(pybamm.BaseSubModel):
         j0_n = variables[
             "Negative electrode" + self.reaction_name + " exchange current density"
         ]
-        j0_s = pybamm.Broadcast(0, ["separator"])
+        j0_s = pybamm.SecondaryBroadcast(
+            pybamm.Broadcast(0, ["separator"]), "current collector"
+        )
         j0_p = variables[
             "Positive electrode" + self.reaction_name + " exchange current density"
         ]

@@ -90,8 +90,8 @@ class TestFiniteVolume(unittest.TestCase):
         self.assertEqual(extrap_right_disc.evaluate(None, linear_y), 3)
 
         # Fluxes
-        extrap_flux_left = pybamm.BoundaryFlux(2 * var, "left")
-        extrap_flux_right = pybamm.BoundaryFlux(1 - var, "right")
+        extrap_flux_left = pybamm.BoundaryGradient(2 * var, "left")
+        extrap_flux_right = pybamm.BoundaryGradient(1 - var, "right")
         extrap_flux_left_disc = disc.process_symbol(extrap_flux_left)
         extrap_flux_right_disc = disc.process_symbol(extrap_flux_right)
 

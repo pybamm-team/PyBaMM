@@ -140,25 +140,54 @@ class Discretisation(object):
 
         return model_disc
 
+    def _flatten_variables(self, variables):
+        """
+        Extract variable objects from concatenations and secondary broadcasts
+
+        Parameters
+        ----------
+        variables : iterable of :class:`pybamm.Symbol`
+            Iterable of symbols from which to extract variables
+
+        Returns
+        -------
+        flattened_variables : list of :class:`pybamm.Variable`
+            List of variable objects
+        """
+        # Unpack symbols in variables that are concatenations of variables
+        flattened_variables = []
+        for symbol in variables:
+            if isinstance(symbol, pybamm.Concatenation):
+                for child in symbol.children:
+                    if (
+                        isinstance(child, pybamm.Broadcast)
+                        and child.broadcast_type == "secondary"
+                    ):
+                        flattened_variables.append(child.child)
+                    else:
+                        flattened_variables.append(child)
+            elif (
+                isinstance(symbol, pybamm.Broadcast)
+                and symbol.broadcast_type == "secondary"
+            ):
+                flattened_variables.append(symbol.child)
+            else:
+                flattened_variables.append(symbol)
+        return flattened_variables
+
     def set_variable_slices(self, variables):
         """Sets the slicing for variables.
 
         variables : iterable of :class:`pybamm.Variables`
             The variables for which to set slices
         """
-        # Unpack symbols in variables that are concatenations of variables
-        unpacked_variables = []
-        for symbol in variables:
-            if isinstance(symbol, pybamm.Concatenation):
-                unpacked_variables.extend([var for var in symbol.children])
-            else:
-                unpacked_variables.append(symbol)
+        flattened_variables = self._flatten_variables(variables)
         # Set up y_slices
-        y_slices = {variable.id: None for variable in unpacked_variables}
+        y_slices = {variable.id: None for variable in flattened_variables}
         start = 0
         end = 0
-        # Iterate through unpacked variables, adding appropriate slices to y_slices
-        for variable in unpacked_variables:
+        # Iterate through flattened variables, adding appropriate slices to y_slices
+        for variable in flattened_variables:
             # If domain is empty then variable has size 1
             if variable.domain == []:
                 end += 1
@@ -378,18 +407,9 @@ class Discretisation(object):
 
         # get a list of model rhs variables that are sorted according to
         # where they are in the state vector
-        model_variables = model.rhs.keys()
-        model_slices = []
-        for v in model_variables:
-            if isinstance(v, pybamm.Concatenation):
-                model_slices.append(
-                    slice(
-                        self._y_slices[v.children[0].id].start,
-                        self._y_slices[v.children[-1].id].stop,
-                    )
-                )
-            else:
-                model_slices.append(self._y_slices[v.id])
+        model_variables = self._flatten_variables(model.rhs.keys())
+        model_slices = [self._y_slices[var.id] for var in model_variables]
+
         sorted_model_variables = [
             v for _, v in sorted(zip(model_slices, model_variables))
         ]
@@ -582,24 +602,12 @@ class Discretisation(object):
 
         """
         # Unpack symbols in variables that are concatenations of variables
-        unpacked_variables = []
-        slices = []
-        for symbol in var_eqn_dict.keys():
-            if isinstance(symbol, pybamm.Concatenation):
-                unpacked_variables.extend([var for var in symbol.children])
-                slices.append(
-                    slice(
-                        self._y_slices[symbol.children[0].id].start,
-                        self._y_slices[symbol.children[-1].id].stop,
-                    )
-                )
-            else:
-                unpacked_variables.append(symbol)
-                slices.append(self._y_slices[symbol.id])
+        flattened_variables = self._flatten_variables(var_eqn_dict.keys())
+        slices = [self._y_slices[var.id] for var in flattened_variables]
 
         if check_complete:
             # Check keys from the given var_eqn_dict against self._y_slices
-            ids = {v.id for v in unpacked_variables}
+            ids = {v.id for v in flattened_variables}
             if ids != self._y_slices.keys():
                 given_variable_names = [v.name for v in var_eqn_dict.keys()]
                 raise pybamm.ModelError(

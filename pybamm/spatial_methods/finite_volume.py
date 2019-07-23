@@ -539,7 +539,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     ([-0.5, 1.5], ([0, 0], [prim_pts - 2, prim_pts - 1])),
                     shape=(1, prim_pts),
                 )
-        elif isinstance(symbol, pybamm.BoundaryFlux):
+        elif isinstance(symbol, pybamm.BoundaryGradient):
             if symbol.side == "left":
                 dx = submesh_list[0].d_nodes[0]
                 sub_matrix = (1 / dx) * csr_matrix(
