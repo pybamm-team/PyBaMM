@@ -17,7 +17,7 @@ class OdeSolver(pybamm.BaseSolver):
     def __init__(self, method=None, tol=1e-8):
         super().__init__(method, tol)
 
-    def solve(self, model, t_eval):
+    def solve(self, model, t_eval, t_mode='single'):
         """Calculate the solution of the model at specified times.
 
         Parameters
@@ -27,6 +27,9 @@ class OdeSolver(pybamm.BaseSolver):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
+        t_mode : string
+            The mode for time-stepping. continuous = all steps, single = one at
+            a time.
 
         """
         pybamm.logger.info("Start solving {}".format(model.name))
@@ -64,15 +67,37 @@ class OdeSolver(pybamm.BaseSolver):
 
         # Solve
         solve_start_time = timer.time()
-        pybamm.logger.info("Calling ODE solver")
-        solution = self.integrate(
-            dydt,
-            y0,
-            t_eval,
-            events=events,
-            mass_matrix=model.mass_matrix.entries,
-            jacobian=jacobian,
-        )
+        if t_mode == 'continuous':
+            pybamm.logger.info("Calling ODE solver")
+            solution = self.integrate(
+                dydt,
+                y0,
+                t_eval,
+                events=events,
+                mass_matrix=model.mass_matrix.entries,
+                jacobian=jacobian,
+            )
+        else:
+            self.yt = y0
+            self.t_eval = t_eval
+            self.step_count = 0
+            self.jacobian = jacobian
+            self.events = events
+            self.dydt = dydt
+            for i in range(len(t_eval)-1):
+#                t1 = self.t_eval[self.step_count]
+#                t2 = self.t_eval[self.step_count+1]
+#                solution = self.integrate(
+#                        dydt,
+#                        self.yt,
+#                        (t1, t2),
+#                        events=self.events,
+#                        mass_matrix=model.mass_matrix.entries,
+#                        jacobian=self.jacobian,
+#                        )
+                solution = self._step(model)
+#                self.yt = solution.y[-1]
+#                self.step_count += 1
 
         # Assign times
         solution.solve_time = timer.time() - solve_start_time
@@ -180,3 +205,18 @@ class OdeSolver(pybamm.BaseSolver):
             A function that takes in t and y and returns the Jacobian
         """
         raise NotImplementedError
+
+    def _step(self, model):
+        t1 = self.t_eval[self.step_count]
+        t2 = self.t_eval[self.step_count+1]
+        solution = self.integrate(
+                self.dydt,
+                self.yt,
+                t_eval=(0, t2-t1),
+                events=self.events,
+                mass_matrix=model.mass_matrix.entries,
+                jacobian=self.jacobian,
+                )
+        self.yt = solution.y[:, -1]
+        self.step_count += 1
+        return solution
