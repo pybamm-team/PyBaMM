@@ -33,6 +33,7 @@ class FirstOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
+        T_0 = variables["Leading-order cell temperature"]
         eps_0 = variables["Leading-order porosity"]
         c_e_0 = variables["Leading-order average electrolyte concentration"]
         # v_box_0 = variables["Leading-order volume-averaged velocity"]
@@ -64,9 +65,9 @@ class FirstOrder(BaseModel):
         )
 
         # Diffusivities
-        D_e_n = (eps_n_0 ** param.b) * param.D_e(c_e_0)
-        D_e_s = (eps_s_0 ** param.b) * param.D_e(c_e_0)
-        D_e_p = (eps_p_0 ** param.b) * param.D_e(c_e_0)
+        D_e_n = (eps_n_0 ** param.b) * param.D_e(c_e_0, T_0)
+        D_e_s = (eps_s_0 ** param.b) * param.D_e(c_e_0, T_0)
+        D_e_p = (eps_p_0 ** param.b) * param.D_e(c_e_0, T_0)
 
         # Fluxes
         N_e_n_1 = -rhs_n * x_n
