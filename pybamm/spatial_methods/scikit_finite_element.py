@@ -225,7 +225,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Vector`
+        :class:`pybamm.Matrix`
             The finite volume integral vector for the domain
         """
         # get primary domain mesh

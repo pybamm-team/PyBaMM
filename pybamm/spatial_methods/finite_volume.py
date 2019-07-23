@@ -206,7 +206,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
     def definite_integral_vector(self, domain, vector_type="row"):
         """
-        Vector for finite-volume implementation of the definite integral
+        Vector for finite-volume implementation of the definite integral.
+        Note: This only returns the integral vector over the primary domain, and
+        does not account for secondary dimensions
+        (see :meth:`pybamm.FiniteVolume.definite_integral_matrix).
 
         .. math::
             I = \\int_{a}^{b}\\!f(s)\\,ds
@@ -223,7 +226,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         Returns
         -------
-        :class:`pybamm.Vector`
+        :class:`pybamm.Matrix`
             The finite volume integral vector for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
