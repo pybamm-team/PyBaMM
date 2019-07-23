@@ -18,15 +18,15 @@ else:
 
 # load models
 models = [
-    # pybamm.lead_acid.LOQS(
-    #     {"surface form": "differential", "bc_options": {"dimensionality": 1}},
-    #     name="3D LOQS model",
-    # ),
-    pybamm.lead_acid.LOQS(),
+    pybamm.lead_acid.LOQS(
+        {"surface form": "differential", "bc_options": {"dimensionality": 1}},
+        name="3D LOQS model",
+    ),
+    # pybamm.lead_acid.LOQS(),
     # pybamm.lead_acid.FOQS(),
-    pybamm.lead_acid.CompositeExtended(),
+    # pybamm.lead_acid.CompositeExtended(),
     # # pybamm.lead_acid.Composite({"surface form": "algebraic"}),
-    pybamm.lead_acid.NewmanTiedemann(),
+    # pybamm.lead_acid.NewmanTiedemann(),
 ]
 
 # load parameter values and process models and geometry
@@ -59,22 +59,22 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 5, 100)
+t_eval = np.linspace(0, 1, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
 
 # plot
 output_variables = [
-    [
-        "Average negative electrode interfacial current density [A.m-2]",
-        "Average positive electrode interfacial current density [A.m-2]",
-    ],
-    "Average negative electrode surface potential difference [V]",
-    "Average positive electrode surface potential difference [V]",
-    "Electrolyte concentration",
-    "Electrolyte flux",
-    "Terminal voltage [V]",
+    # [
+    #     "Average negative electrode interfacial current density [A.m-2]",
+    #     "Average positive electrode interfacial current density [A.m-2]",
+    # ],
+    # "Average negative electrode surface potential difference [V]",
+    # "Average positive electrode surface potential difference [V]",
+    # "Electrolyte concentration",
+    # "Electrolyte flux",
+    "Terminal voltage [V]"
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
 plot.dynamic_plot()
