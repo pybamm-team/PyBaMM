@@ -20,26 +20,36 @@ class SingleParticlePotentialPair(pybamm.BaseModel):
         self.param = param
 
         # Set variables
-        psi = pybamm.Variable("Current collector potential weighted sum", ["current collector"])
-        W = pybamm.Variable("Perturbation to current collector potential difference", ["current collector"])
-        c_psi = pybamm.Variable("Lagrange multiplier for current collector potential weighted sum", ["current collector"])
-        c_W = pybamm.Variable("Lagrange multiplier for perturbation to current collector potential difference", ["current collector"])
-        y = pybamm.standard_spatial_vars.y
-        z = pybamm.standard_spatial_vars.z
+        psi = pybamm.Variable(
+            "Current collector potential weighted sum", ["current collector"]
+        )
+        W = pybamm.Variable(
+            "Perturbation to current collector potential difference",
+            ["current collector"],
+        )
+        c_psi = pybamm.Variable(
+            "Lagrange multiplier for variable `psi`"
+        )
+        c_W = pybamm.Variable(
+            "Lagrange multiplier for variable `W`"
+        )
 
         self.variables = {
             "Current collector potential weighted sum": psi,
             "Perturbation to current collector potential difference": W,
-            "Lagrange multiplier for current collector potential weighted sum": c_psi,
-            "Lagrange multiplier for perturbation to current collector potential difference": c_W,
+            "Lagrange multiplier for variable `psi`": c_psi,
+            "Lagrange multiplier for variable `W`": c_W,
         }
 
-        # Algebraic equations
+        # Algebraic equations (enforce zero mean constraint through Lagrange multiplier)
         self.algebraic = {
-            psi: pybamm.laplacian(psi),
-            W: pybamm.laplacian(W) - pybamm.source(1, W),
-            c_psi: pybamm.Integral(psi, [y, z]),
-            c_W: pybamm.Integral(W, [y, z]),
+            psi: pybamm.laplacian(psi)
+            + c_psi * pybamm.DefiniteIntegralVector(psi, vector_type="column"),
+            W: pybamm.laplacian(W)
+            - pybamm.source(1, W)
+            + c_W * pybamm.DefiniteIntegralVector(W, vector_type="column"),
+            c_psi: pybamm.DefiniteIntegralVector(psi, vector_type="row"),
+            c_W: pybamm.DefiniteIntegralVector(W, vector_type="row"),
         }
 
         # Boundary conditons

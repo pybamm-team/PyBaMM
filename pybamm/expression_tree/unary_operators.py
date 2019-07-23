@@ -433,6 +433,56 @@ class IndefiniteIntegral(Integral):
         return self.children[0].evaluate_for_shape()
 
 
+class DefiniteIntegralVector(SpatialOperator):
+    """A node in the expression tree representing an integral of the basis used
+    for discretisation
+
+    .. math::
+        I = \\int_{a}^{b}\\!\\psi(x)\\,dx,
+
+    where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
+    the domain respectively and :math:`\\psi` is the basis function.
+
+    Parameters
+    ----------
+    variable : :class:`pybamm.Symbol`
+        The variable whose basis will be integrated over the entire domain
+    vector_type : str, optional
+        Whether to return a row or column vector (defualt is row)
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, vector_type="row"):
+        name = "basis integral"
+        self.vector_type = vector_type
+        super().__init__(name, child)
+        # integrating removes the domain
+        self.domain = []
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name, self.vector_type)
+            + (self.children[0].id,)
+            + tuple(self.domain)
+        )
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+
+        return self.__class__(simplified_child, self.integration_variable)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+
+        return self.__class__(child, self.integration_variable)
+
+    def evaluate_for_shape(self):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        return pybamm.evaluate_for_shape_using_domain(self.domain)
+
+
 class BoundaryOperator(SpatialOperator):
     """A node in the expression tree which gets the boundary value of a variable.
 

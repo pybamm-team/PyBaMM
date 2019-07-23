@@ -211,6 +211,28 @@ class TestScikitFiniteElement(unittest.TestCase):
             integral_eqn_disc.evaluate(None, y_test), 6 * ly * lz
         )
 
+    def test_definite_integral_vector(self):
+        mesh = get_2p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+
+        # row (default)
+        vec = pybamm.DefiniteIntegralVector(var)
+        vec_disc = disc.process_symbol(vec)
+        self.assertEqual(vec_disc.shape[0], 1)
+        self.assertEqual(vec_disc.shape[1], mesh["current collector"][0].npts)
+
+        # column
+        vec = pybamm.DefiniteIntegralVector(var, vector_type="column")
+        vec_disc = disc.process_symbol(vec)
+        self.assertEqual(vec_disc.shape[0], mesh["current collector"][0].npts)
+        self.assertEqual(vec_disc.shape[1], 1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

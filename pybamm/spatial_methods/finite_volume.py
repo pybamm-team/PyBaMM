@@ -204,7 +204,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def definite_integral_vector(self, domain):
+    def definite_integral_vector(self, domain, vector_type="row"):
         """
         Vector for finite-volume implementation of the definite integral
 
@@ -218,6 +218,8 @@ class FiniteVolume(pybamm.SpatialMethod):
         ----------
         domain : list
             The domain(s) of integration
+        vector_type : str, optional
+            Whether to return a row or column vector (defualt is row)
 
         Returns
         -------
@@ -231,8 +233,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         vector = np.array([])
         for submesh in submesh_list:
             vector = np.append(vector, submesh.d_edges * np.ones_like(submesh.nodes))
-
-        return pybamm.Matrix(vector[np.newaxis, :])
+        if vector_type == "row":
+            return pybamm.Matrix(vector[np.newaxis, :])
+        elif vector_type == "column":
+            return pybamm.Matrix(vector[:, np.newaxis])
 
     def indefinite_integral(self, domain, symbol, discretised_symbol):
         """Implementation of the indefinite integral operator. """

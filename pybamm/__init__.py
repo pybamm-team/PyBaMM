@@ -90,6 +90,7 @@ from .expression_tree.unary_operators import (
     BoundaryFlux,
     Integral,
     IndefiniteIntegral,
+    DefiniteIntegralVector,
     grad,
     div,
     laplacian,

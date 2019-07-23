@@ -193,7 +193,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         out.domain = []
         return out
 
-    def definite_integral_vector(self, domain):
+    def definite_integral_vector(self, domain, vector_type="row"):
         """
         Vector for finite-element implementation of the definite integral over
         the entire domain
@@ -207,6 +207,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         ----------
         domain : list
             The domain(s) of integration
+        vector_type : str, optional
+            Whether to return a row or column vector (defualt is row)
 
         Returns
         -------
@@ -214,6 +216,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite volume integral vector for the domain
         """
         # get primary domain mesh
+        if isinstance(domain, list):
+            domain = domain[0]
         mesh = self.mesh[domain][0]
 
         # make form for the integral
@@ -223,7 +227,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         # assemble
         vector = skfem.asm(integral_form, mesh.basis)
-        return pybamm.Matrix(vector[np.newaxis, :])
+
+        if vector_type == "row":
+            return pybamm.Matrix(vector[np.newaxis, :])
+        elif vector_type == "column":
+            return pybamm.Matrix(vector[:, np.newaxis])
 
     def indefinite_integral(self, domain, symbol, discretised_symbol):
         """Implementation of the indefinite integral operator. The
