@@ -43,12 +43,7 @@ class TestCopy(unittest.TestCase):
             pybamm.t,
             pybamm.Index(vec, 1),
         ]:
-            try:
-                self.assertEqual(symbol.id, symbol.new_copy().id)
-            except:
-                import ipdb
-
-                ipdb.set_trace()
+            self.assertEqual(symbol.id, symbol.new_copy().id)
 
 
 if __name__ == "__main__":

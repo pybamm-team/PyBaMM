@@ -449,12 +449,7 @@ class Discretisation(object):
 
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
-            try:
-                new_var_eqn_dict[eqn_key].test_shape()
-            except:
-                import ipdb
-
-                ipdb.set_trace()
+            new_var_eqn_dict[eqn_key].test_shape()
 
         return new_var_eqn_dict
 
