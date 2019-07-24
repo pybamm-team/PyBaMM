@@ -64,6 +64,11 @@ class TestLeadAcidCompositeExtended(unittest.TestCase):
         model = pybamm.lead_acid.CompositeExtended()
         model.check_well_posedness()
 
+    def test_well_posed_differential_side_reactions(self):
+        options = {"surface form": "differential", "side reactions": ["oxygen"]}
+        model = pybamm.lead_acid.CompositeExtended(options)
+        model.check_well_posedness()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
