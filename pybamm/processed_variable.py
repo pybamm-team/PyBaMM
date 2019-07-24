@@ -194,11 +194,7 @@ class ProcessedVariable(object):
         )
 
     def initialise_3D(self):
-        if self.base_variable.has_symbol_of_classes(pybamm.Outer):
-            # bit of a hack for now
-            len_x = self.mesh.combine_submeshes(*self.domain)[0].npts
-        else:
-            len_x = len(self.mesh.combine_submeshes(*self.domain))
+        len_x = len(self.mesh.combine_submeshes(*self.domain))
         len_r = self.base_eval.shape[0] // len_x
         entries = np.empty((len_x, len_r, len(self.t_sol)))
 
@@ -210,44 +206,21 @@ class ProcessedVariable(object):
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, y, self.known_evals[t]
                 )
-
-                # another hack sorry
-                if self.base_variable.has_symbol_of_classes(pybamm.Outer):
-                    temporary = np.reshape(eval_and_known_evals[0], [len_r, len_x])
-                    entries[:, :, idx] = np.transpose(temporary)
-                else:
-                    entries[:, :, idx] = np.reshape(
-                        eval_and_known_evals[0], [len_x, len_r]
-                    )
-
+                entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_x, len_r])
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
                     self.base_variable.evaluate(t, y), [len_x, len_r]
                 )
         # Process the discretisation to get x values
-        if self.domain == [
-            "negative electrode"
-        ] and self.base_variable.has_symbol_of_classes(pybamm.Outer):
-            nodes = self.mesh.combine_submeshes(*["negative particle"])[0].nodes
-            edges = self.mesh.combine_submeshes(*["negative particle"])[0].edges
-        elif self.domain == [
-            "positive electrode"
-        ] and self.base_variable.has_symbol_of_classes(pybamm.Outer):
-            nodes = self.mesh.combine_submeshes(*["positive particle"])[0].nodes
-            edges = self.mesh.combine_submeshes(*["positive particle"])[0].edges
-        else:
-            nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
-            edges = self.mesh.combine_submeshes(*self.domain)[0].edges
+        nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
+        edges = self.mesh.combine_submeshes(*self.domain)[0].edges
 
         if entries.shape[1] == len(nodes):
             r_sol = nodes
         elif entries.shape[1] == len(edges):
             r_sol = edges
         else:
-            import ipdb
-
-            ipdb.set_trace()
             raise ValueError("3D variable shape does not match domain shape")
 
         # Get x values
