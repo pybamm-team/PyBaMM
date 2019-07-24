@@ -246,6 +246,45 @@ class TestScikitFiniteElement(unittest.TestCase):
         self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 1)
         self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 1)
 
+    def test_pure_neumann_poisson(self):
+        # grad^2 u = 1, du/dz = 1 at z = 1, du/dn = 0 elsewhere, u has zero average
+        u = pybamm.Variable("u", domain="current collector")
+        c = pybamm.Variable("c")  # lagrange multiplier
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+
+        model = pybamm.BaseModel()
+        # 0*c hack otherwise gives KeyError
+        model.algebraic = {
+            u: pybamm.laplacian(u) - pybamm.source(1, u)
+            + c * pybamm.DefiniteIntegralVector(u, vector_type="column"),
+            c: pybamm.Integral(u, [y, z]) + 0 * c,
+        }
+        model.initial_conditions = {u: pybamm.Scalar(0), c: pybamm.Scalar(0)}
+        # set boundary conditions ("left" = bottom of unit square, "right" = top
+        # of unit square, elsewhere normal derivative is zero)
+        model.boundary_conditions = {
+            u: {"left": (0, "Neumann"), "right": (1, "Neumann")}
+        }
+        model.variables = {"c": c, "u": u}
+
+        # create discretisation
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        # solve model
+        solver = pybamm.AlgebraicSolver()
+        solution = solver.solve(model)
+
+        z = mesh["current collector"][0].coordinates[1, :]
+        u_exact = z ** 2 / 2 - 1 / 6
+        np.testing.assert_array_almost_equal(solution.y[:-1], u_exact, decimal=1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

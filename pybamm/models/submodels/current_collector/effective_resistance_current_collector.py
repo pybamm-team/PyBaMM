@@ -21,6 +21,8 @@ class EfectiveResistance2D(pybamm.BaseModel):
         self.param = param
 
         # Set variables
+        var = pybamm.standard_spatial_vars
+
         psi = pybamm.Variable(
             "Current collector potential weighted sum", ["current collector"]
         )
@@ -68,8 +70,8 @@ class EfectiveResistance2D(pybamm.BaseModel):
             W: pybamm.laplacian(W)
             - pybamm.source(1, W)
             + c_W * pybamm.DefiniteIntegralVector(W, vector_type="column"),
-            c_psi: pybamm.DefiniteIntegralVector(psi, vector_type="row"),
-            c_W: pybamm.DefiniteIntegralVector(W, vector_type="row"),
+            c_psi: pybamm.Integral(psi, [var.y, var.z]),
+            c_W: pybamm.Integral(W, [var.y, var.z]),
         }
 
         # Boundary conditons
@@ -112,3 +114,7 @@ class EfectiveResistance2D(pybamm.BaseModel):
     @property
     def default_spatial_methods(self):
         return {"current collector": pybamm.ScikitFiniteElement}
+
+    @property
+    def default_solver(self):
+        return pybamm.AlgebraicSolver()

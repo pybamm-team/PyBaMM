@@ -705,6 +705,9 @@ def source(left, right):
     mass matrix (adjusted to account for the boundary conditions imposed the the
     right symbol) and the discretised left symbol.
     """
+    # Broadcast if left is number
+    if isinstance(left, numbers.Number):
+        left = pybamm.Broadcast(left, "current collector")
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(

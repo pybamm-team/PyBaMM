@@ -59,8 +59,23 @@ class AlgebraicSolver(object):
         concatenated_algebraic, jac = self.set_up(model)
         set_up_time = timer.time() - start_time
 
+        # Create function to evaluate algebraic
         def algebraic(y):
             return concatenated_algebraic.evaluate(0, y, known_evals={})[0][:, 0]
+
+        # Create function to evaluate jacobian
+        if jac is not None:
+
+            def jacobian(y):
+                # Note: we only use this solver for time independent algebraic
+                # systems, so jac is arbitrarily evaluated at t=0. Also, needs
+                # to be converted from sparse to dense, so in very large
+                # algebraic models it may be best to switch use_jacobian to False
+                # by defualt.
+                return jac.evaluate(0, y, known_evals={})[0].toarray()
+
+        else:
+            jacobian = None
 
         # Use "initial conditions" set in model as initial guess
         y0_guess = model.concatenated_initial_conditions
@@ -68,7 +83,7 @@ class AlgebraicSolver(object):
         # Solve
         solve_start_time = timer.time()
         pybamm.logger.info("Calling root finding algorithm")
-        solution = self.root(algebraic, y0_guess, jacobian=jac)
+        solution = self.root(algebraic, y0_guess, jacobian=jacobian)
 
         # Assign times
         solution.solve_time = timer.time() - solve_start_time
@@ -106,12 +121,8 @@ class AlgebraicSolver(object):
             return out
 
         if jacobian:
-            # wrap jacobian to only take y
-            def jac_fun(y):
-                return jacobian(0, y)
-
             sol = optimize.root(
-                root_fun, y0_guess, method=self.method, tol=self.tol, jac=jac_fun
+                root_fun, y0_guess, method=self.method, tol=self.tol, jac=jacobian
             )
         else:
             sol = optimize.root(root_fun, y0_guess, method=self.method, tol=self.tol)

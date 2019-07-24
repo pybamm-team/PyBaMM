@@ -4,6 +4,7 @@
 import pybamm
 import unittest
 import numpy as np
+from tests import get_discretisation_for_testing
 
 
 class TestAlgebraicSolver(unittest.TestCase):
@@ -69,7 +70,7 @@ class TestAlgebraicSolver(unittest.TestCase):
         def algebraic(y):
             return A @ y - b
 
-        def jac(t, y):
+        def jac(y):
             return A
 
         y0 = np.zeros(2)
@@ -82,6 +83,39 @@ class TestAlgebraicSolver(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(solution_no_jac.y, sol)
         np.testing.assert_array_almost_equal(solution_with_jac.y, sol)
+
+    def test_model_solver(self):
+        # Create model
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 3, var2: 6}
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.AlgebraicSolver()
+        solution = solver.solve(model)
+        np.testing.assert_array_equal(solution.y[0], 3)
+        np.testing.assert_array_equal(solution.y[-1], 6)
+
+        # Test time
+        self.assertGreater(
+            solution.total_time, solution.solve_time + solution.set_up_time
+        )
+
+        # Test without jacobian
+        model.use_jacobian = False
+        solution_no_jac = solver.solve(model)
+        np.testing.assert_array_equal(solution_no_jac.y[0], 3)
+        np.testing.assert_array_equal(solution_no_jac.y[-1], 6)
+
+        # Test speed, no jac faster for simple systems
+        self.assertGreater(
+            solution.total_time, solution_no_jac.total_time
+        )
 
 
 if __name__ == "__main__":
