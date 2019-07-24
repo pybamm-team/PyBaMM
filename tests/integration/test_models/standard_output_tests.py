@@ -475,7 +475,9 @@ class PotentialTests(BaseOutputTest):
             self.phi_s_n(t, x_n) - self.phi_e_n(t, x_n), self.delta_phi_n(t, x_n)
         )
         np.testing.assert_array_almost_equal(
-            self.phi_s_p(t, x_p) - self.phi_e_p(t, x_p), self.delta_phi_p(t, x_p)
+            self.phi_s_p(t, x_p) - self.phi_e_p(t, x_p),
+            self.delta_phi_p(t, x_p),
+            decimal=5,
         )
 
     def test_average_potential_differences(self):

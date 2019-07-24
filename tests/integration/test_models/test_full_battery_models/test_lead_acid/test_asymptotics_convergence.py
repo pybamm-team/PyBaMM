@@ -61,13 +61,19 @@ class TestAsymptoticConvergence(unittest.TestCase):
             t_comp, y_comp = solution_comp.t, solution_comp.y
             t_full, y_full = solution_full.t, solution_full.y
             voltage_loqs = pybamm.ProcessedVariable(
-                leading_order_model.variables["Terminal voltage"], t_loqs, y_loqs
+                leading_order_model.variables["Terminal voltage"],
+                t_loqs,
+                y_loqs,
+                loqs_disc.mesh,
             )
             voltage_comp = pybamm.ProcessedVariable(
-                composite_model.variables["Terminal voltage"], t_comp, y_comp
+                composite_model.variables["Terminal voltage"],
+                t_comp,
+                y_comp,
+                comp_disc.mesh,
             )
             voltage_full = pybamm.ProcessedVariable(
-                full_model.variables["Terminal voltage"], t_full, y_full
+                full_model.variables["Terminal voltage"], t_full, y_full, full_disc.mesh
             )
 
             # Compare

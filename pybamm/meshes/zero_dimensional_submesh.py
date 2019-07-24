@@ -26,6 +26,8 @@ class SubMesh0D:
 
         spatial_position = list(position.values())[0]
         self.nodes = np.array([spatial_position])
+        self.edges = np.array([spatial_position])
+        self.coord_sys = None
         self.npts = 1
 
     def add_ghost_meshes(self):
