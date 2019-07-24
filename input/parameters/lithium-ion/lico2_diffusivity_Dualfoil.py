@@ -32,4 +32,7 @@ def lico2_diffusivity_Dualfoil(sto, T, T_inf, E_D_s, R_g):
     D_ref = 1 * 10 ** (-13)
     arrhenius = np.exp(E_D_s / R_g * (1 / T_inf - 1 / T))
 
-    return D_ref * arrhenius
+    # Removing the fudge factor 0 * sto requires different handling of either
+    # either simplifications or how sto is passed into this function.
+    # See #547
+    return D_ref * arrhenius + 0 * sto

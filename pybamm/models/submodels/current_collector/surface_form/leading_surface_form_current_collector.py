@@ -63,9 +63,9 @@ class LeadingOrder(BaseSurfaceForm):
 
         # Set boundary conditions at top ("right") and bottom ("left")
         param = self.param
-        applied_current = param.current_with_time
-        top_bc = (param.l_n * param.l_p * param.sigma_n_dash * applied_current) / (
-            param.l_n * param.sigma_n_dash + param.l_p * param.sigma_p_dash
+        i_cell = param.current_density_with_time
+        top_bc = (param.l_n * param.l_p * param.sigma_n_dash * i_cell) / (
+            param.l_n * param.sigma_n_dash * param.l_p * param.sigma_p_dash
         )
         self.boundary_conditions = {
             delta_phi_difference: {

@@ -287,9 +287,6 @@ class BaseInterface(pybamm.BaseSubModel):
         """
 
         # Average, and broadcast if necessary
-        # import ipdb
-        #
-        # ipdb.set_trace()
         ocp_av = pybamm.x_average(ocp)
         if ocp.domain == []:
             ocp = pybamm.FullBroadcast(

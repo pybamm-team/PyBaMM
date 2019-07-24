@@ -276,7 +276,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             if symbol.side == "left":
                 boundary_val_vector[mesh.negative_tab] = vector[mesh.negative_tab]
             elif symbol.side == "right":
-                boundary_val_vector[mesh.positive_tab] = vector[mesh.negative_tab]
+                boundary_val_vector[mesh.positive_tab] = vector[mesh.positive_tab]
 
             # divide integration weights by (numerical) tab width to give average value
             boundary_val_vector = boundary_val_vector / (

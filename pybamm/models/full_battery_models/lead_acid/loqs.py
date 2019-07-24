@@ -46,9 +46,9 @@ class LOQS(BaseModel):
                 "current collector"
             ] = pybamm.current_collector.surface_form.LeadingOrder(self.param)
         elif self.options["bc_options"]["dimensionality"] == 2:
-            raise NotImplementedError(
-                "Two-dimensional current collector submodel not implemented."
-            )
+            self.submodels[
+                "current collector"
+            ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
 
     def set_porosity_submodel(self):
 

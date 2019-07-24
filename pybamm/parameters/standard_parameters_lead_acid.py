@@ -63,8 +63,14 @@ c_ox_init_dim = pybamm.Parameter("Initial oxygen concentration [mol.m-3]")
 c_ox_typ = pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
 # Electrode properties
+sigma_cn_dimensional = pybamm.Parameter(
+    "Negative current collector conductivity [S.m-1]"
+)
 sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
 sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
+sigma_cp_dimensional = pybamm.Parameter(
+    "Positive current collector conductivity [S.m-1]"
+)
 
 # Microstructure
 a_n_dim = pybamm.geometric_parameters.a_n_dim
@@ -256,9 +262,11 @@ tau_diffusion_e = L_x ** 2 / D_e_typ
 "4. Dimensionless Parameters"
 
 # Macroscale Geometry
+l_cn = pybamm.geometric_parameters.l_cn
 l_n = pybamm.geometric_parameters.l_n
 l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
+l_cp = pybamm.geometric_parameters.l_cp
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
 
@@ -291,8 +299,10 @@ curlyD_hy = D_hy_dimensional / D_e_typ
 omega_c_hy = c_e_typ * M_hy / rho_typ * (1 - M_w * V_hy / V_w * M_hy)
 
 # Electrode Properties
+sigma_cn = sigma_cn_dimensional * potential_scale / i_typ / L_x
 sigma_n = sigma_n_dim * potential_scale / current_scale / L_x
 sigma_p = sigma_p_dim * potential_scale / current_scale / L_x
+sigma_cp = sigma_cp_dimensional * potential_scale / i_typ / L_x
 sigma_n_dash = sigma_n * delta ** 2
 sigma_p_dash = sigma_p * delta ** 2
 delta_pore_n = 1 / (a_n_dim * L_x)
