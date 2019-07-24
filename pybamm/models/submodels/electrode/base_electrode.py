@@ -37,7 +37,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             electrode.
         """
         param = self.param
-        phi_s_av = pybamm.average(phi_s)
+        phi_s_av = pybamm.x_average(phi_s)
 
         if self.domain == "Negative":
             phi_s_dim = param.potential_scale * phi_s
@@ -52,7 +52,7 @@ class BaseElectrode(pybamm.BaseSubModel):
 
             v = pybamm.boundary_value(phi_s, "right")
             delta_phi_s = phi_s - pybamm.PrimaryBroadcast(v, ["positive electrode"])
-        delta_phi_s_av = pybamm.average(delta_phi_s)
+        delta_phi_s_av = pybamm.x_average(delta_phi_s)
         delta_phi_s_dim = delta_phi_s * param.potential_scale
         delta_phi_s_av_dim = delta_phi_s_av * param.potential_scale
 

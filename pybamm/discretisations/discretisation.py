@@ -158,7 +158,7 @@ class Discretisation(object):
         flattened_variables = []
         for symbol in variables:
             if isinstance(symbol, pybamm.Concatenation):
-                flattened_variables.extend([child for symbol in symbol.children])
+                flattened_variables.extend([child for child in symbol.children])
             else:
                 flattened_variables.append(symbol)
         return flattened_variables
@@ -450,7 +450,6 @@ class Discretisation(object):
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
             try:
-
                 new_var_eqn_dict[eqn_key].test_shape()
             except:
                 import ipdb

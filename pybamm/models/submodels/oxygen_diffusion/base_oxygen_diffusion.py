@@ -39,7 +39,7 @@ class BaseModel(pybamm.BaseSubModel):
             oxygen.
         """
 
-        c_ox_av = pybamm.average(c_ox)
+        c_ox_av = pybamm.x_average(c_ox)
         c_ox_typ = self.param.c_ox_typ
         c_ox_n, c_ox_s, c_ox_p = c_ox.orphans
 

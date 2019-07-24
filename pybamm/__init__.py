@@ -100,7 +100,7 @@ from .expression_tree.unary_operators import (
     div,
     laplacian,
     surf,
-    average,
+    x_average,
     boundary_value,
 )
 from .expression_tree.functions import *

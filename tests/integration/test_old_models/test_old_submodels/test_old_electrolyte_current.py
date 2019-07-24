@@ -130,12 +130,12 @@ class TestOldMacInnesStefanMaxwell(unittest.TestCase):
 
                 phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
 
-                phi_e_n_av = pybamm.average(phi_e_n)
+                phi_e_n_av = pybamm.x_average(phi_e_n)
                 phi_e_n_av_param = modeltest.parameter_values.process_symbol(phi_e_n_av)
                 phi_e_n_av_disc = modeltest.disc.process_symbol(phi_e_n_av_param)
                 phi_e_n_av_eval = phi_e_n_av_disc.evaluate(0, None)
 
-                phi_e_p_av = pybamm.average(phi_e_p)
+                phi_e_p_av = pybamm.x_average(phi_e_p)
                 phi_e_p_av_param = modeltest.parameter_values.process_symbol(phi_e_p_av)
                 phi_e_p_av_disc = modeltest.disc.process_symbol(phi_e_p_av_param)
                 phi_e_p_av_eval = phi_e_p_av_disc.evaluate(0, None)

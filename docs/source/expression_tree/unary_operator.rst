@@ -42,4 +42,4 @@ Unary Operators
 
 .. autofunction:: pybamm.boundary_value
 
-.. autofunction:: pybamm.average
+.. autofunction:: pybamm.x_average

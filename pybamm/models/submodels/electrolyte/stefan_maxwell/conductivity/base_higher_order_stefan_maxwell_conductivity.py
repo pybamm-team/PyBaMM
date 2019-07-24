@@ -85,7 +85,7 @@ class BaseHigherOrder(BaseModel):
             + phi_s_n_av
             - (
                 chi_av
-                * pybamm.average(
+                * pybamm.x_average(
                     self._higher_order_macinnes_function(
                         c_e_n / pybamm.PrimaryBroadcast(c_e_av, "negative electrode")
                     )
@@ -142,16 +142,16 @@ class BaseHigherOrder(BaseModel):
         )
 
         phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
-        phi_e_av = pybamm.average(phi_e)
+        phi_e_av = pybamm.x_average(phi_e)
 
         # concentration overpotential
         eta_c_av = chi_av * (
-            pybamm.average(
+            pybamm.x_average(
                 self._higher_order_macinnes_function(
                     c_e_p / pybamm.PrimaryBroadcast(c_e_av, "positive electrode")
                 )
             )
-            - pybamm.average(
+            - pybamm.x_average(
                 self._higher_order_macinnes_function(
                     c_e_n / pybamm.PrimaryBroadcast(c_e_av, "negative electrode")
                 )

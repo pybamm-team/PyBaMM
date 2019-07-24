@@ -54,7 +54,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j_scale = self.param.i_typ / (self.param.a_p_dim * self.param.L_x)
 
         # Average, and broadcast if necessary
-        j_av = pybamm.average(j)
+        j_av = pybamm.x_average(j)
         if j.domain == []:
             j = pybamm.FullBroadcast(j, self.domain_for_broadcast, "current collector")
         elif j.domain == ["current collector"]:
@@ -139,7 +139,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j_scale = self.param.i_typ / (self.param.a_p_dim * self.param.L_x)
 
         # Average, and broadcast if necessary
-        j0_av = pybamm.average(j0)
+        j0_av = pybamm.x_average(j0)
         if j0.domain == []:
             j0 = pybamm.FullBroadcast(
                 j0, self.domain_for_broadcast, "current collector"
@@ -203,7 +203,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         pot_scale = self.param.potential_scale
         # Average, and broadcast if necessary
-        eta_r_av = pybamm.average(eta_r)
+        eta_r_av = pybamm.x_average(eta_r)
         if eta_r.domain == []:
             eta_r = pybamm.FullBroadcast(
                 eta_r, self.domain_for_broadcast, "current collector"
@@ -243,7 +243,7 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
 
         # Average, and broadcast if necessary
-        delta_phi_av = pybamm.average(delta_phi)
+        delta_phi_av = pybamm.x_average(delta_phi)
         if delta_phi.domain == []:
             delta_phi = pybamm.FullBroadcast(
                 delta_phi, self.domain_for_broadcast, "current collector"
@@ -287,14 +287,17 @@ class BaseInterface(pybamm.BaseSubModel):
         """
 
         # Average, and broadcast if necessary
-        ocp_av = pybamm.average(ocp)
+        # import ipdb
+        #
+        # ipdb.set_trace()
+        ocp_av = pybamm.x_average(ocp)
         if ocp.domain == []:
             ocp = pybamm.FullBroadcast(
                 ocp, self.domain_for_broadcast, "current collector"
             )
         elif ocp.domain == ["current collector"]:
             ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
-        dUdT_av = pybamm.average(dUdT)
+        dUdT_av = pybamm.x_average(dUdT)
 
         if self.domain == "Negative":
             ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp

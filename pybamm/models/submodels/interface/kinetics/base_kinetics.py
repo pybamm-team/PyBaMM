@@ -43,7 +43,7 @@ class BaseModel(BaseInterface):
 
         j = self._get_kinetics(j0, ne, eta_r)
         j_tot_av = self._get_average_total_interfacial_current_density(variables)
-        # j = j_tot_av + (j - pybamm.average(j))  # enforce true average
+        # j = j_tot_av + (j - pybamm.x_average(j))  # enforce true average
 
         variables.update(self._get_standard_interfacial_current_variables(j))
         variables.update(

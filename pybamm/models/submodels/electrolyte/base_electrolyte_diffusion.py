@@ -41,10 +41,10 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         c_e_typ = self.param.c_e_typ
         c_e_n, c_e_s, c_e_p = c_e.orphans
-        c_e_av = pybamm.average(c_e)
-        c_e_n_av = pybamm.average(c_e_n)
-        c_e_s_av = pybamm.average(c_e_s)
-        c_e_p_av = pybamm.average(c_e_p)
+        c_e_av = pybamm.x_average(c_e)
+        c_e_n_av = pybamm.x_average(c_e_n)
+        c_e_s_av = pybamm.x_average(c_e_s)
+        c_e_p_av = pybamm.x_average(c_e_p)
 
         variables = {
             "Electrolyte concentration": c_e,

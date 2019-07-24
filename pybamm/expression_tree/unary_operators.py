@@ -26,6 +26,8 @@ class UnaryOperator(pybamm.Symbol):
     def __init__(self, name, child, domain=None, auxiliary_domains=None):
         if domain is None:
             domain = child.domain
+        if auxiliary_domains is None:
+            auxiliary_domains = child.auxiliary_domains
         super().__init__(
             name, children=[child], domain=domain, auxiliary_domains=auxiliary_domains
         )
@@ -352,23 +354,21 @@ class Integral(SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, integration_variable, domain=None):
+    def __init__(self, child, integration_variable):
         if not isinstance(integration_variable, list):
             integration_variable = [integration_variable]
 
-        if domain is None:
-            if child.domain == []:
-                domain = []
-            # integral of a child on an electrode domain goes to the current collector
-            elif child.domain[0] in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]:
-                domain = ["current collector"]
-            # for other domains, integral removes the domain
-            else:
-                domain = []
+        # integral of a child takes the domain from auxiliary domain of the child
+        if child.auxiliary_domains != {}:
+            domain = child.auxiliary_domains["secondary"]
+            try:
+                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+            except KeyError:
+                auxiliary_domains = {}
+        # if child has no auxiliary domain, integral removes domain
+        else:
+            domain = []
+            auxiliary_domains = {}
         name = "integral"
         for var in integration_variable:
             if isinstance(var, pybamm.SpatialVariable):
@@ -390,7 +390,9 @@ class Integral(SpatialOperator):
             name += " {}".format(child.domain)
 
         self._integration_variable = integration_variable
-        super().__init__(name, child, domain=domain)
+        super().__init__(
+            name, child, domain=domain, auxiliary_domains=auxiliary_domains
+        )
 
     @property
     def integration_variable(self):
@@ -415,14 +417,12 @@ class Integral(SpatialOperator):
     def _unary_simplify(self, simplified_child):
         """ See :meth:`UnaryOperator._unary_simplify()`. """
 
-        return self.__class__(
-            simplified_child, self.integration_variable, domain=self.domain
-        )
+        return self.__class__(simplified_child, self.integration_variable)
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
-        return self.__class__(child, self.integration_variable, domain=self.domain)
+        return self.__class__(child, self.integration_variable)
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
@@ -452,7 +452,7 @@ class IndefiniteIntegral(Integral):
     **Extends:** :class:`Integral`
     """
 
-    def __init__(self, child, integration_variable, domain=None):
+    def __init__(self, child, integration_variable):
         if isinstance(integration_variable, list):
             if len(integration_variable) > 1:
                 raise NotImplementedError(
@@ -460,8 +460,10 @@ class IndefiniteIntegral(Integral):
                 )
             else:
                 integration_variable = integration_variable[0]
-        # the integrated variable has the same domain as the child
-        super().__init__(child, integration_variable, domain=child.domain)
+        super().__init__(child, integration_variable)
+        # overwrite domains with child domains
+        self.auxiliary_domains = child.auxiliary_domains
+        self.domain = child.domain
         # Overwrite the name
         self.name = "{} integrated w.r.t {}".format(
             child.name, integration_variable.name
@@ -490,20 +492,20 @@ class BoundaryOperator(SpatialOperator):
 
     def __init__(self, name, child, side):
         self.side = side
-        if child.domain == []:
-            domain = []
-        # boundary operator of a child on an electrode domain goes to the current
-        # collector
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ]:
-            domain = ["current collector"]
-        # for other domains, boundary value removes the domain
+        # integral of a child takes the domain from auxiliary domain of the child
+        if child.auxiliary_domains != {}:
+            domain = child.auxiliary_domains["secondary"]
+        # if child has no auxiliary domain, integral removes domain
         else:
             domain = []
-        super().__init__(name, child, domain=domain)
+        # tertiary auxiliary domain shift down to secondary
+        try:
+            auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+        except KeyError:
+            auxiliary_domains = {}
+        super().__init__(
+            name, child, domain=domain, auxiliary_domains=auxiliary_domains
+        )
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()` """
@@ -522,7 +524,9 @@ class BoundaryOperator(SpatialOperator):
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
-        return pybamm.evaluate_for_shape_using_domain(self.domain)
+        return pybamm.evaluate_for_shape_using_domain(
+            self.domain, self.auxiliary_domains
+        )
 
 
 class BoundaryValue(BoundaryOperator):
@@ -656,8 +660,8 @@ def surf(symbol, set_domain=False):
     return out
 
 
-def average(symbol):
-    """convenience function for creating an average
+def x_average(symbol):
+    """convenience function for creating an average in the x-direction
 
     Parameters
     ----------
@@ -718,7 +722,7 @@ def average(symbol):
 
 
 def boundary_value(symbol, side):
-    """convenience function for creating a :class:`Integral`
+    """convenience function for creating a :class:`pybamm.BoundaryValue`
 
     Parameters
     ----------

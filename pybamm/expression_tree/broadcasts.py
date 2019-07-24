@@ -50,6 +50,8 @@ class Broadcast(pybamm.SpatialOperator):
         )
         self.broadcast_type = broadcast_type
         self.broadcast_domain = broadcast_domain
+        if auxiliary_domains is None:
+            auxiliary_domains = {"secondary": child.domain}
         super().__init__(name, child, domain, auxiliary_domains)
 
     def check_and_set_domain_and_broadcast_type(

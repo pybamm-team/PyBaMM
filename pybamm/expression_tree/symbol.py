@@ -90,6 +90,9 @@ class Symbol(anytree.NodeMixin):
             domain = [domain]
         if auxiliary_domains is None:
             auxiliary_domains = {}
+        for level, dom in auxiliary_domains.items():
+            if isinstance(dom, str):
+                auxiliary_domains[level] = [dom]
 
         for child in children:
             # copy child before adding
@@ -177,7 +180,7 @@ class Symbol(anytree.NodeMixin):
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
-            + tuple([(k, v) for k, v in self.auxiliary_domains.items()])
+            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
 
     @property

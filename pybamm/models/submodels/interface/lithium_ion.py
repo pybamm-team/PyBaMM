@@ -74,9 +74,7 @@ class BaseInterfaceLithiumIon(BaseInterface):
         """
         c_s_surf = variables[self.domain + " particle surface concentration"]
         T = variables[self.domain + " electrode temperature"]
-        import ipdb
 
-        ipdb.set_trace()
         if self.domain == "Negative":
             ocp = self.param.U_n(c_s_surf, T)
             dUdT = self.param.dUdT_n(c_s_surf)

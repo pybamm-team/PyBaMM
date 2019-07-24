@@ -156,6 +156,11 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a.side, "right")
         self.assertEqual(boundary_a.child.id, a.id)
 
+    def test_evaluates_on_edges(self):
+        a = pybamm.StateVector(slice(0, 10))
+        self.assertFalse(a[1].evaluates_on_edges())
+        self.assertFalse(pybamm.Laplacian(a).evaluates_on_edges())
+
     def test_boundary_value(self):
         a = pybamm.Scalar(1)
         boundary_a = pybamm.boundary_value(a, "right")
@@ -174,13 +179,13 @@ class TestUnaryOperators(unittest.TestCase):
 
     def test_average(self):
         a = pybamm.Scalar(1)
-        average_a = pybamm.average(a)
+        average_a = pybamm.x_average(a)
         self.assertEqual(average_a.id, a.id)
 
-        average_broad_a = pybamm.average(pybamm.Broadcast(a, ["negative electrode"]))
+        average_broad_a = pybamm.x_average(pybamm.Broadcast(a, ["negative electrode"]))
         self.assertEqual(average_broad_a.evaluate(), np.array([1]))
 
-        average_conc_broad = pybamm.average(
+        average_conc_broad = pybamm.x_average(
             pybamm.Concatenation(
                 pybamm.Broadcast(1, ["negative electrode"]),
                 pybamm.Broadcast(2, ["separator"]),
@@ -197,7 +202,7 @@ class TestUnaryOperators(unittest.TestCase):
         ]:
             a = pybamm.Symbol("a", domain=domain)
             x = pybamm.SpatialVariable("x", domain)
-            av_a = pybamm.average(a)
+            av_a = pybamm.x_average(a)
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
@@ -206,7 +211,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         a = pybamm.Symbol("a", domain="bad domain")
         with self.assertRaises(pybamm.DomainError):
-            pybamm.average(a)
+            pybamm.x_average(a)
 
 
 if __name__ == "__main__":
