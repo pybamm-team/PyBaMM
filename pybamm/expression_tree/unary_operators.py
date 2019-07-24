@@ -675,15 +675,12 @@ def average(symbol):
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast) and symbol.broadcast_type != "secondary":
+    elif isinstance(symbol, pybamm.Broadcast):
         return symbol.orphans[0]
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif (
         isinstance(symbol, pybamm.Concatenation)
-        and all(
-            isinstance(child, pybamm.Broadcast) and child.broadcast_type != "secondary"
-            for child in symbol.children
-        )
+        and all(isinstance(child, pybamm.Broadcast) for child in symbol.children)
         and symbol.domain == ["negative electrode", "separator", "positive electrode"]
     ):
         a, b, c = [orp.orphans[0] for orp in symbol.orphans]
@@ -741,7 +738,7 @@ def boundary_value(symbol, side):
         new_symbol.parent = None
         return new_symbol
     # If symbol is a Broadcast, its boundary value is its child
-    if isinstance(symbol, pybamm.Broadcast) and symbol.broadcast_type != "secondary":
+    if isinstance(symbol, pybamm.Broadcast):
         return symbol.orphans[0]
     # Otherwise, calculate boundary value
     else:

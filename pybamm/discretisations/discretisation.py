@@ -158,19 +158,7 @@ class Discretisation(object):
         flattened_variables = []
         for symbol in variables:
             if isinstance(symbol, pybamm.Concatenation):
-                for child in symbol.children:
-                    if (
-                        isinstance(child, pybamm.Broadcast)
-                        and child.broadcast_type == "secondary"
-                    ):
-                        flattened_variables.append(child.child)
-                    else:
-                        flattened_variables.append(child)
-            elif (
-                isinstance(symbol, pybamm.Broadcast)
-                and symbol.broadcast_type == "secondary"
-            ):
-                flattened_variables.append(symbol.child)
+                flattened_variables.extend([child for symbol in symbol.children])
             else:
                 flattened_variables.append(symbol)
         return flattened_variables

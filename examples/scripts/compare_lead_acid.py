@@ -22,7 +22,7 @@ models = [
         {"surface form": "differential", "bc_options": {"dimensionality": 1}},
         name="3D LOQS model",
     ),
-    # pybamm.lead_acid.LOQS(),
+    pybamm.lead_acid.LOQS(),
     # pybamm.lead_acid.FOQS(),
     # pybamm.lead_acid.CompositeExtended(),
     # # pybamm.lead_acid.Composite({"surface form": "algebraic"}),

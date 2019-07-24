@@ -25,7 +25,6 @@ class Variable(pybamm.Symbol):
         domain 'negative particle', secondary domain 'negative electrode' and tertiary
         domain 'current collector'
 
-
     *Extends:* :class:`Symbol`
     """
 
