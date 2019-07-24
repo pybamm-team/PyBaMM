@@ -33,7 +33,7 @@ class Full(BaseModel):
 
         deps_dt_n = -self.param.beta_surf_n * j_n
         deps_dt_s = pybamm.FullBroadcast(
-            0, "separator", secondary_domain="current collector"
+            0, "separator", auxiliary_domains={"secondary": "current collector"}
         )
         deps_dt_p = -self.param.beta_surf_p * j_p
 

@@ -47,14 +47,19 @@ def create_object_of_size(size, typ="vector"):
         return np.nan * np.ones((size, size))
 
 
-def evaluate_for_shape_using_domain(domain, secondary_domain=None, typ="vector"):
+def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"):
     """
     Return a vector of the appropriate shape, based on the domain.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
     """
     _domain_size = domain_size(domain)
-    _secondary_domain_size = domain_size(secondary_domain)
-    return create_object_of_size(_domain_size * _secondary_domain_size, typ)
+    if auxiliary_domains is None:
+        _auxiliary_domain_sizes = 1
+    else:
+        _auxiliary_domain_sizes = int(
+            np.prod([domain_size(dom) for dom in auxiliary_domains.values()])
+        )
+    return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
 
 
 class Symbol(anytree.NodeMixin):
@@ -73,7 +78,7 @@ class Symbol(anytree.NodeMixin):
 
     """
 
-    def __init__(self, name, children=None, domain=None, secondary_domain=None):
+    def __init__(self, name, children=None, domain=None, auxiliary_domains=None):
         super(Symbol, self).__init__()
         self.name = name
 
@@ -83,10 +88,8 @@ class Symbol(anytree.NodeMixin):
             domain = []
         elif isinstance(domain, str):
             domain = [domain]
-        if secondary_domain is None:
-            secondary_domain = []
-        elif isinstance(secondary_domain, str):
-            secondary_domain = [secondary_domain]
+        if auxiliary_domains is None:
+            auxiliary_domains = {}
 
         for child in children:
             # copy child before adding
@@ -96,8 +99,8 @@ class Symbol(anytree.NodeMixin):
         # cache children
         self.cached_children = super(Symbol, self).children
 
-        # Set secondary domain
-        self.secondary_domain = secondary_domain
+        # Set auxiliary domains
+        self.auxiliary_domains = auxiliary_domains
         # Set domain (and hence id)
         self.domain = domain
 
@@ -174,7 +177,7 @@ class Symbol(anytree.NodeMixin):
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
-            + tuple(self.secondary_domain)
+            + tuple([(k, v) for k, v in self.auxiliary_domains.items()])
         )
 
     @property
@@ -274,14 +277,14 @@ class Symbol(anytree.NodeMixin):
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
         return (
-            "{!s}({}, {!s}, children={!s}, domain={!s}, secondary_domain={!s})"
+            "{!s}({}, {!s}, children={!s}, domain={!s}, auxiliary_domains={!s})"
         ).format(
             self.__class__.__name__,
             hex(self.id),
             self._name,
             [str(child) for child in self.children],
             [str(subdomain) for subdomain in self.domain],
-            [str(subdomain) for subdomain in self.secondary_domain],
+            {k: str(v) for k, v in self.auxiliary_domains.items()},
         )
 
     def __add__(self, other):
@@ -615,6 +618,7 @@ class Symbol(anytree.NodeMixin):
                 min_y_size = max(x.y_slice.stop for x in state_vectors_in_node)
                 # Pick a y that won't cause RuntimeWarnings
                 y = np.linspace(0.1, 0.9, min_y_size)
+                evaluated_self = self.evaluate(0, y)
 
         # Return shape of evaluated object
         if isinstance(evaluated_self, numbers.Number):

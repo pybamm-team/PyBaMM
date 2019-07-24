@@ -23,11 +23,11 @@ class UnaryOperator(pybamm.Symbol):
 
     """
 
-    def __init__(self, name, child, domain=None, secondary_domain=None):
+    def __init__(self, name, child, domain=None, auxiliary_domains=None):
         if domain is None:
             domain = child.domain
         super().__init__(
-            name, children=[child], domain=domain, secondary_domain=secondary_domain
+            name, children=[child], domain=domain, auxiliary_domains=auxiliary_domains
         )
         self.child = self.children[0]
 
@@ -249,8 +249,8 @@ class SpatialOperator(UnaryOperator):
 
     """
 
-    def __init__(self, name, child, domain=None, secondary_domain=None):
-        super().__init__(name, child, domain, secondary_domain)
+    def __init__(self, name, child, domain=None, auxiliary_domains=None):
+        super().__init__(name, child, domain, auxiliary_domains)
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """
@@ -641,12 +641,6 @@ def surf(symbol, set_domain=False):
     :class:`pybamm.BoundaryValue`
         the surface value of ``symbol``
     """
-    original_symbol = symbol
-    if isinstance(symbol, pybamm.SecondaryBroadcast):
-        symbol = symbol.orphans[0]
-        secondary_domain = original_symbol.broadcast_domain
-    else:
-        secondary_domain = None
     if symbol.domain in [["negative electrode"], ["positive electrode"]] and isinstance(
         symbol, pybamm.PrimaryBroadcast
     ):
@@ -655,12 +649,10 @@ def surf(symbol, set_domain=False):
     else:
         out = boundary_value(symbol, "right")
         if set_domain:
-            if original_symbol.domain == ["negative particle"]:
+            if symbol.domain == ["negative particle"]:
                 out.domain = ["negative electrode"]
-            elif original_symbol.domain == ["positive particle"]:
+            elif symbol.domain == ["positive particle"]:
                 out.domain = ["positive electrode"]
-    if secondary_domain is not None:
-        out = pybamm.SecondaryBroadcast(out, secondary_domain)
     return out
 
 

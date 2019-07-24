@@ -9,6 +9,3 @@ Broadcasting Operators
 
 .. autoclass:: pybamm.PrimaryBroadcast
   :members:
-
-.. autoclass:: pybamm.SecondaryBroadcast
-  :members:

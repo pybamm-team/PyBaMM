@@ -21,18 +21,17 @@ class LeadingOrder(BaseSurfaceForm):
     def __init__(self, param):
         super().__init__(param)
 
-    def _unpack(self, variables):
+    def get_coupled_variables(self, variables):
+
         delta_phi_n_av = variables[
             "Average negative electrode surface potential difference"
         ]
         delta_phi_p_av = variables[
             "Average positive electrode surface potential difference"
         ]
-
-        delta_phi_difference = delta_phi_n_av - delta_phi_p_av
-        return delta_phi_difference
-
-    def get_coupled_variables(self, variables):
+        phi_s_cn = delta_phi_n_av
+        phi_s_cp = delta_phi_p_av - delta_phi_n_av
+        variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
 
         # Define conductivity
         param = self.param
@@ -40,9 +39,8 @@ class LeadingOrder(BaseSurfaceForm):
             param.l_n * param.sigma_n_dash * param.l_p * param.sigma_p_dash
         ) / (param.l_n * param.sigma_n_dash + param.l_p * param.sigma_p_dash)
 
-        delta_phi_difference = self._unpack(variables)
-
         # Simple model: read off vertical current (no extra equation)
+        delta_phi_difference = delta_phi_n_av - delta_phi_p_av
         I_s_perp = vertical_conductivity * pybamm.grad(delta_phi_difference)
         i_boundary_cc = pybamm.div(I_s_perp)
 
@@ -55,7 +53,13 @@ class LeadingOrder(BaseSurfaceForm):
 
     def set_boundary_conditions(self, variables):
 
-        delta_phi_difference = self._unpack(variables)
+        delta_phi_n_av = variables[
+            "Average negative electrode surface potential difference"
+        ]
+        delta_phi_p_av = variables[
+            "Average positive electrode surface potential difference"
+        ]
+        delta_phi_difference = delta_phi_n_av - delta_phi_p_av
 
         # Set boundary conditions at top ("right") and bottom ("left")
         param = self.param

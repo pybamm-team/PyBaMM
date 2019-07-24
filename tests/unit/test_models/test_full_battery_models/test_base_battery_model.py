@@ -11,7 +11,7 @@ class TestBaseBatteryModel(unittest.TestCase):
         c = pybamm.Parameter("Negative electrode width [m]") * pybamm.Variable(
             "Negative electrolyte concentration",
             domain="negative electrode",
-            secondary_domain="current collector",
+            auxiliary_domains={"secondary": "current collector"},
         )
         processed_c = model.process_parameters_and_discretise(c)
         self.assertIsInstance(processed_c, pybamm.Multiplication)

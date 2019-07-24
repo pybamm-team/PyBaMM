@@ -210,25 +210,25 @@ class TestSymbol(unittest.TestCase):
             a.__repr__(),
             r"Symbol\("
             + hex_regex
-            + r", a, children\=\[\], domain\=\[\]\), secondary_domain\=\[\]\)",
+            + r", a, children\=\[\], domain\=\[\]\), auxiliary_domain\=\[\]\)",
         )
         self.assertRegex(
             b.__repr__(),
             r"Symbol\("
             + hex_regex
-            + r", b, children\=\[\], domain\=\[\]\), secondary_domain\=\[\]\)",
+            + r", b, children\=\[\], domain\=\[\]\), auxiliary_domain\=\[\]\)",
         )
         self.assertRegex(
             c.__repr__(),
             r"Symbol\("
             + hex_regex
-            + r", c, children\=\[\], domain\=\['test'\]\), secondary_domain\=\[\]\)",
+            + r", c, children\=\[\], domain\=\['test'\]\), auxiliary_domain\=\[\]\)",
         )
         self.assertRegex(
             d.__repr__(),
             r"Symbol\("
             + hex_regex
-            + r", d, children\=\[\], domain\=\['test'\]\), secondary_domain\=\[\]\)",
+            + r", d, children\=\[\], domain\=\['test'\]\), auxiliary_domain\=\[\]\)",
         )
         self.assertRegex(
             (a + b).__repr__(),
@@ -239,20 +239,20 @@ class TestSymbol(unittest.TestCase):
             r"Multiplication\("
             + hex_regex
             + r", \*, children\=\['c', 'd'\], domain=\['test'\]\)"
-            + r", secondary_domain\=\[\]\)",
+            + r", auxiliary_domain\=\[\]\)",
         )
         self.assertRegex(
             pybamm.grad(a).__repr__(),
             r"Gradient\("
             + hex_regex
-            + r", grad, children\=\['a'\], domain=\[\]\), secondary_domain\=\[\]\)",
+            + r", grad, children\=\['a'\], domain=\[\]\), auxiliary_domain\=\[\]\)",
         )
         self.assertRegex(
             pybamm.grad(c).__repr__(),
             r"Gradient\("
             + hex_regex
             + r", grad, children\=\['c'\], domain=\['test'\]\)"
-            + r", secondary_domain\=\[\]\)",
+            + r", auxiliary_domain\=\[\]\)",
         )
 
     def test_symbol_visualise(self):
