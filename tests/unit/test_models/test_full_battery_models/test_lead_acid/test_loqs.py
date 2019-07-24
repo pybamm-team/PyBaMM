@@ -16,6 +16,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
+    def test_well_posed_1plus1D(self):
+        options = {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
+
     def test_default_geometry(self):
         options = {"thermal": None}
         model = pybamm.lead_acid.LOQS(options)
