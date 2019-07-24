@@ -156,6 +156,11 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a.side, "right")
         self.assertEqual(boundary_a.child.id, a.id)
 
+    def test_evaluates_on_edges(self):
+        a = pybamm.StateVector(slice(0, 10))
+        self.assertFalse(a[1].evaluates_on_edges())
+        self.assertFalse(pybamm.Laplacian(a).evaluates_on_edges())
+
     def test_boundary_value(self):
         a = pybamm.Scalar(1)
         boundary_a = pybamm.boundary_value(a, "right")
