@@ -156,9 +156,9 @@ def plot_voltage_breakdown(all_variables, t_eval, model, Crates):
     fig, axes = plt.subplots(n, m, figsize=(6.4, 2.3))
     labels = ["V", "$V_U$", "$V_k$", "$V_c$", "$V_o$"]
     overpotentials = [
-        "Average reaction overpotential [V]",
-        "Average concentration overpotential [V]",
-        "Average electrolyte ohmic losses [V]",
+        "Average battery reaction overpotential [V]",
+        "Average battery concentration overpotential [V]",
+        "Average battery electrolyte ohmic losses [V]",
     ]
     y_min = 0.95 * min(
         np.nanmin(models_variables[model]["Battery voltage [V]"](t_eval))
@@ -188,14 +188,15 @@ def plot_voltage_breakdown(all_variables, t_eval, model, Crates):
 
         # Plot
         # Initialise
+        # for lead-acid we multiply everything by 6 to
         time = variables["Time [h]"](t_eval)
-        initial_ocv = variables["Average open circuit voltage [V]"](0) * 6
-        ocv = variables["Average open circuit voltage [V]"](t_eval) * 6
+        initial_ocv = variables["Average battery open circuit voltage [V]"](0)
+        ocv = variables["Average battery open circuit voltage [V]"](t_eval)
         ax.fill_between(time, ocv, initial_ocv)
         top = ocv
         # Plot
         for overpotential in overpotentials:
-            bottom = top + variables[overpotential](t_eval) * 6
+            bottom = top + variables[overpotential](t_eval)
             ax.fill_between(time, bottom, top)
             top = bottom
         ax.plot(time, variables["Battery voltage [V]"](t_eval), "k--")

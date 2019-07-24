@@ -84,8 +84,8 @@ def discharge_states(compute):
                 "Run script with '--compute' first to generate results"
             )
     # plot_voltages(all_variables, t_eval)
-    plot_variables(all_variables, t_eval)
-    # plot_voltage_breakdown(all_variables, t_eval)
+    # plot_variables(all_variables, t_eval)
+    plot_voltage_breakdown(all_variables, t_eval)
 
 
 def plot_errors(models_times_and_voltages):

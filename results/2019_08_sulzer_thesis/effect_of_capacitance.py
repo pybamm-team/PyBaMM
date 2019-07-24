@@ -133,9 +133,6 @@ def discharge_times_and_errors(compute):
         new_models_times_and_voltages = convergence_study(
             models, Crates, all_npts, t_eval
         )
-        import ipdb
-
-        ipdb.set_trace()
         models_times_and_voltages.update(new_models_times_and_voltages)
         with open(savefile, "wb") as f:
             pickle.dump(models_times_and_voltages, f, pickle.HIGHEST_PROTOCOL)
