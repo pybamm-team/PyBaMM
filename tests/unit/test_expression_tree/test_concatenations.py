@@ -285,6 +285,20 @@ class TestConcatenations(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.DomainError, "domain cannot be empty"):
             pybamm.DomainConcatenation([a, b], None)
 
+    def test_numpy_concatenation_simplify(self):
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        c = pybamm.Variable("c")
+        # simplifying flattens the concatenations into a single concatenation
+        self.assertEqual(
+            pybamm.NumpyConcatenation(pybamm.NumpyConcatenation(a, b), c).simplify().id,
+            pybamm.NumpyConcatenation(a, b, c).id,
+        )
+        self.assertEqual(
+            pybamm.NumpyConcatenation(a, pybamm.NumpyConcatenation(b, c)).simplify().id,
+            pybamm.NumpyConcatenation(a, b, c).id,
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

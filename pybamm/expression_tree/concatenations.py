@@ -156,6 +156,20 @@ class NumpyConcatenation(Concatenation):
         else:
             return SparseStack(*[child.jac(variable) for child in children])
 
+    def _concatenation_simplify(self, children):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        # Turn a concatenation of concatenations into a single concatenation
+        new_children = []
+        for child in children:
+            # extract any children from numpy concatenation
+            if isinstance(child, NumpyConcatenation):
+                new_children.extend(child.orphans)
+            else:
+                new_children.append(child)
+        new_symbol = NumpyConcatenation(*new_children)
+        new_symbol.domain = []
+        return new_symbol
+
 
 class DomainConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of symbols, being

@@ -245,6 +245,9 @@ class ProcessedVariable(object):
         elif entries.shape[1] == len(edges):
             r_sol = edges
         else:
+            import ipdb
+
+            ipdb.set_trace()
             raise ValueError("3D variable shape does not match domain shape")
 
         # Get x values
