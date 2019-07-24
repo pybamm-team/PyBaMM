@@ -53,7 +53,7 @@ class SpatialMethod:
         else:
             return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
-    def broadcast(self, symbol, domain, broadcast_type):
+    def broadcast(self, symbol, domain, auxiliary_domains, broadcast_type):
         """
         Broadcast symbol to a specified domain.
 
@@ -84,6 +84,7 @@ class SpatialMethod:
             out = pybamm.Outer(
                 symbol, pybamm.Vector(np.ones(primary_pts_for_broadcast), domain=domain)
             )
+            out.auxiliary_domains = auxiliary_domains
 
         elif broadcast_type == "full":
             out = symbol * pybamm.Vector(np.ones(full_pts_for_broadcast), domain=domain)

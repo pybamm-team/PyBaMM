@@ -456,9 +456,7 @@ class PotentialTests(BaseOutputTest):
     def test_negative_electrode_potential_profile(self):
         """Test that negative electrode potential is zero on left boundary. Test
         average negative electrode potential is less than or equal to zero."""
-        t, x, _ = self.phi_s_n.t_x_r_sol
-
-        np.testing.assert_array_almost_equal(self.phi_s_n(t, x=0), 0, decimal=5)
+        np.testing.assert_array_almost_equal(self.phi_s_n(self.t, x=0), 0, decimal=5)
 
     def test_positive_electrode_potential_profile(self):
         """Test average positive electrode potential is less than the positive electrode

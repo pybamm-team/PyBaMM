@@ -4,7 +4,6 @@
 import argparse
 import numpy as np
 import pybamm
-import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -17,24 +16,24 @@ else:
     pybamm.set_logging_level("INFO")
 
 # load models
+# models = [
+#     pybamm.lead_acid.LOQS(),
+#     pybamm.lead_acid.FOQS(),
+#     pybamm.lead_acid.CompositeExtended(),
+#     pybamm.lead_acid.Composite(),
+#     pybamm.lead_acid.NewmanTiedemann(),
+# ]
 models = [
     pybamm.lead_acid.LOQS(
-        {"surface form": "differential", "bc_options": {"dimensionality": 1}},
-        name="3D LOQS model",
-    ),
-    pybamm.lead_acid.LOQS(),
-    # pybamm.lead_acid.FOQS(),
-    # pybamm.lead_acid.CompositeExtended(),
-    # # pybamm.lead_acid.Composite({"surface form": "algebraic"}),
-    # pybamm.lead_acid.NewmanTiedemann(),
+        {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+    )
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        # "Bruggeman coefficient": 0.001,
-        "Typical current [A]": 1,
+        "Typical current [A]": 20,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
@@ -47,7 +46,6 @@ for model in models:
 # set mesh
 
 # discretise models
-sys.setrecursionlimit(10000)
 for model in models:
     geometry = model.default_geometry
     param.process_geometry(geometry)
@@ -70,11 +68,11 @@ output_variables = [
     #     "Average negative electrode interfacial current density [A.m-2]",
     #     "Average positive electrode interfacial current density [A.m-2]",
     # ],
-    # "Average negative electrode surface potential difference [V]",
-    # "Average positive electrode surface potential difference [V]",
-    # "Average electrolyte concentration",
-    # "Electrolyte flux",
-    "Terminal voltage [V]"
+    "Average electrolyte concentration [mol.m-3]",
+    # "Porosity",
+    # "Electrolyte current density [A.m-2]",
+    # "Electrolyte potential [V]",
+    "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
 plot.dynamic_plot()

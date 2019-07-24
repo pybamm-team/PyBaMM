@@ -67,14 +67,18 @@ class StateVector(pybamm.Symbol):
     *Extends:* :class:`Array`
     """
 
-    def __init__(self, y_slice, name=None, domain=[]):
+    def __init__(self, y_slice, name=None, domain=None, auxiliary_domains=None):
         if name is None:
             if y_slice.start is None:
                 name = "y[:{:d}]".format(y_slice.stop)
             else:
                 name = "y[{:d}:{:d}]".format(y_slice.start, y_slice.stop)
+        if domain is None:
+            domain = []
+        if auxiliary_domains is None:
+            auxiliary_domains = {}
         self._y_slice = y_slice
-        super().__init__(name=name, domain=domain)
+        super().__init__(name=name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     @property
     def y_slice(self):

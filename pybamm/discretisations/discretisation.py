@@ -142,7 +142,7 @@ class Discretisation(object):
 
     def _flatten_variables(self, variables):
         """
-        Extract variable objects from concatenations and secondary broadcasts
+        Extract variable objects from concatenations
 
         Parameters
         ----------
@@ -525,7 +525,10 @@ class Discretisation(object):
                     symbol = disc_child * pybamm.Vector(np.array([1]))
                 else:
                     symbol = spatial_method.broadcast(
-                        disc_child, symbol.domain, symbol.broadcast_type
+                        disc_child,
+                        symbol.domain,
+                        symbol.auxiliary_domains,
+                        symbol.broadcast_type,
                     )
                 return symbol
 
@@ -540,7 +543,11 @@ class Discretisation(object):
             return symbol._function_new_copy(disc_children)
 
         elif isinstance(symbol, pybamm.Variable):
-            return pybamm.StateVector(self._y_slices[symbol.id], domain=symbol.domain)
+            return pybamm.StateVector(
+                self._y_slices[symbol.id],
+                domain=symbol.domain,
+                auxiliary_domains=symbol.auxiliary_domains,
+            )
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             return spatial_method.spatial_variable(symbol)

@@ -83,6 +83,7 @@ class ProcessedVariable(object):
         self.mesh = mesh
         self.interp_kind = interp_kind
         self.domain = base_variable.domain
+        self.auxiliary_domains = base_variable.auxiliary_domains
         self.known_evals = known_evals
 
         if self.known_evals:
@@ -138,7 +139,6 @@ class ProcessedVariable(object):
         )
 
         self.entries = entries
-        self.t_x_r_sol = (self.t_sol, None, None)
         self.dimensions = 1
 
     def initialise_2D(self):
@@ -177,14 +177,19 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 2
-        if any("particle" in dom for dom in self.domain):
-            self.scale = "micro"
+        if self.domain[0] in [["negative particle"], ["positive particle"]]:
+            self.spatial_var_name = "r"
             self.r_sol = space
-            self.t_x_r_sol = (self.t_sol, None, self.r_sol)
-        else:
-            self.scale = "macro"
+        elif self.domain[0] in [
+            ["negative electrode"],
+            ["separator"],
+            ["positive electrode"],
+        ]:
+            self.spatial_var_name = "x"
             self.x_sol = space
-            self.t_x_r_sol = (self.t_sol, self.x_sol, None)
+        elif self.domain == ["current collector"]:
+            self.spatial_var_name = "z"
+            self.z_sol = space
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
@@ -221,6 +226,9 @@ class ProcessedVariable(object):
         elif entries.shape[1] == len(edges):
             r_sol = edges
         else:
+            import ipdb
+
+            ipdb.set_trace()
             raise ValueError("3D variable shape does not match domain shape")
 
         # Get x values
@@ -238,7 +246,6 @@ class ProcessedVariable(object):
         self.dimensions = 3
         self.x_sol = x_sol
         self.r_sol = r_sol
-        self.t_x_r_sol = (self.t_sol, x_sol, r_sol)
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
@@ -287,27 +294,32 @@ class ProcessedVariable(object):
             fill_value=np.nan,
         )
 
-    def __call__(self, t, x=None, r=None):
+    def __call__(self, t, x=None, r=None, z=None):
         "Evaluate the variable at arbitrary t (and x and/or r), using interpolation"
         if self.dimensions == 1:
             return self._interpolation_function(t)
         elif self.dimensions == 2:
-            return self.call_2D(t, x, r)
+            return self.call_2D(t, x, r, z)
         elif self.dimensions == 3:
             return self.call_3D(t, x, r)
 
-    def call_2D(self, t, x, r):
+    def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
-        if self.scale == "micro":
+        if self.spatial_var_name == "r":
             if r is not None:
                 return self._interpolation_function(t, r)
             else:
                 raise ValueError("r cannot be None for microscale variable")
-        else:
+        elif self.spatial_var_name == "x":
             if x is not None:
                 return self._interpolation_function(t, x)
             else:
                 raise ValueError("x cannot be None for macroscale variable")
+        else:
+            if z is not None:
+                return self._interpolation_function(t, z)
+            else:
+                raise ValueError("z cannot be None for macroscale variable")
 
     def call_3D(self, t, x, r):
         "Evaluate a 3D variable"
