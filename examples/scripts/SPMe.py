@@ -25,7 +25,7 @@ def main(ics=None, timestep=1.0):
     # solve model
     # Hours
     f = 1 / 3600
-    t_eval = np.linspace(0, timestep * f, 4)
+    t_eval = np.linspace(0, timestep * f, 2)
 
     # model.use_jacobian = False
     # model.use_simplify = False
