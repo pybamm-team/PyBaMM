@@ -42,6 +42,12 @@ class TestLeadAcidCompositeSideReactions(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
+    def test_basic_processing_extended_differential(self):
+        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        model = pybamm.lead_acid.CompositeExtended(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all(skip_output_tests=True)
+
     def test_optimisations(self):
         options = {"side reactions": ["oxygen"], "surface form": "differential"}
         model = pybamm.lead_acid.Composite(options)
