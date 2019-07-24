@@ -177,13 +177,13 @@ class ProcessedVariable(object):
         # assign attributes for reference (either x_sol or r_sol)
         self.entries = entries
         self.dimensions = 2
-        if self.domain[0] in [["negative particle"], ["positive particle"]]:
+        if self.domain[0] in ["negative particle", "positive particle"]:
             self.spatial_var_name = "r"
             self.r_sol = space
         elif self.domain[0] in [
-            ["negative electrode"],
-            ["separator"],
-            ["positive electrode"],
+            "negative electrode",
+            "separator",
+            "positive electrode",
         ]:
             self.spatial_var_name = "x"
             self.x_sol = space
@@ -284,7 +284,6 @@ class ProcessedVariable(object):
         self.dimensions = 3
         self.x_sol = x_sol
         self.z_sol = z_sol
-        self.t_x_z_sol = (self.t_sol, x_sol, z_sol)
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
@@ -301,7 +300,7 @@ class ProcessedVariable(object):
         elif self.dimensions == 2:
             return self.call_2D(t, x, r, z)
         elif self.dimensions == 3:
-            return self.call_3D(t, x, r)
+            return self.call_3D(t, x, r, z)
 
     def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
@@ -321,7 +320,7 @@ class ProcessedVariable(object):
             else:
                 raise ValueError("z cannot be None for macroscale variable")
 
-    def call_3D(self, t, x, r):
+    def call_3D(self, t, x, r, z):
         "Evaluate a 3D variable"
         if isinstance(x, np.ndarray):
             if isinstance(r, np.ndarray) and isinstance(t, np.ndarray):

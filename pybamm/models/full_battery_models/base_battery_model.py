@@ -433,13 +433,21 @@ class BaseBatteryModel(pybamm.BaseModel):
             V = pybamm.BoundaryValue(phi_s_p, "right")
             V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
         elif self.options["bc_options"]["dimensionality"] == 1:
-            phi_s_cn = self.variables["Negative current collector potential"]
-            phi_s_cp = self.variables["Positive current collector potential"]
-            phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
-            phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
+            delta_phi_n = self.variables[
+                "Average negative electrode surface potential difference"
+            ]
+            delta_phi_p = self.variables[
+                "Average positive electrode surface potential difference"
+            ]
+            delta_phi_n_dim = self.variables[
+                "Average negative electrode surface potential difference [V]"
+            ]
+            delta_phi_p_dim = self.variables[
+                "Average positive electrode surface potential difference [V]"
+            ]
             # In 1D both tabs are at "right"
-            V = pybamm.BoundaryValue(phi_s_cp, "right")
-            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right")
+            V = pybamm.BoundaryValue(delta_phi_p - delta_phi_n, "right")
+            V_dim = pybamm.BoundaryValue(delta_phi_p_dim - delta_phi_n_dim, "right")
         elif self.options["bc_options"]["dimensionality"] == 2:
             phi_s_cn = self.variables["Negative current collector potential"]
             phi_s_cp = self.variables["Positive current collector potential"]

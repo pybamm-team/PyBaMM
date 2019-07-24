@@ -29,7 +29,7 @@ class LeadingOrder(BaseSurfaceForm):
         delta_phi_p_av = variables[
             "Average positive electrode surface potential difference"
         ]
-        phi_s_cn = delta_phi_n_av
+        phi_s_cn = delta_phi_n_av - pybamm.BoundaryValue(delta_phi_n_av, "right")
         phi_s_cp = delta_phi_p_av - delta_phi_n_av
         variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
 
@@ -64,12 +64,16 @@ class LeadingOrder(BaseSurfaceForm):
         # Set boundary conditions at top ("right") and bottom ("left")
         param = self.param
         i_cell = param.current_density_with_time
+        vertical_conductivity = (
+            param.l_n * param.sigma_n_dash * param.l_p * param.sigma_p_dash
+        ) / (param.l_n * param.sigma_n_dash + param.l_p * param.sigma_p_dash)
+
         top_bc = (param.l_n * param.l_p * param.sigma_n_dash * i_cell) / (
             param.l_n * param.sigma_n_dash * param.l_p * param.sigma_p_dash
         )
         self.boundary_conditions = {
             delta_phi_difference: {
                 "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (top_bc, "Neumann"),
+                "right": (i_cell / vertical_conductivity, "Neumann"),
             }
         }

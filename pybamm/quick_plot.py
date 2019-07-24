@@ -340,10 +340,14 @@ class QuickPlot(object):
         t_dimensionless = t / self.time_scale
         for key, plot in self.plots.items():
             if self.variables[key][0][0].dimensions == 2:
-                x = self.spatial_variable[key]
+                spatial_var_name, spatial_var_value = self.spatial_variable[key]
                 for i, variable_lists in enumerate(self.variables[key]):
                     for j, variable in enumerate(variable_lists):
-                        plot[i][j].set_ydata(variable(t_dimensionless, x))
+                        plot[i][j].set_ydata(
+                            variable(
+                                t_dimensionless, **{spatial_var_name: spatial_var_value}
+                            )
+                        )
             else:
                 self.time_lines[key].set_xdata([t])
 
