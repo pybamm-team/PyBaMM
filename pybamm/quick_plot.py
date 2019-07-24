@@ -10,9 +10,9 @@ def ax_min(data):
     "Calculate appropriate minimum axis value for plotting"
     data_min = np.min(data)
     if data_min <= 0:
-        return 1.1 * data_min
+        return 1.05 * data_min
     else:
-        return 0.9 * data_min
+        return 0.95 * data_min
 
 
 def ax_max(data):

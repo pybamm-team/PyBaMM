@@ -24,18 +24,18 @@ else:
 #     pybamm.lead_acid.NewmanTiedemann(),
 # ]
 models = [
-    pybamm.lead_acid.LOQS(),
+    # pybamm.lead_acid.LOQS({"surface form": "algebraic"}),
     pybamm.lead_acid.LOQS(
-        {"surface form": "differential", "bc_options": {"dimensionality": 1}},
+        {"surface form": "algebraic", "bc_options": {"dimensionality": 2}},
         name="1+1D LOQS",
-    ),
+    )
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 50,
+        "Typical current [A]": 200,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
@@ -59,7 +59,7 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 1, 100)
+t_eval = np.linspace(0, 1, 1000)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
@@ -73,6 +73,7 @@ output_variables = [
     # "Average negative electrode surface potential difference [V]",
     # "Average positive electrode surface potential difference [V]",
     # "Current collector current density",
+    # "Average electrolyte concentration",
     # "Porosity",
     # "Electrolyte current density [A.m-2]",
     # "Electrolyte potential [V]",

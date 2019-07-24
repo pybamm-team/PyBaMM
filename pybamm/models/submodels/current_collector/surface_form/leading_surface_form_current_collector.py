@@ -41,8 +41,7 @@ class LeadingOrder(BaseSurfaceForm):
 
         # Simple model: read off vertical current (no extra equation)
         delta_phi_difference = delta_phi_n_av - delta_phi_p_av
-        I_s_perp = vertical_conductivity * pybamm.grad(delta_phi_difference)
-        i_boundary_cc = pybamm.div(I_s_perp)
+        i_boundary_cc = vertical_conductivity * pybamm.laplacian(delta_phi_difference)
 
         # TODO: grad not implemented for 2D yet
         i_cc = pybamm.Scalar(0)

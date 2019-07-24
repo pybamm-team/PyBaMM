@@ -77,9 +77,19 @@ class HigherOrderBaseModel(BaseModel):
         ]
 
     def set_current_collector_submodel(self):
-        self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param
-        )
+
+        if self.options["bc_options"]["dimensionality"] == 0:
+            self.submodels["current collector"] = pybamm.current_collector.Uniform(
+                self.param
+            )
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            self.submodels[
+                "current collector"
+            ] = pybamm.current_collector.surface_form.LeadingOrder(self.param)
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            self.submodels[
+                "current collector"
+            ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
 
     def set_average_interfacial_submodel(self):
         self.submodels[

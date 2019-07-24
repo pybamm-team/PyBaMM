@@ -20,7 +20,6 @@ class LOQS(BaseModel):
 
     def __init__(self, options=None, name="LOQS model"):
         super().__init__(options, name)
-        self.use_jacobian = False
 
         self.set_reactions()
         self.set_current_collector_submodel()
@@ -35,6 +34,9 @@ class LOQS(BaseModel):
 
         self.build_model()
 
+        if self.options["bc_options"]["dimensionality"] == 0:
+            self.use_jacobian = False
+
     def set_current_collector_submodel(self):
 
         if self.options["bc_options"]["dimensionality"] == 0:
@@ -48,7 +50,10 @@ class LOQS(BaseModel):
         elif self.options["bc_options"]["dimensionality"] == 2:
             self.submodels[
                 "current collector"
-            ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
+            ] = pybamm.current_collector.surface_form.LeadingOrder(self.param)
+            # self.submodels[
+            #     "current collector"
+            # ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
 
     def set_porosity_submodel(self):
 
@@ -158,42 +163,6 @@ class LOQS(BaseModel):
         self.reaction_submodels["Positive"].append(
             self.submodels["leading-order positive oxygen interface"]
         )
-
-    @property
-    def default_spatial_methods(self):
-        base_spatial_methods = {"macroscale": pybamm.FiniteVolume}
-        if self.options["bc_options"]["dimensionality"] == 0:
-            # 0D submesh - use base spatial method
-            base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod
-        if self.options["bc_options"]["dimensionality"] == 1:
-            base_spatial_methods["current collector"] = pybamm.FiniteVolume
-        elif self.options["bc_options"]["dimensionality"] == 2:
-            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
-        return base_spatial_methods
-
-    @property
-    def default_submesh_types(self):
-        base_submeshes = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-        }
-        if self.options["bc_options"]["dimensionality"] == 0:
-            base_submeshes["current collector"] = pybamm.SubMesh0D
-        elif self.options["bc_options"]["dimensionality"] == 1:
-            base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
-        elif self.options["bc_options"]["dimensionality"] == 2:
-            base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
-        return base_submeshes
-
-    @property
-    def default_geometry(self):
-        if self.options["bc_options"]["dimensionality"] == 0:
-            return pybamm.Geometry("1D macro")
-        elif self.options["bc_options"]["dimensionality"] == 1:
-            return pybamm.Geometry("1+1D macro")
-        elif self.options["bc_options"]["dimensionality"] == 2:
-            return pybamm.Geometry("2+1D macro")
 
     @property
     def default_solver(self):
