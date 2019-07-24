@@ -11,7 +11,7 @@ class TestSingleParticle(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
 
-        a = pybamm.Scalar(0)
+        a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {
             "Average negative electrode interfacial current density": a,
             "Average negative electrode temperature": a,

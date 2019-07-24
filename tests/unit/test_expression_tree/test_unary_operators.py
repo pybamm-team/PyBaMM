@@ -57,7 +57,33 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta.name, "integral dx ['negative electrode']")
         self.assertEqual(inta.children[0].name, a.name)
         self.assertEqual(inta.integration_variable[0], x)
-        self.assertEqual(inta.domain, ["current collector"])
+        self.assertEqual(inta.domain, [])
+        self.assertEqual(inta.auxiliary_domains, {})
+        # space integral with secondary domain
+        a_sec = pybamm.Symbol(
+            "a",
+            domain=["negative electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        x = pybamm.SpatialVariable("x", ["negative electrode"])
+        inta_sec = pybamm.Integral(a_sec, x)
+        self.assertEqual(inta_sec.domain, ["current collector"])
+        self.assertEqual(inta_sec.auxiliary_domains, {})
+        # space integral with secondary domain
+        a_tert = pybamm.Symbol(
+            "a",
+            domain=["negative electrode"],
+            auxiliary_domains={
+                "secondary": "current collector",
+                "tertiary": "some extra domain",
+            },
+        )
+        x = pybamm.SpatialVariable("x", ["negative electrode"])
+        inta_tert = pybamm.Integral(a_tert, x)
+        self.assertEqual(inta_tert.domain, ["current collector"])
+        self.assertEqual(
+            inta_tert.auxiliary_domains, {"secondary": ["some extra domain"]}
+        )
 
         # space integral over two variables
         b = pybamm.Symbol("b", domain=["current collector"])
@@ -76,6 +102,11 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta.children[0].name, a.name)
         self.assertEqual(inta.integration_variable[0], x)
         self.assertEqual(inta.domain, ["negative electrode"])
+        inta_sec = pybamm.IndefiniteIntegral(a_sec, x)
+        self.assertEqual(inta_sec.domain, ["negative electrode"])
+        self.assertEqual(
+            inta_sec.auxiliary_domains, {"secondary": ["current collector"]}
+        )
 
         # expected errors
         a = pybamm.Symbol("a", domain=["negative electrode"])
@@ -175,7 +206,26 @@ class TestUnaryOperators(unittest.TestCase):
         boundary_a = pybamm.boundary_value(a, "right")
         self.assertIsInstance(boundary_a, pybamm.BoundaryValue)
         self.assertEqual(boundary_a.side, "right")
-        self.assertEqual(boundary_a.domain, ["current collector"])
+        self.assertEqual(boundary_a.domain, [])
+        self.assertEqual(boundary_a.auxiliary_domains, {})
+        # test with secondary domain
+        a_sec = pybamm.Symbol(
+            "a",
+            domain=["separator"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        boundary_a_sec = pybamm.boundary_value(a_sec, "right")
+        self.assertEqual(boundary_a_sec.domain, ["current collector"])
+        self.assertEqual(boundary_a_sec.auxiliary_domains, {})
+        # test with secondary domain and tertiary domain
+        a_tert = pybamm.Symbol(
+            "a",
+            domain=["separator"],
+            auxiliary_domains={"secondary": "current collector", "tertiary": "bla"},
+        )
+        boundary_a_tert = pybamm.boundary_value(a_tert, "right")
+        self.assertEqual(boundary_a_tert.domain, ["current collector"])
+        self.assertEqual(boundary_a_tert.auxiliary_domains, {"secondary": ["bla"]})
 
     def test_average(self):
         a = pybamm.Scalar(1)
@@ -185,13 +235,12 @@ class TestUnaryOperators(unittest.TestCase):
         average_broad_a = pybamm.x_average(pybamm.Broadcast(a, ["negative electrode"]))
         self.assertEqual(average_broad_a.evaluate(), np.array([1]))
 
-        average_conc_broad = pybamm.x_average(
-            pybamm.Concatenation(
-                pybamm.Broadcast(1, ["negative electrode"]),
-                pybamm.Broadcast(2, ["separator"]),
-                pybamm.Broadcast(3, ["positive electrode"]),
-            )
+        conc_broad = pybamm.Concatenation(
+            pybamm.Broadcast(1, ["negative electrode"]),
+            pybamm.Broadcast(2, ["separator"]),
+            pybamm.Broadcast(3, ["positive electrode"]),
         )
+        average_conc_broad = pybamm.x_average(conc_broad)
         self.assertIsInstance(average_conc_broad, pybamm.Division)
 
         for domain in [
@@ -207,7 +256,7 @@ class TestUnaryOperators(unittest.TestCase):
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
             # electrode domains go to current collector when averaged
-            self.assertEqual(av_a.domain, ["current collector"])
+            self.assertEqual(av_a.domain, [])
 
         a = pybamm.Symbol("a", domain="bad domain")
         with self.assertRaises(pybamm.DomainError):

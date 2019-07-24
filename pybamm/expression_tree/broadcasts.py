@@ -51,7 +51,10 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_type = broadcast_type
         self.broadcast_domain = broadcast_domain
         if auxiliary_domains is None:
-            auxiliary_domains = {"secondary": child.domain}
+            if child.domain != []:
+                auxiliary_domains = {"secondary": child.domain}
+            else:
+                auxiliary_domains = {}
         super().__init__(name, child, domain, auxiliary_domains)
 
     def check_and_set_domain_and_broadcast_type(
@@ -86,12 +89,16 @@ class Broadcast(pybamm.SpatialOperator):
     def _unary_simplify(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
-        return Broadcast(child, self.broadcast_domain, self.broadcast_type)
+        return Broadcast(
+            child, self.broadcast_domain, self.auxiliary_domains, self.broadcast_type
+        )
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
-        return Broadcast(child, self.broadcast_domain, self.broadcast_type)
+        return Broadcast(
+            child, self.broadcast_domain, self.auxiliary_domains, self.broadcast_type
+        )
 
     def evaluate_for_shape(self):
         """

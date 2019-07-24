@@ -1,5 +1,5 @@
 #
-# Test for the Symbol class
+# Test for the Simplify class
 #
 import math
 import numpy as np

@@ -28,6 +28,7 @@ class Concatenation(pybamm.Symbol):
             auxiliary_domains = self.get_children_auxiliary_domains(children)
         else:
             domain = []
+            auxiliary_domains = {}
         self.concatenation_function = concat_fun
         super().__init__(
             name, children, domain=domain, auxiliary_domains=auxiliary_domains

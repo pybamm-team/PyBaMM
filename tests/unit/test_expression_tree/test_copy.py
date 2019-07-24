@@ -1,5 +1,5 @@
 #
-# Test for the Symbol class
+# Test for making copies
 #
 import numpy as np
 import pybamm
@@ -7,7 +7,7 @@ import unittest
 from tests import get_mesh_for_testing
 
 
-class TestSimplify(unittest.TestCase):
+class TestCopy(unittest.TestCase):
     def test_symbol_new_copy(self):
         a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
@@ -32,7 +32,7 @@ class TestSimplify(unittest.TestCase):
             pybamm.BoundaryValue(v_n, "right"),
             pybamm.BoundaryGradient(v_n, "right"),
             pybamm.PrimaryBroadcast(a, "domain"),
-            pybamm.FullBroadcast(a, "domain", "other domain"),
+            pybamm.FullBroadcast(a, "domain", {"secondary": "other domain"}),
             pybamm.Concatenation(v_n, v_s),
             pybamm.NumpyConcatenation(a, b, v_s),
             pybamm.DomainConcatenation([v_n, v_s], mesh),
