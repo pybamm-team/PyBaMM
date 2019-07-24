@@ -17,7 +17,7 @@ class OdeSolver(pybamm.BaseSolver):
     def __init__(self, method=None, tol=1e-8):
         super().__init__(method, tol)
 
-    def solve(self, model, t_eval, t_mode="single"):
+    def solve_all(self, model, t_eval):
         """Calculate the solution of the model at specified times.
 
         Parameters
@@ -27,85 +27,26 @@ class OdeSolver(pybamm.BaseSolver):
             initial_conditions
         t_eval : numeric type
             The times at which to compute the solution
-        t_mode : string
-            The mode for time-stepping. continuous = all steps, single = one at
-            a time.
 
         """
-        pybamm.logger.info("Start solving {}".format(model.name))
-
         # Set up
         timer = pybamm.Timer()
         start_time = timer.time()
-        concatenated_rhs, y0, model_events, jac_rhs = self.set_up(model)
+        self.set_up(model)
         set_up_time = timer.time() - start_time
-
-        # Create function to evaluate rhs
-        def dydt(t, y):
-            pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
-            y = y[:, np.newaxis]
-            dy = concatenated_rhs.evaluate(t, y, known_evals={})[0]
-            return dy[:, 0]
-
-        # Create event-dependent function to evaluate events
-        def event_fun(event):
-            def eval_event(t, y):
-                return event.evaluate(t, y)
-
-            return eval_event
-
-        events = [event_fun(event) for event in model_events.values()]
-
-        # Create function to evaluate jacobian
-        if jac_rhs is not None:
-
-            def jacobian(t, y):
-                return jac_rhs.evaluate(t, y, known_evals={})[0]
-
-        else:
-            jacobian = None
 
         # Solve
         solve_start_time = timer.time()
-        if t_mode == "continuous":
-            pybamm.logger.info("Calling ODE solver")
-            solution = self.integrate(
-                dydt,
-                y0,
-                t_eval,
-                events=events,
-                mass_matrix=model.mass_matrix.entries,
-                jacobian=jacobian,
-            )
-        else:
-            self.yt = y0
-            self.t_eval = t_eval
-            self.step_count = 0
-            self.jacobian = jacobian
-            self.events = events
-            self.dydt = dydt
-            for i in range(len(t_eval) - 1):
-                #                t1 = self.t_eval[self.step_count]
-                #                t2 = self.t_eval[self.step_count+1]
-                #                solution = self.integrate(
-                #                        dydt,
-                #                        self.yt,
-                #                        (t1, t2),
-                #                        events=self.events,
-                #                        mass_matrix=model.mass_matrix.entries,
-                #                        jacobian=self.jacobian,
-                #                        )
-                solution = self._step(model)
-        #                self.yt = solution.y[-1]
-        #                self.step_count += 1
+        pybamm.logger.info("Calling ODE solver")
 
+        solution = self._solve(model, t_eval=t_eval)
         # Assign times
         solution.solve_time = timer.time() - solve_start_time
         solution.total_time = timer.time() - start_time
         solution.set_up_time = set_up_time
 
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, model_events)
+        termination = self.get_termination_reason(solution, self.events)
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         return solution
@@ -137,6 +78,7 @@ class OdeSolver(pybamm.BaseSolver):
             should be used instead)
 
         """
+        pybamm.logger.info("Start solving {}".format(model.name))
         if len(model.algebraic) > 0:
             raise pybamm.SolverError(
                 """Cannot use ODE solver to solve model with DAEs"""
@@ -179,8 +121,36 @@ class OdeSolver(pybamm.BaseSolver):
             events = {
                 name: pybamm.EvaluatorPython(event) for name, event in events.items()
             }
+                # Create function to evaluate rhs
+        def dydt(t, y):
+            pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
+            y = y[:, np.newaxis]
+            dy = concatenated_rhs.evaluate(t, y, known_evals={})[0]
+            return dy[:, 0]
 
-        return concatenated_rhs, y0, events, jac_rhs
+        # Create event-dependent function to evaluate events
+        def event_fun(event):
+            def eval_event(t, y):
+                return event.evaluate(t, y)
+
+            return eval_event
+
+        events = [event_fun(event) for event in events.values()]
+
+        # Create function to evaluate jacobian
+        if jac_rhs is not None:
+
+            def jacobian(t, y):
+                return jac_rhs.evaluate(t, y, known_evals={})[0]
+
+        else:
+            jacobian = None
+
+        self.concatenated_rhs = concatenated_rhs
+        self.y0 = y0
+        self.dydt = dydt
+        self.events = events
+        self.jacobian = jacobian
 
     def integrate(
         self, derivs, y0, t_eval, events=None, mass_matrix=None, jacobian=None
@@ -206,17 +176,47 @@ class OdeSolver(pybamm.BaseSolver):
         """
         raise NotImplementedError
 
-    def _step(self, model):
-        t1 = self.t_eval[self.step_count]
-        t2 = self.t_eval[self.step_count + 1]
+    def step(self, model, dt, t0=0.0):
+        """Calculate the solution of the model at specified times.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate. Must have attributes rhs and
+            initial_conditions
+        dt : numeric type
+            The timestep over which to step the solution
+        t0 : numeric type
+            The start time used to set the time when function is first called
+            and increment from thereafter
+
+        """
+        if not hasattr(self, 'y0'):
+            self.set_up(model)
+            self.t = t0
+        solution = self._solve(model, dt=dt)
+        # Identify the event that caused termination
+        termination = self.get_termination_reason(solution, self.events)
+
+        pybamm.logger.info("Finish solving step {} ({})".format(model.name, termination))
+        return solution
+
+    def _solve(self, model, t_eval=None, dt=None):
+        """Solve the solution either for a set of times or discrete step.
+        
+        """
+        if t_eval is not None:
+            times = t_eval
+        elif dt is not None:
+            times = (self.t, self.t+dt)
         solution = self.integrate(
             self.dydt,
-            self.yt,
-            t_eval=(t1, t2),
+            self.y0,
+            t_eval=times,
             events=self.events,
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
         )
-        self.yt = solution.y[:, -1]
-        self.step_count += 1
+        self.y0 = solution.y[:, -1]
+        self.t = solution.t[-1]
         return solution
