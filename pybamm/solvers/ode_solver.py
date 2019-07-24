@@ -17,7 +17,7 @@ class OdeSolver(pybamm.BaseSolver):
     def __init__(self, method=None, tol=1e-8):
         super().__init__(method, tol)
 
-    def solve_all(self, model, t_eval):
+    def solve(self, model, t_eval):
         """Calculate the solution of the model at specified times.
 
         Parameters
@@ -39,14 +39,14 @@ class OdeSolver(pybamm.BaseSolver):
         solve_start_time = timer.time()
         pybamm.logger.info("Calling ODE solver")
 
-        solution = self._solve(model, t_eval=t_eval)
+        solution = self._solve_times(model, t_eval=t_eval)
         # Assign times
         solution.solve_time = timer.time() - solve_start_time
         solution.total_time = timer.time() - start_time
         solution.set_up_time = set_up_time
 
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
+        termination = self.get_termination_reason(solution, model.events)
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         return solution
@@ -149,7 +149,7 @@ class OdeSolver(pybamm.BaseSolver):
         self.concatenated_rhs = concatenated_rhs
         self.y0 = y0
         self.dydt = dydt
-        self.events = events
+        self.event_funcs = events
         self.jacobian = jacobian
 
     def integrate(
@@ -194,16 +194,16 @@ class OdeSolver(pybamm.BaseSolver):
         if not hasattr(self, 'y0'):
             self.set_up(model)
             self.t = t0
-        solution = self._solve(model, dt=dt)
+        solution = self._solve_times(model, dt=dt)
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, self.events)
+        termination = self.get_termination_reason(solution, model.events)
 
         pybamm.logger.info("Finish solving step {} ({})".format(model.name, termination))
         return solution
 
-    def _solve(self, model, t_eval=None, dt=None):
+    def _solve_times(self, model, t_eval=None, dt=None):
         """Solve the solution either for a set of times or discrete step.
-        
+
         """
         if t_eval is not None:
             times = t_eval
@@ -213,7 +213,7 @@ class OdeSolver(pybamm.BaseSolver):
             self.dydt,
             self.y0,
             t_eval=times,
-            events=self.events,
+            events=self.event_funcs,
             mass_matrix=model.mass_matrix.entries,
             jacobian=self.jacobian,
         )

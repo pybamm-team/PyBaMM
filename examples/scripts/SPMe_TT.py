@@ -98,7 +98,7 @@ param = pybamm.standard_parameters_lithium_ion
 ##plt.plot(Cs, output_n)
 #plt.plot(Cs, output_p)
 
-# Particle Concentrations 
+# Particle Concentrations
 c_ave_neg = []
 plt.figure()
 for time in solution.t:
@@ -112,7 +112,7 @@ for time in solution.t:
     temp_c_pos = particle_conc_pos(time, r=x)
     plt.plot(temp_c_pos)
     c_ave_pos.append(np.mean(temp_c_pos))
-    
+
 plt.figure()
 plt.plot(solution.t, c_ave_neg)
 plt.plot(solution.t, c_ave_pos)

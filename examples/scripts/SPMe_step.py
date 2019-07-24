@@ -41,7 +41,7 @@ amalg = []
 for i in range(len(t_eval)-1):
     step_sol = solver.step(model, dt=timestep*f)
     amalg.append(step_sol)
-cont_sol = model.default_solver.solve_all(model, t_eval)
+cont_sol = model.default_solver.solve(model, t_eval)
 
 state_variables = [
     "Electrolyte concentration [mol.m-3]",
