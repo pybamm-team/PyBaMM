@@ -62,8 +62,38 @@ class AlgebraicSolver(object):
         def algebraic(y):
             return concatenated_algebraic.evaluate(0, y, known_evals={})[0][:, 0]
 
-        def jac_fun(y):
-            return jac(0, y)
+        # Use "initial conditions" set in model as initial guess
+        y0_guess = model.concatenated_initial_conditions
+
+        # Solve
+        solve_start_time = timer.time()
+        pybamm.logger.info("Calling root finding algorithm")
+        solution = self.root(algebraic, y0_guess, jacobian=jac)
+
+        # Assign times
+        solution.solve_time = timer.time() - solve_start_time
+        solution.total_time = timer.time() - start_time
+        solution.set_up_time = set_up_time
+
+        pybamm.logger.info("Finish solving {}".format(model.name))
+        return solution
+
+    def root(self, algebraic, y0_guess, jacobian=None):
+        """
+        Calculate the solution of the algebraic equations through root-finding
+
+        Parameters
+        ----------
+        algebraic : method
+            Function that takes in y and returns the value of the algebraic
+            equations
+        y0_guess : array-like
+            Array of the user's guess for the solution, used to initialise
+            the root finding algorithm
+        jacobian : method, optional
+            A function that takes in t and y and returns the Jacobian. If
+            None, the solver will approximate the Jacobian if required.
+        """
 
         def root_fun(y0):
             "Evaluates algebraic using y0"
@@ -75,27 +105,23 @@ class AlgebraicSolver(object):
             )
             return out
 
-        # Use "initial conditions" set in model as initial guess
-        y0_guess = model.concatenated_initial_conditions
+        if jacobian:
+            # wrap jacobian to only take y
+            def jac_fun(y):
+                return jacobian(0, y)
 
-        # Solve
-        solve_start_time = timer.time()
-        pybamm.logger.info("Calling root finding algorithm")
-        if jac:
             sol = optimize.root(
-                root_fun, y0_guess, method=self.root_method, tol=self.root_tol, jac=jac_fun,
+                root_fun, y0_guess, method=self.method, tol=self.tol, jac=jac_fun
             )
         else:
-            sol = optimize.root(
-                root_fun, y0_guess, method=self.root_method, tol=self.root_tol
-            )
+            sol = optimize.root(root_fun, y0_guess, method=self.method, tol=self.tol)
 
-        if sol.success and np.all(sol.fun < self.root_tol * len(sol.x)):
+        if sol.success and np.all(sol.fun < self.tol * len(sol.x)):
             termination = "success"
-            solution = pybamm.Solution(0, sol.x, termination)
+            return pybamm.Solution(0, sol.x, termination)
         elif not sol.success:
             raise pybamm.SolverError(
-                "Could not find solution: {}".format(sol.message)
+                "Could not find acceptable solution: {}".format(sol.message)
             )
         else:
             raise pybamm.SolverError(
@@ -103,16 +129,9 @@ class AlgebraicSolver(object):
                 Could not find acceptable solution: solver terminated
                 successfully, but maximum solution error ({}) above tolerance ({})
                 """.format(
-                    np.max(sol.fun), self.root_tol * len(sol.x)
+                    np.max(sol.fun), self.tol * len(sol.x)
                 )
             )
-        # Assign times
-        solution.solve_time = timer.time() - solve_start_time
-        solution.total_time = timer.time() - start_time
-        solution.set_up_time = set_up_time
-
-        pybamm.logger.info("Finish solving {}".format(model.name))
-        return solution
 
     def set_up(self, model):
         """Unpack model, perform checks, simplify and calculate jacobian.

@@ -438,4 +438,4 @@ class Geometry2DCurrentCollector(Geometry):
         }
 
         # update with custom geometry if non empty
-        self.update(custom_geometry)        
+        self.update(custom_geometry)

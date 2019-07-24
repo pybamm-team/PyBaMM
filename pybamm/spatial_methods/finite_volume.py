@@ -209,7 +209,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         Vector for finite-volume implementation of the definite integral.
         Note: This only returns the integral vector over the primary domain, and
         does not account for secondary dimensions
-        (see :meth:`pybamm.FiniteVolume.definite_integral_matrix).
+        (see :meth:`pybamm.FiniteVolume.definite_integral_matrix`).
 
         .. math::
             I = \\int_{a}^{b}\\!f(s)\\,ds
