@@ -584,12 +584,26 @@ class Discretisation(object):
 
         """
         # Unpack symbols in variables that are concatenations of variables
-        flattened_variables = self._flatten_variables(var_eqn_dict.keys())
-        slices = [self._y_slices[var.id] for var in flattened_variables]
+        unpacked_variables = []
+        slices = []
+        for symbol in var_eqn_dict.keys():
+            if isinstance(symbol, pybamm.Concatenation):
+                unpacked_variables.extend([var for var in symbol.children])
+                # must append the slice for the whole concatenation, so that equations
+                # get sorted correctly
+                slices.append(
+                    slice(
+                        self._y_slices[symbol.children[0].id].start,
+                        self._y_slices[symbol.children[-1].id].stop,
+                    )
+                )
+            else:
+                unpacked_variables.append(symbol)
+                slices.append(self._y_slices[symbol.id])
 
         if check_complete:
             # Check keys from the given var_eqn_dict against self._y_slices
-            ids = {v.id for v in flattened_variables}
+            ids = {v.id for v in unpacked_variables}
             if ids != self._y_slices.keys():
                 given_variable_names = [v.name for v in var_eqn_dict.keys()]
                 raise pybamm.ModelError(
