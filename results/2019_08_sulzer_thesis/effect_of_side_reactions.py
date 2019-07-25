@@ -19,7 +19,7 @@ def plot_voltages(all_variables, t_eval):
     shared_plotting.plot_voltages(all_variables, t_eval)
     file_name = "side_reactions_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def plot_interfacial_currents(models_variables, t_eval):
@@ -85,7 +85,7 @@ def plot_variables(all_variables, t_eval):
         shared_plotting.plot_variable(all_variables, times, var, exceptions)
         if OUTPUT_DIR is not None:
             plt.savefig(
-                OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight"
+                OUTPUT_DIR + file_name, format="eps", dpi=1000
             )
 
 

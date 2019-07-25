@@ -16,12 +16,12 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
-    Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+    Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     shared_plotting.plot_voltages(all_variables, t_eval)
     file_name = "charge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def plot_interfacial_currents(models_variables, t_eval):
@@ -87,18 +87,16 @@ def plot_variables(all_variables, t_eval):
             exceptions = {}
         shared_plotting.plot_variable(all_variables, times, var, exceptions)
         if OUTPUT_DIR is not None:
-            plt.savefig(
-                OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight"
-            )
+            plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def plot_voltage_breakdown(all_variables, t_eval):
     Crates = [-0.1, -2, -5]
-    model = "LOQS"
+    model = "Composite"
     shared_plotting.plot_voltage_breakdown(all_variables, t_eval, model, Crates)
     file_name = "charge_voltage_breakdown.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def charge_states(compute):
@@ -113,13 +111,13 @@ def charge_states(compute):
             pybamm.lead_acid.FOQS(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="FOQS"
             ),
-            pybamm.lead_acid.Composite(
-                {"surface form": "algebraic", "side reactions": ["oxygen"]},
-                name="Composite",
-            ),
+            # pybamm.lead_acid.Composite(
+            #     {"surface form": "algebraic", "side reactions": ["oxygen"]},
+            #     name="Composite",
+            # ),
             pybamm.lead_acid.CompositeExtended(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]},
-                name="Extended\ncomposite",
+                name="Composite",
             ),
         ]
         Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
@@ -144,9 +142,9 @@ def charge_states(compute):
                 "Run script with '--compute' first to generate results"
             )
     # plot_voltages(all_variables, t_eval)
-    plot_interfacial_currents(all_variables[-1], t_eval)
+    # plot_interfacial_currents(all_variables[-1], t_eval)
     # plot_variables(all_variables, t_eval)
-    # plot_voltage_breakdown(all_variables, t_eval)
+    plot_voltage_breakdown(all_variables, t_eval)
 
 
 if __name__ == "__main__":

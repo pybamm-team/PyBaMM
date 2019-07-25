@@ -7,12 +7,12 @@ import pybamm
 from collections import defaultdict
 
 
-def plot_voltages(all_variables, t_eval, linestyles=None):
+def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
     # Plot
     linestyles = linestyles or ["k-", "g--", "r:", "b-."]
     n = int(len(all_variables) // np.sqrt(len(all_variables)))
     m = int(np.ceil(len(all_variables) / n))
-    fig, axes = plt.subplots(n, m, figsize=(6.4, 4.5))
+    fig, axes = plt.subplots(n, m, figsize=figsize)
     labels = [model for model in [x for x in all_variables.values()][0].keys()]
     y_min = 0.98 * min(
         np.nanmin(variables["Battery voltage [V]"](t_eval))
@@ -54,8 +54,8 @@ def plot_voltages(all_variables, t_eval, linestyles=None):
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         if k % m == 0:
             ax.set_ylabel("Voltage [V]")
-        else:
-            ax.set_yticklabels([])
+        # else:
+        #     ax.set_yticklabels([])
 
         for j, variables in enumerate(models_variables.values()):
             ax.plot(
@@ -82,7 +82,7 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None):
     x = all_variables[Crates[0]][labels[0]]["x"](0, np.linspace(0, 1))[:, 0]
     x_dim = all_variables[Crates[0]][labels[0]]["x [m]"](0, np.linspace(0, 1))[:, 0]
 
-    fig, axes = plt.subplots(n, m, figsize=(6.4, 6.4))
+    fig, axes = plt.subplots(n, m, figsize=(6.4, 5))
 
     # Default limits
     y_min = pybamm.ax_min(
@@ -146,7 +146,7 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None):
     leg = fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
     leg.get_frame().set_edgecolor("k")
     plt.subplots_adjust(
-        bottom=0.15, top=0.95, left=0.18, right=0.97, hspace=0.08, wspace=0.05
+        bottom=0.17, top=0.95, left=0.18, right=0.97, hspace=0.08, wspace=0.05
     )
 
 
