@@ -60,7 +60,7 @@ nu = nu_plus + nu_minus
 
 # Other species properties
 c_ox_init_dim = pybamm.Parameter("Initial oxygen concentration [mol.m-3]")
-c_ox_typ = pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
+c_ox_typ = c_e_typ  # pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
 # Electrode properties
 sigma_cn_dimensional = pybamm.Parameter(

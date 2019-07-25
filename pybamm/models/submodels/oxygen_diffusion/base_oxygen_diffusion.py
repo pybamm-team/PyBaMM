@@ -46,19 +46,19 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {
             "Oxygen concentration": c_ox,
             "Oxygen concentration [mol.m-3]": c_ox_typ * c_ox,
-            "Oxygen concentration [Molar]": c_ox_typ * c_ox,
+            "Oxygen concentration [Molar]": c_ox_typ * c_ox / 1000,
             "Average oxygen concentration": c_ox_av,
             "Average oxygen concentration [mol.m-3]": c_ox_typ * c_ox_av,
-            "Average oxygen concentration [Molar]": c_ox_typ * c_ox_av,
+            "Average oxygen concentration [Molar]": c_ox_typ * c_ox_av / 1000,
             "Negative oxygen concentration": c_ox_n,
             "Negative oxygen concentration [mol.m-3]": c_ox_typ * c_ox_n,
-            "Negative oxygen concentration [Molar]": c_ox_typ * c_ox_n,
+            "Negative oxygen concentration [Molar]": c_ox_typ * c_ox_n / 1000,
             "Separator oxygen concentration": c_ox_s,
             "Separator oxygen concentration [mol.m-3]": c_ox_typ * c_ox_s,
-            "Separator oxygen concentration [Molar]": c_ox_typ * c_ox_s,
+            "Separator oxygen concentration [Molar]": c_ox_typ * c_ox_s / 1000,
             "Positive oxygen concentration": c_ox_p,
             "Positive oxygen concentration [mol.m-3]": c_ox_typ * c_ox_p,
-            "Positive oxygen concentration [Molar]": c_ox_typ * c_ox_p,
+            "Positive oxygen concentration [Molar]": c_ox_typ * c_ox_p / 1000,
         }
 
         return variables

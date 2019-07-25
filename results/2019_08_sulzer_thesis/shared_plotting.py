@@ -150,7 +150,7 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None):
     )
 
 
-def plot_voltage_breakdown(all_variables, t_eval, model, Crates):
+def plot_voltage_components(all_variables, t_eval, model, Crates):
     n = int(len(Crates) // np.sqrt(len(Crates)))
     m = int(np.ceil(len(Crates) / n))
     fig, axes = plt.subplots(n, m, figsize=(6.4, 2.3))

@@ -48,11 +48,11 @@ def plot_variables(all_variables, t_eval):
             plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_voltage_breakdown(all_variables, t_eval):
+def plot_voltage_components(all_variables, t_eval):
     Crates = [0.1, 2, 5]
     model = "Composite"
-    shared_plotting.plot_voltage_breakdown(all_variables, t_eval, model, Crates)
-    file_name = "discharge_voltage_breakdown.eps"
+    shared_plotting.plot_voltage_components(all_variables, t_eval, model, Crates)
+    file_name = "discharge_voltage_components.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
@@ -85,7 +85,7 @@ def discharge_states(compute):
             )
     plot_voltages(all_variables, t_eval)
     plot_variables(all_variables, t_eval)
-    plot_voltage_breakdown(all_variables, t_eval)
+    plot_voltage_components(all_variables, t_eval)
 
 
 def plot_errors(models_times_and_voltages):
