@@ -121,7 +121,8 @@ class OdeSolver(pybamm.BaseSolver):
             events = {
                 name: pybamm.EvaluatorPython(event) for name, event in events.items()
             }
-                # Create function to evaluate rhs
+        # Create function to evaluate rhs
+
         def dydt(t, y):
             pybamm.logger.debug("Evaluating RHS for {} at t={}".format(model.name, t))
             y = y[:, np.newaxis]
@@ -198,7 +199,8 @@ class OdeSolver(pybamm.BaseSolver):
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
 
-        pybamm.logger.info("Finish solving step {} ({})".format(model.name, termination))
+        pybamm.logger.info("Finish solving step {} ({})".format(model.name,
+                           termination))
         return solution
 
     def _solve_times(self, model, t_eval=None, dt=None):
@@ -208,7 +210,7 @@ class OdeSolver(pybamm.BaseSolver):
         if t_eval is not None:
             times = t_eval
         elif dt is not None:
-            times = (self.t, self.t+dt)
+            times = (self.t, self.t + dt)
         solution = self.integrate(
             self.dydt,
             self.y0,

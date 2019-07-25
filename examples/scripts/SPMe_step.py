@@ -3,11 +3,11 @@ import numpy as np
 
 pybamm.set_logging_level("INFO")
 ics = {
-"Initial concentration in electrolyte [mol.m-3]": 1000.0,
-"Initial concentration in negative electrode [mol.m-3]": 19986.609595075,
-"Initial concentration in positive electrode [mol.m-3]": 30730.755438556498,
-"Initial temperature [K]": 298.15,
-}
+       "Initial concentration in electrolyte [mol.m-3]": 1000.0,
+       "Initial concentration in negative electrode [mol.m-3]": 19986.609595075,
+       "Initial concentration in positive electrode [mol.m-3]": 30730.755438556498,
+       "Initial temperature [K]": 298.15,
+       }
 timestep = 0.1
 n_steps = 5
 # load model
@@ -24,7 +24,8 @@ param.update(ics)
 param.process_model(model)
 param.process_geometry(geometry)
 # set mesh
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+mesh = pybamm.Mesh(geometry, model.default_submesh_types,
+                   model.default_var_pts)
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
@@ -33,13 +34,10 @@ disc.process_model(model)
 f = 1 / 3600
 t_eval = np.arange(n_steps)*timestep*f
 
-# model.use_jacobian = False
-# model.use_simplify = False
 solver = model.default_solver
-#step_sol = solver.solve(model, t_eval)
 amalg = []
 for i in range(len(t_eval)-1):
-    step_sol = solver.step(model, dt=timestep*f)
+    step_sol = solver.step(model, dt=timestep * f)
     amalg.append(step_sol)
 cont_sol = model.default_solver.solve(model, t_eval)
 
@@ -61,10 +59,12 @@ print('Solution match', np.allclose(step_sol.y[:, -1], cont_sol.y[:, -1]))
 # for i, iv in enumerate(state_variables):
 
 f_step = pybamm.ProcessedVariable(
-     model.variables["Electrolyte concentration [mol.m-3]"], step_sol.t, step_sol.y, mesh=mesh
+     model.variables["Electrolyte concentration [mol.m-3]"],
+     step_sol.t, step_sol.y, mesh=mesh
 )
 f_cont = pybamm.ProcessedVariable(
-     model.variables["Electrolyte concentration [mol.m-3]"], cont_sol.t, cont_sol.y, mesh=mesh
+     model.variables["Electrolyte concentration [mol.m-3]"],
+     cont_sol.t, cont_sol.y, mesh=mesh
 )
 
 print('Processed Variable match',
