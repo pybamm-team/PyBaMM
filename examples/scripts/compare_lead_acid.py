@@ -15,27 +15,27 @@ if args.debug:
 else:
     pybamm.set_logging_level("INFO")
 
-# load models
-# models = [
-#     pybamm.lead_acid.LOQS(),
-#     pybamm.lead_acid.FOQS(),
-#     pybamm.lead_acid.CompositeExtended(),
-#     pybamm.lead_acid.Composite(),
-#     pybamm.lead_acid.NewmanTiedemann(),
-# ]
+    # load models
 models = [
-    # pybamm.lead_acid.LOQS({"surface form": "algebraic"}),
-    pybamm.lead_acid.LOQS(
-        {"surface form": "algebraic", "bc_options": {"dimensionality": 2}},
-        name="1+1D LOQS",
-    )
+    #     pybamm.lead_acid.LOQS(),
+    #     pybamm.lead_acid.FOQS(),
+    #     pybamm.lead_acid.CompositeExtended(),
+    pybamm.lead_acid.Composite(),
+    #     pybamm.lead_acid.NewmanTiedemann(),
 ]
+# models = [
+#     # pybamm.lead_acid.LOQS({"surface form": "algebraic"}),
+#     pybamm.lead_acid.LOQS(
+#         {"surface form": "algebraic", "bc_options": {"dimensionality": 2}},
+#         name="1+1D LOQS",
+#     )
+# ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": -20,
+        "Typical current [A]": 20,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
@@ -77,8 +77,8 @@ output_variables = [
     # "Average electrolyte concentration",
     # "Porosity",
     # "Electrolyte current density [A.m-2]",
-    # "Electrolyte potential [V]",
-    "Terminal voltage [V]"
+    "Electrolyte potential [V]",
+    "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
 plot.dynamic_plot()
