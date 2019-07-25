@@ -15,7 +15,10 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    domain : str
+        The domain in which the model holds
+    reactions : dict
+        Dictionary of reaction terms
 
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.surface_potential_form.BaseModel`
     """  # noqa: E501

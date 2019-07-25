@@ -292,14 +292,14 @@ class TestSymbol(unittest.TestCase):
         div_eqn = pybamm.div(var)
         grad_div_eqn = pybamm.div(grad_eqn)
         algebraic_eqn = 2 * var + 3
-        self.assertTrue(grad_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertFalse(grad_eqn.has_symbol_of_class(pybamm.Divergence))
-        self.assertFalse(div_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertTrue(div_eqn.has_symbol_of_class(pybamm.Divergence))
-        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Divergence))
-        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Divergence))
+        self.assertTrue(grad_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertFalse(grad_eqn.has_symbol_of_classes(pybamm.Divergence))
+        self.assertFalse(div_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertTrue(div_eqn.has_symbol_of_classes(pybamm.Divergence))
+        self.assertTrue(grad_div_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertTrue(grad_div_eqn.has_symbol_of_classes(pybamm.Divergence))
+        self.assertFalse(algebraic_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertFalse(algebraic_eqn.has_symbol_of_classes(pybamm.Divergence))
 
     def test_orphans(self):
         a = pybamm.Scalar(1)
@@ -314,14 +314,18 @@ class TestSymbol(unittest.TestCase):
 
     def test_shape(self):
         scal = pybamm.Scalar(1)
-        self.assertEqual(scal.shape_for_testing, ())
+        self.assertEqual(scal.shape, ())
         self.assertEqual(scal.size, 1)
 
         state = pybamm.StateVector(slice(10))
-        self.assertEqual(state.shape_for_testing, (10, 1))
+        self.assertEqual(state.shape, (10, 1))
         self.assertEqual(state.size, 10)
         state = pybamm.StateVector(slice(10, 25))
-        self.assertEqual(state.shape_for_testing, (15, 1))
+        self.assertEqual(state.shape, (15, 1))
+
+        # test with big object
+        state = 2 * pybamm.StateVector(slice(100000))
+        self.assertEqual(state.shape, (100000, 1))
 
     def test_shape_for_testing(self):
         scal = pybamm.Scalar(1)

@@ -87,18 +87,6 @@ class BaseOutputComparison(object):
         self.mesh = mesh
         self.solutions = solutions
 
-    def get_vars(self, var):
-        "Helper function to reduce repeated code."
-        return [
-            pybamm.ProcessedVariable(
-                model.variables[var],
-                self.solutions[model].t,
-                self.solutions[model].y,
-                mesh=self.mesh,
-            )
-            for model in self.models
-        ]
-
     def compare(self, var, tol=1e-2):
         "Compare variables from different models"
         # Get variable for each model

@@ -14,7 +14,8 @@ class FirstOrder(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    reactions : dict
+        Dictionary of reaction terms
 
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.diffusion.BaseModel`
     """
@@ -33,13 +34,18 @@ class FirstOrder(BaseModel):
 
         # Unpack
         T_0 = variables["Leading-order cell temperature"]
-        eps_0 = variables["Leading-order porosity"]
         c_e_0 = variables["Leading-order average electrolyte concentration"]
         # v_box_0 = variables["Leading-order volume-averaged velocity"]
-        deps_0_dt = variables["Leading-order porosity change"]
         dc_e_0_dt = variables["Leading-order electrolyte concentration change"]
-        eps_n_0, eps_s_0, eps_p_0 = [e.orphans[0] for e in eps_0.orphans]
-        deps_n_0_dt, _, deps_p_0_dt = [de.orphans[0] for de in deps_0_dt.orphans]
+        eps_n_0 = variables["Leading-order average negative electrode porosity"]
+        eps_s_0 = variables["Leading-order average separator porosity"]
+        eps_p_0 = variables["Leading-order average positive electrode porosity"]
+        deps_n_0_dt = variables[
+            "Leading-order average negative electrode porosity change"
+        ]
+        deps_p_0_dt = variables[
+            "Leading-order average positive electrode porosity change"
+        ]
 
         # Combined time derivatives
         d_epsc_n_0_dt = c_e_0 * deps_n_0_dt + eps_n_0 * dc_e_0_dt

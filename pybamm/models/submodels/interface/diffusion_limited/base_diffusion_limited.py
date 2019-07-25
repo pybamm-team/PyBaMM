@@ -76,3 +76,9 @@ class BaseModel(BaseInterface):
 
     def _get_diffusion_limited_current_density(self, variables):
         raise NotImplementedError
+
+    def _get_dj_dc(self, variables):
+        return pybamm.Scalar(0)
+
+    def _get_dj_ddeltaphi(self, variables):
+        return pybamm.Scalar(0)

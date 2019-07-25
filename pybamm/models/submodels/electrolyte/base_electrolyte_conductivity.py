@@ -12,7 +12,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    domain : str, optional
+        The domain in which the model holds
+    reactions : dict, optional
+        Dictionary of reaction terms
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
@@ -164,8 +167,12 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         # Average, and broadcast if necessary
         delta_phi_av = pybamm.average(delta_phi)
-        if delta_phi.domain in [[], ["current collector"]]:
+        if delta_phi.domain == []:
             delta_phi = pybamm.Broadcast(delta_phi, self.domain_for_broadcast)
+        elif delta_phi.domain == ["current collector"]:
+            delta_phi = pybamm.Broadcast(
+                delta_phi, self.domain_for_broadcast, broadcast_type="primary"
+            )
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,

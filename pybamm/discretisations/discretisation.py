@@ -74,7 +74,8 @@ class Discretisation(object):
 
         """
         # Check well-posedness to avoid obscure errors
-        model.check_well_posedness()
+        if pybamm.settings.debug_mode is True:
+            model.check_well_posedness()
 
         pybamm.logger.info("Start discretising {}".format(model.name))
 
@@ -193,11 +194,11 @@ class Discretisation(object):
             left_symbol_disc = self.process_symbol(left_symbol)
             right_symbol_disc = self.process_symbol(right_symbol)
 
-            return self._spatial_methods[left_domain].internal_neumann_condition(
+            out = self._spatial_methods[left_domain].internal_neumann_condition(
                 left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
             )
+            return out
 
-        # bc_key_ids = [key.id for key in list(model.boundary_conditions.keys())]
         bc_key_ids = list(self.bcs.keys())
 
         internal_bcs = {}
@@ -205,30 +206,31 @@ class Discretisation(object):
             if isinstance(var, pybamm.Concatenation):
                 children = var.children
 
+                # Note that we do not need to take orphans as the symbols will be
+                # processed anyway (which creates new symbols)
                 first_child = children[0]
-                first_orphan = first_child.new_copy()
                 next_child = children[1]
-                next_orphan = next_child.new_copy()
 
                 lbc = self.bcs[var.id]["left"]
-                rbc = (boundary_gradient(first_orphan, next_orphan), "Neumann")
+                rbc = (boundary_gradient(first_child, next_child), "Neumann")
 
+                # First child
                 if first_child.id not in bc_key_ids:
                     internal_bcs.update({first_child.id: {"left": lbc, "right": rbc}})
 
+                # Middle children
                 for i, _ in enumerate(children[1:-1]):
                     current_child = next_child
-                    current_orphan = next_orphan
                     next_child = children[i + 2]
-                    next_orphan = next_child.new_copy()
 
                     lbc = rbc
-                    rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
+                    rbc = (boundary_gradient(current_child, next_child), "Neumann")
                     if current_child.id not in bc_key_ids:
                         internal_bcs.update(
                             {current_child.id: {"left": lbc, "right": rbc}}
                         )
 
+                # Last child
                 lbc = rbc
                 rbc = self.bcs[var.id]["right"]
                 if children[-1].id not in bc_key_ids:
@@ -436,6 +438,7 @@ class Discretisation(object):
 
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
+            # Test shape of new object
             new_var_eqn_dict[eqn_key].test_shape()
 
         return new_var_eqn_dict

@@ -119,3 +119,11 @@ class BaseModel(BaseInterface):
         ne = self._get_number_of_electrons_in_reaction()
         ocp = self._get_open_circuit_potential(hacked_variables)[0]
         return c_e_0, delta_phi, j0, ne, ocp
+
+    def _get_j_diffusion_limited_first_order(self, variables):
+        """
+        First-order correction to the interfacial current density due to
+        diffusion-limited effects. For a general model the correction term is zero,
+        since the reaction is not diffusion-limited
+        """
+        return pybamm.Scalar(0)
