@@ -37,8 +37,7 @@ class HigherOrderBaseModel(BaseModel):
         # Update interface, porosity and convection with full potentials
         self.set_full_interface_submodel()
         self.set_full_convection_submodel()
-        # TODO: fix jacobian when using full porosity model
-        # self.set_full_porosity_submodel()
+        self.set_full_porosity_submodel()
         self.set_thermal_submodel()
 
         self.build_model()
@@ -56,7 +55,7 @@ class HigherOrderBaseModel(BaseModel):
             leading_order_variables[
                 "Leading-order " + variable.lower()
             ] = leading_order_model.variables[variable]
-        self.variables = leading_order_variables
+        self.variables.update(leading_order_variables)
         self.variables[
             "Leading-order electrolyte concentration change"
         ] = leading_order_model.rhs[
@@ -194,6 +193,14 @@ class FOQS(HigherOrderBaseModel):
                 self.param, self.reactions
             )
 
+    def set_full_porosity_submodel(self):
+        """
+        Update porosity submodel, now that we have the spatially heterogeneous
+        interfacial current densities
+        """
+        # TODO: fix shape for jacobian
+        pass
+
 
 class Composite(HigherOrderBaseModel):
     """Composite model for lead-acid, from [1]_.
@@ -225,6 +232,13 @@ class Composite(HigherOrderBaseModel):
                 self.param, self.reactions
             )
 
+    def set_full_porosity_submodel(self):
+        """
+        Update porosity submodel, now that we have the spatially heterogeneous
+        interfacial current densities
+        """
+        self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
+
 
 class CompositeExtended(HigherOrderBaseModel):
     """Extended composite model for lead-acid.
@@ -248,3 +262,10 @@ class CompositeExtended(HigherOrderBaseModel):
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
                 self.param, self.reactions, extended=True
             )
+
+    def set_full_porosity_submodel(self):
+        """
+        Update porosity submodel, now that we have the spatially heterogeneous
+        interfacial current densities
+        """
+        self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
