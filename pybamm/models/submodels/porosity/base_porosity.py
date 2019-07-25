@@ -36,6 +36,9 @@ class BaseModel(pybamm.BaseSubModel):
         if set_leading_order is True:
             variables.update(
                 {
+                    "Leading-order negative electrode porosity": eps_n,
+                    "Leading-order separator porosity": eps_s,
+                    "Leading-order positive electrode porosity": eps_p,
                     "Leading-order average negative electrode porosity": pybamm.average(
                         eps_n
                     ),
