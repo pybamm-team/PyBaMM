@@ -44,9 +44,9 @@ class BaseHigherOrder(BaseModel):
             "Average negative electrode surface potential difference"
         ]
         phi_s_n_av = variables["Average negative electrode potential"]
-        eps_n_av = variables["Average negative electrode porosity"]
-        eps_s_av = variables["Average separator porosity"]
-        eps_p_av = variables["Average positive electrode porosity"]
+        eps_n_av = variables["Leading-order average negative electrode porosity"]
+        eps_s_av = variables["Leading-order average separator porosity"]
+        eps_p_av = variables["Leading-order average positive electrode porosity"]
         T_av = variables["Average cell temperature"]
 
         c_e_n, c_e_s, c_e_p = c_e.orphans

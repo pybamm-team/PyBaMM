@@ -25,14 +25,11 @@ class BaseFirstOrderKinetics(BaseModel):
 
     def get_coupled_variables(self, variables):
         # Unpack
-        c_e_0 = variables["Leading-order average electrolyte concentration"]
+        c_e_0 = variables[
+            "Leading-order " + self.domain.lower() + " electrolyte concentration"
+        ]
         c_e = variables[self.domain + " electrolyte concentration"]
-        c_e_1 = (
-            c_e
-            - pybamm.Broadcast(
-                c_e_0, self.domain_for_broadcast, broadcast_type="primary"
-            )
-        ) / self.param.C_e
+        c_e_1 = (c_e - c_e_0) / self.param.C_e
 
         dj_dc_0 = self._get_dj_dc(variables)
         dj_ddeltaphi_0 = self._get_dj_ddeltaphi(variables)
@@ -41,20 +38,16 @@ class BaseFirstOrderKinetics(BaseModel):
         variables = self._get_delta_phi(variables)
 
         delta_phi_0 = variables[
-            "Leading-order average "
+            "Leading-order "
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
-        delta_phi_1 = (
-            delta_phi
-            - pybamm.Broadcast(
-                delta_phi_0, self.domain_for_broadcast, broadcast_type="primary"
-            )
-        ) / self.param.C_e
+        delta_phi_1 = (delta_phi - delta_phi_0) / self.param.C_e
 
         j_0 = variables[
-            self.domain
+            "Leading-order "
+            + self.domain.lower()
             + " electrode"
             + self.reaction_name
             + " interfacial current density"

@@ -35,7 +35,9 @@ class Composite(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        eps = variables["Average " + self.domain.lower() + " electrode porosity"]
+        eps = variables[
+            "Leading-order average " + self.domain.lower() + " electrode porosity"
+        ]
 
         if self._domain == "Negative":
             sigma_eff = self.param.sigma_n * (1 - eps) ** self.param.b

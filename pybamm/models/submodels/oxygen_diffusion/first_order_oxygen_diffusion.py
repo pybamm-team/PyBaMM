@@ -37,8 +37,8 @@ class FirstOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
-        eps_0 = variables["Leading-order porosity"]
-        _, eps_s_0, eps_p_0 = [e.orphans[0] for e in eps_0.orphans]
+        eps_s_0 = variables["Leading-order average separator porosity"]
+        eps_p_0 = variables["Leading-order average positive electrode porosity"]
 
         # Diffusivities
         D_ox_s = (eps_s_0 ** param.b) * param.curlyD_ox
@@ -47,9 +47,7 @@ class FirstOrder(BaseModel):
         # Reactions
         sj_ox_p = sum(
             reaction["Positive"]["s_ox"]
-            * variables["Leading-order " + reaction["Positive"]["aj"].lower()].orphans[
-                0
-            ]
+            * variables["Average leading-order " + reaction["Positive"]["aj"].lower()]
             for reaction in self.reactions.values()
         )
 
