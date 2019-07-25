@@ -24,12 +24,12 @@ geometry = models[-1].default_geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Bruggeman coefficient": 0.001,
         "Typical current [A]": -20,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
         "Positive electrode reference exchange-current density [A.m-2]": 0.006,
+        "Positive electrode reference exchange-current density (oxygen) [A.m-2]": 1e-22,
     }
 )
 for model in models:
@@ -48,7 +48,7 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 5, 100)
+t_eval = np.linspace(0, 2, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
@@ -61,12 +61,10 @@ output_variables = [
         "Average negative electrode interfacial current density",
         "Average negative electrode oxygen interfacial current density",
     ],
-    # "Average negative electrode reaction overpotential [V]",
-    # "Average positive electrode reaction overpotential [V]",
-    "Electrolyte concentration",
-    "Electrolyte flux",
-    "Oxygen concentration",
-    "Oxygen flux",
+    "Average negative electrode reaction overpotential [V]",
+    "Average positive electrode reaction overpotential [V]",
+    "State of Charge",
+    "Oxygen concentration [mol.m-3]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)

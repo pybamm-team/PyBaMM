@@ -5,11 +5,13 @@
 # (see https://github.com/pints-team/pints)
 #
 import importlib
+import numpy as np
 import os
 import sys
 import timeit
 import pathlib
 import pybamm
+from collections import defaultdict
 
 
 def root_dir():
@@ -151,3 +153,33 @@ def load_function(filename):
         )
 
     return getattr(module_object, valid_module)
+
+
+def rmse(x, y):
+    "Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs"
+    # Check lengths
+    if len(x) != len(y):
+        raise ValueError("Vectors must have the same length")
+    return np.sqrt(np.nanmean((x - y) ** 2))
+
+
+def get_infinite_nested_dict():
+    """
+    Return a dictionary that allows infinite nesting without having to define level by
+    level.
+
+    See:
+    https://stackoverflow.com/questions/651794/whats-the-best-way-to-initialize-a-dict-of-dicts-in-python/652226#652226
+
+    Example
+    -------
+    >>> import pybamm
+    >>> d = pybamm.get_infinite_nested_dict()
+    >>> d["a"] = 1
+    >>> d["a"]
+    1
+    >>> d["b"]["c"]["d"] = 2
+    >>> d["b"]["c"] == {"d": 2}
+    True
+    """
+    return defaultdict(get_infinite_nested_dict)
