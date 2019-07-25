@@ -115,13 +115,16 @@ class BaseHigherOrder(BaseModel):
             )
         )
 
-        phi_e_s = pybamm.PrimaryBroadcast(phi_e_const, "separator") + (
-            chi_av_s
-            * self._higher_order_macinnes_function(
-                c_e_s / pybamm.PrimaryBroadcast(c_e_av, "separator")
+        phi_e_s = (
+            pybamm.PrimaryBroadcast(phi_e_const, "separator")
+            + (
+                chi_av_s
+                * self._higher_order_macinnes_function(
+                    c_e_s / pybamm.PrimaryBroadcast(c_e_av, "separator")
+                )
             )
+            - pybamm.outer(i_boundary_cc * param.C_e / param.gamma_e / kappa_s_av, x_s)
         )
-        -pybamm.outer(i_boundary_cc * param.C_e / param.gamma_e / kappa_s_av, x_s)
 
         phi_e_p = (
             pybamm.PrimaryBroadcast(phi_e_const, "positive electrode")

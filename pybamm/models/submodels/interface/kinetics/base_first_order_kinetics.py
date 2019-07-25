@@ -2,6 +2,7 @@
 # First-order Butler-Volmer kinetics
 #
 from .base_kinetics import BaseModel
+import pybamm
 
 
 class BaseFirstOrderKinetics(BaseModel):
