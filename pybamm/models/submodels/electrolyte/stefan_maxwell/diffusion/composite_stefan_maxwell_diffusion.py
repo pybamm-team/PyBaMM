@@ -68,32 +68,35 @@ class Composite(Full):
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
         if self.extended is False:
-            neg_reactions = sum(
-                reaction["Negative"]["s"]
-                * variables["Leading-order " + reaction["Negative"]["aj"].lower()]
-                for reaction in self.reactions.values()
-            )
-            pos_reactions = sum(
-                reaction["Positive"]["s"]
-                * variables["Leading-order " + reaction["Positive"]["aj"].lower()]
-                for reaction in self.reactions.values()
-            )
+            source_terms_0 = self._get_source_terms_leading_order(variables)
         else:
-            neg_reactions = sum(
-                reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]]
-                for reaction in self.reactions.values()
-            )
-            pos_reactions = sum(
-                reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]]
-                for reaction in self.reactions.values()
-            )
-        sep_reactions = pybamm.FullBroadcast(0, "separator", "current collector")
-        source_terms_0 = (
-            pybamm.Concatenation(neg_reactions, sep_reactions, pos_reactions)
-            / param.gamma_e
-        )
+            source_terms_0 = self._get_source_terms_first_order(variables)
 
         self.rhs = {
             c_e: (1 / eps_0)
             * (-pybamm.div(N_e) / param.C_e + source_terms_0 - c_e * deps_0_dt)
         }
+
+    def _get_source_terms_leading_order(self, variables):
+        return sum(
+            pybamm.Concatenation(
+                reaction["Negative"]["s"]
+                * variables["Leading-order " + reaction["Negative"]["aj"].lower()],
+                pybamm.FullBroadcast(0, "separator", "current collector"),
+                reaction["Positive"]["s"]
+                * variables["Leading-order " + reaction["Positive"]["aj"].lower()],
+            )
+            / self.param.gamma_e
+            for reaction in self.reactions.values()
+        )
+
+    def _get_source_terms_first_order(self, variables):
+        return sum(
+            pybamm.Concatenation(
+                reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
+                pybamm.FullBroadcast(0, "separator", "current collector"),
+                reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
+            )
+            / self.param.gamma_e
+            for reaction in self.reactions.values()
+        )

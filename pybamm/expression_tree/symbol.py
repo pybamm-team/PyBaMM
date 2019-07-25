@@ -606,7 +606,7 @@ class Symbol(anytree.NodeMixin):
         Shape of an object, found by evaluating it with appropriate t and y.
         """
         # Default behaviour is to try to evaluate the object directly
-        # Try with some large y
+        # Try with some large y, to avoid having to use pre_order (slow)
         try:
             y = np.linspace(0.1, 0.9, int(1e4))
             evaluated_self = self.evaluate(0, y)

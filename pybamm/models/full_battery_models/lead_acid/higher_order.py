@@ -31,8 +31,9 @@ class HigherOrderBaseModel(BaseModel):
         # Average interface submodel to get average first-order potential differences
         self.set_average_interfacial_submodel()
         # Electrolyte and solid submodels to get full first-order potentials
+        self.set_negative_electrode_submodel()
         self.set_electrolyte_conductivity_submodel()
-        self.set_solid_submodel()
+        self.set_positive_electrode_submodel()
         # Update interface, porosity and convection with full potentials
         self.set_full_interface_submodel()
         self.set_full_convection_submodel()
@@ -50,26 +51,12 @@ class HigherOrderBaseModel(BaseModel):
         self.reaction_submodels = leading_order_model.reaction_submodels
 
         # Leading-order variables
-        for variable in [
-            "Average electrolyte concentration",
-            "Average negative electrode surface potential difference",
-            "Average positive electrode surface potential difference",
-            "Negative electrode interfacial current density",
-            "Positive electrode interfacial current density",
-            "Negative electrode oxygen interfacial current density",
-            "Positive electrode oxygen interfacial current density",
-            "Average negative electrode interfacial current density",
-            "Average positive electrode interfacial current density",
-            "Average negative electrode oxygen interfacial current density",
-            "Average positive electrode oxygen interfacial current density",
-            "Porosity",
-            "Porosity change",
-            "Volume-averaged velocity",
-            "Cell temperature",
-        ]:
-            self.variables[
+        leading_order_variables = {}
+        for variable in self.variables.keys():
+            leading_order_variables[
                 "Leading-order " + variable.lower()
             ] = leading_order_model.variables[variable]
+        self.variables = leading_order_variables
         self.variables[
             "Leading-order electrolyte concentration change"
         ] = leading_order_model.rhs[
@@ -110,10 +97,12 @@ class HigherOrderBaseModel(BaseModel):
             "electrolyte conductivity"
         ] = pybamm.electrolyte.stefan_maxwell.conductivity.FirstOrder(self.param)
 
-    def set_solid_submodel(self):
+    def set_negative_electrode_submodel(self):
         self.submodels["negative electrode"] = pybamm.electrode.ohm.Composite(
             self.param, "Negative"
         )
+
+    def set_positive_electrode_submodel(self):
         self.submodels["positive electrode"] = pybamm.electrode.ohm.Composite(
             self.param, "Positive"
         )

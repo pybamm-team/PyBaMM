@@ -38,7 +38,11 @@ class Constant(BaseModel):
         deps_p_dt = pybamm.FullBroadcast(0, "positive electrode", "current collector")
         deps_dt = pybamm.Concatenation(deps_n_dt, deps_s_dt, deps_p_dt)
 
-        variables = self._get_standard_porosity_variables(eps)
-        variables.update(self._get_standard_porosity_change_variables(deps_dt))
+        variables = self._get_standard_porosity_variables(eps, set_leading_order=True)
+        variables.update(
+            self._get_standard_porosity_change_variables(
+                deps_dt, set_leading_order=True
+            )
+        )
 
         return variables
