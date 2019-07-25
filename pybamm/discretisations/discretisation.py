@@ -100,6 +100,11 @@ class Discretisation(object):
         else:
             # create a blank model so that original model is unchanged
             model_disc = pybamm.BaseModel()
+            model_disc.name = model.name
+            model_disc.options = model.options
+            model_disc.use_jacobian = model.use_jacobian
+            model_disc.use_simplify = model.use_simplify
+            model_disc.use_to_python = model.use_to_python
 
         model_disc.bcs = self.bcs
 
@@ -131,7 +136,7 @@ class Discretisation(object):
 
         # Create mass matrix
         pybamm.logger.info("Create mass matrix for {}".format(model.name))
-        model_disc.mass_matrix = self.create_mass_matrix(model)
+        model_disc.mass_matrix = self.create_mass_matrix(model_disc)
 
         # Check that resulting model makes sense
         self.check_model(model_disc)

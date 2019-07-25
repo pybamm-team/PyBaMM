@@ -102,7 +102,6 @@ s_plus_Ox_dim = pybamm.Parameter("Signed stoichiometry of cations (oxygen reacti
 s_w_Ox_dim = pybamm.Parameter("Signed stoichiometry of water (oxygen reaction)")
 s_ox_Ox_dim = pybamm.Parameter("Signed stoichiometry of oxygen (oxygen reaction)")
 ne_Ox = pybamm.Parameter("Electrons in oxygen reaction")
-c_ox_ref = pybamm.Parameter("Reference oxygen molecule concentration [mol.m-3]")
 U_Ox_dim = pybamm.Parameter("Oxygen reference OCP vs SHE [V]")
 # Hydrogen
 j0_n_Hy_ref_dimensional = pybamm.Parameter(
