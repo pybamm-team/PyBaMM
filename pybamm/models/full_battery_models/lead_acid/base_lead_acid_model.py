@@ -109,3 +109,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
             self.reactions["main"]["Negative"]["s_ox"] = 0
             self.reactions["main"]["Positive"]["s_ox"] = 0
+
+    def set_soc_variables(self):
+        "Set variables relating to the state of charge."
+        # State of Charge defined as function of dimensionless electrolyte concentration
+        soc = self.variables["Average electrolyte concentration"] * 100
+        self.variables.update({"State of Charge": soc, "Depth of Discharge": 100 - soc})
