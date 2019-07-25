@@ -90,7 +90,7 @@ class OneDimensionalCurrentCollector(BaseModel):
             + (param.sigma_cp * param.delta ** 2 / param.l_cp)
             * pybamm.source(i_boundary_cc, phi_s_cp),
 #            i_boundary_cc: v_boundary_cc - local_voltage_expression,
-            i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z - param.z/10,
+            i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z,
         }
 
     def set_boundary_conditions(self, variables):
