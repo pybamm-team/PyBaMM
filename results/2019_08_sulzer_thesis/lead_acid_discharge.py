@@ -17,6 +17,8 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
+    Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+    all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     shared_plotting.plot_voltages(all_variables, t_eval)
     file_name = "discharge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
@@ -66,7 +68,7 @@ def discharge_states(compute):
             pybamm.lead_acid.FOQS(name="FOQS"),
             pybamm.lead_acid.Composite(name="Composite"),
         ]
-        Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+        Crates = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20]
         t_eval = np.linspace(0, 1, 100)
         extra_parameter_values = {"Bruggeman coefficient": 0.001}
         all_variables, t_eval = model_comparison(
@@ -83,8 +85,8 @@ def discharge_states(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    # plot_voltages(all_variables, t_eval)
-    # plot_variables(all_variables, t_eval)
+    plot_voltages(all_variables, t_eval)
+    plot_variables(all_variables, t_eval)
     plot_voltage_breakdown(all_variables, t_eval)
 
 
@@ -156,7 +158,7 @@ def discharge_times_and_errors(compute):
                 "Run script with '--compute' first to generate results"
             )
     plot_errors(models_times_and_voltages)
-    # plot_times(models_times_and_voltages)
+    plot_times(models_times_and_voltages)
 
 
 if __name__ == "__main__":

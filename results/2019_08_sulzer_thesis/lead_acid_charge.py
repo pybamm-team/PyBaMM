@@ -16,6 +16,8 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
+    Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+    all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     shared_plotting.plot_voltages(all_variables, t_eval)
     file_name = "charge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
@@ -107,6 +109,17 @@ def charge_states(compute):
             ),
             pybamm.lead_acid.LOQS(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="LOQS"
+            ),
+            pybamm.lead_acid.FOQS(
+                {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="FOQS"
+            ),
+            pybamm.lead_acid.Composite(
+                {"surface form": "algebraic", "side reactions": ["oxygen"]},
+                name="Composite",
+            ),
+            pybamm.lead_acid.CompositeExtended(
+                {"surface form": "algebraic", "side reactions": ["oxygen"]},
+                name="Extended\ncomposite",
             ),
         ]
         Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
