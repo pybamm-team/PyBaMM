@@ -34,10 +34,8 @@ class FirstOrder(BaseModel):
 
         # Unpack
         T_0 = variables["Leading-order cell temperature"]
-        eps_0 = variables["Leading-order porosity"]
         c_e_0 = variables["Leading-order average electrolyte concentration"]
         # v_box_0 = variables["Leading-order volume-averaged velocity"]
-        deps_0_dt = variables["Leading-order porosity change"]
         dc_e_0_dt = variables["Leading-order electrolyte concentration change"]
         eps_n_0 = variables["Leading-order average negative electrode porosity"]
         eps_s_0 = variables["Leading-order average separator porosity"]
