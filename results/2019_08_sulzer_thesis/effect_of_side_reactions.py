@@ -16,7 +16,7 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
-    shared_plotting.plot_voltages(all_variables, t_eval)
+    shared_plotting.plot_voltages(all_variables, t_eval, figsize=(6.4, 2))
     file_name = "side_reactions_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
@@ -73,7 +73,7 @@ def plot_variables(all_variables, t_eval):
     times = np.linspace(0, 2, 4)
     var_file_names = {
         "Electrolyte concentration [Molar]"
-        + "": "charge_electrolyte_concentration_comparison.eps"
+        + "": "side_reactions_electrolyte_concentration_comparison.eps"
     }
     limits_exceptions = {"Electrolyte concentration [Molar]": {"min": 0}}
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
@@ -84,9 +84,7 @@ def plot_variables(all_variables, t_eval):
             exceptions = {}
         shared_plotting.plot_variable(all_variables, times, var, exceptions)
         if OUTPUT_DIR is not None:
-            plt.savefig(
-                OUTPUT_DIR + file_name, format="eps", dpi=1000
-            )
+            plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def charge_states(compute):
@@ -102,7 +100,7 @@ def charge_states(compute):
             ),
         ]
         Crates = [-0.1, -1, -5]
-        t_eval = np.linspace(0, 2, 100)
+        t_eval = np.linspace(0, 3, 100)
         extra_parameter_values = {
             "Positive electrode"
             + "reference exchange-current density (oxygen) [A.m-2]": 1e-24,

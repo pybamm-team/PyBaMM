@@ -26,7 +26,7 @@ def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
     )
     # Strict voltage cut-offs
     y_min = max(y_min, 10.5)
-    y_max = min(y_max, 14.5)
+    y_max = min(y_max, 15)
     for k, (Crate, models_variables) in enumerate(all_variables.items()):
         if len(all_variables) == 1:
             ax = axes

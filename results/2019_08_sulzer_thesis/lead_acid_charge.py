@@ -90,11 +90,11 @@ def plot_variables(all_variables, t_eval):
             plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_voltage_breakdown(all_variables, t_eval):
+def plot_voltage_components(all_variables, t_eval):
     Crates = [-0.1, -2, -5]
     model = "Composite"
-    shared_plotting.plot_voltage_breakdown(all_variables, t_eval, model, Crates)
-    file_name = "charge_voltage_breakdown.eps"
+    shared_plotting.plot_voltage_components(all_variables, t_eval, model, Crates)
+    file_name = "charge_voltage_components.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
@@ -121,7 +121,7 @@ def charge_states(compute):
             ),
         ]
         Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
-        t_eval = np.linspace(0, 2, 100)
+        t_eval = np.linspace(0, 3, 100)
         extra_parameter_values = {
             "Positive electrode"
             + "reference exchange-current density (oxygen) [A.m-2]": 1e-24,
@@ -141,10 +141,10 @@ def charge_states(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    # plot_voltages(all_variables, t_eval)
+    plot_voltages(all_variables, t_eval)
     # plot_interfacial_currents(all_variables[-1], t_eval)
-    # plot_variables(all_variables, t_eval)
-    plot_voltage_breakdown(all_variables, t_eval)
+    plot_variables(all_variables, t_eval)
+    plot_voltage_components(all_variables, t_eval)
 
 
 if __name__ == "__main__":
