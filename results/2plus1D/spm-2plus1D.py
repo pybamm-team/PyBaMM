@@ -57,6 +57,14 @@ phi_s_cp = pybamm.ProcessedVariable(
     solution.y,
     mesh=mesh,
 )
+
+e_conc = pybamm.ProcessedVariable(
+        model.variables['Electrolyte concentration [mol.m-3]'],
+        solution.t,
+        solution.y,
+        mesh=mesh,
+)
+
 l_y = phi_s_cp.x_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
 y_plot = np.linspace(0, l_y, 21)

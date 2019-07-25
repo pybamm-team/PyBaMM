@@ -35,24 +35,88 @@ class OneDimensionalCurrentCollector(BaseModel):
 
         return variables
 
+#    def set_algebraic(self, variables):
+#
+#        phi_s_cn = variables["Negative current collector potential"]
+#        phi_s_cp = variables["Positive current collector potential"]
+#        i_boundary_cc = variables["Current collector current density"]
+#
+#        param = self.param
+#        applied_current = param.current_with_time
+#
+#        self.algebraic = {
+#            phi_s_cn: phi_s_cn,
+#            phi_s_cp: phi_s_cp
+#            - (
+#                param.U_p(param.c_p_init, param.T_ref)
+#                - param.U_n(param.c_n_init, param.T_ref)
+#            ) - 0.1*param.l_z,
+#            i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z,
+#        }
+    
     def set_algebraic(self, variables):
+
+        param = self.param
+
+        ocp_p_av = variables["Average positive electrode open circuit potential"]
+        ocp_n_av = variables["Average negative electrode open circuit potential"]
+        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
+        eta_r_p_av = variables["Average positive electrode reaction overpotential"]
+        eta_e_av = variables["Average electrolyte overpotential"]
+        delta_phi_s_n_av = variables["Average negative electrode ohmic losses"]
+        delta_phi_s_p_av = variables["Average positive electrode ohmic losses"]
 
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
+        v_boundary_cc = variables["Local current collector potential difference"]
+        applied_current = param.current_with_time
+        # The voltage-current expression from the SPM(e)
+        local_voltage_expression = (
+            ocp_p_av
+            - ocp_n_av
+            + eta_r_p_av
+            - eta_r_n_av
+            + eta_e_av
+            + delta_phi_s_p_av
+            - delta_phi_s_n_av
+        )
+
+        self.algebraic = {
+            phi_s_cn: pybamm.div(pybamm.grad((phi_s_cn)))
+            - (param.sigma_cn * param.delta ** 2 / param.l_cn)
+            * pybamm.source(i_boundary_cc, phi_s_cn),
+            phi_s_cp: pybamm.div(pybamm.grad(phi_s_cp))
+            + (param.sigma_cp * param.delta ** 2 / param.l_cp)
+            * pybamm.source(i_boundary_cc, phi_s_cp),
+#            i_boundary_cc: v_boundary_cc - local_voltage_expression,
+            i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z - param.z/10,
+        }
+
+    def set_boundary_conditions(self, variables):
+
+        phi_s_cn = variables["Negative current collector potential"]
+        phi_s_cp = variables["Positive current collector potential"]
 
         param = self.param
         applied_current = param.current_with_time
 
-        self.algebraic = {
-            phi_s_cn: phi_s_cn,
-            phi_s_cp: phi_s_cp
-            - (
-                param.U_p(param.c_p_init, param.T_ref)
-                - param.U_n(param.c_n_init, param.T_ref)
-            ),
-            i_boundary_cc: i_boundary_cc - applied_current / param.l_y / param.l_z,
+        pos_tab_bc = -applied_current / (
+            param.sigma_cp * param.delta ** 2 * param.l_tab_p * param.l_cp
+        )
+
+        self.boundary_conditions = {
+            phi_s_cn: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            },
+            phi_s_cp: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(3.0), "Dirichlet"),
+            },
         }
+
+        return variables
 
     def set_initial_conditions(self, variables):
 
