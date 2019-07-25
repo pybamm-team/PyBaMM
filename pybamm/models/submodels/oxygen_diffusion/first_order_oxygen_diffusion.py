@@ -47,7 +47,7 @@ class FirstOrder(BaseModel):
         # Reactions
         sj_ox_p = sum(
             reaction["Positive"]["s_ox"]
-            * variables["Average leading-order " + reaction["Positive"]["aj"].lower()]
+            * variables["Leading-order average " + reaction["Positive"]["aj"].lower()]
             for reaction in self.reactions.values()
         )
 

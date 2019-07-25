@@ -19,9 +19,9 @@ class TestComposite(unittest.TestCase):
             "Average electrolyte concentration": a,
             "Average negative electrode potential": a,
             "Average negative electrode surface potential difference": a,
-            "Average negative electrode porosity": a,
-            "Average separator porosity": a,
-            "Average positive electrode porosity": a,
+            "Leading-order average negative electrode porosity": a,
+            "Leading-order average separator porosity": a,
+            "Leading-order average positive electrode porosity": a,
             "Average cell temperature": a,
         }
         submodel = pybamm.electrolyte.stefan_maxwell.conductivity.Composite(param)
