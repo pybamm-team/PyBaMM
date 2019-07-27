@@ -199,7 +199,15 @@ class ProcessedVariable(object):
         )
 
     def initialise_3D(self):
-        len_x = len(self.mesh.combine_submeshes(*self.domain))
+        if self.domain in [["negative particle"], ["negative electrode"]]:
+            x_sol = self.mesh["negative electrode"][0].nodes
+            r_nodes = self.mesh["negative particle"][0].nodes
+            r_edges = self.mesh["negative particle"][0].edges
+        elif self.domain in [["positive particle"], ["positive electrode"]]:
+            x_sol = self.mesh["positive electrode"][0].nodes
+            r_nodes = self.mesh["positive particle"][0].nodes
+            r_edges = self.mesh["positive particle"][0].edges
+        len_x = len(x_sol)
         len_r = self.base_eval.shape[0] // len_x
         entries = np.empty((len_x, len_r, len(self.t_sol)))
 
@@ -217,29 +225,15 @@ class ProcessedVariable(object):
                 entries[:, :, idx] = np.reshape(
                     self.base_variable.evaluate(t, y), [len_x, len_r]
                 )
-        # Process the discretisation to get x values
-        nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
-        edges = self.mesh.combine_submeshes(*self.domain)[0].edges
-
-        if entries.shape[1] == len(nodes):
-            r_sol = nodes
-        elif entries.shape[1] == len(edges):
-            r_sol = edges
-        else:
-            import ipdb
-
-            ipdb.set_trace()
-            raise ValueError("3D variable shape does not match domain shape")
-
         # Get x values
-        if self.domain == ["negative particle"] or self.domain == [
-            "negative electrode"
-        ]:
-            x_sol = self.mesh["negative electrode"][0].nodes
-        elif self.domain == ["positive particle"] or self.domain == [
-            "positive electrode"
-        ]:
-            x_sol = self.mesh["positive electrode"][0].nodes
+
+        # Process the discretisation to get x values
+        if entries.shape[1] == len(r_nodes):
+            r_sol = r_nodes
+        elif entries.shape[1] == len(r_edges):
+            r_sol = r_edges
+        else:
+            raise ValueError("3D variable shape does not match domain shape")
 
         # assign attributes for reference
         self.entries = entries

@@ -67,9 +67,6 @@ class LeadingOrder(BaseSurfaceForm):
             param.l_n * param.sigma_n_dash * param.l_p * param.sigma_p_dash
         ) / (param.l_n * param.sigma_n_dash + param.l_p * param.sigma_p_dash)
 
-        top_bc = (param.l_n * param.l_p * param.sigma_n_dash * i_cell) / (
-            param.l_n * param.sigma_n_dash * param.l_p * param.sigma_p_dash
-        )
         self.boundary_conditions = {
             delta_phi_difference: {
                 "left": (pybamm.Scalar(0), "Neumann"),

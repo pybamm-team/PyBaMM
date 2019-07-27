@@ -312,6 +312,9 @@ class ParticleConcentrationTests(BaseOutputTest):
         t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n_edge, self.r_p_edge
 
         if self.operating_condition == "discharge":
+            import ipdb
+
+            ipdb.set_trace()
             np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
             np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
         if self.operating_condition == "charge":
