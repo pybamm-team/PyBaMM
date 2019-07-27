@@ -223,14 +223,14 @@ class ProcessedVariable(object):
             self.second_dimension = "r"
             first_dim_size = len_x
             second_dim_size = len_r
-            r_index = 1
+            transpose = False
         else:
             self.first_dimension = "r"
             self.second_dimension = "x"
             first_dim_size = len_r
             second_dim_size = len_x
-            r_index = 0
-        entries = np.empty((first_dim_size, second_dim_size, len(self.t_sol)))
+            transpose = True
+        entries = np.empty((len_x, len_r, len(self.t_sol)))
 
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
@@ -240,19 +240,23 @@ class ProcessedVariable(object):
                 eval_and_known_evals = self.base_variable.evaluate(
                     t, u, self.known_evals[t]
                 )
-                entries[:, :, idx] = np.reshape(
+                temporary = np.reshape(
                     eval_and_known_evals[0], [first_dim_size, second_dim_size]
                 )
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
-                entries[:, :, idx] = np.reshape(
+                temporary = np.reshape(
                     self.base_variable.evaluate(t, u), [first_dim_size, second_dim_size]
                 )
+            if transpose is True:
+                entries[:, :, idx] = np.transpose(temporary)
+            else:
+                entries[:, :, idx] = temporary
 
         # Assess whether on nodes or edges
-        if entries.shape[r_index] == len(r_nodes):
+        if entries.shape[1] == len(r_nodes):
             r_sol = r_nodes
-        elif entries.shape[r_index] == len(r_edges):
+        elif entries.shape[1] == len(r_edges):
             r_sol = r_edges
         else:
             raise ValueError("3D variable shape does not match domain shape")
@@ -264,20 +268,12 @@ class ProcessedVariable(object):
         self.r_sol = r_sol
 
         # set up interpolation
-        if self.first_dimension == "x":
-            self._interpolation_function = interp.RegularGridInterpolator(
-                (x_sol, r_sol, self.t_sol),
-                entries,
-                method=self.interp_kind,
-                fill_value=np.nan,
-            )
-        elif self.first_dimension == "r":
-            self._interpolation_function = interp.RegularGridInterpolator(
-                (r_sol, x_sol, self.t_sol),
-                entries,
-                method=self.interp_kind,
-                fill_value=np.nan,
-            )
+        self._interpolation_function = interp.RegularGridInterpolator(
+            (x_sol, r_sol, self.t_sol),
+            entries,
+            method=self.interp_kind,
+            fill_value=np.nan,
+        )
 
     def initialise_3D_scikit_fem(self):
         y_sol = self.mesh[self.domain[0]][0].edges["y"]
@@ -346,12 +342,11 @@ class ProcessedVariable(object):
 
     def call_3D(self, t, x, r, y, z):
         "Evaluate a 3D variable"
-        if self.first_dimension == "x" and self.second_dimension == "r":
+        if (self.first_dimension == "x" and self.second_dimension == "r") or (
+            self.first_dimension == "r" and self.second_dimension == "x"
+        ):
             first_dim = x
             second_dim = r
-        elif self.first_dimension == "r" and self.second_dimension == "x":
-            first_dim = r
-            second_dim = x
         elif self.first_dimension == "y" and self.second_dimension == "z":
             first_dim = y
             second_dim = z

@@ -231,14 +231,14 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
         # 3 vectors
         np.testing.assert_array_equal(
-            processed_var(t_sol, x_sol, r_sol).shape, (10, 40, 50)
+            processed_var(t_sol, x_sol, r_sol).shape, (40, 10, 50)
         )
         np.testing.assert_array_equal(
             processed_var(t_sol, x_sol, r_sol),
-            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+            np.reshape(y_sol, [len(x_sol), len(r_sol), len(t_sol)]),
         )
         # 2 vectors, 1 scalar
-        np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (10, 40))
+        np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (40, 10))
         np.testing.assert_array_equal(processed_var(t_sol, 0.2, r_sol).shape, (10, 50))
         np.testing.assert_array_equal(processed_var(t_sol, x_sol, 0.5).shape, (40, 50))
         # 1 vectors, 2 scalar
@@ -264,7 +264,7 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
         # 3 vectors
         np.testing.assert_array_equal(
-            processed_var(t_sol, x_sol, r_sol).shape, (10, 35, 50)
+            processed_var(t_sol, x_sol, r_sol).shape, (35, 10, 50)
         )
 
     @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
