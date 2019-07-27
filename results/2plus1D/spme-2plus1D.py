@@ -76,7 +76,7 @@ def plot(t):
     phi_s_cn_plot = plt.pcolormesh(
         y_plot,
         z_plot,
-        np.transpose(phi_s_cn(x=y_plot, r=z_plot, t=solution.t[ind])),
+        np.transpose(phi_s_cn(y=y_plot, z=z_plot, t=solution.t[ind])),
         shading="gouraud",
     )
     plt.axis([0, l_y, 0, l_z])
@@ -91,7 +91,7 @@ def plot(t):
     phi_s_cp_plot = plt.pcolormesh(
         y_plot,
         z_plot,
-        np.transpose(phi_s_cp(x=y_plot, r=z_plot, t=solution.t[ind])),
+        np.transpose(phi_s_cp(y=y_plot, z=z_plot, t=solution.t[ind])),
         shading="gouraud",
     )
 
