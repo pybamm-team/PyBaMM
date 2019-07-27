@@ -156,8 +156,12 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None, yaxis=
     )
 
 
-def plot_time_dependent_variables(all_variables, t_eval, output_vars, labels):
-    fig, axes = plt.subplots(1, len(all_variables), figsize=(6.4, 3.5))
+def plot_time_dependent_variables(
+    all_variables, t_eval, output_vars, labels, colors=None, figsize=(6.4, 3.5)
+):
+    models = list(list(all_variables.values())[0].keys())
+    full_model = models[0]
+    fig, axes = plt.subplots(len(models) - 1, len(all_variables), figsize=figsize)
     y_min = pybamm.ax_min(
         [
             np.nanmin(variables[var](t_eval))
@@ -174,46 +178,64 @@ def plot_time_dependent_variables(all_variables, t_eval, output_vars, labels):
             for var in output_vars
         ]
     )
+    linestyles = ["--", ":", "-.", "-"]
+    colors = colors or ["k", "b"]
     for i, (Crate, models_variables) in enumerate(all_variables.items()):
-        models = models_variables.keys()
-        if len(all_variables) == 1:
-            ax = axes
-        else:
-            ax = axes.flat[i]
-        t_max = max(
-            np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
-        )
-        ax.set_xlim([0, t_max])
-        ax.set_ylim([y_min, y_max])
-        ax.set_xlabel("Time [h]")
-        if i == 0:
-            ax.set_ylabel("Interfacial current densities")
-        linestyles = ["--", ":", "-.", "-"]
-        colors = ["k", "b"]
-        if len(all_variables) > 1:
-            ax.set_title(
-                "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
-                    chr(97 + i), abs(Crate), abs(Crate) * 0.6
-                )
+        for j, model in enumerate(models[1:]):
+            full_variables = models_variables[full_model]
+            variables = models_variables[model]
+            if len(models) == 2:
+                ax = axes[i]
+            else:
+                ax = axes[j, i]
+            t_max = max(
+                np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
             )
-        plots = {}
-        for j, (model, variables) in enumerate(models_variables.items()):
+            ax.set_xlim([0, t_max])
+            ax.set_ylim([y_min, y_max])
+            if i == 0:
+                if len(models) == 2:
+                    ax.set_ylabel("Interfacial current densities")
+                else:
+                    ax.set_ylabel("{}\nvs Full".format(model), rotation=0, labelpad=30)
+                    ax.yaxis.get_label().set_verticalalignment("center")
+            if j == 0 and len(all_variables) > 1:
+                ax.set_title(
+                    "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
+                        chr(97 + i), abs(Crate), abs(Crate) * 0.6
+                    )
+                )
+            if j == len(models) - 2:
+                ax.set_xlabel("Time [h]")
+            plots = {}
+            for k, var in enumerate(output_vars):
+                plots[(full_model, k)], = ax.plot(
+                    full_variables["Time [h]"](t_eval),
+                    full_variables[var](t_eval),
+                    linestyle=linestyles[k],
+                    color=colors[0],
+                )
             for k, var in enumerate(output_vars):
                 plots[(model, k)], = ax.plot(
                     variables["Time [h]"](t_eval),
                     variables[var](t_eval),
                     linestyle=linestyles[k],
-                    color=colors[j],
+                    color=colors[j + 1],
                 )
-    leg1 = fig.legend(
-        [plots[(model, len(linestyles) - 1)] for model in models],
-        models,
-        loc="lower center",
-        ncol=len(models),
-        bbox_to_anchor=(0.5, 0),
-    )
-    fig.legend(labels, loc="lower center", ncol=len(labels), bbox_to_anchor=(0.5, 0.1))
-    fig.add_artist(leg1)
+    if len(models) == 2:
+        leg1 = fig.legend(
+            [plots[(model, len(linestyles) - 1)] for model in models],
+            models,
+            loc="lower center",
+            ncol=len(models),
+            bbox_to_anchor=(0.5, 0),
+        )
+        fig.legend(
+            labels, loc="lower center", ncol=len(labels), bbox_to_anchor=(0.5, 0.1)
+        )
+        fig.add_artist(leg1)
+    else:
+        fig.legend(labels, loc="lower center", ncol=len(labels))
 
 
 def plot_voltage_components(all_variables, t_eval, model, Crates):

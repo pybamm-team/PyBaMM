@@ -24,10 +24,10 @@ def plot_voltages(all_variables, t_eval):
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_interfacial_currents(models_variables, t_eval):
-    models = ["Full", "LOQS"]
+def plot_interfacial_currents(all_variables, t_eval):
+    Crates = [-0.1, -2, -5]
+    all_variables = {Crate: v for Crate, v in all_variables.items() if Crate in Crates}
     file_name = "charge_interfacial_current_density_comparison.eps"
-    fig, ax = plt.subplots(1, 1)
     output_vars = [
         "Average positive electrode interfacial current density",
         "Average positive electrode oxygen interfacial current density",
@@ -35,36 +35,22 @@ def plot_interfacial_currents(models_variables, t_eval):
         "Average negative electrode interfacial current density",
     ]
     labels = [
-        "Positive electrode (main)",
-        "Positive electrode (oxygen)",
-        "Negative electrode (oxygen)",
-        "Negative electrode (main)",
+        "Pos electrode\n(main)",
+        "Pos electrode\n(oxygen)",
+        "Neg electrode\n(oxygen)",
+        "Neg electrode\n(main)",
     ]
-    t_max = max(np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values())
-    ax.set_xlim([0, t_max])
-    ax.set_xlabel("Time [h]")
-    ax.set_ylabel("Interfacial current densities")
-    linestyles = ["--", ":", "-.", "-"]
-    colors = ["k", "r"]
-    plots = {}
-    for j, (model, variables) in enumerate(models_variables.items()):
-        if model in models:
-            for k, var in enumerate(output_vars):
-                plots[(model, k)], = ax.plot(
-                    variables["Time [h]"](t_eval),
-                    variables[var](t_eval),
-                    linestyle=linestyles[k],
-                    color=colors[j],
-                )
-    leg1 = ax.legend(
-        [plots[("Full", 3)], plots[("LOQS", 3)]],
-        ["Full", "LOQS"],
-        loc="center left",
-        bbox_to_anchor=(1, 0.25),
+    shared_plotting.plot_time_dependent_variables(
+        all_variables,
+        t_eval,
+        output_vars,
+        labels,
+        colors=["k", "g", "r", "b"],
+        figsize=(6.4, 6.4),
     )
-    ax.legend(labels, loc="center left", bbox_to_anchor=(1, 0.75))
-    ax.add_artist(leg1)
-    fig.tight_layout()
+    plt.subplots_adjust(
+        bottom=0.15, left=0.15, right=0.95, wspace=0.3, hspace=0.4, top=0.95
+    )
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
@@ -143,10 +129,10 @@ def charge_states(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    plot_voltages(all_variables, t_eval)
-    # plot_interfacial_currents(all_variables[-1], t_eval)
-    plot_variables(all_variables, t_eval)
-    plot_voltage_components(all_variables, t_eval)
+    # plot_voltages(all_variables, t_eval)
+    plot_interfacial_currents(all_variables, t_eval)
+    # plot_variables(all_variables, t_eval)
+    # plot_voltage_components(all_variables, t_eval)
 
 
 if __name__ == "__main__":
