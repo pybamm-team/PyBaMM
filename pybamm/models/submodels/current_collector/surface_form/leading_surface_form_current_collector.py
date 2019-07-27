@@ -24,10 +24,10 @@ class LeadingOrder(BaseSurfaceForm):
     def get_coupled_variables(self, variables):
 
         delta_phi_n_av = variables[
-            "Average negative electrode surface potential difference"
+            "X-averaged negative electrode surface potential difference"
         ]
         delta_phi_p_av = variables[
-            "Average positive electrode surface potential difference"
+            "X-averaged positive electrode surface potential difference"
         ]
         phi_s_cn = delta_phi_n_av - pybamm.BoundaryValue(delta_phi_n_av, "right")
         phi_s_cp = delta_phi_p_av - delta_phi_n_av
@@ -53,10 +53,10 @@ class LeadingOrder(BaseSurfaceForm):
     def set_boundary_conditions(self, variables):
 
         delta_phi_n_av = variables[
-            "Average negative electrode surface potential difference"
+            "X-averaged negative electrode surface potential difference"
         ]
         delta_phi_p_av = variables[
-            "Average positive electrode surface potential difference"
+            "X-averaged positive electrode surface potential difference"
         ]
         delta_phi_difference = delta_phi_n_av - delta_phi_p_av
 

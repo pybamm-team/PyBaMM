@@ -40,13 +40,13 @@ class SingleParticlePotentialPair(BaseModel):
 
         param = self.param
 
-        ocp_p_av = variables["Average positive electrode open circuit potential"]
-        ocp_n_av = variables["Average negative electrode open circuit potential"]
-        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
-        eta_r_p_av = variables["Average positive electrode reaction overpotential"]
-        eta_e_av = variables["Average electrolyte overpotential"]
-        delta_phi_s_n_av = variables["Average negative electrode ohmic losses"]
-        delta_phi_s_p_av = variables["Average positive electrode ohmic losses"]
+        ocp_p_av = variables["X-averaged positive electrode open circuit potential"]
+        ocp_n_av = variables["X-averaged negative electrode open circuit potential"]
+        eta_r_n_av = variables["X-averaged negative electrode reaction overpotential"]
+        eta_r_p_av = variables["X-averaged positive electrode reaction overpotential"]
+        eta_e_av = variables["X-averaged electrolyte overpotential"]
+        delta_phi_s_n_av = variables["X-averaged negative electrode ohmic losses"]
+        delta_phi_s_p_av = variables["X-averaged positive electrode ohmic losses"]
 
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]

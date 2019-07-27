@@ -34,17 +34,17 @@ class FirstOrder(BaseModel):
 
         # Unpack
         T_0 = variables["Leading-order cell temperature"]
-        c_e_0 = variables["Leading-order average electrolyte concentration"]
+        c_e_0 = variables["Leading-order x-averaged electrolyte concentration"]
         # v_box_0 = variables["Leading-order volume-averaged velocity"]
         dc_e_0_dt = variables["Leading-order electrolyte concentration change"]
-        eps_n_0 = variables["Leading-order average negative electrode porosity"]
-        eps_s_0 = variables["Leading-order average separator porosity"]
-        eps_p_0 = variables["Leading-order average positive electrode porosity"]
+        eps_n_0 = variables["Leading-order x-averaged negative electrode porosity"]
+        eps_s_0 = variables["Leading-order x-averaged separator porosity"]
+        eps_p_0 = variables["Leading-order x-averaged positive electrode porosity"]
         deps_n_0_dt = variables[
-            "Leading-order average negative electrode porosity change"
+            "Leading-order x-averaged negative electrode porosity change"
         ]
         deps_p_0_dt = variables[
-            "Leading-order average positive electrode porosity change"
+            "Leading-order x-averaged positive electrode porosity change"
         ]
 
         # Combined time derivatives
@@ -55,13 +55,13 @@ class FirstOrder(BaseModel):
         # Right-hand sides
         rhs_n = d_epsc_n_0_dt - sum(
             reaction["Negative"]["s"]
-            * variables["Leading-order average " + reaction["Negative"]["aj"].lower()]
+            * variables["Leading-order x-averaged " + reaction["Negative"]["aj"].lower()]
             for reaction in self.reactions.values()
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = d_epsc_p_0_dt - sum(
             reaction["Positive"]["s"]
-            * variables["Leading-order average " + reaction["Positive"]["aj"].lower()]
+            * variables["Leading-order x-averaged " + reaction["Positive"]["aj"].lower()]
             for reaction in self.reactions.values()
         )
 
@@ -115,12 +115,12 @@ class FirstOrder(BaseModel):
             pybamm.PrimaryBroadcast(c_e_0, "positive electrode") + param.C_e * c_e_p_1,
         )
         variables.update(self._get_standard_concentration_variables(c_e))
-        # Update with analytical expressions for first-order averages
+        # Update with analytical expressions for first-order x-averageds
         variables.update(
             {
-                "Average first-order negative electrolyte concentration": c_e_n_1_av,
-                "Average first-order separator electrolyte concentration": c_e_s_1_av,
-                "Average first-order positive electrolyte concentration": c_e_p_1_av,
+                "X-averaged first-order negative electrolyte concentration": c_e_n_1_av,
+                "X-averaged first-order separator electrolyte concentration": c_e_s_1_av,
+                "X-averaged first-order positive electrolyte concentration": c_e_p_1_av,
             }
         )
 

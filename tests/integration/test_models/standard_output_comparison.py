@@ -120,16 +120,16 @@ class AveragesComparison(BaseOutputComparison):
 
     def test_all(self):
         # Potentials
-        self.compare("Average open circuit voltage")
+        self.compare("X-averaged open circuit voltage")
         # Currents
-        self.compare("Average negative electrode interfacial current density")
-        self.compare("Average positive electrode interfacial current density")
+        self.compare("X-averaged negative electrode interfacial current density")
+        self.compare("X-averaged positive electrode interfacial current density")
         # Concentration
-        self.compare("Average electrolyte concentration")
+        self.compare("X-averaged electrolyte concentration")
         # Porosity
-        self.compare("Average negative electrode porosity")
-        self.compare("Average separator porosity")
-        self.compare("Average positive electrode porosity")
+        self.compare("X-averaged negative electrode porosity")
+        self.compare("X-averaged separator porosity")
+        self.compare("X-averaged positive electrode porosity")
 
 
 class VariablesComparison(BaseOutputComparison):
@@ -145,12 +145,12 @@ class VariablesComparison(BaseOutputComparison):
         # Potentials
         # Some of these are 'average' but aren't expected to be the same across all
         # models
-        self.compare("Average reaction overpotential")
-        self.compare("Average negative electrode open circuit potential")
-        self.compare("Average positive electrode open circuit potential")
+        self.compare("X-averaged reaction overpotential")
+        self.compare("X-averaged negative electrode open circuit potential")
+        self.compare("X-averaged positive electrode open circuit potential")
         self.compare("Terminal voltage")
-        self.compare("Average electrolyte overpotential")
-        self.compare("Average solid phase ohmic losses")
+        self.compare("X-averaged electrolyte overpotential")
+        self.compare("X-averaged solid phase ohmic losses")
         self.compare("Negative electrode reaction overpotential")
         self.compare("Positive electrode reaction overpotential")
         self.compare("Negative electrode potential")

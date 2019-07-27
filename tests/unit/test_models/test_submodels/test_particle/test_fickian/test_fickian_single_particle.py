@@ -13,8 +13,8 @@ class TestSingleParticle(unittest.TestCase):
 
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {
-            "Average negative electrode interfacial current density": a,
-            "Average negative electrode temperature": a,
+            "X-averaged negative electrode interfacial current density": a,
+            "X-averaged negative electrode temperature": a,
         }
 
         submodel = pybamm.particle.fickian.SingleParticle(param, "Negative")
@@ -22,8 +22,8 @@ class TestSingleParticle(unittest.TestCase):
         std_tests.test_all()
 
         variables = {
-            "Average positive electrode interfacial current density": a,
-            "Average positive electrode temperature": a,
+            "X-averaged positive electrode interfacial current density": a,
+            "X-averaged positive electrode temperature": a,
         }
         submodel = pybamm.particle.fickian.SingleParticle(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)

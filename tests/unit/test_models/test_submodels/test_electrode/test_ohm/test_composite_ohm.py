@@ -16,9 +16,9 @@ class TestComposite(unittest.TestCase):
             "Current collector current density": a,
             "Negative electrode porosity": a,
             "Positive electrode porosity": a,
-            "Average positive electrode open circuit potential": a,
-            "Average positive electrode reaction overpotential": a,
-            "Average positive electrolyte potential": a,
+            "X-averaged positive electrode open circuit potential": a,
+            "X-averaged positive electrode reaction overpotential": a,
+            "X-averaged positive electrolyte potential": a,
         }
         submodel = pybamm.electrode.ohm.Composite(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)

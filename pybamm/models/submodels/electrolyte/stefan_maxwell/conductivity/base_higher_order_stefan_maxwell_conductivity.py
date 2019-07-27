@@ -41,13 +41,13 @@ class BaseHigherOrder(BaseModel):
         i_boundary_cc = variables["Current collector current density"]
         c_e = variables["Electrolyte concentration"]
         delta_phi_n_av = variables[
-            "Average negative electrode surface potential difference"
+            "X-averaged negative electrode surface potential difference"
         ]
-        phi_s_n_av = variables["Average negative electrode potential"]
-        eps_n_av = variables["Leading-order average negative electrode porosity"]
-        eps_s_av = variables["Leading-order average separator porosity"]
-        eps_p_av = variables["Leading-order average positive electrode porosity"]
-        T_av = variables["Average cell temperature"]
+        phi_s_n_av = variables["X-averaged negative electrode potential"]
+        eps_n_av = variables["Leading-order x-averaged negative electrode porosity"]
+        eps_s_av = variables["Leading-order x-averaged separator porosity"]
+        eps_p_av = variables["Leading-order x-averaged positive electrode porosity"]
+        T_av = variables["X-averaged cell temperature"]
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
 

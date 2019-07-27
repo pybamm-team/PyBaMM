@@ -42,10 +42,10 @@ class BaseParticle(pybamm.BaseSubModel):
             self.domain + " particle surface concentration": c_s_surf,
             self.domain
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " particle surface concentration": c_s_surf_av,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
         }

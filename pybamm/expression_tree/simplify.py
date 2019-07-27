@@ -613,4 +613,5 @@ class Simplification(object):
                 )
 
         new_symbol.domain = []
+        new_symbol.auxiliary_domains = {}
         return simplify_if_constant(new_symbol)

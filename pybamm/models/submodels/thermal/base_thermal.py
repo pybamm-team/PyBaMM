@@ -28,27 +28,27 @@ class BaseModel(pybamm.BaseSubModel):
         q = self._flux_law(T)
 
         variables = {
-            "Average negative electrode temperature": pybamm.x_average(T_n),
-            "Average negative electrode temperature [K]": param.Delta_T
+            "X-averaged negative electrode temperature": pybamm.x_average(T_n),
+            "X-averaged negative electrode temperature [K]": param.Delta_T
             * pybamm.x_average(T_n)
             + param.T_ref,
             "Negative electrode temperature": T_n,
             "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
-            "Average separator temperature": pybamm.x_average(T_s),
-            "Average separator temperature [K]": param.Delta_T * pybamm.x_average(T_s)
+            "X-averaged separator temperature": pybamm.x_average(T_s),
+            "X-averaged separator temperature [K]": param.Delta_T * pybamm.x_average(T_s)
             + param.T_ref,
             "Separator temperature": T_s,
             "Separator temperature [K]": param.Delta_T * T_s + param.T_ref,
-            "Average positive electrode temperature": pybamm.x_average(T_p),
-            "Average positive electrode temperature [K]": param.Delta_T
+            "X-averaged positive electrode temperature": pybamm.x_average(T_p),
+            "X-averaged positive electrode temperature [K]": param.Delta_T
             * pybamm.x_average(T_p)
             + param.T_ref,
             "Positive electrode temperature": T_p,
             "Positive electrode temperature [K]": param.Delta_T * T_p + param.T_ref,
             "Cell temperature": T,
             "Cell temperature [K]": param.Delta_T * T + param.T_ref,
-            "Average cell temperature": T_av,
-            "Average cell temperature [K]": param.Delta_T * T_av + param.T_ref,
+            "X-averaged cell temperature": T_av,
+            "X-averaged cell temperature [K]": param.Delta_T * T_av + param.T_ref,
             "Heat flux": q,
             "Heat flux [W.m-2]": q,
         }
@@ -133,8 +133,8 @@ class BaseModel(pybamm.BaseSubModel):
                 * param.potential_scale
                 * Q
                 / param.L_x,
-                "Average total heating": Q_av,
-                "Average total heating [A.V.m-3]": param.i_typ
+                "X-averaged total heating": Q_av,
+                "X-averaged total heating [A.V.m-3]": param.i_typ
                 * param.potential_scale
                 * Q_av
                 / param.L_x,

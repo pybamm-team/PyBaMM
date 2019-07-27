@@ -59,7 +59,7 @@ class HigherOrderBaseModel(BaseModel):
         self.variables[
             "Leading-order electrolyte concentration change"
         ] = leading_order_model.rhs[
-            leading_order_model.variables["Average electrolyte concentration"]
+            leading_order_model.variables["X-averaged electrolyte concentration"]
         ]
 
     def set_current_collector_submodel(self):
@@ -79,16 +79,16 @@ class HigherOrderBaseModel(BaseModel):
 
     def set_average_interfacial_submodel(self):
         self.submodels[
-            "average negative interface"
+            "x-averaged negative interface"
         ] = pybamm.interface.lead_acid.InverseFirstOrderKinetics(self.param, "Negative")
         self.submodels[
-            "average negative interface"
+            "x-averaged negative interface"
         ].reaction_submodels = self.reaction_submodels["Negative"]
         self.submodels[
-            "average positive interface"
+            "x-averaged positive interface"
         ] = pybamm.interface.lead_acid.InverseFirstOrderKinetics(self.param, "Positive")
         self.submodels[
-            "average positive interface"
+            "x-averaged positive interface"
         ].reaction_submodels = self.reaction_submodels["Positive"]
 
     def set_electrolyte_conductivity_submodel(self):

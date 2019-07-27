@@ -111,23 +111,23 @@ class VoltageTests(BaseOutputTest):
         self.eta_r_n = variables["Negative electrode reaction overpotential [V]"]
         self.eta_r_p = variables["Positive electrode reaction overpotential [V]"]
         self.eta_r_n_av = variables[
-            "Average negative electrode reaction overpotential [V]"
+            "X-averaged negative electrode reaction overpotential [V]"
         ]
         self.eta_r_p_av = variables[
-            "Average positive electrode reaction overpotential [V]"
+            "X-averaged positive electrode reaction overpotential [V]"
         ]
-        self.eta_r_av = variables["Average reaction overpotential [V]"]
+        self.eta_r_av = variables["X-averaged reaction overpotential [V]"]
 
-        self.eta_e_av = variables["Average electrolyte overpotential [V]"]
-        self.delta_phi_s_av = variables["Average solid phase ohmic losses [V]"]
+        self.eta_e_av = variables["X-averaged electrolyte overpotential [V]"]
+        self.delta_phi_s_av = variables["X-averaged solid phase ohmic losses [V]"]
 
         self.ocp_n_av = variables[
-            "Average negative electrode open circuit potential [V]"
+            "X-averaged negative electrode open circuit potential [V]"
         ]
         self.ocp_p_av = variables[
-            "Average positive electrode open circuit potential [V]"
+            "X-averaged positive electrode open circuit potential [V]"
         ]
-        self.ocv_av = variables["Average open circuit voltage [V]"]
+        self.ocv_av = variables["X-averaged open circuit voltage [V]"]
         self.voltage = variables["Terminal voltage [V]"]
 
     def test_each_reaction_overpotential(self):
@@ -312,9 +312,9 @@ class ParticleConcentrationTests(BaseOutputTest):
         t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n_edge, self.r_p_edge
 
         if self.operating_condition == "discharge":
-            import ipdb
-
-            ipdb.set_trace()
+            # import ipdb
+            #
+            # ipdb.set_trace()
             np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
             np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
         if self.operating_condition == "charge":
@@ -347,10 +347,10 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         self.c_e_p = variables["Positive electrolyte concentration"]
 
         # TODO: output average electrolyte concentration
-        # self.c_e_av = variables["Average electrolyte concentration"]
-        # self.c_e_n_av = variables["Average negative electrolyte concentration"]
-        # self.c_e_s_av = variables["Average separator electrolyte concentration"]
-        # self.c_e_p_av = variables["Average positive electrolyte concentration"]
+        # self.c_e_av = variables["X-averaged electrolyte concentration"]
+        # self.c_e_n_av = variables["X-averaged negative electrolyte concentration"]
+        # self.c_e_s_av = variables["X-averaged separator electrolyte concentration"]
+        # self.c_e_p_av = variables["X-averaged positive electrolyte concentration"]
 
         self.N_e_hat = variables["Electrolyte flux"]
         # self.N_e_hat = variables["Reduced cation flux"]
@@ -428,15 +428,15 @@ class PotentialTests(BaseOutputTest):
 
         self.phi_s_n = variables["Negative electrode potential [V]"]
         self.phi_s_p = variables["Positive electrode potential [V]"]
-        self.phi_s_n_av = variables["Average negative electrode potential [V]"]
-        self.phi_s_p_av = variables["Average positive electrode potential [V]"]
+        self.phi_s_n_av = variables["X-averaged negative electrode potential [V]"]
+        self.phi_s_p_av = variables["X-averaged positive electrode potential [V]"]
 
         self.phi_e = variables["Electrolyte potential [V]"]
         self.phi_e_n = variables["Negative electrolyte potential [V]"]
         self.phi_e_s = variables["Separator electrolyte potential [V]"]
         self.phi_e_p = variables["Positive electrolyte potential [V]"]
-        self.phi_e_n_av = variables["Average negative electrolyte potential [V]"]
-        self.phi_e_p_av = variables["Average positive electrolyte potential [V]"]
+        self.phi_e_n_av = variables["X-averaged negative electrolyte potential [V]"]
+        self.phi_e_p_av = variables["X-averaged positive electrolyte potential [V]"]
 
         self.delta_phi_n = variables[
             "Negative electrode surface potential difference [V]"
@@ -445,10 +445,10 @@ class PotentialTests(BaseOutputTest):
             "Positive electrode surface potential difference [V]"
         ]
         self.delta_phi_n_av = variables[
-            "Average negative electrode surface potential difference [V]"
+            "X-averaged negative electrode surface potential difference [V]"
         ]
         self.delta_phi_p_av = variables[
-            "Average positive electrode surface potential difference [V]"
+            "X-averaged positive electrode surface potential difference [V]"
         ]
 
         self.grad_phi_e = variables["Gradient of electrolyte potential"]
@@ -525,10 +525,10 @@ class CurrentTests(BaseOutputTest):
         self.j_n = variables["Negative electrode interfacial current density"]
         self.j_p = variables["Positive electrode interfacial current density"]
         self.j_n_av = variables[
-            "Average negative electrode interfacial current density"
+            "X-averaged negative electrode interfacial current density"
         ]
         self.j_p_av = variables[
-            "Average positive electrode interfacial current density"
+            "X-averaged positive electrode interfacial current density"
         ]
 
         self.j0_n = variables["Negative electrode exchange current density"]

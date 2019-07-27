@@ -49,14 +49,14 @@ class LeadingOrder(BaseModel):
 
         param = self.param
 
-        c_e_av = variables["Average electrolyte concentration"]
+        c_e_av = variables["X-averaged electrolyte concentration"]
 
-        eps_n_av = variables["Average negative electrode porosity"]
-        eps_s_av = variables["Average separator porosity"]
-        eps_p_av = variables["Average positive electrode porosity"]
+        eps_n_av = variables["X-averaged negative electrode porosity"]
+        eps_s_av = variables["X-averaged separator porosity"]
+        eps_p_av = variables["X-averaged positive electrode porosity"]
 
-        deps_n_dt_av = variables["Average negative electrode porosity change"]
-        deps_p_dt_av = variables["Average positive electrode porosity change"]
+        deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
+        deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
 
         source_terms = sum(
             param.l_n
@@ -78,5 +78,5 @@ class LeadingOrder(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        c_e = variables["Average electrolyte concentration"]
+        c_e = variables["X-averaged electrolyte concentration"]
         self.initial_conditions = {c_e: self.param.c_e_init}
