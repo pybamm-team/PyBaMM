@@ -22,7 +22,7 @@ c_e_p = pybamm.Variable(
 c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
 c_e_av = pybamm.Variable(
-    "Average electrolyte concentration", domain="current collector"
+    "X-averaged electrolyte concentration", domain="current collector"
 )
 
 # Electrolyte potential
@@ -68,11 +68,11 @@ delta_phi_p = pybamm.Variable(
 )
 
 delta_phi_n_av = pybamm.Variable(
-    "Average negative electrode surface potential difference",
+    "X-averaged negative electrode surface potential difference",
     domain="current collector",
 )
 delta_phi_p_av = pybamm.Variable(
-    "Average positive electrode surface potential difference",
+    "X-averaged positive electrode surface potential difference",
     domain="current collector",
 )
 
@@ -136,11 +136,11 @@ eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
 
 # Piecewise constant (for asymptotic models)
 eps_n_pc = pybamm.Variable(
-    "Average negative electrode porosity", domain="current collector"
+    "X-averaged negative electrode porosity", domain="current collector"
 )
-eps_s_pc = pybamm.Variable("Average separator porosity", domain="current collector")
+eps_s_pc = pybamm.Variable("X-averaged separator porosity", domain="current collector")
 eps_p_pc = pybamm.Variable(
-    "Average positive electrode porosity", domain="current collector"
+    "X-averaged positive electrode porosity", domain="current collector"
 )
 
 eps_piecewise_constant = pybamm.Concatenation(
@@ -184,4 +184,4 @@ T_p = pybamm.Variable(
     auxiliary_domains={"secondary": "current collector"},
 )
 T = pybamm.Concatenation(T_n, T_s, T_p)
-T_av = pybamm.Variable("Average cell temperature", domain="current collector")
+T_av = pybamm.Variable("X-averaged cell temperature", domain="current collector")

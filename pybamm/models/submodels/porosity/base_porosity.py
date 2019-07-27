@@ -28,9 +28,9 @@ class BaseModel(pybamm.BaseSubModel):
             "Negative electrode porosity": eps_n,
             "Separator porosity": eps_s,
             "Positive electrode porosity": eps_p,
-            "Average negative electrode porosity": pybamm.x_average(eps_n),
-            "Average separator porosity": pybamm.x_average(eps_s),
-            "Average positive electrode porosity": pybamm.x_average(eps_p),
+            "X-averaged negative electrode porosity": pybamm.x_average(eps_n),
+            "X-averaged separator porosity": pybamm.x_average(eps_s),
+            "X-averaged positive electrode porosity": pybamm.x_average(eps_p),
         }
 
         if set_leading_order is True:
@@ -39,13 +39,13 @@ class BaseModel(pybamm.BaseSubModel):
                     "Leading-order negative electrode porosity": eps_n,
                     "Leading-order separator porosity": eps_s,
                     "Leading-order positive electrode porosity": eps_p,
-                    "Leading-order average negative electrode porosity": pybamm.average(
-                        eps_n
+                    "Leading-order x-averaged "
+                    + "negative electrode porosity": pybamm.x_average(eps_n),
+                    "Leading-order x-averaged separator porosity": pybamm.x_average(
+                        eps_s
                     ),
-                    "Leading-order average separator porosity": pybamm.average(eps_s),
-                    "Leading-order average positive electrode porosity": pybamm.average(
-                        eps_p
-                    ),
+                    "Leading-order x-averaged "
+                    + "positive electrode porosity": pybamm.x_average(eps_p),
                 }
             )
 
@@ -60,22 +60,25 @@ class BaseModel(pybamm.BaseSubModel):
             "Negative electrode porosity change": deps_n_dt,
             "Separator porosity change": deps_s_dt,
             "Positive electrode porosity change": deps_p_dt,
-            "Average porosity change": pybamm.x_average(deps_dt),
-            "Average negative electrode porosity change": pybamm.x_average(deps_n_dt),
-            "Average separator porosity change": pybamm.x_average(deps_s_dt),
-            "Average positive electrode porosity change": pybamm.x_average(deps_p_dt),
+            "X-averaged porosity change": pybamm.x_average(deps_dt),
+            "X-averaged negative electrode porosity change": pybamm.x_average(
+                deps_n_dt
+            ),
+            "X-averaged separator porosity change": pybamm.x_average(deps_s_dt),
+            "X-averaged positive electrode porosity change": pybamm.x_average(
+                deps_p_dt
+            ),
         }
 
         if set_leading_order is True:
             variables.update(
                 {
-                    "Leading-order average "
-                    + "negative electrode porosity change": pybamm.average(deps_n_dt),
-                    "Leading-order average separator porosity change": pybamm.average(
-                        deps_s_dt
-                    ),
-                    "Leading-order average "
-                    + "positive electrode porosity change": pybamm.average(deps_p_dt),
+                    "Leading-order x-averaged "
+                    + "negative electrode porosity change": pybamm.x_average(deps_n_dt),
+                    "Leading-order x-averaged "
+                    + "separator porosity change": pybamm.x_average(deps_s_dt),
+                    "Leading-order x-averaged "
+                    + "positive electrode porosity change": pybamm.x_average(deps_p_dt),
                 }
             )
 

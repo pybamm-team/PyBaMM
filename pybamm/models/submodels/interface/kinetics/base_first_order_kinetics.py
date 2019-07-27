@@ -3,7 +3,6 @@
 #
 import pybamm
 from .base_kinetics import BaseModel
-import pybamm
 
 
 class BaseFirstOrderKinetics(BaseModel):

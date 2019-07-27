@@ -27,11 +27,49 @@ class TestLeadAcidLOQS(unittest.TestCase):
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertNotIn("negative particle", model.default_geometry)
 
-    def test_default_spatial_methods(self):
-        options = {"thermal": None}
-        model = pybamm.lead_acid.LOQS(options)
+    def test_defaults_dimensions(self):
+        model = pybamm.lead_acid.LOQS()
         self.assertIsInstance(model.default_spatial_methods, dict)
         self.assertNotIn("negative particle", model.default_geometry)
+        self.assertTrue(
+            issubclass(
+                model.default_spatial_methods["current collector"],
+                pybamm.ZeroDimensionalMethod,
+            )
+        )
+        self.assertTrue(
+            issubclass(
+                model.default_submesh_types["current collector"], pybamm.SubMesh0D
+            )
+        )
+        model = pybamm.lead_acid.LOQS(
+            {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+        )
+        self.assertTrue(
+            issubclass(
+                model.default_spatial_methods["current collector"], pybamm.FiniteVolume
+            )
+        )
+        self.assertTrue(
+            issubclass(
+                model.default_submesh_types["current collector"],
+                pybamm.Uniform1DSubMesh,
+            )
+        )
+        model = pybamm.lead_acid.LOQS(
+            {"surface form": "differential", "bc_options": {"dimensionality": 2}}
+        )
+        self.assertTrue(
+            issubclass(
+                model.default_spatial_methods["current collector"],
+                pybamm.ScikitFiniteElement,
+            )
+        )
+        self.assertTrue(
+            issubclass(
+                model.default_submesh_types["current collector"], pybamm.Scikit2DSubMesh
+            )
+        )
 
     def test_incompatible_options(self):
         options = {"bc_options": {"dimensionality": 1}}

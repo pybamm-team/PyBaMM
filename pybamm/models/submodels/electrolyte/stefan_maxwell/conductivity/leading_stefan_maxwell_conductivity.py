@@ -26,9 +26,9 @@ class LeadingOrder(BaseModel):
         super().__init__(param, domain, reactions)
 
     def get_coupled_variables(self, variables):
-        ocp_n_av = variables["Average negative electrode open circuit potential"]
-        eta_r_n_av = variables["Average negative electrode reaction overpotential"]
-        phi_s_n_av = variables["Average negative electrode potential"]
+        ocp_n_av = variables["X-averaged negative electrode open circuit potential"]
+        eta_r_n_av = variables["X-averaged negative electrode reaction overpotential"]
+        phi_s_n_av = variables["X-averaged negative electrode potential"]
         phi_e_av = phi_s_n_av - eta_r_n_av - ocp_n_av
         return self._get_coupled_variables_from_potential(variables, phi_e_av)
 

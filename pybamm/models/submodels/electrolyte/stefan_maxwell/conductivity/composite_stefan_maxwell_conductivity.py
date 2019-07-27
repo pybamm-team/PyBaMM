@@ -29,5 +29,5 @@ class Composite(BaseHigherOrder):
 
     def unpack(self, variables):
         "Unpack variables and return average values"
-        c_e_av = variables["Average electrolyte concentration"]
+        c_e_av = variables["X-averaged electrolyte concentration"]
         return c_e_av

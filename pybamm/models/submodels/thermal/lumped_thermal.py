@@ -46,9 +46,9 @@ class Lumped(BaseModel):
         return q
 
     def _unpack(self, variables):
-        T_av = variables["Average cell temperature"]
+        T_av = variables["X-averaged cell temperature"]
         q = variables["Heat flux"]
-        Q_av = variables["Average total heating"]
+        Q_av = variables["X-averaged total heating"]
         return T_av, q, Q_av
 
     def set_rhs(self, variables):

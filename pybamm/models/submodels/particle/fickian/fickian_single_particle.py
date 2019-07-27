@@ -43,7 +43,7 @@ class SingleParticle(BaseModel):
             "X-average " + self.domain.lower() + " particle concentration"
         ]
         T_k_xav = pybamm.PrimaryBroadcast(
-            variables["Average " + self.domain.lower() + " electrode temperature"],
+            variables["X-averaged " + self.domain.lower() + " electrode temperature"],
             [self.domain.lower() + " particle"],
         )
 
@@ -60,7 +60,9 @@ class SingleParticle(BaseModel):
         ]
         N_s_xav = variables["X-average " + self.domain.lower() + " particle flux"]
         j_av = variables[
-            "Average " + self.domain.lower() + " electrode interfacial current density"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode interfacial current density"
         ]
 
         return c_s_xav, N_s_xav, j_av

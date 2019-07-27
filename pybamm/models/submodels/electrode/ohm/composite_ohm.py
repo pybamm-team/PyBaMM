@@ -36,7 +36,7 @@ class Composite(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         eps = variables[
-            "Leading-order average " + self.domain.lower() + " electrode porosity"
+            "Leading-order x-averaged " + self.domain.lower() + " electrode porosity"
         ]
 
         if self._domain == "Negative":
@@ -48,9 +48,9 @@ class Composite(BaseModel):
 
         elif self.domain == "Positive":
             delta_phi_p_av = variables[
-                "Average positive electrode surface potential difference"
+                "X-averaged positive electrode surface potential difference"
             ]
-            phi_e_p_av = variables["Average positive electrolyte potential"]
+            phi_e_p_av = variables["X-averaged positive electrolyte potential"]
 
             sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b
 

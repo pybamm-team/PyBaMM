@@ -26,13 +26,13 @@ class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
     def get_coupled_variables(self, variables):
         # Unpack
         delta_phi_0 = variables[
-            "Leading-order average "
+            "Leading-order x-averaged "
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
-        c_e_0 = variables["Leading-order average electrolyte concentration"]
+        c_e_0 = variables["Leading-order x-averaged electrolyte concentration"]
         c_e_av = variables[
-            "Average " + self.domain.lower() + " electrolyte concentration"
+            "X-averaged " + self.domain.lower() + " electrolyte concentration"
         ]
         c_e_1_av = (c_e_av - c_e_0) / self.param.C_e
 

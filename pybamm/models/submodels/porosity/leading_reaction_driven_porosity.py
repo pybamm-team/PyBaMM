@@ -50,15 +50,15 @@ class LeadingOrder(BaseModel):
     def set_rhs(self, variables):
         self.rhs = {}
         for domain in ["negative electrode", "separator", "positive electrode"]:
-            eps_av = variables["Average " + domain + " porosity"]
-            deps_dt_av = variables["Average " + domain + " porosity change"]
+            eps_av = variables["X-averaged " + domain + " porosity"]
+            deps_dt_av = variables["X-averaged " + domain + " porosity change"]
             self.rhs.update({eps_av: deps_dt_av})
 
     def set_initial_conditions(self, variables):
 
-        eps_n_av = variables["Average negative electrode porosity"]
-        eps_s_av = variables["Average separator porosity"]
-        eps_p_av = variables["Average positive electrode porosity"]
+        eps_n_av = variables["X-averaged negative electrode porosity"]
+        eps_s_av = variables["X-averaged separator porosity"]
+        eps_p_av = variables["X-averaged positive electrode porosity"]
 
         self.initial_conditions = {eps_n_av: self.param.eps_n_init}
         self.initial_conditions.update({eps_s_av: self.param.eps_s_init})

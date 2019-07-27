@@ -41,9 +41,11 @@ class LeadingOrder(BaseModel):
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
         elif self.domain == "Positive":
-            ocp_p_av = variables["Average positive electrode open circuit potential"]
-            eta_r_p_av = variables["Average positive electrode reaction overpotential"]
-            phi_e_p_av = variables["Average positive electrolyte potential"]
+            ocp_p_av = variables["X-averaged positive electrode open circuit potential"]
+            eta_r_p_av = variables[
+                "X-averaged positive electrode reaction overpotential"
+            ]
+            phi_e_p_av = variables["X-averaged positive electrolyte potential"]
 
             v = ocp_p_av + eta_r_p_av + phi_e_p_av
 

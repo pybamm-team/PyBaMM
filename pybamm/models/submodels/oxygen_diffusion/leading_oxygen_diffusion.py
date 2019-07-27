@@ -24,7 +24,7 @@ class LeadingOrder(BaseModel):
         super().__init__(param, reactions)
 
     def get_fundamental_variables(self):
-        c_ox_av = pybamm.Variable("Average oxygen concentration")
+        c_ox_av = pybamm.Variable("X-averaged oxygen concentration")
         c_ox_n = pybamm.FullBroadcast(
             c_ox_av, ["negative electrode"], "current collector"
         )
@@ -52,14 +52,14 @@ class LeadingOrder(BaseModel):
 
         param = self.param
 
-        c_ox_av = variables["Average oxygen concentration"]
+        c_ox_av = variables["X-averaged oxygen concentration"]
 
-        eps_n_av = variables["Average negative electrode porosity"]
-        eps_s_av = variables["Average separator porosity"]
-        eps_p_av = variables["Average positive electrode porosity"]
+        eps_n_av = variables["X-averaged negative electrode porosity"]
+        eps_s_av = variables["X-averaged separator porosity"]
+        eps_p_av = variables["X-averaged positive electrode porosity"]
 
-        deps_n_dt_av = variables["Average negative electrode porosity change"]
-        deps_p_dt_av = variables["Average positive electrode porosity change"]
+        deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
+        deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
 
         source_terms = sum(
             param.l_n
@@ -81,5 +81,5 @@ class LeadingOrder(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        c_ox = variables["Average oxygen concentration"]
+        c_ox = variables["X-averaged oxygen concentration"]
         self.initial_conditions = {c_ox: self.param.c_ox_init}
