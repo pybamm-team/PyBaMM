@@ -85,7 +85,9 @@ def plot_variables(all_variables, t_eval):
             exceptions = limits_exceptions[var]
         else:
             exceptions = {}
-        shared_plotting.plot_variable(all_variables, times, var, exceptions)
+        shared_plotting.plot_variable(
+            all_variables, times, var, exceptions, yaxis="FCI"
+        )
         if OUTPUT_DIR is not None:
             plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 

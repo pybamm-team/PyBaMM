@@ -22,12 +22,12 @@ models = [
     #     pybamm.lead_acid.CompositeExtended(),
     # pybamm.lead_acid.Composite(),
     pybamm.lead_acid.LOQS(
-        {"surface form": "differential", "side reactions": ["oxygen"]}
+        # {"surface form": "differential", "side reactions": ["oxygen"]}
     ),
-    pybamm.lead_acid.CompositeExtended(
-        {"surface form": "differential", "side reactions": ["oxygen"]}
-    ),
-    pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
+    # pybamm.lead_acid.CompositeExtended(
+    #     {"surface form": "differential", "side reactions": ["oxygen"]}
+    # ),
+    # pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
 ]
 # models = [
 #     # pybamm.lead_acid.LOQS({"surface form": "algebraic"}),
@@ -42,7 +42,7 @@ param = models[0].default_parameter_values
 param.update(
     {
         "Oxygen diffusivity [m2.s-1]": 1e-7,
-        "Typical current [A]": -20,
+        "Typical current [A]": 20,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
@@ -84,8 +84,9 @@ output_variables = [
     # "Average electrolyte concentration",
     # "Porosity",
     # "Electrolyte current density [A.m-2]",
-    "Electrolyte concentration [Molar]",
-    "Oxygen concentration [Molar]",
+    # "Electrolyte concentration [Molar]",
+    # "Oxygen concentration [Molar]",
+    ["State of Charge", "Fractional Charge Input"],
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)

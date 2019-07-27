@@ -147,3 +147,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         # State of Charge defined as function of dimensionless electrolyte concentration
         soc = self.variables["Average electrolyte concentration"] * 100
         self.variables.update({"State of Charge": soc, "Depth of Discharge": 100 - soc})
+
+        # Fractional charge input
+        fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
+        self.variables["Fractional Charge Input"] = fci
+        self.rhs[fci] = -self.param.current_with_time * 100
+        self.initial_conditions[fci] = self.param.q_init * 100
