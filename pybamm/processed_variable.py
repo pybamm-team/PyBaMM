@@ -7,7 +7,7 @@ import pybamm
 import scipy.interpolate as interp
 
 
-def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="linear"):
+def post_process_variables(variables, t_sol, u_sol, mesh=None, interp_kind="linear"):
     """
     Post-process all variables in a model
 
@@ -17,7 +17,7 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
         Dictionary of variables
     t_sol : array_like, size (m,)
         The time vector returned by the solver
-    y_sol : array_like, size (m, k)
+    u_sol : array_like, size (m, k)
         The solution vector returned by the solver. Can include solution values that
         other than those that get read by base_variable.evaluate() (i.e. k>=n)
     mesh : :class:`pybamm.Mesh`
@@ -36,7 +36,7 @@ def post_process_variables(variables, t_sol, y_sol, mesh=None, interp_kind="line
     for var, eqn in variables.items():
         pybamm.logger.debug("Post-processing {}".format(var))
         processed_variables[var] = ProcessedVariable(
-            eqn, t_sol, y_sol, mesh, interp_kind, known_evals
+            eqn, t_sol, u_sol, mesh, interp_kind, known_evals
         )
 
         for t in known_evals:
@@ -58,7 +58,7 @@ class ProcessedVariable(object):
         When evaluated, returns an array of size (m,n)
     t_sol : array_like, size (m,)
         The time vector returned by the solver
-    y_sol : array_like, size (m, k)
+    u_sol : array_like, size (m, k)
         The solution vector returned by the solver. Can include solution values that
         other than those that get read by base_variable.evaluate() (i.e. k>=n)
     mesh : :class:`pybamm.Mesh`
@@ -72,14 +72,14 @@ class ProcessedVariable(object):
         self,
         base_variable,
         t_sol,
-        y_sol,
+        u_sol,
         mesh=None,
         interp_kind="linear",
         known_evals=None,
     ):
         self.base_variable = base_variable
         self.t_sol = t_sol
-        self.y_sol = y_sol
+        self.u_sol = u_sol
         self.mesh = mesh
         self.interp_kind = interp_kind
         self.domain = base_variable.domain
@@ -88,10 +88,10 @@ class ProcessedVariable(object):
 
         if self.known_evals:
             self.base_eval, self.known_evals[t_sol[0]] = base_variable.evaluate(
-                t_sol[0], y_sol[:, 0], self.known_evals[t_sol[0]]
+                t_sol[0], u_sol[:, 0], self.known_evals[t_sol[0]]
             )
         else:
-            self.base_eval = base_variable.evaluate(t_sol[0], y_sol[:, 0])
+            self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0])
 
         # handle 2D (in space) finite element variables differently
         if "current collector" in self.domain and isinstance(
@@ -124,10 +124,10 @@ class ProcessedVariable(object):
             t = self.t_sol[idx]
             if self.known_evals:
                 entries[idx], self.known_evals[t] = self.base_variable.evaluate(
-                    t, self.y_sol[:, idx], self.known_evals[t]
+                    t, self.u_sol[:, idx], self.known_evals[t]
                 )
             else:
-                entries[idx] = self.base_variable.evaluate(t, self.y_sol[:, idx])
+                entries[idx] = self.base_variable.evaluate(t, self.u_sol[:, idx])
 
         # No discretisation provided, or variable has no domain (function of t only)
         self._interpolation_function = interp.interp1d(
@@ -148,15 +148,15 @@ class ProcessedVariable(object):
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
-            y = self.y_sol[:, idx]
+            u = self.u_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, y, self.known_evals[t]
+                    t, u, self.known_evals[t]
                 )
                 entries[:, idx] = eval_and_known_evals[0][:, 0]
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
-                entries[:, idx] = self.base_variable.evaluate(t, y)[:, 0]
+                entries[:, idx] = self.base_variable.evaluate(t, u)[:, 0]
 
         # Process the discretisation to get x values
         nodes = self.mesh.combine_submeshes(*self.domain)[0].nodes
@@ -235,10 +235,10 @@ class ProcessedVariable(object):
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
-            y = self.y_sol[:, idx]
+            u = self.u_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, y, self.known_evals[t]
+                    t, u, self.known_evals[t]
                 )
                 entries[:, :, idx] = np.reshape(
                     eval_and_known_evals[0], [first_dim_size, second_dim_size]
@@ -246,7 +246,7 @@ class ProcessedVariable(object):
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, y), [first_dim_size, second_dim_size]
+                    self.base_variable.evaluate(t, u), [first_dim_size, second_dim_size]
                 )
 
         # Assess whether on nodes or edges
@@ -280,51 +280,51 @@ class ProcessedVariable(object):
             )
 
     def initialise_3D_scikit_fem(self):
-        # NOTE: use independent variable names x, z for spatial dimension
-        # instead of y, z to avoid confusion with the solution vector y_sol
-        x_sol = self.mesh[self.domain[0]][0].edges["y"]
-        len_x = len(x_sol)
+        y_sol = self.mesh[self.domain[0]][0].edges["y"]
+        len_y = len(y_sol)
         z_sol = self.mesh[self.domain[0]][0].edges["z"]
         len_z = len(z_sol)
-        entries = np.empty((len_x, len_z, len(self.t_sol)))
+        entries = np.empty((len_y, len_z, len(self.t_sol)))
 
         # Evaluate the base_variable index-by-index
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
-            y = self.y_sol[:, idx]
+            u = self.u_sol[:, idx]
             if self.known_evals:
                 eval_and_known_evals = self.base_variable.evaluate(
-                    t, y, self.known_evals[t]
+                    t, u, self.known_evals[t]
                 )
-                entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_x, len_z])
+                entries[:, :, idx] = np.reshape(eval_and_known_evals[0], [len_y, len_z])
                 self.known_evals[t] = eval_and_known_evals[1]
             else:
                 entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, y), [len_x, len_z]
+                    self.base_variable.evaluate(t, u), [len_y, len_z]
                 )
 
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 3
-        self.x_sol = x_sol
+        self.y_sol = y_sol
         self.z_sol = z_sol
+        self.first_dimension = "y"
+        self.second_dimension = "z"
 
         # set up interpolation
         self._interpolation_function = interp.RegularGridInterpolator(
-            (x_sol, z_sol, self.t_sol),
+            (y_sol, z_sol, self.t_sol),
             entries,
             method=self.interp_kind,
             fill_value=np.nan,
         )
 
-    def __call__(self, t, x=None, r=None, z=None):
+    def __call__(self, t, x=None, r=None, y=None, z=None):
         "Evaluate the variable at arbitrary t (and x and/or r), using interpolation"
         if self.dimensions == 1:
             return self._interpolation_function(t)
         elif self.dimensions == 2:
             return self.call_2D(t, x, r, z)
         elif self.dimensions == 3:
-            return self.call_3D(t, x, r)
+            return self.call_3D(t, x, r, y, z)
 
     def call_2D(self, t, x, r, z):
         "Evaluate a 2D variable"
@@ -344,19 +344,22 @@ class ProcessedVariable(object):
             else:
                 raise ValueError("z cannot be None for macroscale variable")
 
-    def call_3D(self, t, x, r):
+    def call_3D(self, t, x, r, y, z):
         "Evaluate a 3D variable"
-        if self.first_dimension == "x":
+        if self.first_dimension == "x" and self.second_dimension == "r":
             first_dim = x
             second_dim = r
-        else:
+        elif self.first_dimension == "r" and self.second_dimension == "x":
             first_dim = r
             second_dim = x
+        elif self.first_dimension == "y" and self.second_dimension == "z":
+            first_dim = y
+            second_dim = z
         if isinstance(first_dim, np.ndarray):
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 first_dim = first_dim[:, np.newaxis, np.newaxis]
                 second_dim = second_dim[:, np.newaxis]
-            elif isinstance(r, np.ndarray) or isinstance(t, np.ndarray):
+            elif isinstance(second_dim, np.ndarray) or isinstance(t, np.ndarray):
                 first_dim = first_dim[:, np.newaxis]
         else:
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
