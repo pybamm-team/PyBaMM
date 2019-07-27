@@ -44,7 +44,9 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             return
 
         delta_phi = variables[
-            "X-averaged " + self.domain.lower() + " electrode surface potential difference"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference"
         ]
         if self.domain == "Negative":
             delta_phi_init = self.param.U_n(self.param.c_n_init, self.param.T_ref)
@@ -112,7 +114,9 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
             + " electrode total interfacial current density"
         ]
         delta_phi = variables[
-            "X-averaged " + self.domain.lower() + " electrode surface potential difference"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference"
         ]
 
         if self.domain == "Negative":
@@ -155,7 +159,9 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
             + " electrode total interfacial current density"
         ]
         delta_phi = variables[
-            "X-averaged " + self.domain.lower() + " electrode surface potential difference"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference"
         ]
 
         self.algebraic[delta_phi] = sum_j_av - sum_j

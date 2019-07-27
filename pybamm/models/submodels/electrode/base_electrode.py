@@ -60,7 +60,9 @@ class BaseElectrode(pybamm.BaseSubModel):
             self.domain + " electrode potential": phi_s,
             self.domain + " electrode potential [V]": phi_s_dim,
             "X-averaged " + self.domain.lower() + " electrode potential": phi_s_av,
-            "X-averaged " + self.domain.lower() + " electrode potential [V]": phi_s_av_dim,
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode potential [V]": phi_s_av_dim,
             self.domain + " electrode ohmic losses": delta_phi_s,
             self.domain + " electrode ohmic losses [V]": delta_phi_s_dim,
             "X-averaged "

@@ -382,8 +382,12 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         ocp_n = self.variables["Negative electrode open circuit potential"]
         ocp_p = self.variables["Positive electrode open circuit potential"]
-        ocp_n_av = self.variables["X-averaged negative electrode open circuit potential"]
-        ocp_p_av = self.variables["X-averaged positive electrode open circuit potential"]
+        ocp_n_av = self.variables[
+            "X-averaged negative electrode open circuit potential"
+        ]
+        ocp_p_av = self.variables[
+            "X-averaged positive electrode open circuit potential"
+        ]
 
         ocp_n_dim = self.variables["Negative electrode open circuit potential [V]"]
         ocp_p_dim = self.variables["Positive electrode open circuit potential [V]"]
@@ -405,11 +409,15 @@ class BaseBatteryModel(pybamm.BaseModel):
         ocv_dim = ocp_p_right_dim - ocp_n_left_dim
 
         # overpotentials
-        eta_r_n_av = self.variables["X-averaged negative electrode reaction overpotential"]
+        eta_r_n_av = self.variables[
+            "X-averaged negative electrode reaction overpotential"
+        ]
         eta_r_n_av_dim = self.variables[
             "X-averaged negative electrode reaction overpotential [V]"
         ]
-        eta_r_p_av = self.variables["X-averaged positive electrode reaction overpotential"]
+        eta_r_p_av = self.variables[
+            "X-averaged positive electrode reaction overpotential"
+        ]
         eta_r_p_av_dim = self.variables[
             "X-averaged positive electrode reaction overpotential [V]"
         ]
@@ -489,7 +497,9 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Battery-wide variables
         eta_e_av_dim = self.variables.get("X-averaged electrolyte ohmic losses [V]", 0)
-        eta_c_av_dim = self.variables.get("X-averaged concentration overpotential [V]", 0)
+        eta_c_av_dim = self.variables.get(
+            "X-averaged concentration overpotential [V]", 0
+        )
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
@@ -498,7 +508,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             {
                 "X-averaged battery open circuit voltage [V]": ocv_av_dim * num_cells,
                 "Measured battery open circuit voltage [V]": ocv_dim * num_cells,
-                "X-averaged battery reaction overpotential [V]": eta_r_av_dim * num_cells,
+                "X-averaged battery reaction overpotential [V]": eta_r_av_dim
+                * num_cells,
                 "X-averaged battery solid phase ohmic losses [V]": delta_phi_s_av_dim
                 * num_cells,
                 "X-averaged battery electrolyte ohmic losses [V]": eta_e_av_dim

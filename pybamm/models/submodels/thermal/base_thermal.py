@@ -35,7 +35,8 @@ class BaseModel(pybamm.BaseSubModel):
             "Negative electrode temperature": T_n,
             "Negative electrode temperature [K]": param.Delta_T * T_n + param.T_ref,
             "X-averaged separator temperature": pybamm.x_average(T_s),
-            "X-averaged separator temperature [K]": param.Delta_T * pybamm.x_average(T_s)
+            "X-averaged separator temperature [K]": param.Delta_T
+            * pybamm.x_average(T_s)
             + param.T_ref,
             "Separator temperature": T_s,
             "Separator temperature [K]": param.Delta_T * T_s + param.T_ref,

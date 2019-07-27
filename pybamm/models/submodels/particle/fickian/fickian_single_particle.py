@@ -60,7 +60,9 @@ class SingleParticle(BaseModel):
         ]
         N_s_xav = variables["X-average " + self.domain.lower() + " particle flux"]
         j_av = variables[
-            "X-averaged " + self.domain.lower() + " electrode interfacial current density"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode interfacial current density"
         ]
 
         return c_s_xav, N_s_xav, j_av

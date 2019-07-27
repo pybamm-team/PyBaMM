@@ -55,13 +55,17 @@ class FirstOrder(BaseModel):
         # Right-hand sides
         rhs_n = d_epsc_n_0_dt - sum(
             reaction["Negative"]["s"]
-            * variables["Leading-order x-averaged " + reaction["Negative"]["aj"].lower()]
+            * variables[
+                "Leading-order x-averaged " + reaction["Negative"]["aj"].lower()
+            ]
             for reaction in self.reactions.values()
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = d_epsc_p_0_dt - sum(
             reaction["Positive"]["s"]
-            * variables["Leading-order x-averaged " + reaction["Positive"]["aj"].lower()]
+            * variables[
+                "Leading-order x-averaged " + reaction["Positive"]["aj"].lower()
+            ]
             for reaction in self.reactions.values()
         )
 
@@ -119,7 +123,7 @@ class FirstOrder(BaseModel):
         variables.update(
             {
                 "X-averaged first-order negative electrolyte concentration": c_e_n_1_av,
-                "X-averaged first-order separator electrolyte concentration": c_e_s_1_av,
+                "X-averaged first-order separator concentration": c_e_s_1_av,
                 "X-averaged first-order positive electrolyte concentration": c_e_p_1_av,
             }
         )

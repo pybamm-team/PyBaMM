@@ -63,11 +63,14 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             "Positive electrolyte concentration [mol.m-3]": c_e_typ * c_e_p,
             "Positive electrolyte concentration [Molar]": c_e_typ * c_e_p / 1000,
             "X-averaged negative electrolyte concentration": c_e_n_av,
-            "X-averaged negative electrolyte concentration [mol.m-3]": c_e_typ * c_e_n_av,
+            "X-averaged negative electrolyte concentration [mol.m-3]": c_e_typ
+            * c_e_n_av,
             "X-averaged separator electrolyte concentration": c_e_s_av,
-            "X-averaged separator electrolyte concentration [mol.m-3]": c_e_typ * c_e_s_av,
+            "X-averaged separator electrolyte concentration [mol.m-3]": c_e_typ
+            * c_e_s_av,
             "X-averaged positive electrolyte concentration": c_e_p_av,
-            "X-averaged positive electrolyte concentration [mol.m-3]": c_e_typ * c_e_p_av,
+            "X-averaged positive electrolyte concentration [mol.m-3]": c_e_typ
+            * c_e_p_av,
         }
 
         return variables
