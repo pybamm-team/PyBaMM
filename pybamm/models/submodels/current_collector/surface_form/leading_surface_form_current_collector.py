@@ -62,7 +62,7 @@ class LeadingOrder(BaseSurfaceForm):
 
         # Set boundary conditions at top ("right") and bottom ("left")
         param = self.param
-        i_cell = param.current_density_with_time
+        i_cell = param.current_with_time
         vertical_conductivity = (
             param.l_n * param.sigma_n_dash * param.l_p * param.sigma_p_dash
         ) / (param.l_n * param.sigma_n_dash + param.l_p * param.sigma_p_dash)

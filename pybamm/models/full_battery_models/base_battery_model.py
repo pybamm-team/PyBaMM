@@ -260,13 +260,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.variables = {}
 
         # Current
-        icell = pybamm.electrical_parameters.current_density_with_time
-        icell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
+        i_cell = pybamm.electrical_parameters.current_with_time
+        i_cell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
         I = pybamm.electrical_parameters.dimensional_current_with_time
         self.variables.update(
             {
-                "Total current density": icell,
-                "Total current density [A.m-2]": icell_dim,
+                "Total current density": i_cell,
+                "Total current density [A.m-2]": i_cell_dim,
                 "Current [A]": I,
             }
         )

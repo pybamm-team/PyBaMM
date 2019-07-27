@@ -90,15 +90,15 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
         # Current
-        icell = pybamm.standard_parameters_lead_acid.current_density_with_time
-        icell_dim = (
+        i_cell = pybamm.standard_parameters_lead_acid.current_with_time
+        i_cell_dim = (
             pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
         )
         I = pybamm.standard_parameters_lead_acid.dimensional_current_with_time
         self.variables.update(
             {
-                "Total current density": icell,
-                "Total current density [A.m-2]": icell_dim,
+                "Total current density": i_cell,
+                "Total current density [A.m-2]": i_cell_dim,
                 "Current [A]": I,
             }
         )
