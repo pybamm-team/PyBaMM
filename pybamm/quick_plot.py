@@ -10,18 +10,18 @@ def ax_min(data):
     "Calculate appropriate minimum axis value for plotting"
     data_min = np.min(data)
     if data_min <= 0:
-        return 1.05 * data_min
+        return 1.04 * data_min
     else:
-        return 0.95 * data_min
+        return 0.96 * data_min
 
 
 def ax_max(data):
     "Calculate appropriate maximum axis value for plotting"
     data_max = np.max(data)
     if data_max <= 0:
-        return 0.9 * data_max
+        return 0.96 * data_max
     else:
-        return 1.1 * data_max
+        return 1.04 * data_max
 
 
 def split_long_string(title, max_words=4):
@@ -92,7 +92,7 @@ class QuickPlot(object):
             self.spatial_scales["z"] = (variables["z [m]"] / variables["z"]).evaluate()[
                 -1
             ]
-        if "Time [m]" and "Time" in variables:
+        if "Time [h]" and "Time" in variables:
             self.time_scale = (variables["Time [h]"] / variables["Time"]).evaluate(t=1)
 
         # Time parameters

@@ -129,10 +129,10 @@ def charge_states(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    # plot_voltages(all_variables, t_eval)
+    plot_voltages(all_variables, t_eval)
     plot_interfacial_currents(all_variables, t_eval)
-    # plot_variables(all_variables, t_eval)
-    # plot_voltage_components(all_variables, t_eval)
+    plot_variables(all_variables, t_eval)
+    plot_voltage_components(all_variables, t_eval)
 
 
 if __name__ == "__main__":

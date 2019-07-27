@@ -15,39 +15,25 @@ if args.debug:
 else:
     pybamm.set_logging_level("INFO")
 
-    # load models
+# load models
 models = [
-    #     pybamm.lead_acid.LOQS(),
-    #     pybamm.lead_acid.FOQS(),
-    #     pybamm.lead_acid.CompositeExtended(),
-    # pybamm.lead_acid.Composite(),
-    pybamm.lead_acid.LOQS(
-        # {"surface form": "differential", "side reactions": ["oxygen"]}
+    pybamm.lead_acid.NewmanTiedemann(
+        {"surface form": "algebraic", "convection": True}, name="With convection"
     ),
-    # pybamm.lead_acid.CompositeExtended(
-    #     {"surface form": "differential", "side reactions": ["oxygen"]}
-    # ),
-    # pybamm.lead_acid.NewmanTiedemann({"side reactions": ["oxygen"]}),
+    pybamm.lead_acid.NewmanTiedemann(name="Without convection"),
 ]
-# models = [
-#     # pybamm.lead_acid.LOQS({"surface form": "algebraic"}),
-#     pybamm.lead_acid.LOQS(
-#         {"surface form": "algebraic", "bc_options": {"dimensionality": 2}},
-#         name="1+1D LOQS",
-#     )
-# ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Oxygen diffusivity [m2.s-1]": 1e-7,
-        "Typical current [A]": 20,
-        "Initial State of Charge": 1,
-        "Typical electrolyte concentration [mol.m-3]": 5600,
-        "Negative electrode reference exchange-current density [A.m-2]": 0.08,
-        "Positive electrode reference exchange-current density [A.m-2]": 0.006,
-        "Positive electrode reference exchange-current density (oxygen) [A.m-2]": 1e-22,
+        "Volume change factor": 10,
+        "Typical current [A]": 10,
+        # "Initial State of Charge": 1,
+        # "Typical electrolyte concentration [mol.m-3]": 5600,
+        # "Negative electrode reference exchange-current density [A.m-2]": 0.08,
+        # "Positive electrode reference exchange-current density [A.m-2]": 0.006,
+        # "Positive electrode reference exchange-current density (oxygen) [A.m-2]": 1e-22,
     }
 )
 for model in models:
@@ -74,19 +60,8 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    # [
-    #     "Average negative electrode interfacial current density [A.m-2]",
-    #     "Average positive electrode interfacial current density [A.m-2]",
-    # ],
-    # "Average negative electrode surface potential difference [V]",
-    # "Average positive electrode surface potential difference [V]",
-    # "Current collector current density",
-    # "Average electrolyte concentration",
-    # "Porosity",
-    # "Electrolyte current density [A.m-2]",
-    # "Electrolyte concentration [Molar]",
-    # "Oxygen concentration [Molar]",
-    ["State of Charge", "Fractional Charge Input"],
+    "Electrolyte concentration",
+    "Volume-averaged velocity [m.s-1]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)

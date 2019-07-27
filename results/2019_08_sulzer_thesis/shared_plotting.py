@@ -73,8 +73,17 @@ def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
     return fig, axes
 
 
-def plot_variable(all_variables, times, variable, limits_exceptions=None, yaxis="SOC"):
-    linestyles = ["k-", "g--", "r:", "b-."]
+def plot_variable(
+    all_variables,
+    times,
+    variable,
+    limits_exceptions=None,
+    yaxis="SOC",
+    linestyles=None,
+    figsize=(6.4, 5),
+):
+    limits_exceptions = limits_exceptions or {}
+    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
     n = len(times)
     m = len(all_variables)
     Crates = list(all_variables.keys())
@@ -82,7 +91,7 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None, yaxis=
     x = all_variables[Crates[0]][labels[0]]["x"](0, np.linspace(0, 1))[:, 0]
     x_dim = all_variables[Crates[0]][labels[0]]["x [m]"](0, np.linspace(0, 1))[:, 0]
 
-    fig, axes = plt.subplots(n, m, figsize=(6.4, 5))
+    fig, axes = plt.subplots(n, m, figsize=figsize)
 
     # Default limits
     y_min = pybamm.ax_min(
@@ -108,7 +117,10 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None, yaxis=
     # Plot
     for i, (Crate, models_variables) in enumerate(all_variables.items()):
         for j, time in enumerate(times):
-            ax = axes[j, i]
+            if len(times) == 1:
+                ax = axes[i]
+            else:
+                ax = axes[j, i]
             ax.set_xlim([x_dim[0], x_dim[-1]])
             ax.set_ylim([y_min, y_max])
             ax.yaxis.set_major_locator(plt.MaxNLocator(3))
@@ -128,21 +140,26 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None, yaxis=
 
             # y-axis
             if i == 0:
-                for variables in models_variables.values():
-                    try:
-                        if yaxis == "SOC":
-                            soc = variables["State of Charge"](time)
-                            ax.set_ylabel(
-                                "{}\% SoC".format(int(soc)), rotation=0, labelpad=30
-                            )
-                        elif yaxis == "FCI":
-                            fci = variables["Fractional Charge Input"](time)
-                            ax.set_ylabel(
-                                "{}\% FCI".format(int(fci)), rotation=0, labelpad=30
-                            )
-                        ax.yaxis.get_label().set_verticalalignment("center")
-                    except ValueError:
-                        pass
+                # If we only want to plot one time the y label is the variable
+                if len(times) == 1:
+                    ax.set_ylabel(variable)
+                # Otherwise the y label is the time
+                else:
+                    for variables in models_variables.values():
+                        try:
+                            if yaxis == "SOC":
+                                soc = variables["State of Charge"](time)
+                                ax.set_ylabel(
+                                    "{}\% SoC".format(int(soc)), rotation=0, labelpad=30
+                                )
+                            elif yaxis == "FCI":
+                                fci = variables["Fractional Charge Input"](time)
+                                ax.set_ylabel(
+                                    "{}\% FCI".format(int(fci)), rotation=0, labelpad=30
+                                )
+                            ax.yaxis.get_label().set_verticalalignment("center")
+                        except ValueError:
+                            pass
             else:
                 ax.set_yticklabels([])
 
@@ -154,6 +171,7 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None, yaxis=
     plt.subplots_adjust(
         bottom=0.17, top=0.95, left=0.18, right=0.97, hspace=0.08, wspace=0.05
     )
+    return fig, axes
 
 
 def plot_time_dependent_variables(

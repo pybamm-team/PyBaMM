@@ -275,6 +275,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         time_scale = pybamm.electrical_parameters.timescale
         self.variables.update(
             {
+                "Time": pybamm.t,
                 "Time [s]": pybamm.t * time_scale,
                 "Time [min]": pybamm.t * time_scale / 60,
                 "Time [h]": pybamm.t * time_scale / 3600,
