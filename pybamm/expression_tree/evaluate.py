@@ -153,7 +153,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
 
     # Note: we assume that y is being passed as a column vector
     elif isinstance(symbol, pybamm.StateVector):
-        symbol_str = symbol.name
+        symbol_str = "y[:{}][{}]".format(
+            len(symbol.evaluation_array), symbol.evaluation_array
+        )
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"
