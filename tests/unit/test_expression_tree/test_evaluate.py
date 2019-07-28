@@ -252,6 +252,7 @@ class TestEvaluate(unittest.TestCase):
         disc.set_variable_slices([conc])
         expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.DomainConcatenation)
+
         y = np.empty((expr._size, 1))
         for i in range(len(y)):
             y[i] = i
@@ -259,11 +260,12 @@ class TestEvaluate(unittest.TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
+
         import ipdb
 
         ipdb.set_trace()
-        self.assertEqual(list(variable_symbols.keys())[0], b.id)
-        self.assertEqual(list(variable_symbols.keys())[1], a.id)
+        self.assertEqual(list(variable_symbols.keys())[0], a.id)
+        self.assertEqual(list(variable_symbols.keys())[1], b.id)
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
         var_a = pybamm.id_to_python_variable(a.id)

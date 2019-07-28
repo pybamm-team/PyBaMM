@@ -788,6 +788,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(expr.children[0].evaluate(0, y).shape, (120, 1))
         self.assertEqual(expr.children[1].evaluate(0, y).shape, (75, 1))
         self.assertEqual(expr.children[2].evaluate(0, y).shape, (105, 1))
+        np.testing.assert_equal(expr.evaluate(0, y), y[:, np.newaxis])
 
     def test_exceptions(self):
         c_n = pybamm.Variable("c", domain=["negative electrode"])
