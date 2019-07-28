@@ -156,7 +156,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "surface form '{}' not recognised".format(options["surface form"])
             )
-        if options["current collector"] not in ["uniform", "potential pair"]:
+        if options["current collector"] not in [
+            "uniform",
+            "potential pair",
+            "single particle potential pair",
+        ]:
             raise pybamm.OptionError(
                 "current collector model '{}' not recognised".format(
                     options["current collector"]
@@ -441,32 +445,18 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # terminal voltage
+        phi_s_cn = self.variables["Negative current collector potential"]
+        phi_s_cp = self.variables["Positive current collector potential"]
+        phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
+        phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
         if self.options["dimensionality"] == 0:
-            phi_s_p = self.variables["Positive electrode potential"]
-            phi_s_p_dim = self.variables["Positive electrode potential [V]"]
-            V = pybamm.BoundaryValue(phi_s_p, "right")
-            V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
+            V = phi_s_cp
+            V_dim = phi_s_cp_dim
         elif self.options["dimensionality"] == 1:
-            delta_phi_n = self.variables[
-                "X-averaged negative electrode surface potential difference"
-            ]
-            delta_phi_p = self.variables[
-                "X-averaged positive electrode surface potential difference"
-            ]
-            delta_phi_n_dim = self.variables[
-                "X-averaged negative electrode surface potential difference [V]"
-            ]
-            delta_phi_p_dim = self.variables[
-                "X-averaged positive electrode surface potential difference [V]"
-            ]
             # In 1D both tabs are at "right"
-            V = pybamm.BoundaryValue(delta_phi_p - delta_phi_n, "right")
-            V_dim = pybamm.BoundaryValue(delta_phi_p_dim - delta_phi_n_dim, "right")
+            V = pybamm.BoundaryValue(phi_s_cp, "right")
+            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right")
         elif self.options["dimensionality"] == 2:
-            phi_s_cn = self.variables["Negative current collector potential"]
-            phi_s_cp = self.variables["Positive current collector potential"]
-            phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
-            phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
             # In 2D left corresponds to the negative tab and right the positive tab
             V = pybamm.BoundaryValue(phi_s_cp, "right") - pybamm.BoundaryValue(
                 phi_s_cn, "left"

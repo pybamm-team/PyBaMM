@@ -22,7 +22,7 @@ class BaseModel(pybamm.BaseSubModel):
     def _get_standard_negative_potential_variables(self, phi_s_cn):
         """
         A private function to obtain the standard variables which
-        can be derived from the potential in the current collector.
+        can be derived from the negative potential in the current collector.
 
         Parameters
         ----------
@@ -48,7 +48,7 @@ class BaseModel(pybamm.BaseSubModel):
     def _get_standard_potential_variables(self, phi_s_cn, phi_s_cp):
         """
         A private function to obtain the standard variables which
-        can be derived from the potential in the current collector.
+        can be derived from the potentials in the current collector.
 
         Parameters
         ----------
@@ -65,15 +65,10 @@ class BaseModel(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
         U_ref = self.param.U_p_ref - self.param.U_n_ref
 
-        V_cc = phi_s_cp - phi_s_cn
-
         # add more to this
         variables = {
             "Positive current collector potential": phi_s_cp,
             "Positive current collector potential [V]": U_ref + phi_s_cp * pot_scale,
-            "Local current collector potential difference": V_cc,
-            "Local current collector potential difference [V]": U_ref
-            + V_cc * pot_scale,
         }
         variables.update(self._get_standard_negative_potential_variables(phi_s_cn))
 

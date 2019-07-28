@@ -22,7 +22,6 @@ class LOQS(BaseModel):
         super().__init__(options, name)
 
         self.set_reactions()
-        self.set_current_collector_submodel()
         self.set_interfacial_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
@@ -31,6 +30,7 @@ class LOQS(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_side_reaction_submodels()
+        self.set_current_collector_submodel()
 
         self.build_model()
 

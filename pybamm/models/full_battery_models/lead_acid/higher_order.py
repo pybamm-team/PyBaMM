@@ -24,7 +24,6 @@ class HigherOrderBaseModel(BaseModel):
 
         self.set_leading_order_model()
         self.set_reactions()
-        self.set_current_collector_submodel()
         # Electrolyte submodel to get first-order concentrations
         self.set_electrolyte_diffusion_submodel()
         self.set_other_species_diffusion_submodels()
@@ -39,6 +38,7 @@ class HigherOrderBaseModel(BaseModel):
         self.set_full_convection_submodel()
         self.set_full_porosity_submodel()
         self.set_thermal_submodel()
+        self.set_current_collector_submodel()
 
         self.build_model()
 

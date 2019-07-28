@@ -59,6 +59,7 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
+    "Electrolyte pressure",
     "Electrolyte concentration",
     "Volume-averaged velocity [m.s-1]",
     "Terminal voltage [V]",

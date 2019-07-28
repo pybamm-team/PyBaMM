@@ -51,7 +51,6 @@ class SingleParticlePotentialPair(BaseModel):
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
-        v_boundary_cc = variables["Local current collector potential difference"]
 
         # The voltage-current expression from the SPM(e)
         local_voltage_expression = (
@@ -63,15 +62,18 @@ class SingleParticlePotentialPair(BaseModel):
             + delta_phi_s_p_av
             - delta_phi_s_n_av
         )
+        import ipdb
+
+        ipdb.set_trace()
 
         self.algebraic = {
             phi_s_cn: pybamm.laplacian(phi_s_cn)
             - (param.sigma_cn * param.delta ** 2 / param.l_cn)
             * pybamm.source(i_boundary_cc, phi_s_cn),
-            phi_s_cp: pybamm.laplacian(phi_s_cp)
+            i_boundary_cc: pybamm.laplacian(phi_s_cp)
             + (param.sigma_cp * param.delta ** 2 / param.l_cp)
             * pybamm.source(i_boundary_cc, phi_s_cp),
-            i_boundary_cc: v_boundary_cc - local_voltage_expression,
+            phi_s_cp: phi_s_cp - phi_s_cn - local_voltage_expression,
         }
 
     def set_boundary_conditions(self, variables):

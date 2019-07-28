@@ -16,7 +16,6 @@ class DFN(BaseModel):
         super().__init__(options, name)
 
         self.set_reactions()
-        self.set_current_collector_submodel()
         self.set_porosity_submodel()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
@@ -24,6 +23,7 @@ class DFN(BaseModel):
         self.set_solid_submodel()
         self.set_electrolyte_submodel()
         self.set_thermal_submodel()
+        self.set_current_collector_submodel()
 
         self.build_model()
 

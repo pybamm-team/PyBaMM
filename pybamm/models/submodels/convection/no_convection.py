@@ -27,7 +27,13 @@ class NoConvection(BaseModel):
             ["negative electrode", "separator", "positive electrode"],
             "current collector",
         )
-
         variables = self._get_standard_velocity_variables(v_box)
+
+        p = pybamm.FullBroadcast(
+            pybamm.Scalar(0),
+            ["negative electrode", "separator", "positive electrode"],
+            "current collector",
+        )
+        variables.update(self._get_standard_pressure_variables(p))
 
         return variables

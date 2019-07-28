@@ -14,7 +14,6 @@ class SPM(BaseModel):
     def __init__(self, options=None, name="Single Particle Model"):
         super().__init__(options, name)
 
-        self.set_current_collector_submodel()
         self.set_porosity_submodel()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
@@ -23,23 +22,19 @@ class SPM(BaseModel):
         self.set_electrolyte_submodel()
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
+        self.set_current_collector_submodel()
 
         self.build_model()
 
     def set_current_collector_submodel(self):
 
-        if self.options["dimensionality"] == 0:
-            self.submodels["current collector"] = pybamm.current_collector.Uniform(
-                self.param
-            )
-        elif self.options["dimensionality"] == 1:
-            raise NotImplementedError(
-                "One-dimensional current collector submodel not implemented."
-            )
-        elif self.options["dimensionality"] == 2:
-            self.submodels[
-                "current collector"
-            ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
+        if self.options["current collector"] == "uniform":
+            submodel = pybamm.current_collector.Uniform(self.param)
+        elif self.options["current collector"] == "potential pair":
+            submodel = pybamm.current_collector.PotentialPair(self.param)
+        elif self.options["current collector"] == "single particle potential pair":
+            submodel = pybamm.current_collector.SingleParticlePotentialPair(self.param)
+        self.submodels["current collector"] = submodel
 
     def set_porosity_submodel(self):
 

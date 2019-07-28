@@ -131,6 +131,32 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_local_potential_difference_variables(self, v_boundary_cc):
+        """
+        A private function to set the local current collector potential difference
+
+        Parameters
+        ----------
+        v_boundary_cc : dict
+            The local current collector potential difference.
+
+        Returns
+        -------
+        variables : dict
+            The variables in the whole model with the whole-cell
+            current variables added.
+        """
+        pot_scale = self.param.potential_scale
+        U_ref = self.param.U_p_ref - self.param.U_n_ref
+
+        variables = {
+            "Local current collector potential difference": v_boundary_cc,
+            "Local current collector potential difference [V]": U_ref
+            + v_boundary_cc * pot_scale,
+        }
+
+        return variables
+
     @property
     def default_solver(self):
         """
