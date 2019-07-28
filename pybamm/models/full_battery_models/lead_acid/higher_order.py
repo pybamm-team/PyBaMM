@@ -64,15 +64,15 @@ class HigherOrderBaseModel(BaseModel):
 
     def set_current_collector_submodel(self):
 
-        if self.options["bc_options"]["dimensionality"] == 0:
+        if self.options["dimensionality"] == 0:
             self.submodels["current collector"] = pybamm.current_collector.Uniform(
                 self.param
             )
-        elif self.options["bc_options"]["dimensionality"] == 1:
+        elif self.options["dimensionality"] == 1:
             self.submodels[
                 "current collector"
             ] = pybamm.current_collector.surface_form.LeadingOrder(self.param)
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["dimensionality"] == 2:
             self.submodels[
                 "current collector"
             ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)

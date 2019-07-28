@@ -39,15 +39,15 @@ class SPMe(BaseModel):
 
     def set_current_collector_submodel(self):
 
-        if self.options["bc_options"]["dimensionality"] == 0:
+        if self.options["dimensionality"] == 0:
             self.submodels["current collector"] = pybamm.current_collector.Uniform(
                 self.param
             )
-        elif self.options["bc_options"]["dimensionality"] == 1:
+        elif self.options["dimensionality"] == 1:
             raise NotImplementedError(
                 "One-dimensional current collector submodel not implemented."
             )
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["dimensionality"] == 2:
             self.submodels[
                 "current collector"
             ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
@@ -103,7 +103,7 @@ class SPMe(BaseModel):
 
     @property
     def default_geometry(self):
-        dimensionality = self.options["bc_options"]["dimensionality"]
+        dimensionality = self.options["dimensionality"]
         if dimensionality == 0:
             return pybamm.Geometry("1D macro", "1D micro")
         elif dimensionality == 1:
@@ -117,7 +117,7 @@ class SPMe(BaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        dimensionality = self.options["bc_options"]["dimensionality"]
+        dimensionality = self.options["dimensionality"]
         if dimensionality == 0:
             return pybamm.ScipySolver()
         else:

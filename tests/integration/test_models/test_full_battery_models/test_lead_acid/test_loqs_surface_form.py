@@ -25,14 +25,22 @@ class TestLeadAcidLoqsSurfaceForm(unittest.TestCase):
         modeltest.test_all()
 
     def test_basic_processing_1p1D_differential(self):
-        options = {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+        options = {
+            "surface form": "differential",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     @unittest.skipIf(scikits_odes_spec is None, "scikits.odes not installed")
     def test_basic_processing_1p1D_algebraic(self):
-        options = {"surface form": "algebraic", "bc_options": {"dimensionality": 1}}
+        options = {
+            "surface form": "algebraic",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
         model = pybamm.lead_acid.LOQS(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)

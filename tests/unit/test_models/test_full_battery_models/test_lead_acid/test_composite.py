@@ -25,7 +25,11 @@ class TestLeadAcidComposite(unittest.TestCase):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.Composite(options)
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
-        options = {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+        options = {
+            "surface form": "differential",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
         model = pybamm.lead_acid.Composite(options)
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
         options = {"surface form": "algebraic"}

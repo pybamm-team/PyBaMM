@@ -17,23 +17,34 @@ else:
 
 # load models
 models = [
-    pybamm.lead_acid.NewmanTiedemann(
-        {"surface form": "algebraic", "convection": True}, name="With convection"
+    pybamm.lead_acid.LOQS(
+        {
+            "surface form": "differential",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        },
+        name="2+1D LOQS",
     ),
-    pybamm.lead_acid.NewmanTiedemann(name="Without convection"),
+    pybamm.lead_acid.LOQS(
+        {
+            "surface form": "differential",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        },
+        name="1+1D LOQS",
+    ),
+    pybamm.lead_acid.LOQS({"dimensionality": 1}, name="1D LOQS"),
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Volume change factor": 10,
-        "Typical current [A]": 10,
-        # "Initial State of Charge": 1,
-        # "Typical electrolyte concentration [mol.m-3]": 5600,
-        # "Negative electrode reference exchange-current density [A.m-2]": 0.08,
-        # "Positive electrode reference exchange-current density [A.m-2]": 0.006,
-        # "Positive electrode reference exchange-current density (oxygen) [A.m-2]": 1e-22,
+        "Typical current [A]": 100,
+        "Initial State of Charge": 1,
+        "Typical electrolyte concentration [mol.m-3]": 5600,
+        "Negative electrode reference exchange-current density [A.m-2]": 0.08,
+        "Positive electrode reference exchange-current density [A.m-2]": 0.006,
     }
 )
 for model in models:
@@ -60,9 +71,10 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    "Electrolyte concentration",
-    "Volume-averaged velocity [m.s-1]",
-    "Terminal voltage [V]",
+    # "X-averaged electrolyte potential [V]",
+    # "X-averaged electrolyte concentration",
+    # "Current collector current density",
+    "Terminal voltage [V]"
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
 plot.dynamic_plot()

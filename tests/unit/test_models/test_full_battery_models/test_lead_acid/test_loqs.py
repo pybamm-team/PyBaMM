@@ -17,7 +17,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_1plus1D(self):
-        options = {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+        options = {
+            "surface form": "differential",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
@@ -43,7 +47,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
             )
         )
         model = pybamm.lead_acid.LOQS(
-            {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+            {
+                "surface form": "differential",
+                "current collector": "potential pair",
+                "dimensionality": 1,
+            }
         )
         self.assertTrue(
             issubclass(
@@ -57,7 +65,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
             )
         )
         model = pybamm.lead_acid.LOQS(
-            {"surface form": "differential", "bc_options": {"dimensionality": 2}}
+            {
+                "surface form": "differential",
+                "current collector": "potential pair",
+                "dimensionality": 2,
+            }
         )
         self.assertTrue(
             issubclass(
@@ -72,9 +84,6 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
 
     def test_incompatible_options(self):
-        options = {"bc_options": {"dimensionality": 1}}
-        with self.assertRaisesRegex(pybamm.OptionError, "must use surface formulation"):
-            pybamm.lead_acid.LOQS(options)
         options = {"surface form": "bad surface form"}
         with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
             pybamm.lead_acid.LOQS(options)
@@ -118,7 +127,11 @@ class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_1plus1D(self):
-        options = {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+        options = {
+            "surface form": "differential",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
@@ -127,7 +140,11 @@ class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
-        options = {"surface form": "differential", "bc_options": {"dimensionality": 1}}
+        options = {
+            "surface form": "differential",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        }
         model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
         options = {"surface form": "algebraic"}
@@ -138,7 +155,7 @@ class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIn("current collector", model.default_geometry)
-        options["bc_options"] = {"dimensionality": 1}
+        options.update({"current collector": "potential pair", "dimensionality": 1})
         model = pybamm.lead_acid.LOQS(options)
         self.assertIn("current collector", model.default_geometry)
 

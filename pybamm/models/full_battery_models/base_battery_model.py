@@ -121,14 +121,14 @@ class BaseBatteryModel(pybamm.BaseModel):
     @options.setter
     def options(self, extra_options):
         default_options = {
-            "bc_options": {"dimensionality": 0},
+            "dimensionality": 0,
             "surface form": False,
             "convection": False,
             "thermal": None,
             "first-order potential": "linear",
             "side reactions": [],
             "interfacial surface area": "constant",
-            "higher-order concentration": "composite",
+            "current collector": "uniform",
         }
         options = default_options
         # any extra options overwrite the default options
@@ -144,10 +144,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
             and options["surface form"] is False
         ):
-            if options["bc_options"]["dimensionality"] in [1, 2]:
-                raise pybamm.OptionError(
-                    "must use surface formulation to solve {!s} in 2 or 3D".format(self)
-                )
             if len(options["side reactions"]) > 0:
                 raise pybamm.OptionError(
                     """
@@ -160,10 +156,16 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "surface form '{}' not recognised".format(options["surface form"])
             )
-        if options["bc_options"]["dimensionality"] not in [0, 1, 2]:
+        if options["current collector"] not in ["uniform", "potential pair"]:
+            raise pybamm.OptionError(
+                "current collector model '{}' not recognised".format(
+                    options["current collector"]
+                )
+            )
+        if options["dimensionality"] not in [0, 1, 2]:
             raise pybamm.OptionError(
                 "Dimension of current collectors must be 0, 1, or 2, not {}".format(
-                    options["bc_options"]["dimensionality"]
+                    options["dimensionality"]
                 )
             )
 
@@ -300,9 +302,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "x_p [m]": var.x_p * L_x,
             }
         )
-        if self.options["bc_options"]["dimensionality"] == 1:
+        if self.options["dimensionality"] == 1:
             self.variables.update({"y": var.y, "y [m]": var.y * L_y})
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["dimensionality"] == 2:
             self.variables.update(
                 {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
             )
@@ -439,12 +441,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # terminal voltage
-        if self.options["bc_options"]["dimensionality"] == 0:
+        if self.options["dimensionality"] == 0:
             phi_s_p = self.variables["Positive electrode potential"]
             phi_s_p_dim = self.variables["Positive electrode potential [V]"]
             V = pybamm.BoundaryValue(phi_s_p, "right")
             V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
-        elif self.options["bc_options"]["dimensionality"] == 1:
+        elif self.options["dimensionality"] == 1:
             delta_phi_n = self.variables[
                 "X-averaged negative electrode surface potential difference"
             ]
@@ -460,7 +462,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             # In 1D both tabs are at "right"
             V = pybamm.BoundaryValue(delta_phi_p - delta_phi_n, "right")
             V_dim = pybamm.BoundaryValue(delta_phi_p_dim - delta_phi_n_dim, "right")
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["dimensionality"] == 2:
             phi_s_cn = self.variables["Negative current collector potential"]
             phi_s_cp = self.variables["Positive current collector potential"]
             phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
@@ -475,7 +477,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         else:
             raise pybamm.ModelError(
                 "Dimension of current collectors must be 0, 1, or 2, not {}".format(
-                    self.options["bc_options"]["dimensionality"]
+                    self.options["dimensionality"]
                 )
             )
 

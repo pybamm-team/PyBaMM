@@ -7,7 +7,7 @@ import sys
 pybamm.set_logging_level("INFO")
 
 # load (2+1D) SPMe model
-options = {"bc_options": {"dimensionality": 2}}
+options = {"current collector": "potential pair", "dimensionality": 2}
 model = pybamm.lithium_ion.SPMe(options)
 
 # create geometry

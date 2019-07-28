@@ -77,11 +77,11 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
         }
-        if self.options["bc_options"]["dimensionality"] == 0:
+        if self.options["dimensionality"] == 0:
             base_submeshes["current collector"] = pybamm.SubMesh0D
-        elif self.options["bc_options"]["dimensionality"] == 1:
+        elif self.options["dimensionality"] == 1:
             base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["dimensionality"] == 2:
             base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
         return base_submeshes
 
@@ -92,12 +92,12 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
         }
-        if self.options["bc_options"]["dimensionality"] == 0:
+        if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method
             base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod
-        if self.options["bc_options"]["dimensionality"] == 1:
+        if self.options["dimensionality"] == 1:
             base_spatial_methods["current collector"] = pybamm.FiniteVolume
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["dimensionality"] == 2:
             base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
         return base_spatial_methods
 
