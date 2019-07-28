@@ -160,19 +160,14 @@ class Discretisation(object):
 
         return model_disc
 
-    def _flatten_variables(self, variables):
+    def set_variable_slices(self, variables):
         """
-        Extract variable objects from concatenations
+        Sets the slicing for variables.
 
         Parameters
         ----------
-        variables : iterable of :class:`pybamm.Symbol`
-            Iterable of symbols from which to extract variables
-
-        Returns
-        -------
-        flattened_variables : list of :class:`pybamm.Variable`
-            List of variable objects
+        variables : iterable of :class:`pybamm.Variables`
+            The variables for which to set slices
         """
         # Set up y_slices
         y_slices = defaultdict(list)
