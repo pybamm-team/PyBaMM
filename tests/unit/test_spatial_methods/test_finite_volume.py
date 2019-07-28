@@ -463,6 +463,39 @@ class TestFiniteVolume(unittest.TestCase):
             np.zeros_like(combined_submesh[0].nodes[:, np.newaxis]),
         )
 
+    def test_grad_1plus1d(self):
+        mesh = get_1p1d_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        a = pybamm.Variable("a", domain=["negative electrode"])
+        b = pybamm.Variable("b", domain=["separator"])
+        c = pybamm.Variable("c", domain=["positive electrode"])
+        var = pybamm.Concatenation(a, b, c)
+        boundary_conditions = {
+            var.id: {
+                "left": (pybamm.Vector(np.linspace(0, 1, 15)), "Neumann"),
+                "right": (pybamm.Vector(np.linspace(0, 1, 15)), "Neumann"),
+            }
+        }
+
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(pybamm.grad(var))
+
+        # Evaulate
+        combined_submesh = mesh.combine_submeshes(*var.domain)
+        linear_y = np.outer(np.linspace(0, 1, 15), combined_submesh[0].nodes).reshape(
+            -1, 1
+        )
+
+        expected = np.outer(
+            np.linspace(0, 1, 15), np.ones_like(combined_submesh[0].edges)
+        ).reshape(-1, 1)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.evaluate(None, linear_y), expected
+        )
+
     def test_spherical_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions (applied by grad on var)

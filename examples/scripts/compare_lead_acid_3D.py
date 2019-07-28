@@ -25,7 +25,7 @@ models = [
     #     name="1+1D NewmanTiedemann",
     # ),
     # pybamm.lead_acid.NewmanTiedemann({"dimensionality": 0}, name="1D NewmanTiedemann"),
-    pybamm.ReactionDiffusionModel({"dimensionality": 1}),
+    pybamm.lead_acid.NewmanTiedemann({"dimensionality": 1}),
     # pybamm.lead_acid.LOQS({"dimensionality": 1}, name="1+1D LOQS"),
 ]
 
@@ -72,10 +72,10 @@ for i, model in enumerate(models):
 output_variables = [
     "X-averaged negative electrode porosity",
     "X-averaged positive electrode porosity",
-    # "X-averaged electrolyte potential [V]",
+    "X-averaged electrolyte potential [V]",
     "X-averaged electrolyte concentration",
     "Current collector current density",
-    # "Terminal voltage [V]",
+    "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
 plot.dynamic_plot()

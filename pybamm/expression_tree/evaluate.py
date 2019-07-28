@@ -134,23 +134,23 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         # which we must follow
         elif isinstance(symbol, pybamm.DomainConcatenation):
             slice_starts = []
-            child_vectors = []
-            for child_var, slices in zip(children_vars, symbol._children_slices):
-                for child_dom, child_slice in slices.items():
-                    if len(symbol._slices[child_dom]) > 1:
-                        raise NotImplementedError(
-                            """Evaluator not implemented for a multi-slice (2D)
-                            DomainConcatenation"""
+            all_child_vectors = []
+            second_pts = len(list(symbol._slices.values())[0])
+            for i in range(second_pts):
+                child_vectors = []
+                for child_var, slices in zip(children_vars, symbol._children_slices):
+                    for child_dom, child_slice in slices.items():
+                        slice_starts.append(symbol._slices[child_dom][i].start)
+                        child_vectors.append(
+                            "{}[{}:{}]".format(
+                                child_var, child_slice[i].start, child_slice[i].stop
+                            )
                         )
-                    slice_starts.append(symbol._slices[child_dom][0].start)
-                    child_vectors.append(
-                        "{}[{}:{}]".format(
-                            child_var, child_slice[0].start, child_slice[0].stop
-                        )
-                    )
-            child_vectors = [v for _, v in sorted(zip(slice_starts, child_vectors))]
-            if len(children_vars) > 1:
-                symbol_str = "np.concatenate(({}))".format(",".join(child_vectors))
+                all_child_vectors.extend(
+                    [v for _, v in sorted(zip(slice_starts, child_vectors))]
+                )
+            if len(children_vars) > 1 or second_pts > 1:
+                symbol_str = "np.concatenate(({}))".format(",".join(all_child_vectors))
             else:
                 symbol_str = "{}".format(",".join(children_vars))
         else:

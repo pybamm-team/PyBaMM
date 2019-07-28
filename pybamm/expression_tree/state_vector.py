@@ -70,6 +70,10 @@ class StateVector(pybamm.Symbol):
         """Array to use for evaluating"""
         return self._evaluation_array
 
+    @property
+    def size(self):
+        return self.evaluation_array.count(True)
+
     def set_evaluation_array(self, y_slices):
         "Set evaluation array using slices"
         array = np.zeros(y_slices[-1].stop)
@@ -151,5 +155,4 @@ class StateVector(pybamm.Symbol):
         The size of a StateVector is the number of True elements in its evaluation_array
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        size = self.evaluation_array.count(True)
-        return np.nan * np.ones((size, 1))
+        return np.nan * np.ones((self.size, 1))

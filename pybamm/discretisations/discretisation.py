@@ -413,7 +413,7 @@ class Discretisation(object):
                     )
                 )
             else:
-                model_slices.append(self.y_slices[v.id])
+                model_slices.append(self.y_slices[v.id][0])
         sorted_model_variables = [
             v for _, v in sorted(zip(model_slices, model_variables))
         ]
@@ -629,7 +629,7 @@ class Discretisation(object):
                 )
             else:
                 unpacked_variables.append(symbol)
-                slices.append(self.y_slices[symbol.id])
+                slices.append(self.y_slices[symbol.id][0])
 
         if check_complete:
             # Check keys from the given var_eqn_dict against self.y_slices

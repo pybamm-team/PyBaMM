@@ -41,6 +41,7 @@ class HigherOrderBaseModel(BaseModel):
         self.set_current_collector_submodel()
 
         self.build_model()
+        self.use_jacobian = False
 
     def set_leading_order_model(self):
         leading_order_model = pybamm.lead_acid.LOQS(
