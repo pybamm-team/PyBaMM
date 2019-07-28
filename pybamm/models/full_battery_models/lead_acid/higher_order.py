@@ -43,6 +43,21 @@ class HigherOrderBaseModel(BaseModel):
         self.build_model()
         self.use_jacobian = False
 
+    def set_current_collector_submodel(self):
+
+        if self.options["current collector"] == "uniform":
+            submodel = pybamm.current_collector.Uniform(self.param)
+        elif self.options["current collector"] == "potential pair":
+            if self.options["dimensionality"] == 1:
+                submodel = pybamm.current_collector.CompositePotentialPair1plus1D(
+                    self.param
+                )
+            elif self.options["dimensionality"] == 2:
+                submodel = pybamm.current_collector.CompositePotentialPair2plus1D(
+                    self.param
+                )
+        self.submodels["current collector"] = submodel
+
     def set_leading_order_model(self):
         leading_order_model = pybamm.lead_acid.LOQS(
             self.options, name="LOQS model (for composite model)"
@@ -143,7 +158,10 @@ class HigherOrderBaseModel(BaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["surface form"] == "algebraic":
+        if (
+            self.options["current collector"] != "uniform"
+            or self.options["surface form"] == "algebraic"
+        ):
             return pybamm.ScikitsDaeSolver()
         else:
             return pybamm.ScipySolver()
