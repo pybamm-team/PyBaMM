@@ -37,6 +37,19 @@ class LOQS(BaseModel):
         if self.options["dimensionality"] == 0:
             self.use_jacobian = False
 
+    def set_current_collector_submodel(self):
+
+        if self.options["current collector"] == "uniform":
+            submodel = pybamm.current_collector.Uniform(self.param)
+        elif self.options["current collector"] == "potential pair":
+            if self.options["dimensionality"] == 1:
+                submodel = pybamm.current_collector.PotentialPair1plus1D(self.param)
+            elif self.options["dimensionality"] == 2:
+                submodel = pybamm.current_collector.PotentialPair2plus1D(self.param)
+        elif self.options["current collector"] == "single particle potential pair":
+            submodel = pybamm.current_collector.SingleParticlePotentialPair(self.param)
+        self.submodels["leading-order current collector"] = submodel
+
     def set_porosity_submodel(self):
 
         self.submodels["leading-order porosity"] = pybamm.porosity.LeadingOrder(

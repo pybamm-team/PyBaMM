@@ -105,7 +105,7 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_standard_whole_cell_current_variables(self, variables):
+    def _get_standard_whole_cell_variables(self, variables):
         """
         A private function to obtain the whole-cell versions of the
         current variables.
@@ -121,35 +121,19 @@ class BaseElectrode(pybamm.BaseSubModel):
             The variables in the whole model with the whole-cell
             current variables added.
         """
-        i_s_n = variables["Negative electrode current density"]
-        i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
-        i_s_p = variables["Positive electrode current density"]
-
-        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
-
-        variables.update({"Electrode current density": i_s})
-
-        return variables
-
-    def _get_standard_local_potential_difference_variables(self, v_boundary_cc):
-        """
-        A private function to set the local current collector potential difference
-
-        Parameters
-        ----------
-        v_boundary_cc : dict
-            The local current collector potential difference.
-
-        Returns
-        -------
-        variables : dict
-            The variables in the whole model with the whole-cell
-            current variables added.
-        """
         pot_scale = self.param.potential_scale
         U_ref = self.param.U_p_ref - self.param.U_n_ref
 
+        i_s_n = variables["Negative electrode current density"]
+        i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
+        i_s_p = variables["Positive electrode current density"]
+        phi_s_p = variables["Positive electrode potential"]
+        v_boundary_cc = pybamm.boundary_value(phi_s_p, "right")
+
+        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
+
         variables = {
+            "Electrode current density": i_s,
             "Local current collector potential difference": v_boundary_cc,
             "Local current collector potential difference [V]": U_ref
             + v_boundary_cc * pot_scale,

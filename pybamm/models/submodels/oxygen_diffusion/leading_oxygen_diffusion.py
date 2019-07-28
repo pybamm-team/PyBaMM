@@ -64,10 +64,10 @@ class LeadingOrder(BaseModel):
         source_terms = sum(
             param.l_n
             * rxn["Negative"]["s_ox"]
-            * variables[rxn["Negative"]["aj"]].orphans[0]
+            * variables["X-averaged " + rxn["Negative"]["aj"].lower()]
             + param.l_p
             * rxn["Positive"]["s_ox"]
-            * variables[rxn["Positive"]["aj"]].orphans[0]
+            * variables["X-averaged " + rxn["Positive"]["aj"].lower()]
             for rxn in self.reactions.values()
         )
 

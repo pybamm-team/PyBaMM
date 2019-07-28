@@ -104,7 +104,7 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         param = self.param
 
         sum_j = sum(
-            variables[reaction[self.domain]["aj"]].orphans[0]
+            variables["X-averaged " + reaction[self.domain]["aj"].lower()]
             for reaction in self.reactions.values()
         )
 
@@ -149,7 +149,7 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
             return
 
         sum_j = sum(
-            variables[reaction[self.domain]["aj"]].orphans[0]
+            variables["X-averaged " + reaction[self.domain]["aj"].lower()]
             for reaction in self.reactions.values()
         )
 

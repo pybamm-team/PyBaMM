@@ -68,39 +68,6 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
-    @property
-    def default_submesh_types(self):
-        base_submeshes = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "negative particle": pybamm.Uniform1DSubMesh,
-            "positive particle": pybamm.Uniform1DSubMesh,
-        }
-        if self.options["dimensionality"] == 0:
-            base_submeshes["current collector"] = pybamm.SubMesh0D
-        elif self.options["dimensionality"] == 1:
-            base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
-        elif self.options["dimensionality"] == 2:
-            base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
-        return base_submeshes
-
-    @property
-    def default_spatial_methods(self):
-        base_spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "negative particle": pybamm.FiniteVolume,
-            "positive particle": pybamm.FiniteVolume,
-        }
-        if self.options["dimensionality"] == 0:
-            # 0D submesh - use base spatial method
-            base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod
-        if self.options["dimensionality"] == 1:
-            base_spatial_methods["current collector"] = pybamm.FiniteVolume
-        elif self.options["dimensionality"] == 2:
-            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
-        return base_spatial_methods
-
     def set_reactions(self):
 
         # Should probably refactor as this is a bit clunky at the moment

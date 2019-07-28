@@ -74,7 +74,7 @@ class Composite(BaseModel):
         variables.update(self._get_standard_current_variables(i_s))
 
         if self.domain == "Positive":
-            variables.update(self._get_standard_whole_cell_current_variables(variables))
+            variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables
 

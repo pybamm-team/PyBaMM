@@ -155,7 +155,7 @@ class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):
             "dimensionality": 1,
         }
         model = pybamm.lead_acid.LOQS(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
         options = {"surface form": "algebraic"}
         model = pybamm.lead_acid.LOQS(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)

@@ -516,12 +516,13 @@ class Discretisation(object):
                 return child_spatial_method.mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
-                return child_spatial_method.indefinite_integral(
-                    child.domain, child, disc_child
-                )
+                return child_spatial_method.indefinite_integral(child, disc_child)
 
             elif isinstance(symbol, pybamm.Integral):
-                return child_spatial_method.integral(child.domain, child, disc_child)
+                out = child_spatial_method.integral(child, disc_child)
+                out.domain = symbol.domain
+                out.auxiliary_domains = symbol.auxiliary_domains
+                return out
 
             elif isinstance(symbol, pybamm.Broadcast):
                 # Broadcast new_child to the domain specified by symbol.domain

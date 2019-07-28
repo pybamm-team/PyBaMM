@@ -137,7 +137,9 @@ class OdeSolver(pybamm.BaseSolver):
             events = {name: simp.simplify(event) for name, event in events.items()}
 
         y0 = model.concatenated_initial_conditions[:, 0]
+        import ipdb
 
+        ipdb.set_trace()
         if model.use_jacobian:
             # Create Jacobian from simplified rhs
             y = pybamm.StateVector(slice(0, np.size(y0)))

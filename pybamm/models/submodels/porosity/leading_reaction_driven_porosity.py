@@ -28,8 +28,8 @@ class LeadingOrder(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        j_n = variables["Negative electrode interfacial current density"].orphans[0]
-        j_p = variables["Positive electrode interfacial current density"].orphans[0]
+        j_n = variables["X-averaged negative electrode interfacial current density"]
+        j_p = variables["X-averaged positive electrode interfacial current density"]
 
         deps_dt_n = pybamm.PrimaryBroadcast(
             -self.param.beta_surf_n * j_n, ["negative electrode"]

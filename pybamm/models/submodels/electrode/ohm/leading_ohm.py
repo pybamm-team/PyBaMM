@@ -57,14 +57,7 @@ class LeadingOrder(BaseModel):
         variables.update(self._get_standard_current_variables(i_s))
 
         if self.domain == "Positive":
-            variables.update(self._get_standard_whole_cell_current_variables(variables))
-            # TODO: figure out why we need to include these for it to work, even at
-            # leading order
-            eta_e_av = variables["X-averaged electrolyte overpotential"]
-            delta_phi_s_n_av = variables["X-averaged negative electrode ohmic losses"]
-            delta_phi_s_p_av = variables["X-averaged positive electrode ohmic losses"]
-            v += eta_e_av + delta_phi_s_p_av - delta_phi_s_n_av
-            variables.update(self._get_standard_local_potential_difference_variables(v))
+            variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables
 

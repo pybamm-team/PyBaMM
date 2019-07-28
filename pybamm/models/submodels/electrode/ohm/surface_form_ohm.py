@@ -66,7 +66,7 @@ class SurfaceForm(BaseModel):
             "Negative electrode current density" in variables
             and "Positive electrode current density" in variables
         ):
-            variables.update(self._get_standard_whole_cell_current_variables(variables))
+            variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables
 

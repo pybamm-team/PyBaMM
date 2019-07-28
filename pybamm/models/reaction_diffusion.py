@@ -25,11 +25,11 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
 
         self.set_thermal_submodel()
         self.set_reactions()
-        self.set_current_collector_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
         self.set_interfacial_submodel()
         self.set_electrolyte_submodel()
+        self.set_current_collector_submodel()
 
         self.build_model()
 
@@ -43,6 +43,9 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, self.reactions
+        )
+        self.variables["Local current collector potential difference"] = pybamm.Scalar(
+            0
         )
 
     def set_interfacial_submodel(self):
