@@ -154,3 +154,13 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.variables["Fractional Charge Input"] = fci
             self.rhs[fci] = -self.param.current_with_time * 100
             self.initial_conditions[fci] = self.param.q_init * 100
+
+    def set_current_collector_submodel(self):
+
+        if self.options["current collector"] == "uniform":
+            submodel = pybamm.current_collector.Uniform(self.param)
+        elif self.options["current collector"] == "potential pair":
+            submodel = pybamm.current_collector.PotentialPair(self.param)
+        elif self.options["current collector"] == "single particle potential pair":
+            submodel = pybamm.current_collector.SingleParticlePotentialPair(self.param)
+        self.submodels["current collector"] = submodel

@@ -18,20 +18,10 @@ else:
 # load models
 models = [
     # pybamm.lead_acid.LOQS(
-    #     {
-    #         "surface form": "differential",
-    #         "current collector": "potential pair",
-    #         "dimensionality": 2,
-    #     },
-    #     name="2+1D LOQS",
+    #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D LOQS"
     # ),
     pybamm.lead_acid.LOQS(
-        {
-            "surface form": "differential",
-            "current collector": "potential pair",
-            "dimensionality": 1,
-        },
-        name="1+1D LOQS",
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
     ),
     pybamm.lead_acid.LOQS({"dimensionality": 1}, name="1D LOQS"),
 ]
@@ -71,10 +61,10 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    # "X-averaged electrolyte potential [V]",
-    # "X-averaged electrolyte concentration",
-    # "Current collector current density",
-    "Terminal voltage [V]"
+    "X-averaged electrolyte potential [V]",
+    "X-averaged electrolyte concentration",
+    "Current collector current density",
+    "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
 plot.dynamic_plot()

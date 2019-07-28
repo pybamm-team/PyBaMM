@@ -38,14 +38,12 @@ param.update(
 for model in models:
     param.process_model(model)
 
-# set mesh
-
 # discretise models
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
 for model in models:
     geometry = model.default_geometry
     param.process_geometry(geometry)
-    var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)

@@ -37,21 +37,6 @@ class LOQS(BaseModel):
         if self.options["dimensionality"] == 0:
             self.use_jacobian = False
 
-    def set_current_collector_submodel(self):
-
-        if self.options["current collector"] == "uniform":
-            submodel = pybamm.current_collector.Uniform(self.param)
-        elif self.options["current collector"] == "potential pair":
-            if self.options["surface form"] is False:
-                submodel = pybamm.current_collector.SingleParticlePotentialPair(
-                    self.param
-                )
-            else:
-                submodel = pybamm.current_collector.surface_form.LeadingOrder(
-                    self.param
-                )
-        self.submodels["current collector"] = submodel
-
     def set_porosity_submodel(self):
 
         self.submodels["leading-order porosity"] = pybamm.porosity.LeadingOrder(
@@ -167,7 +152,10 @@ class LOQS(BaseModel):
         Create and return the default solver for this model
         """
 
-        if self.options["surface form"] == "algebraic":
+        if (
+            self.options["current collector"] != "uniform"
+            or self.options["surface form"] == "algebraic"
+        ):
             return pybamm.ScikitsDaeSolver()
         else:
             return pybamm.ScipySolver()

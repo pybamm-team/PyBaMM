@@ -35,22 +35,6 @@ class PotentialPair(BaseModel):
 
         return variables
 
-    def get_coupled_variables(self, variables):
-        param = self.param
-
-        phi_s_p = variables["Positive electrode potential"]
-        phi_s_cn = variables["Negative current collector potential"]
-        i_boundary_cc = variables["Current collector current density"]
-
-        # 1D models determine phi_s_cp
-        # note that phi_s_cn is equal pybamm.boundary_value(phi_s_n, "left")
-        voltage_from_1D_models = variables[
-            "Local current collector potential difference"
-        ]
-        phi_s_cp = phi_s_cn + voltage_from_1D_models
-        variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
-        return variables
-
     def set_algebraic(self, variables):
 
         param = self.param
@@ -59,14 +43,6 @@ class PotentialPair(BaseModel):
         phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
 
-        # The local current collector potential difference is determined by the 1D
-        # through-cell models. We then impose an algebraic equation to make sure that
-        # this is equal to phi_s_cp - phi_s_cn
-        v_boundary_cc = variables["Local current collector potential difference"]
-
-        # Local current collector potential difference may not depend explicitly on
-        # i_boundary_cc, so we need to order the keys slightly weirdly in order for the
-        # model checks to pass
         self.algebraic = {
             phi_s_cn: pybamm.laplacian(phi_s_cn)
             - (param.sigma_cn * param.delta ** 2 / param.l_cn)
@@ -106,7 +82,6 @@ class PotentialPair(BaseModel):
         param = self.param
         applied_current = param.current_with_time
         phi_s_cn = variables["Negative current collector potential"]
-        phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
 
         self.initial_conditions = {

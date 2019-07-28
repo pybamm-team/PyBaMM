@@ -179,9 +179,6 @@ class DaeSolver(pybamm.BaseSolver):
             concatenated_rhs = simp.simplify(concatenated_rhs)
             pybamm.logger.info("Simplifying algebraic")
             concatenated_algebraic = simp.simplify(concatenated_algebraic)
-            import ipdb
-
-            ipdb.set_trace()
             pybamm.logger.info("Simplifying events")
             events = {name: simp.simplify(event) for name, event in events.items()}
 

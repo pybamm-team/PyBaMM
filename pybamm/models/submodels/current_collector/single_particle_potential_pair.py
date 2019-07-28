@@ -36,6 +36,9 @@ class SingleParticlePotentialPair(BaseModel):
 
         return variables
 
+    def get_coupled_variables(self, variables):
+        return {}
+
     def set_algebraic(self, variables):
 
         param = self.param
