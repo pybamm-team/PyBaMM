@@ -57,7 +57,7 @@ phi_s_cp = pybamm.ProcessedVariable(
     solution.y,
     mesh=mesh,
 )
-l_y = phi_s_cp.x_sol[-1]
+l_y = phi_s_cp.y_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
 y_plot = np.linspace(0, l_y, 21)
 z_plot = np.linspace(0, l_z, 21)
