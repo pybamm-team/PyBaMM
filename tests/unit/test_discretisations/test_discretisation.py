@@ -13,9 +13,6 @@ from tests import (
 from tests.shared import SpatialMethodForTesting
 
 from scipy.sparse import block_diag
-import warnings
-
-warnings.simplefilter("error")
 
 
 class TestDiscretise(unittest.TestCase):
@@ -765,6 +762,32 @@ class TestDiscretise(unittest.TestCase):
             ]
         )[:, np.newaxis]
         np.testing.assert_allclose(eqn_disc.evaluate(), expected_vector)
+
+    def test_concatenation_2D(self):
+        disc = get_1p1d_discretisation_for_testing(zpts=3)
+        mesh = disc.mesh
+
+        a = pybamm.Variable("a", domain=["negative electrode"])
+        b = pybamm.Variable("b", domain=["separator"])
+        c = pybamm.Variable("c", domain=["positive electrode"])
+        conc = pybamm.Concatenation(a, b, c)
+        disc.set_variable_slices([conc])
+        self.assertEqual(
+            disc.y_slices,
+            {
+                a.id: [slice(0, 40), slice(100, 140), slice(200, 240)],
+                b.id: [slice(40, 65), slice(140, 165), slice(240, 265)],
+                c.id: [slice(65, 100), slice(165, 200), slice(265, 300)],
+            },
+        )
+        expr = disc.process_symbol(conc)
+        self.assertIsInstance(expr, pybamm.DomainConcatenation)
+
+        # Evaulate
+        y = np.linspace(0, 1, 300)
+        self.assertEqual(expr.children[0].evaluate(0, y).shape, (120, 1))
+        self.assertEqual(expr.children[1].evaluate(0, y).shape, (75, 1))
+        self.assertEqual(expr.children[2].evaluate(0, y).shape, (105, 1))
 
     def test_exceptions(self):
         c_n = pybamm.Variable("c", domain=["negative electrode"])

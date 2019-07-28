@@ -137,6 +137,11 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
             child_vectors = []
             for child_var, slices in zip(children_vars, symbol._children_slices):
                 for child_dom, child_slice in slices.items():
+                    if len(symbol._slices[child_dom]) > 1:
+                        raise NotImplementedError(
+                            """Evaluator not implemented for a multi-slice (2D)
+                            DomainConcatenation"""
+                        )
                     slice_starts.append(symbol._slices[child_dom][0].start)
                     child_vectors.append(
                         "{}[{}:{}]".format(
