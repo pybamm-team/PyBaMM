@@ -62,9 +62,6 @@ class SingleParticlePotentialPair(BaseModel):
             + delta_phi_s_p_av
             - delta_phi_s_n_av
         )
-        import ipdb
-
-        ipdb.set_trace()
 
         self.algebraic = {
             phi_s_cn: pybamm.laplacian(phi_s_cn)

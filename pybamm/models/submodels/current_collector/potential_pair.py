@@ -24,9 +24,8 @@ class PotentialPair(BaseModel):
     def get_fundamental_variables(self):
 
         phi_s_cn = pybamm.standard_variables.phi_s_cn
-        phi_s_cp = pybamm.standard_variables.phi_s_cp
 
-        variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
+        variables = self._get_standard_negative_potential_variables(phi_s_cn)
 
         # TODO: grad not implemented for 2D yet
         i_cc = pybamm.Scalar(0)
@@ -34,6 +33,22 @@ class PotentialPair(BaseModel):
 
         variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
 
+        return variables
+
+    def get_coupled_variables(self, variables):
+        param = self.param
+
+        phi_s_p = variables["Positive electrode potential"]
+        phi_s_cn = variables["Negative current collector potential"]
+        i_boundary_cc = variables["Current collector current density"]
+
+        # 1D models determine phi_s_cp
+        # note that phi_s_cn is equal pybamm.boundary_value(phi_s_n, "left")
+        voltage_from_1D_models = variables[
+            "Local current collector potential difference"
+        ]
+        phi_s_cp = phi_s_cn + voltage_from_1D_models
+        variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
         return variables
 
     def set_algebraic(self, variables):
@@ -59,7 +74,6 @@ class PotentialPair(BaseModel):
             i_boundary_cc: pybamm.laplacian(phi_s_cp)
             + (param.sigma_cp * param.delta ** 2 / param.l_cp)
             * pybamm.source(i_boundary_cc, phi_s_cp),
-            phi_s_cp: phi_s_cp - phi_s_cn - v_boundary_cc,
         }
 
     def set_boundary_conditions(self, variables):
@@ -74,6 +88,8 @@ class PotentialPair(BaseModel):
             param.sigma_cp * param.delta ** 2 * param.l_tab_p * param.l_cp
         )
 
+        # Boundary condition needs to be on the variables that go into the Laplacian,
+        # even though phi_s_cp isn't a pybamm.Variable object
         self.boundary_conditions = {
             phi_s_cn: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
@@ -95,7 +111,5 @@ class PotentialPair(BaseModel):
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
-            phi_s_cp: param.U_p(param.c_p_init, param.T_ref)
-            - param.U_n(param.c_n_init, param.T_ref),
             i_boundary_cc: applied_current / param.l_y / param.l_z,
         }
