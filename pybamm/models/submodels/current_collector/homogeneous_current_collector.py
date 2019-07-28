@@ -29,7 +29,9 @@ class Uniform(BaseModel):
         i_boundary_cc = pybamm.PrimaryBroadcast(
             self.param.current_with_time, "current collector"
         )
+        phi_s_cn = pybamm.PrimaryBroadcast(0, "current collector")
 
-        variables = self._get_standard_current_variables(i_cc, i_boundary_cc)
+        variables = self._get_standard_negative_potential_variables(phi_s_cn)
+        variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
 
         return variables

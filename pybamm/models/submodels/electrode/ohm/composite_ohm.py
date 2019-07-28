@@ -38,10 +38,13 @@ class Composite(BaseModel):
         eps = variables[
             "Leading-order x-averaged " + self.domain.lower() + " electrode porosity"
         ]
+        phi_s_cn = variables["Negative current collector potential"]
 
         if self._domain == "Negative":
             sigma_eff = self.param.sigma_n * (1 - eps) ** self.param.b
-            phi_s = pybamm.outer(
+            phi_s = pybamm.PrimaryBroadcast(
+                phi_s_cn, "negative electrode"
+            ) + pybamm.outer(
                 i_boundary_cc / sigma_eff, x_n * (x_n - 2 * l_n) / (2 * l_n)
             )
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)

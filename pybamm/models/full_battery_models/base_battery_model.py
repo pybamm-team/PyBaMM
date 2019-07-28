@@ -330,7 +330,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             self.variables.update(submodel.get_coupled_variables(self.variables))
 
-            # Set model equations
+        # Set model equations
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
                 "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
