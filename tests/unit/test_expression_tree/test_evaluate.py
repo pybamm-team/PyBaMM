@@ -32,8 +32,8 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
         # test values of variable_symbols
-        self.assertEqual(list(variable_symbols.values())[0], "y[0:1]")
-        self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
+        self.assertEqual(list(variable_symbols.values())[0], "y[:1][[True]]")
+        self.assertEqual(list(variable_symbols.values())[1], "y[:2][[False, True]]")
 
         var_a = pybamm.id_to_python_variable(a.id)
         var_b = pybamm.id_to_python_variable(b.id)
@@ -55,8 +55,8 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.keys())[3], expr.id)
 
         # test values of variable_symbols
-        self.assertEqual(list(variable_symbols.values())[0], "y[0:1]")
-        self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
+        self.assertEqual(list(variable_symbols.values())[0], "y[:1][[True]]")
+        self.assertEqual(list(variable_symbols.values())[1], "y[:2][[False, True]]")
         self.assertEqual(
             list(variable_symbols.values())[2], "{} + {}".format(var_a, var_b)
         )
@@ -80,8 +80,8 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.keys())[3], expr.id)
 
         # test values of variable_symbols
-        self.assertEqual(list(variable_symbols.values())[0], "y[0:1]")
-        self.assertEqual(list(variable_symbols.values())[1], "y[1:2]")
+        self.assertEqual(list(variable_symbols.values())[0], "y[:1][[True]]")
+        self.assertEqual(list(variable_symbols.values())[1], "y[:2][[False, True]]")
         self.assertEqual(list(variable_symbols.values())[2], "-{}".format(var_b))
         var_child = pybamm.id_to_python_variable(expr.children[1].id)
         self.assertEqual(
@@ -97,7 +97,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(constant_symbols.values())[0], test_function)
         self.assertEqual(list(variable_symbols.keys())[0], a.id)
         self.assertEqual(list(variable_symbols.keys())[1], expr.id)
-        self.assertEqual(list(variable_symbols.values())[0], "y[0:1]")
+        self.assertEqual(list(variable_symbols.values())[0], "y[:1][[True]]")
         var_funct = pybamm.id_to_python_variable(expr.id, True)
         self.assertEqual(
             list(variable_symbols.values())[1], "{}({})".format(var_funct, var_a)
@@ -248,8 +248,8 @@ class TestEvaluate(unittest.TestCase):
         expr = a + b
         constant_str, variable_str = pybamm.to_python(expr)
         expected_str = (
-            "self\.var_[0-9m]+ = y\[0:1\].*\\n"
-            "self\.var_[0-9m]+ = y\[1:2\].*\\n"
+            "self\.var_[0-9m]+ = y\[:1\]\[\[True\]\].*\\n"
+            "self\.var_[0-9m]+ = y\[:2\]\[\[False, True\]\].*\\n"
             "self\.var_[0-9m]+ = self\.var_[0-9m]+ \+ self\.var_[0-9m]+"
         )
 

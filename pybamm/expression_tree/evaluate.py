@@ -137,10 +137,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
             child_vectors = []
             for child_var, slices in zip(children_vars, symbol._children_slices):
                 for child_dom, child_slice in slices.items():
-                    slice_starts.append(symbol._slices[child_dom].start)
+                    slice_starts.append(symbol._slices[child_dom][0].start)
                     child_vectors.append(
                         "{}[{}:{}]".format(
-                            child_var, child_slice.start, child_slice.stop
+                            child_var, child_slice[0].start, child_slice[0].stop
                         )
                     )
             child_vectors = [v for _, v in sorted(zip(slice_starts, child_vectors))]
@@ -153,7 +153,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
 
     # Note: we assume that y is being passed as a column vector
     elif isinstance(symbol, pybamm.StateVector):
-        symbol_str = symbol.name
+        symbol_str = "y[:{}][{}]".format(
+            len(symbol.evaluation_array), symbol.evaluation_array
+        )
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"

@@ -253,7 +253,7 @@ class TestFiniteVolume(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
         disc.set_variable_slices([var])
-        discretised_symbol = pybamm.StateVector(disc._y_slices[var.id])
+        discretised_symbol = pybamm.StateVector(*disc.y_slices[var.id])
         bcs = {
             "left": (pybamm.Scalar(0), "Dirichlet"),
             "right": (pybamm.Scalar(3), "Dirichlet"),
@@ -348,10 +348,10 @@ class TestFiniteVolume(unittest.TestCase):
         c_s_p = pybamm.Variable("c_s_p", domain=["positive particle"])
 
         disc.set_variable_slices([c_s_n])
-        disc_c_s_n = pybamm.StateVector(disc._y_slices[c_s_n.id])
+        disc_c_s_n = pybamm.StateVector(*disc.y_slices[c_s_n.id])
 
         disc.set_variable_slices([c_s_p])
-        disc_c_s_p = pybamm.StateVector(disc._y_slices[c_s_p.id])
+        disc_c_s_p = pybamm.StateVector(*disc.y_slices[c_s_p.id])
         bcs = {
             "left": (pybamm.Scalar(0), "Dirichlet"),
             "right": (pybamm.Scalar(3), "Dirichlet"),

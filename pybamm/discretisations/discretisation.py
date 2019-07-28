@@ -2,8 +2,8 @@
 # Interface for discretisation
 #
 import pybamm
-
 import numpy as np
+from collections import defaultdict
 from scipy.sparse import block_diag, csr_matrix
 
 
@@ -35,12 +35,27 @@ class Discretisation(object):
                 dom: method(mesh) for dom, method in spatial_methods.items()
             }
         self.bcs = {}
-        self._y_slices = {}
+        self.y_slices = {}
         self._discretised_symbols = {}
 
     @property
     def mesh(self):
         return self._mesh
+
+    @property
+    def y_slices(self):
+        return self._y_slices
+
+    @y_slices.setter
+    def y_slices(self, value):
+        if not isinstance(value, dict):
+            raise TypeError("""y_slices should be dict, not {}""".format(type(value)))
+
+        self._y_slices = value
+
+    @property
+    def spatial_methods(self):
+        return self._spatial_methods
 
     @property
     def bcs(self):
@@ -159,43 +174,40 @@ class Discretisation(object):
         flattened_variables : list of :class:`pybamm.Variable`
             List of variable objects
         """
-        # Unpack symbols in variables that are concatenations of variables
-        flattened_variables = []
-        for symbol in variables:
-            if isinstance(symbol, pybamm.Concatenation):
-                flattened_variables.extend([child for child in symbol.children])
-            else:
-                flattened_variables.append(symbol)
-        return flattened_variables
-
-    def set_variable_slices(self, variables):
-        """Sets the slicing for variables.
-
-        variables : iterable of :class:`pybamm.Variables`
-            The variables for which to set slices
-        """
-        flattened_variables = self._flatten_variables(variables)
         # Set up y_slices
-        y_slices = {variable.id: None for variable in flattened_variables}
+        y_slices = defaultdict(list)
         start = 0
         end = 0
-        # Iterate through flattened variables, adding appropriate slices to y_slices
-        for variable in flattened_variables:
+        # Iterate through unpacked variables, adding appropriate slices to y_slices
+        for variable in variables:
             # If domain is empty then variable has size 1
             if variable.domain == []:
                 end += 1
+                y_slices[variable.id].append(slice(start, end))
+                start = end
             # Otherwise, add up the size of all the domains in variable.domain
+            elif isinstance(variable, pybamm.Concatenation):
+                children = variable.children
+                meshes = {
+                    child: [self.spatial_methods[dom].mesh[dom] for dom in child.domain]
+                    for child in children
+                }
+                sec_points = len(list(meshes.values())[0][0])
+                for i in range(sec_points):
+                    for child, mesh in meshes.items():
+                        for domain_mesh in mesh:
+                            submesh = domain_mesh[i]
+                            end += submesh.npts_for_broadcast
+                        y_slices[child.id].append(slice(start, end))
+                        start = end
             else:
                 for dom in variable.domain:
-                    for submesh in self._spatial_methods[dom].mesh[dom]:
+                    for submesh in self.spatial_methods[dom].mesh[dom]:
                         end += submesh.npts_for_broadcast
-            y_slices[variable.id] = slice(start, end)
-            start = end
-        self._y_slices = y_slices
+                y_slices[variable.id].append(slice(start, end))
+                start = end
 
-        assert isinstance(self._y_slices, dict), ValueError(
-            """y_slices should be dict, not {}""".format(type(self._y_slices))
-        )
+        self.y_slices = y_slices
 
         # reset discretised_symbols
         self._discretised_symbols = {}
@@ -217,12 +229,13 @@ class Discretisation(object):
             left_domain = left_symbol.domain[0]
             right_domain = right_symbol.domain[0]
 
-            left_mesh = self._spatial_methods[left_domain].mesh[left_domain]
-            right_mesh = self._spatial_methods[right_domain].mesh[right_domain]
+            left_mesh = self.spatial_methods[left_domain].mesh[left_domain]
+            right_mesh = self.spatial_methods[right_domain].mesh[right_domain]
 
             left_symbol_disc = self.process_symbol(left_symbol)
             right_symbol_disc = self.process_symbol(right_symbol)
-            return self._spatial_methods[left_domain].internal_neumann_condition(
+
+            return self.spatial_methods[left_domain].internal_neumann_condition(
                 left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
             )
 
@@ -394,9 +407,18 @@ class Discretisation(object):
 
         # get a list of model rhs variables that are sorted according to
         # where they are in the state vector
-        model_variables = self._flatten_variables(model.rhs.keys())
-        model_slices = [self._y_slices[var.id] for var in model_variables]
-
+        model_variables = model.rhs.keys()
+        model_slices = []
+        for v in model_variables:
+            if isinstance(v, pybamm.Concatenation):
+                model_slices.append(
+                    slice(
+                        self.y_slices[v.children[0].id][0].start,
+                        self.y_slices[v.children[-1].id][0].stop,
+                    )
+                )
+            else:
+                model_slices.append(self.y_slices[v.id])
         sorted_model_variables = [
             v for _, v in sorted(zip(model_slices, model_variables))
         ]
@@ -408,7 +430,7 @@ class Discretisation(object):
                 mass_list.append(1.0)
             else:
                 mass_list.append(
-                    self._spatial_methods[var.domain[0]]
+                    self.spatial_methods[var.domain[0]]
                     .mass_matrix(var, self.bcs)
                     .entries
                 )
@@ -484,7 +506,7 @@ class Discretisation(object):
         """ See :meth:`Discretisation.process_symbol()`. """
 
         if symbol.domain != []:
-            spatial_method = self._spatial_methods[symbol.domain[0]]
+            spatial_method = self.spatial_methods[symbol.domain[0]]
 
         if isinstance(symbol, pybamm.BinaryOperator):
             # Pre-process children
@@ -502,7 +524,7 @@ class Discretisation(object):
             child = symbol.child
             disc_child = self.process_symbol(child)
             if child.domain != []:
-                child_spatial_method = self._spatial_methods[child.domain[0]]
+                child_spatial_method = self.spatial_methods[child.domain[0]]
             if isinstance(symbol, pybamm.Gradient):
                 return child_spatial_method.gradient(child, disc_child, self.bcs)
 
@@ -550,9 +572,9 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Variable):
             return pybamm.StateVector(
-                self._y_slices[symbol.id],
+                *self.y_slices[symbol.id],
                 domain=symbol.domain,
-                auxiliary_domains=symbol.auxiliary_domains,
+                auxiliary_domains=symbol.auxiliary_domains
             )
 
         elif isinstance(symbol, pybamm.SpatialVariable):
@@ -578,12 +600,12 @@ class Discretisation(object):
 
     def _concatenate_in_order(self, var_eqn_dict, check_complete=False):
         """
-        Concatenate a dictionary of {variable: equation} using self._y_slices
+        Concatenate a dictionary of {variable: equation} using self.y_slices
 
         The keys/variables in `var_eqn_dict` must be the same as the ids in
-        `self._y_slices`.
+        `self.y_slices`.
         The resultant concatenation is ordered according to the ordering of the slice
-        values in `self._y_slices`
+        values in `self.y_slices`
 
         Parameters
         ----------
@@ -606,18 +628,18 @@ class Discretisation(object):
                 # get sorted correctly
                 slices.append(
                     slice(
-                        self._y_slices[symbol.children[0].id].start,
-                        self._y_slices[symbol.children[-1].id].stop,
+                        self.y_slices[symbol.children[0].id][0].start,
+                        self.y_slices[symbol.children[-1].id][0].stop,
                     )
                 )
             else:
                 unpacked_variables.append(symbol)
-                slices.append(self._y_slices[symbol.id])
+                slices.append(self.y_slices[symbol.id])
 
         if check_complete:
-            # Check keys from the given var_eqn_dict against self._y_slices
+            # Check keys from the given var_eqn_dict against self.y_slices
             ids = {v.id for v in unpacked_variables}
-            if ids != self._y_slices.keys():
+            if ids != self.y_slices.keys():
                 given_variable_names = [v.name for v in var_eqn_dict.keys()]
                 raise pybamm.ModelError(
                     "Initial conditions are insufficient. Only "

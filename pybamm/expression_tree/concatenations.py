@@ -1,11 +1,11 @@
 #
 # Concatenation classes
 #
-import pybamm
-
-import numpy as np
-from scipy.sparse import vstack
 import copy
+import numpy as np
+import pybamm
+from scipy.sparse import vstack
+from collections import defaultdict
 
 
 class Concatenation(pybamm.Symbol):
@@ -226,7 +226,7 @@ class DomainConcatenation(Concatenation):
             self._slices = self.create_slices(self)
 
             # store size of final vector
-            self._size = self._slices[self.domain[-1]].stop
+            self._size = self._slices[self.domain[-1]][-1].stop
 
             # create disc of domain => slice for each child
             self._children_slices = [
@@ -243,15 +243,15 @@ class DomainConcatenation(Concatenation):
         return self._mesh
 
     def create_slices(self, node):
-        slices = {}
+        slices = defaultdict(list)
         start = 0
         end = 0
-        for dom in node.domain:
-            prim_pts = self.mesh[dom][0].npts
-            second_pts = len(self.mesh[dom])
-            end += prim_pts * second_pts
-            slices[dom] = slice(start, end)
-            start = end
+        second_pts = len(self.mesh[node.domain[0]])
+        for i in range(second_pts):
+            for dom in node.domain:
+                end += self.mesh[dom][i].npts
+                slices[dom].append(slice(start, end))
+                start = end
         return slices
 
     def _concatenation_evaluate(self, children_eval):
@@ -262,12 +262,18 @@ class DomainConcatenation(Concatenation):
         # loop through domains of children writing subvectors to final vector
         for child_vector, slices in zip(children_eval, self._children_slices):
             for child_dom, child_slice in slices.items():
-                vector[self._slices[child_dom]] = child_vector[child_slice]
+                for i in range(len(child_slice)):
+                    vector[self._slices[child_dom][i]] = child_vector[child_slice[i]]
 
         return vector
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
+        # TODO: fix 2D jacobian
+        if len(self._slices[self.domain[-1]]) > 1:
+            raise NotImplementedError(
+                "Jacobian not implemented for a multi-slice (2D) concatenation"
+            )
         children = self.cached_children
         if len(children) == 0:
             return pybamm.Scalar(0)
@@ -282,15 +288,21 @@ class DomainConcatenation(Concatenation):
     def _concatenation_simplify(self, children):
         """ See :meth:`pybamm.Symbol.simplify()`. """
         # Simplify Concatenation of StateVectors to a single StateVector
-        if all([isinstance(x, pybamm.StateVector) for x in children]) and all(
-            [
-                children[idx].y_slice.stop == children[idx + 1].y_slice.start
-                for idx in range(len(children) - 1)
-            ]
-        ):
-            return pybamm.StateVector(
-                slice(children[0].y_slice.start, children[-1].y_slice.stop)
-            )
+        # The sum of the evalation arrays of the StateVectors must be exactly 1
+        if all([isinstance(child, pybamm.StateVector) for child in children]):
+            longest_eval_array = len(children[-1]._evaluation_array)
+            eval_arrays = {}
+            for child in children:
+                eval_arrays[child] = np.concatenate(
+                    [
+                        child.evaluation_array,
+                        np.zeros(longest_eval_array - len(child.evaluation_array)),
+                    ]
+                )
+            if all(sum(array for array in eval_arrays.values()) == 1):
+                return pybamm.StateVector(
+                    slice(children[0].y_slices[0].start, children[-1].y_slices[-1].stop)
+                )
 
         new_symbol = self.__class__(children, self.mesh, self)
 
