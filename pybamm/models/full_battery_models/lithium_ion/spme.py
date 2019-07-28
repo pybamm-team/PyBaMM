@@ -37,21 +37,6 @@ class SPMe(BaseModel):
             var = s._get_standard_surface_potential_difference_variables(delta_phi)
             self.variables.update(var)
 
-    def set_current_collector_submodel(self):
-
-        if self.options["dimensionality"] == 0:
-            self.submodels["current collector"] = pybamm.current_collector.Uniform(
-                self.param
-            )
-        elif self.options["dimensionality"] == 1:
-            raise NotImplementedError(
-                "One-dimensional current collector submodel not implemented."
-            )
-        elif self.options["dimensionality"] == 2:
-            self.submodels[
-                "current collector"
-            ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
-
     def set_porosity_submodel(self):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)

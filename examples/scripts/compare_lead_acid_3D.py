@@ -20,17 +20,18 @@ models = [
     # pybamm.lead_acid.LOQS(
     #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D LOQS"
     # ),
-    pybamm.lead_acid.LOQS(
-        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
+    pybamm.lead_acid.Composite(
+        {"current collector": "potential pair", "dimensionality": 1},
+        name="1+1D Composite",
     ),
-    pybamm.lead_acid.LOQS({"dimensionality": 1}, name="1D LOQS"),
+    pybamm.lead_acid.Composite({"dimensionality": 1}, name="1D Composite"),
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 100,
+        "Typical current [A]": 10,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
@@ -47,7 +48,15 @@ for model in models:
     geometry = model.default_geometry
     param.process_geometry(geometry)
     var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
+    var_pts = {
+        var.x_n: 25,
+        var.x_s: 41,
+        var.x_p: 34,
+        var.r_n: 5,
+        var.r_p: 5,
+        var.y: 10,
+        var.z: 10,
+    }
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
@@ -61,10 +70,10 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    "X-averaged electrolyte potential [V]",
-    "X-averaged electrolyte concentration",
-    "Current collector current density",
-    "Terminal voltage [V]",
+    # "X-averaged electrolyte potential [V]",
+    # "X-averaged electrolyte concentration",
+    # "Current collector current density",
+    "Terminal voltage [V]"
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
 plot.dynamic_plot()

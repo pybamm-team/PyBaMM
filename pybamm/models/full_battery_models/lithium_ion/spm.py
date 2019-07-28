@@ -26,16 +26,6 @@ class SPM(BaseModel):
 
         self.build_model()
 
-    def set_current_collector_submodel(self):
-
-        if self.options["current collector"] == "uniform":
-            submodel = pybamm.current_collector.Uniform(self.param)
-        elif self.options["current collector"] == "potential pair":
-            submodel = pybamm.current_collector.PotentialPair(self.param)
-        elif self.options["current collector"] == "single particle potential pair":
-            submodel = pybamm.current_collector.SingleParticlePotentialPair(self.param)
-        self.submodels["current collector"] = submodel
-
     def set_porosity_submodel(self):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)

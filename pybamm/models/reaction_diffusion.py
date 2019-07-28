@@ -33,15 +33,6 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
 
         self.build_model()
 
-    def set_thermal_submodel(self):
-        self.submodels["thermal"] = pybamm.thermal.Isothermal(self.param)
-
-    def set_current_collector_submodel(self):
-
-        self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param
-        )
-
     def set_porosity_submodel(self):
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
 

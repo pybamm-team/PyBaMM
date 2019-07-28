@@ -27,12 +27,6 @@ class DFN(BaseModel):
 
         self.build_model()
 
-    def set_current_collector_submodel(self):
-
-        self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param
-        )
-
     def set_porosity_submodel(self):
 
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
