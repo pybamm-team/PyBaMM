@@ -44,12 +44,22 @@ class StateVector(pybamm.Symbol):
             else:
                 name += "]"
         self._y_slices = y_slices
+        self._first_point = y_slices[0].start
+        self._last_point = y_slices[-1].stop
         self.set_evaluation_array(y_slices)
         super().__init__(name=name, domain=domain)
 
     @property
     def y_slices(self):
         return self._y_slices
+
+    @property
+    def first_point(self):
+        return self._first_point
+
+    @property
+    def last_point(self):
+        return self._last_point
 
     @property
     def evaluation_array(self):
@@ -97,9 +107,9 @@ class StateVector(pybamm.Symbol):
 
         """
 
-        # Get inices of state vectors
-        self_y_indices = np.arange(self.y_slice.start, self.y_slice.stop)
-        variable_y_indices = np.arange(variable.y_slice.start, variable.y_slice.stop)
+        # Get indices of state vectors
+        self_y_indices = np.arange(self.first_point, self.last_point)
+        variable_y_indices = np.arange(variable.first_point, variable.last_point)
 
         # Return zeros of correct size if no entries match
         if np.size(np.intersect1d(self_y_indices, variable_y_indices)) == 0:
@@ -107,12 +117,10 @@ class StateVector(pybamm.Symbol):
         else:
             # Populate entries corresponding to matching y slices, and shift so
             # that the matrix is the correct size
-            row = (
-                np.intersect1d(self_y_indices, variable_y_indices) - self.y_slice.start
-            )
+            row = np.intersect1d(self_y_indices, variable_y_indices) - self.first_point
             col = (
                 np.intersect1d(self_y_indices, variable_y_indices)
-                - variable.y_slice.start
+                - variable.first_point
             )
             data = np.ones_like(row)
             jac = csr_matrix(

@@ -43,8 +43,6 @@ class Vector(pybamm.Array):
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
-        # Get indices of state vector
-        variable_y_indices = np.arange(variable.y_slice.start, variable.y_slice.stop)
         # Return zeros of correct size
-        jac = csr_matrix((np.size(self), np.size(variable_y_indices)))
+        jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
         return pybamm.Matrix(jac)
