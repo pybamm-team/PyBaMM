@@ -543,8 +543,8 @@ class TestSimplify(unittest.TestCase):
 
         y = mesh.combine_submeshes(*conc.domain)[0].nodes ** 2
         self.assertIsInstance(conc_simp, pybamm.StateVector)
-        self.assertEqual(conc_simp.y_slice.start, 0)
-        self.assertEqual(conc_simp.y_slice.stop, len(y))
+        self.assertEqual(conc_simp.y_slices[0].start, 0)
+        self.assertEqual(conc_simp.y_slices[-1].stop, len(y))
         np.testing.assert_array_equal(conc_disc.evaluate(y=y), conc_simp.evaluate(y=y))
 
     def test_simplify_outer(self):

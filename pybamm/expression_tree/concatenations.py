@@ -243,15 +243,21 @@ class DomainConcatenation(Concatenation):
     def _concatenation_simplify(self, children):
         """ See :meth:`pybamm.Symbol.simplify()`. """
         # Simplify Concatenation of StateVectors to a single StateVector
-        if all([isinstance(x, pybamm.StateVector) for x in children]) and all(
-            [
-                children[idx].y_slice.stop == children[idx + 1].y_slice.start
-                for idx in range(len(children) - 1)
-            ]
-        ):
-            return pybamm.StateVector(
-                slice(children[0].y_slice.start, children[-1].y_slice.stop)
-            )
+        # The sum of the evalation arrays of the StateVectors must be exactly 1
+        if all([isinstance(child, pybamm.StateVector) for child in children]):
+            longest_eval_array = len(children[-1]._evaluation_array)
+            eval_arrays = {}
+            for child in children:
+                eval_arrays[child] = np.concatenate(
+                    [
+                        child.evaluation_array,
+                        np.zeros(longest_eval_array - len(child.evaluation_array)),
+                    ]
+                )
+            if all(sum(array for array in eval_arrays.values()) == 1):
+                return pybamm.StateVector(
+                    slice(children[0].y_slices[0].start, children[-1].y_slices[-1].stop)
+                )
 
         new_symbol = self.__class__(children, self.mesh, self)
 
