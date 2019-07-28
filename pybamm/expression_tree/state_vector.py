@@ -106,7 +106,10 @@ class StateVector(pybamm.Symbol):
             The variable with respect to which to differentiate
 
         """
-
+        if len(self.y_slices) > 1:
+            raise NotImplementedError(
+                "Jacobian not implemented for a multi-slice (2D) StateVector"
+            )
         # Get indices of state vectors
         self_y_indices = np.arange(self.first_point, self.last_point)
         variable_y_indices = np.arange(variable.first_point, variable.last_point)
