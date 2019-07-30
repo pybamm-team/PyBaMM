@@ -1,5 +1,5 @@
-Sub Meshes
-==========
+1D Sub Meshes
+=============
 
 .. autoclass:: pybamm.SubMesh1D
     :members:

@@ -1,5 +1,5 @@
 #
-# Test for the Symbol class
+# Test for the Simplify class
 #
 import math
 import numpy as np
@@ -76,7 +76,9 @@ class TestSimplify(unittest.TestCase):
 
         # BoundaryValue
         v_neg = pybamm.Variable("v", domain=["negative electrode"])
-        self.assertIsInstance((pybamm.surf(v_neg)).simplify(), pybamm.BoundaryValue)
+        self.assertIsInstance(
+            (pybamm.boundary_value(v_neg, "right")).simplify(), pybamm.BoundaryValue
+        )
 
         # addition
         self.assertIsInstance((a + b).simplify(), pybamm.Scalar)

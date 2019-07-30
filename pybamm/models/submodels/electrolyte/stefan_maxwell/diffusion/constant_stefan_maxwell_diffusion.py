@@ -22,15 +22,17 @@ class ConstantConcentration(BaseModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        c_e_n = pybamm.Broadcast(1, ["negative electrode"])
-        c_e_s = pybamm.Broadcast(1, ["separator"])
-        c_e_p = pybamm.Broadcast(1, ["positive electrode"])
+        c_e_n = pybamm.FullBroadcast(1, "negative electrode", "current collector")
+        c_e_s = pybamm.FullBroadcast(1, "separator", "current collector")
+        c_e_p = pybamm.FullBroadcast(1, "positive electrode", "current collector")
         c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
 
         variables = self._get_standard_concentration_variables(c_e)
 
-        N_e = pybamm.Broadcast(
-            0, ["negative electrode", "separator", "positive electrode"]
+        N_e = pybamm.FullBroadcast(
+            0,
+            ["negative electrode", "separator", "positive electrode"],
+            "current collector",
         )
 
         variables.update(self._get_standard_flux_variables(N_e))

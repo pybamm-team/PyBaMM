@@ -14,6 +14,8 @@ class Composite(BaseHigherOrder):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    domain : str, optional
+        The domain in which the model holds
 
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.BaseHigerOrder`
     """
@@ -27,5 +29,5 @@ class Composite(BaseHigherOrder):
 
     def unpack(self, variables):
         "Unpack variables and return average values"
-        c_e_av = variables["Average electrolyte concentration"]
+        c_e_av = variables["X-averaged electrolyte concentration"]
         return c_e_av

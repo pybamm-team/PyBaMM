@@ -64,14 +64,20 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
                 )
 
     def test_init_failure(self):
+        submesh_types = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.Scikit2DSubMesh,
+        }
         geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
         with self.assertRaises(KeyError):
-            pybamm.Mesh(geometry, None, {})
+            pybamm.Mesh(geometry, submesh_types, {})
 
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.y: 10, var.z: 10}
         with self.assertRaises(TypeError):
-            pybamm.Mesh(geometry, None, var_pts)
+            pybamm.Mesh(geometry, submesh_types, var_pts)
 
         lims = {var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         with self.assertRaises(pybamm.GeometryError):

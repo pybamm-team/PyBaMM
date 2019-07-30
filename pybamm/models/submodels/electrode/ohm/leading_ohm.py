@@ -37,19 +37,19 @@ class LeadingOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         if self.domain == "Negative":
-            phi_s = pybamm.Broadcast(0, ["negative electrode"])
+            phi_s = pybamm.FullBroadcast(0, ["negative electrode"], "current collector")
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
         elif self.domain == "Positive":
-            ocp_p_av = variables["Average positive electrode open circuit potential"]
-            eta_r_p_av = variables["Average positive electrode reaction overpotential"]
-            phi_e_p_av = variables["Average positive electrolyte potential"]
+            ocp_p_av = variables["X-averaged positive electrode open circuit potential"]
+            eta_r_p_av = variables[
+                "X-averaged positive electrode reaction overpotential"
+            ]
+            phi_e_p_av = variables["X-averaged positive electrolyte potential"]
 
             v = ocp_p_av + eta_r_p_av + phi_e_p_av
 
-            phi_s = pybamm.Broadcast(
-                v, ["positive electrode"], broadcast_type="primary"
-            )
+            phi_s = pybamm.PrimaryBroadcast(v, ["positive electrode"])
             i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 
         variables.update(self._get_standard_potential_variables(phi_s))

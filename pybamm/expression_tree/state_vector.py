@@ -20,11 +20,13 @@ class StateVector(pybamm.Symbol):
         the name of the node
     domain : iterable of str, optional
         list of domains the parameter is valid over, defaults to empty list
+    auxiliary_domains : dict of str, optional
+        dictionary of auxiliary domains
 
     *Extends:* :class:`Array`
     """
 
-    def __init__(self, *y_slices, name=None, domain=None):
+    def __init__(self, *y_slices, name=None, domain=None, auxiliary_domains=None):
         for y_slice in y_slices:
             if not isinstance(y_slice, slice):
                 raise TypeError("all y_slices must be slice objects")
@@ -45,11 +47,13 @@ class StateVector(pybamm.Symbol):
                 name += "]"
         if domain is None:
             domain = []
+        if auxiliary_domains is None:
+            auxiliary_domains = {}
         self._y_slices = y_slices
         self._first_point = y_slices[0].start
         self._last_point = y_slices[-1].stop
         self.set_evaluation_array(y_slices)
-        super().__init__(name=name, domain=domain)
+        super().__init__(name=name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     @property
     def y_slices(self):
@@ -148,7 +152,12 @@ class StateVector(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return StateVector(*self.y_slices, name=self.name, domain=self.domain)
+        return StateVector(
+            *self.y_slices,
+            name=self.name,
+            domain=self.domain,
+            auxiliary_domains=self.auxiliary_domains
+        )
 
     def evaluate_for_shape(self):
         """

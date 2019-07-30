@@ -68,6 +68,13 @@ class TestLeadAcidCompositeSurfaceForm(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
 
+class TestLeadAcidCompositeExtended(unittest.TestCase):
+    def test_basic_processing(self):
+        model = pybamm.lead_acid.CompositeExtended()
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

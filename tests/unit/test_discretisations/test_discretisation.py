@@ -135,6 +135,7 @@ class TestDiscretise(unittest.TestCase):
             "macroscale": pybamm.SpatialMethod,
             "negative particle": pybamm.SpatialMethod,
             "positive particle": pybamm.SpatialMethod,
+            "current collector": pybamm.SpatialMethod,
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -673,7 +674,7 @@ class TestDiscretise(unittest.TestCase):
 
         # scalar
         broad = disc._spatial_methods[whole_cell[0]].broadcast(
-            a, whole_cell, broadcast_type="full"
+            a, whole_cell, {}, broadcast_type="full"
         )
         np.testing.assert_array_equal(
             broad.evaluate(), 7 * np.ones_like(combined_submesh[0].nodes[:, np.newaxis])

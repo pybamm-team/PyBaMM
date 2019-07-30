@@ -26,27 +26,34 @@ class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
     def get_coupled_variables(self, variables):
         # Unpack
         delta_phi_0 = variables[
-            "Leading-order average "
+            "Leading-order x-averaged "
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
-        c_e_0 = variables["Leading-order average electrolyte concentration"]
+        c_e_0 = variables["Leading-order x-averaged electrolyte concentration"]
         c_e_av = variables[
-            "Average " + self.domain.lower() + " electrolyte concentration"
+            "X-averaged " + self.domain.lower() + " electrolyte concentration"
         ]
         c_e_1_av = (c_e_av - c_e_0) / self.param.C_e
 
         # Get derivatives of leading-order terms
-        dj_dc_0 = sum(
+        sum_dj_dc_0 = sum(
             reaction_submodel._get_dj_dc(variables)
             for reaction_submodel in self.reaction_submodels
         )
-        dj_ddeltaphi_0 = sum(
+        sum_dj_ddeltaphi_0 = sum(
             reaction_submodel._get_dj_ddeltaphi(variables)
             for reaction_submodel in self.reaction_submodels
         )
+        sum_j_diffusion_limited_first_order = sum(
+            reaction_submodel._get_j_diffusion_limited_first_order(variables)
+            for reaction_submodel in self.reaction_submodels
+        )
 
-        delta_phi_1_av = -dj_dc_0 * c_e_1_av / dj_ddeltaphi_0
+        delta_phi_1_av = (
+            -(sum_dj_dc_0 * c_e_1_av + sum_j_diffusion_limited_first_order)
+            / sum_dj_ddeltaphi_0
+        )
         delta_phi = delta_phi_0 + self.param.C_e * delta_phi_1_av
 
         # Update variables dictionary

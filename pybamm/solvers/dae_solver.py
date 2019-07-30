@@ -194,7 +194,7 @@ class DaeSolver(pybamm.BaseSolver):
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")
-                jac = jac.simplify()
+                jac = simp.simplify(jac)
 
             if model.use_to_python:
                 pybamm.logger.info("Converting jacobian to python")

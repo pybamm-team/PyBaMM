@@ -5,12 +5,18 @@ Name [units],Value,Reference,Notes
 Reference temperature [K],294.85,Room temperature,
 ,,,
 # Macroscale geometry,,,
+Negative current collector width [m],2.5E-05,,random choice
 Negative electrode width [m],0.0009,Manufacturer,
 Separator width [m],0.0015,Manufacturer,
 Positive electrode width [m],0.00125,Manufacturer,
+Positive current collector width [m],2.5E-05,,random choice
 Electrode height [m],0.114,Manufacturer,
 Electrode depth [m],0.065,Manufacturer,
+Negative tab width [m],0.04,,Estimated value
+Negative tab centre y-coordinate [m],0.06,,Estimated value
 Negative tab centre z-coordinate [m],0.114,Tab at top,
+Positive tab width [m],0.04,,Estimated value
+Positive tab centre y-coordinate [m],0.147,,Estimated value
 Positive tab centre z-coordinate [m],0.114,Tab at top,
 ,,,
 # Electrical,,,
@@ -55,6 +61,10 @@ Molar volume of lead-dioxide [m3.mol-1],2.54797441364606E-05,,Calculated as 239e
 Molar volume of lead sulfate [m3.mol-1],4.81717011128776E-05,,Calculated as 303e-3 / 6.29e3
 Negative electrode volumetric capacity [C.m-3],3.473e9,bernardi1995mathematical,
 Positive electrode volumetric capacity [C.m-3],2.745e9,bernardi1995mathematical,
+,,,
+# Current collector properties ,,,
+Negative current collector conductivity [S.m-1],59600000,,random choice
+Positive current collector conductivity [S.m-1],35500000,,random choice
 ,,,
 # Microstructure,,,
 Negative electrode surface area density [m-1],2300000,,

@@ -2,6 +2,7 @@
 # First-order Butler-Volmer kinetics
 #
 from .base_kinetics import BaseModel
+import pybamm
 
 
 class BaseFirstOrderKinetics(BaseModel):
@@ -24,7 +25,9 @@ class BaseFirstOrderKinetics(BaseModel):
 
     def get_coupled_variables(self, variables):
         # Unpack
-        c_e_0 = variables["Leading-order average electrolyte concentration"]
+        c_e_0 = variables[
+            "Leading-order " + self.domain.lower() + " electrolyte concentration"
+        ]
         c_e = variables[self.domain + " electrolyte concentration"]
         c_e_1 = (c_e - c_e_0) / self.param.C_e
 
@@ -35,15 +38,25 @@ class BaseFirstOrderKinetics(BaseModel):
         variables = self._get_delta_phi(variables)
 
         delta_phi_0 = variables[
-            "Leading-order average "
+            "Leading-order "
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         delta_phi_1 = (delta_phi - delta_phi_0) / self.param.C_e
 
-        j_0 = variables[self.domain + " electrode interfacial current density"]
-        j_1 = dj_dc_0 * c_e_1 + dj_ddeltaphi_0 * delta_phi_1
+        j_0 = variables[
+            "Leading-order "
+            + self.domain.lower()
+            + " electrode"
+            + self.reaction_name
+            + " interfacial current density"
+        ]
+        j_1 = (
+            pybamm.PrimaryBroadcast(dj_dc_0, self.domain_for_broadcast) * c_e_1
+            + pybamm.PrimaryBroadcast(dj_ddeltaphi_0, self.domain_for_broadcast)
+            * delta_phi_1
+        )
         j = j_0 + self.param.C_e * j_1
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)

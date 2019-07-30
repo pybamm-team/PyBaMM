@@ -25,10 +25,14 @@ class Concatenation(pybamm.Symbol):
             name = "concatenation"
         if check_domain:
             domain = self.get_children_domains(children)
+            auxiliary_domains = self.get_children_auxiliary_domains(children)
         else:
             domain = []
+            auxiliary_domains = {}
         self.concatenation_function = concat_fun
-        super().__init__(name, children, domain=domain)
+        super().__init__(
+            name, children, domain=domain, auxiliary_domains=auxiliary_domains
+        )
 
     def get_children_domains(self, children):
         # combine domains from children
@@ -40,6 +44,27 @@ class Concatenation(pybamm.Symbol):
             else:
                 raise pybamm.DomainError("""domain of children must be disjoint""")
         return domain
+
+    def get_children_auxiliary_domains(self, children):
+        "Combine auxiliary domains from children, at all levels"
+        aux_domains = {}
+        for child in children:
+            for level in child.auxiliary_domains.keys():
+                if (
+                    not hasattr(aux_domains, level)
+                    or aux_domains[level] == []
+                    or child.auxiliary_domains[level] == aux_domains[level]
+                ):
+                    aux_domains[level] = child.auxiliary_domains[level]
+                else:
+                    raise pybamm.DomainError(
+                        """children must have same or empty auxiliary domains,
+                        not {!s} and {!s}""".format(
+                            aux_domains[level], child.auxiliary_domains[level]
+                        )
+                    )
+
+        return aux_domains
 
     def _concatenation_evaluate(self, children_eval):
         """ See :meth:`Concatenation._concatenation_evaluate()`. """
@@ -130,6 +155,20 @@ class NumpyConcatenation(Concatenation):
             return pybamm.Scalar(0)
         else:
             return SparseStack(*[child.jac(variable) for child in children])
+
+    def _concatenation_simplify(self, children):
+        """ See :meth:`pybamm.Symbol.simplify()`. """
+        # Turn a concatenation of concatenations into a single concatenation
+        new_children = []
+        for child in children:
+            # extract any children from numpy concatenation
+            if isinstance(child, NumpyConcatenation):
+                new_children.extend(child.orphans)
+            else:
+                new_children.append(child)
+        new_symbol = NumpyConcatenation(*new_children)
+        new_symbol.domain = []
+        return new_symbol
 
 
 class DomainConcatenation(Concatenation):

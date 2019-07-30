@@ -35,21 +35,22 @@ class Composite(BaseModel):
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
-        eps = variables["Average " + self.domain.lower() + " electrode porosity"]
+        eps = variables[
+            "Leading-order x-averaged " + self.domain.lower() + " electrode porosity"
+        ]
 
         if self._domain == "Negative":
             sigma_eff = self.param.sigma_n * (1 - eps) ** self.param.b
-            phi_s = (
-                pybamm.outer(i_boundary_cc, x_n * (x_n - 2 * l_n) / (2 * l_n))
-                / sigma_eff
+            phi_s = pybamm.outer(
+                i_boundary_cc / sigma_eff, x_n * (x_n - 2 * l_n) / (2 * l_n)
             )
             i_s = pybamm.outer(i_boundary_cc, 1 - x_n / l_n)
 
         elif self.domain == "Positive":
             delta_phi_p_av = variables[
-                "Average positive electrode surface potential difference"
+                "X-averaged positive electrode surface potential difference"
             ]
-            phi_e_p_av = variables["Average positive electrolyte potential"]
+            phi_e_p_av = variables["X-averaged positive electrolyte potential"]
 
             sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b
 
@@ -59,12 +60,10 @@ class Composite(BaseModel):
                 + (i_boundary_cc / sigma_eff) * (1 - l_p / 3)
             )
 
-            phi_s = (
-                pybamm.Broadcast(
-                    const, ["positive electrode"], broadcast_type="primary"
-                )
-                - pybamm.outer(i_boundary_cc, x_p + (x_p - 1) ** 2 / (2 * l_p))
-                / sigma_eff
+            phi_s = pybamm.PrimaryBroadcast(
+                const, ["positive electrode"]
+            ) - pybamm.outer(
+                i_boundary_cc / sigma_eff, x_p + (x_p - 1) ** 2 / (2 * l_p)
             )
             i_s = pybamm.outer(i_boundary_cc, 1 - (1 - x_p) / l_p)
 
@@ -75,6 +74,26 @@ class Composite(BaseModel):
             variables.update(self._get_standard_whole_cell_current_variables(variables))
 
         return variables
+
+    def set_boundary_conditions(self, variables):
+
+        phi_s = variables[self.domain + " electrode potential"]
+        eps = variables["Leading-order " + self.domain.lower() + " electrode porosity"]
+        i_boundary_cc = variables["Current collector current density"]
+
+        if self.domain == "Negative":
+            lbc = (pybamm.Scalar(0), "Dirichlet")
+            rbc = (pybamm.Scalar(0), "Neumann")
+
+        elif self.domain == "Positive":
+            lbc = (pybamm.Scalar(0), "Neumann")
+            sigma_eff = self.param.sigma_p * (1 - eps) ** self.param.b
+            rbc = (
+                i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
+                "Neumann",
+            )
+
+        self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
     @property
     def default_solver(self):

@@ -62,6 +62,7 @@ class TestFiniteVolume(unittest.TestCase):
         spatial_methods = {
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
+            "current collector": pybamm.ZeroDimensionalMethod,
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
@@ -90,8 +91,8 @@ class TestFiniteVolume(unittest.TestCase):
         self.assertEqual(extrap_right_disc.evaluate(None, linear_y), 3)
 
         # Fluxes
-        extrap_flux_left = pybamm.BoundaryFlux(2 * var, "left")
-        extrap_flux_right = pybamm.BoundaryFlux(1 - var, "right")
+        extrap_flux_left = pybamm.BoundaryGradient(2 * var, "left")
+        extrap_flux_right = pybamm.BoundaryGradient(1 - var, "right")
         extrap_flux_left_disc = disc.process_symbol(extrap_flux_left)
         extrap_flux_right_disc = disc.process_symbol(extrap_flux_right)
 
@@ -171,11 +172,6 @@ class TestFiniteVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
         self.assertEqual(extrap_right_disc.domain, [])
-        # domain for boundary values must now be explicitly set
-        extrap_right.domain = ["current collector"]
-        disc.set_variable_slices([var])
-        extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, ["current collector"])
 
     def test_discretise_diffusivity_times_spatial_operator(self):
         # Set up
@@ -894,6 +890,7 @@ class TestFiniteVolume(unittest.TestCase):
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.ZeroDimensionalMethod,
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         # lengths
@@ -967,6 +964,7 @@ class TestFiniteVolume(unittest.TestCase):
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
+            "current collector": pybamm.ZeroDimensionalMethod,
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 

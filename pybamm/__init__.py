@@ -49,7 +49,12 @@ from .settings import settings
 #
 # Classes for the Expression Tree
 #
-from .expression_tree.symbol import Symbol, evaluate_for_shape_using_domain
+from .expression_tree.symbol import (
+    Symbol,
+    domain_size,
+    create_object_of_size,
+    evaluate_for_shape_using_domain,
+)
 from .expression_tree.binary_operators import (
     is_scalar_zero,
     is_matrix_zero,
@@ -87,19 +92,19 @@ from .expression_tree.unary_operators import (
     Mass,
     BoundaryOperator,
     BoundaryValue,
-    BoundaryFlux,
+    BoundaryGradient,
     Integral,
     IndefiniteIntegral,
     grad,
     div,
     laplacian,
     surf,
-    average,
+    x_average,
     boundary_value,
 )
 from .expression_tree.functions import *
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import Broadcast
+from .expression_tree.broadcasts import Broadcast, PrimaryBroadcast, FullBroadcast
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import Variable
 from .expression_tree.independent_variable import (
@@ -199,13 +204,15 @@ from .geometry import standard_spatial_vars
 #
 from .discretisations.discretisation import Discretisation
 from .meshes.meshes import Mesh
-from .meshes.submeshes import SubMesh1D, Uniform1DSubMesh
+from .meshes.zero_dimensional_submesh import SubMesh0D
+from .meshes.one_dimensional_submeshes import SubMesh1D, Uniform1DSubMesh
 from .meshes.scikit_fem_submeshes import Scikit2DSubMesh, have_scikit_fem
 
 #
 # Spatial Methods
 #
 from .spatial_methods.spatial_method import SpatialMethod
+from .spatial_methods.zero_dimensional_method import ZeroDimensionalMethod
 from .spatial_methods.finite_volume import FiniteVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 

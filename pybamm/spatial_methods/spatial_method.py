@@ -53,7 +53,7 @@ class SpatialMethod:
         else:
             return pybamm.Vector(symbol_mesh[0].nodes, domain=symbol.domain)
 
-    def broadcast(self, symbol, domain, broadcast_type):
+    def broadcast(self, symbol, domain, auxiliary_domains, broadcast_type):
         """
         Broadcast symbol to a specified domain.
 
@@ -84,20 +84,10 @@ class SpatialMethod:
             out = pybamm.Outer(
                 symbol, pybamm.Vector(np.ones(primary_pts_for_broadcast), domain=domain)
             )
-
-        elif broadcast_type == "secondary":
-            raise NotImplementedError
+            out.auxiliary_domains = auxiliary_domains
 
         elif broadcast_type == "full":
             out = symbol * pybamm.Vector(np.ones(full_pts_for_broadcast), domain=domain)
-
-        else:
-            raise KeyError(
-                """Broadcast type must be either: 'primary', 'secondary', or 'full' and
-                not {}""".format(
-                    broadcast_type
-                )
-            )
 
         return out
 
@@ -252,8 +242,8 @@ class SpatialMethod:
         """
         if any(len(self.mesh[dom]) > 1 for dom in discretised_child.domain):
             raise NotImplementedError("Cannot process 2D symbol in base spatial method")
-        if isinstance(symbol, pybamm.BoundaryFlux):
-            raise TypeError("Cannot process BoundaryFlux in base spatial method")
+        if isinstance(symbol, pybamm.BoundaryGradient):
+            raise TypeError("Cannot process BoundaryGradient in base spatial method")
         n = sum(self.mesh[dom][0].npts for dom in discretised_child.domain)
         if symbol.side == "left":
             # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point

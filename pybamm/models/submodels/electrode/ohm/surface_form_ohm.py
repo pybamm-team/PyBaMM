@@ -33,6 +33,9 @@ class SurfaceForm(BaseModel):
         i_e = variables[self.domain + " electrolyte current density"]
         eps = variables[self.domain + " electrode porosity"]
 
+        if isinstance(i_boundary_cc, pybamm.Broadcast):
+            i_boundary_cc = i_boundary_cc.orphans[0]
+
         i_s = i_boundary_cc - i_e
 
         if self.domain == "Negative":
@@ -45,10 +48,12 @@ class SurfaceForm(BaseModel):
             delta_phi_p = variables["Positive electrode surface potential difference"]
 
             conductivity = param.sigma_p * (1 - eps) ** param.b
-            phi_s = (
-                -pybamm.IndefiniteIntegral(i_s / conductivity, x_p)
-                + pybamm.boundary_value(phi_e_s, "right")
-                + pybamm.boundary_value(delta_phi_p, "left")
+            phi_s = -pybamm.IndefiniteIntegral(
+                i_s / conductivity, x_p
+            ) + pybamm.PrimaryBroadcast(
+                pybamm.boundary_value(phi_e_s, "right")
+                + pybamm.boundary_value(delta_phi_p, "left"),
+                "positive electrode",
             )
 
         variables.update(self._get_standard_potential_variables(phi_s))

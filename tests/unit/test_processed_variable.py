@@ -214,6 +214,59 @@ class TestProcessedVariable(unittest.TestCase):
             processed_var(t_sol, x_sol, r_sol).shape, (35, 10, 50)
         )
 
+    def test_processed_var_3D_r_first_dimension(self):
+        var = pybamm.Variable("var", domain=["negative particle"])
+        broad_var = pybamm.PrimaryBroadcast(var, "negative electrode")
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+        r = pybamm.SpatialVariable("r", domain=["negative particle"])
+
+        disc = tests.get_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        r_sol = disc.process_symbol(r).entries[:, 0]
+        var_sol = disc.process_symbol(broad_var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        # 3 vectors
+        np.testing.assert_array_equal(
+            processed_var(t_sol, x_sol, r_sol).shape, (40, 10, 50)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t_sol, x_sol, r_sol),
+            np.reshape(y_sol, [len(x_sol), len(r_sol), len(t_sol)]),
+        )
+        # 2 vectors, 1 scalar
+        np.testing.assert_array_equal(processed_var(0.5, x_sol, r_sol).shape, (40, 10))
+        np.testing.assert_array_equal(processed_var(t_sol, 0.2, r_sol).shape, (10, 50))
+        np.testing.assert_array_equal(processed_var(t_sol, x_sol, 0.5).shape, (40, 50))
+        # 1 vectors, 2 scalar
+        np.testing.assert_array_equal(processed_var(0.5, 0.2, r_sol).shape, (10,))
+        np.testing.assert_array_equal(processed_var(0.5, x_sol, 0.5).shape, (40,))
+        np.testing.assert_array_equal(processed_var(t_sol, 0.2, 0.5).shape, (50,))
+        # 3 scalars
+        np.testing.assert_array_equal(processed_var(0.2, 0.2, 0.2).shape, ())
+
+        # positive particle
+        var = pybamm.Variable("var", domain=["positive particle"])
+        broad_var = pybamm.PrimaryBroadcast(var, "positive electrode")
+        x = pybamm.SpatialVariable("x", domain=["positive electrode"])
+        r = pybamm.SpatialVariable("r", domain=["positive particle"])
+
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        r_sol = disc.process_symbol(r).entries[:, 0]
+        var_sol = disc.process_symbol(broad_var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, y_sol, mesh=disc.mesh)
+        # 3 vectors
+        np.testing.assert_array_equal(
+            processed_var(t_sol, x_sol, r_sol).shape, (35, 10, 50)
+        )
+
     @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
     def test_processed_var_3D_scikit_interpolation(self):
         var = pybamm.Variable("var", domain=["current collector"])
@@ -231,22 +284,28 @@ class TestProcessedVariable(unittest.TestCase):
         processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
         # 3 vectors
         np.testing.assert_array_equal(
-            processed_var(t_sol, y_sol, z_sol).shape, (15, 15, 50)
+            processed_var(t_sol, y=y_sol, z=z_sol).shape, (15, 15, 50)
         )
         np.testing.assert_array_equal(
-            processed_var(t_sol, y_sol, z_sol),
+            processed_var(t_sol, y=y_sol, z=z_sol),
             np.reshape(u_sol, [len(y_sol), len(z_sol), len(t_sol)]),
         )
         # 2 vectors, 1 scalar
-        np.testing.assert_array_equal(processed_var(0.5, y_sol, z_sol).shape, (15, 15))
-        np.testing.assert_array_equal(processed_var(t_sol, 0.2, z_sol).shape, (15, 50))
-        np.testing.assert_array_equal(processed_var(t_sol, y_sol, 0.5).shape, (15, 50))
+        np.testing.assert_array_equal(
+            processed_var(0.5, y=y_sol, z=z_sol).shape, (15, 15)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t_sol, y=0.2, z=z_sol).shape, (15, 50)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t_sol, y=y_sol, z=0.5).shape, (15, 50)
+        )
         # 1 vectors, 2 scalar
-        np.testing.assert_array_equal(processed_var(0.5, 0.2, z_sol).shape, (15,))
-        np.testing.assert_array_equal(processed_var(0.5, y_sol, 0.5).shape, (15,))
-        np.testing.assert_array_equal(processed_var(t_sol, 0.2, 0.5).shape, (50,))
+        np.testing.assert_array_equal(processed_var(0.5, y=0.2, z=z_sol).shape, (15,))
+        np.testing.assert_array_equal(processed_var(0.5, y=y_sol, z=0.5).shape, (15,))
+        np.testing.assert_array_equal(processed_var(t_sol, y=0.2, z=0.5).shape, (50,))
         # 3 scalars
-        np.testing.assert_array_equal(processed_var(0.2, 0.2, 0.2).shape, ())
+        np.testing.assert_array_equal(processed_var(0.2, y=0.2, z=0.2).shape, ())
 
     def test_processed_variable_ode_pde_solution(self):
         # without space

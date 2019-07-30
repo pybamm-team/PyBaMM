@@ -1,6 +1,7 @@
 #
 # Full diffusion limited kinetics
 #
+import pybamm
 from .base_diffusion_limited import BaseModel
 
 
@@ -25,8 +26,14 @@ class FullDiffusionLimited(BaseModel):
     def _get_diffusion_limited_current_density(self, variables):
         param = self.param
         if self.domain == "Negative":
-            N_ox_s_p = variables["Oxygen flux"].orphans[1]
-            N_ox_neg_sep_interface = N_ox_s_p[0]
+            eps_s = variables["Separator porosity"]
+            c_ox_s = variables["Separator oxygen concentration"]
+            N_ox_neg_sep_interface = (
+                -pybamm.boundary_value(eps_s ** param.b, "left")
+                * param.curlyD_ox
+                * pybamm.BoundaryGradient(c_ox_s, "left")
+            )
+            N_ox_neg_sep_interface.domain = ["current collector"]
 
             j = -N_ox_neg_sep_interface / param.C_e / param.s_ox_Ox / param.l_n
 

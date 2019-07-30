@@ -67,7 +67,7 @@ def get_mesh_for_testing(
         "positive electrode": pybamm.Uniform1DSubMesh,
         "negative particle": pybamm.Uniform1DSubMesh,
         "positive particle": pybamm.Uniform1DSubMesh,
-        "current collector": pybamm.Uniform1DSubMesh,
+        "current collector": pybamm.SubMesh0D,
     }
     if cc_submesh:
         submesh_types["current collector"] = cc_submesh

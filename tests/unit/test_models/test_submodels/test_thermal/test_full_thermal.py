@@ -10,9 +10,13 @@ import unittest
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
-        a_n = pybamm.Broadcast(pybamm.Scalar(0), ["negative electrode"])
-        a_s = pybamm.Broadcast(pybamm.Scalar(0), ["separator"])
-        a_p = pybamm.Broadcast(pybamm.Scalar(0), ["positive electrode"])
+        a_n = pybamm.FullBroadcast(
+            pybamm.Scalar(0), ["negative electrode"], "current collector"
+        )
+        a_s = pybamm.FullBroadcast(pybamm.Scalar(0), ["separator"], "current collector")
+        a_p = pybamm.FullBroadcast(
+            pybamm.Scalar(0), ["positive electrode"], "current collector"
+        )
         variables = {
             "Negative electrode interfacial current density": a_n,
             "Positive electrode interfacial current density": a_p,

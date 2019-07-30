@@ -13,6 +13,8 @@ class FirstOrder(BaseHigherOrder):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    domain : str, optional
+        The domain in which the model holds
 
     **Extends:** :class:`pybamm.electrolyte.stefan_maxwell.conductivity.BaseHigerOrder`
     """
@@ -25,6 +27,6 @@ class FirstOrder(BaseHigherOrder):
         return x
 
     def unpack(self, variables):
-        "Unpack variables and return leading-order average values"
-        c_e_av = variables["Leading-order average electrolyte concentration"]
+        "Unpack variables and return leading-order x-averaged values"
+        c_e_av = variables["Leading-order x-averaged electrolyte concentration"]
         return c_e_av

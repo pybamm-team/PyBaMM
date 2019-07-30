@@ -114,12 +114,12 @@ class FirstOrderButlerVolmer(BaseInterfaceLeadAcid, kinetics.FirstOrderButlerVol
         super().__init__(param, domain)
 
 
-class InverseFirstOrderButlerVolmer(
-    BaseInterfaceLeadAcid, inverse_kinetics.InverseFirstOrderButlerVolmer
+class InverseFirstOrderKinetics(
+    BaseInterfaceLeadAcid, inverse_kinetics.BaseInverseFirstOrderKinetics
 ):
     """
     Extends :class:`BaseInterfaceLeadAcid` (for exchange-current density, etc) and
-    :class:`kinetics.InverseFirstOrderButlerVolmer` (for kinetics)
+    :class:`kinetics.BaseInverseFirstOrderKinetics` (for kinetics)
     """
 
     def __init__(self, param, domain):

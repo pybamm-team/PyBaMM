@@ -76,9 +76,9 @@ sigma_cp_dimensional = pybamm.Parameter(
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
 a_k_dim = pybamm.Concatenation(
-    pybamm.Broadcast(a_n_dim, ["negative electrode"]),
-    pybamm.Broadcast(0, ["separator"]),
-    pybamm.Broadcast(a_p_dim, ["positive electrode"]),
+    pybamm.FullBroadcast(a_n_dim, ["negative electrode"], "current collector"),
+    pybamm.FullBroadcast(0, ["separator"], "current collector"),
+    pybamm.FullBroadcast(a_p_dim, ["positive electrode"], "current collector"),
 )
 R_n = pybamm.geometric_parameters.R_n
 R_p = pybamm.geometric_parameters.R_p
@@ -241,10 +241,9 @@ l_cn = pybamm.geometric_parameters.l_cn
 l_n = pybamm.geometric_parameters.l_n
 l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
+l_cp = pybamm.geometric_parameters.l_cp
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
-
-l_cp = pybamm.geometric_parameters.l_cp
 delta = pybamm.geometric_parameters.delta
 
 # Tab geometry
@@ -260,9 +259,9 @@ epsilon_n = pybamm.Parameter("Negative electrode porosity")
 epsilon_s = pybamm.Parameter("Separator porosity")
 epsilon_p = pybamm.Parameter("Positive electrode porosity")
 epsilon = pybamm.Concatenation(
-    pybamm.Broadcast(epsilon_n, ["negative electrode"]),
-    pybamm.Broadcast(epsilon_s, ["separator"]),
-    pybamm.Broadcast(epsilon_p, ["positive electrode"]),
+    pybamm.FullBroadcast(epsilon_n, ["negative electrode"], "current collector"),
+    pybamm.FullBroadcast(epsilon_s, ["separator"], "current collector"),
+    pybamm.FullBroadcast(epsilon_p, ["positive electrode"], "current collector"),
 )
 a_n = a_n_dim * R_n
 a_p = a_p_dim * R_p
