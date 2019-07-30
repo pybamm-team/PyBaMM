@@ -230,8 +230,8 @@ class DomainConcatenation(Concatenation):
         # loop through domains of children writing subvectors to final vector
         for child_vector, slices in zip(children_eval, self._children_slices):
             for child_dom, child_slice in slices.items():
-                for i in range(len(child_slice)):
-                    vector[self._slices[child_dom][i]] = child_vector[child_slice[i]]
+                for i, _slice in enumerate(child_slice):
+                    vector[self._slices[child_dom][i]] = child_vector[_slice]
 
         return vector
 
@@ -242,15 +242,13 @@ class DomainConcatenation(Concatenation):
         jacs = []
         child_jacs = [child.jac(variable) for child in self.cached_children]
         for i in range(self.secondary_dimensions_npts):
-            for child, child_jac, slices in zip(
-                self.cached_children, child_jacs, self._children_slices
-            ):
+            for child_jac, slices in zip(child_jacs, self._children_slices):
                 if len(slices) > 1:
                     raise NotImplementedError(
                         """jacobian only implemented for when each child has
                         a single domain"""
                     )
-                child_dom, child_slice = next(iter(slices.items()))
+                child_slice = next(iter(slices.values()))
                 jacs.append(child_jac[child_slice[i]])
         return SparseStack(*jacs)
 

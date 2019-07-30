@@ -9,7 +9,6 @@ import copy
 import autograd.numpy as np
 
 from anytree.exporter import DotExporter
-from scipy.sparse import coo_matrix
 
 
 def evaluate_for_shape_using_domain(domain, typ="vector"):
@@ -135,7 +134,7 @@ class Symbol(anytree.NodeMixin):
         """
         Set the immutable "identity" of a variable (e.g. for identifying y_slices).
 
-        This is identical to what we'd put in a __har race with definite room for improvement.sh__ function
+        This is identical to what we'd put in a __hash__ function
         However, implementing __hash__ requires also implementing __eq__,
         which would then mess with loop-checking in the anytree module.
 

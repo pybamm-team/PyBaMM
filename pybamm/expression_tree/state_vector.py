@@ -119,9 +119,9 @@ class StateVector(pybamm.Symbol):
         variable_y_indices = np.arange(variable.first_point, variable.last_point)
 
         jac = csr_matrix((0, np.size(variable_y_indices)))
-        for slice in self.y_slices:
+        for y_slice in self.y_slices:
             # Get indices of state vectors
-            slice_indices = np.arange(slice.start, slice.stop)
+            slice_indices = np.arange(y_slice.start, y_slice.stop)
 
             # Return zeros of correct size if no entries match
             if np.size(np.intersect1d(slice_indices, variable_y_indices)) == 0:
@@ -129,7 +129,7 @@ class StateVector(pybamm.Symbol):
             else:
                 # Populate entries corresponding to matching y slices, and shift so
                 # that the matrix is the correct size
-                row = np.intersect1d(slice_indices, variable_y_indices) - slice.start
+                row = np.intersect1d(slice_indices, variable_y_indices) - y_slice.start
                 col = (
                     np.intersect1d(slice_indices, variable_y_indices)
                     - variable.first_point
