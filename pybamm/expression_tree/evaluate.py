@@ -135,8 +135,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         elif isinstance(symbol, pybamm.DomainConcatenation):
             slice_starts = []
             all_child_vectors = []
-            second_pts = len(list(symbol.mesh.values())[0])
-            for i in range(second_pts):
+            for i in range(symbol.secondary_dimensions_npts):
                 child_vectors = []
                 for child_var, slices in zip(children_vars, symbol._children_slices):
                     for child_dom, child_slice in slices.items():

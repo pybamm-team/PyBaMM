@@ -184,6 +184,7 @@ class DomainConcatenation(Concatenation):
                 )
 
             # create dict of domain => slice of final vector
+            self.secondary_dimensions_npts = len(self.mesh[self.domain[0]])
             self._slices = self.create_slices(self)
 
             # store size of final vector
@@ -208,6 +209,11 @@ class DomainConcatenation(Concatenation):
         start = 0
         end = 0
         second_pts = len(self.mesh[node.domain[0]])
+        if second_pts != self.secondary_dimensions_npts:
+            raise ValueError(
+                """Concatenation and children must have the same number of
+                points in secondary dimensions"""
+            )
         for i in range(second_pts):
             for dom in node.domain:
                 end += self.mesh[dom][i].npts
@@ -230,16 +236,22 @@ class DomainConcatenation(Concatenation):
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
-        # TODO: fix 2D jacobian
-        if len(list(self.mesh.values())[0]) > 1:
-            raise NotImplementedError(
-                "Jacobian not implemented for a multi-slice (2D) concatenation"
-            )
-        children = self.cached_children
-        if len(children) == 0:
-            return pybamm.Scalar(0)
-        else:
-            return SparseStack(*[child.jac(variable) for child in children])
+        # note that this assumes that the children are in the right order and only have
+        # one domain each
+        jacs = []
+        child_jacs = [child.jac(variable) for child in self.cached_children]
+        for i in range(self.secondary_dimensions_npts):
+            for child, child_jac, slices in zip(
+                self.cached_children, child_jacs, self._children_slices
+            ):
+                if len(slices) > 1:
+                    raise NotImplementedError(
+                        """jacobian only implemented for when each child has 
+                        a single domain"""
+                    )
+                child_dom, child_slice = next(iter(slices.items()))
+                jacs.append(child_jac[child_slice[i]])
+        return SparseStack(*jacs)
 
     def _concatenation_new_copy(self, children):
         """ See :meth:`pybamm.Symbol.new_copy()`. """

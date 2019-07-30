@@ -7,6 +7,7 @@ import numpy as np
 import autograd.numpy as auto_np
 import unittest
 from scipy.sparse import eye
+from tests import get_1p1d_discretisation_for_testing
 
 
 def test_multi_var_function(arg1, arg2):
@@ -240,6 +241,45 @@ class TestJacobian(unittest.TestCase):
         jacobian = np.diag(5 * np.ones(8))
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+    def test_jac_of_domain_concatenation(self):
+        # create mesh
+        disc = get_1p1d_discretisation_for_testing()
+        mesh = disc.mesh
+        y = pybamm.StateVector(slice(0, 1500))
+
+        # Jacobian of a DomainConcatenation of constants is a zero matrix of the
+        # appropriate size
+        a_dom = ["negative electrode"]
+        b_dom = ["separator"]
+        c_dom = ["positive electrode"]
+        a_npts = mesh[a_dom[0]][0].npts
+        b_npts = mesh[b_dom[0]][0].npts
+        c_npts = mesh[c_dom[0]][0].npts
+        cc_npts = mesh["current collector"][0].npts
+        curr_coll_vector = pybamm.Vector(np.ones(cc_npts), domain="current collector")
+        a = 2 * pybamm.Outer(
+            curr_coll_vector, pybamm.Vector(np.ones(a_npts), domain=a_dom)
+        )
+        b = pybamm.Outer(curr_coll_vector, pybamm.Vector(np.ones(b_npts), domain=b_dom))
+        c = 3 * pybamm.Outer(
+            curr_coll_vector, pybamm.Vector(np.ones(c_npts), domain=c_dom)
+        )
+
+        conc = pybamm.DomainConcatenation([a, b, c], mesh)
+        jac = conc.jac(y).evaluate().toarray()
+        np.testing.assert_array_equal(jac, np.zeros((1500, 1500)))
+
+        # Jacobian of a DomainConcatenation of StateVectors
+        a = pybamm.Variable("a", domain=a_dom)
+        b = pybamm.Variable("b", domain=b_dom)
+        c = pybamm.Variable("c", domain=c_dom)
+        conc = pybamm.Concatenation(a, b, c)
+        disc.set_variable_slices([conc])
+        conc_disc = disc.process_symbol(conc)
+        y0 = np.ones(1500)
+        jac = conc_disc.jac(y).evaluate(y=y0).toarray()
+        np.testing.assert_array_equal(jac, np.eye(1500))
 
 
 if __name__ == "__main__":
