@@ -119,7 +119,7 @@ class FirstOrder(BaseModel):
             pybamm.PrimaryBroadcast(c_e_0, "positive electrode") + param.C_e * c_e_p_1,
         )
         variables.update(self._get_standard_concentration_variables(c_e))
-        # Update with analytical expressions for first-order x-averageds
+        # Update with analytical expressions for first-order x-averages
         variables.update(
             {
                 "X-averaged first-order negative electrolyte concentration": c_e_n_1_av,

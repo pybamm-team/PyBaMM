@@ -7,7 +7,8 @@ from .base_surface_form_current_collector import BaseSurfaceForm
 
 class LeadingOrder(BaseSurfaceForm):
     """A submodel for Ohm's law plus conservation of current in the current collectors,
-    which uses the voltage-current relationship from the SPM(e).
+    which uses the voltage-current relationship from the surface form of the
+    leading-order model.
 
     Parameters
     ----------
