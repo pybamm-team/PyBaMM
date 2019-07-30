@@ -74,7 +74,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             return A
 
         y0 = np.zeros(2)
-        sol = np.array([3, -4])
+        sol = np.array([3, -4])[:, np.newaxis]
 
         solver = pybamm.AlgebraicSolver()
 

@@ -284,6 +284,8 @@ class ParameterValues(dict):
                 )
             elif isinstance(symbol, pybamm.Integral):
                 new_symbol = symbol.__class__(new_child, symbol.integration_variable)
+            elif isinstance(symbol, pybamm.DefiniteIntegralVector):
+                new_symbol = symbol.__class__(new_child, vector_type=symbol.vector_type)
             elif isinstance(symbol, pybamm.BoundaryOperator):
                 # BoundaryValue or BoundaryFlux
                 new_symbol = symbol.__class__(new_child, symbol.side)

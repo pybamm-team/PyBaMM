@@ -471,12 +471,12 @@ class DefiniteIntegralVector(SpatialOperator):
     def _unary_simplify(self, simplified_child):
         """ See :meth:`UnaryOperator._unary_simplify()`. """
 
-        return self.__class__(simplified_child, self.integration_variable)
+        return self.__class__(simplified_child, vector_type=self.vector_type)
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
-        return self.__class__(child, self.integration_variable)
+        return self.__class__(child, vector_type=self.vector_type)
 
     def evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """

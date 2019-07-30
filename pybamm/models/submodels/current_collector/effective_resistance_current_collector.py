@@ -5,22 +5,29 @@ import pybamm
 import os
 
 
-class EfectiveResistance2D(pybamm.BaseModel):
+class EffectiveResistance2D(pybamm.BaseModel):
     """A model which calculates the effective Ohmic resistance of the current
     collectors in the limit of large electrical conductivity.
     Note:  This submodel should be solved before a one-dimensional model to calculate
-    and return the parameter "Effective current collector Ohmic resistance"
+    and return the effective current collector resistance.
 
-    Parameters
-    ----------
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self):
+        super().__init__()
         self.name = "Effective resistance in current collector model"
-        self.param = param
+        self.param = pybamm.standard_parameters_lithium_ion
 
-        # Set variables
+        # Get useful parameters
+        param = self.param
+        l_cn = param.l_cn
+        l_cp = param.l_cp
+        l_y = param.l_y
+        sigma_cn_dbl_prime = param.sigma_cn_dbl_prime
+        sigma_cp_dbl_prime = param.sigma_cp_dbl_prime
+        alpha_prime = param.alpha_prime
+
+        # Set model variables
         var = pybamm.standard_spatial_vars
 
         psi = pybamm.Variable(
@@ -33,19 +40,44 @@ class EfectiveResistance2D(pybamm.BaseModel):
         c_psi = pybamm.Variable("Lagrange multiplier for variable `psi`")
         c_W = pybamm.Variable("Lagrange multiplier for variable `W`")
 
-        # TODO: get potentials
+        self.variables = {
+            "Current collector potential weighted sum": psi,
+            "Perturbation to current collector potential difference": W,
+            "Lagrange multiplier for variable `psi`": c_psi,
+            "Lagrange multiplier for variable `W`": c_W,
+        }
+
+        # Algebraic equations (enforce zero mean constraint through Lagrange multiplier)
+        # 0*LagrangeMultiplier hack otherwise gives KeyError
+        self.algebraic = {
+            psi: pybamm.laplacian(psi)
+            + c_psi * pybamm.DefiniteIntegralVector(psi, vector_type="column"),
+            W: pybamm.laplacian(W)
+            - pybamm.source(1, W)
+            + c_W * pybamm.DefiniteIntegralVector(W, vector_type="column"),
+            c_psi: pybamm.Integral(psi, [var.y, var.z]) + 0 * c_psi,
+            c_W: pybamm.Integral(W, [var.y, var.z]) + 0 * c_W,
+        }
+
+        # Boundary conditons
+        W_neg_tab_bc = l_y / (alpha_prime * sigma_cn_dbl_prime)
+        W_pos_tab_bc = l_y / (alpha_prime * sigma_cp_dbl_prime)
+
+        self.boundary_conditions = {
+            psi: {"left": (l_cn, "Neumann"), "right": (-l_cp, "Neumann")},
+            W: {"left": (W_neg_tab_bc, "Neumann"), "right": (W_pos_tab_bc, "Neumann")},
+        }
+
+        # "Initial conditions" provides initial guess for solver
+        # TODO: better guess than zero
+        self.initial_conditions = {
+            psi: pybamm.Scalar(0),
+            W: pybamm.Scalar(0),
+            c_psi: pybamm.Scalar(0),
+            c_W: pybamm.Scalar(0),
+        }
 
         # Define effective current collector resistance
-        l_cn = param.l_cn
-        l_cp = param.l_cp
-        l_y = param.l_y
-        delta = param.delta
-        sigma_cn_dbl_prime = param.sigma_cn * delta ** 2
-        sigma_cp_dbl_prime = param.sigma_cp * delta ** 2
-        alpha_prime = 1 / (sigma_cn_dbl_prime * delta * l_cn) + 1 / (
-            sigma_cp_dbl_prime * delta * l_cp
-        )
-
         R_cc = (
             (alpha_prime / l_y)
             * (
@@ -55,36 +87,48 @@ class EfectiveResistance2D(pybamm.BaseModel):
             - (pybamm.BoundaryValue(psi, "right") - pybamm.BoundaryValue(psi, "left"))
         ) / (sigma_cn_dbl_prime * l_cn + sigma_cp_dbl_prime * l_cp)
 
-        self.variables = {
-            "Current collector potential weighted sum": psi,
-            "Perturbation to current collector potential difference": W,
-            "Lagrange multiplier for variable `psi`": c_psi,
-            "Lagrange multiplier for variable `W`": c_W,
-            "Effective current collector resistance": R_cc,
-        }
+        R_cc_dim = R_cc * param.potential_scale / param.I_typ
 
-        # Algebraic equations (enforce zero mean constraint through Lagrange multiplier)
-        self.algebraic = {
-            psi: pybamm.laplacian(psi)
-            + c_psi * pybamm.DefiniteIntegralVector(psi, vector_type="column"),
-            W: pybamm.laplacian(W)
-            - pybamm.source(1, W)
-            + c_W * pybamm.DefiniteIntegralVector(W, vector_type="column"),
-            c_psi: pybamm.Integral(psi, [var.y, var.z]),
-            c_W: pybamm.Integral(W, [var.y, var.z]),
-        }
+        self.variables.update(
+            {
+                "Effective current collector resistance": R_cc,
+                "Effective current collector resistance [Ohm]": R_cc_dim,
+            }
+        )
 
-        # Boundary conditons
-        W_neg_tab_bc = pybamm.Scalar(l_y / (alpha_prime * sigma_cn_dbl_prime))
-        W_pos_tab_bc = pybamm.Scalar(l_y / (alpha_prime * sigma_cp_dbl_prime))
+    def get_potentials(self, V_av, I_av):
+        """Calculates the potentials in the current collector given the average
+        voltage and current"""
+        param = self.param
+        I_app = param.current_with_time
+        l_cn = param.l_cn
+        l_cp = param.l_cp
+        sigma_cn_prime = param.sigma_cn_prime
+        sigma_cp_prime = param.sigma_cp_prime
+        alpha = param.alpha
+        pot_scale = param.potential_scale
+        psi = self.variables["Current collector potential weighted sum"]
+        W = self.variables["Perturbation to current collector potential difference"]
 
-        self.boundary_conditions = {
-            psi: {
-                "left": (pybamm.Scalar(l_cn), "Neumann"),
-                "right": (pybamm.Scalar(-l_cp), "Neumann"),
-            },
-            W: {"left": (W_neg_tab_bc, "Neumann"), "right": (W_pos_tab_bc, "Neumann")},
-        }
+        V_cc = V_av - alpha * I_av * W
+        denominator = sigma_cn_prime * l_cn + sigma_cn_prime * l_cp
+        phi_s_cn = (I_app * psi - sigma_cp_prime * l_cp * V_cc) / denominator
+        phi_s_cp = (I_app * psi + sigma_cn_prime * l_cn * V_cc) / denominator
+
+        self.variables.update(
+            {
+                "Negative current collector potential": phi_s_cn,
+                "Negative current collector potential [V]": phi_s_cn * pot_scale,
+                "Positive current collector potential": phi_s_cp,
+                "Positive current collector potential [V]": param.U_p_ref
+                - param.U_n_ref
+                + phi_s_cp * pot_scale,
+                "Local current collector potential difference": V_cc,
+                "Local current collector potential difference [V]": param.U_p_ref
+                - param.U_n_ref
+                + V_cc * pot_scale,
+            }
+        )
 
     @property
     def default_parameter_values(self):

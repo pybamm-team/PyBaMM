@@ -267,7 +267,6 @@ class TestScikitFiniteElement(unittest.TestCase):
             u: {"left": (0, "Neumann"), "right": (1, "Neumann")}
         }
         model.variables = {"c": c, "u": u}
-
         # create discretisation
         mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
         spatial_methods = {
@@ -281,7 +280,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         solver = pybamm.AlgebraicSolver()
         solution = solver.solve(model)
 
-        z = mesh["current collector"][0].coordinates[1, :]
+        z = mesh["current collector"][0].coordinates[1, :][:, np.newaxis]
         u_exact = z ** 2 / 2 - 1 / 6
         np.testing.assert_array_almost_equal(solution.y[:-1], u_exact, decimal=1)
 
