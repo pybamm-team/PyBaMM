@@ -266,6 +266,7 @@ class TestJacobian(unittest.TestCase):
         )
 
         conc = pybamm.DomainConcatenation([a, b, c], mesh)
+        conc.shape
         jac = conc.jac(y).evaluate().toarray()
         np.testing.assert_array_equal(jac, np.zeros((1500, 1500)))
 

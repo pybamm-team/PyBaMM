@@ -615,9 +615,14 @@ class Symbol(anytree.NodeMixin):
             state_vectors_in_node = [
                 x for x in self.pre_order() if isinstance(x, pybamm.StateVector)
             ]
-            min_y_size = max(len(x._evaluation_array) for x in state_vectors_in_node)
-            # Pick a y that won't cause RuntimeWarnings
-            y = np.linspace(0.1, 0.9, min_y_size)
+            if state_vectors_in_node == []:
+                y = None
+            else:
+                min_y_size = max(
+                    len(x._evaluation_array) for x in state_vectors_in_node
+                )
+                # Pick a y that won't cause RuntimeWarnings
+                y = np.linspace(0.1, 0.9, min_y_size)
             evaluated_self = self.evaluate(0, y)
 
         # Return shape of evaluated object
