@@ -4,7 +4,7 @@
 import pybamm
 
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, vstack
 
 
 class StateVector(pybamm.Symbol):
@@ -112,30 +112,38 @@ class StateVector(pybamm.Symbol):
             The variable with respect to which to differentiate
 
         """
-        if len(self.y_slices) > 1:
+        if len(variable.y_slices) > 1:
             raise NotImplementedError(
-                "Jacobian not implemented for a multi-slice (2D) StateVector"
+                "Jacobian only implemented for a single-slice StateVector"
             )
-        # Get indices of state vectors
-        self_y_indices = np.arange(self.first_point, self.last_point)
         variable_y_indices = np.arange(variable.first_point, variable.last_point)
 
-        # Return zeros of correct size if no entries match
-        if np.size(np.intersect1d(self_y_indices, variable_y_indices)) == 0:
-            jac = csr_matrix((np.size(self_y_indices), np.size(variable_y_indices)))
-        else:
-            # Populate entries corresponding to matching y slices, and shift so
-            # that the matrix is the correct size
-            row = np.intersect1d(self_y_indices, variable_y_indices) - self.first_point
-            col = (
-                np.intersect1d(self_y_indices, variable_y_indices)
-                - variable.first_point
-            )
-            data = np.ones_like(row)
-            jac = csr_matrix(
-                (data, (row, col)),
-                shape=(np.size(self_y_indices), np.size(variable_y_indices)),
-            )
+        jac = csr_matrix((0, np.size(variable_y_indices)))
+        for slice in self.y_slices:
+            # Get indices of state vectors
+            slice_indices = np.arange(slice.start, slice.stop)
+
+            # Return zeros of correct size if no entries match
+            if np.size(np.intersect1d(slice_indices, variable_y_indices)) == 0:
+                jac = csr_matrix((np.size(slice_indices), np.size(variable_y_indices)))
+            else:
+                # Populate entries corresponding to matching y slices, and shift so
+                # that the matrix is the correct size
+                row = np.intersect1d(slice_indices, variable_y_indices) - slice.start
+                col = (
+                    np.intersect1d(slice_indices, variable_y_indices)
+                    - variable.first_point
+                )
+                data = np.ones_like(row)
+                jac = vstack(
+                    [
+                        jac,
+                        csr_matrix(
+                            (data, (row, col)),
+                            shape=(np.size(slice_indices), np.size(variable_y_indices)),
+                        ),
+                    ]
+                )
         return pybamm.Matrix(jac)
 
     def new_copy(self):
