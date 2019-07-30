@@ -72,13 +72,16 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         # the right line, avoiding these checks
         if isinstance(symbol, pybamm.Multiplication):
             symbol_str = (
-                "{0}.multiply({1}) if scipy.sparse.issparse({0}) else "
-                "{1}.multiply({0}) if scipy.sparse.issparse({1}) else "
+                "scipy.sparse.csr_matrix({0}.multiply({1})) "
+                "if scipy.sparse.issparse({0}) else "
+                "scipy.sparse.csr_matrix({1}.multiply({0})) "
+                "if scipy.sparse.issparse({1}) else "
                 "{0} * {1}".format(children_vars[0], children_vars[1])
             )
         elif isinstance(symbol, pybamm.Division):
             symbol_str = (
-                "{0}.multiply(1/{1}) if scipy.sparse.issparse({0}) else "
+                "scipy.sparse.csr_matrix({0}.multiply(1/{1})) "
+                "if scipy.sparse.issparse({0}) else "
                 "{0} / {1}".format(children_vars[0], children_vars[1])
             )
         elif isinstance(symbol, pybamm.Outer):
