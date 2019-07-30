@@ -148,7 +148,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                 all_child_vectors.extend(
                     [v for _, v in sorted(zip(slice_starts, child_vectors))]
                 )
-            if len(children_vars) > 1 or second_pts > 1:
+            if len(children_vars) > 1 or symbol.secondary_dimensions_npts > 1:
                 symbol_str = "np.concatenate(({}))".format(",".join(all_child_vectors))
             else:
                 symbol_str = "{}".format(",".join(children_vars))

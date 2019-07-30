@@ -4,7 +4,6 @@
 import pybamm
 
 import numpy as np
-import autograd.numpy as auto_np
 import unittest
 from scipy.sparse import eye
 from tests import get_1p1d_discretisation_for_testing

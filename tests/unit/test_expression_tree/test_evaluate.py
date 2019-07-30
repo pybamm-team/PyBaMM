@@ -242,7 +242,6 @@ class TestEvaluate(unittest.TestCase):
 
     def test_domain_concatenation_2D(self):
         disc = get_1p1d_discretisation_for_testing()
-        mesh = disc.mesh
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
@@ -267,8 +266,6 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(list(variable_symbols.keys())[1], b_disc.id)
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
-        var_a = pybamm.id_to_python_variable(a_disc.id)
-        var_b = pybamm.id_to_python_variable(b_disc.id)
         self.assertEqual(len(constant_symbols), 0)
 
         evaluator = pybamm.EvaluatorPython(expr)

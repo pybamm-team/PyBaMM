@@ -199,6 +199,7 @@ class DomainConcatenation(Concatenation):
             self._slices = copy.copy(copy_this._slices)
             self._size = copy.copy(copy_this._size)
             self._children_slices = copy.copy(copy_this._children_slices)
+            self.secondary_dimensions_npts = copy_this.secondary_dimensions_npts
 
     @property
     def mesh(self):
@@ -246,7 +247,7 @@ class DomainConcatenation(Concatenation):
             ):
                 if len(slices) > 1:
                     raise NotImplementedError(
-                        """jacobian only implemented for when each child has 
+                        """jacobian only implemented for when each child has
                         a single domain"""
                     )
                 child_dom, child_slice = next(iter(slices.items()))
