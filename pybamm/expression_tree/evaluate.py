@@ -89,7 +89,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                 children_vars[0], children_vars[1]
             )
         elif isinstance(symbol, pybamm.Kron):
-            symbol_str = "scipy.sparse.kron({}, {})".format(
+            symbol_str = "scipy.sparse.csr_matrix(scipy.sparse.kron({}, {}))".format(
                 children_vars[0], children_vars[1]
             )
         else:
