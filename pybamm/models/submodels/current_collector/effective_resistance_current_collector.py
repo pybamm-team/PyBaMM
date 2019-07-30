@@ -149,7 +149,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
     @property
     def default_var_pts(self):
         var = pybamm.standard_spatial_vars
-        return {var.y: 10, var.z: 10}
+        return {var.y: 32, var.z: 32}
 
     @property
     def default_submesh_types(self):

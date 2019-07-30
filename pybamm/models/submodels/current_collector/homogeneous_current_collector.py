@@ -25,7 +25,7 @@ class Uniform(BaseModel):
 
         i_cc = pybamm.Scalar(0)
 
-        i_boundary_cc = self.param.current_with_time
+        i_boundary_cc = self.param.current_density_with_time
 
         variables = self._get_standard_current_variables(i_cc, i_boundary_cc)
 

@@ -46,13 +46,13 @@ solution = model.default_solver.solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
 phi_s_cn = pybamm.ProcessedVariable(
-    model.variables["Negative current collector potential"],
+    model.variables["Negative current collector potential [V]"],
     solution.t,
     solution.y,
     mesh=mesh,
 )
 phi_s_cp = pybamm.ProcessedVariable(
-    model.variables["Positive current collector potential"],
+    model.variables["Positive current collector potential [V]"],
     solution.t,
     solution.y,
     mesh=mesh,

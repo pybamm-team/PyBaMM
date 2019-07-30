@@ -65,12 +65,10 @@ class SingleParticlePotentialPair(BaseModel):
         )
 
         self.algebraic = {
-            phi_s_cn: pybamm.laplacian(phi_s_cn)
-            - (param.sigma_cn * param.delta ** 2 / param.l_cn)
-            * pybamm.source(i_boundary_cc, phi_s_cn),
-            phi_s_cp: pybamm.laplacian(phi_s_cp)
-            + (param.sigma_cp * param.delta ** 2 / param.l_cp)
-            * pybamm.source(i_boundary_cc, phi_s_cp),
+            phi_s_cn: param.l_cn * param.sigma_cn_prime * pybamm.laplacian(phi_s_cn)
+            - pybamm.source(i_boundary_cc, phi_s_cn),
+            phi_s_cp: param.l_cp * param.sigma_cp_prime * pybamm.laplacian(phi_s_cp)
+            + pybamm.source(i_boundary_cc, phi_s_cp),
             i_boundary_cc: v_boundary_cc - local_voltage_expression,
         }
 
@@ -83,7 +81,7 @@ class SingleParticlePotentialPair(BaseModel):
         applied_current = param.current_with_time
 
         pos_tab_bc = -applied_current / (
-            param.sigma_cp * param.delta ** 2 * param.l_tab_p * param.l_cp
+            param.sigma_cp_prime * param.l_tab_p * param.l_cp
         )
 
         self.boundary_conditions = {

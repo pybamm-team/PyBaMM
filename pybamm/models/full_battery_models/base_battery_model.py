@@ -420,17 +420,12 @@ class BaseBatteryModel(pybamm.BaseModel):
             V = pybamm.BoundaryValue(phi_s_p, "right")
             V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
         elif self.options["bc_options"]["dimensionality"] == 2:
-            phi_s_cn = self.variables["Negative current collector potential"]
-            phi_s_cp = self.variables["Positive current collector potential"]
-            phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
-            phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
-            # In 2D left corresponds to the negative tab and right the positive tab
-            V = pybamm.BoundaryValue(phi_s_cp, "right") - pybamm.BoundaryValue(
-                phi_s_cn, "left"
-            )
-            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right") - pybamm.BoundaryValue(
-                phi_s_cn_dim, "left"
-            )
+            phi_neg_tab = self.variables["Negative tab potential"]
+            phi_pos_tab = self.variables["Positive tab potential"]
+            phi_neg_tab_dim = self.variables["Negative tab potential [V]"]
+            phi_pos_tab_dim = self.variables["Positive tab potential [V]"]
+            V = phi_pos_tab - phi_neg_tab
+            V_dim = phi_pos_tab_dim - phi_neg_tab_dim
         else:
             raise pybamm.ModelError(
                 "Dimension of current collectors must be 0, 1, or 2, not {}".format(
