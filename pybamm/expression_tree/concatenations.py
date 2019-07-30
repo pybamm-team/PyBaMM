@@ -231,7 +231,7 @@ class DomainConcatenation(Concatenation):
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
         # TODO: fix 2D jacobian
-        if len(self._slices[self.domain[-1]]) > 1:
+        if len(list(self.mesh.values())[0]) > 1:
             raise NotImplementedError(
                 "Jacobian not implemented for a multi-slice (2D) concatenation"
             )

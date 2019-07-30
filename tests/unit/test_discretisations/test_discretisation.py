@@ -765,7 +765,6 @@ class TestDiscretise(unittest.TestCase):
 
     def test_concatenation_2D(self):
         disc = get_1p1d_discretisation_for_testing(zpts=3)
-        mesh = disc.mesh
 
         a = pybamm.Variable("a", domain=["negative electrode"])
         b = pybamm.Variable("b", domain=["separator"])

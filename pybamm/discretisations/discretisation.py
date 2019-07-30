@@ -393,10 +393,12 @@ class Discretisation(object):
         for v in model_variables:
             if isinstance(v, pybamm.Concatenation):
                 model_slices.append(
-                    slice(
-                        self.y_slices[v.children[0].id][0].start,
-                        self.y_slices[v.children[-1].id][0].stop,
-                    )
+                    [
+                        slice(
+                            self.y_slices[v.children[0].id][0].start,
+                            self.y_slices[v.children[-1].id][0].stop,
+                        )
+                    ]
                 )
             else:
                 model_slices.append(self.y_slices[v.id])
@@ -598,10 +600,12 @@ class Discretisation(object):
             if isinstance(symbol, pybamm.Concatenation):
                 unpacked_variables.extend([var for var in symbol.children])
                 slices.append(
-                    slice(
-                        self.y_slices[symbol.children[0].id][0].start,
-                        self.y_slices[symbol.children[-1].id][0].stop,
-                    )
+                    [
+                        slice(
+                            self.y_slices[symbol.children[0].id][0].start,
+                            self.y_slices[symbol.children[-1].id][0].stop,
+                        )
+                    ]
                 )
             else:
                 unpacked_variables.append(symbol)
