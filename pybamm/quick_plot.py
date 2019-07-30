@@ -249,7 +249,7 @@ class QuickPlot(object):
         self.plots = {}
         self.time_lines = {}
 
-        colors = ["r", "b", "k", "g", "m"]
+        colors = ["r", "b", "k", "g", "m", "c"]
         linestyles = ["-", ":", "--", "-."]
         fontsize = 42 // self.n_cols
 
