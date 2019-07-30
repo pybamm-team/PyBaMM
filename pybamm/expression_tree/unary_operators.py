@@ -220,7 +220,7 @@ class Index(UnaryOperator):
         return self.__class__(child, self.index)
 
     def evaluate_for_shape(self):
-        return self.children[0].evaluate_for_shape()[self.slice]
+        return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
     def evaluates_on_edges(self):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """

@@ -245,11 +245,12 @@ class SpatialMethod:
             # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
             # (row[i], col[i]) for each index of data. Here we just want a single point
             # with value 1 at (0,0).
-            left_vector = coo_matrix(([1], ([0], [0])), shape=(1, n))
+            # Convert to a csr_matrix to allow indexing and other functionality
+            left_vector = csr_matrix(coo_matrix(([1], ([0], [0])), shape=(1, n)))
             bv_vector = pybamm.Matrix(left_vector)
         elif symbol.side == "right":
             # as above, but now we want a single point with value 1 at (0, n-1)
-            right_vector = coo_matrix(([1], ([0], [n - 1])), shape=(1, n))
+            right_vector = csr_matrix(coo_matrix(([1], ([0], [n - 1])), shape=(1, n)))
             bv_vector = pybamm.Matrix(right_vector)
 
         out = bv_vector @ discretised_child

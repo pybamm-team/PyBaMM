@@ -242,7 +242,6 @@ class TestEvaluate(unittest.TestCase):
 
     def test_domain_concatenation_2D(self):
         disc = get_1p1d_discretisation_for_testing()
-        mesh = disc.mesh
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
@@ -252,6 +251,8 @@ class TestEvaluate(unittest.TestCase):
         disc.set_variable_slices([conc])
         expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.DomainConcatenation)
+        a_disc = expr.children[0]
+        b_disc = expr.children[1]
 
         y = np.empty((expr._size, 1))
         for i in range(len(y)):
@@ -261,62 +262,18 @@ class TestEvaluate(unittest.TestCase):
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
 
-        import ipdb
-
-        ipdb.set_trace()
-        self.assertEqual(list(variable_symbols.keys())[0], a.id)
-        self.assertEqual(list(variable_symbols.keys())[1], b.id)
+        self.assertEqual(list(variable_symbols.keys())[0], a_disc.id)
+        self.assertEqual(list(variable_symbols.keys())[1], b_disc.id)
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
-        var_a = pybamm.id_to_python_variable(a.id)
-        var_b = pybamm.id_to_python_variable(b.id)
         self.assertEqual(len(constant_symbols), 0)
-        self.assertEqual(
-            list(variable_symbols.values())[2],
-            "np.concatenate(({}[0:{}],{}[0:{}]))".format(var_a, a_pts, var_b, b_pts),
-        )
 
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator.evaluate(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))
 
         # check that concatenating a single domain is consistent
-        expr = pybamm.DomainConcatenation([a], mesh)
-        evaluator = pybamm.EvaluatorPython(expr)
-        result = evaluator.evaluate(y=y)
-        np.testing.assert_allclose(result, expr.evaluate(y=y))
-
-        # check the reordering in case a child vector has to be split up
-        a_dom = ["separator"]
-        b_dom = ["negative electrode", "positive electrode"]
-        b0_pts = mesh[b_dom[0]][0].npts
-        a0_pts = mesh[a_dom[0]][0].npts
-        b1_pts = mesh[b_dom[1]][0].npts
-
-        a = pybamm.StateVector(slice(0, a0_pts), domain=a_dom)
-        b = pybamm.StateVector(slice(a0_pts, a0_pts + b0_pts + b1_pts), domain=b_dom)
-
-        y = np.empty((a0_pts + b0_pts + b1_pts, 1))
-        for i in range(len(y)):
-            y[i] = i
-
-        var_a = pybamm.id_to_python_variable(a.id)
-        var_b = pybamm.id_to_python_variable(b.id)
-        expr = pybamm.DomainConcatenation([a, b], mesh)
-        constant_symbols = OrderedDict()
-        variable_symbols = OrderedDict()
-        pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-
-        b0_str = "{}[0:{}]".format(var_b, b0_pts)
-        a0_str = "{}[0:{}]".format(var_a, a0_pts)
-        b1_str = "{}[{}:{}]".format(var_b, b0_pts, b0_pts + b1_pts)
-
-        self.assertEqual(len(constant_symbols), 0)
-        self.assertEqual(
-            list(variable_symbols.values())[2],
-            "np.concatenate(({},{},{}))".format(b0_str, a0_str, b1_str),
-        )
-
+        expr = disc.process_symbol(pybamm.Concatenation(a))
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator.evaluate(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))

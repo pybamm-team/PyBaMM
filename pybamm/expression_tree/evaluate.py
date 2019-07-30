@@ -72,13 +72,16 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         # the right line, avoiding these checks
         if isinstance(symbol, pybamm.Multiplication):
             symbol_str = (
-                "{0}.multiply({1}) if scipy.sparse.issparse({0}) else "
-                "{1}.multiply({0}) if scipy.sparse.issparse({1}) else "
+                "scipy.sparse.csr_matrix({0}.multiply({1})) "
+                "if scipy.sparse.issparse({0}) else "
+                "scipy.sparse.csr_matrix({1}.multiply({0})) "
+                "if scipy.sparse.issparse({1}) else "
                 "{0} * {1}".format(children_vars[0], children_vars[1])
             )
         elif isinstance(symbol, pybamm.Division):
             symbol_str = (
-                "{0}.multiply(1/{1}) if scipy.sparse.issparse({0}) else "
+                "scipy.sparse.csr_matrix({0}.multiply(1/{1})) "
+                "if scipy.sparse.issparse({0}) else "
                 "{0} / {1}".format(children_vars[0], children_vars[1])
             )
         elif isinstance(symbol, pybamm.Outer):
@@ -86,7 +89,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                 children_vars[0], children_vars[1]
             )
         elif isinstance(symbol, pybamm.Kron):
-            symbol_str = "scipy.sparse.kron({}, {})".format(
+            symbol_str = "scipy.sparse.csr_matrix(scipy.sparse.kron({}, {}))".format(
                 children_vars[0], children_vars[1]
             )
         else:
@@ -135,8 +138,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
         elif isinstance(symbol, pybamm.DomainConcatenation):
             slice_starts = []
             all_child_vectors = []
-            second_pts = len(list(symbol._slices.values())[0])
-            for i in range(second_pts):
+            for i in range(symbol.secondary_dimensions_npts):
                 child_vectors = []
                 for child_var, slices in zip(children_vars, symbol._children_slices):
                     for child_dom, child_slice in slices.items():
@@ -149,7 +151,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols):
                 all_child_vectors.extend(
                     [v for _, v in sorted(zip(slice_starts, child_vectors))]
                 )
-            if len(children_vars) > 1 or second_pts > 1:
+            if len(children_vars) > 1 or symbol.secondary_dimensions_npts > 1:
                 symbol_str = "np.concatenate(({}))".format(",".join(all_child_vectors))
             else:
                 symbol_str = "{}".format(",".join(children_vars))

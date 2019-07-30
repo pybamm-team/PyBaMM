@@ -357,10 +357,10 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
 
         if issparse(left):
-            return left.multiply(right)
+            return csr_matrix(left.multiply(right))
         elif issparse(right):
             # Hadamard product is commutative, so we can switch right and left
-            return right.multiply(left)
+            return csr_matrix(right.multiply(left))
         else:
             return left * right
 
@@ -482,7 +482,7 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
 
         if issparse(left):
-            return left.multiply(1 / right)
+            return csr_matrix(left.multiply(1 / right))
         else:
             if isinstance(right, numbers.Number) and right == 0:
                 return left * np.inf
@@ -690,7 +690,7 @@ class Kron(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        return kron(left, right)
+        return csr_matrix(kron(left, right))
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
