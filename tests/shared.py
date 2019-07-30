@@ -95,9 +95,11 @@ def get_p2d_mesh_for_testing(xpts=None, rpts=10):
     return get_mesh_for_testing(xpts=xpts, rpts=rpts, geometry=geometry)
 
 
-def get_1p1d_mesh_for_testing(xpts=None, zpts=15):
+def get_1p1d_mesh_for_testing(xpts=None, zpts=15, cc_submesh=pybamm.Uniform1DSubMesh):
     geometry = pybamm.Geometry("1+1D macro")
-    return get_mesh_for_testing(xpts=xpts, zpts=zpts, geometry=geometry)
+    return get_mesh_for_testing(
+        xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
+    )
 
 
 def get_2p1d_mesh_for_testing(
