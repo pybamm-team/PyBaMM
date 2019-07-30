@@ -407,12 +407,10 @@ class Discretisation(object):
         for v in model_variables:
             if isinstance(v, pybamm.Concatenation):
                 model_slices.append(
-                    [
-                        slice(
-                            self.y_slices[v.children[0].id][0].start,
-                            self.y_slices[v.children[-1].id][0].stop,
-                        )
-                    ]
+                    slice(
+                        self.y_slices[v.children[0].id][0].start,
+                        self.y_slices[v.children[-1].id][0].stop,
+                    )
                 )
             else:
                 model_slices.append(self.y_slices[v.id][0])
@@ -624,12 +622,10 @@ class Discretisation(object):
                 # must append the slice for the whole concatenation, so that equations
                 # get sorted correctly
                 slices.append(
-                    [
-                        slice(
-                            self.y_slices[symbol.children[0].id][0].start,
-                            self.y_slices[symbol.children[-1].id][0].stop,
-                        )
-                    ]
+                    slice(
+                        self.y_slices[symbol.children[0].id][0].start,
+                        self.y_slices[symbol.children[-1].id][0].stop,
+                    )
                 )
             else:
                 unpacked_variables.append(symbol)

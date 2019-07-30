@@ -41,7 +41,6 @@ class HigherOrderBaseModel(BaseModel):
         self.set_current_collector_submodel()
 
         self.build_model()
-        self.use_jacobian = False
 
     def set_current_collector_submodel(self):
 

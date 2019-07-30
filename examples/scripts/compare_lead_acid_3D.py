@@ -40,7 +40,7 @@ models = [
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 30,
+        "Typical current [A]": 100,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
