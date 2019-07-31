@@ -41,11 +41,11 @@ class Full(BaseModel):
 
         N_e_diffusion = -(eps ** param.b) * param.D_e(c_e, T) * pybamm.grad(c_e)
         # N_e_migration = (param.C_e * param.t_plus) / param.gamma_e * i_e
-        # N_e_convection = c_e * v_box
+        # N_e_convection = param.C_e * c_e * v_box
 
         # N_e = N_e_diffusion + N_e_migration + N_e_convection
 
-        N_e = N_e_diffusion + c_e * v_box
+        N_e = N_e_diffusion + param.C_e * c_e * v_box
 
         variables.update(self._get_standard_flux_variables(N_e))
 

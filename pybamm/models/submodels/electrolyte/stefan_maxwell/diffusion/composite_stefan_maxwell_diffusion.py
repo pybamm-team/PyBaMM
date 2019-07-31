@@ -49,10 +49,7 @@ class Composite(Full):
 
         # N_e = N_e_diffusion + N_e_migration + N_e_convection
 
-        if v_box_0.id == pybamm.Scalar(0).id:
-            N_e = N_e_diffusion
-        else:
-            N_e = N_e_diffusion + pybamm.outer(v_box_0, c_e)
+        N_e = N_e_diffusion + param.C_e * c_e_0_av * v_box_0
 
         variables.update(self._get_standard_flux_variables(N_e))
 

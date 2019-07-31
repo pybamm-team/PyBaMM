@@ -35,7 +35,15 @@ class FirstOrder(BaseModel):
         # Unpack
         T_0 = variables["Leading-order cell temperature"]
         c_e_0 = variables["Leading-order x-averaged electrolyte concentration"]
-        # v_box_0 = variables["Leading-order volume-averaged velocity"]
+        div_v_box_n_0 = variables[
+            "Leading-order x-averaged negative electrode volume-averaged acceleration"
+        ]
+        div_v_box_s_0 = variables[
+            "Leading-order x-averaged separator volume-averaged acceleration"
+        ]
+        div_v_box_p_0 = variables[
+            "Leading-order x-averaged positive electrode volume-averaged acceleration"
+        ]
         dc_e_0_dt = variables["Leading-order electrolyte concentration change"]
         eps_n_0 = variables["Leading-order x-averaged negative electrode porosity"]
         eps_s_0 = variables["Leading-order x-averaged separator porosity"]
@@ -53,20 +61,28 @@ class FirstOrder(BaseModel):
         d_epsc_p_0_dt = c_e_0 * deps_p_0_dt + eps_p_0 * dc_e_0_dt
 
         # Right-hand sides
-        rhs_n = d_epsc_n_0_dt - sum(
-            reaction["Negative"]["s"]
-            * variables[
-                "Leading-order x-averaged " + reaction["Negative"]["aj"].lower()
-            ]
-            for reaction in self.reactions.values()
+        rhs_n = (
+            d_epsc_n_0_dt
+            + param.C_e * c_e_0 * div_v_box_n_0
+            - sum(
+                reaction["Negative"]["s"]
+                * variables[
+                    "Leading-order x-averaged " + reaction["Negative"]["aj"].lower()
+                ]
+                for reaction in self.reactions.values()
+            )
         )
-        rhs_s = d_epsc_s_0_dt
-        rhs_p = d_epsc_p_0_dt - sum(
-            reaction["Positive"]["s"]
-            * variables[
-                "Leading-order x-averaged " + reaction["Positive"]["aj"].lower()
-            ]
-            for reaction in self.reactions.values()
+        rhs_s = d_epsc_s_0_dt + param.C_e * c_e_0 * div_v_box_s_0
+        rhs_p = (
+            d_epsc_p_0_dt
+            + param.C_e * c_e_0 * div_v_box_p_0
+            - sum(
+                reaction["Positive"]["s"]
+                * variables[
+                    "Leading-order x-averaged " + reaction["Positive"]["aj"].lower()
+                ]
+                for reaction in self.reactions.values()
+            )
         )
 
         # Diffusivities

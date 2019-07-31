@@ -228,7 +228,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         if len(model.algebraic) > 0:
             y0 = self.calculate_consistent_initial_conditions(
-                rhs, algebraic, jac_alg_fn, model.concatenated_initial_conditions[:, 0]
+                rhs, algebraic, model.concatenated_initial_conditions[:, 0], jac_alg_fn
             )
         else:
             # can use DAE solver to solve ODE model
@@ -236,7 +236,9 @@ class DaeSolver(pybamm.BaseSolver):
 
         return concatenated_rhs, concatenated_algebraic, y0, events, jac
 
-    def calculate_consistent_initial_conditions(self, rhs, algebraic, jac, y0_guess):
+    def calculate_consistent_initial_conditions(
+        self, rhs, algebraic, y0_guess, jac=None
+    ):
         """
         Calculate consistent initial conditions for the algebraic equations through
         root-finding

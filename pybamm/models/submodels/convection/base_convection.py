@@ -38,13 +38,70 @@ class BaseModel(pybamm.BaseSubModel):
 
         vel_scale = self.param.velocity_scale
 
-        v_box_av = pybamm.x_average(v_box)
-        # add more to this (x-averages etc)
+        v_box_n, v_box_s, v_box_p = v_box.orphans
+
         variables = {
+            "Negative electrode volume-averaged velocity": v_box_n,
+            "Separator volume-averaged velocity": v_box_s,
+            "Positive electrode volume-averaged velocity": v_box_p,
             "Volume-averaged velocity": v_box,
+            "Negative electrode volume-averaged velocity [m.s-1]": vel_scale * v_box_n,
+            "Separator volume-averaged velocity [m.s-1]": vel_scale * v_box_s,
+            "Positive electrode volume-averaged velocity [m.s-1]": vel_scale * v_box_p,
             "Volume-averaged velocity [m.s-1]": vel_scale * v_box,
-            # "X-averaged volume-averaged velocity": v_box_av,
-            # "X-averaged volume-averaged velocity [m.s-1]": vel_scale * v_box_av,
+        }
+
+        return variables
+
+    def _get_standard_acceleration_variables(self, v_box):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the fluid velocity.
+
+        Parameters
+        ----------
+        v_box : :class:`pybamm.Symbol`
+            The volume-averaged fluid velocity
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the volume-averaged
+            velocity.
+        """
+
+        acc_scale = self.param.velocity_scale / self.param.L_x
+
+        div_v_box_n, div_v_box_s, div_v_box_p = div_v_box.orphans
+
+        div_v_box_av = pybamm.x_average(div_v_box)
+
+        variables = {
+            "Negative electrode volume-averaged acceleration": div_v_box_n,
+            "Separator volume-averaged acceleration": div_v_box_s,
+            "Positive electrode volume-averaged acceleration": div_v_box_p,
+            "Volume-averaged acceleration": div_v_box,
+            "Negative electrode volume-averaged acceleration [m.s-1]": acc_scale
+            * div_v_box_n,
+            "Separator volume-averaged acceleration [m.s-1]": acc_scale * div_v_box_s,
+            "Positive electrode volume-averaged acceleration [m.s-1]": acc_scale
+            * div_v_box_p,
+            "Volume-averaged acceleration [m.s-1]": acc_scale * div_v_box,
+            "X-averaged negative electrode volume-averaged acceleration"
+            + "": pybamm.x_average(div_v_box_n),
+            "X-averaged separator volume-averaged acceleration"
+            + "": pybamm.x_average(div_v_box_s),
+            "X-averaged positive electrode volume-averaged acceleration"
+            + "": pybamm.x_average(div_v_box_p),
+            "X-averaged volume-averaged acceleration": pybamm.x_average(div_v_box),
+            "X-averaged negative electrode volume-averaged acceleration "
+            + "[m.s-1]": acc_scale * pybamm.x_average(div_v_box_n),
+            "X-averaged separator volume-averaged acceleration [m.s-1]": acc_scale
+            * pybamm.x_average(div_v_box_s),
+            "X-averaged positive electrode volume-averaged acceleration "
+            + "[m.s-1]": acc_scale * pybamm.x_average(div_v_box_p),
+            "X-averaged volume-averaged acceleration [m.s-1]": acc_scale
+            * pybamm.x_average(div_v_box),
         }
 
         return variables
