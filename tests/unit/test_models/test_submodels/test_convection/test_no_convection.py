@@ -13,7 +13,7 @@ class TestNoConvectionModel(unittest.TestCase):
 
         a = pybamm.Scalar(0)
         variables = {"Current collector current density": a}
-        submodel = pybamm.convection.NoConvection(param)
+        submodel = pybamm.convection.through_cell.NoConvection(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

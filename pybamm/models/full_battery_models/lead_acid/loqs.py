@@ -58,14 +58,20 @@ class LOQS(BaseModel):
 
     def set_convection_submodel(self):
 
-        if self.options["convection"] is False:
-            self.submodels["leading-order convection"] = pybamm.convection.NoConvection(
-                self.param
-            )
-        if self.options["convection"] is True:
-            self.submodels["leading-order convection"] = pybamm.convection.LeadingOrder(
-                self.param
-            )
+        if self.options["convection"] is None:
+            self.submodels[
+                "leading-order through-cell convection"
+            ] = pybamm.convection.through_cell.NoConvection(self.param)
+            self.submodels[
+                "leading-order transverse convection"
+            ] = pybamm.convection.transverse.NoConvection(self.param)
+        else:
+            self.submodels[
+                "leading-order through-cell convection"
+            ] = pybamm.convection.through_cell.LeadingOrder(self.param)
+            self.submodels[
+                "leading-order transvserse convection"
+            ] = pybamm.convection.transverse.Full(self.param)
 
     def set_interfacial_submodel(self):
 

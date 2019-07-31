@@ -1,0 +1,45 @@
+#
+# Submodel for uniform convection in transverse directions
+#
+import pybamm
+from .base_transverse_convection import BaseTransverseModel
+
+
+class Uniform(BaseTransverseModel):
+    """
+    Submodel for uniform convection in transverse directions
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
+
+
+    **Extends:** :class:`pybamm.convection.through_cell.BaseTransverseModel`
+    """
+
+    def __init__(self, param):
+        super().__init__(param)
+
+    def get_fundamental_variables(self):
+
+        p_s = pybamm.PrimaryBroadcast(0, "current collector")
+        variables = self._get_standard_separator_pressure_variables(p_s)
+
+        return variables
+
+    def get_coupled_variables(self, variables):
+
+        z = pybamm.standard_spatial_vars.z
+
+        div_Vbox_s = self._get_separator_velocity(variables)
+        variables.update(
+            self._get_standard_transverse_velocity_variables(div_Vbox_s, "acceleration")
+        )
+
+        Vbox_s = pybamm.IndefiniteIntegral(div_Vbox_s, z)
+        variables.update(
+            self._get_standard_transverse_velocity_variables(Vbox_s, "velocity")
+        )
+
+        return variables

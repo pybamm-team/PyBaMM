@@ -37,7 +37,9 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
 
     def set_convection_submodel(self):
-        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param)
 
     def set_electrolyte_submodel(self):
         electrolyte = pybamm.electrolyte.stefan_maxwell

@@ -17,7 +17,7 @@ class TestLeadingOrder(unittest.TestCase):
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,
         }
-        submodel = pybamm.convection.LeadingOrder(param)
+        submodel = pybamm.convection.through_cell.LeadingOrder(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

@@ -23,7 +23,7 @@ class TestComposite(unittest.TestCase):
             ),
             "X-averaged positive electrode interfacial current density": a,
         }
-        submodel = pybamm.convection.Composite(param)
+        submodel = pybamm.convection.through_cell.Composite(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

@@ -1,31 +1,37 @@
 #
-# Class for leading-order pressure driven convection
+# Class for composite pressure driven convection
 #
 import pybamm
-from .base_convection import BaseModel
+from .base_through_cell_convection import BaseThroughCellModel
 
 
-class LeadingOrder(BaseModel):
-    """A submodel for the leading-order approximation of pressure-driven convection
+class Composite(BaseThroughCellModel):
+    """Class for composite pressure-driven convection
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
 
-
-    **Extends:** :class:`pybamm.convection.BaseModel`
+    **Extends:** :class:`pybamm.convection.through_cell.BaseThroughCellModel`
     """
 
     def __init__(self, param):
         super().__init__(param)
 
     def get_coupled_variables(self, variables):
-
         param = self.param
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
+        # j_n = variables["Negative electrode interfacial current density"]
+        # j_p = variables["Positive electrode interfacial current density"]
 
+        # Volume-averaged velocity
+        # v_box_n = param.beta_n * pybamm.IndefiniteIntegral(j_n, x_n)
+        # # Shift v_box_p to be equal to 0 at x_p = 1
+        # v_box_p = param.beta_p * (
+        #     pybamm.IndefiniteIntegral(j_p, x_p) - pybamm.Integral(j_p, x_p)
+        # )
         j_n_av = variables["X-averaged negative electrode interfacial current density"]
         j_p_av = variables["X-averaged positive electrode interfacial current density"]
 

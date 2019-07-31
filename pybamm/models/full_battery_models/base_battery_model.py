@@ -141,7 +141,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         default_options = {
             "dimensionality": 0,
             "surface form": False,
-            "convection": False,
+            "convection": None,
             "thermal": None,
             "first-order potential": "linear",
             "side reactions": [],
@@ -194,7 +194,18 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
-
+        if options["dimensionality"] == 0:
+            if options["current collector"] != "uniform":
+                raise pybamm.OptionError(
+                    "current collector model must be uniform in 0D model"
+                )
+            if (
+                options["convection"] is not None
+                and options["convection"]["transverse"] == "full"
+            ):
+                raise pybamm.OptionError(
+                    "cannot have transverse convection in 0D model"
+                )
         self._options = options
 
     def set_standard_output_variables(self):

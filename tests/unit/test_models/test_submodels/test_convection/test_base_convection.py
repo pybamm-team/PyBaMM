@@ -9,7 +9,7 @@ import unittest
 
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
-        submodel = pybamm.convection.BaseModel(None)
+        submodel = pybamm.convection.through_cell.BaseModel(None)
         std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()
 

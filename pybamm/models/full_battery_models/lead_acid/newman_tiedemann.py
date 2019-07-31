@@ -38,9 +38,13 @@ class NewmanTiedemann(BaseModel):
 
     def set_convection_submodel(self):
         if self.options["convection"] is False:
-            self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+            self.submodels[
+                "through-cell convection"
+            ] = pybamm.convection.through_cell.NoConvection(self.param)
         if self.options["convection"] is True:
-            self.submodels["convection"] = pybamm.convection.Full(self.param)
+            self.submodels[
+                "through-cell convection"
+            ] = pybamm.convection.through_cell.Full(self.param)
 
     def set_interfacial_submodel(self):
         self.submodels["negative interface"] = pybamm.interface.lead_acid.ButlerVolmer(

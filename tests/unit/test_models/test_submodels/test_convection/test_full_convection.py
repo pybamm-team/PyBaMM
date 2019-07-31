@@ -18,7 +18,7 @@ class TestFull(unittest.TestCase):
             ),
             "Interfacial current density": a,
         }
-        submodel = pybamm.convection.Full(param)
+        submodel = pybamm.convection.through_cell.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

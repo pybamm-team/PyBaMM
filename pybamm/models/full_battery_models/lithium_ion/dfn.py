@@ -33,7 +33,9 @@ class DFN(BaseModel):
 
     def set_convection_submodel(self):
 
-        self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+        self.submodels[
+            "through-cell convection"
+        ] = pybamm.convection.through_cell.NoConvection(self.param)
 
     def set_interfacial_submodel(self):
 
