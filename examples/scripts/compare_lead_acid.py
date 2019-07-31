@@ -33,7 +33,6 @@ param.update(
         # "Typical electrolyte concentration [mol.m-3]": 5600,
         # "Negative electrode reference exchange-current density [A.m-2]": 0.08,
         # "Positive electrode reference exchange-current density [A.m-2]": 0.006,
-        # "Positive electrode reference exchange-current density (oxygen) [A.m-2]": 1e-22,
     }
 )
 for model in models:
