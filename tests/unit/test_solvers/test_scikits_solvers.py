@@ -250,7 +250,7 @@ class TestScikitsSolvers(unittest.TestCase):
         y0_guess = np.array([0, 1])
         t_eval = np.linspace(0, 1, 100)
         y0 = solver.calculate_consistent_initial_conditions(
-            constant_growth_dae_rhs, constant_growth_dae_algebraic, y0_guess
+            constant_growth_dae_rhs, constant_growth_dae_algebraic, None, y0_guess
         )
         # check y0
         np.testing.assert_array_equal(y0, [0, 0])

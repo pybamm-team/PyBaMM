@@ -2,7 +2,6 @@
 # Class for two-dimensional current collectors - composite models
 #
 import pybamm
-from .base_current_collector import BaseModel
 from .potential_pair import (
     BasePotentialPair,
     PotentialPair1plus1D,

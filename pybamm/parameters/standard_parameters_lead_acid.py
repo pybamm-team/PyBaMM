@@ -63,14 +63,11 @@ c_ox_init_dim = pybamm.Parameter("Initial oxygen concentration [mol.m-3]")
 c_ox_typ = c_e_typ  # pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
 # Electrode properties
-sigma_cn_dimensional = pybamm.Parameter(
-    "Negative current collector conductivity [S.m-1]"
-)
 sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
 sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
-sigma_cp_dimensional = pybamm.Parameter(
-    "Positive current collector conductivity [S.m-1]"
-)
+# In lead-acid the current collector and electrodes are the same (same conductivity)
+sigma_cn_dimensional = sigma_n_dim
+sigma_cp_dimensional = sigma_p_dim
 
 # Microstructure
 a_n_dim = pybamm.geometric_parameters.a_n_dim
@@ -261,13 +258,14 @@ tau_diffusion_e = L_x ** 2 / D_e_typ
 "4. Dimensionless Parameters"
 
 # Macroscale Geometry
-l_cn = pybamm.geometric_parameters.l_cn
 l_n = pybamm.geometric_parameters.l_n
 l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
-l_cp = pybamm.geometric_parameters.l_cp
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+# In lead-acid the current collector and electrodes are the same (same width)
+l_cn = l_n
+l_cp = l_p
 
 # Tab geometry
 l_tab_n = pybamm.geometric_parameters.l_tab_n
