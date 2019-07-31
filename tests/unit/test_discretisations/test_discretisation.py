@@ -30,7 +30,7 @@ class TestDiscretise(unittest.TestCase):
         # create discretisation
         disc = get_discretisation_for_testing()
 
-        disc.y_slices = {c.id: slice(0, 1), a.id: slice(2, 3), b.id: slice(3, 4)}
+        disc.y_slices = {c.id: [slice(0, 1)], a.id: [slice(2, 3)], b.id: [slice(3, 4)]}
         result = disc._concatenate_in_order(initial_conditions)
 
         self.assertIsInstance(result, pybamm.NumpyConcatenation)
