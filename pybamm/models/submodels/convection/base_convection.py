@@ -38,10 +38,13 @@ class BaseModel(pybamm.BaseSubModel):
 
         vel_scale = self.param.velocity_scale
 
+        v_box_av = pybamm.x_average(v_box)
         # add more to this (x-averages etc)
         variables = {
             "Volume-averaged velocity": v_box,
             "Volume-averaged velocity [m.s-1]": vel_scale * v_box,
+            # "X-averaged volume-averaged velocity": v_box_av,
+            # "X-averaged volume-averaged velocity [m.s-1]": vel_scale * v_box_av,
         }
 
         return variables
@@ -62,20 +65,30 @@ class BaseModel(pybamm.BaseSubModel):
             The variables which can be derived from the pressure.
         """
 
-        # add more to this (x-averages etc)
-        variables = {"Electrolyte pressure": p}
+        p_n, p_s, p_p = p.orphans
+
+        variables = {
+            "Negative electrode pressure": p_n,
+            "Separator pressure": p_n,
+            "Positive electrode pressure": p_n,
+            "Pressure": p,
+            "X-averaged pressure": pybamm.x_average(p),
+            "X-averaged negative electrode pressure": pybamm.x_average(p_n),
+            "X-averaged separator pressure": pybamm.x_average(p_n),
+            "X-averaged positive electrode pressure": pybamm.x_average(p_n),
+        }
 
         return variables
 
-    def _get_standard_vertical_velocity_variables(self, dVbox_dz):
+    def _get_standard_vertical_velocity_variables(self, div_Vbox_s):
         """
         A private function to obtain the standard variables which
         can be derived from the vertical velocity of the fluid.
 
         Parameters
         ----------
-        dV_box_dz : :class:`pybamm.Symbol`
-            The vertical velocity of the fluid
+        div_Vbox_s : :class:`pybamm.Symbol`
+            The vertical acceleration of the fluid
 
         Returns
         -------
@@ -86,8 +99,10 @@ class BaseModel(pybamm.BaseSubModel):
         L_z = self.param.L_z
 
         variables = {
-            "Vertical volume-averaged acceleration": dVbox_dz,
-            "Vertical volume-averaged acceleration [m.s-2]": vel_scale / L_z * dVbox_dz,
+            "Vertical volume-averaged acceleration": div_Vbox_s,
+            "Vertical volume-averaged acceleration [m.s-2]": vel_scale
+            / L_z
+            * div_Vbox_s,
         }
 
         return variables

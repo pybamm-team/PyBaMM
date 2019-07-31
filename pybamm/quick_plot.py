@@ -321,7 +321,11 @@ class QuickPlot(object):
 
         axcolor = "lightgoldenrodyellow"
         axfreq = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
-        self.sfreq = Slider(axfreq, "Time", 0, self.max_t, valinit=0)
+        if self.time_scale == 1:
+            slider_string = "Time"
+        else:
+            slider_string = "Time [h]"
+        self.sfreq = Slider(axfreq, slider_string, 0, self.max_t, valinit=0)
         self.sfreq.on_changed(self.update)
 
         # plt.subplots_adjust(
