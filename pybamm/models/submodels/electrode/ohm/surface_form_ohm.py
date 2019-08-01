@@ -34,10 +34,7 @@ class SurfaceForm(BaseModel):
         eps = variables[self.domain + " electrode porosity"]
         phi_s_cn = variables["Negative current collector potential"]
 
-        if isinstance(i_boundary_cc, pybamm.Broadcast):
-            i_boundary_cc = i_boundary_cc.orphans[0]
-
-        i_s = i_boundary_cc - i_e
+        i_s = pybamm.PrimaryBroadcast(i_boundary_cc, self.domain_for_broadcast) - i_e
 
         if self.domain == "Negative":
             conductivity = param.sigma_n * (1 - eps) ** param.b
