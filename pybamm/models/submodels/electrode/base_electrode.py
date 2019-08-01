@@ -137,7 +137,7 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         variables = {
             "Electrode current density": i_s,
-            "Positive current collector potential": v_boundary_cc,
+            "Positive current collector potential": phi_s_cp,
             "Local current collector potential difference": v_boundary_cc,
             "Local current collector potential difference [V]": U_ref
             + v_boundary_cc * pot_scale,

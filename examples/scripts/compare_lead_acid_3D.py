@@ -24,32 +24,32 @@ models = [
         {"current collector": "potential pair", "dimensionality": 1},
         name="1+1D NewmanTiedemann",
     ),
-    pybamm.lead_acid.NewmanTiedemann(
-        {"dimensionality": 1}, name="1+1D uniform NewmanTiedemann"
-    ),
+    # pybamm.lead_acid.NewmanTiedemann(
+    #     {"dimensionality": 1}, name="1+1D uniform NewmanTiedemann"
+    # ),
     pybamm.lead_acid.Composite(
         {"current collector": "potential pair", "dimensionality": 1},
         name="1+1D composite",
     ),
-    pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
+    # pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
     pybamm.lead_acid.LOQS(
         {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
     ),
-    pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
+    # pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 1,
+        "Typical current [A]": 50,
         "Bruggeman  coefficient": 0.001,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
         "Positive electrode reference exchange-current density [A.m-2]": 0.006,
-        "Negative electrode conductivity [S.m-1]": 5000,
-        "Positive electrode conductivity [S.m-1]": 5000,
+        # "Negative electrode conductivity [S.m-1]": 5000,
+        # "Positive electrode conductivity [S.m-1]": 5000,
     }
 )
 for model in models:
@@ -83,8 +83,8 @@ for i, model in enumerate(models):
 # plot
 output_variables = [
     "Local current collector potential difference [V]",
-    "X-averaged positive electrode porosity",
-    "X-averaged electrolyte potential [V]",
+    "Negative current collector potential [V]",
+    "Positive current collector potential [V]",
     "X-averaged electrolyte concentration",
     "Current collector current density",
     "Terminal voltage [V]",
