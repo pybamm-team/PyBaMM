@@ -160,7 +160,10 @@ class Symbol(anytree.NodeMixin):
         children)
         """
         for pre, _, node in anytree.RenderTree(self):
-            print("%s%s" % (pre, str(node.name)))
+            if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
+                print("{}{} = {}".format(pre, node.name, node.value))
+            else:
+                print("{}{}".format(pre, node.name))
 
     def visualise(self, filename):
         """
