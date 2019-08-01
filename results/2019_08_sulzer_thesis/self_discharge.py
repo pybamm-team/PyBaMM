@@ -15,7 +15,7 @@ def plot_voltages(all_variables, t_eval):
     shared_plotting.plot_voltages(all_variables, t_eval)
     file_name = "sefl_discharge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def self_discharge_states(compute):

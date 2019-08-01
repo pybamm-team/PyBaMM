@@ -22,7 +22,11 @@ class NoConvection(BaseModel):
 
     def get_fundamental_variables(self):
 
-        v_box = pybamm.Scalar(0)
+        v_box = pybamm.FullBroadcast(
+            pybamm.Scalar(0),
+            ["negative electrode", "separator", "positive electrode"],
+            "current collector",
+        )
 
         variables = self._get_standard_velocity_variables(v_box)
 
