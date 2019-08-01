@@ -49,6 +49,7 @@ class BaseInverseFirstOrderKinetics(BaseFirstOrderKinetics):
             reaction_submodel._get_j_diffusion_limited_first_order(variables)
             for reaction_submodel in self.reaction_submodels
         )
+        i_boundary_cc_1 = (i_boundary_cc - i_boundary_cc_0) / param.C_e
 
         delta_phi_1_av = (
             -(sum_dj_dc_0 * c_e_1_av + sum_j_diffusion_limited_first_order)

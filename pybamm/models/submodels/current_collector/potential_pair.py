@@ -43,9 +43,6 @@ class BasePotentialPair(BaseModel):
         phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
 
-        import ipdb
-
-        ipdb.set_trace()
         self.algebraic = {
             phi_s_cn: (param.sigma_cn * param.delta ** 2 * param.l_cn)
             * pybamm.laplacian(phi_s_cn)
@@ -59,16 +56,22 @@ class BasePotentialPair(BaseModel):
 
         param = self.param
         applied_current = param.current_with_time
+        cc_area = self._get_effective_current_collector_area()
         phi_s_cn = variables["Negative current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
-            i_boundary_cc: applied_current / param.l_y / param.l_z,
+            i_boundary_cc: applied_current / cc_area,
         }
 
 
 class PotentialPair1plus1D(BasePotentialPair):
+    "Base class for a 1+1D potential pair model"
+
+    def __init__(self, param):
+        super().__init__(param)
+
     def set_boundary_conditions(self, variables):
 
         phi_s_cn = variables["Negative current collector potential"]
@@ -90,8 +93,17 @@ class PotentialPair1plus1D(BasePotentialPair):
             },
         }
 
+    def _get_effective_current_collector_area(self):
+        "In the 1+1D models the current collector effectively has surface area l_z"
+        return self.param.l_z
+
 
 class PotentialPair2plus1D(BasePotentialPair):
+    "Base class for a 2+1D potential pair model"
+
+    def __init__(self, param):
+        super().__init__(param)
+
     def set_boundary_conditions(self, variables):
 
         phi_s_cn = variables["Negative current collector potential"]
@@ -116,3 +128,7 @@ class PotentialPair2plus1D(BasePotentialPair):
                 "right": (pos_tab_bc, "Neumann"),
             },
         }
+
+    def _get_effective_current_collector_area(self):
+        "Return the area of the current collector"
+        return self.param.l_y * self.param.l_z
