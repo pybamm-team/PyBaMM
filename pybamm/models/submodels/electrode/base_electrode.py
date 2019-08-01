@@ -129,7 +129,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         i_s_p = variables["Positive electrode current density"]
         phi_s_p = variables["Positive electrode potential"]
 
-        phi_s_cp = variables["Negative current collector potential"]
+        phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = pybamm.boundary_value(phi_s_p, "right")
         v_boundary_cc = phi_s_cp - phi_s_cn
 

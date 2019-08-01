@@ -27,7 +27,6 @@ models = [
     pybamm.lead_acid.NewmanTiedemann(
         {"dimensionality": 1}, name="1+1D uniform NewmanTiedemann"
     ),
-    # pybamm.lead_acid.NewmanTiedemann({"dimensionality": 0}, name="1D NewmanTiedemann"),
     pybamm.lead_acid.Composite(
         {"current collector": "potential pair", "dimensionality": 1},
         name="1+1D composite",

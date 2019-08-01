@@ -44,8 +44,8 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, self.reactions
         )
-        self.variables["Local current collector potential difference"] = pybamm.Scalar(
-            0
+        self.variables.update(
+            {"Positive current collector potential": pybamm.Scalar(0)}
         )
 
     def set_interfacial_submodel(self):
