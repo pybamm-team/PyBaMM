@@ -82,9 +82,8 @@ class TestConcatenations(unittest.TestCase):
         )
 
     def test_numpy_domain_concatenation(self):
-        # create discretisation
-        disc = get_discretisation_for_testing()
-        mesh = disc.mesh
+        # create mesh
+        mesh = get_mesh_for_testing()
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]

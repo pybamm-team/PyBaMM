@@ -191,10 +191,7 @@ class Index(UnaryOperator):
         # tree for StateVectors and return a matrix of zeros of the correct size
         # if none are found.
         if all([not (isinstance(n, pybamm.StateVector)) for n in self.pre_order()]):
-            variable_y_indices = np.arange(
-                variable.y_slice.start, variable.y_slice.stop
-            )
-            jac = csr_matrix((1, np.size(variable_y_indices)))
+            jac = csr_matrix((1, variable.evaluation_array.count(True)))
             return pybamm.Matrix(jac)
         else:
             child_jac = self.child.jac(variable)
@@ -223,7 +220,7 @@ class Index(UnaryOperator):
         return self.__class__(child, self.index)
 
     def evaluate_for_shape(self):
-        return self.children[0].evaluate_for_shape()[self.slice]
+        return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
     def evaluates_on_edges(self):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
