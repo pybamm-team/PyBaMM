@@ -27,30 +27,30 @@ models = [
     pybamm.lead_acid.NewmanTiedemann(
         {"dimensionality": 1}, name="1+1D uniform NewmanTiedemann"
     ),
-    pybamm.lead_acid.NewmanTiedemann({"dimensionality": 0}, name="1D NewmanTiedemann"),
-    # pybamm.lead_acid.Composite(
-    #     {"current collector": "potential pair", "dimensionality": 1},
-    #     name="1+1D composite",
-    # ),
-    # pybamm.lead_acid.LOQS(
-    #     {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
-    # ),
-    # pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
-    # pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
+    # pybamm.lead_acid.NewmanTiedemann({"dimensionality": 0}, name="1D NewmanTiedemann"),
+    pybamm.lead_acid.Composite(
+        {"current collector": "potential pair", "dimensionality": 1},
+        name="1+1D composite",
+    ),
+    pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
+    pybamm.lead_acid.LOQS(
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
+    ),
+    pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
 ]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 10,
+        "Typical current [A]": 1,
         "Bruggeman  coefficient": 0.001,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
         "Positive electrode reference exchange-current density [A.m-2]": 0.006,
-        "Negative electrode conductivity [S.m-1]": 50000,
-        "Positive electrode conductivity [S.m-1]": 50000,
+        "Negative electrode conductivity [S.m-1]": 5000,
+        "Positive electrode conductivity [S.m-1]": 5000,
     }
 )
 for model in models:
@@ -62,13 +62,13 @@ for model in models:
     param.process_geometry(geometry)
     var = pybamm.standard_spatial_vars
     var_pts = {
-        var.x_n: 30,
-        var.x_s: 30,
-        var.x_p: 30,
+        var.x_n: 5,
+        var.x_s: 5,
+        var.x_p: 5,
         var.r_n: 5,
         var.r_p: 5,
-        var.y: 10,
-        var.z: 10,
+        var.y: 5,
+        var.z: 5,
     }
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
@@ -83,7 +83,7 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    "X-averaged negative electrode porosity",
+    "Local current collector potential difference [V]",
     "X-averaged positive electrode porosity",
     "X-averaged electrolyte potential [V]",
     "X-averaged electrolyte concentration",

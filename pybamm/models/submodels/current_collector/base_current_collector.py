@@ -22,12 +22,9 @@ class BaseModel(pybamm.BaseSubModel):
     def get_coupled_variables(self, variables):
 
         # 1D models determine phi_s_cp
-        # note that phi_s_cn is equal pybamm.boundary_value(phi_s_n, "left")
         phi_s_cn = variables["Negative current collector potential"]
-        voltage_from_1D_models = variables[
-            "Local current collector potential difference"
-        ]
-        phi_s_cp = phi_s_cn + voltage_from_1D_models
+        phi_s_cp = variables["Positive current collector potential"]
+
         variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
         return variables
 
