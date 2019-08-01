@@ -35,22 +35,22 @@ class TestDaeSolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(init_cond, vec)
 
         # With jacobian
-        def jac(t, y):
+        def jac_dense(t, y):
             return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
 
         init_cond = solver.calculate_consistent_initial_conditions(
-            rhs, algebraic, y0, jac
+            rhs, algebraic, y0, jac_dense
         )
         np.testing.assert_array_almost_equal(init_cond, vec)
 
         # With sparse jacobian
-        def jac(t, y):
+        def jac_sparse(t, y):
             return 2 * csr_matrix(
                 np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
             )
 
         init_cond = solver.calculate_consistent_initial_conditions(
-            rhs, algebraic, y0, jac
+            rhs, algebraic, y0, jac_sparse
         )
         np.testing.assert_array_almost_equal(init_cond, vec)
 
