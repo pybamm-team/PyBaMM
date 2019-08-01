@@ -51,16 +51,23 @@ for i, model in enumerate(models[:-1]):
     solutions[i] = model.default_solver.solve(model, t_eval)
 
 
-phi_neg_tab = pybamm.ProcessedVariable(
-    spme.variables["Negative tab potential [V]"],
-    solutions[0].t, solutions[0].y
-)
-phi_pos_tab = pybamm.ProcessedVariable(
-    spme.variables["Positive tab potential [V]"],
-    solutions[0].t, solutions[0].y
-)
-
-import ipdb; ipdb.set_trace()
+#phi_neg_tab = pybamm.ProcessedVariable(
+#    spme.variables["Negative tab potential [V]"],
+#    solutions[0].t, solutions[0].y
+#)
+#phi_pos_tab = pybamm.ProcessedVariable(
+#    spme.variables["Positive tab potential [V]"],
+#    solutions[0].t, solutions[0].y
+#)
+#
+#current_1D = pybamm.ProcessedVariable(
+#    spme_av.variables["Current collector current density"],
+#    solutions[0].t, solutions[0].y
+#)
+#current_2D = pybamm.ProcessedVariable(
+#    spme.variables["Current collector current density"],
+#    solutions[0].t, solutions[0].y
+#)
 
 # plot terminal voltage
 for i, model in enumerate(models[:-1]):

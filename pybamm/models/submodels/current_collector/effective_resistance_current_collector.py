@@ -60,16 +60,18 @@ class EffectiveResistance2D(pybamm.BaseModel):
         }
 
         # Boundary conditons
+        psi_neg_tab_bc = l_cn
+        psi_pos_tab_bc = -l_cp
         W_neg_tab_bc = l_y / (alpha_prime * sigma_cn_dbl_prime)
         W_pos_tab_bc = l_y / (alpha_prime * sigma_cp_dbl_prime)
 
         self.boundary_conditions = {
-            psi: {"left": (l_cn, "Neumann"), "right": (-l_cp, "Neumann")},
+            psi: {"left": (psi_neg_tab_bc, "Neumann"), "right": (psi_pos_tab_bc, "Neumann")},
             W: {"left": (W_neg_tab_bc, "Neumann"), "right": (W_pos_tab_bc, "Neumann")},
         }
 
         # "Initial conditions" provides initial guess for solver
-        # TODO: better guess than zero
+        # TODO: better guess than zero?
         self.initial_conditions = {
             psi: pybamm.Scalar(0),
             W: pybamm.Scalar(0),
@@ -99,6 +101,8 @@ class EffectiveResistance2D(pybamm.BaseModel):
     def get_potentials(self, V_av, I_av):
         """Calculates the potentials in the current collector given the average
         voltage and current"""
+        # TO DO: check if variables can be built after the fact in this way?
+        # Probably not, should work with processed variables instead
         param = self.param
         I_app = param.current_with_time
         l_cn = param.l_cn
