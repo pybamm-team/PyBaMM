@@ -18,9 +18,15 @@ else:
 # load models
 models = [
     pybamm.lead_acid.NewmanTiedemann(
-        {"surface form": "algebraic", "convection": True}, name="With convection"
+        {"convection": {"transverse": "uniform"}}, name="NT With convection"
     ),
-    pybamm.lead_acid.NewmanTiedemann(name="Without convection"),
+    # pybamm.lead_acid.Composite(
+    #     {"convection": {"transverse": "uniform"}}, name="Comp With convection"
+    # ),
+    # pybamm.lead_acid.LOQS(
+    #     {"convection": {"transverse": "uniform"}}, name="LOQS With convection"
+    # ),
+    pybamm.lead_acid.NewmanTiedemann(name="NT Without convection"),
 ]
 
 # load parameter values and process models and geometry
@@ -28,7 +34,7 @@ param = models[0].default_parameter_values
 param.update(
     {
         "Volume change factor": 1,
-        "Typical current [A]": 5,
+        "Typical current [A]": 200,
         "Initial State of Charge": 1,
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
@@ -50,14 +56,14 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 0.028, 100)
+t_eval = np.linspace(0, 0.5, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
 
 # plot
 output_variables = [
-    "Electrolyte pressure",
+    "Pressure",
     "Electrolyte concentration",
     "Volume-averaged velocity [m.s-1]",
     "Terminal voltage [V]",

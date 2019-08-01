@@ -39,9 +39,20 @@ class NewmanTiedemann(BaseModel):
     def set_convection_submodel(self):
         if self.options["convection"] is False:
             self.submodels[
+                "transverse convection"
+            ] = pybamm.convection.transverse.NoConvection(self.param)
+            self.submodels[
                 "through-cell convection"
             ] = pybamm.convection.through_cell.NoConvection(self.param)
-        if self.options["convection"] is True:
+        else:
+            if self.options["convection"]["transverse"] == "uniform":
+                self.submodels[
+                    "transverse convection"
+                ] = pybamm.convection.transverse.Uniform(self.param)
+            elif self.options["convection"]["transverse"] == "full":
+                self.submodels[
+                    "transverse convection"
+                ] = pybamm.convection.transverse.Full(self.param)
             self.submodels[
                 "through-cell convection"
             ] = pybamm.convection.through_cell.Full(self.param)

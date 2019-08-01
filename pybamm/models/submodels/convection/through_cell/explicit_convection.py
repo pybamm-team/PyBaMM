@@ -31,7 +31,7 @@ class Explicit(BaseThroughCellModel):
         j_p_av = variables["X-averaged positive electrode interfacial current density"]
 
         p_n = param.beta_n * pybamm.outer(
-            j_n_av, (x_n ** 2 - param.l_n ** 2) / 2
+            j_n_av, (-x_n ** 2 + param.l_n ** 2) / 2
         ) + pybamm.PrimaryBroadcast(p_s, "negative electrode")
         p_p = param.beta_n * pybamm.outer(
             j_n_av, ((x_p - 1) ** 2 - param.l_p ** 2) / 2

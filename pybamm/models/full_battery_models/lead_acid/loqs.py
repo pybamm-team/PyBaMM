@@ -73,7 +73,7 @@ class LOQS(BaseModel):
                 ] = pybamm.convection.transverse.Uniform(self.param)
             elif self.options["convection"]["transverse"] == "full":
                 self.submodels[
-                    "transverse convection"
+                    "leading-order transverse convection"
                 ] = pybamm.convection.transverse.Full(self.param)
             self.submodels[
                 "leading-order through-cell convection"

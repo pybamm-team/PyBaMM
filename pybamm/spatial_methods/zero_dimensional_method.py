@@ -26,3 +26,9 @@ class ZeroDimensionalMethod(pybamm.SpatialMethod):
         zero dimensional, this is simply the number 1.
         """
         return pybamm.Matrix(np.ones((1, 1)))
+
+    def indefinite_integral(self, child, discretised_child):
+        """
+        Calculates the zero-dimensional indefinite integral, i.e. the identity operator
+        """
+        return discretised_child
