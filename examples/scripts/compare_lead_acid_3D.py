@@ -20,10 +20,10 @@ models = [
     # pybamm.lead_acid.LOQS(
     #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D LOQS"
     # ),
-    # pybamm.lead_acid.NewmanTiedemann(
-    #     {"current collector": "potential pair", "dimensionality": 1},
-    #     name="1+1D NewmanTiedemann",
-    # ),
+    pybamm.lead_acid.NewmanTiedemann(
+        {"current collector": "potential pair", "dimensionality": 1},
+        name="1+1D NewmanTiedemann",
+    ),
     # pybamm.lead_acid.NewmanTiedemann(
     #     {"dimensionality": 1}, name="1+1D uniform NewmanTiedemann"
     # ),
@@ -31,15 +31,15 @@ models = [
         {"current collector": "potential pair quite conductive", "dimensionality": 1},
         name="1+1D composite",
     ),
-    # pybamm.lead_acid.Composite(
-    #     {"current collector": "potential pair", "dimensionality": 1},
-    #     name="1+1D composite",
-    # ),
+    pybamm.lead_acid.Composite(
+        {"current collector": "potential pair", "dimensionality": 1},
+        name="1+1D composite",
+    ),
     # # pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
-    # pybamm.lead_acid.LOQS(
-    #     {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
-    # ),
-    # # pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
+    pybamm.lead_acid.LOQS(
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
+    ),
+    # pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
 ]
 
 # load parameter values and process models and geometry
@@ -90,7 +90,7 @@ output_variables = [
     "Negative current collector potential [V]",
     "Positive current collector potential [V]",
     "X-averaged electrolyte concentration",
-    "Leading-order current collector current density",
+    # "Leading-order current collector current density",
     "Current collector current density",
     "Terminal voltage [V]",
 ]

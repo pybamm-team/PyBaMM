@@ -101,9 +101,13 @@ class BaseModel(pybamm.BaseSubModel):
             The variables which can be derived from the current in the current
             collector.
         """
+        i_typ = self.param.i_typ
 
         # TO DO: implement grad in 2D to get i_cc
         # just need this to get 1D models working for now
-        variables = {"Current collector current density": i_boundary_cc}
+        variables = {
+            "Current collector current density": i_boundary_cc,
+            "Current collector current density [A.m-2]": i_typ * i_boundary_cc,
+        }
 
         return variables

@@ -56,6 +56,8 @@ class SingleParticlePotentialPair(BaseModel):
         i_boundary_cc = variables["Current collector current density"]
 
         # The voltage-current expression from the SPM(e)
+        # TODO: write the single particle potential pair model as a submodel of the
+        # potential pair model, with these hard-coded in somehow
         local_voltage_expression = (
             ocp_p_av
             - ocp_n_av
