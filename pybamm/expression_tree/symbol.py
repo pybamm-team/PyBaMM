@@ -176,6 +176,7 @@ class Symbol(anytree.NodeMixin):
         """
 
         # check that filename ends in .png.
+        print('this is great')
         if filename[-4:] != ".png":
             raise ValueError("filename should end in .png")
 
