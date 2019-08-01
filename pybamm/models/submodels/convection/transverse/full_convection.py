@@ -41,7 +41,7 @@ class Full(BaseTransverseModel):
     def set_algebraic(self, variables):
         p_s = variables["X-averaged separator pressure"]
         div_Vbox_s = self._get_separator_velocity(variables)
-        Vbox_s = variables["X-averaged transverse separator volume-averaged velocity"]
+        Vbox_s = variables["X-averaged separator transverse volume-averaged velocity"]
 
         # Problem in the z-direction for p_s
         self.algebraic = {p_s: pybamm.div(Vbox_s) - div_Vbox_s}

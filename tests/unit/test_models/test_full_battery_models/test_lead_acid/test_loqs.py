@@ -12,7 +12,11 @@ class TestLeadAcidLOQS(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_with_convection(self):
-        options = {"thermal": None, "convection": True}
+        options = {"convection": {"transverse": "uniform"}}
+        model = pybamm.lead_acid.LOQS(options)
+        model.check_well_posedness()
+
+        options = {"dimensionality": 1, "convection": {"transverse": "full"}}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
@@ -93,9 +97,13 @@ class TestLeadAcidLOQS(unittest.TestCase):
         )
 
     def test_incompatible_options(self):
-        options = {"surface form": "bad surface form"}
         with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
-            pybamm.lead_acid.LOQS(options)
+            pybamm.lead_acid.LOQS({"surface form": "bad surface form"})
+
+        with self.assertRaisesRegex(
+            pybamm.OptionError, "cannot have transverse convection in 0D model"
+        ):
+            pybamm.lead_acid.LOQS({"convection": {"transverse": "full"}})
 
 
 class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):

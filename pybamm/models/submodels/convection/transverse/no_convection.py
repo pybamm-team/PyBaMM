@@ -31,6 +31,7 @@ class NoConvection(BaseTransverseModel):
         )
 
         div_Vbox_s = pybamm.PrimaryBroadcast(0, "current collector")
+
         variables.update(
             self._get_standard_transverse_velocity_variables(div_Vbox_s, "acceleration")
         )

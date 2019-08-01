@@ -32,11 +32,14 @@ class LeadingOrder(BaseThroughCellModel):
         # Volume-averaged velocity
         v_box_n = param.beta_n * pybamm.outer(j_n_av, x_n)
         v_box_p = param.beta_p * pybamm.outer(j_p_av, x_p - 1)
+        variables.update(
+            self._get_standard_neg_pos_velocity_variables(v_box_n, v_box_p)
+        )
 
-        v_box_s, dVbox_dz = self._separator_velocity(variables)
-        v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
-
-        variables.update(self._get_standard_velocity_variables(v_box))
-        variables.update(self._get_standard_vertical_velocity_variables(dVbox_dz))
+        div_v_box_n = param.beta_n * j_n_av
+        div_v_box_p = param.beta_p * j_p_av
+        variables.update(
+            self._get_standard_neg_pos_acceleration_variables(div_v_box_n, div_v_box_p)
+        )
 
         return variables

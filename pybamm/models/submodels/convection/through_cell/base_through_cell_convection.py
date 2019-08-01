@@ -35,10 +35,11 @@ class BaseThroughCellModel(BaseModel):
         v_box_n_right = param.beta_n * pybamm.PrimaryBroadcast(
             i_boundary_cc, "separator"
         )
-        div_v_box_s = -div_Vbox_s
+        div_v_box_s_av = -div_Vbox_s
+        div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
 
         # Simple formula for velocity in the separator
-        v_box_s = pybamm.outer(div_v_box_s, (x_s - l_n)) + v_box_n_right
+        v_box_s = pybamm.outer(div_v_box_s_av, (x_s - l_n)) + v_box_n_right
 
         variables.update(
             self._get_standard_sep_velocity_variables(v_box_s, div_v_box_s)
@@ -56,12 +57,16 @@ class BaseThroughCellModel(BaseModel):
         """Volume-averaged velocity in the separator"""
 
         vel_scale = self.param.velocity_scale
+        div_v_box_s_av = pybamm.x_average(div_v_box_s)
 
         variables = {
             "Separator volume-averaged velocity": v_box_s,
             "Separator volume-averaged velocity [m.s-1]": vel_scale * v_box_s,
             "Separator volume-averaged acceleration": div_v_box_s,
             "Separator volume-averaged acceleration [m.s-1]": vel_scale * div_v_box_s,
+            "X-averaged separator volume-averaged acceleration": div_v_box_s_av,
+            "X-averaged separator volume-averaged acceleration "
+            + "[m.s-1]": vel_scale * div_v_box_s_av,
         }
 
         return variables

@@ -40,7 +40,9 @@ class Full(BaseThroughCellModel):
         v_mass_p = -pybamm.grad(p_p)
         v_box_n = v_mass_n
         v_box_p = v_mass_p
-        variables.update(self._get_standard_velocity_variables(v_box_n, v_box_p))
+        variables.update(
+            self._get_standard_neg_pos_velocity_variables(v_box_n, v_box_p)
+        )
 
         div_v_box_n = pybamm.div(v_box_n)
         div_v_box_p = pybamm.div(v_box_p)
