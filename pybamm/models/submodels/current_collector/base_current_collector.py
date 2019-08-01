@@ -22,12 +22,9 @@ class BaseModel(pybamm.BaseSubModel):
     def get_coupled_variables(self, variables):
 
         # 1D models determine phi_s_cp
-        # note that phi_s_cn is equal pybamm.boundary_value(phi_s_n, "left")
         phi_s_cn = variables["Negative current collector potential"]
-        voltage_from_1D_models = variables[
-            "Local current collector potential difference"
-        ]
-        phi_s_cp = phi_s_cn + voltage_from_1D_models
+        phi_s_cp = variables["Positive current collector potential"]
+
         variables = self._get_standard_potential_variables(phi_s_cn, phi_s_cp)
         return variables
 
@@ -104,9 +101,13 @@ class BaseModel(pybamm.BaseSubModel):
             The variables which can be derived from the current in the current
             collector.
         """
+        i_typ = self.param.i_typ
 
         # TO DO: implement grad in 2D to get i_cc
         # just need this to get 1D models working for now
-        variables = {"Current collector current density": i_boundary_cc}
+        variables = {
+            "Current collector current density": i_boundary_cc,
+            "Current collector current density [A.m-2]": i_typ * i_boundary_cc,
+        }
 
         return variables

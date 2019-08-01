@@ -4,6 +4,7 @@
 import pybamm
 import numpy as np
 from scipy import optimize
+from scipy.sparse import issparse
 
 
 class DaeSolver(pybamm.BaseSolver):
@@ -254,6 +255,9 @@ class DaeSolver(pybamm.BaseSolver):
         y0_guess : array-like
             Array of the user's guess for the initial conditions, used to initialise
             the root finding algorithm
+        jac : method
+            Function that takes in t and y and returns the value of the jacobian for the
+            algebraic equations
 
         Returns
         -------
@@ -279,11 +283,23 @@ class DaeSolver(pybamm.BaseSolver):
             return out
 
         if jac:
+            if issparse(jac(0, y0_guess)):
 
-            def jac_fn(y0_alg):
-                "Evaluates jacobian using y0_diff (fixed) and y0_alg (changed by algo)"
-                y0 = np.concatenate([y0_diff, y0_alg])
-                return jac(0, y0)[:, len_rhs:].toarray()
+                def jac_fn(y0_alg):
+                    """
+                    Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
+                    """
+                    y0 = np.concatenate([y0_diff, y0_alg])
+                    return jac(0, y0)[:, len_rhs:].toarray()
+
+            else:
+
+                def jac_fn(y0_alg):
+                    """
+                    Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
+                    """
+                    y0 = np.concatenate([y0_diff, y0_alg])
+                    return jac(0, y0)[:, len_rhs:]
 
         else:
             jac_fn = None

@@ -43,18 +43,20 @@ class HigherOrderBaseModel(BaseModel):
         self.build_model()
 
     def set_current_collector_submodel(self):
+        cc = pybamm.current_collector
 
         if self.options["current collector"] == "uniform":
-            submodel = pybamm.current_collector.Uniform(self.param)
+            submodel = cc.Uniform(self.param)
+        elif self.options["current collector"] == "potential pair quite conductive":
+            if self.options["dimensionality"] == 1:
+                submodel = cc.QuiteConductivePotentialPair1plus1D(self.param)
+            elif self.options["dimensionality"] == 2:
+                submodel = cc.QuiteConductivePotentialPair2plus1D(self.param)
         elif self.options["current collector"] == "potential pair":
             if self.options["dimensionality"] == 1:
-                submodel = pybamm.current_collector.CompositePotentialPair1plus1D(
-                    self.param
-                )
+                submodel = cc.CompositePotentialPair1plus1D(self.param)
             elif self.options["dimensionality"] == 2:
-                submodel = pybamm.current_collector.CompositePotentialPair2plus1D(
-                    self.param
-                )
+                submodel = cc.CompositePotentialPair2plus1D(self.param)
         self.submodels["current collector"] = submodel
 
     def set_leading_order_model(self):

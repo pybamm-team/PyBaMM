@@ -177,6 +177,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         if options["current collector"] not in [
             "uniform",
             "potential pair",
+            "potential pair quite conductive",
             "single particle potential pair",
         ]:
             raise pybamm.OptionError(

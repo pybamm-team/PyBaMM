@@ -19,6 +19,7 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Negative electrode porosity": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative electrode interfacial current density": a_n,
+            "X-averaged negative electrode interfacial current density": a,
             "X-averaged negative electrode total interfacial current density": a,
         }
         icd = " interfacial current density"
@@ -44,7 +45,7 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Separator electrolyte current density": a_s,
             "Positive electrode porosity": a_p,
             "Positive electrolyte concentration": a_p,
-            "Positive electrode interfacial current density": a_p,
+            "X-averaged positive electrode interfacial current density": a,
             "X-averaged positive electrode total interfacial current density": a,
         }
         submodel = spf.LeadingOrderAlgebraic(param, "Positive", reactions)

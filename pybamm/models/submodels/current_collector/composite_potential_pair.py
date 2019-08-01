@@ -10,8 +10,10 @@ from .potential_pair import (
 
 
 class BaseCompositePotentialPair(BasePotentialPair):
-    """A submodel for Ohm's law plus conservation of current in the current collectors,
-    which uses the voltage-current relationship from the SPM(e).
+    """
+    Potential pair model for the current collectors.
+    This is identical to the BasePotentialPair model, except the name of the fundamental
+    variables are changed to avoid clashes with leading order.
 
     Parameters
     ----------

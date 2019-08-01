@@ -119,7 +119,10 @@ class NewmanTiedemann(BaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["surface form"] == "differential":
+        if (
+            self.options["surface form"] == "differential"
+            and self.options["current collector"] == "uniform"
+        ):
             return pybamm.ScipySolver()
         else:
             return pybamm.ScikitsDaeSolver()
