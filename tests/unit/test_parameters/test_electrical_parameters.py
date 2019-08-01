@@ -15,7 +15,7 @@ class TestElectricalParameters(unittest.TestCase):
         )
         dimensionless_current = pybamm.electrical_parameters.current_with_time
         dimensionless_current_density = (
-            pybamm.electrical_parameters.current_density_with_time
+            pybamm.electrical_parameters.current_with_time
         )
 
         # process

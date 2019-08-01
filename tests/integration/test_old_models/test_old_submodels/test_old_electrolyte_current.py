@@ -75,8 +75,8 @@ class TestOldMacInnesStefanMaxwell(unittest.TestCase):
             # Unpack
             phi_e = out_vars["Electrolyte potential"]
             i_e = out_vars["Electrolyte current density"]
-            delta_phi_e_av = out_vars["Average electrolyte ohmic losses"]
-            eta_c_av = out_vars["Average concentration overpotential"]
+            delta_phi_e_av = out_vars["X-averaged electrolyte ohmic losses"]
+            eta_c_av = out_vars["X-averaged concentration overpotential"]
 
             # Test
             self.assertIsInstance(phi_e, pybamm.Concatenation)
@@ -130,12 +130,12 @@ class TestOldMacInnesStefanMaxwell(unittest.TestCase):
 
                 phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
 
-                phi_e_n_av = pybamm.average(phi_e_n)
+                phi_e_n_av = pybamm.x_average(phi_e_n)
                 phi_e_n_av_param = modeltest.parameter_values.process_symbol(phi_e_n_av)
                 phi_e_n_av_disc = modeltest.disc.process_symbol(phi_e_n_av_param)
                 phi_e_n_av_eval = phi_e_n_av_disc.evaluate(0, None)
 
-                phi_e_p_av = pybamm.average(phi_e_p)
+                phi_e_p_av = pybamm.x_average(phi_e_p)
                 phi_e_p_av_param = modeltest.parameter_values.process_symbol(phi_e_p_av)
                 phi_e_p_av_disc = modeltest.disc.process_symbol(phi_e_p_av_param)
                 phi_e_p_av_eval = phi_e_p_av_disc.evaluate(0, None)

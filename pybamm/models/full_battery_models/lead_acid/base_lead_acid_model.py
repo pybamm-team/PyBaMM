@@ -52,21 +52,53 @@ class BaseModel(pybamm.BaseBatteryModel):
         )
 
     @property
+    def default_spatial_methods(self):
+        base_spatial_methods = {"macroscale": pybamm.FiniteVolume}
+        if self.options["bc_options"]["dimensionality"] == 0:
+            # 0D submesh - use base spatial method
+            base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod
+        if self.options["bc_options"]["dimensionality"] == 1:
+            base_spatial_methods["current collector"] = pybamm.FiniteVolume
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
+        return base_spatial_methods
+
+    @property
+    def default_submesh_types(self):
+        base_submeshes = {
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
+        }
+        if self.options["bc_options"]["dimensionality"] == 0:
+            base_submeshes["current collector"] = pybamm.SubMesh0D
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
+        return base_submeshes
+
+    @property
     def default_geometry(self):
-        return pybamm.Geometry("1D macro")
+        if self.options["bc_options"]["dimensionality"] == 0:
+            return pybamm.Geometry("1D macro")
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            return pybamm.Geometry("1+1D macro")
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            return pybamm.Geometry("2+1D macro")
 
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
         # Current
-        icell = pybamm.standard_parameters_lead_acid.current_density_with_time
-        icell_dim = (
+        i_cell = pybamm.standard_parameters_lead_acid.current_with_time
+        i_cell_dim = (
             pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
         )
         I = pybamm.standard_parameters_lead_acid.dimensional_current_with_time
         self.variables.update(
             {
-                "Total current density": icell,
-                "Total current density [A.m-2]": icell_dim,
+                "Total current density": i_cell,
+                "Total current density [A.m-2]": i_cell_dim,
                 "Current [A]": I,
             }
         )
@@ -113,5 +145,12 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_soc_variables(self):
         "Set variables relating to the state of charge."
         # State of Charge defined as function of dimensionless electrolyte concentration
-        soc = self.variables["Average electrolyte concentration"] * 100
+        soc = self.variables["X-averaged electrolyte concentration"] * 100
         self.variables.update({"State of Charge": soc, "Depth of Discharge": 100 - soc})
+
+        # Fractional charge input
+        if "Fractional Charge Input" not in self.variables:
+            fci = pybamm.Variable("Fractional Charge Input", domain="current collector")
+            self.variables["Fractional Charge Input"] = fci
+            self.rhs[fci] = -self.param.current_with_time * 100
+            self.initial_conditions[fci] = self.param.q_init * 100

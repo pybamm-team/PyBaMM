@@ -395,8 +395,9 @@ class BaseModel(object):
         for var in {**self.rhs, **self.algebraic}.keys():
             if isinstance(var, pybamm.Variable):
                 var_ids_in_keys.add(var.id)
+            # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                var_ids_in_keys.update([x.id for x in var.children])
+                var_ids_in_keys.update([child.id for child in var.children])
         for var_id, var in all_vars.items():
             if var_id not in var_ids_in_keys:
                 raise pybamm.ModelError(

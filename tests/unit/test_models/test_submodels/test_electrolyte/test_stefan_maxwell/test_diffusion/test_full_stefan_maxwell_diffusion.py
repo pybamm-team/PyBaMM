@@ -16,14 +16,16 @@ class TestFull(unittest.TestCase):
             "Porosity change": a,
             "Volume-averaged velocity": a,
             "Electrolyte concentration": a,
-            "Negative electrode interfacial current density": pybamm.Broadcast(
-                a, "negative electrode"
+            "Negative electrode interfacial current density": pybamm.FullBroadcast(
+                a, "negative electrode", "current collector"
             ),
-            "Positive electrode interfacial current density": pybamm.Broadcast(
-                a, "positive electrode"
+            "Positive electrode interfacial current density": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
             ),
-            "Cell temperature": pybamm.Broadcast(
-                a, ["negative electrode", "separator", "positive electrode"]
+            "Cell temperature": pybamm.FullBroadcast(
+                a,
+                ["negative electrode", "separator", "positive electrode"],
+                "current collector",
             ),
         }
         icd = " interfacial current density"

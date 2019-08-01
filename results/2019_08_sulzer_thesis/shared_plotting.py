@@ -7,12 +7,12 @@ import pybamm
 from collections import defaultdict
 
 
-def plot_voltages(all_variables, t_eval, linestyles=None):
+def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
     # Plot
     linestyles = linestyles or ["k-", "g--", "r:", "b-."]
     n = int(len(all_variables) // np.sqrt(len(all_variables)))
     m = int(np.ceil(len(all_variables) / n))
-    fig, axes = plt.subplots(n, m, figsize=(6.4, 4.5))
+    fig, axes = plt.subplots(n, m, figsize=figsize)
     labels = [model for model in [x for x in all_variables.values()][0].keys()]
     y_min = 0.98 * min(
         np.nanmin(variables["Battery voltage [V]"](t_eval))
@@ -26,7 +26,7 @@ def plot_voltages(all_variables, t_eval, linestyles=None):
     )
     # Strict voltage cut-offs
     y_min = max(y_min, 10.5)
-    y_max = min(y_max, 14.5)
+    y_max = min(y_max, 14.6)
     for k, (Crate, models_variables) in enumerate(all_variables.items()):
         if len(all_variables) == 1:
             ax = axes
@@ -54,8 +54,8 @@ def plot_voltages(all_variables, t_eval, linestyles=None):
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         if k % m == 0:
             ax.set_ylabel("Voltage [V]")
-        else:
-            ax.set_yticklabels([])
+        # else:
+        #     ax.set_yticklabels([])
 
         for j, variables in enumerate(models_variables.values()):
             ax.plot(
@@ -73,8 +73,17 @@ def plot_voltages(all_variables, t_eval, linestyles=None):
     return fig, axes
 
 
-def plot_variable(all_variables, times, variable, limits_exceptions=None):
-    linestyles = ["k-", "g--", "r:", "b-."]
+def plot_variable(
+    all_variables,
+    times,
+    variable,
+    limits_exceptions=None,
+    yaxis="SOC",
+    linestyles=None,
+    figsize=(6.4, 5),
+):
+    limits_exceptions = limits_exceptions or {}
+    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
     n = len(times)
     m = len(all_variables)
     Crates = list(all_variables.keys())
@@ -82,7 +91,7 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None):
     x = all_variables[Crates[0]][labels[0]]["x"](0, np.linspace(0, 1))[:, 0]
     x_dim = all_variables[Crates[0]][labels[0]]["x [m]"](0, np.linspace(0, 1))[:, 0]
 
-    fig, axes = plt.subplots(n, m, figsize=(6.4, 6.4))
+    fig, axes = plt.subplots(n, m, figsize=figsize)
 
     # Default limits
     y_min = pybamm.ax_min(
@@ -108,7 +117,10 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None):
     # Plot
     for i, (Crate, models_variables) in enumerate(all_variables.items()):
         for j, time in enumerate(times):
-            ax = axes[j, i]
+            if len(times) == 1:
+                ax = axes[i]
+            else:
+                ax = axes[j, i]
             ax.set_xlim([x_dim[0], x_dim[-1]])
             ax.set_ylim([y_min, y_max])
             ax.yaxis.set_major_locator(plt.MaxNLocator(3))
@@ -128,15 +140,26 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None):
 
             # y-axis
             if i == 0:
-                for variables in models_variables.values():
-                    try:
-                        soc = variables["State of Charge"](time)
-                        ax.set_ylabel(
-                            "{}\% SoC".format(int(soc)), rotation=0, labelpad=30
-                        )
-                        ax.yaxis.get_label().set_verticalalignment("center")
-                    except ValueError:
-                        pass
+                # If we only want to plot one time the y label is the variable
+                if len(times) == 1:
+                    ax.set_ylabel(variable)
+                # Otherwise the y label is the time
+                else:
+                    for variables in models_variables.values():
+                        try:
+                            if yaxis == "SOC":
+                                soc = variables["State of Charge"](time)
+                                ax.set_ylabel(
+                                    "{}\% SoC".format(int(soc)), rotation=0, labelpad=30
+                                )
+                            elif yaxis == "FCI":
+                                fci = variables["Fractional Charge Input"](time)
+                                ax.set_ylabel(
+                                    "{}\% FCI".format(int(fci)), rotation=0, labelpad=30
+                                )
+                            ax.yaxis.get_label().set_verticalalignment("center")
+                        except ValueError:
+                            pass
             else:
                 ax.set_yticklabels([])
 
@@ -146,11 +169,94 @@ def plot_variable(all_variables, times, variable, limits_exceptions=None):
     leg = fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
     leg.get_frame().set_edgecolor("k")
     plt.subplots_adjust(
-        bottom=0.15, top=0.95, left=0.18, right=0.97, hspace=0.08, wspace=0.05
+        bottom=0.17, top=0.95, left=0.18, right=0.97, hspace=0.08, wspace=0.05
     )
+    return fig, axes
 
 
-def plot_voltage_breakdown(all_variables, t_eval, model, Crates):
+def plot_time_dependent_variables(
+    all_variables, t_eval, output_vars, labels, colors=None, figsize=(6.4, 3.5)
+):
+    models = list(list(all_variables.values())[0].keys())
+    full_model = models[0]
+    fig, axes = plt.subplots(len(models) - 1, len(all_variables), figsize=figsize)
+    y_min = pybamm.ax_min(
+        [
+            np.nanmin(variables[var](t_eval))
+            for models_variables in all_variables.values()
+            for variables in models_variables.values()
+            for var in output_vars
+        ]
+    )
+    y_max = pybamm.ax_max(
+        [
+            np.nanmax(variables[var](t_eval))
+            for models_variables in all_variables.values()
+            for variables in models_variables.values()
+            for var in output_vars
+        ]
+    )
+    linestyles = ["--", ":", "-.", "-"]
+    colors = colors or ["k", "b"]
+    for i, (Crate, models_variables) in enumerate(all_variables.items()):
+        for j, model in enumerate(models[1:]):
+            full_variables = models_variables[full_model]
+            variables = models_variables[model]
+            if len(models) == 2:
+                ax = axes[i]
+            else:
+                ax = axes[j, i]
+            t_max = max(
+                np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
+            )
+            ax.set_xlim([0, t_max])
+            ax.set_ylim([y_min, y_max])
+            if i == 0:
+                if len(models) == 2:
+                    ax.set_ylabel("Interfacial current densities")
+                else:
+                    ax.set_ylabel("{}\nvs Full".format(model), rotation=0, labelpad=30)
+                    ax.yaxis.get_label().set_verticalalignment("center")
+            if j == 0 and len(all_variables) > 1:
+                ax.set_title(
+                    "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
+                        chr(97 + i), abs(Crate), abs(Crate) * 0.6
+                    )
+                )
+            if j == len(models) - 2:
+                ax.set_xlabel("Time [h]")
+            plots = {}
+            for k, var in enumerate(output_vars):
+                plots[(full_model, k)], = ax.plot(
+                    full_variables["Time [h]"](t_eval),
+                    full_variables[var](t_eval),
+                    linestyle=linestyles[k],
+                    color=colors[0],
+                )
+            for k, var in enumerate(output_vars):
+                plots[(model, k)], = ax.plot(
+                    variables["Time [h]"](t_eval),
+                    variables[var](t_eval),
+                    linestyle=linestyles[k],
+                    color=colors[j + 1],
+                )
+    if len(models) == 2:
+        leg1 = fig.legend(
+            [plots[(model, len(linestyles) - 1)] for model in models],
+            models,
+            loc="lower center",
+            ncol=len(models),
+            bbox_to_anchor=(0.5, 0),
+        )
+        fig.legend(
+            labels, loc="lower center", ncol=len(labels), bbox_to_anchor=(0.5, 0.1)
+        )
+        fig.add_artist(leg1)
+    else:
+        fig.legend(labels, loc="lower center", ncol=len(labels))
+
+
+def plot_voltage_components(all_variables, t_eval, model, Crates):
     n = int(len(Crates) // np.sqrt(len(Crates)))
     m = int(np.ceil(len(Crates) / n))
     fig, axes = plt.subplots(n, m, figsize=(6.4, 2.3))

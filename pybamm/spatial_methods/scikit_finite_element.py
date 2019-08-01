@@ -276,14 +276,14 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             if symbol.side == "left":
                 boundary_val_vector[mesh.negative_tab] = vector[mesh.negative_tab]
             elif symbol.side == "right":
-                boundary_val_vector[mesh.positive_tab] = vector[mesh.negative_tab]
+                boundary_val_vector[mesh.positive_tab] = vector[mesh.positive_tab]
 
             # divide integration weights by (numerical) tab width to give average value
             boundary_val_vector = boundary_val_vector / (
                 boundary_val_vector[np.newaxis, :] @ np.ones_like(vector)
             )
 
-        elif isinstance(symbol, pybamm.BoundaryFlux):
+        elif isinstance(symbol, pybamm.BoundaryGradient):
             raise NotImplementedError
 
         # Return boundary value with domain given by symbol
@@ -325,15 +325,16 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         mass = skfem.asm(mass_form, mesh.basis)
 
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
-        _, lbc_type = boundary_conditions[symbol.id]["left"]
-        _, rbc_type = boundary_conditions[symbol.id]["right"]
+        if symbol.id in boundary_conditions:
+            _, lbc_type = boundary_conditions[symbol.id]["left"]
+            _, rbc_type = boundary_conditions[symbol.id]["right"]
 
-        if lbc_type == "Dirichlet":
-            # set source terms to zero on boundary by zeroing out mass matrix
-            self.bc_apply(mass, mesh.negative_tab, zero=True)
-        if rbc_type == "Dirichlet":
-            # set source terms to zero on boundary by zeroing out mass matrix
-            self.bc_apply(mass, mesh.positive_tab, zero=True)
+            if lbc_type == "Dirichlet":
+                # set source terms to zero on boundary by zeroing out mass matrix
+                self.bc_apply(mass, mesh.negative_tab, zero=True)
+            if rbc_type == "Dirichlet":
+                # set source terms to zero on boundary by zeroing out mass matrix
+                self.bc_apply(mass, mesh.positive_tab, zero=True)
 
         return pybamm.Matrix(mass)
 

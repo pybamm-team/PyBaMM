@@ -12,7 +12,6 @@ The plots were formatted using a formatting file `matplotlibrc` identical to [th
 
 - [Effect of capacitance](effect_of_capacitance.py): comparison of the one-dimensional model with and without capacitance terms included
     - Voltages
-    - Errors
     - Time taken for full solution
 - [Discharge asymptotics results](lead_acid_discharge.py):
     - Comparison of voltage curves for the full porous electrode model and a hierarchy of simplified models (Leading-Order Quasi-Static, First-Order Quasi-Static and Composite)
@@ -21,8 +20,8 @@ The plots were formatted using a formatting file `matplotlibrc` identical to [th
         - Electrolyte potential
         - Interfacial current density
     - Errors compared to full model and time taken to solve each model
-    - Breakdown of voltage into constituent overpotentials
-- Effect of convection (to do):
+    - Decomposition of voltage into constituent overpotentials
+- [Effect of convection](effect_of_convection.py):
     - Voltage at various C-rates with and without convection
     - Velocity profiles
     - Increasing the volume changes to see more of an effect
@@ -36,8 +35,7 @@ The plots were formatted using a formatting file `matplotlibrc` identical to [th
     - Comparison of variable profiles at various times for the full and reduced-order models
         - Electrolyte concentration
         - Oxygen concentration
-    - Errors compared to full model and time taken to solve each model
-    - Breakdown of voltage into constituent overpotentials
+    - Decomposition of voltage into constituent overpotentials
 - [Self-discharge](self_discharge.py):
     - Self-discharge voltages
 

@@ -37,7 +37,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             electrode.
         """
         param = self.param
-        phi_s_av = pybamm.average(phi_s)
+        phi_s_av = pybamm.x_average(phi_s)
 
         if self.domain == "Negative":
             phi_s_dim = param.potential_scale * phi_s
@@ -50,26 +50,25 @@ class BaseElectrode(pybamm.BaseSubModel):
                 param.U_p_ref - param.U_n_ref + param.potential_scale * phi_s_av
             )
 
-            v = pybamm.BoundaryValue(phi_s, "right")
-            delta_phi_s = phi_s - pybamm.Broadcast(
-                v, ["positive electrode"], broadcast_type="primary"
-            )
-
-        delta_phi_s_av = pybamm.average(delta_phi_s)
+            v = pybamm.boundary_value(phi_s, "right")
+            delta_phi_s = phi_s - pybamm.PrimaryBroadcast(v, ["positive electrode"])
+        delta_phi_s_av = pybamm.x_average(delta_phi_s)
         delta_phi_s_dim = delta_phi_s * param.potential_scale
         delta_phi_s_av_dim = delta_phi_s_av * param.potential_scale
 
         variables = {
             self.domain + " electrode potential": phi_s,
             self.domain + " electrode potential [V]": phi_s_dim,
-            "Average " + self.domain.lower() + " electrode potential": phi_s_av,
-            "Average " + self.domain.lower() + " electrode potential [V]": phi_s_av_dim,
+            "X-averaged " + self.domain.lower() + " electrode potential": phi_s_av,
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode potential [V]": phi_s_av_dim,
             self.domain + " electrode ohmic losses": delta_phi_s,
             self.domain + " electrode ohmic losses [V]": delta_phi_s_dim,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode ohmic losses": delta_phi_s_av,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode ohmic losses [V]": delta_phi_s_av_dim,
             "Gradient of "
@@ -123,7 +122,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             current variables added.
         """
         i_s_n = variables["Negative electrode current density"]
-        i_s_s = pybamm.Broadcast(0, ["separator"])
+        i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         i_s_p = variables["Positive electrode current density"]
 
         i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)

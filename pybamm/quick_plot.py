@@ -10,18 +10,18 @@ def ax_min(data):
     "Calculate appropriate minimum axis value for plotting"
     data_min = np.min(data)
     if data_min <= 0:
-        return 1.1 * data_min
+        return 1.04 * data_min
     else:
-        return 0.9 * data_min
+        return 0.96 * data_min
 
 
 def ax_max(data):
     "Calculate appropriate maximum axis value for plotting"
     data_max = np.max(data)
     if data_max <= 0:
-        return 0.9 * data_max
+        return 0.96 * data_max
     else:
-        return 1.1 * data_max
+        return 1.04 * data_max
 
 
 def split_long_string(title, max_words=4):
@@ -78,11 +78,21 @@ class QuickPlot(object):
 
         # Scales (default to 1 if information not in model)
         variables = models[0].variables
-        self.x_scale = 1
+        self.spatial_scales = {"x": 1, "y": 1, "z": 1}
         self.time_scale = 1
         if "x [m]" and "x" in variables:
-            self.x_scale = (variables["x [m]"] / variables["x"]).evaluate()[-1]
-        if "Time [m]" and "Time" in variables:
+            self.spatial_scales["x"] = (variables["x [m]"] / variables["x"]).evaluate()[
+                -1
+            ]
+        if "y [m]" and "y" in variables:
+            self.spatial_scales["y"] = (variables["y [m]"] / variables["y"]).evaluate()[
+                -1
+            ]
+        if "z [m]" and "z" in variables:
+            self.spatial_scales["z"] = (variables["z [m]"] / variables["z"]).evaluate()[
+                -1
+            ]
+        if "Time [h]" and "Time" in variables:
             self.time_scale = (variables["Time [h]"] / variables["Time"]).evaluate(t=1)
 
         # Time parameters
@@ -122,7 +132,7 @@ class QuickPlot(object):
     def set_output_variables(self, output_variables, solutions, models, mesh):
         # Set up output variables
         self.variables = {}
-        self.x_values = {}
+        self.spatial_variable = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -170,7 +180,9 @@ class QuickPlot(object):
 
             # Set the x variable for any two-dimensional variables
             if self.variables[key][0][0].dimensions == 2:
-                self.x_values[key] = mesh.combine_submeshes(*domain)[0].edges
+                variable_key = self.variables[key][0][0].spatial_var_name
+                variable_value = mesh.combine_submeshes(*domain)[0].edges
+                self.spatial_variable[key] = (variable_key, variable_value)
 
             # Don't allow 3D variables
             elif any(var.dimensions == 3 for var in self.variables[key][0]):
@@ -188,26 +200,28 @@ class QuickPlot(object):
         self.axis = {}
         for key, variable_lists in self.variables.items():
             if variable_lists[0][0].dimensions == 1:
-                x = None
+                spatial_var_name, spatial_var_value = "x", None
                 x_min = self.min_t
                 x_max = self.max_t
             elif variable_lists[0][0].dimensions == 2:
-                x = self.x_values[key]
-                x_scaled = x * self.x_scale
-                x_min = x_scaled[0]
-                x_max = x_scaled[-1]
+                spatial_var_name, spatial_var_value = self.spatial_variable[key]
+                spatial_var_scaled = (
+                    spatial_var_value * self.spatial_scales[spatial_var_name]
+                )
+                x_min = spatial_var_scaled[0]
+                x_max = spatial_var_scaled[-1]
 
             # Get min and max y values
             y_min = np.min(
                 [
-                    ax_min(var(self.ts[i], x))
+                    ax_min(var(self.ts[i], **{spatial_var_name: spatial_var_value}))
                     for i, variable_list in enumerate(variable_lists)
                     for var in variable_list
                 ]
             )
             y_max = np.max(
                 [
-                    ax_max(var(self.ts[i], x))
+                    ax_max(var(self.ts[i], **{spatial_var_name: spatial_var_value}))
                     for i, variable_list in enumerate(variable_lists)
                     for var in variable_list
                 ]
@@ -251,13 +265,13 @@ class QuickPlot(object):
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 2:
                 # 2D plot: plot as a function of x at time t
-                ax.set_xlabel("Position [m]", fontsize=fontsize)
-                x_value = self.x_values[key]
+                spatial_var_name, spatial_var_value = self.spatial_variable[key]
+                ax.set_xlabel(spatial_var_name + " [m]", fontsize=fontsize)
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         self.plots[key][i][j], = ax.plot(
-                            x_value * self.x_scale,
-                            variable(t, x_value),
+                            spatial_var_value * self.spatial_scales[spatial_var_name],
+                            variable(t, **{spatial_var_name: spatial_var_value}),
                             lw=2,
                             color=colors[i],
                             linestyle=linestyles[j],
@@ -326,10 +340,14 @@ class QuickPlot(object):
         t_dimensionless = t / self.time_scale
         for key, plot in self.plots.items():
             if self.variables[key][0][0].dimensions == 2:
-                x = self.x_values[key]
+                spatial_var_name, spatial_var_value = self.spatial_variable[key]
                 for i, variable_lists in enumerate(self.variables[key]):
                     for j, variable in enumerate(variable_lists):
-                        plot[i][j].set_ydata(variable(t_dimensionless, x))
+                        plot[i][j].set_ydata(
+                            variable(
+                                t_dimensionless, **{spatial_var_name: spatial_var_value}
+                            )
+                        )
             else:
                 self.time_lines[key].set_xdata([t])
 

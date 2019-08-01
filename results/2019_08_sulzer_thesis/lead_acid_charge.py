@@ -16,16 +16,18 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
+    Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
+    all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     shared_plotting.plot_voltages(all_variables, t_eval)
     file_name = "charge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_interfacial_currents(models_variables, t_eval):
-    models = ["Full", "LOQS"]
+def plot_interfacial_currents(all_variables, t_eval):
+    Crates = [-0.1, -2, -5]
+    all_variables = {Crate: v for Crate, v in all_variables.items() if Crate in Crates}
     file_name = "charge_interfacial_current_density_comparison.eps"
-    fig, ax = plt.subplots(1, 1)
     output_vars = [
         "Average positive electrode interfacial current density",
         "Average positive electrode oxygen interfacial current density",
@@ -33,36 +35,22 @@ def plot_interfacial_currents(models_variables, t_eval):
         "Average negative electrode interfacial current density",
     ]
     labels = [
-        "Positive electrode (main)",
-        "Positive electrode (oxygen)",
-        "Negative electrode (oxygen)",
-        "Negative electrode (main)",
+        "Pos electrode\n(main)",
+        "Pos electrode\n(oxygen)",
+        "Neg electrode\n(oxygen)",
+        "Neg electrode\n(main)",
     ]
-    t_max = max(np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values())
-    ax.set_xlim([0, t_max])
-    ax.set_xlabel("Time [h]")
-    ax.set_ylabel("Interfacial current densities")
-    linestyles = ["--", ":", "-.", "-"]
-    colors = ["k", "r"]
-    plots = {}
-    for j, (model, variables) in enumerate(models_variables.items()):
-        if model in models:
-            for k, var in enumerate(output_vars):
-                plots[(model, k)], = ax.plot(
-                    variables["Time [h]"](t_eval),
-                    variables[var](t_eval),
-                    linestyle=linestyles[k],
-                    color=colors[j],
-                )
-    leg1 = ax.legend(
-        [plots[("Full", 3)], plots[("LOQS", 3)]],
-        ["Full", "LOQS"],
-        loc="center left",
-        bbox_to_anchor=(1, 0.25),
+    shared_plotting.plot_time_dependent_variables(
+        all_variables,
+        t_eval,
+        output_vars,
+        labels,
+        colors=["k", "g", "r", "b"],
+        figsize=(6.4, 6.4),
     )
-    ax.legend(labels, loc="center left", bbox_to_anchor=(1, 0.75))
-    ax.add_artist(leg1)
-    fig.tight_layout()
+    plt.subplots_adjust(
+        bottom=0.15, left=0.15, right=0.95, wspace=0.3, hspace=0.4, top=0.95
+    )
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
@@ -83,20 +71,20 @@ def plot_variables(all_variables, t_eval):
             exceptions = limits_exceptions[var]
         else:
             exceptions = {}
-        shared_plotting.plot_variable(all_variables, times, var, exceptions)
+        shared_plotting.plot_variable(
+            all_variables, times, var, exceptions, yaxis="FCI"
+        )
         if OUTPUT_DIR is not None:
-            plt.savefig(
-                OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight"
-            )
+            plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_voltage_breakdown(all_variables, t_eval):
+def plot_voltage_components(all_variables, t_eval):
     Crates = [-0.1, -2, -5]
-    model = "LOQS"
-    shared_plotting.plot_voltage_breakdown(all_variables, t_eval, model, Crates)
-    file_name = "charge_voltage_breakdown.eps"
+    model = "Composite"
+    shared_plotting.plot_voltage_components(all_variables, t_eval, model, Crates)
+    file_name = "charge_voltage_components.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def charge_states(compute):
@@ -108,9 +96,20 @@ def charge_states(compute):
             pybamm.lead_acid.LOQS(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="LOQS"
             ),
+            pybamm.lead_acid.FOQS(
+                {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="FOQS"
+            ),
+            # pybamm.lead_acid.Composite(
+            #     {"surface form": "algebraic", "side reactions": ["oxygen"]},
+            #     name="Composite",
+            # ),
+            pybamm.lead_acid.CompositeExtended(
+                {"surface form": "algebraic", "side reactions": ["oxygen"]},
+                name="Composite",
+            ),
         ]
         Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
-        t_eval = np.linspace(0, 2, 100)
+        t_eval = np.linspace(0, 3, 100)
         extra_parameter_values = {
             "Positive electrode"
             + "reference exchange-current density (oxygen) [A.m-2]": 1e-24,
@@ -130,10 +129,10 @@ def charge_states(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    # plot_voltages(all_variables, t_eval)
-    plot_interfacial_currents(all_variables[-1], t_eval)
-    # plot_variables(all_variables, t_eval)
-    # plot_voltage_breakdown(all_variables, t_eval)
+    plot_voltages(all_variables, t_eval)
+    plot_interfacial_currents(all_variables, t_eval)
+    plot_variables(all_variables, t_eval)
+    plot_voltage_components(all_variables, t_eval)
 
 
 if __name__ == "__main__":

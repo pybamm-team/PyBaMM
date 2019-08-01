@@ -1,5 +1,5 @@
 #
-# Native PyBaMM Meshes
+# One-dimensional submeshes
 #
 import pybamm
 
@@ -7,17 +7,10 @@ import numpy as np
 
 
 class SubMesh1D:
-    """ Submesh class.
-        Contains the position of the nodes and the number of mesh points.
-
-        Parameters
-        ----------
-        domain : dict
-            A dictionary that contains the limits of the spatial variables
-        npts : dict
-            A dictionary that contains the number of points to be used on each
-            spatial variable
-        """
+    """
+    1D submesh class.
+    Contains the position of the nodes and the number of mesh points.
+    """
 
     def __init__(self, edges, coord_sys):
         self.edges = edges
@@ -31,6 +24,14 @@ class SubMesh1D:
 class Uniform1DSubMesh(SubMesh1D):
     """
     A class to generate a uniform submesh on a 1D domain
+
+    Parameters
+    ----------
+    lims : dict
+        A dictionary that contains the limits of the spatial variables
+    npts : dict
+        A dictionary that contains the number of points to be used on each
+        spatial variable
     """
 
     def __init__(self, lims, npts):
@@ -42,13 +43,12 @@ class Uniform1DSubMesh(SubMesh1D):
         if len(lims) != 1:
             raise pybamm.GeometryError("lims should only contain a single variable")
 
-        var = list(lims.keys())[0]
-        spatial_lims = lims[var]
-        npts = npts[var.id]
+        spatial_var = list(lims.keys())[0]
+        spatial_lims = lims[spatial_var]
+        npts = npts[spatial_var.id]
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
 
-        spatial_var = list(lims.keys())[0]
         coord_sys = spatial_var.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys)

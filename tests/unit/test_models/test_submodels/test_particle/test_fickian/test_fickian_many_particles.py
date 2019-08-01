@@ -11,13 +11,16 @@ class TestManyParticles(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
 
-        a = pybamm.Scalar(0)
-        a_n = pybamm.Broadcast(0, ["negative electrode"])
-        a_p = pybamm.Broadcast(0, ["positive electrode"])
+        a_n = pybamm.FullBroadcast(
+            pybamm.Scalar(0), "negative electrode", {"secondary": "current collector"}
+        )
+        a_p = pybamm.FullBroadcast(
+            pybamm.Scalar(0), "positive electrode", {"secondary": "current collector"}
+        )
 
         variables = {
             "Negative electrode interfacial current density": a_n,
-            "Average negative electrode temperature": a,
+            "Negative electrode temperature": a_n,
         }
 
         submodel = pybamm.particle.fickian.ManyParticles(param, "Negative")
@@ -26,7 +29,7 @@ class TestManyParticles(unittest.TestCase):
 
         variables = {
             "Positive electrode interfacial current density": a_p,
-            "Average positive electrode temperature": a,
+            "Positive electrode temperature": a_p,
         }
         submodel = pybamm.particle.fickian.ManyParticles(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
