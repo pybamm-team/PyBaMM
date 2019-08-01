@@ -4,6 +4,7 @@
 import pybamm
 import unittest
 import numpy as np
+from scipy.sparse import csr_matrix
 
 
 class TestDaeSolver(unittest.TestCase):
@@ -31,6 +32,26 @@ class TestDaeSolver(unittest.TestCase):
 
         y0 = np.zeros_like(vec)
         init_cond = solver.calculate_consistent_initial_conditions(rhs, algebraic, y0)
+        np.testing.assert_array_almost_equal(init_cond, vec)
+
+        # With jacobian
+        def jac(t, y):
+            return 2 * np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
+
+        init_cond = solver.calculate_consistent_initial_conditions(
+            rhs, algebraic, y0, jac
+        )
+        np.testing.assert_array_almost_equal(init_cond, vec)
+
+        # With sparse jacobian
+        def jac(t, y):
+            return 2 * csr_matrix(
+                np.hstack([np.zeros((3, 1)), np.diag(y[1:] - vec[1:])])
+            )
+
+        init_cond = solver.calculate_consistent_initial_conditions(
+            rhs, algebraic, y0, jac
+        )
         np.testing.assert_array_almost_equal(init_cond, vec)
 
     def test_fail_consistent_initial_conditions(self):
