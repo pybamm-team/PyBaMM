@@ -227,10 +227,6 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
         self.assertEqual((b / b).simplify().evaluate(), 1)
 
-        # Spatial variable
-        x = pybamm.SpatialVariable("x", ["negative electrode"])
-        self.assertIsInstance(x.simplify(), pybamm.SpatialVariable)
-
         # not implemented for Symbol
         sym = pybamm.Symbol("sym")
         with self.assertRaises(NotImplementedError):

@@ -17,12 +17,12 @@ def simplify_if_constant(symbol):
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
             if isinstance(result, numbers.Number):
-                return pybamm.Scalar(result, domain=symbol.domain)
+                return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(result, domain=symbol.domain)
+                    return pybamm.Vector(result)
                 else:
-                    return pybamm.Matrix(result, domain=symbol.domain)
+                    return pybamm.Matrix(result)
 
     return symbol
 
@@ -578,6 +578,8 @@ class Simplification(object):
 
     def _simplify(self, symbol):
         """ See :meth:`Simplification.simplify()`. """
+        symbol.domain = []
+        symbol.auxiliary_domains = {}
 
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children
@@ -605,13 +607,10 @@ class Simplification(object):
             # Backup option: return new copy of the object
             try:
                 new_symbol = symbol.new_copy()
-                new_symbol.domain = []
                 return new_symbol
             except NotImplementedError:
                 raise NotImplementedError(
                     "Cannot simplify symbol of type '{}'".format(type(symbol))
                 )
 
-        new_symbol.domain = []
-        new_symbol.auxiliary_domains = {}
         return simplify_if_constant(new_symbol)
