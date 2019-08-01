@@ -17,16 +17,10 @@ else:
 
 # load models
 models = [
-    pybamm.lead_acid.NewmanTiedemann(
-        {"convection": {"transverse": "uniform"}}, name="NT With convection"
-    ),
-    # pybamm.lead_acid.Composite(
-    #     {"convection": {"transverse": "uniform"}}, name="Comp With convection"
-    # ),
-    # pybamm.lead_acid.LOQS(
-    #     {"convection": {"transverse": "uniform"}}, name="LOQS With convection"
-    # ),
-    pybamm.lead_acid.NewmanTiedemann(name="NT Without convection"),
+    pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.Composite(),
+    pybamm.lead_acid.LOQS(),
+    pybamm.lead_acid.FOQS({"surface form": "algebraic"}),
 ]
 
 # load parameter values and process models and geometry

@@ -23,6 +23,15 @@ class FirstOrder(BaseModel):
     def __init__(self, param, reactions):
         super().__init__(param, reactions)
 
+    def get_fundamental_variables(self):
+        A_e = pybamm.Variable(
+            "Electrolyte concentration correction constant", domain="current collector"
+        )
+
+        variables = {"Electrolyte concentration correction constant": A_e}
+
+        return variables
+
     def get_coupled_variables(self, variables):
         param = self.param
         l_n = param.l_n
@@ -54,6 +63,7 @@ class FirstOrder(BaseModel):
         deps_p_0_dt = variables[
             "Leading-order x-averaged positive electrode porosity change"
         ]
+        A_e = variables["Electrolyte concentration correction constant"]
 
         # Combined time derivatives
         d_epsc_n_0_dt = c_e_0 * deps_n_0_dt + eps_n_0 * dc_e_0_dt
@@ -118,9 +128,9 @@ class FirstOrder(BaseModel):
             + (rhs_s * l_s ** 2 * l_p / (2 * D_e_s))
             + (rhs_n * l_n * l_s * l_p / D_e_s)
         )
-        A_e = -(eps_n_0 * c_e_n_1_av + eps_s_0 * c_e_s_1_av + eps_p_0 * c_e_p_1_av) / (
-            l_n * eps_n_0 + l_s * eps_s_0 + l_p * eps_p_0
-        )
+        # A_e = -(eps_n_0 * c_e_n_1_av + eps_s_0 * c_e_s_1_av + eps_p_0 * c_e_p_1_av) / (
+        #     l_n * eps_n_0 + l_s * eps_s_0 + l_p * eps_p_0
+        # )
         c_e_n_1 += pybamm.PrimaryBroadcast(A_e, "negative electrode")
         c_e_s_1 += pybamm.PrimaryBroadcast(A_e, "separator")
         c_e_p_1 += pybamm.PrimaryBroadcast(A_e, "positive electrode")
@@ -138,9 +148,17 @@ class FirstOrder(BaseModel):
         # Update with analytical expressions for first-order x-averages
         variables.update(
             {
-                "X-averaged first-order negative electrolyte concentration": c_e_n_1_av,
-                "X-averaged first-order separator concentration": c_e_s_1_av,
-                "X-averaged first-order positive electrolyte concentration": c_e_p_1_av,
+                "X-averaged first-order negative electrolyte concentration": c_e_n_1_av
+                + A_e,
+                "X-averaged first-order separator concentration": c_e_s_1_av + A_e,
+                "X-averaged first-order positive electrolyte concentration": c_e_p_1_av
+                + A_e,
+                "X-averaged first-order negative electrolyte concentration "
+                + "minus A_e": c_e_n_1_av,
+                "X-averaged first-order separator concentration "
+                + "minus A_e": c_e_s_1_av,
+                "X-averaged first-order positive electrolyte concentration "
+                + "minus A_e": c_e_p_1_av,
             }
         )
 
@@ -150,3 +168,60 @@ class FirstOrder(BaseModel):
         variables.update(self._get_standard_flux_variables(N_e))
 
         return variables
+
+    def set_algebraic(self, variables):
+        l_n = self.param.l_n
+        l_s = self.param.l_s
+        l_p = self.param.l_p
+        c_e_0 = variables["Leading-order x-averaged electrolyte concentration"]
+        div_v_box_n_0 = variables[
+            "Leading-order x-averaged negative electrode volume-averaged acceleration"
+        ]
+        div_v_box_s_0 = variables[
+            "Leading-order x-averaged separator volume-averaged acceleration"
+        ]
+        div_v_box_p_0 = variables[
+            "Leading-order x-averaged positive electrode volume-averaged acceleration"
+        ]
+        dc_e_0_dt = variables["Leading-order electrolyte concentration change"]
+        eps_n_0 = variables["Leading-order x-averaged negative electrode porosity"]
+        eps_s_0 = variables["Leading-order x-averaged separator porosity"]
+        eps_p_0 = variables["Leading-order x-averaged positive electrode porosity"]
+        deps_n_0_dt = variables[
+            "Leading-order x-averaged negative electrode porosity change"
+        ]
+        deps_p_0_dt = variables[
+            "Leading-order x-averaged positive electrode porosity change"
+        ]
+        c_e_n_1_av = variables[
+            "X-averaged first-order negative electrolyte concentration"
+        ]
+        c_e_s_1_av = variables["X-averaged first-order separator concentration"]
+        c_e_p_1_av = variables[
+            "X-averaged first-order positive electrolyte concentration"
+        ]
+        A_e = variables["Electrolyte concentration correction constant"]
+
+        self.algebraic = {
+            A_e: A_e
+            + (eps_n_0 * c_e_n_1_av + eps_s_0 * c_e_s_1_av + eps_p_0 * c_e_p_1_av)
+            / (l_n * eps_n_0 + l_s * eps_s_0 + l_p * eps_p_0)
+        }
+
+    def set_initial_conditions(self, variables):
+        l_n = self.param.l_n
+        l_s = self.param.l_s
+        l_p = self.param.l_p
+        eps_n_0 = variables["Leading-order x-averaged negative electrode porosity"]
+        eps_s_0 = variables["Leading-order x-averaged separator porosity"]
+        eps_p_0 = variables["Leading-order x-averaged positive electrode porosity"]
+        c_e_n_1_av = variables[
+            "X-averaged first-order negative electrolyte concentration"
+        ]
+        c_e_s_1_av = variables["X-averaged first-order separator concentration"]
+        c_e_p_1_av = variables[
+            "X-averaged first-order positive electrolyte concentration"
+        ]
+        A_e = variables["Electrolyte concentration correction constant"]
+
+        self.initial_conditions = {A_e: pybamm.Scalar(0)}
