@@ -65,9 +65,10 @@ class SpatialVariable(IndependentVariable):
     Parameters
     ----------
     name : str
-        name of the node (e.g. "x_n")
+        name of the node (e.g. "x", "y", "z", "r", "x_n", "x_s", "x_p", "r_n", "r_p")
     domain : iterable of str
-        list of domains that this variable is valid over
+        list of domains that this variable is valid over (e.g. "cartesian", "spherical
+        polar")
 
     *Extends:* :class:`Symbol`
     """
