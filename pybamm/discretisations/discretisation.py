@@ -3,7 +3,7 @@
 #
 import pybamm
 import numpy as np
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csr_matrix
 
 
@@ -180,10 +180,11 @@ class Discretisation(object):
             # Otherwise, add up the size of all the domains in variable.domain
             elif isinstance(variable, pybamm.Concatenation):
                 children = variable.children
-                meshes = {
-                    child: [self.spatial_methods[dom].mesh[dom] for dom in child.domain]
-                    for child in children
-                }
+                meshes = OrderedDict()
+                for child in children:
+                    meshes[child] = [
+                        self.spatial_methods[dom].mesh[dom] for dom in child.domain
+                    ]
                 sec_points = len(list(meshes.values())[0][0])
                 for i in range(sec_points):
                     for child, mesh in meshes.items():

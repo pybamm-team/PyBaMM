@@ -773,12 +773,13 @@ class TestDiscretise(unittest.TestCase):
         conc = pybamm.Concatenation(a, b, c)
         disc.set_variable_slices([conc])
         self.assertEqual(
-            disc.y_slices,
-            {
-                a.id: [slice(0, 40), slice(100, 140), slice(200, 240)],
-                b.id: [slice(40, 65), slice(140, 165), slice(240, 265)],
-                c.id: [slice(65, 100), slice(165, 200), slice(265, 300)],
-            },
+            disc.y_slices[a.id], [slice(0, 40), slice(100, 140), slice(200, 240)]
+        ),
+        self.assertEqual(
+            disc.y_slices[b.id], [slice(40, 65), slice(140, 165), slice(240, 265)]
+        )
+        self.assertEqual(
+            disc.y_slices[c.id], [slice(65, 100), slice(165, 200), slice(265, 300)]
         )
         expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.DomainConcatenation)
