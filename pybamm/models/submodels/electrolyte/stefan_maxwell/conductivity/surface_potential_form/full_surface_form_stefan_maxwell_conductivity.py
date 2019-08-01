@@ -78,7 +78,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             c_e_flux = pybamm.BoundaryGradient(c_e, "right")
             flux_left = -i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
             flux_right = (
-                (i_boundary_cc * pybamm.BoundaryValue(1 / conductivity, "right"))
+                (i_boundary_cc / pybamm.BoundaryValue(conductivity, "right"))
                 - pybamm.BoundaryValue(param.chi(c_e) / c_e, "right") * c_e_flux
                 - i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "right")
             )
@@ -91,7 +91,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
         elif self.domain == "Positive":
             c_e_flux = pybamm.BoundaryGradient(c_e, "left")
             flux_left = (
-                (i_boundary_cc * pybamm.BoundaryValue(1 / conductivity, "left"))
+                (i_boundary_cc / pybamm.BoundaryValue(conductivity, "left"))
                 - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux
                 - i_boundary_cc * pybamm.BoundaryValue(1 / sigma_eff, "left")
             )
