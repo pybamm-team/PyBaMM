@@ -17,9 +17,9 @@ class TestSpatialMethod(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.integral(None, None, None)
+            spatial_method.integral(None, None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.indefinite_integral(None, None, None)
+            spatial_method.indefinite_integral(None, None)
 
     def test_discretise_spatial_variable(self):
         # create discretisation

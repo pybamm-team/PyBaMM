@@ -30,12 +30,8 @@ class TestLeadingOrder(unittest.TestCase):
             "X-averaged negative electrode porosity change": a,
             "X-averaged separator porosity change": a,
             "X-averaged positive electrode porosity change": a,
-            "Negative electrode interfacial current density": pybamm.Broadcast(
-                a, "negative electrode"
-            ),
-            "Positive electrode interfacial current density": pybamm.Broadcast(
-                a, "positive electrode"
-            ),
+            "X-averaged negative electrode interfacial current density": a,
+            "X-averaged positive electrode interfacial current density": a,
         }
         submodel = pybamm.electrolyte.stefan_maxwell.diffusion.LeadingOrder(
             param, reactions
