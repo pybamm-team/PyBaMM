@@ -49,7 +49,14 @@ class Composite(Full):
 
         # N_e = N_e_diffusion + N_e_migration + N_e_convection
 
-        N_e = N_e_diffusion + param.C_e * c_e_0_av * v_box_0
+        N_e = (
+            N_e_diffusion
+            + param.C_e
+            * pybamm.PrimaryBroadcast(
+                c_e_0_av, ["negative electrode", "separator", "positive electrode"]
+            )
+            * v_box_0
+        )
 
         variables.update(self._get_standard_flux_variables(N_e))
 

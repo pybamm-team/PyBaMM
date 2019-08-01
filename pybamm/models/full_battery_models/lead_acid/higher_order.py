@@ -139,14 +139,10 @@ class HigherOrderBaseModel(BaseModel):
         Update convection submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        if self.options["convection"] is False:
+        if self.options["convection"] is not False:
             self.submodels[
-                "full through-cell convection"
-            ] = pybamm.convection.through_cell.NoConvection(self.param)
-        if self.options["convection"] is True:
-            self.submodels[
-                "full through-cell convection"
-            ] = pybamm.convection.through_cell.Composite(self.param)
+                "through-cell convection"
+            ] = pybamm.convection.through_cell.Explicit(self.param)
 
     def set_full_porosity_submodel(self):
         """

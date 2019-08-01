@@ -141,8 +141,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         default_options = {
             "dimensionality": 0,
             "surface form": False,
-            "convection": None,
-            "thermal": None,
+            "convection": False,
+            "thermal": "isothermal",
             "first-order potential": "linear",
             "side reactions": [],
             "interfacial surface area": "constant",
@@ -191,7 +191,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     options["dimensionality"]
                 )
             )
-        if options["thermal"] not in [None, "lumped", "full"]:
+        if options["thermal"] not in ["isothermal", "lumped", "full"]:
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
@@ -201,7 +201,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "current collector model must be uniform in 0D model"
                 )
             if (
-                options["convection"] is not None
+                options["convection"] is not False
                 and options["convection"]["transverse"] == "full"
             ):
                 raise pybamm.OptionError(
@@ -408,7 +408,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_thermal_submodel(self):
 
-        if self.options["thermal"] is None:
+        if self.options["thermal"] == "isothermal":
             thermal_submodel = pybamm.thermal.Isothermal(self.param)
         elif self.options["thermal"] == "full":
             thermal_submodel = pybamm.thermal.Full(self.param)

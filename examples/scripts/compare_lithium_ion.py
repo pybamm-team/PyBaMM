@@ -2,7 +2,7 @@ import pybamm
 import numpy as np
 
 # load models
-options = {"thermal": None}
+options = {"thermal": "isothermal"}
 pybamm.set_logging_level("INFO")
 models = [
     pybamm.lithium_ion.SPM(options),
