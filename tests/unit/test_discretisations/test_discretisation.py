@@ -774,7 +774,7 @@ class TestDiscretise(unittest.TestCase):
         disc.set_variable_slices([conc])
         self.assertEqual(
             disc.y_slices[a.id], [slice(0, 40), slice(100, 140), slice(200, 240)]
-        ),
+        )
         self.assertEqual(
             disc.y_slices[b.id], [slice(40, 65), slice(140, 165), slice(240, 265)]
         )
