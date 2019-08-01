@@ -33,20 +33,23 @@ class BaseQuiteConductivePotentialPair(BaseModel):
 
         variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
 
+        # Lagrangian multiplier for
+        c = pybamm.Variable("Lagrangian multiplier")
+        # variables.update({"Lagrangian multiplier": c})
+
         return variables
 
     def set_algebraic(self, variables):
 
         param = self.param
+        z = pybamm.standard_spatial_vars.z
 
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
+        # c = variables["Lagrangian multiplier"]
 
-        import ipdb
-
-        ipdb.set_trace()
         self.algebraic = {
             phi_s_cn: (param.sigma_cn * param.delta ** 2 * param.l_cn)
             * pybamm.laplacian(phi_s_cn)
@@ -54,6 +57,8 @@ class BaseQuiteConductivePotentialPair(BaseModel):
             i_boundary_cc: (param.sigma_cp * param.delta ** 2 * param.l_cp)
             * pybamm.laplacian(phi_s_cp)
             + pybamm.source(i_boundary_cc_0, phi_s_cp),
+            # + c * pybamm.Integral(pybamm.PrimaryBroadcast(1, "current collector"), z),
+            # c: pybamm.Integral(i_boundary_cc, z) + 0 * c,
         }
 
     def set_initial_conditions(self, variables):
@@ -62,14 +67,16 @@ class BaseQuiteConductivePotentialPair(BaseModel):
         applied_current = param.current_with_time
         phi_s_cn = variables["Negative current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
+        # c = variables["Lagrangian multiplier"]
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
             i_boundary_cc: applied_current / param.l_y / param.l_z,
+            # c: pybamm.Scalar(0),
         }
 
 
-class QuiteConductivePotentialPair1plus1D(BasePotentialPair):
+class QuiteConductivePotentialPair1plus1D(BaseQuiteConductivePotentialPair):
     def set_boundary_conditions(self, variables):
 
         phi_s_cn = variables["Negative current collector potential"]
@@ -92,7 +99,7 @@ class QuiteConductivePotentialPair1plus1D(BasePotentialPair):
         }
 
 
-class QuiteConductivePotentialPair2plus1D(BasePotentialPair):
+class QuiteConductivePotentialPair2plus1D(BaseQuiteConductivePotentialPair):
     def set_boundary_conditions(self, variables):
 
         phi_s_cn = variables["Negative current collector potential"]
