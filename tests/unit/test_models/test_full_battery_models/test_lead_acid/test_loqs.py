@@ -92,11 +92,6 @@ class TestLeadAcidLOQS(unittest.TestCase):
             )
         )
 
-    def test_incompatible_options(self):
-        options = {"surface form": "bad surface form"}
-        with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
-            pybamm.lead_acid.LOQS(options)
-
 
 class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
     def test_well_posed_differential(self):

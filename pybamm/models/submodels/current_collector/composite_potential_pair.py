@@ -11,7 +11,7 @@ from .potential_pair import (
 
 class BaseCompositePotentialPair(BasePotentialPair):
     """
-    Potential pair model for the current collectors.
+    Composite potential pair model for the current collectors.
     This is identical to the BasePotentialPair model, except the name of the fundamental
     variables are changed to avoid clashes with leading order.
 

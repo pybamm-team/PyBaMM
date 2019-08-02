@@ -11,7 +11,7 @@ from .potential_pair import (
 
 class BaseQuiteConductivePotentialPair(BasePotentialPair):
     """A submodel for Ohm's law plus conservation of current in the current collectors,
-    which uses the voltage-current relationship from the SPM(e).
+    in the limit of quite conductive electrodes.
 
     Parameters
     ----------

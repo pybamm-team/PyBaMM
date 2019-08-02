@@ -6,8 +6,7 @@ from .base_current_collector import BaseModel
 
 
 class BasePotentialPair(BaseModel):
-    """A submodel for Ohm's law plus conservation of current in the current collectors,
-    which uses the voltage-current relationship from the SPM(e).
+    """A submodel for Ohm's law plus conservation of current in the current collectors.
 
     Parameters
     ----------
