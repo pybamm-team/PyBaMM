@@ -66,7 +66,10 @@ class EffectiveResistance2D(pybamm.BaseModel):
         W_pos_tab_bc = l_y / (alpha_prime * sigma_cp_dbl_prime)
 
         self.boundary_conditions = {
-            psi: {"left": (psi_neg_tab_bc, "Neumann"), "right": (psi_pos_tab_bc, "Neumann")},
+            psi: {
+                "left": (psi_neg_tab_bc, "Neumann"),
+                "right": (psi_pos_tab_bc, "Neumann"),
+            },
             W: {"left": (W_neg_tab_bc, "Neumann"), "right": (W_pos_tab_bc, "Neumann")},
         }
 
