@@ -24,16 +24,19 @@ class TestLeadAcidComposite(unittest.TestCase):
 
 
 class TestLeadAcidCompositeMultiDimensional(unittest.TestCase):
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_well_posed(self):
         model = pybamm.lead_acid.Composite(
             {"dimensionality": 1, "current collector": "potential pair"}
         )
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
         model.check_well_posedness()
+
         model = pybamm.lead_acid.Composite(
             {"dimensionality": 2, "current collector": "potential pair"}
         )
         model.check_well_posedness()
+
         model = pybamm.lead_acid.Composite(
             {
                 "dimensionality": 1,
@@ -41,6 +44,7 @@ class TestLeadAcidCompositeMultiDimensional(unittest.TestCase):
             }
         )
         model.check_well_posedness()
+
         model = pybamm.lead_acid.Composite(
             {
                 "dimensionality": 2,
