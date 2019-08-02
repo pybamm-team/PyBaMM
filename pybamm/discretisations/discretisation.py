@@ -161,10 +161,13 @@ class Discretisation(object):
         return model_disc
 
     def set_variable_slices(self, variables):
-        """Sets the slicing for variables.
+        """
+        Sets the slicing for variables.
 
+        Parameters
+        ----------
         variables : iterable of :class:`pybamm.Variables`
-        The variables for which to set slices
+            The variables for which to set slices
         """
         # Set up y_slices
         y_slices = defaultdict(list)
@@ -531,12 +534,13 @@ class Discretisation(object):
                 return child_spatial_method.mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
-                return child_spatial_method.indefinite_integral(
-                    child.domain, child, disc_child
-                )
+                return child_spatial_method.indefinite_integral(child, disc_child)
 
             elif isinstance(symbol, pybamm.Integral):
-                return child_spatial_method.integral(child.domain, child, disc_child)
+                out = child_spatial_method.integral(child, disc_child)
+                out.domain = symbol.domain
+                out.auxiliary_domains = symbol.auxiliary_domains
+                return out
 
             elif isinstance(symbol, pybamm.Broadcast):
                 # Broadcast new_child to the domain specified by symbol.domain
@@ -564,9 +568,9 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Variable):
             return pybamm.StateVector(
-                *self._y_slices[symbol.id],
+                *self.y_slices[symbol.id],
                 domain=symbol.domain,
-                auxiliary_domains=symbol.auxiliary_domains,
+                auxiliary_domains=symbol.auxiliary_domains
             )
 
         elif isinstance(symbol, pybamm.SpatialVariable):

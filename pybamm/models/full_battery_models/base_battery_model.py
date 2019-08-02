@@ -72,7 +72,12 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_geometry(self):
-        return pybamm.Geometry("1D macro", "1+1D micro")
+        if self.options["dimensionality"] == 0:
+            return pybamm.Geometry("1D macro", "1+1D micro")
+        elif self.options["dimensionality"] == 1:
+            return pybamm.Geometry("1+1D macro", "1+1D micro")
+        elif self.options["dimensionality"] == 2:
+            return pybamm.Geometry("2+1D macro", "1+1D micro")
 
     @property
     def default_var_pts(self):
@@ -89,23 +94,36 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def default_submesh_types(self):
-        return {
+        base_submeshes = {
             "negative electrode": pybamm.Uniform1DSubMesh,
             "separator": pybamm.Uniform1DSubMesh,
             "positive electrode": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.SubMesh0D,
         }
+        if self.options["dimensionality"] == 0:
+            base_submeshes["current collector"] = pybamm.SubMesh0D
+        elif self.options["dimensionality"] == 1:
+            base_submeshes["current collector"] = pybamm.Uniform1DSubMesh
+        elif self.options["dimensionality"] == 2:
+            base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
+        return base_submeshes
 
     @property
     def default_spatial_methods(self):
-        return {
+        base_spatial_methods = {
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
-            "current collector": pybamm.ZeroDimensionalMethod,
         }
+        if self.options["dimensionality"] == 0:
+            # 0D submesh - use base spatial method
+            base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod
+        elif self.options["dimensionality"] == 1:
+            base_spatial_methods["current collector"] = pybamm.FiniteVolume
+        elif self.options["dimensionality"] == 2:
+            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
+        return base_spatial_methods
 
     @property
     def default_solver(self):
@@ -121,14 +139,14 @@ class BaseBatteryModel(pybamm.BaseModel):
     @options.setter
     def options(self, extra_options):
         default_options = {
-            "bc_options": {"dimensionality": 0},
+            "dimensionality": 0,
             "surface form": False,
             "convection": False,
             "thermal": None,
             "first-order potential": "linear",
             "side reactions": [],
             "interfacial surface area": "constant",
-            "higher-order concentration": "composite",
+            "current collector": "uniform",
         }
         options = default_options
         # any extra options overwrite the default options
@@ -144,10 +162,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
             and options["surface form"] is False
         ):
-            if options["bc_options"]["dimensionality"] in [1, 2]:
-                raise pybamm.OptionError(
-                    "must use surface formulation to solve {!s} in 2 or 3D".format(self)
-                )
             if len(options["side reactions"]) > 0:
                 raise pybamm.OptionError(
                     """
@@ -160,11 +174,26 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "surface form '{}' not recognised".format(options["surface form"])
             )
-        if options["bc_options"]["dimensionality"] not in [0, 1, 2]:
+        if options["current collector"] not in [
+            "uniform",
+            "potential pair",
+            "potential pair quite conductive",
+            "single particle potential pair",
+        ]:
+            raise pybamm.OptionError(
+                "current collector model '{}' not recognised".format(
+                    options["current collector"]
+                )
+            )
+        if options["dimensionality"] not in [0, 1, 2]:
             raise pybamm.OptionError(
                 "Dimension of current collectors must be 0, 1, or 2, not {}".format(
-                    options["bc_options"]["dimensionality"]
+                    options["dimensionality"]
                 )
+            )
+        if options["thermal"] not in [None, "lumped", "full"]:
+            raise pybamm.OptionError(
+                "Unknown thermal model '{}'".format(options["thermal"])
             )
 
         self._options = options
@@ -300,9 +329,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "x_p [m]": var.x_p * L_x,
             }
         )
-        if self.options["bc_options"]["dimensionality"] == 1:
+        if self.options["dimensionality"] == 1:
             self.variables.update({"y": var.y, "y [m]": var.y * L_y})
-        elif self.options["bc_options"]["dimensionality"] == 2:
+        elif self.options["dimensionality"] == 2:
             self.variables.update(
                 {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
             )
@@ -328,7 +357,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             self.variables.update(submodel.get_coupled_variables(self.variables))
 
-            # Set model equations
+        # Set model equations
         for submodel_name, submodel in self.submodels.items():
             pybamm.logger.debug(
                 "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
@@ -374,10 +403,21 @@ class BaseBatteryModel(pybamm.BaseModel):
             thermal_submodel = pybamm.thermal.Full(self.param)
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(self.param)
-        else:
-            raise KeyError("Unknown type of thermal model")
 
         self.submodels["thermal"] = thermal_submodel
+
+    def set_current_collector_submodel(self):
+
+        if self.options["current collector"] == "uniform":
+            submodel = pybamm.current_collector.Uniform(self.param)
+        elif self.options["current collector"] == "potential pair":
+            if self.options["dimensionality"] == 1:
+                submodel = pybamm.current_collector.PotentialPair1plus1D(self.param)
+            elif self.options["dimensionality"] == 2:
+                submodel = pybamm.current_collector.PotentialPair2plus1D(self.param)
+        elif self.options["current collector"] == "single particle potential pair":
+            submodel = pybamm.current_collector.SingleParticlePotentialPair(self.param)
+        self.submodels["current collector"] = submodel
 
     def set_voltage_variables(self):
 
@@ -439,44 +479,24 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # terminal voltage
-        if self.options["bc_options"]["dimensionality"] == 0:
-            phi_s_p = self.variables["Positive electrode potential"]
-            phi_s_p_dim = self.variables["Positive electrode potential [V]"]
-            V = pybamm.BoundaryValue(phi_s_p, "right")
-            V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
-        elif self.options["bc_options"]["dimensionality"] == 1:
-            delta_phi_n = self.variables[
-                "X-averaged negative electrode surface potential difference"
-            ]
-            delta_phi_p = self.variables[
-                "X-averaged positive electrode surface potential difference"
-            ]
-            delta_phi_n_dim = self.variables[
-                "X-averaged negative electrode surface potential difference [V]"
-            ]
-            delta_phi_p_dim = self.variables[
-                "X-averaged positive electrode surface potential difference [V]"
-            ]
+        phi_s_cn = self.variables["Negative current collector potential"]
+        phi_s_cp = self.variables["Positive current collector potential"]
+        phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
+        phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
+        if self.options["dimensionality"] == 0:
+            V = phi_s_cp
+            V_dim = phi_s_cp_dim
+        elif self.options["dimensionality"] == 1:
             # In 1D both tabs are at "right"
-            V = pybamm.BoundaryValue(delta_phi_p - delta_phi_n, "right")
-            V_dim = pybamm.BoundaryValue(delta_phi_p_dim - delta_phi_n_dim, "right")
-        elif self.options["bc_options"]["dimensionality"] == 2:
-            phi_s_cn = self.variables["Negative current collector potential"]
-            phi_s_cp = self.variables["Positive current collector potential"]
-            phi_s_cn_dim = self.variables["Negative current collector potential [V]"]
-            phi_s_cp_dim = self.variables["Positive current collector potential [V]"]
+            V = pybamm.BoundaryValue(phi_s_cp, "right")
+            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right")
+        elif self.options["dimensionality"] == 2:
             # In 2D left corresponds to the negative tab and right the positive tab
             V = pybamm.BoundaryValue(phi_s_cp, "right") - pybamm.BoundaryValue(
                 phi_s_cn, "left"
             )
             V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right") - pybamm.BoundaryValue(
                 phi_s_cn_dim, "left"
-            )
-        else:
-            raise pybamm.ModelError(
-                "Dimension of current collectors must be 0, 1, or 2, not {}".format(
-                    self.options["bc_options"]["dimensionality"]
-                )
             )
 
         # TODO: add current collector losses to the voltage in 3D

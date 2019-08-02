@@ -22,7 +22,6 @@ class NewmanTiedemann(BaseModel):
         super().__init__(options, name)
 
         self.set_reactions()
-        self.set_current_collector_submodel()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
         self.set_convection_submodel()
@@ -30,13 +29,9 @@ class NewmanTiedemann(BaseModel):
         self.set_solid_submodel()
         self.set_thermal_submodel()
         self.set_side_reaction_submodels()
+        self.set_current_collector_submodel()
 
         self.build_model()
-
-    def set_current_collector_submodel(self):
-        self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param
-        )
 
     def set_porosity_submodel(self):
         self.submodels["porosity"] = pybamm.porosity.Full(self.param)
@@ -120,7 +115,10 @@ class NewmanTiedemann(BaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["surface form"] == "differential":
+        if (
+            self.options["surface form"] == "differential"
+            and self.options["current collector"] == "uniform"
+        ):
             return pybamm.ScipySolver()
         else:
             return pybamm.ScikitsDaeSolver()

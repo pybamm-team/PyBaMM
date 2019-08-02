@@ -19,7 +19,9 @@ class TestFull(unittest.TestCase):
             pybamm.Scalar(0), ["positive electrode"], "current collector"
         )
         variables = {
-            "Current collector current density": a,
+            "Current collector current density": pybamm.PrimaryBroadcast(
+                a, "current collector"
+            ),
             "Negative electrode porosity": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative electrode interfacial current density": a_n,
@@ -43,7 +45,9 @@ class TestFull(unittest.TestCase):
         std_tests.test_all()
 
         variables = {
-            "Current collector current density": a,
+            "Current collector current density": pybamm.PrimaryBroadcast(
+                a, "current collector"
+            ),
             "Negative electrolyte potential": a_n,
             "Negative electrolyte current density": a_n,
             "Separator electrolyte potential": a_s,

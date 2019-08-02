@@ -25,10 +25,10 @@ class LeadingOrderDiffusionLimited(BaseModel):
     def _get_diffusion_limited_current_density(self, variables):
         if self.domain == "Negative":
             j_p = variables[
-                "Positive electrode"
+                "X-averaged positive electrode"
                 + self.reaction_name
                 + " interfacial current density"
-            ].orphans[0]
+            ]
             j = -self.param.l_p * j_p / self.param.l_n
 
         return j
@@ -40,12 +40,12 @@ class LeadingOrderDiffusionLimited(BaseModel):
         since the reaction is not diffusion-limited
         """
         j_leading_order = variables[
-            "Leading-order "
+            "Leading-order x-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
             + " interfacial current density"
-        ].orphans[0]
+        ]
         param = self.param
         if self.domain == "Negative":
             N_ox_s_p = variables["Oxygen flux"].orphans[1]

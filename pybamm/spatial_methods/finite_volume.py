@@ -194,21 +194,20 @@ class FiniteVolume(pybamm.SpatialMethod):
         grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
         return self.divergence(grad, grad, boundary_conditions)
 
-    def integral(self, domain, symbol, discretised_symbol):
+    def integral(self, child, discretised_child):
         """Vector-vector dot product to implement the integral operator. """
         # Calculate integration vector
-        integration_vector = self.definite_integral_matrix(domain)
+        integration_vector = self.definite_integral_matrix(child.domain)
 
         # Check for spherical domains
-        submesh_list = self.mesh.combine_submeshes(*symbol.domain)
+        submesh_list = self.mesh.combine_submeshes(*child.domain)
         if submesh_list[0].coord_sys == "spherical polar":
             second_dim = len(submesh_list)
             r_numpy = np.kron(np.ones(second_dim), submesh_list[0].nodes)
             r = pybamm.Vector(r_numpy)
-            out = 4 * np.pi ** 2 * integration_vector @ (discretised_symbol * r)
+            out = 4 * np.pi ** 2 * integration_vector @ (discretised_child * r)
         else:
-            out = integration_vector @ discretised_symbol
-        out.domain = []
+            out = integration_vector @ discretised_child
 
         return out
 
@@ -249,21 +248,22 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = csr_matrix(kron(eye(second_dim_len), vector))
         return pybamm.Matrix(matrix)
 
-    def indefinite_integral(self, domain, symbol, discretised_symbol):
+    def indefinite_integral(self, child, discretised_child):
         """Implementation of the indefinite integral operator. """
 
         # Different integral matrix depending on whether the integrand evaluates on
         # edges or nodes
-        if symbol.evaluates_on_edges():
-            integration_matrix = self.indefinite_integral_matrix_edges(domain)
+        if child.evaluates_on_edges():
+            integration_matrix = self.indefinite_integral_matrix_edges(child.domain)
         else:
-            integration_matrix = self.indefinite_integral_matrix_nodes(domain)
+            integration_matrix = self.indefinite_integral_matrix_nodes(child.domain)
 
         # Don't need to check for spherical domains as spherical polars
-        # only change the diveregence (symbols here have grad and no div)
-        out = integration_matrix @ discretised_symbol
+        # only change the diveregence (childs here have grad and no div)
+        out = integration_matrix @ discretised_child
 
-        out.domain = domain
+        out.domain = child.domain
+        out.auxiliary_domains = child.auxiliary_domains
 
         return out
 

@@ -20,17 +20,36 @@ class TestLeadAcidComposite(unittest.TestCase):
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
 
+
+class TestLeadAcidCompositeMultiDimensional(unittest.TestCase):
     @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
-    def test_default_solver(self):
-        options = {"surface form": "differential"}
-        model = pybamm.lead_acid.Composite(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
-        options = {"surface form": "differential", "bc_options": {"dimensionality": 1}}
-        model = pybamm.lead_acid.Composite(options)
-        self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
-        options = {"surface form": "algebraic"}
-        model = pybamm.lead_acid.Composite(options)
+    def test_well_posed(self):
+        model = pybamm.lead_acid.Composite(
+            {"dimensionality": 1, "current collector": "potential pair"}
+        )
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
+        model.check_well_posedness()
+
+        model = pybamm.lead_acid.Composite(
+            {"dimensionality": 2, "current collector": "potential pair"}
+        )
+        model.check_well_posedness()
+
+        model = pybamm.lead_acid.Composite(
+            {
+                "dimensionality": 1,
+                "current collector": "potential pair quite conductive",
+            }
+        )
+        model.check_well_posedness()
+
+        model = pybamm.lead_acid.Composite(
+            {
+                "dimensionality": 2,
+                "current collector": "potential pair quite conductive",
+            }
+        )
+        model.check_well_posedness()
 
 
 class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
@@ -39,24 +58,12 @@ class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
 
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
     def test_well_posed_algebraic(self):
         options = {"surface form": "algebraic", "side reactions": ["oxygen"]}
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
-
-    def test_varying_surface_area(self):
-        options = {
-            "surface form": "differential",
-            "side reactions": ["oxygen"],
-            "interfacial surface area": "varying",
-        }
-        model = pybamm.lead_acid.Composite(options)
-        model.check_well_posedness()
-
-    def test_incompatible_options(self):
-        options = {"side reactions": ["something"]}
-        with self.assertRaises(pybamm.OptionError):
-            pybamm.lead_acid.Composite(options)
+        self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
 
 class TestLeadAcidCompositeExtended(unittest.TestCase):

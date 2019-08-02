@@ -194,16 +194,16 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(stiffness)
 
-    def integral(self, domain, symbol, discretised_symbol):
+    def integral(self, child, discretised_child):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.SpatialMethod.integral`
         """
 
         # Calculate integration vector
-        integration_vector = self.definite_integral_vector(domain[0])
+        integration_vector = self.definite_integral_vector(child.domain[0])
 
-        out = integration_vector @ discretised_symbol
-        out.domain = []
+        out = integration_vector @ discretised_child
+
         return out
 
     def definite_integral_vector(self, domain):
@@ -238,9 +238,9 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         vector = skfem.asm(integral_form, mesh.basis)
         return pybamm.Matrix(vector[np.newaxis, :])
 
-    def indefinite_integral(self, domain, symbol, discretised_symbol):
+    def indefinite_integral(self, child, discretised_child):
         """Implementation of the indefinite integral operator. The
-        input discretised symbol must be defined on the internal mesh edges.
+        input discretised child must be defined on the internal mesh edges.
         See :meth:`pybamm.SpatialMethod.indefinite_integral`
         """
         raise NotImplementedError
