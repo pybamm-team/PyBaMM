@@ -50,7 +50,7 @@ Molar mass of hydrogen molecules [kg.mol-1],0.002,lide1992crc,
 ,,,
 # Electrode properties,,,
 Negative electrode conductivity [S.m-1],4800000,,Lead
-Positive electrode conductivity [S.m-1],80000,,Lead-oxide
+Positive electrode conductivity [S.m-1],8000,,Lead dioxide
 Pore size [m],1E-07,,
 Maximum porosity of negative electrode,0.53,,
 Maximum porosity of separator,0.92,,

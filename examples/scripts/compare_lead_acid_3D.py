@@ -27,15 +27,18 @@ models = [
     # pybamm.lead_acid.NewmanTiedemann(
     #     {"dimensionality": 1}, name="1+1D uniform NewmanTiedemann"
     # ),
-    # pybamm.lead_acid.NewmanTiedemann({"dimensionality": 0}, name="1D NewmanTiedemann"),
+    pybamm.lead_acid.Composite(
+        {"current collector": "potential pair quite conductive", "dimensionality": 1},
+        name="1+1D composite",
+    ),
     pybamm.lead_acid.Composite(
         {"current collector": "potential pair", "dimensionality": 1},
         name="1+1D composite",
     ),
+    # # pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
     pybamm.lead_acid.LOQS(
         {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
     ),
-    # pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
     # pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
 ]
 
@@ -49,7 +52,8 @@ param.update(
         "Typical electrolyte concentration [mol.m-3]": 5600,
         "Negative electrode reference exchange-current density [A.m-2]": 0.08,
         "Positive electrode reference exchange-current density [A.m-2]": 0.006,
-        "Positive electrode conductivity [S.m-1]": 1000,
+        # "Negative electrode conductivity [S.m-1]": 500000,
+        # "Positive electrode conductivity [S.m-1]": 500000,
     }
 )
 for model in models:
@@ -67,7 +71,7 @@ for model in models:
         var.r_n: 5,
         var.r_p: 5,
         var.y: 5,
-        var.z: 10,
+        var.z: 5,
     }
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
@@ -82,10 +86,11 @@ for i, model in enumerate(models):
 
 # plot
 output_variables = [
-    # "X-averaged volume-averaged velocity  ",
-    # "X-averaged separator pressure",
-    "X-averaged electrolyte potential [V]",
+    "Local current collector potential difference [V]",
+    "Negative current collector potential [V]",
+    "Positive current collector potential [V]",
     "X-averaged electrolyte concentration",
+    # "Leading-order current collector current density",
     "Current collector current density",
     "Terminal voltage [V]",
 ]
