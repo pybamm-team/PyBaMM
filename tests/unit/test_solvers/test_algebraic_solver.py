@@ -112,11 +112,6 @@ class TestAlgebraicSolver(unittest.TestCase):
         np.testing.assert_array_equal(solution_no_jac.y[0], 3)
         np.testing.assert_array_equal(solution_no_jac.y[-1], 6)
 
-        # Test speed, no jac faster for simple systems
-        self.assertGreater(
-            solution.total_time, solution_no_jac.total_time
-        )
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

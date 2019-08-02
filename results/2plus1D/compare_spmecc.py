@@ -12,7 +12,7 @@ options = {"bc_options": {"dimensionality": 2}}
 cc_model = pybamm.current_collector.EffectiveResistance2D()
 spme_av = pybamm.lithium_ion.SPMe(name="SPMeCC")
 spme = pybamm.lithium_ion.SPMe(options, name="SPMe (2+1D)")
-models = [cc_model, spme_av, spme]
+models = {"Current collector": cc_model, "Average SPMe": spme_av, "SPMe (2+1D)": spme}
 
 # set parameters based on the spme
 param = spme.default_parameter_values
@@ -30,52 +30,33 @@ var_pts = {
 }
 
 # process model and geometry, and discretise
-meshes = [None] * len(models)
-for i, model in enumerate(models):
+meshes = {}
+for name, model in models.items():
     param.process_model(model)
     geometry = model.default_geometry
     param.process_geometry(geometry)
-    meshes[i] = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-    disc = pybamm.Discretisation(meshes[i], model.default_spatial_methods)
+    meshes[name] = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+    disc = pybamm.Discretisation(meshes[name], model.default_spatial_methods)
     disc.process_model(model)
 
-
-# solve current collector model
-cc_solution = cc_model.default_solver.solve(cc_model)
-
-# solve SPMe -- simulate one hour discharge
+# solve models -- simulate one hour discharge
 tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 t_end = 3600 / tau.evaluate(0)
 t_eval = np.linspace(0, t_end, 120)
-solutions = [None] * len(models[1:])
-for i, model in enumerate(models[1:]):
-    solutions[i] = model.default_solver.solve(model, t_eval)
-
-
-# phi_neg_tab = pybamm.ProcessedVariable(
-#    spme.variables["Negative tab potential [V]"],
-#    solutions[0].t, solutions[0].y
-# )
-# phi_pos_tab = pybamm.ProcessedVariable(
-#    spme.variables["Positive tab potential [V]"],
-#    solutions[0].t, solutions[0].y
-# )
-#
-# current_1D = pybamm.ProcessedVariable(
-#    spme_av.variables["Current collector current density"],
-#    solutions[0].t, solutions[0].y
-# )
-# current_2D = pybamm.ProcessedVariable(
-#    spme.variables["Current collector current density"],
-#    solutions[0].t, solutions[0].y
-# )
+solutions = {}
+for name, model in models.items():
+    if name == "Current collector":
+        solutions[name] = model.default_solver.solve(model)
+    else:
+        solutions[name] = model.default_solver.solve(model, t_eval)
 
 # plot terminal voltage
-for i, model in enumerate(models[1:]):
-    t, y = solutions[i].t, solutions[i].y
+for name in ["Average SPMe", "SPMe (2+1D)"]:
+    t, y = solutions[name].t, solutions[name].y
+    model = models[name]
     time = pybamm.ProcessedVariable(model.variables["Time [h]"], t, y)(t)
     voltage = pybamm.ProcessedVariable(
-        model.variables["Terminal voltage [V]"], t, y, mesh=meshes[i + 1]
+        model.variables["Terminal voltage [V]"], t, y, mesh=meshes[name]
     )(t)
 
     # add current collector Ohmic losses to SPMeCC
@@ -86,16 +67,132 @@ for i, model in enumerate(models[1:]):
         ).evaluate()
         R_cc = param.process_symbol(
             cc_model.variables["Effective current collector resistance [Ohm]"]
-        ).evaluate(t=cc_solution.t, y=cc_solution.y)[0][0]
+        ).evaluate(
+            t=solutions["Current collector"].t, y=solutions["Current collector"].y
+        )[
+            0
+        ][
+            0
+        ]
         cc_ohmic_losses = -delta * current * R_cc
         voltage = voltage + cc_ohmic_losses
 
     # plot
     plt.plot(time, voltage, lw=2, label=model.name)
-
-# TODO: comparison of curr coll potentials
-
 plt.xlabel("Time [h]", fontsize=15)
 plt.ylabel("Terminal voltage [V]", fontsize=15)
 plt.legend(fontsize=15)
+
+
+# plot potentials in current collector
+
+# get processed potentials from SPMeCC
+V_av = pybamm.ProcessedVariable(
+    spme_av.variables["Terminal voltage"],
+    solutions["Average SPMe"].t,
+    solutions["Average SPMe"].y,
+    mesh=meshes["Average SPMe"],
+)
+I_av = pybamm.ProcessedVariable(
+    spme_av.variables["Total current density"],
+    solutions["Average SPMe"].t,
+    solutions["Average SPMe"].y,
+    mesh=meshes["Average SPMe"],
+)
+potentials = cc_model.get_processed_potentials(
+    solutions["Current collector"], meshes["Current collector"], param, V_av, I_av
+)
+phi_s_cn_spmecc = potentials["Negative current collector potential [V]"]
+phi_s_cp_spmecc = potentials["Positive current collector potential [V]"]
+
+# get processed potentials from 2+1D SPMe
+phi_s_cn = pybamm.ProcessedVariable(
+    model.variables["Negative current collector potential [V]"],
+    solutions["SPMe (2+1D)"].t,
+    solutions["SPMe (2+1D)"].y,
+    mesh=meshes["SPMe (2+1D)"],
+)
+phi_s_cp = pybamm.ProcessedVariable(
+    model.variables["Positive current collector potential [V]"],
+    solutions["SPMe (2+1D)"].t,
+    solutions["SPMe (2+1D)"].y,
+    mesh=meshes["SPMe (2+1D)"],
+)
+
+# make plot
+l_y = phi_s_cp.y_sol[-1]
+l_z = phi_s_cp.z_sol[-1]
+y_plot = np.linspace(0, l_y, 21)
+z_plot = np.linspace(0, l_z, 21)
+
+
+def plot(t):
+    fig, ax = plt.subplots(figsize=(15, 8))
+    plt.tight_layout()
+    plt.subplots_adjust(left=-0.1)
+
+    # negative current collector potential
+    plt.subplot(221)
+    phi_s_cn_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(phi_s_cn(y=y_plot, z=z_plot, t=t)),
+        shading="gouraud",
+    )
+    plt.axis([0, l_y, 0, l_z])
+    plt.xlabel(r"$y$")
+    plt.ylabel(r"$z$")
+    plt.title(r"$\phi_{s,cn}$")
+    plt.set_cmap("cividis")
+    plt.colorbar(phi_s_cn_plot)
+    plt.subplot(222)
+    phi_s_cn_spmecc_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(phi_s_cn_spmecc(y=y_plot, z=z_plot, t=t)),
+        shading="gouraud",
+    )
+    plt.axis([0, l_y, 0, l_z])
+    plt.xlabel(r"$y$")
+    plt.ylabel(r"$z$")
+    plt.title(r"$\phi_{s,cn}$ SPMeCC")
+    plt.set_cmap("cividis")
+    plt.colorbar(phi_s_cn_spmecc_plot)
+
+    # positive current collector potential
+    plt.subplot(223)
+    phi_s_cp_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(phi_s_cp(y=y_plot, z=z_plot, t=t)),
+        shading="gouraud",
+    )
+
+    plt.axis([0, l_y, 0, l_z])
+    plt.xlabel(r"$y$")
+    plt.ylabel(r"$z$")
+    plt.title(r"$\phi_{s,cp}$")
+    plt.set_cmap("viridis")
+    plt.colorbar(phi_s_cp_plot)
+    plt.subplot(224)
+    phi_s_cp_spmecc_plot = plt.pcolormesh(
+        y_plot,
+        z_plot,
+        np.transpose(phi_s_cp_spmecc(y=y_plot, z=z_plot, t=t)),
+        shading="gouraud",
+    )
+    plt.axis([0, l_y, 0, l_z])
+    plt.xlabel(r"$y$")
+    plt.ylabel(r"$z$")
+    plt.title(r"$\phi_{s,cp}$ SPMeCC")
+    plt.set_cmap("viridis")
+    plt.colorbar(phi_s_cp_spmecc_plot)
+
+    plt.subplots_adjust(
+        top=0.92, bottom=0.15, left=0.10, right=0.9, hspace=0.5, wspace=0.5
+    )
+
+
+plot(solutions["SPMe (2+1D)"].t[-1] / 2)
+
 plt.show()
