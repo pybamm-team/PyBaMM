@@ -100,7 +100,7 @@ class TestOldOhm(unittest.TestCase):
             # Unpack
             phi_s = out_vars["Electrode potential"]
             i_s = out_vars["Electrode current density"]
-            delta_phi_s_av = out_vars["Average solid phase ohmic losses"]
+            delta_phi_s_av = out_vars["X-averaged solid phase ohmic losses"]
 
             self.assertIsInstance(phi_s, pybamm.Concatenation)
             self.assertIsInstance(i_s, pybamm.Concatenation)

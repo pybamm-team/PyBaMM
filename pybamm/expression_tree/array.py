@@ -48,11 +48,6 @@ class Array(pybamm.Symbol):
         return self._entries.shape
 
     @property
-    def size(self):
-        """ returns the total number of entries in the tensor"""
-        return self._entries.size
-
-    @property
     def entries_string(self):
         return self._entries_string
 

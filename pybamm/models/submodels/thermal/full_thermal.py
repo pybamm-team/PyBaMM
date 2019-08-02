@@ -58,7 +58,7 @@ class Full(BaseModel):
 
         self.boundary_conditions = {
             T: {
-                "left": (-self.param.h * T_n_left / self.param.lambda_k, "Neumann"),
-                "right": (-self.param.h * T_p_right / self.param.lambda_k, "Neumann"),
+                "left": (-self.param.h * T_n_left / self.param.lambda_n, "Neumann"),
+                "right": (-self.param.h * T_p_right / self.param.lambda_p, "Neumann"),
             }
         }

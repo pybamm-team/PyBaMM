@@ -14,10 +14,6 @@ class TestBroadcasts(unittest.TestCase):
         self.assertEqual(broad_a.children[0].name, a.name)
         self.assertEqual(broad_a.domain, ["negative electrode"])
 
-        b = pybamm.Symbol("b", domain=["negative electrode"])
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.Broadcast(b, ["separator"])
-
     def test_broadcast_number(self):
         broad_a = pybamm.Broadcast(1, ["negative electrode"])
         self.assertEqual(broad_a.name, "broadcast")
@@ -25,9 +21,10 @@ class TestBroadcasts(unittest.TestCase):
         self.assertEqual(broad_a.children[0].evaluate(), np.array([1]))
         self.assertEqual(broad_a.domain, ["negative electrode"])
 
-        b = pybamm.Symbol("b", domain=["negative electrode"])
-        with self.assertRaises(pybamm.DomainError):
-            pybamm.Broadcast(b, ["separator"])
+    def test_broadcast_type(self):
+        a = pybamm.Symbol("a", domain="current collector")
+        with self.assertRaisesRegex(ValueError, "Variables on the current collector"):
+            pybamm.Broadcast(a, "electrode")
 
 
 if __name__ == "__main__":

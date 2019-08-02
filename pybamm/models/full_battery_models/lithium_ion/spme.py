@@ -51,12 +51,6 @@ class SPMe(BaseModel):
             self.submodels[
                 "current collector"
             ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
-        else:
-            raise pybamm.ModelError(
-                "Dimension of current collectors must be 0, 1, or 2, not {}".format(
-                    self.options["bc_options"]["dimensionality"]
-                )
-            )
 
     def set_porosity_submodel(self):
 
@@ -86,13 +80,13 @@ class SPMe(BaseModel):
 
     def set_negative_electrode_submodel(self):
 
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.CombinedOrder(
+        self.submodels["negative electrode"] = pybamm.electrode.ohm.Composite(
             self.param, "Negative"
         )
 
     def set_positive_electrode_submodel(self):
 
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.CombinedOrder(
+        self.submodels["positive electrode"] = pybamm.electrode.ohm.Composite(
             self.param, "Positive"
         )
 
@@ -100,9 +94,9 @@ class SPMe(BaseModel):
 
         electrolyte = pybamm.electrolyte.stefan_maxwell
 
-        self.submodels[
-            "electrolyte conductivity"
-        ] = electrolyte.conductivity.CombinedOrder(self.param)
+        self.submodels["electrolyte conductivity"] = electrolyte.conductivity.Composite(
+            self.param
+        )
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, self.reactions
         )
@@ -116,38 +110,6 @@ class SPMe(BaseModel):
             return pybamm.Geometry("1+1D macro", "(1+0)+1D micro")
         elif dimensionality == 2:
             return pybamm.Geometry("2+1D macro", "(2+0)+1D micro")
-
-    @property
-    def default_submesh_types(self):
-        base_submeshes = {
-            "negative electrode": pybamm.Uniform1DSubMesh,
-            "separator": pybamm.Uniform1DSubMesh,
-            "positive electrode": pybamm.Uniform1DSubMesh,
-            "negative particle": pybamm.Uniform1DSubMesh,
-            "positive particle": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.Uniform1DSubMesh,
-        }
-        dimensionality = self.options["bc_options"]["dimensionality"]
-        if dimensionality in [0, 1]:
-            return base_submeshes
-        elif dimensionality == 2:
-            base_submeshes["current collector"] = pybamm.Scikit2DSubMesh
-            return base_submeshes
-
-    @property
-    def default_spatial_methods(self):
-        base_spatial_methods = {
-            "macroscale": pybamm.FiniteVolume,
-            "negative particle": pybamm.FiniteVolume,
-            "positive particle": pybamm.FiniteVolume,
-            "current collector": pybamm.FiniteVolume,
-        }
-        dimensionality = self.options["bc_options"]["dimensionality"]
-        if dimensionality in [0, 1]:
-            return base_spatial_methods
-        elif dimensionality == 2:
-            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
-            return base_spatial_methods
 
     @property
     def default_solver(self):

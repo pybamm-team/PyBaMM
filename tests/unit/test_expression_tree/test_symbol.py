@@ -44,6 +44,21 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaises(TypeError):
             a = pybamm.Symbol("a", domain=1)
 
+    def test_symbol_auxiliary_domains(self):
+        a = pybamm.Symbol(
+            "a",
+            domain="test",
+            auxiliary_domains={"secondary": "sec", "tertiary": "tert"},
+        )
+        self.assertEqual(a.domain, ["test"])
+        self.assertEqual(
+            a.auxiliary_domains, {"secondary": ["sec"], "tertiary": ["tert"]}
+        )
+        a = pybamm.Symbol("a", domain=["t", "e", "s"])
+        self.assertEqual(a.domain, ["t", "e", "s"])
+        with self.assertRaises(TypeError):
+            a = pybamm.Symbol("a", domain=1)
+
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
@@ -204,55 +219,68 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
         c = pybamm.Symbol("c", domain=["test"])
-        d = pybamm.Symbol("d", domain=["test"])
+        d = pybamm.Symbol("d", domain=["test"], auxiliary_domains={"sec": "other test"})
         hex_regex = r"\-?0x[0-9,a-f]+"
         self.assertRegex(
             a.__repr__(),
-            r"Symbol\(" + hex_regex + r", a, children\=\[\], domain\=\[\]\)",
+            r"Symbol\("
+            + hex_regex
+            + r", a, children\=\[\], domain\=\[\], auxiliary_domains\=\{\}\)",
         )
         self.assertRegex(
             b.__repr__(),
-            r"Symbol\(" + hex_regex + r", b, children\=\[\], domain\=\[\]\)",
+            r"Symbol\("
+            + hex_regex
+            + r", b, children\=\[\], domain\=\[\], auxiliary_domains\=\{\}\)",
         )
         self.assertRegex(
             c.__repr__(),
-            r"Symbol\(" + hex_regex + r", c, children\=\[\], domain\=\['test'\]\)",
+            r"Symbol\("
+            + hex_regex
+            + r", c, children\=\[\], domain\=\['test'\], auxiliary_domains\=\{\}\)",
         )
         self.assertRegex(
             d.__repr__(),
-            r"Symbol\(" + hex_regex + r", d, children\=\[\], domain\=\['test'\]\)",
+            r"Symbol\("
+            + hex_regex
+            + r", d, children\=\[\], domain\=\['test'\]"
+            + r", auxiliary_domains\=\{'sec': \"\['other test'\]\"\}\)",
         )
         self.assertRegex(
             (a + b).__repr__(),
-            r"Addition\(" + hex_regex + r", \+, children\=\['a', 'b'\], domain=\[\]\)",
+            r"Addition\(" + hex_regex + r", \+, children\=\['a', 'b'\], domain=\[\]",
         )
         self.assertRegex(
             (c * d).__repr__(),
             r"Multiplication\("
             + hex_regex
-            + r", \*, children\=\['c', 'd'\], domain=\['test'\]\)",
+            + r", \*, children\=\['c', 'd'\], domain=\['test'\]"
+            + r", auxiliary_domains\=\{'sec': \"\['other test'\]\"\}\)",
         )
         self.assertRegex(
             pybamm.grad(a).__repr__(),
-            r"Gradient\(" + hex_regex + ", grad, children\=\['a'\], domain=\[\]\)",
+            r"Gradient\("
+            + hex_regex
+            + r", grad, children\=\['a'\], domain=\[\], auxiliary_domains\=\{\}\)",
         )
         self.assertRegex(
             pybamm.grad(c).__repr__(),
             r"Gradient\("
             + hex_regex
-            + ", grad, children\=\['c'\], domain=\['test'\]\)",
+            + r", grad, children\=\['c'\], domain=\['test'\]"
+            + r", auxiliary_domains\=\{\}\)",
         )
 
     def test_symbol_visualise(self):
 
         param = pybamm.standard_parameters_lithium_ion
 
-        one_n = pybamm.Broadcast(1, ["negative electrode"])
-        one_p = pybamm.Broadcast(1, ["positive electrode"])
+        one_n = pybamm.FullBroadcast(1, ["negative electrode"], "current collector")
+        one_p = pybamm.FullBroadcast(1, ["positive electrode"], "current collector")
 
-        zero_n = pybamm.Broadcast(0, ["negative electrode"])
-        zero_s = pybamm.Broadcast(0, ["separator"])
-        zero_p = pybamm.Broadcast(0, ["positive electrode"])
+        zero_n = pybamm.FullBroadcast(0, ["negative electrode"], "current collector")
+        zero_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
+        zero_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")
 
         deps_dt = pybamm.Concatenation(zero_n, zero_s, zero_p)
 
@@ -292,14 +320,14 @@ class TestSymbol(unittest.TestCase):
         div_eqn = pybamm.div(var)
         grad_div_eqn = pybamm.div(grad_eqn)
         algebraic_eqn = 2 * var + 3
-        self.assertTrue(grad_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertFalse(grad_eqn.has_symbol_of_class(pybamm.Divergence))
-        self.assertFalse(div_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertTrue(div_eqn.has_symbol_of_class(pybamm.Divergence))
-        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertTrue(grad_div_eqn.has_symbol_of_class(pybamm.Divergence))
-        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Gradient))
-        self.assertFalse(algebraic_eqn.has_symbol_of_class(pybamm.Divergence))
+        self.assertTrue(grad_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertFalse(grad_eqn.has_symbol_of_classes(pybamm.Divergence))
+        self.assertFalse(div_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertTrue(div_eqn.has_symbol_of_classes(pybamm.Divergence))
+        self.assertTrue(grad_div_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertTrue(grad_div_eqn.has_symbol_of_classes(pybamm.Divergence))
+        self.assertFalse(algebraic_eqn.has_symbol_of_classes(pybamm.Gradient))
+        self.assertFalse(algebraic_eqn.has_symbol_of_classes(pybamm.Divergence))
 
     def test_orphans(self):
         a = pybamm.Scalar(1)
@@ -314,14 +342,18 @@ class TestSymbol(unittest.TestCase):
 
     def test_shape(self):
         scal = pybamm.Scalar(1)
-        self.assertEqual(scal.shape_for_testing, ())
+        self.assertEqual(scal.shape, ())
         self.assertEqual(scal.size, 1)
 
         state = pybamm.StateVector(slice(10))
-        self.assertEqual(state.shape_for_testing, (10, 1))
+        self.assertEqual(state.shape, (10, 1))
         self.assertEqual(state.size, 10)
         state = pybamm.StateVector(slice(10, 25))
-        self.assertEqual(state.shape_for_testing, (15, 1))
+        self.assertEqual(state.shape, (15, 1))
+
+        # test with big object
+        state = 2 * pybamm.StateVector(slice(100000))
+        self.assertEqual(state.shape, (100000, 1))
 
     def test_shape_for_testing(self):
         scal = pybamm.Scalar(1)
@@ -342,14 +374,14 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(concat.shape_for_testing, (30, 1))
 
         var = pybamm.Variable("var", domain="negative electrode")
-        broadcast = pybamm.Broadcast(0, domain="negative electrode")
+        broadcast = pybamm.Broadcast(0, "negative electrode")
         self.assertEqual(var.shape_for_testing, broadcast.shape_for_testing)
         self.assertEqual(
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing
         )
 
         var = pybamm.Variable("var", domain=["random domain", "other domain"])
-        broadcast = pybamm.Broadcast(0, domain=["random domain", "other domain"])
+        broadcast = pybamm.Broadcast(0, ["random domain", "other domain"])
         self.assertEqual(var.shape_for_testing, broadcast.shape_for_testing)
         self.assertEqual(
             (var + broadcast).shape_for_testing, broadcast.shape_for_testing

@@ -25,7 +25,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
         c_s_surf = pybamm.surf(c_s, set_domain=True)
 
-        c_s_surf_av = pybamm.average(c_s_surf)
+        c_s_surf_av = pybamm.x_average(c_s_surf)
 
         if self.domain == "Negative":
             c_scale = self.param.c_n_max
@@ -42,10 +42,10 @@ class BaseParticle(pybamm.BaseSubModel):
             self.domain + " particle surface concentration": c_s_surf,
             self.domain
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " particle surface concentration": c_s_surf_av,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " particle surface concentration [mol.m-3]": c_scale * c_s_surf_av,
         }

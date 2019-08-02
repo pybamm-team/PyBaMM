@@ -20,7 +20,6 @@ class LOQS(BaseModel):
 
     def __init__(self, options=None, name="LOQS model"):
         super().__init__(options, name)
-        self.use_jacobian = False
 
         self.set_reactions()
         self.set_current_collector_submodel()
@@ -35,52 +34,77 @@ class LOQS(BaseModel):
 
         self.build_model()
 
+        if self.options["bc_options"]["dimensionality"] == 0:
+            self.use_jacobian = False
+
     def set_current_collector_submodel(self):
 
-        self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param
-        )
+        if self.options["bc_options"]["dimensionality"] == 0:
+            self.submodels["current collector"] = pybamm.current_collector.Uniform(
+                self.param
+            )
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            self.submodels[
+                "current collector"
+            ] = pybamm.current_collector.surface_form.LeadingOrder(self.param)
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            self.submodels[
+                "current collector"
+            ] = pybamm.current_collector.surface_form.LeadingOrder(self.param)
+            # self.submodels[
+            #     "current collector"
+            # ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
 
     def set_porosity_submodel(self):
 
-        self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
+        self.submodels["leading-order porosity"] = pybamm.porosity.LeadingOrder(
+            self.param
+        )
 
     def set_convection_submodel(self):
 
         if self.options["convection"] is False:
-            self.submodels["convection"] = pybamm.convection.NoConvection(self.param)
+            self.submodels["leading-order convection"] = pybamm.convection.NoConvection(
+                self.param
+            )
         if self.options["convection"] is True:
-            self.submodels["convection"] = pybamm.convection.LeadingOrder(self.param)
+            self.submodels["leading-order convection"] = pybamm.convection.LeadingOrder(
+                self.param
+            )
 
     def set_interfacial_submodel(self):
 
         if self.options["surface form"] is False:
             self.submodels[
-                "negative interface"
+                "leading-order negative interface"
             ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Negative")
             self.submodels[
-                "positive interface"
+                "leading-order positive interface"
             ] = pybamm.interface.lead_acid.InverseButlerVolmer(self.param, "Positive")
         else:
             self.submodels[
-                "negative interface"
+                "leading-order negative interface"
             ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Negative")
 
             self.submodels[
-                "positive interface"
+                "leading-order positive interface"
             ] = pybamm.interface.lead_acid.ButlerVolmer(self.param, "Positive")
+        self.reaction_submodels = {
+            "Negative": [self.submodels["leading-order negative interface"]],
+            "Positive": [self.submodels["leading-order positive interface"]],
+        }
 
     def set_negative_electrode_submodel(self):
 
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Negative"
-        )
+        self.submodels[
+            "leading-order negative electrode"
+        ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Negative")
 
     def set_positive_electrode_submodel(self):
 
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Positive"
-        )
+        self.submodels[
+            "leading-order positive electrode"
+        ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Positive")
 
     def set_electrolyte_submodel(self):
 
@@ -89,13 +113,13 @@ class LOQS(BaseModel):
 
         if self.options["surface form"] is False:
             self.submodels[
-                "electrolyte conductivity"
+                "leading-order electrolyte conductivity"
             ] = electrolyte.conductivity.LeadingOrder(self.param)
 
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
-                    domain.lower() + " electrolyte conductivity"
+                    "leading-order " + domain.lower() + " electrolyte conductivity"
                 ] = surf_form.LeadingOrderDifferential(
                     self.param, domain, self.reactions
                 )
@@ -103,7 +127,7 @@ class LOQS(BaseModel):
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
-                    domain.lower() + " electrolyte conductivity"
+                    "leading-order " + domain.lower() + " electrolyte conductivity"
                 ] = surf_form.LeadingOrderAlgebraic(self.param, domain, self.reactions)
 
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.LeadingOrder(
@@ -112,42 +136,33 @@ class LOQS(BaseModel):
 
     def set_side_reaction_submodels(self):
         if "oxygen" in self.options["side reactions"]:
-            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.LeadingOrder(
-                self.param, self.reactions
-            )
             self.submodels[
-                "positive oxygen interface"
+                "leading-order oxygen diffusion"
+            ] = pybamm.oxygen_diffusion.LeadingOrder(self.param, self.reactions)
+            self.submodels[
+                "leading-order positive oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.ForwardTafel(self.param, "Positive")
             self.submodels[
-                "negative oxygen interface"
+                "leading-order negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.LeadingOrderDiffusionLimited(
                 self.param, "Negative"
             )
         else:
-            self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(
-                self.param
-            )
             self.submodels[
-                "positive oxygen interface"
+                "leading-order oxygen diffusion"
+            ] = pybamm.oxygen_diffusion.NoOxygen(self.param)
+            self.submodels[
+                "leading-order positive oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Positive")
             self.submodels[
-                "negative oxygen interface"
+                "leading-order negative oxygen interface"
             ] = pybamm.interface.lead_acid_oxygen.NoReaction(self.param, "Negative")
-
-    @property
-    def default_spatial_methods(self):
-        # ODEs only in the macroscale, so use base spatial method
-        return {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.FiniteVolume,
-        }
-
-    @property
-    def default_geometry(self):
-        if self.options["bc_options"]["dimensionality"] == 0:
-            return pybamm.Geometry("1D macro")
-        elif self.options["bc_options"]["dimensionality"] == 1:
-            return pybamm.Geometry("1+1D macro")
+        self.reaction_submodels["Negative"].append(
+            self.submodels["leading-order negative oxygen interface"]
+        )
+        self.reaction_submodels["Positive"].append(
+            self.submodels["leading-order positive oxygen interface"]
+        )
 
     @property
     def default_solver(self):

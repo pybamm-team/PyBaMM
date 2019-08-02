@@ -180,6 +180,7 @@ class TestGeometry(unittest.TestCase):
                     "positive electrode",
                     "negative particle",
                     "positive particle",
+                    "current collector",
                 ]
             ),
         )
@@ -212,6 +213,7 @@ class TestGeometry(unittest.TestCase):
                     "positive electrode",
                     "negative particle",
                     "positive particle",
+                    "current collector",
                 ]
             ),
         )
@@ -231,6 +233,7 @@ class TestGeometry(unittest.TestCase):
                     "positive electrode",
                     "negative particle",
                     "positive particle",
+                    "current collector",
                 ]
             ),
         )
@@ -244,6 +247,7 @@ class TestGeometry(unittest.TestCase):
                     "positive electrode",
                     "negative particle",
                     "positive particle",
+                    "current collector",
                 ]
             ),
         )

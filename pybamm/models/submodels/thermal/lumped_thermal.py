@@ -24,9 +24,9 @@ class Lumped(BaseModel):
     def get_fundamental_variables(self):
 
         T_av = pybamm.standard_variables.T_av
-        T_n = pybamm.Broadcast(T_av, ["negative electrode"])
-        T_s = pybamm.Broadcast(T_av, ["separator"])
-        T_p = pybamm.Broadcast(T_av, ["positive electrode"])
+        T_n = pybamm.PrimaryBroadcast(T_av, ["negative electrode"])
+        T_s = pybamm.PrimaryBroadcast(T_av, ["separator"])
+        T_p = pybamm.PrimaryBroadcast(T_av, ["positive electrode"])
         T = pybamm.Concatenation(T_n, T_s, T_p)
 
         variables = self._get_standard_fundamental_variables(T)
@@ -38,15 +38,17 @@ class Lumped(BaseModel):
 
     def _flux_law(self, T):
         """Fast x-direction heat diffusion (i.e. reached steady state)"""
-        q = pybamm.Broadcast(
-            pybamm.Scalar(0), ["negative electrode", "separator", "positive electrode"]
+        q = pybamm.FullBroadcast(
+            pybamm.Scalar(0),
+            ["negative electrode", "separator", "positive electrode"],
+            "current collector",
         )
         return q
 
     def _unpack(self, variables):
-        T_av = variables["Average cell temperature"]
+        T_av = variables["X-averaged cell temperature"]
         q = variables["Heat flux"]
-        Q_av = variables["Average total heating"]
+        Q_av = variables["X-averaged total heating"]
         return T_av, q, Q_av
 
     def set_rhs(self, variables):

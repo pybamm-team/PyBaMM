@@ -32,6 +32,7 @@ Contents
     source/spatial_methods/index
     source/solvers/index
     source/processed_variable
+    source/util
 
 Examples
 ========

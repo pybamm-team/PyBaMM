@@ -79,6 +79,7 @@ class Geometry1DMacro(Geometry):
         self["positive electrode"] = {
             "primary": {var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)}}
         }
+        self["current collector"] = {"primary": {var.z: {"position": pybamm.Scalar(1)}}}
 
         # update with custom geometry if non empty
         self.update(custom_geometry)

@@ -186,6 +186,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
         return pybamm.Matrix(matrix)
 
+    def laplacian(self, symbol, discretised_symbol, boundary_conditions):
+        """
+        Laplacian operator, implemented as div(grad(.))
+        See :meth:`pybamm.SpatialMethod.laplacian`
+        """
+        grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
+        return self.divergence(grad, grad, boundary_conditions)
+
     def integral(self, domain, symbol, discretised_symbol):
         """Vector-vector dot product to implement the integral operator. """
         # Calculate integration vector
@@ -398,12 +406,19 @@ class FiniteVolume(pybamm.SpatialMethod):
         right_sub_matrix[0][0] = 1
         right_matrix = pybamm.Matrix(csr_matrix(kron(eye(sec_pts), right_sub_matrix)))
 
-        right_copy = right_symbol_disc.new_copy()
-        left_copy = left_symbol_disc.new_copy()
-        right_copy.domain = []
-        left_copy.domain = []
-        dy = right_matrix @ right_copy - left_matrix @ left_copy
+        # Remove domains to avoid clash
+        left_domain = left_symbol_disc.domain
+        right_domain = right_symbol_disc.domain
+        left_symbol_disc.domain = []
+        right_symbol_disc.domain = []
+
+        # Finite volume derivative
+        dy = right_matrix @ right_symbol_disc - left_matrix @ left_symbol_disc
         dx = right_mesh[0].nodes[0] - left_mesh[0].nodes[-1]
+
+        # Change domains back
+        left_symbol_disc.domain = left_domain
+        right_symbol_disc.domain = right_domain
 
         return dy / dx
 
@@ -572,7 +587,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     ([-0.5, 1.5], ([0, 0], [prim_pts - 2, prim_pts - 1])),
                     shape=(1, prim_pts),
                 )
-        elif isinstance(symbol, pybamm.BoundaryFlux):
+        elif isinstance(symbol, pybamm.BoundaryGradient):
             if symbol.side == "left":
                 dx = submesh_list[0].d_nodes[0]
                 sub_matrix = (1 / dx) * csr_matrix(
@@ -595,6 +610,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Return boundary value with domain given by symbol
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
         boundary_value.domain = symbol.domain
+        boundary_value.auxiliary_domains = symbol.auxiliary_domains
 
         return boundary_value
 
