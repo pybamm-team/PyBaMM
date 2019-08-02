@@ -22,16 +22,32 @@ class TestLeadAcidComposite(unittest.TestCase):
         model.check_well_posedness()
         pybamm.settings.debug_mode = True
 
-    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
-    def test_well_posed_1plus1D(self):
-        options = {
-            "surface form": "differential",
-            "current collector": "potential pair",
-            "dimensionality": 1,
-        }
-        model = pybamm.lead_acid.Composite(options)
-        model.check_well_posedness()
+
+class TestLeadAcidCompositeMultiDimensional(unittest.TestCase):
+    def test_well_posed(self):
+        model = pybamm.lead_acid.Composite(
+            {"dimensionality": 1, "current collector": "potential pair"}
+        )
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
+        model.check_well_posedness()
+        model = pybamm.lead_acid.Composite(
+            {"dimensionality": 2, "current collector": "potential pair"}
+        )
+        model.check_well_posedness()
+        model = pybamm.lead_acid.Composite(
+            {
+                "dimensionality": 1,
+                "current collector": "potential pair quite conductive",
+            }
+        )
+        model.check_well_posedness()
+        model = pybamm.lead_acid.Composite(
+            {
+                "dimensionality": 2,
+                "current collector": "potential pair quite conductive",
+            }
+        )
+        model.check_well_posedness()
 
 
 class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
@@ -46,11 +62,6 @@ class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
-
-    def test_incompatible_options(self):
-        options = {"side reactions": ["something"]}
-        with self.assertRaises(pybamm.OptionError):
-            pybamm.lead_acid.Composite(options)
 
 
 class TestLeadAcidCompositeExtended(unittest.TestCase):

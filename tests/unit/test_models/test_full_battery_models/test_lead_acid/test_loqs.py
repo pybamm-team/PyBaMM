@@ -75,15 +75,6 @@ class TestLeadAcidLOQS(unittest.TestCase):
             )
         )
 
-    def test_incompatible_options(self):
-        with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
-            pybamm.lead_acid.LOQS({"surface form": "bad surface form"})
-
-        with self.assertRaisesRegex(
-            pybamm.OptionError, "cannot have transverse convection in 0D model"
-        ):
-            pybamm.lead_acid.LOQS({"convection": {"transverse": "full"}})
-
 
 class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
     def test_well_posed_differential(self):

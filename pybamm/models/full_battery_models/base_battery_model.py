@@ -119,7 +119,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method
             base_spatial_methods["current collector"] = pybamm.ZeroDimensionalMethod
-        if self.options["dimensionality"] == 1:
+        elif self.options["dimensionality"] == 1:
             base_spatial_methods["current collector"] = pybamm.FiniteVolume
         elif self.options["dimensionality"] == 2:
             base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement
@@ -508,12 +508,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right") - pybamm.BoundaryValue(
                 phi_s_cn_dim, "left"
-            )
-        else:
-            raise pybamm.ModelError(
-                "Dimension of current collectors must be 0, 1, or 2, not {}".format(
-                    self.options["dimensionality"]
-                )
             )
 
         # TODO: add current collector losses to the voltage in 3D
