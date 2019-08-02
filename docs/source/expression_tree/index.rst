@@ -10,6 +10,7 @@ Expression Tree
   scalar
   matrix
   vector
+  state_vector
   binary_operator
   unary_operator
   concatenations

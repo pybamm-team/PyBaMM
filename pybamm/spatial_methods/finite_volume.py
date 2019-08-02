@@ -186,6 +186,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         matrix = csr_matrix(kron(eye(second_dim_len), sub_matrix))
         return pybamm.Matrix(matrix)
 
+    def laplacian(self, symbol, discretised_symbol, boundary_conditions):
+        """
+        Laplacian operator, implemented as div(grad(.))
+        See :meth:`pybamm.SpatialMethod.laplacian`
+        """
+        grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
+        return self.divergence(grad, grad, boundary_conditions)
+
     def integral(self, domain, symbol, discretised_symbol):
         """Vector-vector dot product to implement the integral operator. """
         # Calculate integration vector
@@ -539,7 +547,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                     ([-0.5, 1.5], ([0, 0], [prim_pts - 2, prim_pts - 1])),
                     shape=(1, prim_pts),
                 )
-        elif isinstance(symbol, pybamm.BoundaryFlux):
+        elif isinstance(symbol, pybamm.BoundaryGradient):
             if symbol.side == "left":
                 dx = submesh_list[0].d_nodes[0]
                 sub_matrix = (1 / dx) * csr_matrix(
@@ -562,6 +570,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Return boundary value with domain given by symbol
         boundary_value = pybamm.Matrix(matrix) @ discretised_child
         boundary_value.domain = symbol.domain
+        boundary_value.auxiliary_domains = symbol.auxiliary_domains
 
         return boundary_value
 

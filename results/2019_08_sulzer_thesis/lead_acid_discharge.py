@@ -17,16 +17,18 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
+    Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+    all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     shared_plotting.plot_voltages(all_variables, t_eval)
     file_name = "discharge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def plot_variables(all_variables, t_eval):
     # Set up
-    Crates = [0.1, 2, 5]
-    times = np.linspace(0, 0.5, 4)
+    Crates = [0.1, 1, 4]
+    times = np.array([0, 0.195, 0.375, 0.545])
     var_file_names = {
         "Electrolyte concentration [Molar]"
         + "": "discharge_electrolyte_concentration_comparison.eps",
@@ -43,18 +45,16 @@ def plot_variables(all_variables, t_eval):
             exceptions = {}
         shared_plotting.plot_variable(all_variables, times, var, exceptions)
         if OUTPUT_DIR is not None:
-            plt.savefig(
-                OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight"
-            )
+            plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_voltage_breakdown(all_variables, t_eval):
+def plot_voltage_components(all_variables, t_eval):
     Crates = [0.1, 2, 5]
     model = "Composite"
-    shared_plotting.plot_voltage_breakdown(all_variables, t_eval, model, Crates)
-    file_name = "discharge_voltage_breakdown.eps"
+    shared_plotting.plot_voltage_components(all_variables, t_eval, model, Crates)
+    file_name = "discharge_voltage_components.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def discharge_states(compute):
@@ -66,7 +66,7 @@ def discharge_states(compute):
             pybamm.lead_acid.FOQS(name="FOQS"),
             pybamm.lead_acid.Composite(name="Composite"),
         ]
-        Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+        Crates = [0.1, 0.2, 0.5, 1, 2, 4, 5, 10, 20]
         t_eval = np.linspace(0, 1, 100)
         extra_parameter_values = {"Bruggeman coefficient": 0.001}
         all_variables, t_eval = model_comparison(
@@ -83,9 +83,9 @@ def discharge_states(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    # plot_voltages(all_variables, t_eval)
-    # plot_variables(all_variables, t_eval)
-    plot_voltage_breakdown(all_variables, t_eval)
+    plot_voltages(all_variables, t_eval)
+    plot_variables(all_variables, t_eval)
+    plot_voltage_components(all_variables, t_eval)
 
 
 def plot_errors(models_times_and_voltages):
@@ -112,14 +112,14 @@ def plot_errors(models_times_and_voltages):
     fig.tight_layout()
     file_name = "discharge_asymptotics_rmse.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def plot_times(models_times_and_voltages):
     shared_plotting.plot_times(models_times_and_voltages, Crate=1)
     file_name = "discharge_asymptotics_solver_times.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def discharge_times_and_errors(compute):
@@ -156,7 +156,7 @@ def discharge_times_and_errors(compute):
                 "Run script with '--compute' first to generate results"
             )
     plot_errors(models_times_and_voltages)
-    # plot_times(models_times_and_voltages)
+    plot_times(models_times_and_voltages)
 
 
 if __name__ == "__main__":

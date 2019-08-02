@@ -16,16 +16,16 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
-    shared_plotting.plot_voltages(all_variables, t_eval)
+    linestyles = ["k-", "b--"]
+    shared_plotting.plot_voltages(all_variables, t_eval, linestyles, figsize=(6.4, 2.5))
     file_name = "side_reactions_voltage_comparison.eps"
+    plt.subplots_adjust(bottom=0.4)
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_interfacial_currents(models_variables, t_eval):
-    models = list(models_variables.keys())
+def plot_interfacial_currents(all_variables, t_eval):
     file_name = "side_reactions_interfacial_current_density_comparison.eps"
-    fig, ax = plt.subplots(1, 1)
     output_vars = [
         "Average positive electrode interfacial current density",
         "Average positive electrode oxygen interfacial current density",
@@ -33,98 +33,73 @@ def plot_interfacial_currents(models_variables, t_eval):
         "Average negative electrode interfacial current density",
     ]
     labels = [
-        "Positive electrode (main)",
-        "Positive electrode (oxygen)",
-        "Negative electrode (oxygen)",
-        "Negative electrode (main)",
+        "Pos electrode\n(main)",
+        "Pos electrode\n(oxygen)",
+        "Neg electrode\n(oxygen)",
+        "Neg electrode\n(main)",
     ]
-    t_max = max(np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values())
-    ax.set_xlim([0, t_max])
-    ax.set_xlabel("Time [h]")
-    ax.set_ylabel("Interfacial current densities")
-    linestyles = ["--", ":", "-.", "-"]
-    colors = ["k", "r"]
-    plots = {}
-    for j, (model, variables) in enumerate(models_variables.items()):
-        if model in models:
-            for k, var in enumerate(output_vars):
-                plots[(model, k)], = ax.plot(
-                    variables["Time [h]"](t_eval),
-                    variables[var](t_eval),
-                    linestyle=linestyles[k],
-                    color=colors[j],
-                )
-    leg1 = ax.legend(
-        [plots[(model, len(linestyles) - 1)] for model in models],
-        models,
-        loc="center left",
-        bbox_to_anchor=(1, 0.25),
+    shared_plotting.plot_time_dependent_variables(
+        all_variables, t_eval, output_vars, labels
     )
-    ax.legend(labels, loc="center left", bbox_to_anchor=(1, 0.75))
-    ax.add_artist(leg1)
-    fig.tight_layout()
+    plt.subplots_adjust(bottom=0.4, right=0.95, wspace=0.3)
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_variables(all_variables, t_eval):
-    # Set up
-    Crates = [-0.1, -1, -5]
-    times = np.linspace(0, 2, 4)
-    var_file_names = {
-        "Electrolyte concentration [Molar]"
-        + "": "charge_electrolyte_concentration_comparison.eps"
-    }
-    limits_exceptions = {"Electrolyte concentration [Molar]": {"min": 0}}
-    all_variables = {k: v for k, v in all_variables.items() if k in Crates}
-    for var, file_name in var_file_names.items():
-        if var in limits_exceptions:
-            exceptions = limits_exceptions[var]
-        else:
-            exceptions = {}
-        shared_plotting.plot_variable(all_variables, times, var, exceptions)
-        if OUTPUT_DIR is not None:
-            plt.savefig(
-                OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight"
-            )
-
-
 def charge_states(compute):
-    savefile = "effect_of_side_reactions_data.pickle"
+    savefile1 = "effect_of_side_reactions_data.pickle"
+    savefile2 = "effect_of_side_reactions_loqs_data.pickle"
     if compute:
-        models = [
-            pybamm.lead_acid.NewmanTiedemann(
-                {"surface form": "algebraic"}, name="Without oxygen"
-            ),
+        models1 = [
             pybamm.lead_acid.NewmanTiedemann(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]},
                 name="With oxygen",
             ),
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "algebraic"}, name="Without oxygen"
+            ),
         ]
         Crates = [-0.1, -1, -5]
-        t_eval = np.linspace(0, 2, 100)
+        t_eval = np.linspace(0, 5, 100)
         extra_parameter_values = {
             "Positive electrode"
             + "reference exchange-current density (oxygen) [A.m-2]": 1e-24,
             "Initial State of Charge": 0.5,
         }
-        all_variables, t_eval = model_comparison(
-            models, Crates, t_eval, extra_parameter_values=extra_parameter_values
+        all_variables1, t_eval1 = model_comparison(
+            models1, Crates, t_eval, extra_parameter_values=extra_parameter_values
         )
-        with open(savefile, "wb") as f:
-            data = (all_variables, t_eval)
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        # Use LOQS without voltage cut-off for interfacial current densities, so that
+        # the current goes all the way
+        models2 = [
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "algebraic", "side reactions": ["oxygen"]},
+                name="With oxygen",
+            ),
+            pybamm.lead_acid.LOQS({"surface form": "algebraic"}, name="Without oxygen"),
+        ]
+        extra_parameter_values["Upper voltage cut-off [V]"] = 100
+        all_variables2, t_eval2 = model_comparison(
+            models2, Crates, t_eval, extra_parameter_values=extra_parameter_values
+        )
+        with open(savefile1, "wb") as f:
+            data1 = (all_variables1, t_eval1)
+            pickle.dump(data1, f, pickle.HIGHEST_PROTOCOL)
+        with open(savefile2, "wb") as f:
+            data2 = (all_variables2, t_eval2)
+            pickle.dump(data2, f, pickle.HIGHEST_PROTOCOL)
     else:
         try:
-            with open(savefile, "rb") as f:
-                (all_variables, t_eval) = pickle.load(f)
+            with open(savefile1, "rb") as f:
+                (all_variables1, t_eval1) = pickle.load(f)
+            with open(savefile2, "rb") as f:
+                (all_variables2, t_eval2) = pickle.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    plot_voltages(all_variables, t_eval)
-    plot_interfacial_currents(all_variables[-1], t_eval)
-    plot_variables(all_variables, t_eval)
+    plot_voltages(all_variables1, t_eval1)
+    plot_interfacial_currents(all_variables2, t_eval2)
 
 
 if __name__ == "__main__":

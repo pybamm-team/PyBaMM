@@ -56,18 +56,18 @@ class BaseInterface(pybamm.BaseSubModel):
             j_scale = i_typ / (self.param.a_p_dim * L_x)
 
         # Average, and broadcast if necessary
-        j_av = pybamm.average(j)
+        j_av = pybamm.x_average(j)
         if j.domain == []:
-            j = pybamm.Broadcast(j, self.domain_for_broadcast)
+            j = pybamm.FullBroadcast(j, self.domain_for_broadcast, "current collector")
         elif j.domain == ["current collector"]:
-            j = pybamm.Broadcast(j, self.domain_for_broadcast, broadcast_type="primary")
+            j = pybamm.PrimaryBroadcast(j, self.domain_for_broadcast)
 
         variables = {
             self.domain
             + " electrode"
             + self.reaction_name
             + " interfacial current density": j,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
@@ -76,7 +76,7 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " interfacial current density [A.m-2]": j_scale * j,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
@@ -85,7 +85,7 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " interfacial current density per volume [A.m-3]": i_typ / L_x * j,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
@@ -104,14 +104,14 @@ class BaseInterface(pybamm.BaseSubModel):
             j_scale = i_typ / (self.param.a_p_dim * L_x)
 
         variables = {
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode total interfacial current density": j_tot_av,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode total interfacial current density [A.m-2]": j_scale
             * j_tot_av,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode total interfacial current density per volume [A.m-3]": i_typ
             / L_x
@@ -130,7 +130,7 @@ class BaseInterface(pybamm.BaseSubModel):
         j_n = variables[
             "Negative electrode" + self.reaction_name + " interfacial current density"
         ]
-        j_s = pybamm.Broadcast(0, ["separator"])
+        j_s = pybamm.FullBroadcast(0, "separator", "current collector")
         j_p = variables[
             "Positive electrode" + self.reaction_name + " interfacial current density"
         ]
@@ -164,20 +164,20 @@ class BaseInterface(pybamm.BaseSubModel):
             j_scale = i_typ / (self.param.a_p_dim * L_x)
 
         # Average, and broadcast if necessary
-        j0_av = pybamm.average(j0)
+        j0_av = pybamm.x_average(j0)
         if j0.domain == []:
-            j0 = pybamm.Broadcast(j0, self.domain_for_broadcast)
-        elif j0.domain == ["current collector"]:
-            j0 = pybamm.Broadcast(
-                j0, self.domain_for_broadcast, broadcast_type="primary"
+            j0 = pybamm.FullBroadcast(
+                j0, self.domain_for_broadcast, "current collector"
             )
+        elif j0.domain == ["current collector"]:
+            j0 = pybamm.PrimaryBroadcast(j0, self.domain_for_broadcast)
 
         variables = {
             self.domain
             + " electrode"
             + self.reaction_name
             + " exchange current density": j0,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
@@ -186,7 +186,7 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " exchange current density [A.m-2]": j_scale * j0,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
@@ -195,7 +195,7 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " exchange current density per volume [A.m-3]": i_typ / L_x * j0,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
@@ -214,7 +214,7 @@ class BaseInterface(pybamm.BaseSubModel):
         j0_n = variables[
             "Negative electrode" + self.reaction_name + " exchange current density"
         ]
-        j0_s = pybamm.Broadcast(0, ["separator"])
+        j0_s = pybamm.FullBroadcast(0, "separator", "current collector")
         j0_p = variables[
             "Positive electrode" + self.reaction_name + " exchange current density"
         ]
@@ -242,20 +242,20 @@ class BaseInterface(pybamm.BaseSubModel):
 
         pot_scale = self.param.potential_scale
         # Average, and broadcast if necessary
-        eta_r_av = pybamm.average(eta_r)
+        eta_r_av = pybamm.x_average(eta_r)
         if eta_r.domain == []:
-            eta_r = pybamm.Broadcast(eta_r, self.domain_for_broadcast)
-        elif eta_r.domain == ["current collector"]:
-            eta_r = pybamm.Broadcast(
-                eta_r, self.domain_for_broadcast, broadcast_type="primary"
+            eta_r = pybamm.FullBroadcast(
+                eta_r, self.domain_for_broadcast, "current collector"
             )
+        elif eta_r.domain == ["current collector"]:
+            eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
         variables = {
             self.domain
             + " electrode"
             + self.reaction_name
             + " reaction overpotential": eta_r,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
@@ -264,7 +264,7 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " reaction overpotential [V]": eta_r * pot_scale,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
@@ -282,23 +282,23 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
 
         # Average, and broadcast if necessary
-        delta_phi_av = pybamm.average(delta_phi)
+        delta_phi_av = pybamm.x_average(delta_phi)
         if delta_phi.domain == []:
-            delta_phi = pybamm.Broadcast(delta_phi, self.domain_for_broadcast)
-        elif delta_phi.domain == ["current collector"]:
-            delta_phi = pybamm.Broadcast(
-                delta_phi, self.domain_for_broadcast, broadcast_type="primary"
+            delta_phi = pybamm.FullBroadcast(
+                delta_phi, self.domain_for_broadcast, "current collector"
             )
+        elif delta_phi.domain == ["current collector"]:
+            delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode surface potential difference": delta_phi_av,
             self.domain
             + " electrode surface potential difference [V]": ocp_ref
             + delta_phi * pot_scale,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode surface potential difference [V]": ocp_ref
             + delta_phi_av * pot_scale,
@@ -326,14 +326,14 @@ class BaseInterface(pybamm.BaseSubModel):
         """
 
         # Average, and broadcast if necessary
-        ocp_av = pybamm.average(ocp)
+        ocp_av = pybamm.x_average(ocp)
         if ocp.domain == []:
-            ocp = pybamm.Broadcast(ocp, self.domain_for_broadcast)
-        elif ocp.domain == ["current collector"]:
-            ocp = pybamm.Broadcast(
-                ocp, self.domain_for_broadcast, broadcast_type="primary"
+            ocp = pybamm.FullBroadcast(
+                ocp, self.domain_for_broadcast, "current collector"
             )
-        dUdT_av = pybamm.average(dUdT)
+        elif ocp.domain == ["current collector"]:
+            ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
+        dUdT_av = pybamm.x_average(dUdT)
 
         if self.domain == "Negative":
             ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
@@ -351,18 +351,18 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " open circuit potential [V]": ocp_dim,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
             + " open circuit potential": ocp_av,
-            "Average "
+            "X-averaged "
             + self.domain.lower()
             + " electrode"
             + self.reaction_name
             + " open circuit potential [V]": ocp_av_dim,
             self.domain + " electrode entropic change": dUdT,
-            "Average " + self.domain.lower() + " electrode entropic change": dUdT_av,
+            "X-averaged " + self.domain.lower() + " electrode entropic change": dUdT_av,
         }
 
         return variables

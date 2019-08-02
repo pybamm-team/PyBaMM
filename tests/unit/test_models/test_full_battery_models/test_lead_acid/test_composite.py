@@ -55,7 +55,7 @@ class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
 
     def test_incompatible_options(self):
         options = {"side reactions": ["something"]}
-        with self.assertRaises(pybamm.ModelError):
+        with self.assertRaises(pybamm.OptionError):
             pybamm.lead_acid.Composite(options)
 
 

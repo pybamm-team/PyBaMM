@@ -74,8 +74,11 @@ class BaseModel(BaseStefanMaxwellConductivity):
         c_e = variables[self.domain + " electrolyte concentration"]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
 
+        if isinstance(i_boundary_cc, pybamm.Broadcast):
+            i_boundary_cc = i_boundary_cc.orphans[0]
+
         if self.domain == "Negative":
-            c_e_flux = pybamm.BoundaryFlux(c_e, "right")
+            c_e_flux = pybamm.BoundaryGradient(c_e, "right")
             flux_left = -pybamm.BoundaryValue(i_boundary_cc / sigma_eff, "left")
             flux_right = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "right"))
@@ -89,7 +92,7 @@ class BaseModel(BaseStefanMaxwellConductivity):
             rbc_c_e = (c_e_flux, "Neumann")
 
         elif self.domain == "Positive":
-            c_e_flux = pybamm.BoundaryFlux(c_e, "left")
+            c_e_flux = pybamm.BoundaryGradient(c_e, "left")
             flux_left = (
                 (i_boundary_cc / pybamm.BoundaryValue(conductivity, "left"))
                 - pybamm.BoundaryValue(param.chi(c_e) / c_e, "left") * c_e_flux
@@ -152,6 +155,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
         c_e = variables[self.domain + " electrolyte concentration"]
         delta_phi = variables[self.domain + " electrode surface potential difference"]
 
+        if isinstance(i_boundary_cc, pybamm.Broadcast):
+            i_boundary_cc = i_boundary_cc.orphans[0]
+
         i_e = conductivity * (
             (param.chi(c_e) / c_e) * pybamm.grad(c_e)
             + pybamm.grad(delta_phi)
@@ -182,24 +188,29 @@ class BaseModel(BaseStefanMaxwellConductivity):
         eps_s = variables["Separator porosity"]
         T = variables["Separator temperature"]
 
+        if isinstance(i_boundary_cc, pybamm.Broadcast):
+            i_boundary_cc = i_boundary_cc.orphans[0]
+
         chi_e_s = param.chi(c_e_s)
         kappa_s_eff = param.kappa_e(c_e_s, T) * (eps_s ** param.b)
 
-        phi_e_s = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
+        phi_e_s = pybamm.PrimaryBroadcast(
+            pybamm.boundary_value(phi_e_n, "right"), "separator"
+        ) + pybamm.IndefiniteIntegral(
             chi_e_s / c_e_s * pybamm.grad(c_e_s)
             - param.C_e * i_boundary_cc / kappa_s_eff,
             x_s,
         )
 
-        i_e_s = pybamm.Broadcast(i_boundary_cc, ["separator"])
+        i_e_s = pybamm.FullBroadcast(i_boundary_cc, ["separator"], "current collector")
 
         variables.update(self._get_domain_potential_variables(phi_e_s))
         variables.update(self._get_domain_current_variables(i_e_s))
 
         # Update boundary conditions (for indefinite integral)
         self.boundary_conditions[c_e_s] = {
-            "left": (pybamm.BoundaryFlux(c_e_s, "left"), "Neumann"),
-            "right": (pybamm.BoundaryFlux(c_e_s, "right"), "Neumann"),
+            "left": (pybamm.BoundaryGradient(c_e_s, "left"), "Neumann"),
+            "right": (pybamm.BoundaryGradient(c_e_s, "right"), "Neumann"),
         }
 
         return variables
@@ -215,6 +226,9 @@ class BaseModel(BaseStefanMaxwellConductivity):
         i_boundary_cc = variables["Current collector current density"]
         i_e = variables[self.domain + " electrolyte current density"]
 
+        if isinstance(i_boundary_cc, pybamm.Broadcast):
+            i_boundary_cc = i_boundary_cc.orphans[0]
+
         i_s = i_boundary_cc - i_e
 
         if self.domain == "Negative":
@@ -227,10 +241,13 @@ class BaseModel(BaseStefanMaxwellConductivity):
             delta_phi_p = variables["Positive electrode surface potential difference"]
 
             conductivity = param.sigma_p * (1 - eps) ** param.b
-            phi_s = (
-                -pybamm.IndefiniteIntegral(i_s / conductivity, x_p)
-                + pybamm.boundary_value(phi_e_s, "right")
-                + pybamm.boundary_value(delta_phi_p, "left")
+
+            phi_s = -pybamm.IndefiniteIntegral(
+                i_s / conductivity, x_p
+            ) + pybamm.PrimaryBroadcast(
+                pybamm.boundary_value(phi_e_s, "right")
+                + pybamm.boundary_value(delta_phi_p, "left"),
+                "positive electrode",
             )
 
         return phi_s

@@ -17,7 +17,7 @@ save_folder = "results/2019_08_sulzer_thesis/data/capacitance_results/"
 def plot_voltages(all_variables, t_eval):
     linestyles = ["k-", "b-.", "r--"]
     _, axes = shared_plotting.plot_voltages(
-        all_variables, t_eval, linestyles=linestyles
+        all_variables, t_eval, linestyles=linestyles, figsize=(6.4, 4)
     )
 
     # Add inset plot
@@ -25,19 +25,20 @@ def plot_voltages(all_variables, t_eval):
         ax = axes.flat[k]
         y_min = ax.get_ylim()[0]
         ax.set_ylim([y_min, 13.6])
-        inset = inset_axes(ax, width="40%", height="40%", loc=1, borderpad=0)
+        inset = inset_axes(ax, width="40%", height="30%", loc=1, borderpad=0)
         for j, variables in enumerate(models_variables.values()):
             time = variables["Time [s]"](t_eval)
             capacitance_indices = np.where(time < 50)
             time = time[capacitance_indices]
             voltage = variables["Battery voltage [V]"](t_eval)[capacitance_indices]
             inset.plot(time, voltage, linestyles[j])
-            inset.set_xlabel("Time [s]", fontsize=10)
+            inset.set_xlabel("Time [s]", fontsize=9)
             inset.set_xlim([0, 3])
+            inset.tick_params(axis="both", which="major", labelsize=9)
 
     file_name = "capacitance_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def plot_errors(all_variables, t_eval, Crates):
@@ -46,7 +47,7 @@ def plot_errors(all_variables, t_eval, Crates):
     # Only use some Crates
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     # Plot
-    fig, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 4))
     for k, (Crate, models_variables) in enumerate(all_variables.items()):
         ax.set_xlabel("Time [h]")
         ax.set_ylabel("Error [V]")
@@ -60,7 +61,7 @@ def plot_errors(all_variables, t_eval, Crates):
                 - base_model_results["Battery voltage [V]"](t_eval)
             )
             ax.loglog(variables["Time [h]"](t_eval), error, linestyles[j], label=model)
-        ax.legend(loc="best")
+        ax.legend(loc="upper right")
     fig.tight_layout()
     file_name = "capacitance_errors_voltages.eps".format(Crate)
     if OUTPUT_DIR is not None:
@@ -106,7 +107,7 @@ def plot_times(models_times_and_voltages):
     )
     file_name = "capacitance_solver_times.eps"
     if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000, bbox_inches="tight")
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
 def discharge_times_and_errors(compute):
@@ -144,8 +145,8 @@ def discharge_times_and_errors(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    # plot_errors(models_times_and_voltages)
-    plot_times(models_times_and_voltages)
+    plot_errors(models_times_and_voltages)
+    # plot_times(models_times_and_voltages)
 
 
 if __name__ == "__main__":
@@ -153,6 +154,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    # discharge_states(args.compute)
-    discharge_times_and_errors(args.compute)
+    discharge_states(args.compute)
+    # discharge_times_and_errors(args.compute)
     plt.show()

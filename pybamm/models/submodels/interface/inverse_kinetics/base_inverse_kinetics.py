@@ -32,12 +32,10 @@ class BaseInverseKinetics(BaseInterface):
         j0 = self._get_exchange_current_density(variables)
         j_tot_av = self._get_average_total_interfacial_current_density(variables)
         # Broadcast to match j0's domain
-        if j0.domain == []:
+        if j0.domain in [[], ["current collector"]]:
             j = j_tot_av
         else:
-            j = pybamm.Broadcast(
-                j_tot_av, [self.domain.lower() + " electrode"], broadcast_type="primary"
-            )
+            j = pybamm.PrimaryBroadcast(j_tot_av, [self.domain.lower() + " electrode"])
 
         if self.domain == "Negative":
             ne = self.param.ne_n

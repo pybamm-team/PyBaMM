@@ -61,13 +61,12 @@ class Full(BaseModel):
         N_e = variables["Electrolyte flux"]
         # i_e = variables["Electrolyte current density"]
 
-        # TODO: check lead acid version in new form
         # source_term = ((param.s - param.t_plus) / param.gamma_e) * pybamm.div(i_e)
         # source_term = pybamm.div(i_e) / param.gamma_e  # lithium-ion
         source_terms = sum(
             pybamm.Concatenation(
                 reaction["Negative"]["s"] * variables[reaction["Negative"]["aj"]],
-                pybamm.Broadcast(0, "separator"),
+                pybamm.FullBroadcast(0, "separator", "current collector"),
                 reaction["Positive"]["s"] * variables[reaction["Positive"]["aj"]],
             )
             / param.gamma_e

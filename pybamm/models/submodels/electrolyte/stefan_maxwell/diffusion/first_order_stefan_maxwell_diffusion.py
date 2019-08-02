@@ -34,17 +34,17 @@ class FirstOrder(BaseModel):
 
         # Unpack
         T_0 = variables["Leading-order cell temperature"]
-        c_e_0 = variables["Leading-order average electrolyte concentration"]
+        c_e_0 = variables["Leading-order x-averaged electrolyte concentration"]
         # v_box_0 = variables["Leading-order volume-averaged velocity"]
         dc_e_0_dt = variables["Leading-order electrolyte concentration change"]
-        eps_n_0 = variables["Leading-order average negative electrode porosity"]
-        eps_s_0 = variables["Leading-order average separator porosity"]
-        eps_p_0 = variables["Leading-order average positive electrode porosity"]
+        eps_n_0 = variables["Leading-order x-averaged negative electrode porosity"]
+        eps_s_0 = variables["Leading-order x-averaged separator porosity"]
+        eps_p_0 = variables["Leading-order x-averaged positive electrode porosity"]
         deps_n_0_dt = variables[
-            "Leading-order average negative electrode porosity change"
+            "Leading-order x-averaged negative electrode porosity change"
         ]
         deps_p_0_dt = variables[
-            "Leading-order average positive electrode porosity change"
+            "Leading-order x-averaged positive electrode porosity change"
         ]
 
         # Combined time derivatives
@@ -55,13 +55,17 @@ class FirstOrder(BaseModel):
         # Right-hand sides
         rhs_n = d_epsc_n_0_dt - sum(
             reaction["Negative"]["s"]
-            * variables["Leading-order average " + reaction["Negative"]["aj"].lower()]
+            * variables[
+                "Leading-order x-averaged " + reaction["Negative"]["aj"].lower()
+            ]
             for reaction in self.reactions.values()
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = d_epsc_p_0_dt - sum(
             reaction["Positive"]["s"]
-            * variables["Leading-order average " + reaction["Positive"]["aj"].lower()]
+            * variables[
+                "Leading-order x-averaged " + reaction["Positive"]["aj"].lower()
+            ]
             for reaction in self.reactions.values()
         )
 
@@ -71,17 +75,23 @@ class FirstOrder(BaseModel):
         D_e_p = (eps_p_0 ** param.b) * param.D_e(c_e_0, T_0)
 
         # Fluxes
-        N_e_n_1 = -rhs_n * x_n
-        N_e_s_1 = -(rhs_s * (x_s - l_n) + rhs_n * l_n)
-        N_e_p_1 = -rhs_p * (x_p - 1)
+        N_e_n_1 = -pybamm.outer(rhs_n, x_n)
+        N_e_s_1 = -(
+            pybamm.outer(rhs_s, (x_s - l_n))
+            + pybamm.PrimaryBroadcast(rhs_n * l_n, "separator")
+        )
+        N_e_p_1 = -pybamm.outer(rhs_p, (x_p - 1))
 
         # Concentrations
-        c_e_n_1 = rhs_n / (2 * D_e_n) * (x_n ** 2 - l_n ** 2)
-        c_e_s_1 = (rhs_s / 2 * (x_s - l_n) ** 2 + rhs_n * l_n * (x_s - l_n)) / D_e_s
-        c_e_p_1 = (
-            (rhs_p / (2 * D_e_p) * ((x_p - 1) ** 2 - l_p ** 2))
-            + (rhs_s * l_s ** 2 / (2 * D_e_s))
-            + (rhs_n * l_n * l_s / D_e_s)
+        c_e_n_1 = pybamm.outer(rhs_n / (2 * D_e_n), x_n ** 2 - l_n ** 2)
+        c_e_s_1 = pybamm.outer(rhs_s / 2, (x_s - l_n) ** 2) + pybamm.outer(
+            rhs_n * l_n / D_e_s, x_s - l_n
+        )
+        c_e_p_1 = pybamm.outer(
+            rhs_p / (2 * D_e_p), (x_p - 1) ** 2 - l_p ** 2
+        ) + pybamm.PrimaryBroadcast(
+            (rhs_s * l_s ** 2 / (2 * D_e_s)) + (rhs_n * l_n * l_s / D_e_s),
+            "positive electrode",
         )
 
         # Correct for integral
@@ -95,26 +105,26 @@ class FirstOrder(BaseModel):
         A_e = -(eps_n_0 * c_e_n_1_av + eps_s_0 * c_e_s_1_av + eps_p_0 * c_e_p_1_av) / (
             l_n * eps_n_0 + l_s * eps_s_0 + l_p * eps_p_0
         )
-        c_e_n_1 += A_e
-        c_e_s_1 += A_e
-        c_e_p_1 += A_e
+        c_e_n_1 += pybamm.PrimaryBroadcast(A_e, "negative electrode")
+        c_e_s_1 += pybamm.PrimaryBroadcast(A_e, "separator")
+        c_e_p_1 += pybamm.PrimaryBroadcast(A_e, "positive electrode")
         c_e_n_1_av += A_e
         c_e_s_1_av += A_e
         c_e_p_1_av += A_e
 
         # Update variables
         c_e = pybamm.Concatenation(
-            pybamm.Broadcast(c_e_0, "negative electrode") + param.C_e * c_e_n_1,
-            pybamm.Broadcast(c_e_0, "separator") + param.C_e * c_e_s_1,
-            pybamm.Broadcast(c_e_0, "positive electrode") + param.C_e * c_e_p_1,
+            pybamm.PrimaryBroadcast(c_e_0, "negative electrode") + param.C_e * c_e_n_1,
+            pybamm.PrimaryBroadcast(c_e_0, "separator") + param.C_e * c_e_s_1,
+            pybamm.PrimaryBroadcast(c_e_0, "positive electrode") + param.C_e * c_e_p_1,
         )
         variables.update(self._get_standard_concentration_variables(c_e))
-        # Update with analytical expressions for first-order averages
+        # Update with analytical expressions for first-order x-averages
         variables.update(
             {
-                "Average first-order negative electrolyte concentration": c_e_n_1_av,
-                "Average first-order separator electrolyte concentration": c_e_s_1_av,
-                "Average first-order positive electrolyte concentration": c_e_p_1_av,
+                "X-averaged first-order negative electrolyte concentration": c_e_n_1_av,
+                "X-averaged first-order separator concentration": c_e_s_1_av,
+                "X-averaged first-order positive electrolyte concentration": c_e_p_1_av,
             }
         )
 

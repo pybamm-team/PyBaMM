@@ -57,7 +57,7 @@ phi_s_cp = pybamm.ProcessedVariable(
     solution.y,
     mesh=mesh,
 )
-l_y = phi_s_cp.x_sol[-1]
+l_y = phi_s_cp.y_sol[-1]
 l_z = phi_s_cp.z_sol[-1]
 y_plot = np.linspace(0, l_y, 21)
 z_plot = np.linspace(0, l_z, 21)
@@ -76,7 +76,7 @@ def plot(t):
     phi_s_cn_plot = plt.pcolormesh(
         y_plot,
         z_plot,
-        np.transpose(phi_s_cn(x=y_plot, r=z_plot, t=solution.t[ind])),
+        np.transpose(phi_s_cn(y=y_plot, z=z_plot, t=solution.t[ind])),
         shading="gouraud",
     )
     plt.axis([0, l_y, 0, l_z])
@@ -91,7 +91,7 @@ def plot(t):
     phi_s_cp_plot = plt.pcolormesh(
         y_plot,
         z_plot,
-        np.transpose(phi_s_cp(x=y_plot, r=z_plot, t=solution.t[ind])),
+        np.transpose(phi_s_cp(y=y_plot, z=z_plot, t=solution.t[ind])),
         shading="gouraud",
     )
 

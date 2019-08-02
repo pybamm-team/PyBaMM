@@ -43,7 +43,7 @@ class BaseModel(BaseInterface):
 
         j = self._get_kinetics(j0, ne, eta_r)
         j_tot_av = self._get_average_total_interfacial_current_density(variables)
-        # j = j_tot_av + (j - pybamm.average(j))  # enforce true average
+        # j = j_tot_av + (j - pybamm.x_average(j))  # enforce true average
 
         variables.update(self._get_standard_interfacial_current_variables(j))
         variables.update(
@@ -105,13 +105,13 @@ class BaseModel(BaseInterface):
         # This is a bit of a hack, but we need to multiply electrolyte concentration by
         # one to differentiate it from the electrolyte concentration inside the
         # surface potential difference when taking j.diff(c_e) later on
-        c_e_0 = variables["Leading-order average electrolyte concentration"] * 1
+        c_e_0 = variables["Leading-order x-averaged electrolyte concentration"] * 1
         hacked_variables = {
             **variables,
             self.domain + " electrolyte concentration": c_e_0,
         }
         delta_phi = variables[
-            "Leading-order average "
+            "Leading-order x-averaged "
             + self.domain.lower()
             + " electrode surface potential difference"
         ]

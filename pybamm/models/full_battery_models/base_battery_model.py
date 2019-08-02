@@ -95,7 +95,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive electrode": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
-            "current collector": pybamm.Uniform1DSubMesh,
+            "current collector": pybamm.SubMesh0D,
         }
 
     @property
@@ -104,7 +104,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "macroscale": pybamm.FiniteVolume,
             "negative particle": pybamm.FiniteVolume,
             "positive particle": pybamm.FiniteVolume,
-            "current collector": pybamm.FiniteVolume,
+            "current collector": pybamm.ZeroDimensionalMethod,
         }
 
     @property
@@ -112,12 +112,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         """
         Create and return the default solver for this model
         """
-        try:
-            default_solver = pybamm.ScikitsOdeSolver()
-        except ImportError:
-            default_solver = pybamm.ScipySolver()
-
-        return default_solver
+        return pybamm.ScipySolver()
 
     @property
     def options(self):
@@ -149,18 +144,28 @@ class BaseBatteryModel(pybamm.BaseModel):
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
             and options["surface form"] is False
         ):
-            if options["bc_options"]["dimensionality"] == 1:
-                raise pybamm.ModelError(
-                    "must use surface formulation to solve {!s} in 2D".format(self)
+            if options["bc_options"]["dimensionality"] in [1, 2]:
+                raise pybamm.OptionError(
+                    "must use surface formulation to solve {!s} in 2 or 3D".format(self)
                 )
             if len(options["side reactions"]) > 0:
-                raise pybamm.ModelError(
+                raise pybamm.OptionError(
                     """
                     must use surface formulation to solve {!s} with side reactions
                     """.format(
                         self
                     )
                 )
+        if options["surface form"] not in [False, "differential", "algebraic"]:
+            raise pybamm.OptionError(
+                "surface form '{}' not recognised".format(options["surface form"])
+            )
+        if options["bc_options"]["dimensionality"] not in [0, 1, 2]:
+            raise pybamm.OptionError(
+                "Dimension of current collectors must be 0, 1, or 2, not {}".format(
+                    options["bc_options"]["dimensionality"]
+                )
+            )
 
         self._options = options
 
@@ -192,9 +197,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             {
                 "Negative electrode open circuit potential": None,
                 "Positive electrode open circuit potential": None,
-                "Average negative electrode open circuit potential": None,
-                "Average positive electrode open circuit potential": None,
-                "Average open circuit voltage": None,
+                "X-averaged negative electrode open circuit potential": None,
+                "X-averaged positive electrode open circuit potential": None,
+                "X-averaged open circuit voltage": None,
                 "Measured open circuit voltage": None,
                 "Terminal voltage": None,
             }
@@ -203,9 +208,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             {
                 "Negative electrode open circuit potential [V]": None,
                 "Positive electrode open circuit potential [V]": None,
-                "Average negative electrode open circuit potential [V]": None,
-                "Average positive electrode open circuit potential [V]": None,
-                "Average open circuit voltage [V]": None,
+                "X-averaged negative electrode open circuit potential [V]": None,
+                "X-averaged positive electrode open circuit potential [V]": None,
+                "X-averaged open circuit voltage [V]": None,
                 "Measured open circuit voltage [V]": None,
                 "Terminal voltage [V]": None,
             }
@@ -216,22 +221,22 @@ class BaseBatteryModel(pybamm.BaseModel):
             {
                 "Negative reaction overpotential": None,
                 "Positive reaction overpotential": None,
-                "Average negative reaction overpotential": None,
-                "Average positive reaction overpotential": None,
-                "Average reaction overpotential": None,
-                "Average electrolyte overpotential": None,
-                "Average solid phase ohmic losses": None,
+                "X-averaged negative reaction overpotential": None,
+                "X-averaged positive reaction overpotential": None,
+                "X-averaged reaction overpotential": None,
+                "X-averaged electrolyte overpotential": None,
+                "X-averaged solid phase ohmic losses": None,
             }
         )
         self.variables.update(
             {
                 "Negative reaction overpotential [V]": None,
                 "Positive reaction overpotential [V]": None,
-                "Average negative reaction overpotential [V]": None,
-                "Average positive reaction overpotential [V]": None,
-                "Average reaction overpotential [V]": None,
-                "Average electrolyte overpotential [V]": None,
-                "Average solid phase ohmic losses [V]": None,
+                "X-averaged negative reaction overpotential [V]": None,
+                "X-averaged positive reaction overpotential [V]": None,
+                "X-averaged reaction overpotential [V]": None,
+                "X-averaged electrolyte overpotential [V]": None,
+                "X-averaged solid phase ohmic losses [V]": None,
             }
         )
 
@@ -255,13 +260,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.variables = {}
 
         # Current
-        icell = pybamm.electrical_parameters.current_density_with_time
-        icell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
+        i_cell = pybamm.electrical_parameters.current_with_time
+        i_cell_dim = pybamm.electrical_parameters.dimensional_current_density_with_time
         I = pybamm.electrical_parameters.dimensional_current_with_time
         self.variables.update(
             {
-                "Total current density": icell,
-                "Total current density [A.m-2]": icell_dim,
+                "Total current density": i_cell,
+                "Total current density [A.m-2]": i_cell_dim,
                 "Current [A]": I,
             }
         )
@@ -270,6 +275,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         time_scale = pybamm.electrical_parameters.timescale
         self.variables.update(
             {
+                "Time": pybamm.t,
                 "Time [s]": pybamm.t * time_scale,
                 "Time [min]": pybamm.t * time_scale / 60,
                 "Time [h]": pybamm.t * time_scale / 3600,
@@ -377,22 +383,26 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         ocp_n = self.variables["Negative electrode open circuit potential"]
         ocp_p = self.variables["Positive electrode open circuit potential"]
-        ocp_n_av = self.variables["Average negative electrode open circuit potential"]
-        ocp_p_av = self.variables["Average positive electrode open circuit potential"]
+        ocp_n_av = self.variables[
+            "X-averaged negative electrode open circuit potential"
+        ]
+        ocp_p_av = self.variables[
+            "X-averaged positive electrode open circuit potential"
+        ]
 
         ocp_n_dim = self.variables["Negative electrode open circuit potential [V]"]
         ocp_p_dim = self.variables["Positive electrode open circuit potential [V]"]
         ocp_n_av_dim = self.variables[
-            "Average negative electrode open circuit potential [V]"
+            "X-averaged negative electrode open circuit potential [V]"
         ]
         ocp_p_av_dim = self.variables[
-            "Average positive electrode open circuit potential [V]"
+            "X-averaged positive electrode open circuit potential [V]"
         ]
 
-        ocp_n_left = pybamm.BoundaryValue(ocp_n, "left")
-        ocp_n_left_dim = pybamm.BoundaryValue(ocp_n_dim, "left")
-        ocp_p_right = pybamm.BoundaryValue(ocp_p, "right")
-        ocp_p_right_dim = pybamm.BoundaryValue(ocp_p_dim, "right")
+        ocp_n_left = pybamm.boundary_value(ocp_n, "left")
+        ocp_n_left_dim = pybamm.boundary_value(ocp_n_dim, "left")
+        ocp_p_right = pybamm.boundary_value(ocp_p, "right")
+        ocp_p_right_dim = pybamm.boundary_value(ocp_p_dim, "right")
 
         ocv_av = ocp_p_av - ocp_n_av
         ocv_av_dim = ocp_p_av_dim - ocp_n_av_dim
@@ -400,22 +410,26 @@ class BaseBatteryModel(pybamm.BaseModel):
         ocv_dim = ocp_p_right_dim - ocp_n_left_dim
 
         # overpotentials
-        eta_r_n_av = self.variables["Average negative electrode reaction overpotential"]
-        eta_r_n_av_dim = self.variables[
-            "Average negative electrode reaction overpotential [V]"
+        eta_r_n_av = self.variables[
+            "X-averaged negative electrode reaction overpotential"
         ]
-        eta_r_p_av = self.variables["Average positive electrode reaction overpotential"]
+        eta_r_n_av_dim = self.variables[
+            "X-averaged negative electrode reaction overpotential [V]"
+        ]
+        eta_r_p_av = self.variables[
+            "X-averaged positive electrode reaction overpotential"
+        ]
         eta_r_p_av_dim = self.variables[
-            "Average positive electrode reaction overpotential [V]"
+            "X-averaged positive electrode reaction overpotential [V]"
         ]
 
-        delta_phi_s_n_av = self.variables["Average negative electrode ohmic losses"]
+        delta_phi_s_n_av = self.variables["X-averaged negative electrode ohmic losses"]
         delta_phi_s_n_av_dim = self.variables[
-            "Average negative electrode ohmic losses [V]"
+            "X-averaged negative electrode ohmic losses [V]"
         ]
-        delta_phi_s_p_av = self.variables["Average positive electrode ohmic losses"]
+        delta_phi_s_p_av = self.variables["X-averaged positive electrode ohmic losses"]
         delta_phi_s_p_av_dim = self.variables[
-            "Average positive electrode ohmic losses [V]"
+            "X-averaged positive electrode ohmic losses [V]"
         ]
 
         delta_phi_s_av = delta_phi_s_p_av - delta_phi_s_n_av
@@ -431,11 +445,21 @@ class BaseBatteryModel(pybamm.BaseModel):
             V = pybamm.BoundaryValue(phi_s_p, "right")
             V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
         elif self.options["bc_options"]["dimensionality"] == 1:
-            # TO DO: add terminal voltage in 1plus1D
-            phi_s_p = self.variables["Positive electrode potential"]
-            phi_s_p_dim = self.variables["Positive electrode potential [V]"]
-            V = pybamm.BoundaryValue(phi_s_p, "right")
-            V_dim = pybamm.BoundaryValue(phi_s_p_dim, "right")
+            delta_phi_n = self.variables[
+                "X-averaged negative electrode surface potential difference"
+            ]
+            delta_phi_p = self.variables[
+                "X-averaged positive electrode surface potential difference"
+            ]
+            delta_phi_n_dim = self.variables[
+                "X-averaged negative electrode surface potential difference [V]"
+            ]
+            delta_phi_p_dim = self.variables[
+                "X-averaged positive electrode surface potential difference [V]"
+            ]
+            # In 1D both tabs are at "right"
+            V = pybamm.BoundaryValue(delta_phi_p - delta_phi_n, "right")
+            V_dim = pybamm.BoundaryValue(delta_phi_p_dim - delta_phi_n_dim, "right")
         elif self.options["bc_options"]["dimensionality"] == 2:
             phi_s_cn = self.variables["Negative current collector potential"]
             phi_s_cp = self.variables["Positive current collector potential"]
@@ -459,36 +483,39 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self.variables.update(
             {
-                "Average open circuit voltage": ocv_av,
+                "X-averaged open circuit voltage": ocv_av,
                 "Measured open circuit voltage": ocv,
-                "Average open circuit voltage [V]": ocv_av_dim,
+                "X-averaged open circuit voltage [V]": ocv_av_dim,
                 "Measured open circuit voltage [V]": ocv_dim,
-                "Average reaction overpotential": eta_r_av,
-                "Average reaction overpotential [V]": eta_r_av_dim,
-                "Average solid phase ohmic losses": delta_phi_s_av,
-                "Average solid phase ohmic losses [V]": delta_phi_s_av_dim,
+                "X-averaged reaction overpotential": eta_r_av,
+                "X-averaged reaction overpotential [V]": eta_r_av_dim,
+                "X-averaged solid phase ohmic losses": delta_phi_s_av,
+                "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
                 "Terminal voltage": V,
                 "Terminal voltage [V]": V_dim,
             }
         )
 
         # Battery-wide variables
-        eta_e_av_dim = self.variables.get("Average electrolyte ohmic losses [V]", 0)
-        eta_c_av_dim = self.variables.get("Average concentration overpotential [V]", 0)
+        eta_e_av_dim = self.variables.get("X-averaged electrolyte ohmic losses [V]", 0)
+        eta_c_av_dim = self.variables.get(
+            "X-averaged concentration overpotential [V]", 0
+        )
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
 
         self.variables.update(
             {
-                "Average battery open circuit voltage [V]": ocv_av_dim * num_cells,
+                "X-averaged battery open circuit voltage [V]": ocv_av_dim * num_cells,
                 "Measured battery open circuit voltage [V]": ocv_dim * num_cells,
-                "Average battery reaction overpotential [V]": eta_r_av_dim * num_cells,
-                "Average battery solid phase ohmic losses [V]": delta_phi_s_av_dim
+                "X-averaged battery reaction overpotential [V]": eta_r_av_dim
                 * num_cells,
-                "Average battery electrolyte ohmic losses [V]": eta_e_av_dim
+                "X-averaged battery solid phase ohmic losses [V]": delta_phi_s_av_dim
                 * num_cells,
-                "Average battery concentration overpotential [V]": eta_c_av_dim
+                "X-averaged battery electrolyte ohmic losses [V]": eta_e_av_dim
+                * num_cells,
+                "X-averaged battery concentration overpotential [V]": eta_c_av_dim
                 * num_cells,
                 "Battery voltage [V]": V_dim * num_cells,
             }

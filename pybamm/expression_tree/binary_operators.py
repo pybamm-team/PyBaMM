@@ -84,8 +84,15 @@ class BinaryOperator(pybamm.Symbol):
             domain = right.domain
         else:
             domain = self.get_children_domains(left.domain, right.domain)
-
-        super().__init__(name, children=[left, right], domain=domain)
+        auxiliary_domains = self.get_children_auxiliary_domains(
+            left.auxiliary_domains, right.auxiliary_domains
+        )
+        super().__init__(
+            name,
+            children=[left, right],
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+        )
         self.left = self.children[0]
         self.right = self.children[1]
 
@@ -94,6 +101,7 @@ class BinaryOperator(pybamm.Symbol):
         return "{!s} {} {!s}".format(self.left, self.name, self.right)
 
     def get_children_domains(self, ldomain, rdomain):
+        "Combine domains from children in appropriate way"
         if ldomain == rdomain:
             return ldomain
         elif ldomain == []:
@@ -109,6 +117,15 @@ class BinaryOperator(pybamm.Symbol):
                     ldomain, rdomain
                 )
             )
+
+    def get_children_auxiliary_domains(self, l_aux_domains, r_aux_domains):
+        "Combine auxiliary domains from children, at all levels"
+        aux_domains = {}
+        for level in set(l_aux_domains.keys()).union(r_aux_domains.keys()):
+            ldomain = l_aux_domains.get(level, [])
+            rdomain = r_aux_domains.get(level, [])
+            aux_domains[level] = self.get_children_domains(ldomain, rdomain)
+        return aux_domains
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
@@ -340,10 +357,10 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
 
         if issparse(left):
-            return left.multiply(right)
+            return csr_matrix(left.multiply(right))
         elif issparse(right):
             # Hadamard product is commutative, so we can switch right and left
-            return right.multiply(left)
+            return csr_matrix(right.multiply(left))
         else:
             return left * right
 
@@ -465,7 +482,7 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
 
         if issparse(left):
-            return left.multiply(1 / right)
+            return csr_matrix(left.multiply(1 / right))
         else:
             if isinstance(right, numbers.Number) and right == 0:
                 return left * np.inf
@@ -609,19 +626,6 @@ class Outer(BinaryOperator):
 
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-        # Can only take outer product of a current collector symbol
-        if (
-            left.domain != ["current collector"]
-            and left.domain != ["negative particle"]
-            and left.domain != ["positive particle"]
-            and left.domain != []
-        ):
-            raise pybamm.DomainError(
-                """left child domain must be 'current collector', 'negative particle',
-                'positive particle', or '', not'{}""".format(
-                    left.domain
-                )
-            )
         # cannot have Variable, StateVector or Matrix in the right symbol, as these
         # can already be 2D objects (so we can't take an outer product with them)
         if right.has_symbol_of_classes(
@@ -686,7 +690,7 @@ class Kron(BinaryOperator):
 
     def _binary_evaluate(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
-        return kron(left, right)
+        return csr_matrix(kron(left, right))
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """

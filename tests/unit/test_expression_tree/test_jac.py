@@ -7,6 +7,7 @@ import numpy as np
 import autograd.numpy as auto_np
 import unittest
 from scipy.sparse import eye
+from tests import get_mesh_for_testing
 
 
 def test_multi_var_function(arg1, arg2):
@@ -270,6 +271,57 @@ class TestJacobian(unittest.TestCase):
         vec = pybamm.StateVector(slice(0, 2))
         jac = pybamm.inner(a * vec, b * vec).jac(vec).evaluate(y=np.ones(2)).toarray()
         np.testing.assert_array_equal(jac, 4 * np.eye(2))
+
+    def test_jac_of_domain_concatenation(self):
+        # create mesh
+        mesh = get_mesh_for_testing()
+        y = pybamm.StateVector(slice(0, 100))
+
+        # Jacobian of a DomainConcatenation of constants is a zero matrix of the
+        # appropriate size
+        a_dom = ["negative electrode"]
+        b_dom = ["separator"]
+        c_dom = ["positive electrode"]
+        a_npts = mesh[a_dom[0]][0].npts
+        b_npts = mesh[b_dom[0]][0].npts
+        c_npts = mesh[c_dom[0]][0].npts
+        a = 2 * pybamm.Vector(np.ones(a_npts), domain=a_dom)
+        b = pybamm.Vector(np.ones(b_npts), domain=b_dom)
+        c = 3 * pybamm.Vector(np.ones(c_npts), domain=c_dom)
+
+        conc = pybamm.DomainConcatenation([a, b, c], mesh)
+        jac = conc.jac(y).evaluate().toarray()
+        np.testing.assert_array_equal(jac, np.zeros((100, 100)))
+
+        # Jacobian of a DomainConcatenation of StateVectors
+        a = 2 * pybamm.StateVector(slice(0, a_npts), domain=a_dom)
+        b = pybamm.StateVector(slice(a_npts, a_npts + b_npts), domain=b_dom)
+        c = 3 * pybamm.StateVector(
+            slice(a_npts + b_npts, a_npts + b_npts + c_npts), domain=c_dom
+        )
+        conc = pybamm.DomainConcatenation([a, b, c], mesh)
+
+        y0 = np.ones(100)
+        jac = conc.jac(y).evaluate(y=y0).toarray()
+        np.testing.assert_array_equal(
+            jac,
+            np.diag(
+                np.concatenate(
+                    [2 * np.ones(a_npts), np.ones(b_npts), 3 * np.ones(c_npts)]
+                )
+            ),
+        )
+
+        # multi=domain case not implemented
+        a = 2 * pybamm.StateVector(slice(0, a_npts), domain=a_dom)
+        b = pybamm.StateVector(
+            slice(a_npts, a_npts + b_npts + c_npts), domain=b_dom + c_dom
+        )
+        conc = pybamm.DomainConcatenation([a, b], mesh)
+        with self.assertRaisesRegex(
+            NotImplementedError, "jacobian only implemented for when each child has"
+        ):
+            conc.jac(y)
 
 
 if __name__ == "__main__":

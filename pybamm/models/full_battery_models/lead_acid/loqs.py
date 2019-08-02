@@ -20,7 +20,6 @@ class LOQS(BaseModel):
 
     def __init__(self, options=None, name="LOQS model"):
         super().__init__(options, name)
-        self.use_jacobian = False
 
         self.set_reactions()
         self.set_current_collector_submodel()
@@ -35,11 +34,26 @@ class LOQS(BaseModel):
 
         self.build_model()
 
+        if self.options["bc_options"]["dimensionality"] == 0:
+            self.use_jacobian = False
+
     def set_current_collector_submodel(self):
 
-        self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param
-        )
+        if self.options["bc_options"]["dimensionality"] == 0:
+            self.submodels["current collector"] = pybamm.current_collector.Uniform(
+                self.param
+            )
+        elif self.options["bc_options"]["dimensionality"] == 1:
+            self.submodels[
+                "current collector"
+            ] = pybamm.current_collector.surface_form.LeadingOrder(self.param)
+        elif self.options["bc_options"]["dimensionality"] == 2:
+            self.submodels[
+                "current collector"
+            ] = pybamm.current_collector.surface_form.LeadingOrder(self.param)
+            # self.submodels[
+            #     "current collector"
+            # ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
 
     def set_porosity_submodel(self):
 
@@ -149,21 +163,6 @@ class LOQS(BaseModel):
         self.reaction_submodels["Positive"].append(
             self.submodels["leading-order positive oxygen interface"]
         )
-
-    @property
-    def default_spatial_methods(self):
-        # ODEs only in the macroscale, so use base spatial method
-        return {
-            "macroscale": pybamm.FiniteVolume,
-            "current collector": pybamm.FiniteVolume,
-        }
-
-    @property
-    def default_geometry(self):
-        if self.options["bc_options"]["dimensionality"] == 0:
-            return pybamm.Geometry("1D macro")
-        elif self.options["bc_options"]["dimensionality"] == 1:
-            return pybamm.Geometry("1+1D macro")
 
     @property
     def default_solver(self):
