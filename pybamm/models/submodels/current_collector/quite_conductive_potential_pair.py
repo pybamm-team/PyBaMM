@@ -37,9 +37,9 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
 
         variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
 
-        # Lagrangian multiplier for
-        c = pybamm.Variable("Lagrangian multiplier")
-        variables.update({"Lagrangian multiplier": c})
+        # Lagrange multiplier for the composite current (enforce average)
+        c = pybamm.Variable("Lagrange multiplier")
+        variables.update({"Lagrange multiplier": c})
 
         return variables
 
@@ -54,8 +54,10 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
         phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
-        c = variables["Lagrangian multiplier"]
+        c = variables["Lagrange multiplier"]
 
+        # Note that the second argument of 'source' must be the same as the argument
+        # in the laplacian (the variable to which the boundary conditions are applied)
         self.algebraic = {
             phi_s_cn: (param.sigma_cn * param.delta ** 2 * param.l_cn)
             * pybamm.laplacian(phi_s_cn)
@@ -74,7 +76,7 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
         cc_area = self._get_effective_current_collector_area()
         phi_s_cn = variables["Negative current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
-        c = variables["Lagrangian multiplier"]
+        c = variables["Lagrange multiplier"]
 
         self.initial_conditions = {
             phi_s_cn: pybamm.Scalar(0),
