@@ -45,7 +45,10 @@ class HigherOrderBaseModel(BaseModel):
     def set_current_collector_submodel(self):
         cc = pybamm.current_collector
 
-        if self.options["current collector"] == "uniform":
+        if self.options["current collector"] in [
+            "uniform",
+            "potential pair quite conductive averaged",
+        ]:
             submodel = cc.Uniform(self.param)
         elif self.options["current collector"] == "potential pair quite conductive":
             if self.options["dimensionality"] == 1:

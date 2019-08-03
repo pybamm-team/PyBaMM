@@ -178,6 +178,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "uniform",
             "potential pair",
             "potential pair quite conductive",
+            "potential pair quite conductive averaged",
             "single particle potential pair",
         ]:
             raise pybamm.OptionError(
@@ -207,6 +208,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
+        if (
+            options["current collector"] == "potential pair quite conductive averaged"
+            and options["dimensionality"] == 2
+        ):
+            raise pybamm.OptionError(
+                "potential pair quite conductive average model not valid in 2D"
+            )
+
         self._options = options
 
     def set_standard_output_variables(self):
@@ -419,7 +428,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_current_collector_submodel(self):
 
-        if self.options["current collector"] == "uniform":
+        if self.options["current collector"] in [
+            "uniform",
+            "potential pair quite conductive averaged",
+        ]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":
             if self.options["dimensionality"] == 1:
@@ -508,6 +520,27 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right") - pybamm.BoundaryValue(
                 phi_s_cn_dim, "left"
+            )
+
+        # Add current collector losses in 2D
+        if (
+            isinstance(self, pybamm.lead_acid.HigherOrderBaseModel)
+            and self.options["current collector"]
+            == "potential pair quite conductive averaged"
+        ):
+            param = self.param
+            i_av = param.current_with_time
+
+            import ipdb
+
+            ipdb.set_trace()
+            V = V - i_av / 6 * (
+                1 / (param.sigma_cn * param.delta ** 2 * param.l_cn)
+                + 1 / (param.sigma_cp * param.delta ** 2 * param.l_cp)
+            )
+            V_dim = V_dim - param.potential_scale * i_av / 6 * (
+                1 / (param.sigma_cn * param.delta ** 2 * param.l_cn)
+                + 1 / (param.sigma_cp * param.delta ** 2 * param.l_cp)
             )
 
         # TODO: add current collector losses to the voltage in 3D

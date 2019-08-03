@@ -42,6 +42,7 @@ class LOQS(BaseModel):
         if self.options["current collector"] in [
             "uniform",
             "potential pair quite conductive",
+            "potential pair quite conductive averaged",
         ]:
             submodel = pybamm.current_collector.Uniform(self.param)
         elif self.options["current collector"] == "potential pair":
