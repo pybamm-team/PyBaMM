@@ -128,6 +128,18 @@ class FullDiffusionLimited(
         super().__init__(param, domain)
 
 
+class CompositeDiffusionLimited(
+    BaseInterfaceOxygenLeadAcid, diffusion_limited.CompositeDiffusionLimited
+):
+    """
+    Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and
+    :class:`kinetics.CompositeDiffusionLimited` (for kinetics)
+    """
+
+    def __init__(self, param, domain):
+        super().__init__(param, domain)
+
+
 class NoReaction(BaseInterfaceOxygenLeadAcid, kinetics.NoReaction):
     """
     Extends :class:`BaseInterfaceOxygenLeadAcid` (for exchange-current density, etc) and

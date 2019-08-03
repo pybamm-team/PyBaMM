@@ -1,3 +1,4 @@
 from .base_diffusion_limited import BaseModel
 from .leading_diffusion_limited import LeadingOrderDiffusionLimited
+from .composite_diffusion_limited import CompositeDiffusionLimited
 from .full_diffusion_limited import FullDiffusionLimited

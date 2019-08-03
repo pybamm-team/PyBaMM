@@ -73,8 +73,10 @@ class Composite(Full):
         N_e = variables["Electrolyte flux"]
         if self.extended is False:
             source_terms_0 = self._get_source_terms_leading_order(variables)
-        else:
+        elif self.extended == "distributed":
             source_terms_0 = self._get_source_terms_first_order(variables)
+        elif self.extended == "average":
+            source_terms_0 = self._get_source_terms_first_order_average(variables)
 
         self.rhs = {
             c_e: (1 / eps_0)
@@ -103,4 +105,27 @@ class Composite(Full):
             )
             / self.param.gamma_e
             for reaction in self.reactions.values()
+        )
+
+    def _get_source_terms_first_order_average(self, variables):
+        first_order_average = sum(
+            (
+                reaction["Negative"]["s"]
+                * variables[
+                    "First-order x-averaged " + reaction["Negative"]["aj"].lower()
+                ]
+                + reaction["Positive"]["s"]
+                * variables[
+                    "First-order x-averaged " + reaction["Positive"]["aj"].lower()
+                ]
+            )
+            / self.param.gamma_e
+            for reaction in self.reactions.values()
+        )
+
+        return self._get_source_terms_leading_order(
+            variables
+        ) + self.param.C_e * pybamm.PrimaryBroadcast(
+            first_order_average,
+            ["negative electrode", "separator", "positive electrode"],
         )

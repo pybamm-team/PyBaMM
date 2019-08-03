@@ -8,3 +8,4 @@ Current Collector
   composite_potential_pair
   homogeneous_current_collector
   potential_pair
+  quite_conductive_potential_pair

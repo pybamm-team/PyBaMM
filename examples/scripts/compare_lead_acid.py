@@ -17,10 +17,22 @@ else:
 
 # load models
 models = [
-    pybamm.lead_acid.NewmanTiedemann(),
-    pybamm.lead_acid.Composite(),
-    pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.FOQS({"surface form": "algebraic"}),
+    pybamm.lead_acid.NewmanTiedemann(
+        {"surface form": "differential", "side reactions": ["oxygen"]}
+    ),
+    pybamm.lead_acid.Composite(
+        {"surface form": "differential", "side reactions": ["oxygen"]}
+    ),
+    pybamm.lead_acid.CompositeExtended(
+        {"surface form": "differential", "side reactions": ["oxygen"]}
+    ),
+    pybamm.lead_acid.CompositeAverageCorrection(
+        {"surface form": "differential", "side reactions": ["oxygen"]}
+    ),
+    pybamm.lead_acid.LOQS(
+        {"surface form": "differential", "side reactions": ["oxygen"]}
+    ),
+    # pybamm.lead_acid.FOQS({"surface form": "algebraic"}),
 ]
 
 # load parameter values and process models and geometry
@@ -28,11 +40,8 @@ param = models[0].default_parameter_values
 param.update(
     {
         "Volume change factor": 1,
-        "Typical current [A]": 200,
-        "Initial State of Charge": 1,
-        "Typical electrolyte concentration [mol.m-3]": 5600,
-        "Negative electrode reference exchange-current density [A.m-2]": 0.08,
-        "Positive electrode reference exchange-current density [A.m-2]": 0.006,
+        "Typical current [A]": -20,
+        "Initial State of Charge": 0.5,
     }
 )
 for model in models:
@@ -50,16 +59,15 @@ for model in models:
 
 # solve model
 solutions = [None] * len(models)
-t_eval = np.linspace(0, 0.5, 100)
+t_eval = np.linspace(0, 5, 100)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
 
 # plot
 output_variables = [
-    "Pressure",
-    "Electrolyte concentration",
-    "Volume-averaged velocity [m.s-1]",
+    "Electrolyte potential [V]",
+    "Electrolyte concentration [Molar]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
