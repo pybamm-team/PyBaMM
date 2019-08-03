@@ -422,7 +422,7 @@ def chi(c_e, c_ox=0, c_hy=0):
     return (
         chi_dimensional(c_e_typ * c_e)
         * (2 * (1 - t_plus))
-        / (V_w * c_T(c_e_typ * c_e, c_e_typ * c_ox, c_e_typ * c_hy))
+        # / (V_w * c_T(c_e_typ * c_e, c_e_typ * c_ox, c_e_typ * c_hy))
     )
 
 
