@@ -36,7 +36,9 @@ geometry = pybamm_model.default_geometry
 # load parameters and process model and geometry
 param = pybamm_model.default_parameter_values
 param["Typical current [A]"] = 17 * C_rate
+# Change the t_plus function to agree with Comsol
 param["Darken thermodynamic factor"] = np.ones_like
+param["MacInnes t_plus function"] = lambda x: 1 - 2 * x
 param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
@@ -89,18 +91,18 @@ def get_interp_fun(var_name, domain):
 
 
 comsol_c_e = get_interp_fun("c_e", whole_cell)
-# comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
+comsol_eps_n = get_interp_fun("eps_n", ["negative electrode"])
 comsol_phi_e = get_interp_fun("phi_e", whole_cell)
-# comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
+comsol_eps_p = get_interp_fun("eps_p", ["positive electrode"])
 comsol_voltage = interp.interp1d(comsol_t, comsol_variables["voltage"])
 # Create comsol model with dictionary of Matrix variables
 comsol_model = pybamm.BaseModel()
 comsol_model.variables = {
     "Electrolyte concentration [mol.m-3]": comsol_c_e,
     "Current [A]": pybamm_model.variables["Current [A]"],
-    # "Negative electrode potential [V]": comsol_phi_n,
+    "Negative electrode porosity": comsol_eps_n,
     "Electrolyte potential [V]": comsol_phi_e,
-    # "Positive electrode potential [V]": comsol_phi_p,
+    "Positive electrode porosity": comsol_eps_p,
     "Terminal voltage [V]": pybamm.Function(comsol_voltage, pybamm.t * tau),
 }
 
