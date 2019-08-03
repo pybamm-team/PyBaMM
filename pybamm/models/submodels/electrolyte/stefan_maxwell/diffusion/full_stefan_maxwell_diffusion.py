@@ -60,6 +60,7 @@ class Full(BaseModel):
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
         # i_e = variables["Electrolyte current density"]
+        div_Vbox_s = variables["Transverse volume-averaged acceleration"]
 
         # source_term = ((param.s - param.t_plus) / param.gamma_e) * pybamm.div(i_e)
         # source_term = pybamm.div(i_e) / param.gamma_e  # lithium-ion
@@ -75,7 +76,12 @@ class Full(BaseModel):
 
         self.rhs = {
             c_e: (1 / eps)
-            * (-pybamm.div(N_e) / param.C_e + source_terms - c_e * deps_dt)
+            * (
+                -pybamm.div(N_e) / param.C_e
+                + source_terms
+                - c_e * deps_dt
+                - c_e * div_Vbox_s
+            )
         }
 
     def set_initial_conditions(self, variables):

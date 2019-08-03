@@ -17,22 +17,23 @@ else:
 
 # load models
 models = [
-    pybamm.lead_acid.NewmanTiedemann(
-        {"surface form": "differential", "side reactions": ["oxygen"]}
-    ),
-    pybamm.lead_acid.Composite(
-        {"surface form": "differential", "side reactions": ["oxygen"]}
-    ),
-    pybamm.lead_acid.CompositeExtended(
-        {"surface form": "differential", "side reactions": ["oxygen"]}
-    ),
-    pybamm.lead_acid.CompositeAverageCorrection(
-        {"surface form": "differential", "side reactions": ["oxygen"]}
-    ),
-    pybamm.lead_acid.LOQS(
-        {"surface form": "differential", "side reactions": ["oxygen"]}
-    ),
-    # pybamm.lead_acid.FOQS({"surface form": "algebraic"}),
+    pybamm.lead_acid.NewmanTiedemann(),
+    pybamm.lead_acid.NewmanTiedemann({"convection": {"transverse": "uniform"}}),
+    pybamm.lead_acid.LOQS(),
+    pybamm.lead_acid.LOQS({"convection": {"transverse": "uniform"}}),
+    # pybamm.lead_acid.Composite(
+    #     {"surface form": "differential", "side reactions": ["oxygen"]}
+    # ),
+    # # pybamm.lead_acid.CompositeExtended(
+    # #     {"surface form": "differential", "side reactions": ["oxygen"]}
+    # # ),
+    # # pybamm.lead_acid.CompositeAverageCorrection(
+    # #     {"surface form": "differential", "side reactions": ["oxygen"]}
+    # # ),
+    # pybamm.lead_acid.LOQS(
+    #     {"surface form": "differential", "side reactions": ["oxygen"]}
+    # ),
+    # # pybamm.lead_acid.FOQS({"surface form": "algebraic"}),
 ]
 
 # load parameter values and process models and geometry
@@ -40,8 +41,8 @@ param = models[0].default_parameter_values
 param.update(
     {
         "Volume change factor": 1,
-        "Typical current [A]": -20,
-        "Initial State of Charge": 0.5,
+        "Typical current [A]": 300,
+        "Initial State of Charge": 1,
     }
 )
 for model in models:
@@ -68,6 +69,8 @@ for i, model in enumerate(models):
 output_variables = [
     "Electrolyte potential [V]",
     "Electrolyte concentration [Molar]",
+    "X-averaged electrolyte concentration [Molar]",
+    "Transverse volume-averaged acceleration [m.s-2]",
     "Terminal voltage [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)

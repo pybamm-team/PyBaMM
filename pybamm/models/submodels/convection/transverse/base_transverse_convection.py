@@ -41,6 +41,7 @@ class BaseTransverseModel(BaseModel):
         var_n = pybamm.PrimaryBroadcast(var_n_av, "negative electrode")
         var_s = pybamm.PrimaryBroadcast(var_s_av, "separator")
         var_p = pybamm.PrimaryBroadcast(var_p_av, "positive electrode")
+        var = pybamm.Concatenation(var_n, var_s, var_p)
 
         variables = {
             "Negative electrode transverse volume-averaged " + typ: var_n,
@@ -65,6 +66,8 @@ class BaseTransverseModel(BaseModel):
             "X-averaged positive electrode transverse volume-averaged "
             + typ
             + " [m.s-2]": scale * var_p_av,
+            "Transverse volume-averaged " + typ: var,
+            "Transverse volume-averaged " + typ + " [m.s-2]": scale * var,
         }
 
         return variables
