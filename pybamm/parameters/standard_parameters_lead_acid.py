@@ -62,18 +62,30 @@ nu = nu_plus + nu_minus
 c_ox_init_dim = pybamm.Parameter("Initial oxygen concentration [mol.m-3]")
 c_ox_typ = c_e_typ  # pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
-# Electrode properties
-sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
-sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
-# In lead-acid the current collector and electrodes are the same (same conductivity)
-sigma_cn_dimensional = sigma_n_dim
-sigma_cp_dimensional = sigma_p_dim
-
 # Microstructure
 a_n_dim = pybamm.geometric_parameters.a_n_dim
 a_p_dim = pybamm.geometric_parameters.a_p_dim
 b = pybamm.geometric_parameters.b
 xi = pybamm.Parameter("Electrode morphological parameter")
+
+# Electrode properties
+V_Pb = pybamm.Parameter("Molar volume of lead [m3.mol-1]")
+V_PbO2 = pybamm.Parameter("Molar volume of lead-dioxide [m3.mol-1]")
+V_PbSO4 = pybamm.Parameter("Molar volume of lead sulfate [m3.mol-1]")
+DeltaVsurf_n = V_Pb - V_PbSO4  # Net Molar Volume consumed in neg electrode [m3.mol-1]
+DeltaVsurf_p = V_PbSO4 - V_PbO2  # Net Molar Volume consumed in pos electrode [m3.mol-1]
+d = pybamm.Parameter("Pore size [m]")
+eps_n_max = pybamm.Parameter("Maximum porosity of negative electrode")
+eps_s_max = pybamm.Parameter("Maximum porosity of separator")
+eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
+Q_n_max_dimensional = pybamm.Parameter("Negative electrode volumetric capacity [C.m-3]")
+Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [C.m-3]")
+sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
+# In lead-acid the current collector and electrodes are the same (same conductivity)
+# but we correct here for Bruggeman
+sigma_cn_dimensional = sigma_n_dim * (1 - eps_n_max) ** b
+sigma_cp_dimensional = sigma_p_dim * (1 - eps_p_max) ** b
 
 # Electrochemical reactions
 # Main
@@ -133,20 +145,6 @@ V_ox = pybamm.Parameter("Partial molar volume of oxygen molecules [m3.mol-1]")
 V_hy = pybamm.Parameter("Partial molar volume of hydrogen molecules [m3.mol-1]")
 M_ox = pybamm.Parameter("Molar mass of oxygen molecules [kg.mol-1]")
 M_hy = pybamm.Parameter("Molar mass of hydrogen molecules [kg.mol-1]")
-
-# Electrode properties
-V_Pb = pybamm.Parameter("Molar volume of lead [m3.mol-1]")
-V_PbO2 = pybamm.Parameter("Molar volume of lead-dioxide [m3.mol-1]")
-V_PbSO4 = pybamm.Parameter("Molar volume of lead sulfate [m3.mol-1]")
-DeltaVsurf_n = V_Pb - V_PbSO4  # Net Molar Volume consumed in neg electrode [m3.mol-1]
-DeltaVsurf_p = V_PbSO4 - V_PbO2  # Net Molar Volume consumed in pos electrode [m3.mol-1]
-d = pybamm.Parameter("Pore size [m]")
-eps_n_max = pybamm.Parameter("Maximum porosity of negative electrode")
-eps_s_max = pybamm.Parameter("Maximum porosity of separator")
-eps_p_max = pybamm.Parameter("Maximum porosity of positive electrode")
-Q_n_max_dimensional = pybamm.Parameter("Negative electrode volumetric capacity [C.m-3]")
-Q_p_max_dimensional = pybamm.Parameter("Positive electrode volumetric capacity [C.m-3]")
-
 
 # Fake thermal
 Delta_T = pybamm.Scalar(0)

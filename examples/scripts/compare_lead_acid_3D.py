@@ -20,24 +20,22 @@ models = [
     # pybamm.lead_acid.LOQS(
     #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D LOQS"
     # ),
-    # pybamm.lead_acid.NewmanTiedemann(
-    #     {"current collector": "potential pair", "dimensionality": 1},
-    #     name="1+1D NewmanTiedemann",
-    # ),
-    # pybamm.lead_acid.NewmanTiedemann(
-    #     {"dimensionality": 1}, name="1+1D uniform NewmanTiedemann"
-    # ),
-    pybamm.lead_acid.CompositeExtended(
-        {"current collector": "potential pair quite conductive", "dimensionality": 1},
-        name="1+1D composite quite conductive",
+    pybamm.lead_acid.NewmanTiedemann(
+        {"current collector": "potential pair", "dimensionality": 1},
+        name="1+1D NewmanTiedemann",
     ),
+    pybamm.lead_acid.NewmanTiedemann({"dimensionality": 1}, name="1D NewmanTiedemann"),
     pybamm.lead_acid.CompositeExtended(
-        {
-            "current collector": "potential pair quite conductive averaged",
-            "dimensionality": 1,
-        },
-        name="1+1D composite quite conductive averaged",
+        {"current collector": "potential pair", "dimensionality": 1},
+        name="1+1D composite",
     ),
+    # pybamm.lead_acid.CompositeExtended(
+    #     {
+    #         "current collector": "potential pair quite conductive averaged",
+    #         "dimensionality": 1,
+    #     },
+    #     name="1+1D composite quite conductive averaged",
+    # ),
     # pybamm.lead_acid.CompositeExtended(
     #     {
     #         # "current collector": "potential pair quite conductive averaged",
@@ -49,9 +47,9 @@ models = [
     #     {"current collector": "potential pair", "dimensionality": 1}, name="1+1D FOQS"
     # ),
     # # pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
-    # pybamm.lead_acid.LOQS(
-    #     {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
-    # ),
+    pybamm.lead_acid.LOQS(
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
+    ),
     # pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
 ]
 
@@ -59,10 +57,10 @@ models = [
 param = models[0].default_parameter_values
 param.update(
     {
-        "Typical current [A]": 20,
+        "Typical current [A]": 85,
         "Bruggeman  coefficient": 0.001,
         "Initial State of Charge": 1,
-        "Positive electrode conductivity [S.m-1]": 8000,
+        "Positive electrode conductivity [S.m-1]": 10 * 8000,
     }
 )
 for model in models:
@@ -73,7 +71,7 @@ for model in models:
     geometry = model.default_geometry
     param.process_geometry(geometry)
     var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.y: 5, var.z: 5}
+    var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.y: 10, var.z: 10}
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)

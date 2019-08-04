@@ -19,12 +19,8 @@ except ImportError:
 def plot_voltages(all_variables, t_eval):
     Crates = [0.1, 1, 2]
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
-    linestyles = ["k:", "k-", "g--", "b-."]
-    linewidths = [0.7, 1.4, 1.4, 1.4]
-    shared_plotting_2D.plot_voltages(
-        all_variables, t_eval, linestyles=linestyles, linewidths=linewidths
-    )
-    file_name = "2d_poor_discharge_voltage_comparison.eps"
+    shared_plotting_2D.plot_voltages(all_variables, t_eval)
+    file_name = "2d_quite_discharge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
@@ -35,57 +31,72 @@ def plot_variables(all_variables, t_eval):
     times = np.array([0, 0.195, 0.375, 0.545])
     var_file_names = {
         "X-averaged electrolyte concentration [Molar]"
-        + "": "2d_poor_discharge_average_electrolyte_concentration_comparison.eps",
-        # "X-averaged electrolyte potential [V]"
-        # + "": "2d_poor_discharge_average_electrolyte_potential_comparison.eps",
+        + "": "2d_quite_discharge_average_electrolyte_concentration_comparison.eps",
+        "X-averaged electrolyte potential [V]"
+        + "": "2d_quite_discharge_average_electrolyte_potential_comparison.eps",
         "Current collector current density"
-        + "": "2d_poor_current_collector_current_density_comparison.eps",
+        + "": "2d_quite_current_collector_current_density_comparison.eps",
     }
     limits_exceptions = {"X-averaged electrolyte concentration [Molar]": {"min": 0}}
-    linestyles = ["k:", "k-", "g--", "b-."]
-    linewidths = [0.7, 1.4, 1.4, 1.4]
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     for var, file_name in var_file_names.items():
         if var in limits_exceptions:
             exceptions = limits_exceptions[var]
         else:
             exceptions = {}
-        shared_plotting_2D.plot_variable(
-            all_variables,
-            times,
-            var,
-            exceptions,
-            linestyles=linestyles,
-            linewidths=linewidths,
-        )
+        shared_plotting_2D.plot_variable(all_variables, times, var, exceptions)
         if OUTPUT_DIR is not None:
             plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
+def plot_voltage_components(all_variables, t_eval):
+    Crates = [0.1, 2, 5]
+    model = "1+1D Composite averaged"
+    shared_plotting_2D.plot_voltage_components(all_variables, t_eval, model, Crates)
+    file_name = "2d_discharge_voltage_components.eps"
+    if OUTPUT_DIR is not None:
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+
+
 def discharge_states(compute):
-    savefile = "2d_poor_discharge_asymptotics_data.pickle"
+    savefile = "2d_quite_discharge_asymptotics_data.pickle"
     if compute:
         models = [
-            pybamm.lead_acid.NewmanTiedemann({"dimensionality": 1}, name="1D Full"),
             pybamm.lead_acid.NewmanTiedemann(
-                {"dimensionality": 1, "current collector": "potential pair"},
+                {
+                    "dimensionality": 1,
+                    "current collector": "potential pair quite conductive",
+                },
                 name="1+1D Full",
             ),
-            pybamm.lead_acid.LOQS(
-                {"dimensionality": 1, "current collector": "potential pair"},
-                name="1+1D LOQS",
-            ),
+            # pybamm.lead_acid.LOQS(
+            #     {
+            #         "dimensionality": 1,
+            #         "current collector": "potential pair quite conductive",
+            #     },
+            #     name="1+1D LOQS",
+            # ),
             # pybamm.lead_acid.FOQS(
             #     {"dimensionality": 1, "current collector": "potential pair"},
             #     name="FOQS",
             # ),
             pybamm.lead_acid.CompositeExtended(
-                {"dimensionality": 1, "current collector": "potential pair"},
+                {
+                    "dimensionality": 1,
+                    "current collector": "potential pair quite conductive",
+                },
+                name="1+1D Composite",
+            ),
+            pybamm.lead_acid.CompositeExtended(
+                {
+                    "dimensionality": 1,
+                    "current collector": "potential pair quite conductive averaged",
+                },
                 name="1+1D Composite",
             ),
         ]
         Crates = [0.1, 1, 2]
-        sigmas = [10 * 8000, 100 * 8000, 1000 * 8000]
+        sigmas = [80, 800, 8000]
 
         t_eval = np.linspace(0, 1, 100)
         extra_parameter_values = {}  # "Bruggeman coefficient": 0.001}

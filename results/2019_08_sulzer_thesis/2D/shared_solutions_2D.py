@@ -46,7 +46,7 @@ def model_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None
             param.update(
                 {
                     "Typical current [A]": current,
-                    "Positive electrode condutivity [S.m-1]": sigma,
+                    "Positive electrode conductivity [S.m-1]": sigma,
                 }
             )
             for model in models:

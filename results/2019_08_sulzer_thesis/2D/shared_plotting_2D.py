@@ -7,7 +7,9 @@ import pybamm
 from collections import defaultdict
 
 
-def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
+def plot_voltages(
+    all_variables, t_eval, linestyles=None, linewidths=None, figsize=(6.4, 5)
+):
     """
     all_variables is a dict of dicts of dicts of dicts.
     First key: Crate
@@ -17,10 +19,10 @@ def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
     """
     # Plot
     linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
     n = len(list(all_variables.values())[0])
     m = len(all_variables)
     fig, axes = plt.subplots(n, m, figsize=figsize)
-    labels = [model for model in [x for x in all_variables.values()][0].keys()]
     y_min = 0.98 * min(
         np.nanmin(variables["Battery voltage [V]"](t_eval))
         for allsigma_models_variables in all_variables.values()
@@ -40,14 +42,15 @@ def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
         for l, (sigma, models_variables) in enumerate(
             allsigma_models_variables.items()
         ):
-            ax = axes[k, l]
+            labels = models_variables.keys()
+            ax = axes[l, k]
             t_max = max(
                 np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
             )
             ax.set_xlim([0, t_max])
             ax.set_ylim([y_min, y_max])
             ax.set_xlabel("Time [h]")
-            if len(all_variables) > 1:
+            if l == 0:
                 ax.set_title(
                     "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
                         chr(97 + k), abs(Crate), abs(Crate) * 0.6
@@ -62,7 +65,15 @@ def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
                 # ax.xaxis.set_ticks_position("bottom")
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             if k % m == 0:
-                ax.set_ylabel("Voltage [V]")
+                ax.set_ylabel(
+                    "$\\hat{{\\sigma}}_p = {} S/m$\n$(\\sigma\\prime_p={})$".format(
+                        sigma, sigma
+                    ),
+                    rotation=0,
+                    labelpad=40,
+                )
+                ax.yaxis.get_label().set_verticalalignment("center")
+
             # else:
             #     ax.set_yticklabels([])
 
@@ -73,7 +84,9 @@ def plot_voltages(all_variables, t_eval, linestyles=None, figsize=(6.4, 4.5)):
                     linestyles[j],
                 )
     leg = fig.legend(labels, loc="lower center", ncol=len(labels))
-    plt.subplots_adjust(bottom=0.25, right=0.95, hspace=1.1, wspace=0.3)
+    plt.subplots_adjust(
+        bottom=0.17, top=0.95, left=0.2, right=0.97, hspace=0.08, wspace=0.05
+    )
     leg.get_frame().set_edgecolor("k")
     return fig, axes
 
@@ -85,19 +98,25 @@ def plot_variable(
     limits_exceptions=None,
     yaxis="SOC",
     linestyles=None,
+    linewidths=None,
     figsize=(6.4, 5),
 ):
+    sigma = 10 * 8000
     limits_exceptions = limits_exceptions or {}
     linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
     n = len(times)
     m = len(all_variables)
     Crates = list(all_variables.keys())
-    labels = [model for model in [x for x in all_variables.values()][0].keys()]
-    import ipdb
+    sigmas = list(all_variables[Crates[0]].keys())
+    labels = list(all_variables[Crates[0]][sigmas[0]].keys())
 
-    ipdb.set_trace()
-    z = all_variables[Crates[0]][labels[0]]["z"](0, np.linspace(0, 1))[:, 0]
-    z_dim = all_variables[Crates[0]][labels[0]]["z [m]"](0, np.linspace(0, 1))[:, 0]
+    z = all_variables[Crates[0]][sigmas[0]][labels[0]]["z"](0, z=np.linspace(0, 1))[
+        :, 0
+    ]
+    z_dim = all_variables[Crates[0]][sigmas[0]][labels[0]]["z [m]"](
+        0, z=np.linspace(0, 1)
+    )[:, 0]
 
     fig, axes = plt.subplots(n, m, figsize=figsize)
 
@@ -106,14 +125,14 @@ def plot_variable(
         [
             np.nanmin(variables[variable](times, z=z))
             for Crate, models_variables in all_variables.items()
-            for variables in models_variables.values()
+            for variables in models_variables[sigma].values()
         ]
     )
     y_max = pybamm.ax_max(
         [
             np.nanmax(variables[variable](times, z=z))
             for Crate, models_variables in all_variables.items()
-            for variables in models_variables.values()
+            for variables in models_variables[sigma].values()
         ]
     )
     # Exceptions
@@ -123,7 +142,8 @@ def plot_variable(
         y_max = limits_exceptions["max"]
 
     # Plot
-    for i, (Crate, models_variables) in enumerate(all_variables.items()):
+    for i, (Crate, allsigma_models_variables) in enumerate(all_variables.items()):
+        models_variables = allsigma_models_variables[sigma]
         for j, time in enumerate(times):
             if len(times) == 1:
                 ax = axes[i]
@@ -268,11 +288,12 @@ def plot_voltage_components(all_variables, t_eval, model, Crates):
     n = int(len(Crates) // np.sqrt(len(Crates)))
     m = int(np.ceil(len(Crates) / n))
     fig, axes = plt.subplots(n, m, figsize=(6.4, 2.3))
-    labels = ["V", "$V_U$", "$V_k$", "$V_c$", "$V_o$"]
+    labels = ["V", "$V_U$", "$V_k$", "$V_c$", "$V_o$", "$V_{cc}$"]
     overpotentials = [
         "Average battery reaction overpotential [V]",
         "Average battery concentration overpotential [V]",
         "Average battery electrolyte ohmic losses [V]",
+        "Current collector losses [V]",
     ]
     y_min = 0.95 * min(
         np.nanmin(models_variables[model]["Battery voltage [V]"](t_eval))
