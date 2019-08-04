@@ -20,21 +20,21 @@ models = [
     # pybamm.lead_acid.LOQS(
     #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D LOQS"
     # ),
-    pybamm.lead_acid.NewmanTiedemann(
-        {"current collector": "potential pair", "dimensionality": 1},
-        name="1+1D NewmanTiedemann",
-    ),
     # pybamm.lead_acid.NewmanTiedemann(
-    #     {"dimensionality": 1}, name="1+1D uniform NewmanTiedemann"
+    #     {"current collector": "potential pair", "dimensionality": 1},
+    #     name="1+1D NewmanTiedemann",
     # ),
-    pybamm.lead_acid.Composite(
-        {"current collector": "potential pair quite conductive", "dimensionality": 1},
-        name="1+1D composite",
-    ),
-    pybamm.lead_acid.Composite(
-        {"current collector": "potential pair", "dimensionality": 1},
-        name="1+1D composite",
-    ),
+    # # pybamm.lead_acid.NewmanTiedemann(
+    # #     {"dimensionality": 1}, name="1+1D uniform NewmanTiedemann"
+    # # ),
+    # pybamm.lead_acid.Composite(
+    #     {"current collector": "potential pair quite conductive", "dimensionality": 1},
+    #     name="1+1D composite",
+    # ),
+    # pybamm.lead_acid.Composite(
+    #     {"current collector": "potential pair", "dimensionality": 1},
+    #     name="1+1D composite",
+    # ),
     # # pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
     pybamm.lead_acid.LOQS(
         {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
@@ -83,6 +83,7 @@ t_eval = np.linspace(0, 3, 1000)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
     solutions[i] = solution
+    pybamm.post_process_variables(model.variables, solution.t, solution.y, mesh=mesh)
 
 # plot
 output_variables = [

@@ -472,8 +472,6 @@ class Discretisation(object):
 
             new_var_eqn_dict[eqn_key] = self.process_symbol(eqn)
 
-            new_var_eqn_dict[eqn_key].test_shape()
-
         return new_var_eqn_dict
 
     def process_symbol(self, symbol):
@@ -496,6 +494,7 @@ class Discretisation(object):
         except KeyError:
             discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
+            discretised_symbol.test_shape()
             return discretised_symbol
 
     def _process_symbol(self, symbol):
