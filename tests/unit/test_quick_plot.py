@@ -71,7 +71,9 @@ class TestQuickPlot(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "mismatching variable domains"):
             pybamm.QuickPlot(model, mesh, solution, [["a", "b broadcasted"]])
         model.variables["3D variable"] = disc.process_symbol(
-            pybamm.Broadcast(1, ["negative particle"])
+            pybamm.FullBroadcast(
+                1, "negative particle", {"secondary": "negative electrode"}
+            )
         )
         with self.assertRaisesRegex(NotImplementedError, "cannot plot 3D variables"):
             pybamm.QuickPlot(model, mesh, solution, ["3D variable"])

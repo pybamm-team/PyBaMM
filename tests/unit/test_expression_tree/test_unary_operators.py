@@ -139,8 +139,11 @@ class TestUnaryOperators(unittest.TestCase):
         # errors
         with self.assertRaisesRegex(TypeError, "index must be integer or slice"):
             pybamm.Index(vec, 0.0)
+        debug_mode = pybamm.settings.debug_mode
+        pybamm.settings.debug_mode = True
         with self.assertRaisesRegex(ValueError, "slice size exceeds child size"):
             pybamm.Index(vec, 5)
+        pybamm.settings.debug_mode = debug_mode
 
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))

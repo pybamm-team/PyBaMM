@@ -82,11 +82,12 @@ class BinaryOperator(pybamm.Symbol):
         # right child.
         if isinstance(self, (pybamm.Outer, pybamm.Kron)):
             domain = right.domain
+            auxiliary_domains = {"secondary": left.domain}
         else:
             domain = self.get_children_domains(left.domain, right.domain)
-        auxiliary_domains = self.get_children_auxiliary_domains(
-            left.auxiliary_domains, right.auxiliary_domains
-        )
+            auxiliary_domains = self.get_children_auxiliary_domains(
+                left.auxiliary_domains, right.auxiliary_domains
+            )
         super().__init__(
             name,
             children=[left, right],

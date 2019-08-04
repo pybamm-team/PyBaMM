@@ -106,12 +106,7 @@ class ProcessedVariable(object):
         ):
             self.initialise_1D()
         else:
-            try:
-                n = self.mesh.combine_submeshes(*self.domain)[0].npts
-            except:
-                import ipdb
-
-                ipdb.set_trace()
+            n = self.mesh.combine_submeshes(*self.domain)[0].npts
             base_shape = self.base_eval.shape[0]
             if base_shape in [n, n + 1]:
                 self.initialise_2D()
@@ -208,12 +203,6 @@ class ProcessedVariable(object):
         Initialise a 3D object that depends on x and r, or x and z.
         Needs to be generalised to deal with other domains
         """
-
-        # Find size of base variable
-        base_var_size = self.base_variable.evaluate(
-            self.t_sol[0], self.u_sol[:, 0]
-        ).size
-
         # Dealt with weird particle/electrode case
         if self.domain in [
             ["negative electrode"],
@@ -257,9 +246,9 @@ class ProcessedVariable(object):
             self.first_dimension = "x"
             self.second_dimension = "z"
 
-            if base_var_size // len(z_sol) == len(x_nodes):
+            if self.base_eval.size // len(z_sol) == len(x_nodes):
                 x_sol = x_nodes
-            elif base_var_size // len(z_sol) == len(x_edges):
+            elif self.base_eval.size // len(z_sol) == len(x_edges):
                 x_sol = x_edges
             first_dim_nodes = x_sol
             second_dim_nodes = z_sol
@@ -275,9 +264,9 @@ class ProcessedVariable(object):
             z_sol = None
             self.first_dimension = "x"
             self.second_dimension = "r"
-            if base_var_size // len(x_sol) == len(r_nodes):
+            if self.base_eval.size // len(x_sol) == len(r_nodes):
                 r_sol = r_nodes
-            elif base_var_size // len(x_sol) == len(r_edges):
+            elif self.base_eval.size // len(x_sol) == len(r_edges):
                 r_sol = r_edges
             first_dim_nodes = x_sol
             second_dim_nodes = r_sol
