@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import pybamm
-import shared_plotting
+import shared_plotting_2D
 from collections import defaultdict
-from shared_solutions import model_comparison, convergence_study
+from shared_solutions_2D import model_comparison, convergence_study
 
 try:
     from config import OUTPUT_DIR
@@ -17,9 +17,9 @@ except ImportError:
 
 
 def plot_voltages(all_variables, t_eval):
-    Crates = [0.1, 0.2, 0.5, 1, 2, 5]
+    Crates = [0.1, 1, 2]
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
-    shared_plotting.plot_voltages(all_variables, t_eval)
+    shared_plotting_2D.plot_voltages(all_variables, t_eval)
     file_name = "2d_poor_discharge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
@@ -27,7 +27,7 @@ def plot_voltages(all_variables, t_eval):
 
 def plot_variables(all_variables, t_eval):
     # Set up
-    Crates = [0.1, 1, 4]
+    Crates = [0.1, 1, 2]
     times = np.array([0, 0.195, 0.375, 0.545])
     var_file_names = {
         "X-averaged electrolyte concentration [Molar]"
@@ -44,7 +44,7 @@ def plot_variables(all_variables, t_eval):
             exceptions = limits_exceptions[var]
         else:
             exceptions = {}
-        shared_plotting.plot_variable(all_variables, times, var, exceptions)
+        shared_plotting_2D.plot_variable(all_variables, times, var, exceptions)
         if OUTPUT_DIR is not None:
             plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
@@ -55,11 +55,11 @@ def discharge_states(compute):
         models = [
             pybamm.lead_acid.NewmanTiedemann(
                 {"dimensionality": 1, "current collector": "potential pair"},
-                name="Full",
+                name="1+1D Full",
             ),
             pybamm.lead_acid.LOQS(
                 {"dimensionality": 1, "current collector": "potential pair"},
-                name="LOQS",
+                name="1+1D LOQS",
             ),
             # pybamm.lead_acid.FOQS(
             #     {"dimensionality": 1, "current collector": "potential pair"},
@@ -67,14 +67,20 @@ def discharge_states(compute):
             # ),
             pybamm.lead_acid.CompositeExtended(
                 {"dimensionality": 1, "current collector": "potential pair"},
-                name="Composite",
+                name="1+1D Composite",
             ),
         ]
-        Crates = [0.1, 0.2, 0.5, 1, 2, 4, 5, 10, 20]
+        Crates = [0.1, 1, 2]
+        sigmas = [80, 800, 8000]
+
         t_eval = np.linspace(0, 1, 100)
         extra_parameter_values = {}  # "Bruggeman coefficient": 0.001}
         all_variables, t_eval = model_comparison(
-            models, Crates, t_eval, extra_parameter_values=extra_parameter_values
+            models,
+            Crates,
+            sigmas,
+            t_eval,
+            extra_parameter_values=extra_parameter_values,
         )
         with open(savefile, "wb") as f:
             data = (all_variables, t_eval)
@@ -88,7 +94,7 @@ def discharge_states(compute):
                 "Run script with '--compute' first to generate results"
             )
     plot_voltages(all_variables, t_eval)
-    plot_variables(all_variables, t_eval)
+    # plot_variables(all_variables, t_eval)
 
 
 def plot_errors(models_times_and_voltages):
@@ -119,7 +125,7 @@ def plot_errors(models_times_and_voltages):
 
 
 def plot_times(models_times_and_voltages):
-    shared_plotting.plot_times(models_times_and_voltages, Crate=1)
+    shared_plotting_2D.plot_times(models_times_and_voltages, Crate=1)
     file_name = "discharge_asymptotics_solver_times.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)

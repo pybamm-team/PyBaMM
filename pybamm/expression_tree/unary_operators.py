@@ -172,10 +172,12 @@ class Index(UnaryOperator):
         else:
             raise TypeError("index must be integer or slice")
 
-        if self.slice in (slice(0, 1), slice(-1, None)):
-            pass
-        elif self.slice.stop > child.size:
-            raise ValueError("slice size exceeds child size")
+        # Perform some additional checks if debug_mode is True (child.size is slow)
+        if pybamm.settings.debug_mode is True:
+            if self.slice in (slice(0, 1), slice(-1, None)):
+                pass
+            elif self.slice.stop > child.size:
+                raise ValueError("slice size exceeds child size")
 
         super().__init__(name, child)
 
