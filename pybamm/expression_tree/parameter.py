@@ -61,7 +61,10 @@ class FunctionParameter(pybamm.Symbol):
         self.diff_variable = diff_variable
         children_list = list(children)
         domain = self.get_children_domains(children_list)
-        super().__init__(name, children=children, domain=domain)
+        auxiliary_domains = self.get_children_auxiliary_domains(children)
+        super().__init__(
+            name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
+        )
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id` """
@@ -89,6 +92,27 @@ class FunctionParameter(pybamm.Symbol):
             domain = domains[0]
 
         return domain
+
+    def get_children_auxiliary_domains(self, children):
+        "Combine auxiliary domains from children, at all levels"
+        aux_domains = {}
+        for child in children:
+            for level in child.auxiliary_domains.keys():
+                if (
+                    not hasattr(aux_domains, level)
+                    or aux_domains[level] == []
+                    or child.auxiliary_domains[level] == aux_domains[level]
+                ):
+                    aux_domains[level] = child.auxiliary_domains[level]
+                else:
+                    raise pybamm.DomainError(
+                        """children must have same or empty auxiliary domains,
+                        not {!s} and {!s}""".format(
+                            aux_domains[level], child.auxiliary_domains[level]
+                        )
+                    )
+
+        return aux_domains
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """

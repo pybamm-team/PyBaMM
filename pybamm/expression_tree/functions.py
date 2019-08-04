@@ -31,6 +31,7 @@ class Function(pybamm.Symbol):
             name = "function ({})".format(function.__class__)
         children_list = list(children)
         domain = self.get_children_domains(children_list)
+        auxiliary_domains = self.get_children_auxiliary_domains(children)
 
         self.function = function
 
@@ -41,7 +42,12 @@ class Function(pybamm.Symbol):
         else:
             self.takes_no_params = len(signature(function).parameters) == 0
 
-        super().__init__(name, children=children_list, domain=domain)
+        super().__init__(
+            name,
+            children=children_list,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+        )
 
     def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the
@@ -62,6 +68,27 @@ class Function(pybamm.Symbol):
             domain = domains[0]
 
         return domain
+
+    def get_children_auxiliary_domains(self, children):
+        "Combine auxiliary domains from children, at all levels"
+        aux_domains = {}
+        for child in children:
+            for level in child.auxiliary_domains.keys():
+                if (
+                    not hasattr(aux_domains, level)
+                    or aux_domains[level] == []
+                    or child.auxiliary_domains[level] == aux_domains[level]
+                ):
+                    aux_domains[level] = child.auxiliary_domains[level]
+                else:
+                    raise pybamm.DomainError(
+                        """children must have same or empty auxiliary domains,
+                        not {!s} and {!s}""".format(
+                            aux_domains[level], child.auxiliary_domains[level]
+                        )
+                    )
+
+        return aux_domains
 
     def diff(self, variable):
         """ See :meth:`pybamm.Symbol.diff()`. """

@@ -364,5 +364,8 @@ class BaseInterface(pybamm.BaseSubModel):
             self.domain + " electrode entropic change": dUdT,
             "X-averaged " + self.domain.lower() + " electrode entropic change": dUdT_av,
         }
+        import ipdb
+
+        ipdb.set_trace()
 
         return variables

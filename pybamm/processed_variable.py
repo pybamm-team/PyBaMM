@@ -106,7 +106,12 @@ class ProcessedVariable(object):
         ):
             self.initialise_1D()
         else:
-            n = self.mesh.combine_submeshes(*self.domain)[0].npts
+            try:
+                n = self.mesh.combine_submeshes(*self.domain)[0].npts
+            except:
+                import ipdb
+
+                ipdb.set_trace()
             base_shape = self.base_eval.shape[0]
             if base_shape in [n, n + 1]:
                 self.initialise_2D()
