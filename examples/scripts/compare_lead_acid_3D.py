@@ -21,12 +21,22 @@ models = [
     #     {"current collector": "potential pair", "dimensionality": 2}, name="2+1D LOQS"
     # ),
     pybamm.lead_acid.NewmanTiedemann(
-        {"current collector": "potential pair", "dimensionality": 1},
+        {
+            "surface form": "algebraic",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        },
         name="1+1D NewmanTiedemann",
     ),
-    pybamm.lead_acid.NewmanTiedemann({"dimensionality": 1}, name="1D NewmanTiedemann"),
+    pybamm.lead_acid.NewmanTiedemann(
+        {"surface form": "algebraic", "dimensionality": 1}, name="1D NewmanTiedemann"
+    ),
     pybamm.lead_acid.CompositeExtended(
-        {"current collector": "potential pair", "dimensionality": 1},
+        {
+            # "surface form": "algebraic",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        },
         name="1+1D composite",
     ),
     # pybamm.lead_acid.CompositeExtended(
@@ -48,7 +58,12 @@ models = [
     # ),
     # # pybamm.lead_acid.Composite({"dimensionality": 1}, name="composite"),
     pybamm.lead_acid.LOQS(
-        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D LOQS"
+        {
+            # "surface form": "algebraic",
+            "current collector": "potential pair",
+            "dimensionality": 1,
+        },
+        name="1+1D LOQS",
     ),
     # pybamm.lead_acid.LOQS({"dimensionality": 1}, name="LOQS"),
 ]

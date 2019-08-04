@@ -32,3 +32,9 @@ class ZeroDimensionalMethod(pybamm.SpatialMethod):
         Calculates the zero-dimensional indefinite integral, i.e. the identity operator
         """
         return discretised_child
+
+    def integral(self, child, discretised_child):
+        """
+        Calculates the zero-dimensional integral, i.e. the identity operator
+        """
+        return discretised_child

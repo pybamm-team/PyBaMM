@@ -202,86 +202,84 @@ def plot_variable(
     return fig, axes
 
 
-def plot_time_dependent_variables(
-    all_variables, t_eval, output_vars, labels, colors=None, figsize=(6.4, 3.5)
+def plot_variable_x_z(
+    all_variables,
+    times,
+    variable,
+    limits_exceptions=None,
+    yaxis="SOC",
+    figsize=(6.4, 4),
 ):
-    models = list(list(all_variables.values())[0].keys())
-    full_model = models[0]
-    fig, axes = plt.subplots(len(models) - 1, len(all_variables), figsize=figsize)
-    y_min = pybamm.ax_min(
+    Crate = 0.1
+    sigma = 80000
+    models = ["1+1D LOQS", "1+1D Composite", "1+1D Full"]
+    time = 0.1
+    limits_exceptions = limits_exceptions or {}
+    n = 1  # len(times)
+    m = 3  # len(all_variables)
+    models_variables = all_variables[Crate][sigma]
+    fig, axes = plt.subplots(n, m, figsize=figsize)
+
+    x = models_variables[models[0]]["x"](0, x=np.linspace(0.1, 0.9))[:, 0]
+    x_dim = models_variables[models[0]]["x [m]"](0, x=np.linspace(0.1, 0.9))[:, 0]
+    z = models_variables[models[0]]["z"](0, z=np.linspace(0.1, 0.9, 80))[:, 0]
+    z_dim = models_variables[models[0]]["z [m]"](0, z=np.linspace(0.1, 0.9, 80))[:, 0]
+
+    # Default limits
+    v_min = pybamm.ax_min(
         [
-            np.nanmin(variables[var](t_eval))
-            for models_variables in all_variables.values()
+            np.nanmin(variables[variable](time, x=x, z=z))
             for variables in models_variables.values()
-            for var in output_vars
         ]
     )
-    y_max = pybamm.ax_max(
+    v_max = pybamm.ax_max(
         [
-            np.nanmax(variables[var](t_eval))
-            for models_variables in all_variables.values()
+            np.nanmax(variables[variable](time, x=x, z=z))
             for variables in models_variables.values()
-            for var in output_vars
         ]
     )
-    linestyles = ["--", ":", "-.", "-"]
-    colors = colors or ["k", "b"]
-    for i, (Crate, models_variables) in enumerate(all_variables.items()):
-        for j, model in enumerate(models[1:]):
-            full_variables = models_variables[full_model]
-            variables = models_variables[model]
-            if len(models) == 2:
-                ax = axes[i]
-            else:
-                ax = axes[j, i]
-            t_max = max(
-                np.nanmax(var["Time [h]"](t_eval)) for var in models_variables.values()
-            )
-            ax.set_xlim([0, t_max])
-            ax.set_ylim([y_min, y_max])
-            if i == 0:
-                if len(models) == 2:
-                    ax.set_ylabel("Interfacial current densities")
-                else:
-                    ax.set_ylabel("{}\nvs Full".format(model), rotation=0, labelpad=30)
-                    ax.yaxis.get_label().set_verticalalignment("center")
-            if j == 0 and len(all_variables) > 1:
-                ax.set_title(
-                    "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
-                        chr(97 + i), abs(Crate), abs(Crate) * 0.6
-                    )
-                )
-            if j == len(models) - 2:
-                ax.set_xlabel("Time [h]")
-            plots = {}
-            for k, var in enumerate(output_vars):
-                plots[(full_model, k)], = ax.plot(
-                    full_variables["Time [h]"](t_eval),
-                    full_variables[var](t_eval),
-                    linestyle=linestyles[k],
-                    color=colors[0],
-                )
-            for k, var in enumerate(output_vars):
-                plots[(model, k)], = ax.plot(
-                    variables["Time [h]"](t_eval),
-                    variables[var](t_eval),
-                    linestyle=linestyles[k],
-                    color=colors[j + 1],
-                )
-    if len(models) == 2:
-        leg1 = fig.legend(
-            [plots[(model, len(linestyles) - 1)] for model in models],
-            models,
-            loc="lower center",
-            ncol=len(models),
-            bbox_to_anchor=(0.5, 0),
+    if "min" in limits_exceptions:
+        v_min = min(v_min, limits_exceptions["min"])
+    if "max" in limits_exceptions:
+        v_max = max(v_max, limits_exceptions["max"])
+
+    # Plot
+    for i, model in enumerate(models):
+        ax = axes.flat[i]
+
+        # Title
+        ax.set_title(model)
+        # x-axis
+        ax.set_xlabel("x [m]")
+        # y-axis
+        if i == 0:
+            ax.set_ylabel("z [m]")
+        else:
+            ax.set_yticklabels([])
+        CS = ax.pcolormesh(
+            x_dim,
+            z_dim,
+            np.transpose(models_variables[model][variable](time, x=x, z=z)),
+            # vmin=v_min,
+            # vmax=v_max,
+            # levels=100,
         )
-        fig.legend(
-            labels, loc="lower center", ncol=len(labels), bbox_to_anchor=(0.5, 0.1)
-        )
-        fig.add_artist(leg1)
-    else:
-        fig.legend(labels, loc="lower center", ncol=len(labels))
+    cbar = fig.colorbar(CS)
+
+    # Electrodes
+    L_n = pybamm.lead_acid.BaseModel().default_parameter_values.process_symbol(
+        pybamm.standard_parameters_lead_acid.L_n
+    )
+    L_s = pybamm.lead_acid.BaseModel().default_parameter_values.process_symbol(
+        pybamm.standard_parameters_lead_acid.L_s
+    )
+    # ax.plot([L_n, L_n], [0, np.max(z_dim)], "k--")
+
+    # Plot
+    # plt.subplots_adjust(
+    #     bottom=0.17, top=0.95, left=0.18, right=0.97, hspace=0.08, wspace=0.05
+    # )
+    return fig, axes
 
 
 def plot_voltage_components(all_variables, t_eval, model, Crates):

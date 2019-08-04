@@ -245,6 +245,8 @@ class ProcessedVariable(object):
             r_sol = None
             self.first_dimension = "x"
             self.second_dimension = "z"
+            ## SUPER HACKY: set order back to F
+            order = "F"
 
             if self.base_eval.size // len(z_sol) == len(x_nodes):
                 x_sol = x_nodes
