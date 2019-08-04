@@ -212,6 +212,9 @@ class ProcessedVariable(object):
             r_nodes = self.mesh["positive particle"][0].nodes
             r_edges = self.mesh["positive particle"][0].edges
         else:
+            import ipdb
+
+            ipdb.set_trace()
             raise pybamm.DomainError(
                 """ Can only create 3D objects on electrodes and particles. Current
                 collector not yet implemented"""
