@@ -4,6 +4,30 @@
 import pybamm
 import pickle
 
+variables_to_keep = [
+    "x",
+    "x [m]",
+    "z",
+    "z [m]",
+    "Time",
+    "Time [h]",
+    "Average battery open circuit voltage [V]",
+    "Average battery reaction overpotential [V]",
+    "Average battery concentration overpotential [V]",
+    "Average battery electrolyte ohmic losses [V]",
+    "Battery current collector overpotential [V]",
+    "Battery voltage [V]",
+    "Electrolyte concentration [Molar]",
+    "X-averaged electrolyte concentration [Molar]",
+    "Oxygen concentration [Molar]",
+    "X-averaged oxygen concentration [Molar]",
+    "Electrolyte potential [V]",
+    "X-averaged electrolyte potential [V]",
+    "Current collector current density",
+    "State of Charge",
+    "Fractional Charge Input",
+]
+
 
 def model_comparison(
     models,
@@ -44,7 +68,7 @@ def model_comparison(
 
     # set mesh
     var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.z: 10}
+    var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.z: 10}
     mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
 
     # discretise models

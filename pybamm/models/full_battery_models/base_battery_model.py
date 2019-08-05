@@ -561,6 +561,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 {
                     "Current collector overpotential": cc_overpotential,
                     "Current collector overpotential [V]": cc_overpotential_dim,
+                    "Battery current collector overpotential [V]": cc_overpotential_dim
+                    * pybamm.Parameter(
+                        "Number of cells connected in series to make a battery"
+                    ),
                     "Voltage minus cc overpotential": V,
                     "Voltage minus cc overpotential [V]": V_dim,
                 }

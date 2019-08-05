@@ -7,7 +7,7 @@ import numpy as np
 import pickle
 import pybamm
 import shared_plotting_2D
-from shared_solutions_2D import model_comparison
+from shared_solutions_2D import model_comparison, variables_to_keep
 
 try:
     from config import OUTPUT_DIR
@@ -76,28 +76,6 @@ def discharge_states(compute):
             },
             name="1+1D Composite",
         ),
-    ]
-    variables_to_keep = [
-        "x",
-        "x [m]",
-        "z",
-        "z [m]",
-        "Time",
-        "Time [h]",
-        "Average battery reaction overpotential [V]",
-        "Average battery concentration overpotential [V]",
-        "Average battery electrolyte ohmic losses [V]",
-        "Battery current collector overpotential [V]",
-        "Battery voltage [V]",
-        "Electrolyte concentration [Molar]",
-        "X-averaged electrolyte concentration [Molar]",
-        "Oxygen concentration [Molar]",
-        "X-averaged oxygen concentration [Molar]",
-        "Electrolyte potential [V]",
-        "X-averaged electrolyte potential [V]",
-        "Current collector current density",
-        "State of Charge",
-        "Fractional Charge Input",
     ]
     for model in models:
         model.variables = {

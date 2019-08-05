@@ -8,7 +8,7 @@ from collections import defaultdict
 
 
 def plot_voltages(
-    all_variables, t_eval, linestyles=None, linewidths=None, figsize=(6.4, 5)
+    all_variables, t_eval, linestyles=None, linewidths=None, figsize=(6.4, 4)
 ):
     """
     all_variables is a dict of dicts of dicts of dicts.
@@ -92,7 +92,7 @@ def plot_voltages(
                 )
     leg = fig.legend(labels, loc="lower center", ncol=len(labels))
     plt.subplots_adjust(
-        bottom=0.17, top=0.95, left=0.28, right=0.97, hspace=0.08, wspace=0.05
+        bottom=0.23, top=0.92, left=0.28, right=0.97, hspace=0.08, wspace=0.05
     )
     leg.get_frame().set_edgecolor("k")
     return fig, axes
@@ -101,14 +101,14 @@ def plot_voltages(
 def plot_variable(
     all_variables,
     times,
+    sigma,
     variable,
     limits_exceptions=None,
     yaxis="SOC",
     linestyles=None,
     linewidths=None,
-    figsize=(6.4, 5),
+    figsize=(6.4, 4),
 ):
-    sigma = 10 * 8000
     limits_exceptions = limits_exceptions or {}
     linestyles = linestyles or ["k-", "g--", "r:", "b-."]
     linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
@@ -204,27 +204,22 @@ def plot_variable(
     leg = fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
     leg.get_frame().set_edgecolor("k")
     plt.subplots_adjust(
-        bottom=0.17, top=0.95, left=0.18, right=0.97, hspace=0.08, wspace=0.05
+        bottom=0.23, top=0.92, left=0.18, right=0.97, hspace=0.08, wspace=0.05
     )
     return fig, axes
 
 
 def plot_variable_x_z(
-    all_variables,
-    time_Crate_sigma,
-    variable,
-    limits_exceptions=None,
-    figsize=(6.4, 6.4),
+    all_variables, time_Crate_sigma, variable, limits_exceptions=None, figsize=(6.4, 4)
 ):
     time, Crate, sigma = time_Crate_sigma
-    sigma = 8000
     models = ["1+1D LOQS", "1+1D Composite", "1+1D Full"]
     time = 0.1
     limits_exceptions = limits_exceptions or {}
     n = 1  # len(times)
     m = 3  # len(all_variables)
     models_variables = all_variables[Crate][sigma]
-    fig, axes = plt.figure(figsize=figsize)
+    fig, axes = plt.subplots(n, m, figsize=figsize)
 
     x = models_variables[models[0]]["x"](0, x=np.linspace(0.1, 0.9))[:, 0]
     x_dim = models_variables[models[0]]["x [m]"](0, x=np.linspace(0.1, 0.9))[:, 0]
@@ -247,7 +242,7 @@ def plot_variable_x_z(
 
     # Plot
     for i, model in enumerate(models):
-        ax = fig.add_subplot(2, 3, i + 1)
+        ax = axes.flat[i]
 
         # Title
         ax.set_title(model)
@@ -283,7 +278,7 @@ def plot_variable_x_z(
 
     # Plot
     plt.subplots_adjust(hspace=0.35, wspace=0.05)
-    return fig
+    return fig, axes
 
 
 def plot_voltage_components(all_variables, t_eval, model, sigmas):
@@ -315,9 +310,13 @@ def plot_voltage_components(all_variables, t_eval, model, sigmas):
         ax.set_ylim([y_min, y_max])
         ax.set_xlabel("Time [h]")
         sigma_exponent = int(np.floor(np.log10(sigma)))
+        sigma_dash = 0.05 * sigma / 8000
         ax.set_title(
-            "\\textbf{{({})}} $\\hat{{\\sigma}}_p = {}\\times 10^{{{}}}$ S/m".format(
-                chr(97 + k), sigma / 10 ** sigma_exponent, sigma_exponent
+            (
+                "\\textbf{{({})}} $\\hat{{\\sigma}}_p = {}\\times 10^{{{}}}$ S/m"
+                + "\n$(\\sigma'_p={}/\\mathcal{{C}})$"
+            ).format(
+                chr(97 + k), sigma / 10 ** sigma_exponent, sigma_exponent, sigma_dash
             )
         )
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
