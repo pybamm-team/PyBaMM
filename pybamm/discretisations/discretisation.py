@@ -542,6 +542,10 @@ class Discretisation(object):
                 return child_spatial_method.definite_integral_vector(
                     child.domain, vector_type=symbol.vector_type
                 )
+            elif isinstance(symbol, pybamm.BoundaryIntegral):
+                return child_spatial_method.boundary_integral(
+                    child.domain, child, disc_child, region=symbol.region
+                )
 
             elif isinstance(symbol, pybamm.Broadcast):
                 # Broadcast new_child to the domain specified by symbol.domain

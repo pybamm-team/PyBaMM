@@ -96,6 +96,7 @@ from .expression_tree.unary_operators import (
     Integral,
     IndefiniteIntegral,
     DefiniteIntegralVector,
+    BoundaryIntegral,
     grad,
     div,
     laplacian,

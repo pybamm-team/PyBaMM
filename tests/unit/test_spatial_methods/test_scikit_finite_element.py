@@ -237,7 +237,6 @@ class TestScikitFiniteElement(unittest.TestCase):
 
         extrap_left = pybamm.BoundaryValue(var, "left")
         extrap_right = pybamm.BoundaryValue(var, "right")
-        disc.set_variable_slices([var])
         extrap_left_disc = disc.process_symbol(extrap_left)
         extrap_right_disc = disc.process_symbol(extrap_right)
 
@@ -245,6 +244,42 @@ class TestScikitFiniteElement(unittest.TestCase):
         constant_y = np.ones(mesh["current collector"][0].npts)
         self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 1)
         self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 1)
+
+    def test_boundary_integral(self):
+        mesh = get_2p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+
+        full = pybamm.BoundaryIntegral(var)
+        neg = pybamm.BoundaryIntegral(var, region="negative tab")
+        pos = pybamm.BoundaryIntegral(var, region="positive tab")
+
+        full_disc = disc.process_symbol(full)
+        neg_disc = disc.process_symbol(neg)
+        pos_disc = disc.process_symbol(pos)
+
+        # check integrating 1 gives correct *dimensionless* region lengths
+        perimeter = 2 * (1 + 0.8)
+        l_tab_n = 0.1 / 0.5
+        l_tab_p = 0.1 / 0.5
+        constant_y = np.ones(mesh["current collector"][0].npts)
+        # Integral around boundary is exact
+        np.testing.assert_array_almost_equal(
+            full_disc.evaluate(None, constant_y), perimeter
+        )
+        # Ideally mesh edges should line up with tab edges.... then we would get
+        # better agreement between actual and numerical tab width
+        np.testing.assert_array_almost_equal(
+            neg_disc.evaluate(None, constant_y), l_tab_n, decimal=1
+        )
+        np.testing.assert_array_almost_equal(
+            pos_disc.evaluate(None, constant_y), l_tab_p, decimal=1
+        )
 
     def test_pure_neumann_poisson(self):
         # grad^2 u = 1, du/dz = 1 at z = 1, du/dn = 0 elsewhere, u has zero average
@@ -256,7 +291,8 @@ class TestScikitFiniteElement(unittest.TestCase):
         model = pybamm.BaseModel()
         # 0*c hack otherwise gives KeyError
         model.algebraic = {
-            u: pybamm.laplacian(u) - pybamm.source(1, u)
+            u: pybamm.laplacian(u)
+            - pybamm.source(1, u)
             + c * pybamm.DefiniteIntegralVector(u, vector_type="column"),
             c: pybamm.Integral(u, [y, z]) + 0 * c,
         }
