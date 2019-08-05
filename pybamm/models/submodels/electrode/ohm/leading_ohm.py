@@ -21,8 +21,8 @@ class LeadingOrder(BaseModel):
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, set_positive_potential=True):
+        super().__init__(param, domain, set_positive_potential=set_positive_potential)
 
     def get_coupled_variables(self, variables):
         """

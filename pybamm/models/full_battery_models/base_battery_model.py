@@ -179,6 +179,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "potential pair",
             "potential pair quite conductive",
             "single particle potential pair",
+            "set external potential",
         ]:
             raise pybamm.OptionError(
                 "current collector model '{}' not recognised".format(
@@ -417,6 +418,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                 submodel = pybamm.current_collector.PotentialPair2plus1D(self.param)
         elif self.options["current collector"] == "single particle potential pair":
             submodel = pybamm.current_collector.SingleParticlePotentialPair(self.param)
+        elif self.options["current collector"] == "set external potential":
+            if self.options["dimensionality"] == 1:
+                submodel = pybamm.current_collector.SetPotentialSingleParticle1plus1D(
+                    self.param
+                )
         self.submodels["current collector"] = submodel
 
     def set_voltage_variables(self):
