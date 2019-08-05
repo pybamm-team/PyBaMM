@@ -61,7 +61,7 @@ def model_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None
     return all_variables, t_eval
 
 
-def convergence_study(models, Crates, all_npts, t_eval, extra_parameter_values=None):
+def convergence_study(models, Crates, sigmas, t_eval, extra_parameter_values=None):
     " Solve models at a range of number of grid points "
     # load parameter values and geometry
     geometry = models[0].default_geometry

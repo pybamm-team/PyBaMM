@@ -50,8 +50,8 @@ def plot_times(models_times_and_voltages):
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def discharge_times_and_errors(compute):
-    savefile = "discharge_asymptotics_times_and_errors.pickle"
+def discharge_errors(compute):
+    savefile = "2d_discharge_asymptotics_errors.pickle"
     if compute:
         try:
             with open(savefile, "rb") as f:
@@ -59,18 +59,31 @@ def discharge_times_and_errors(compute):
         except FileNotFoundError:
             models_times_and_voltages = pybamm.get_infinite_nested_dict()
         models = [
-            pybamm.lead_acid.NewmanTiedemann(
-                {"surface form": "algebraic"}, name="Full"
+            pybamm.lead_acid.NewmanTiedemann(name="1D Full"),
+            pybamm.lead_acid.LOQS(name="1D LOQS"),
+            pybamm.lead_acid.Composite(name="1D Composite"),
+            pybamm.lead_acid.Composite(
+                {"current collector": "potential pair quite conductive averaged"},
+                name="1D Composite",
             ),
-            pybamm.lead_acid.LOQS(name="LOQS"),
-            # pybamm.lead_acid.FOQS(name="FOQS"),
-            # pybamm.lead_acid.Composite(name="Composite"),
+            pybamm.lead_acid.NewmanTiedemann(
+                {"dimensionality": 1, "current collector": "potential pair"},
+                name="1D Full",
+            ),
+            pybamm.lead_acid.LOQS(
+                {"dimensionality": 1, "current collector": "potential pair"},
+                name="1D LOQS",
+            ),
+            pybamm.lead_acid.Composite(
+                {"dimensionality": 1, "current collector": "potential pair"},
+                name="1D Composite",
+            ),
         ]
-        Crates = np.linspace(0.01, 5, 2)
-        all_npts = [20]
+        Crates = np.logspace(0.01, 5, 5)
+        sigmas = np.logspace(8000, 100 * 8000, 5)
         t_eval = np.linspace(0, 1, 100)
         new_models_times_and_voltages = convergence_study(
-            models, Crates, all_npts, t_eval
+            models, Crates, sigmas, t_eval
         )
         models_times_and_voltages.update(new_models_times_and_voltages)
         with open(savefile, "wb") as f:
@@ -84,7 +97,6 @@ def discharge_times_and_errors(compute):
                 "Run script with '--compute' first to generate results"
             )
     plot_errors(models_times_and_voltages)
-    plot_times(models_times_and_voltages)
 
 
 if __name__ == "__main__":
