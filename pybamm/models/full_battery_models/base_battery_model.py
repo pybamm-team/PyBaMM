@@ -516,10 +516,11 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         elif self.options["dimensionality"] == 1:
             # In 1D both tabs are at "right"
-            V = pybamm.BoundaryValue(phi_s_cp, "right")
-            # V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right")
-            V_dim = pybamm.Integral(phi_s_cp_dim, vars.z) - pybamm.Integral(
-                phi_s_cn_dim, vars.z
+            V = pybamm.BoundaryValue(phi_s_cp, "right") - pybamm.BoundaryValue(
+                phi_s_cn, "right"
+            )
+            V_dim = pybamm.BoundaryValue(phi_s_cp_dim, "right") - pybamm.BoundaryValue(
+                phi_s_cn_dim, "right"
             )
 
             def cc_integral(var):
@@ -566,44 +567,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             V = V + cc_overpotential
             V_dim = V_dim + cc_overpotential_dim
-        elif (
-            isinstance(self, pybamm.lead_acid.HigherOrderBaseModel)
-            and self.options["current collector"] == "potential pair quite conductive"
-        ):
-
-            cc_overpotential = (
-                pybamm.BoundaryValue(phi_s_cp, "right")
-                - pybamm.Integral(phi_s_cp, vars.z)
-                - (
-                    pybamm.BoundaryValue(phi_s_cn, "right")
-                    - pybamm.Integral(phi_s_cn, vars.z)
-                )
-            )
-            cc_overpotential_dim = param.potential_scale * cc_overpotential
-
-            self.variables.update(
-                {
-                    "Current collector overpotential": cc_overpotential,
-                    "Current collector overpotential [V]": cc_overpotential_dim,
-                    # "Voltage minus cc overpotential": V - cc_overpotential,
-                    # "Voltage minus cc overpotential [V]": V_dim - cc_overpotential_dim,
-                    "Voltage minus cc overpotential": V,
-                    "Voltage minus cc overpotential [V]": V_dim,
-                }
-            )
-            V = V + cc_overpotential
-            V_dim = V_dim + cc_overpotential_dim
-        else:
-            cc_overpotential = pybamm.Scalar(0)
-            cc_overpotential_dim = pybamm.Scalar(0)
-            self.variables.update(
-                {
-                    "Current collector overpotential": cc_overpotential,
-                    "Current collector overpotential [V]": cc_overpotential_dim,
-                    "Voltage minus cc overpotential": V - cc_overpotential,
-                    "Voltage minus cc overpotential [V]": V_dim - cc_overpotential_dim,
-                }
-            )
 
         # TODO: add current collector losses to the voltage in 3D
 

@@ -32,14 +32,14 @@ def plot_voltages(all_variables, t_eval):
 def plot_variables(all_variables, t_eval):
     # Set up
     Crates = [0.1, 1, 2]
-    times = np.array([0, 0.195, 0.375, 0.545])
+    times = np.array([0, 0.195, 0.375])
     var_file_names = {
         "X-averaged electrolyte concentration [Molar]"
         + "": "2d_poor_discharge_average_electrolyte_concentration_comparison.eps",
         # "X-averaged electrolyte potential [V]"
         # + "": "2d_poor_discharge_average_electrolyte_potential_comparison.eps",
-        "Current collector current density"
-        + "": "2d_poor_current_collector_current_density_comparison.eps",
+        # "Current collector current density"
+        # + "": "2d_poor_current_collector_current_density_comparison.eps",
     }
     limits_exceptions = {"X-averaged electrolyte concentration [Molar]": {"min": 0}}
     linestyles = ["k:", "k-", "g--", "b-."]
@@ -64,20 +64,20 @@ def plot_variables(all_variables, t_eval):
 
 def plot_variables_x_z(all_variables, t_eval):
     # Set up
-    Crates = [0.1, 1, 2]
-    times = np.array([0, 0.195, 0.375, 0.545])
+    time_Crate_sigma = (0.195, 1, 8000)
     var_file_names = {
         "Electrolyte concentration [Molar]"
         + "": "2d_poor_discharge_electrolyte_concentration_comparison.eps"
     }
     limits_exceptions = {"Electrolyte concentration [Molar]": {"min": 0}}
-    all_variables = {k: v for k, v in all_variables.items() if k in Crates}
     for var, file_name in var_file_names.items():
         if var in limits_exceptions:
             exceptions = limits_exceptions[var]
         else:
             exceptions = {}
-        shared_plotting_2D.plot_variable_x_z(all_variables, times, var, exceptions)
+        shared_plotting_2D.plot_variable_x_z(
+            all_variables, time_Crate_sigma, var, exceptions
+        )
         if OUTPUT_DIR is not None:
             plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 

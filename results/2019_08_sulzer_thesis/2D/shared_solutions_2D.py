@@ -2,14 +2,26 @@
 # Simulations
 #
 import pybamm
+import pickle
 
 
 def model_comparison(
-    models, Crates, sigmas, t_eval, extra_parameter_values=None, existing_solutions=None
+    models,
+    Crates,
+    sigmas,
+    t_eval,
+    savefile,
+    use_force=False,
+    extra_parameter_values=None,
 ):
     " Solve models at a range of Crates "
     all_variables = {Crate: {sigma: {} for sigma in sigmas} for Crate in Crates}
-    if existing_solutions is not None:
+    if use_force is False:
+        try:
+            with open(savefile, "rb") as f:
+                (existing_solutions, t_eval) = pickle.load(f)
+        except FileNotFoundError:
+            existing_solutions = {}
         for Crate in all_variables.keys():
             if Crate in existing_solutions:
                 all_variables[Crate].update(existing_solutions[Crate])
@@ -26,7 +38,7 @@ def model_comparison(
 
     # set mesh
     var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.z: 10}
+    var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.z: 10}
     mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
 
     # discretise models
@@ -62,6 +74,10 @@ def model_comparison(
                     )
                     variables["solution"] = solution
                     all_variables[Crate][sigma][model.name] = variables
+
+                with open(savefile, "wb") as f:
+                    data = (all_variables, t_eval)
+                    pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
     return all_variables, t_eval
 

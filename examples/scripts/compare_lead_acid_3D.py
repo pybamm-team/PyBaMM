@@ -121,10 +121,8 @@ output_variables = [
     # "Positive current collector potential [V]",
     # "X-averaged electrolyte concentration",
     # # "Leading-order current collector current density",
-    # "Current collector current density",
+    "Current collector current density",
     "Terminal voltage [V]",
-    "Voltage minus cc overpotential [V]",
-    "Current collector overpotential [V]",
 ]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables)
 plot.dynamic_plot()

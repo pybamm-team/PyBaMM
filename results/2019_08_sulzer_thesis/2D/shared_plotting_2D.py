@@ -328,17 +328,16 @@ def plot_variable_x_z(
     return fig
 
 
-def plot_voltage_components(all_variables, t_eval, model, Crates):
-    sigma = 10 * 8000
-    n = int(len(Crates) // np.sqrt(len(Crates)))
-    m = int(np.ceil(len(Crates) / n))
+def plot_voltage_components(all_variables, t_eval, model, Crate, sigmas):
+    n = int(len(sigmas) // np.sqrt(len(sigmas)))
+    m = int(np.ceil(len(sigmas) / n))
     fig, axes = plt.subplots(n, m, figsize=(6.4, 2.3))
     labels = ["V", "$V_U$", "$V_k$", "$V_c$", "$V_o$", "$V_{cc}$"]
     overpotentials = [
-        "X-averaged battery reaction overpotential [V]",
-        "X-averaged battery concentration overpotential [V]",
-        "X-averaged battery electrolyte ohmic losses [V]",
-        # "Current collector losses [V]",
+        "Average battery reaction overpotential [V]",
+        "Average battery concentration overpotential [V]",
+        "Average battery electrolyte ohmic losses [V]",
+        "Current collector losses [V]",
     ]
     y_min = 0.95 * min(
         np.nanmin(
@@ -352,7 +351,7 @@ def plot_voltage_components(all_variables, t_eval, model, Crates):
         )
         for allsigma_models_variables in all_variables.values()
     )
-    for k, Crate in enumerate(Crates):
+    for k, sigma in enumerate(sigmas):
         variables = all_variables[Crate][sigma][model]
         ax = axes.flat[k]
 
@@ -374,16 +373,16 @@ def plot_voltage_components(all_variables, t_eval, model, Crates):
         # Initialise
         # for lead-acid we multiply everything by 6 to
         time = variables["Time [h]"](t_eval)
-        initial_ocv = variables["X-averaged battery open circuit voltage [V]"](0, z=1)
-        ocv = variables["X-averaged battery open circuit voltage [V]"](t_eval, z=1)
+        initial_ocv = variables["Average battery open circuit voltage [V]"](0)
+        ocv = variables["Average battery open circuit voltage [V]"](t_eval)
         ax.fill_between(time, ocv, initial_ocv)
         top = ocv
         # Plot
         for overpotential in overpotentials:
-            bottom = top + variables[overpotential](t_eval, z=1)
+            bottom = top + variables[overpotential](t_eval)
             ax.fill_between(time, bottom, top)
             top = bottom
-        ax.plot(time, variables["Battery voltage [V]"](t_eval, z=1), "k--")
+        ax.plot(time, variables["Battery voltage [V]"](t_eval), "k--")
     leg = axes.flat[-1].legend(
         labels, bbox_to_anchor=(1.05, 0.5), loc="center left", frameon=True
     )

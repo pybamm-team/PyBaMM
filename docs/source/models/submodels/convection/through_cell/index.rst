@@ -6,6 +6,5 @@ Through-cell Convection
 
   base_through_cell_convection
   no_convection
-  leading_convection
-  composite_convection
+  explicit_convection
   full_convection
