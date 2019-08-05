@@ -15,11 +15,17 @@ def model_comparison(
     extra_parameter_values=None,
 ):
     " Solve models at a range of Crates "
+    # Load the models that we know
     all_variables = {Crate: {sigma: {} for sigma in sigmas} for Crate in Crates}
     if use_force is False:
         try:
             with open(savefile, "rb") as f:
                 (existing_solutions, t_eval) = pickle.load(f)
+            if (
+                list(existing_solutions.keys()) == Crates
+                and list(existing_solutions[Crates[0]].keys()) == sigmas
+            ):
+                return existing_solutions, t_eval
         except FileNotFoundError:
             existing_solutions = {}
         for Crate in all_variables.keys():
@@ -75,14 +81,16 @@ def model_comparison(
                     variables["solution"] = solution
                     all_variables[Crate][sigma][model.name] = variables
 
-                with open(savefile, "wb") as f:
-                    data = (all_variables, t_eval)
-                    pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    with open(savefile, "wb") as f:
+        data = (all_variables, t_eval)
+        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
     return all_variables, t_eval
 
 
-def convergence_study(models, Crates, all_npts, t_eval, extra_parameter_values=None):
+def convergence_study(
+    models, Crate, sigma, all_npts, t_eval, extra_parameter_values=None
+):
     " Solve models at a range of number of grid points "
     # load parameter values and geometry
     geometry = models[0].default_geometry
@@ -115,40 +123,33 @@ def convergence_study(models, Crates, all_npts, t_eval, extra_parameter_values=N
             models_disc[model.name] = disc.process_model(model, inplace=False)
             discs[model.name] = disc
 
-        # Solve for a range of C-rates
-        for Crate in Crates:
-            current = Crate * 17
-            pybamm.logger.info("Setting typical current to {} A".format(current))
-            param.update({"Typical current [A]": current})
-            for model in models:
-                model_disc = models_disc[model.name]
-                disc = discs[model.name]
-                param.update_model(model_disc, disc)
-                try:
-                    solution = model.default_solver.solve(model_disc, t_eval)
-                    success = True
-                except pybamm.SolverError:
-                    pybamm.logger.error(
-                        "Could not solve {!s} at {} A with {} points".format(
-                            model.name, current, npts
-                        )
-                    )
-                    solution = "Could not solve {!s} at {} A with {} points".format(
+        current = Crate * 17
+        pybamm.logger.info("Setting typical current to {} A".format(current))
+        param.update({"Typical current [A]": current})
+        for model in models:
+            model_disc = models_disc[model.name]
+            disc = discs[model.name]
+            param.update_model(model_disc, disc)
+            try:
+                solution = model.default_solver.solve(model_disc, t_eval)
+                success = True
+            except pybamm.SolverError:
+                pybamm.logger.error(
+                    "Could not solve {!s} at {} A with {} points".format(
                         model.name, current, npts
                     )
-                    success = False
-                if success:
-                    voltage = pybamm.ProcessedVariable(
-                        model_disc.variables["Battery voltage [V]"],
-                        solution.t,
-                        solution.y,
-                    )(t_eval)
-                else:
-                    voltage = None
-                variables = {
-                    "Battery voltage [V]": voltage,
-                    "solution object": solution,
-                }
-                models_times_and_voltages[model.name][npts][Crate] = variables
+                )
+                solution = "Could not solve {!s} at {} A with {} points".format(
+                    model.name, current, npts
+                )
+                success = False
+            if success:
+                voltage = pybamm.ProcessedVariable(
+                    model_disc.variables["Battery voltage [V]"], solution.t, solution.y
+                )(t_eval)
+            else:
+                voltage = None
+            variables = {"Battery voltage [V]": voltage, "solution object": solution}
+            models_times_and_voltages[model.name][npts] = variables
 
     return models_times_and_voltages

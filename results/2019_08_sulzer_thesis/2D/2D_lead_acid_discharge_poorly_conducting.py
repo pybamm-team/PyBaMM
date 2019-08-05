@@ -118,9 +118,6 @@ def discharge_states(compute):
             t_eval,
             extra_parameter_values=extra_parameter_values,
         )
-        with open(savefile, "wb") as f:
-            data = (all_variables, t_eval)
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
     else:
         try:
             with open(savefile, "rb") as f:

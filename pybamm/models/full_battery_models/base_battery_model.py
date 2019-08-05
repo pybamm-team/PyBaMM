@@ -570,6 +570,22 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # TODO: add current collector losses to the voltage in 3D
 
+        eta_e_av = self.variables.get(
+            "X-averaged electrolyte ohmic losses",
+            pybamm.PrimaryBroadcast(0, "current collector"),
+        )
+        eta_c_av = self.variables.get(
+            "X-averaged concentration overpotential",
+            pybamm.PrimaryBroadcast(0, "current collector"),
+        )
+        eta_e_av_dim = self.variables.get(
+            "X-averaged electrolyte ohmic losses [V]",
+            pybamm.PrimaryBroadcast(0, "current collector"),
+        )
+        eta_c_av_dim = self.variables.get(
+            "X-averaged concentration overpotential [V]",
+            pybamm.PrimaryBroadcast(0, "current collector"),
+        )
         self.variables.update(
             {
                 "X-averaged open circuit voltage": ocv_av,
@@ -582,6 +598,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Average reaction overpotential": cc_integral(eta_r_av),
                 "X-averaged reaction overpotential [V]": eta_r_av_dim,
                 "Average reaction overpotential [V]": cc_integral(eta_r_av_dim),
+                "X-averaged concentration overpotential": eta_e_av,
+                "Average concentration overpotential": cc_integral(eta_e_av),
+                "X-averaged concentration overpotential [V]": eta_e_av_dim,
+                "Average concentration overpotential [V]": cc_integral(eta_e_av_dim),
+                "X-averaged electrolyte ohmic losses": eta_c_av,
+                "Average electrolyte ohmic losses": cc_integral(eta_c_av),
+                "X-averaged electrolyte ohmic losses [V]": eta_c_av_dim,
+                "Average electrolyte ohmic losses [V]": cc_integral(eta_c_av_dim),
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "Average solid phase ohmic losses": cc_integral(delta_phi_s_av),
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
@@ -592,22 +616,29 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
 
         # Battery-wide variables
-        eta_e_av_dim = self.variables.get("Average electrolyte ohmic losses [V]", 0)
-        eta_c_av_dim = self.variables.get("Average concentration overpotential [V]", 0)
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
 
         self.variables.update(
             {
-                "Average battery open circuit voltage [V]": ocv_av_dim * num_cells,
-                "Measured battery open circuit voltage [V]": ocv_dim * num_cells,
-                "Average battery reaction overpotential [V]": eta_r_av_dim * num_cells,
-                "Average battery solid phase ohmic losses [V]": delta_phi_s_av_dim
+                "Average battery open circuit voltage [V]": cc_integral(ocv_av_dim)
                 * num_cells,
-                "Average battery electrolyte ohmic losses [V]": eta_e_av_dim
+                "Measured battery open circuit voltage [V]": cc_integral(ocv_dim)
                 * num_cells,
-                "Average battery concentration overpotential [V]": eta_c_av_dim
+                "Average battery reaction overpotential [V]": cc_integral(eta_r_av_dim)
+                * num_cells,
+                "Average battery solid phase ohmic losses [V]": cc_integral(
+                    delta_phi_s_av_dim
+                )
+                * num_cells,
+                "Average battery electrolyte ohmic losses [V]": cc_integral(
+                    eta_e_av_dim
+                )
+                * num_cells,
+                "Average battery concentration overpotential [V]": cc_integral(
+                    eta_c_av_dim
+                )
                 * num_cells,
                 "Battery voltage [V]": V_dim * num_cells,
             }

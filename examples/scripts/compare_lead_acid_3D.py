@@ -31,14 +31,14 @@ models = [
     # pybamm.lead_acid.NewmanTiedemann(
     #     {"surface form": "algebraic", "dimensionality": 1}, name="1D NewmanTiedemann"
     # ),
-    pybamm.lead_acid.CompositeExtended(
-        {
-            # "surface form": "algebraic",
-            "current collector": "potential pair quite conductive",
-            "dimensionality": 1,
-        },
-        name="1+1D composite",
-    ),
+    # pybamm.lead_acid.CompositeExtended(
+    #     {
+    #         # "surface form": "algebraic",
+    #         "current collector": "potential pair quite conductive",
+    #         "dimensionality": 1,
+    #     },
+    #     name="1+1D composite",
+    # ),
     pybamm.lead_acid.CompositeExtended(
         {
             # "surface form": "algebraic",
@@ -47,14 +47,14 @@ models = [
         },
         name="1+1D composite averaged",
     ),
-    pybamm.lead_acid.CompositeExtended(
-        {
-            # "surface form": "algebraic",
-            # "current collector": "potential pair quite conductive averaged",
-            "dimensionality": 1
-        },
-        name="1D composite",
-    ),
+    # pybamm.lead_acid.CompositeExtended(
+    #     {
+    #         # "surface form": "algebraic",
+    #         # "current collector": "potential pair quite conductive averaged",
+    #         "dimensionality": 1
+    #     },
+    #     name="1D composite",
+    # ),
     # pybamm.lead_acid.CompositeExtended(
     #     {
     #         "current collector": "potential pair quite conductive averaged",
@@ -115,12 +115,35 @@ for i, model in enumerate(models):
     solutions[i] = solution
 
 # plot
+V0 = pybamm.ProcessedVariable(
+    model.variables["Average open circuit voltage [V]"]
+    + model.variables["Average concentration overpotential [V]"]
+    + model.variables["Average electrolyte ohmic losses [V]"]
+    + model.variables["Average reaction overpotential [V]"]
+    + model.variables["Current collector overpotential [V]"],
+    solutions[0].t,
+    solutions[0].y,
+    mesh,
+)
+V1 = pybamm.ProcessedVariable(
+    model.variables["Terminal voltage [V]"], solutions[0].t, solutions[0].y, mesh
+)
+import ipdb
+
+ipdb.set_trace()
+
+
 output_variables = [
     # "Local current collector potential difference [V]",
     # "Negative current collector potential [V]",
     # "Positive current collector potential [V]",
     # "X-averaged electrolyte concentration",
     # # "Leading-order current collector current density",
+    "Average open circuit voltage [V]",
+    "Average concentration overpotential [V]",
+    "Average electrolyte ohmic losses [V]",
+    "Average reaction overpotential [V]",
+    "Current collector overpotential [V]",
     "Current collector current density",
     "Terminal voltage [V]",
 ]
