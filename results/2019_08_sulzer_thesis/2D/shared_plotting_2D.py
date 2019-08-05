@@ -22,7 +22,7 @@ def plot_voltages(
     linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
     n = len(list(all_variables.values())[0])
     m = len(all_variables)
-    fig, axes = plt.subplots(n, m, figsize=figsize)
+    fig, axes = plt.subplots(n, m, sharex=True, sharey=True, figsize=figsize)
     y_min = 0.98 * min(
         np.nanmin(variables["Battery voltage [V]"](t_eval))
         for allsigma_models_variables in all_variables.values()
@@ -49,7 +49,8 @@ def plot_voltages(
             )
             ax.set_xlim([0, t_max])
             ax.set_ylim([y_min, y_max])
-            ax.set_xlabel("Time [h]")
+            if l == len(allsigma_models_variables) - 1:
+                ax.set_xlabel("Time [h]")
             if l == 0:
                 ax.set_title(
                     "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
@@ -65,12 +66,15 @@ def plot_voltages(
                 # ax.xaxis.set_ticks_position("bottom")
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             if k % m == 0:
+                sigma_exponent = int(np.floor(np.log10(sigma)))
+                sigma_dash = 0.05 * sigma / 8000
                 ax.set_ylabel(
-                    "$\\hat{{\\sigma}}_p = {} S/m$\n$(\\sigma\\prime_p={})$".format(
-                        sigma, sigma
-                    ),
+                    (
+                        "$\\hat{{\\sigma}}_p = {}\\times 10^{{{}}}$ S/m"
+                        + "\n$(\\sigma'_p={}/\\mathcal{{C}})$"
+                    ).format(sigma / 10 ** sigma_exponent, sigma_exponent, sigma_dash),
                     rotation=0,
-                    labelpad=40,
+                    labelpad=50,
                 )
                 ax.yaxis.get_label().set_verticalalignment("center")
 
@@ -85,7 +89,7 @@ def plot_voltages(
                 )
     leg = fig.legend(labels, loc="lower center", ncol=len(labels))
     plt.subplots_adjust(
-        bottom=0.17, top=0.95, left=0.2, right=0.97, hspace=0.08, wspace=0.05
+        bottom=0.17, top=0.95, left=0.28, right=0.97, hspace=0.08, wspace=0.05
     )
     leg.get_frame().set_edgecolor("k")
     return fig, axes
@@ -203,22 +207,17 @@ def plot_variable(
 
 
 def plot_variable_x_z(
-    all_variables,
-    times,
-    variable,
-    limits_exceptions=None,
-    yaxis="SOC",
-    figsize=(6.4, 4),
+    all_variables, times, variable, limits_exceptions=None, figsize=(6.4, 6.4)
 ):
-    Crate = 0.1
-    sigma = 80000
+    Crate = 1
+    sigma = 8000
     models = ["1+1D LOQS", "1+1D Composite", "1+1D Full"]
     time = 0.1
     limits_exceptions = limits_exceptions or {}
     n = 1  # len(times)
     m = 3  # len(all_variables)
     models_variables = all_variables[Crate][sigma]
-    fig, axes = plt.subplots(n, m, figsize=figsize)
+    fig = plt.figure(figsize=figsize)
 
     x = models_variables[models[0]]["x"](0, x=np.linspace(0.1, 0.9))[:, 0]
     x_dim = models_variables[models[0]]["x [m]"](0, x=np.linspace(0.1, 0.9))[:, 0]
@@ -238,14 +237,32 @@ def plot_variable_x_z(
             for variables in models_variables.values()
         ]
     )
-    if "min" in limits_exceptions:
-        v_min = min(v_min, limits_exceptions["min"])
-    if "max" in limits_exceptions:
-        v_max = max(v_max, limits_exceptions["max"])
+    v_min_errors = pybamm.ax_min(
+        [
+            np.nanmin(
+                variables[variable](time, x=x, z=z)
+                - models_variables["1+1D Full"][variable](time, x=x, z=z)
+            )
+            for variables in models_variables.values()
+        ]
+    )
+    v_max_errors = pybamm.ax_max(
+        [
+            np.nanmax(
+                variables[variable](time, x=x, z=z)
+                - models_variables["1+1D Full"][variable](time, x=x, z=z)
+            )
+            for variables in models_variables.values()
+        ]
+    )
+    # if "min" in limits_exceptions:
+    #     v_min = min(v_min, limits_exceptions["min"])
+    # if "max" in limits_exceptions:
+    #     v_max = max(v_max, limits_exceptions["max"])
 
     # Plot
     for i, model in enumerate(models):
-        ax = axes.flat[i]
+        ax = fig.add_subplot(2, 3, i + 1)
 
         # Title
         ax.set_title(model)
@@ -256,15 +273,46 @@ def plot_variable_x_z(
             ax.set_ylabel("z [m]")
         else:
             ax.set_yticklabels([])
-        CS = ax.pcolormesh(
+        CS = ax.contourf(
             x_dim,
             z_dim,
             np.transpose(models_variables[model][variable](time, x=x, z=z)),
-            # vmin=v_min,
-            # vmax=v_max,
-            # levels=100,
+            vmin=v_min,
+            vmax=v_max,
+            levels=100,
         )
-    cbar = fig.colorbar(CS)
+        for c in CS.collections:
+            c.set_edgecolor("face")
+        ax1 = ax
+
+        if i < 2:
+            ax = fig.add_subplot(2, 2, i + 3)
+
+            # Title
+            ax.set_title(model + " (error)")
+            # x-axis
+            ax.set_xlabel("x [m]")
+            # y-axis
+            if i == 0:
+                ax.set_ylabel("z [m]")
+            else:
+                ax.set_yticklabels([])
+            error = models_variables["1+1D Full"][variable](
+                time, x=x, z=z
+            ) - models_variables[model][variable](time, x=x, z=z)
+            CS2 = ax.contourf(
+                x_dim,
+                z_dim,
+                np.transpose(error),
+                vmin=v_min_errors,
+                vmax=v_max_errors,
+                levels=100,
+            )
+            for c in CS2.collections:
+                c.set_edgecolor("face")
+            ax2 = ax
+    cbar = fig.colorbar(CS, ax=ax1)
+    cbar2 = fig.colorbar(CS2, ax=ax2)
 
     # Electrodes
     L_n = pybamm.lead_acid.BaseModel().default_parameter_values.process_symbol(
@@ -276,33 +324,36 @@ def plot_variable_x_z(
     # ax.plot([L_n, L_n], [0, np.max(z_dim)], "k--")
 
     # Plot
-    # plt.subplots_adjust(
-    #     bottom=0.17, top=0.95, left=0.18, right=0.97, hspace=0.08, wspace=0.05
-    # )
-    return fig, axes
+    plt.subplots_adjust(hspace=0.35, wspace=0.05)
+    return fig
 
 
 def plot_voltage_components(all_variables, t_eval, model, Crates):
+    sigma = 10 * 8000
     n = int(len(Crates) // np.sqrt(len(Crates)))
     m = int(np.ceil(len(Crates) / n))
     fig, axes = plt.subplots(n, m, figsize=(6.4, 2.3))
     labels = ["V", "$V_U$", "$V_k$", "$V_c$", "$V_o$", "$V_{cc}$"]
     overpotentials = [
-        "Average battery reaction overpotential [V]",
-        "Average battery concentration overpotential [V]",
-        "Average battery electrolyte ohmic losses [V]",
-        "Current collector losses [V]",
+        "X-averaged battery reaction overpotential [V]",
+        "X-averaged battery concentration overpotential [V]",
+        "X-averaged battery electrolyte ohmic losses [V]",
+        # "Current collector losses [V]",
     ]
     y_min = 0.95 * min(
-        np.nanmin(models_variables[model]["Battery voltage [V]"](t_eval))
-        for models_variables in all_variables.values()
+        np.nanmin(
+            allsigma_models_variables[sigma][model]["Battery voltage [V]"](t_eval)
+        )
+        for allsigma_models_variables in all_variables.values()
     )
     y_max = 1.05 * max(
-        np.nanmax(models_variables[model]["Battery voltage [V]"](t_eval))
-        for models_variables in all_variables.values()
+        np.nanmax(
+            allsigma_models_variables[sigma][model]["Battery voltage [V]"](t_eval)
+        )
+        for allsigma_models_variables in all_variables.values()
     )
     for k, Crate in enumerate(Crates):
-        variables = all_variables[Crate][model]
+        variables = all_variables[Crate][sigma][model]
         ax = axes.flat[k]
 
         # Set up
@@ -323,16 +374,16 @@ def plot_voltage_components(all_variables, t_eval, model, Crates):
         # Initialise
         # for lead-acid we multiply everything by 6 to
         time = variables["Time [h]"](t_eval)
-        initial_ocv = variables["Average battery open circuit voltage [V]"](0)
-        ocv = variables["Average battery open circuit voltage [V]"](t_eval)
+        initial_ocv = variables["X-averaged battery open circuit voltage [V]"](0, z=1)
+        ocv = variables["X-averaged battery open circuit voltage [V]"](t_eval, z=1)
         ax.fill_between(time, ocv, initial_ocv)
         top = ocv
         # Plot
         for overpotential in overpotentials:
-            bottom = top + variables[overpotential](t_eval)
+            bottom = top + variables[overpotential](t_eval, z=1)
             ax.fill_between(time, bottom, top)
             top = bottom
-        ax.plot(time, variables["Battery voltage [V]"](t_eval), "k--")
+        ax.plot(time, variables["Battery voltage [V]"](t_eval, z=1), "k--")
     leg = axes.flat[-1].legend(
         labels, bbox_to_anchor=(1.05, 0.5), loc="center left", frameon=True
     )

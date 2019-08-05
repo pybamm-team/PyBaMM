@@ -87,7 +87,7 @@ def discharge_states(compute):
     if compute:
         models = [
             pybamm.lead_acid.NewmanTiedemann(
-                {"surface form": "differential", "dimensionality": 1}, name="1D Full"
+                {"surface form": "algebraic", "dimensionality": 1}, name="1D Full"
             ),
             pybamm.lead_acid.NewmanTiedemann(
                 {"dimensionality": 1, "current collector": "potential pair"},
@@ -107,7 +107,7 @@ def discharge_states(compute):
             ),
         ]
         Crates = [0.1, 1, 2]
-        sigmas = [10 * 8000]  # , 100 * 8000, 1000 * 8000]
+        sigmas = [8000, 10 * 8000, 100 * 8000]  # , 1000 * 8000]
 
         t_eval = np.linspace(0, 1, 100)
         extra_parameter_values = {}  # "Bruggeman coefficient": 0.001}
@@ -129,8 +129,8 @@ def discharge_states(compute):
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    # plot_voltages(all_variables, t_eval)
-    # plot_variables(all_variables, t_eval)
+    plot_voltages(all_variables, t_eval)
+    plot_variables(all_variables, t_eval)
     plot_variables_x_z(all_variables, t_eval)
 
 

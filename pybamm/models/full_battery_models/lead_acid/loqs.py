@@ -179,7 +179,8 @@ class LOQS(BaseModel):
         """
 
         if (
-            self.options["current collector"] != "uniform"
+            self.options["current collector"]
+            not in ["uniform", "potential pair quite conductive averaged"]
             or self.options["surface form"] == "algebraic"
         ):
             return pybamm.ScikitsDaeSolver()

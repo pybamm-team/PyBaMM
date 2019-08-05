@@ -4,8 +4,15 @@
 import pybamm
 
 
-def model_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None):
+def model_comparison(
+    models, Crates, sigmas, t_eval, extra_parameter_values=None, existing_solutions=None
+):
     " Solve models at a range of Crates "
+    all_variables = {Crate: {sigma: {} for sigma in sigmas} for Crate in Crates}
+    if existing_solutions is not None:
+        for Crate in all_variables.keys():
+            if Crate in existing_solutions:
+                all_variables[Crate].update(existing_solutions[Crate])
     # load parameter values and geometry
     geometry = models[0].default_geometry
     extra_parameter_values = extra_parameter_values or {}
@@ -19,7 +26,7 @@ def model_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None
 
     # set mesh
     var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.z: 5}
+    var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.z: 10}
     mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
 
     # discretise models
@@ -31,32 +38,30 @@ def model_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None
         discs[model] = disc
 
     # solve model for range of Crates
-    all_variables = {}
     for Crate in Crates:
-        all_variables[Crate] = {}
         current = Crate * 17
         for sigma in sigmas:
-            all_variables[Crate][sigma] = {}
-            pybamm.logger.info(
-                """Setting typical current to {} A
-                and positive electrode condutivity to {} S/m""".format(
-                    current, sigma
+            if all_variables[Crate][sigma] == {}:
+                pybamm.logger.info(
+                    """Setting typical current to {} A
+                    and positive electrode condutivity to {} S/m""".format(
+                        current, sigma
+                    )
                 )
-            )
-            param.update(
-                {
-                    "Typical current [A]": current,
-                    "Positive electrode conductivity [S.m-1]": sigma,
-                }
-            )
-            for model in models:
-                param.update_model(model, discs[model])
-                solution = model.default_solver.solve(model, t_eval)
-                variables = pybamm.post_process_variables(
-                    model.variables, solution.t, solution.y, mesh
+                param.update(
+                    {
+                        "Typical current [A]": current,
+                        "Positive electrode conductivity [S.m-1]": sigma,
+                    }
                 )
-                variables["solution"] = solution
-                all_variables[Crate][sigma][model.name] = variables
+                for model in models:
+                    param.update_model(model, discs[model])
+                    solution = model.default_solver.solve(model, t_eval)
+                    variables = pybamm.post_process_variables(
+                        model.variables, solution.t, solution.y, mesh
+                    )
+                    variables["solution"] = solution
+                    all_variables[Crate][sigma][model.name] = variables
 
     return all_variables, t_eval
 
@@ -105,16 +110,25 @@ def convergence_study(models, Crates, all_npts, t_eval, extra_parameter_values=N
                 param.update_model(model_disc, disc)
                 try:
                     solution = model.default_solver.solve(model_disc, t_eval)
+                    success = True
                 except pybamm.SolverError:
                     pybamm.logger.error(
                         "Could not solve {!s} at {} A with {} points".format(
                             model.name, current, npts
                         )
                     )
-                    continue
-                voltage = pybamm.ProcessedVariable(
-                    model_disc.variables["Battery voltage [V]"], solution.t, solution.y
-                )(t_eval)
+                    solution = "Could not solve {!s} at {} A with {} points".format(
+                        model.name, current, npts
+                    )
+                    success = False
+                if success:
+                    voltage = pybamm.ProcessedVariable(
+                        model_disc.variables["Battery voltage [V]"],
+                        solution.t,
+                        solution.y,
+                    )(t_eval)
+                else:
+                    voltage = None
                 variables = {
                     "Battery voltage [V]": voltage,
                     "solution object": solution,
