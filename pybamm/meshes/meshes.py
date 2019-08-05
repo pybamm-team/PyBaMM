@@ -31,15 +31,25 @@ class Mesh(dict):
         # create submesh_pts from var_pts
         submesh_pts = {}
         for domain in geometry:
-            submesh_pts[domain] = {}
-            if len(list(geometry[domain]["primary"].keys())) > 2:
-                raise pybamm.GeometryError
-            for prim_sec in list(geometry[domain].keys()):
-                # skip over tabs key
-                if prim_sec != "tabs":
-                    for var in list(geometry[domain][prim_sec].keys()):
-                        if var.id not in var_id_pts.keys():
-                            if var.domain[0] in geometry.keys():
+            # Zero dimensional submesh case (only one point)
+            if issubclass(submesh_types[domain], pybamm.SubMesh0D):
+                submesh_pts[domain] = 1
+            # other cases
+            else:
+                submesh_pts[domain] = {}
+                if len(list(geometry[domain]["primary"].keys())) > 2:
+                    raise pybamm.GeometryError
+                for prim_sec in list(geometry[domain].keys()):
+                    # skip over tabs key
+                    if prim_sec != "tabs":
+                        for var in list(geometry[domain][prim_sec].keys()):
+                            # Raise error if the number of points for a particular
+                            # variable haven't been provided, unless that variable
+                            # doesn't appear in the geometry
+                            if (
+                                var.id not in var_id_pts.keys()
+                                and var.domain[0] in geometry.keys()
+                            ):
                                 raise KeyError(
                                     """
                                     Points not given for a variable in domain {}
@@ -47,7 +57,8 @@ class Mesh(dict):
                                         domain
                                     )
                                 )
-                        submesh_pts[domain][var.id] = var_id_pts[var.id]
+                            # Otherwise add to the dictionary of submesh points
+                            submesh_pts[domain][var.id] = var_id_pts[var.id]
         self.submesh_pts = submesh_pts
 
         # Input domain order manually
@@ -142,8 +153,9 @@ class Mesh(dict):
         submeshes = [
             (domain, submesh_list)
             for domain, submesh_list in self.items()
-            if domain != "time"
-            and not isinstance(submesh_list[0], pybamm.Scikit2DSubMesh)
+            if not isinstance(
+                submesh_list[0], (pybamm.SubMesh0D, pybamm.Scikit2DSubMesh)
+            )
         ]
         for domain, submesh_list in submeshes:
 

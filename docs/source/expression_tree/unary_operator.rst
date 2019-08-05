@@ -28,7 +28,7 @@ Unary Operators
 .. autoclass:: pybamm.BoundaryValue
   :members:
 
-.. autoclass:: pybamm.BoundaryFlux
+.. autoclass:: pybamm.BoundaryGradient
   :members:
 
 .. autoclass:: pybamm.Integral
@@ -42,4 +42,4 @@ Unary Operators
 
 .. autofunction:: pybamm.boundary_value
 
-.. autofunction:: pybamm.average
+.. autofunction:: pybamm.x_average

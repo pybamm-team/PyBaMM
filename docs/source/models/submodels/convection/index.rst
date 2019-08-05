@@ -7,6 +7,6 @@ Convection
   base_convection
   no_convection
   leading_convection
-  combined_convection
+  composite_convection
   full_convection
 

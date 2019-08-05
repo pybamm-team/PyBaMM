@@ -27,15 +27,11 @@ class SingleParticle(BaseModel):
     def get_fundamental_variables(self):
         if self.domain == "Negative":
             c_s_xav = pybamm.standard_variables.c_s_n_xav
-            c_s = pybamm.Broadcast(
-                c_s_xav, ["negative electrode"], broadcast_type="primary"
-            )
+            c_s = pybamm.PrimaryBroadcast(c_s_xav, ["negative electrode"])
 
         elif self.domain == "Positive":
             c_s_xav = pybamm.standard_variables.c_s_p_xav
-            c_s = pybamm.Broadcast(
-                c_s_xav, ["positive electrode"], broadcast_type="primary"
-            )
+            c_s = pybamm.PrimaryBroadcast(c_s_xav, ["positive electrode"])
 
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
 
@@ -46,12 +42,13 @@ class SingleParticle(BaseModel):
         c_s_xav = variables[
             "X-average " + self.domain.lower() + " particle concentration"
         ]
-        T_k_av = variables["Average " + self.domain.lower() + " electrode temperature"]
-
-        N_s_xav = self._flux_law(c_s_xav, T_k_av)
-        N_s = pybamm.Broadcast(
-            N_s_xav, [self._domain.lower() + " electrode"], broadcast_type="primary"
+        T_k_xav = pybamm.PrimaryBroadcast(
+            variables["X-averaged " + self.domain.lower() + " electrode temperature"],
+            [self.domain.lower() + " particle"],
         )
+
+        N_s_xav = self._flux_law(c_s_xav, T_k_xav)
+        N_s = pybamm.PrimaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
@@ -63,7 +60,9 @@ class SingleParticle(BaseModel):
         ]
         N_s_xav = variables["X-average " + self.domain.lower() + " particle flux"]
         j_av = variables[
-            "Average " + self.domain.lower() + " electrode interfacial current density"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode interfacial current density"
         ]
 
         return c_s_xav, N_s_xav, j_av

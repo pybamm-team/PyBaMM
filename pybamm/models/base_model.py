@@ -40,6 +40,7 @@ class BaseModel(object):
 
     def __init__(self, name="Unnamed model"):
         self.name = name
+        self.options = {}
 
         # Initialise empty model
         self._rhs = {}
@@ -192,6 +193,14 @@ class BaseModel(object):
     def set_of_parameters(self):
         return self._set_of_parameters
 
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, options):
+        self._options = options
+
     def __getitem__(self, key):
         return self.rhs[key]
 
@@ -245,7 +254,12 @@ class BaseModel(object):
         self.check_well_determined(post_discretisation)
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
-        self.check_variables()
+        self.check_default_variables_dictionaries()
+        # Can't check variables after discretising, since Variable objects get replaced
+        # by StateVector objects
+        # Checking variables is slow, so only do it in debug mode
+        if pybamm.settings.debug_mode is True and post_discretisation is False:
+            self.check_variables()
 
     def check_well_determined(self, post_discretisation):
         """ Check that the model is not under- or over-determined. """
@@ -330,9 +344,9 @@ class BaseModel(object):
 
         # Boundary conditions
         for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_symbol_of_class(
+            if eqn.has_symbol_of_classes(
                 (pybamm.Gradient, pybamm.Divergence)
-            ) and not eqn.has_symbol_of_class(pybamm.Integral):
+            ) and not eqn.has_symbol_of_classes(pybamm.Integral):
                 # I have relaxed this check for now so that the lumped temperature
                 # equation doesn't raise errors (this has and average in it)
 
@@ -351,7 +365,7 @@ class BaseModel(object):
                         )
                     )
 
-    def check_variables(self):
+    def check_default_variables_dictionaries(self):
         """ Chec that the right variables are provided. """
         missing_vars = []
         for output, expression in self._variables.items():
@@ -369,6 +383,7 @@ class BaseModel(object):
             for output in missing_vars:
                 del self._variables[output]
 
+    def check_variables(self):
         # Create list of all Variable nodes that appear in the model's list of variables
         all_vars = {}
         for eqn in self.variables.values():
@@ -380,8 +395,9 @@ class BaseModel(object):
         for var in {**self.rhs, **self.algebraic}.keys():
             if isinstance(var, pybamm.Variable):
                 var_ids_in_keys.add(var.id)
+            # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                var_ids_in_keys.update([x.id for x in var.children])
+                var_ids_in_keys.update([child.id for child in var.children])
         for var_id, var in all_vars.items():
             if var_id not in var_ids_in_keys:
                 raise pybamm.ModelError(

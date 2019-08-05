@@ -194,16 +194,16 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(stiffness)
 
-    def integral(self, domain, symbol, discretised_symbol):
+    def integral(self, child, discretised_child):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.SpatialMethod.integral`
         """
 
         # Calculate integration vector
-        integration_vector = self.definite_integral_vector(domain[0])
+        integration_vector = self.definite_integral_vector(child.domain[0])
 
-        out = integration_vector @ discretised_symbol
-        out.domain = []
+        out = integration_vector @ discretised_child
+
         return out
 
     def definite_integral_vector(self, domain):
@@ -238,9 +238,9 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         vector = skfem.asm(integral_form, mesh.basis)
         return pybamm.Matrix(vector[np.newaxis, :])
 
-    def indefinite_integral(self, domain, symbol, discretised_symbol):
+    def indefinite_integral(self, child, discretised_child):
         """Implementation of the indefinite integral operator. The
-        input discretised symbol must be defined on the internal mesh edges.
+        input discretised child must be defined on the internal mesh edges.
         See :meth:`pybamm.SpatialMethod.indefinite_integral`
         """
         raise NotImplementedError
@@ -276,14 +276,14 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             if symbol.side == "left":
                 boundary_val_vector[mesh.negative_tab] = vector[mesh.negative_tab]
             elif symbol.side == "right":
-                boundary_val_vector[mesh.positive_tab] = vector[mesh.negative_tab]
+                boundary_val_vector[mesh.positive_tab] = vector[mesh.positive_tab]
 
             # divide integration weights by (numerical) tab width to give average value
             boundary_val_vector = boundary_val_vector / (
                 boundary_val_vector[np.newaxis, :] @ np.ones_like(vector)
             )
 
-        elif isinstance(symbol, pybamm.BoundaryFlux):
+        elif isinstance(symbol, pybamm.BoundaryGradient):
             raise NotImplementedError
 
         # Return boundary value with domain given by symbol
@@ -325,15 +325,16 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         mass = skfem.asm(mass_form, mesh.basis)
 
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
-        _, lbc_type = boundary_conditions[symbol.id]["left"]
-        _, rbc_type = boundary_conditions[symbol.id]["right"]
+        if symbol.id in boundary_conditions:
+            _, lbc_type = boundary_conditions[symbol.id]["left"]
+            _, rbc_type = boundary_conditions[symbol.id]["right"]
 
-        if lbc_type == "Dirichlet":
-            # set source terms to zero on boundary by zeroing out mass matrix
-            self.bc_apply(mass, mesh.negative_tab, zero=True)
-        if rbc_type == "Dirichlet":
-            # set source terms to zero on boundary by zeroing out mass matrix
-            self.bc_apply(mass, mesh.positive_tab, zero=True)
+            if lbc_type == "Dirichlet":
+                # set source terms to zero on boundary by zeroing out mass matrix
+                self.bc_apply(mass, mesh.negative_tab, zero=True)
+            if rbc_type == "Dirichlet":
+                # set source terms to zero on boundary by zeroing out mass matrix
+                self.bc_apply(mass, mesh.positive_tab, zero=True)
 
         return pybamm.Matrix(mass)
 

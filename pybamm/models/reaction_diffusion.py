@@ -25,22 +25,13 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
 
         self.set_thermal_submodel()
         self.set_reactions()
-        self.set_current_collector_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
         self.set_interfacial_submodel()
         self.set_electrolyte_submodel()
+        self.set_current_collector_submodel()
 
         self.build_model()
-
-    def set_thermal_submodel(self):
-        self.submodels["thermal"] = pybamm.thermal.Isothermal(self.param)
-
-    def set_current_collector_submodel(self):
-
-        self.submodels["current collector"] = pybamm.current_collector.Uniform(
-            self.param
-        )
 
     def set_porosity_submodel(self):
         self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
@@ -52,6 +43,9 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
         electrolyte = pybamm.electrolyte.stefan_maxwell
         self.submodels["electrolyte diffusion"] = electrolyte.diffusion.Full(
             self.param, self.reactions
+        )
+        self.variables.update(
+            {"Positive current collector potential": pybamm.Scalar(0)}
         )
 
     def set_interfacial_submodel(self):
@@ -73,15 +67,15 @@ class ReactionDiffusionModel(pybamm.BaseBatteryModel):
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
         # Set current variables to use lead acid timescale
-        icell = pybamm.standard_parameters_lead_acid.current_with_time
-        icell_dim = (
+        i_cell = pybamm.standard_parameters_lead_acid.current_with_time
+        i_cell_dim = (
             pybamm.standard_parameters_lead_acid.dimensional_current_density_with_time
         )
         I = pybamm.standard_parameters_lead_acid.dimensional_current_with_time
         self.variables.update(
             {
-                "Total current density": icell,
-                "Total current density [A.m-2]": icell_dim,
+                "Total current density": i_cell,
+                "Total current density [A.m-2]": i_cell_dim,
                 "Current [A]": I,
             }
         )

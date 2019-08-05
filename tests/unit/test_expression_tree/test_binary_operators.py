@@ -81,10 +81,6 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(outer_fun.id, outer_class.id)
 
         # failures
-        with self.assertRaisesRegex(
-            pybamm.DomainError, "left child domain must be 'current collector'"
-        ):
-            pybamm.Outer(w, v)
         y = pybamm.StateVector(slice(10))
         with self.assertRaisesRegex(
             TypeError, "right child must only contain SpatialVariable and scalars"

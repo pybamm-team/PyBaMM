@@ -14,8 +14,8 @@ class TestLeadingOrder(unittest.TestCase):
         a = pybamm.Scalar(0)
         variables = {
             "Current collector current density": a,
-            "Average negative electrode interfacial current density": a,
-            "Average positive electrode interfacial current density": a,
+            "X-averaged negative electrode interfacial current density": a,
+            "X-averaged positive electrode interfacial current density": a,
         }
         submodel = pybamm.convection.LeadingOrder(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
