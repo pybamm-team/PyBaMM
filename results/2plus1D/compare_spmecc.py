@@ -128,7 +128,7 @@ z_plot = np.linspace(0, l_z, 21)
 
 
 def plot(t):
-    fig = plt.subplots(figsize=(15, 8))
+    plt.subplots(figsize=(15, 8))
     plt.tight_layout()
     plt.subplots_adjust(left=-0.1)
 
