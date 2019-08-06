@@ -197,7 +197,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
         if options["dimensionality"] == 0:
-            if options["current collector"] != "uniform":
+            if options["current collector"] not in [
+                "uniform",
+                "potential pair quite conductive averaged",
+            ]:
                 raise pybamm.OptionError(
                     "current collector model must be uniform in 0D model"
                 )

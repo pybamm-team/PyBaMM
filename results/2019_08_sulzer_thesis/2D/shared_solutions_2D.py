@@ -1,6 +1,7 @@
 #
 # Simulations
 #
+import numpy as np
 import pybamm
 import pickle
 
@@ -90,29 +91,32 @@ def model_comparison(
 
 def error_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None):
     " Solve models at differen Crates and sigmas and record the voltage "
-    # load parameter values and geometry
-    geometry = models[0].default_geometry
+    model_voltages = {
+        model.name: {Crate: {sigma: {} for sigma in sigmas} for Crate in Crates}
+        for model in models
+    }
+    # load parameter values
     param = models[0].default_parameter_values
     # Update parameters
     extra_parameter_values = extra_parameter_values or {}
     param.update(extra_parameter_values)
-
-    # Process parameters (same parameters for all models)
-    for model in models:
-        param.process_model(model)
-    param.process_geometry(geometry)
 
     # set mesh
     var = pybamm.standard_spatial_vars
 
     # solve model for range of Crates and npts
     var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.z: 5}
-    mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
 
-    # discretise models, store discretised model and discretisation
-    models_disc = {}
+    # discretise models, store discretisation
     discs = {}
     for model in models:
+        model.variables = {
+            "Battery voltage [V]": model.variables["Battery voltage [V]"]
+        }
+        param.process_model(model)
+        geometry = model.default_geometry
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
         discs[model] = disc
@@ -132,30 +136,36 @@ def error_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None
                     "Positive electrode conductivity [S.m-1]": sigma,
                 }
             )
-    for model in models:
-        param.update_model(model, disc)
-        try:
-            solution = model.default_solver.solve(model_disc, t_eval)
-            success = True
-        except pybamm.SolverError:
-            pybamm.logger.error(
-                "Could not solve {!s} at {} A with {} points".format(
-                    model.name, current, npts
-                )
-            )
-            solution = "Could not solve {!s} at {} A with {} points".format(
-                model.name, current, npts
-            )
-            success = False
-        if success:
-            voltage = pybamm.ProcessedVariable(
-                model_disc.variables["Battery voltage [V]"], solution.t, solution.y
-            )(t_eval)
-        else:
-            voltage = None
-        model_voltages[model.name][Crate][sigma] = voltage
+            for model in models:
+                param.update_model(model, discs[model])
+                try:
+                    solution = model.default_solver.solve(model, t_eval)
+                    success = True
+                except pybamm.SolverError:
+                    pybamm.logger.error(
+                        "Could not solve {!s} at {} A with sigma={}".format(
+                            model.name, current, sigma
+                        )
+                    )
+                    solution = "Could not solve {!s} at {} A with sigma={}".format(
+                        model.name, current, sigma
+                    )
+                    success = False
+                if success:
+                    try:
+                        voltage = pybamm.ProcessedVariable(
+                            model.variables["Battery voltage [V]"],
+                            solution.t,
+                            solution.y,
+                            mesh,
+                        )(t_eval)
+                    except ValueError:
+                        voltage = np.nan * np.ones_like(t_eval)
+                else:
+                    voltage = np.nan * np.ones_like(t_eval)
+                model_voltages[model.name][Crate][sigma] = voltage
 
-    return models_times_and_voltages
+    return model_voltages
 
 
 def convergence_study(models, Crates, sigmas, t_eval, extra_parameter_values=None):
