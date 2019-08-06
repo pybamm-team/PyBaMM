@@ -8,7 +8,7 @@ import pickle
 import pybamm
 import shared_plotting_2D
 from collections import defaultdict
-from shared_solutions_2D import error_comparison, convergence_study
+from shared_solutions_2D import error_comparison, time_comparison
 
 try:
     from config import OUTPUT_DIR
@@ -63,8 +63,8 @@ def plot_errors(model_voltages):
 
 
 def plot_times(model_voltages):
-    shared_plotting_2D.plot_times(model_voltages, Crate=1)
-    file_name = "discharge_asymptotics_solver_times.eps"
+    shared_plotting_2D.plot_times(model_voltages)
+    file_name = "2d_discharge_asymptotics_solver_times.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
@@ -116,11 +116,59 @@ def discharge_errors(compute):
     plot_errors(model_voltages)
 
 
+def discharge_times(compute):
+    savefile = "2d_discharge_asymptotics_times.pickle"
+    if compute:
+        models = [
+            pybamm.lead_acid.NewmanTiedemann(
+                {"surface form": "algebraic"}, name="1D Full"
+            ),
+            pybamm.lead_acid.LOQS(name="1D LOQS"),
+            pybamm.lead_acid.Composite(name="1D Composite"),
+            pybamm.lead_acid.Composite(
+                {"current collector": "potential pair quite conductive averaged"},
+                name="1+1D Composite Averaged",
+            ),
+            pybamm.lead_acid.NewmanTiedemann(
+                {
+                    "surface form": "algebraic",
+                    "dimensionality": 1,
+                    "current collector": "potential pair",
+                },
+                name="1+1D Full",
+            ),
+            pybamm.lead_acid.LOQS(
+                {"dimensionality": 1, "current collector": "potential pair"},
+                name="1+1D LOQS",
+            ),
+            pybamm.lead_acid.Composite(
+                {"dimensionality": 1, "current collector": "potential pair"},
+                name="1+1D Composite",
+            ),
+        ]
+        Crate = 1
+        sigma = 10 * 8000
+        all_npts = np.logspace(0.5, 3, 10)
+        t_eval = np.linspace(0, 0.6, 100)
+        model_voltages = time_comparison(models, Crate, sigma, all_npts, t_eval)
+        with open(savefile, "wb") as f:
+            pickle.dump(model_voltages, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        try:
+            with open(savefile, "rb") as f:
+                model_voltages = pickle.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Run script with '--compute' first to generate results"
+            )
+    plot_times(model_voltages)
+
+
 if __name__ == "__main__":
-    pybamm.set_logging_level("INFO")
+    pybamm.set_logging_level("DEBUG")
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    discharge_errors(args.compute)
-    # discharge_times_and_errors(args.compute)
+    # discharge_errors(args.compute)
+    discharge_times(args.compute)
     plt.show()

@@ -345,22 +345,16 @@ def plot_voltage_components(all_variables, t_eval, model, sigmas):
     fig.tight_layout()
 
 
-def plot_times(models_times_and_voltages, Crate=1, linestyles=None):
+def plot_times(models_times, linestyles=None):
     linestyles = linestyles or ["k-", "g--", "r:", "b-."]
     all_npts = defaultdict(list)
     solver_times = defaultdict(list)
     fig, ax = plt.subplots(1, 1)
-    for i, (model, times_and_voltages) in enumerate(models_times_and_voltages.items()):
-        for npts in times_and_voltages.keys():
-            try:
-                solver_time = times_and_voltages[npts][Crate][
-                    "solution object"
-                ].solve_time
-            except KeyError:
-                continue
+    for i, (model, times) in enumerate(models_times.items()):
+        for npts, solver_time in times.items():
             all_npts[model].append(npts * 3)
             solver_times[model].append(solver_time)
-        ax.loglog(all_npts[model], solver_times[model], linestyles[i], label=model)
+        ax.loglog(all_npts[model], solver_times[model], label=model)
     ax.set_xlabel("Number of grid points")
     ax.set_ylabel("Solver time [s]")
     ax.legend(loc="best")

@@ -178,66 +178,66 @@ def error_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None
     return model_voltages
 
 
-def convergence_study(models, Crates, sigmas, t_eval, extra_parameter_values=None):
-    " Solve models at a range of number of grid points "
-    # load parameter values and geometry
-    geometry = models[0].default_geometry
+def time_comparison(
+    models, Crate, sigma, all_npts, t_eval, extra_parameter_values=None
+):
+    " Solve models with different number of grid points and record the time taken"
+    model_times = {model.name: {npts: {} for npts in all_npts} for model in models}
+    # load parameter values
     param = models[0].default_parameter_values
     # Update parameters
     extra_parameter_values = extra_parameter_values or {}
-    param.update(extra_parameter_values)
-
-    # Process parameters (same parameters for all models)
-    for model in models:
-        param.process_model(model)
-    param.process_geometry(geometry)
+    param.update(
+        {
+            "Typical current [A]": Crate * 17,
+            "Positive electrode conductivity [S.m-1]": sigma,
+            **extra_parameter_values,
+        }
+    )
 
     # set mesh
     var = pybamm.standard_spatial_vars
 
-    # solve model for range of Crates and npts
-    models_times_and_voltages = {model.name: {} for model in models}
+    # discretise models, store discretisation
+    geometries = {}
+    for model in models:
+        # Remove all variables
+        model.variables = {}
+        # Remove voltage cut off
+        model.events = {
+            name: event
+            for name, event in model.events.items()
+            if name != "Minimum voltage"
+        }
+        param.process_model(model)
+        geometry = model.default_geometry
+        param.process_geometry(geometry)
+        geometries[model] = geometry
+
     for npts in all_npts:
-        pybamm.logger.info("Setting number of grid points to {}".format(npts))
-        var_pts = {var.x_n: npts, var.x_s: npts, var.x_p: npts}
-        mesh = pybamm.Mesh(geometry, models[-1].default_submesh_types, var_pts)
-
-        # discretise models, store discretised model and discretisation
-        models_disc = {}
-        discs = {}
+        pybamm.logger.info("Changing npts to {}".format(npts))
         for model in models:
-            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-            models_times_and_voltages[model.name][npts] = {}
-            models_disc[model.name] = disc.process_model(model, inplace=False)
-            discs[model.name] = disc
-
-        current = Crate * 17
-        pybamm.logger.info("Setting typical current to {} A".format(current))
-        param.update({"Typical current [A]": current})
-        for model in models:
-            model_disc = models_disc[model.name]
-            disc = discs[model.name]
-            param.update_model(model_disc, disc)
-            try:
-                solution = model.default_solver.solve(model_disc, t_eval)
-                success = True
-            except pybamm.SolverError:
-                pybamm.logger.error(
-                    "Could not solve {!s} at {} A with {} points".format(
-                        model.name, current, npts
-                    )
-                )
-                solution = "Could not solve {!s} at {} A with {} points".format(
-                    model.name, current, npts
-                )
-                success = False
-            if success:
-                voltage = pybamm.ProcessedVariable(
-                    model_disc.variables["Battery voltage [V]"], solution.t, solution.y
-                )(t_eval)
+            if npts > 40 and model.name in ["1+1D Full", "1+1D Composite"]:
+                time = np.nan
             else:
-                voltage = None
-            variables = {"Battery voltage [V]": voltage, "solution object": solution}
-            models_times_and_voltages[model.name][npts] = variables
+                # solve model for range of Crates and npts
+                var_pts = {var.x_n: npts, var.x_s: npts, var.x_p: npts, var.z: 20}
+                mesh = pybamm.Mesh(
+                    geometries[model], model.default_submesh_types, var_pts
+                )
+                disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+                model_disc = disc.process_model(model, inplace=False)
 
-    return models_times_and_voltages
+                try:
+                    solution = model.default_solver.solve(model_disc, t_eval)
+                    time = solution.solve_time
+                except pybamm.SolverError:
+                    pybamm.logger.error(
+                        "Could not solve {!s} at {} A with sigma={}".format(
+                            model.name, current, sigma
+                        )
+                    )
+                    time = np.nan
+            model_times[model.name][npts] = time
+
+    return model_times

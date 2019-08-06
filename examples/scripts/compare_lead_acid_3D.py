@@ -28,9 +28,9 @@ models = [
     #     },
     #     name="1+1D NewmanTiedemann",
     # ),
-    # pybamm.lead_acid.NewmanTiedemann(
-    #     {"surface form": "algebraic", "dimensionality": 1}, name="1D NewmanTiedemann"
-    # ),
+    pybamm.lead_acid.NewmanTiedemann(
+        {"surface form": "algebraic"}, name="1D NewmanTiedemann"
+    ),
     # pybamm.lead_acid.CompositeExtended(
     #     {
     #         # "surface form": "algebraic",
@@ -39,38 +39,12 @@ models = [
     #     },
     #     name="1+1D composite",
     # ),
-    pybamm.lead_acid.CompositeExtended(
-        {
-            "current collector": "potential pair quite conductive averaged",
-            "dimensionality": 1,
-        },
-        name="1+1D composite averaged",
-    ),
-    pybamm.lead_acid.CompositeExtended(
-        {"current collector": "potential pair quite conductive averaged"},
-        name="1D composite averaged",
+    pybamm.lead_acid.NewmanTiedemann(
+        {"current collector": "potential pair", "dimensionality": 1}, name="1+1D NT"
     ),
     # pybamm.lead_acid.CompositeExtended(
-    #     {
-    #         # "surface form": "algebraic",
-    #         # "current collector": "potential pair quite conductive averaged",
-    #         "dimensionality": 1
-    #     },
-    #     name="1D composite",
-    # ),
-    # pybamm.lead_acid.CompositeExtended(
-    #     {
-    #         "current collector": "potential pair quite conductive averaged",
-    #         "dimensionality": 1,
-    #     },
-    #     name="1+1D composite quite conductive averaged",
-    # ),
-    # pybamm.lead_acid.CompositeExtended(
-    #     {
-    #         # "current collector": "potential pair quite conductive averaged",
-    #         "dimensionality": 1
-    #     },
-    #     name="1D composite",
+    #     {"current collector": "potential pair quite conductive averaged"},
+    #     name="1D composite averaged",
     # ),
     # pybamm.lead_acid.FOQS(
     #     {"current collector": "potential pair", "dimensionality": 1}, name="1+1D FOQS"
@@ -104,7 +78,7 @@ for model in models:
     geometry = model.default_geometry
     param.process_geometry(geometry)
     var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.y: 10, var.z: 10}
+    var_pts = {var.x_n: 50, var.x_s: 50, var.x_p: 50, var.y: 10, var.z: 20}
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
