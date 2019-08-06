@@ -8,11 +8,13 @@ pybamm.set_logging_level("INFO")
 sys.setrecursionlimit(10000)
 
 # load current collector and SPMe models
-options = {"bc_options": {"dimensionality": 2}}
 cc_model = pybamm.current_collector.EffectiveResistance2D()
-spme_av = pybamm.lithium_ion.SPMe(name="SPMeCC")
-spme = pybamm.lithium_ion.SPMe(options, name="SPMe (2+1D)")
-models = {"Current collector": cc_model, "Average SPMe": spme_av, "SPMe (2+1D)": spme}
+spme_av = pybamm.lithium_ion.SPMe(name="Average SPMe")
+spme = pybamm.lithium_ion.SPMe(
+    {"current collector": "potential pair", "dimensionality": 2},
+    name="2+1D SPMe",
+)
+models = {"Current collector": cc_model, "Average SPMe": spme_av, "2+1D SPMe": spme}
 
 # set parameters based on the spme
 param = spme.default_parameter_values
@@ -51,7 +53,7 @@ for name, model in models.items():
         solutions[name] = model.default_solver.solve(model, t_eval)
 
 # plot terminal voltage
-for name in ["Average SPMe", "SPMe (2+1D)"]:
+for name in ["Average SPMe", "2+1D SPMe"]:
     t, y = solutions[name].t, solutions[name].y
     model = models[name]
     time = pybamm.ProcessedVariable(model.variables["Time [h]"], t, y)(t)
@@ -59,8 +61,8 @@ for name in ["Average SPMe", "SPMe (2+1D)"]:
         model.variables["Terminal voltage [V]"], t, y, mesh=meshes[name]
     )(t)
 
-    # add current collector Ohmic losses to SPMeCC
-    if model.name == "SPMeCC":
+    # add current collector Ohmic losses to avergae SPMEe to get SPMeCC voltage
+    if model.name == "Average SPMe":
         current = pybamm.ProcessedVariable(model.variables["Current [A]"], t, y)(t)
         delta = param.process_symbol(
             pybamm.standard_parameters_lithium_ion.delta
@@ -108,15 +110,15 @@ phi_s_cp_spmecc = potentials["Positive current collector potential [V]"]
 # get processed potentials from 2+1D SPMe
 phi_s_cn = pybamm.ProcessedVariable(
     model.variables["Negative current collector potential [V]"],
-    solutions["SPMe (2+1D)"].t,
-    solutions["SPMe (2+1D)"].y,
-    mesh=meshes["SPMe (2+1D)"],
+    solutions["2+1D SPMe"].t,
+    solutions["2+1D SPMe"].y,
+    mesh=meshes["2+1D SPMe"],
 )
 phi_s_cp = pybamm.ProcessedVariable(
     model.variables["Positive current collector potential [V]"],
-    solutions["SPMe (2+1D)"].t,
-    solutions["SPMe (2+1D)"].y,
-    mesh=meshes["SPMe (2+1D)"],
+    solutions["2+1D SPMe"].t,
+    solutions["2+1D SPMe"].y,
+    mesh=meshes["2+1D SPMe"],
 )
 
 # make plot
@@ -193,6 +195,6 @@ def plot(t):
     )
 
 
-plot(solutions["SPMe (2+1D)"].t[-1] / 2)
-
+plot(solutions["2+1D SPMe"].t[-1] / 2)
+import ipdb; ipdb.set_trace()
 plt.show()

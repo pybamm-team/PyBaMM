@@ -44,7 +44,6 @@ class BaseModel(pybamm.BaseSubModel):
             The variables which can be derived from the potential in the
             current collector.
         """
-        param = self.param
 
         pot_scale = self.param.potential_scale
 
