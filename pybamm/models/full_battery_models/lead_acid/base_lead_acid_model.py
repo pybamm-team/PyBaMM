@@ -48,7 +48,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Positive electrode OCV": os.path.join(
                     input_path, "lead_dioxide_electrode_ocv_Bode1977.py"
                 ),
-                "t_plus_function": lambda x: 2 * (1 - x),
+                "MacInnes t_plus function": lambda x: 2 * (1 - x),
             },
         )
 
