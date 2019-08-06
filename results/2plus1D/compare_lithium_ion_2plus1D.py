@@ -11,7 +11,7 @@ sys.setrecursionlimit(10000)
 models = [
     pybamm.lithium_ion.SPM(name="1D SPM"),
     pybamm.lithium_ion.SPMe(name="1D SPMe"),
-    pybamm.lithium_ion.DFN(name="1D DFN"),    
+    pybamm.lithium_ion.DFN(name="1D DFN"),
     pybamm.lithium_ion.SPM(
         {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPM"
     ),

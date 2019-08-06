@@ -11,8 +11,7 @@ sys.setrecursionlimit(10000)
 cc_model = pybamm.current_collector.EffectiveResistance2D()
 spme_av = pybamm.lithium_ion.SPMe(name="Average SPMe")
 spme = pybamm.lithium_ion.SPMe(
-    {"current collector": "potential pair", "dimensionality": 2},
-    name="2+1D SPMe",
+    {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPMe"
 )
 models = {"Current collector": cc_model, "Average SPMe": spme_av, "2+1D SPMe": spme}
 
@@ -196,5 +195,4 @@ def plot(t):
 
 
 plot(solutions["2+1D SPMe"].t[-1] / 2)
-import ipdb; ipdb.set_trace()
 plt.show()

@@ -85,8 +85,14 @@ class PotentialPair1plus1D(BasePotentialPair):
 
         param = self.param
         applied_current = param.current_with_time
+        cc_area = self._get_effective_current_collector_area()
 
-        pos_tab_bc = -applied_current / (param.sigma_cp * param.delta ** 2 * param.l_cp)
+        # cc_area appears here due to choice of non-dimensionalisation
+        pos_tab_bc = (
+            -applied_current
+            * cc_area
+            / (param.sigma_cp * param.delta ** 2 * param.l_cp)
+        )
 
         # Boundary condition needs to be on the variables that go into the Laplacian,
         # even though phi_s_cp isn't a pybamm.Variable object
@@ -131,8 +137,10 @@ class PotentialPair2plus1D(BasePotentialPair):
         )
 
         # cc_area appears here due to choice of non-dimensionalisation
-        pos_tab_bc = -applied_current * cc_area / (
-            param.sigma_cp * param.delta ** 2 * positive_tab_area
+        pos_tab_bc = (
+            -applied_current
+            * cc_area
+            / (param.sigma_cp * param.delta ** 2 * positive_tab_area)
         )
 
         # Boundary condition needs to be on the variables that go into the Laplacian,

@@ -319,7 +319,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         Overwrites the default :meth:`pybamm.SpatialMethod.boundary_value`
         """
 
-        # Return average value on the negative tab for "left" and positive tab 
+        # Return average value on the negative tab for "left" and positive tab
         # for "right"
         if isinstance(symbol, pybamm.BoundaryValue):
             # get integration_vector
