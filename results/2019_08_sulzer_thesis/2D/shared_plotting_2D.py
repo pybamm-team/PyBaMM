@@ -346,16 +346,26 @@ def plot_voltage_components(all_variables, t_eval, model, sigmas):
 
 
 def plot_times(models_times, linestyles=None):
-    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linestyles = {
+        "1+1D Full": "k-",
+        "1D Full": "k:",
+        "1+1D Composite": "b-",
+        "1+1D Composite Averaged": "b--",
+        # "1D Composite": "b:",
+        "1+1D LOQS": "g-",
+        "1D LOQS": "g:",
+    }
     all_npts = defaultdict(list)
     solver_times = defaultdict(list)
     fig, ax = plt.subplots(1, 1)
-    for i, (model, times) in enumerate(models_times.items()):
+    for i, (model, linestyle) in enumerate(linestyles.items()):
+        times = models_times[model]
         for npts, solver_time in times.items():
             all_npts[model].append(npts * 3)
             solver_times[model].append(solver_time)
-        ax.loglog(all_npts[model], solver_times[model], label=model)
+        ax.loglog(all_npts[model], solver_times[model], linestyle, label=model)
+    ax.set_xlim(min(all_npts[model]), max(all_npts[model]))
     ax.set_xlabel("Number of grid points")
     ax.set_ylabel("Solver time [s]")
-    ax.legend(loc="best")
+    ax.legend(loc="center left", bbox_to_anchor=(1.05, 0.5))
     fig.tight_layout()
