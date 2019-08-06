@@ -252,14 +252,16 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         raise NotImplementedError
 
-    def boundary_integral(self, domain, symbol, discretised_symbol, region=None):
+    def boundary_integral(self, child, discretised_child, region=None):
         """Implementation of the boundary integral operator.
         See :meth:`pybamm.SpatialMethod.boundary_integral`
         """
         # Calculate integration vector
-        integration_vector = self.boundary_integral_vector(domain[0], region=region)
+        integration_vector = self.boundary_integral_vector(
+            child.domain[0], region=region
+        )
 
-        out = integration_vector @ discretised_symbol
+        out = integration_vector @ discretised_child
         out.domain = []
         return out
 

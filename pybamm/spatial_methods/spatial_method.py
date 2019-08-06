@@ -196,15 +196,15 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def boundary_integral(self, symbol, discretised_symbol, region=None):
+    def boundary_integral(self, domain, child, discretised_child, region=None):
         """
         Implements the boundary integral for a spatial method.
 
         Parameters
         ----------
-        symbol: :class:`pybamm.Symbol`
+        child: :class:`pybamm.Symbol`
             The symbol to which is being integrated
-        discretised_symbol: :class:`pybamm.Symbol`
+        discretised_child: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
         region: str, optional
             The region of the boundary over which to integrate. If region is None
