@@ -1,6 +1,7 @@
 #
 # Simulations
 #
+import numpy as np
 import pybamm
 import pickle
 
@@ -112,9 +113,86 @@ def model_comparison(
     return all_variables, t_eval
 
 
-def convergence_study(
-    models, Crate, sigma, all_npts, t_eval, extra_parameter_values=None
-):
+def error_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None):
+    " Solve models at differen Crates and sigmas and record the voltage "
+    model_voltages = {
+        model.name: {Crate: {sigma: {} for sigma in sigmas} for Crate in Crates}
+        for model in models
+    }
+    # load parameter values
+    param = models[0].default_parameter_values
+    # Update parameters
+    extra_parameter_values = extra_parameter_values or {}
+    param.update(extra_parameter_values)
+
+    # set mesh
+    var = pybamm.standard_spatial_vars
+
+    # solve model for range of Crates and npts
+    var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.z: 5}
+
+    # discretise models, store discretisation
+    discs = {}
+    for model in models:
+        model.variables = {
+            "Battery voltage [V]": model.variables["Battery voltage [V]"]
+        }
+        param.process_model(model)
+        geometry = model.default_geometry
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        discs[model] = disc
+
+    for Crate in Crates:
+        current = Crate * 17
+        for sigma in sigmas:
+            pybamm.logger.info(
+                """Setting typical current to {} A
+                and positive electrode condutivity to {} S/m""".format(
+                    current, sigma
+                )
+            )
+            param.update(
+                {
+                    "Typical current [A]": current,
+                    "Positive electrode conductivity [S.m-1]": sigma,
+                }
+            )
+            for model in models:
+                param.update_model(model, discs[model])
+                try:
+                    solution = model.default_solver.solve(model, t_eval)
+                    success = True
+                except pybamm.SolverError:
+                    pybamm.logger.error(
+                        "Could not solve {!s} at {} A with sigma={}".format(
+                            model.name, current, sigma
+                        )
+                    )
+                    solution = "Could not solve {!s} at {} A with sigma={}".format(
+                        model.name, current, sigma
+                    )
+                    success = False
+                if success:
+                    try:
+                        voltage = pybamm.ProcessedVariable(
+                            model.variables["Battery voltage [V]"],
+                            solution.t,
+                            solution.y,
+                            mesh,
+                        )(t_eval)
+                    except ValueError:
+                        voltage = np.nan * np.ones_like(t_eval)
+                else:
+                    voltage = np.nan * np.ones_like(t_eval)
+                model_voltages[model.name][Crate][sigma] = voltage
+
+    return model_voltages
+
+
+def convergence_study(models, Crates, sigmas, t_eval, extra_parameter_values=None):
     " Solve models at a range of number of grid points "
     # load parameter values and geometry
     geometry = models[0].default_geometry

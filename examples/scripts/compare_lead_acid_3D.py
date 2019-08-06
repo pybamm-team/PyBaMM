@@ -41,7 +41,6 @@ models = [
     ),
     pybamm.lead_acid.CompositeExtended(
         {
-            # "surface form": "algebraic",
             "current collector": "potential pair quite conductive averaged",
             "dimensionality": 1,
         },
@@ -66,11 +65,10 @@ param.update(
         "Positive electrode conductivity [S.m-1]": 8000,
     }
 )
+
+# process models
 for model in models:
     param.process_model(model)
-
-# discretise models
-for model in models:
     geometry = model.default_geometry
     param.process_geometry(geometry)
     var = pybamm.standard_spatial_vars

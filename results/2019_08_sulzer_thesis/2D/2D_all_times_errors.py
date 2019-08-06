@@ -8,7 +8,7 @@ import pickle
 import pybamm
 import shared_plotting_2D
 from collections import defaultdict
-from shared_solutions_2D import model_comparison, convergence_study
+from shared_solutions_2D import error_comparison, convergence_study
 
 try:
     from config import OUTPUT_DIR
@@ -16,82 +16,106 @@ except ImportError:
     OUTPUT_DIR = None
 
 
-def plot_errors(models_times_and_voltages):
-    npts = 20
-    linestyles = ["k-", "g--", "r:", "b-."]
-    Crates = defaultdict(list)
-    voltage_errors = defaultdict(list)
-    fig, ax = plt.subplots(1, 1)
-    for i, (model, times_and_voltages) in enumerate(models_times_and_voltages.items()):
-        if model != "Full":
-            for Crate, variables in times_and_voltages[npts].items():
-                Crates[model].append(Crate)
-                full_voltage = models_times_and_voltages["Full"][npts][Crate][
-                    "Battery voltage [V]"
-                ]
-                reduced_voltage = variables["Battery voltage [V]"]
-                voltage_errors[model].append(pybamm.rmse(full_voltage, reduced_voltage))
-            ax.semilogx(
-                Crates[model], voltage_errors[model], linestyles[i], label=model
-            )
-    ax.set_xlabel("C-rate")
-    ax.set_ylabel("RMSE [V]")
-    ax.legend(loc="best")
-    fig.tight_layout()
-    file_name = "discharge_asymptotics_rmse.eps"
+def plot_errors(model_voltages):
+    t_eval = np.linspace(0, 1)
+    models = list(model_voltages.keys())
+    Crates = list(model_voltages[models[0]].keys())
+    sigmas = list(model_voltages[models[0]][Crates[0]].keys())
+    errors = np.zeros((len(Crates), len(sigmas)))
+    fig, axes = plt.subplots(2, 3, sharex=True, sharey=True)
+    models = [
+        "1+1D LOQS",
+        "1+1D Composite Averaged",
+        "1+1D Composite",
+        "1D LOQS",
+        "1D Composite",
+        "1D Full",
+    ]
+    for i, model in enumerate(models):
+        Crates_variables = model_voltages[model]
+        for j, (Crate, sigmas_voltages) in enumerate(Crates_variables.items()):
+            for k, (sigma, reduced_voltage) in enumerate(sigmas_voltages.items()):
+                full_voltage = model_voltages["1+1D Full"][Crate][sigma]
+                try:
+                    errors[k, j] = pybamm.rmse(full_voltage, reduced_voltage)
+                except:
+                    import ipdb
+
+                    ipdb.set_trace()
+        ax = axes.flat[i]
+        if i >= 3:
+            ax.set_xlabel("C-rate")
+        if i % 3 == 0:
+            ax.set_ylabel("$\\hat{{\\sigma}}_p$")
+        CS = ax.contourf(Crates, sigmas, np.log(errors), vmin=-5, vmax=1, levels=100)
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_title(model)
+    fig.colorbar(CS)
+    file_name = "2d_asymptotics_rmse.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_times(models_times_and_voltages):
-    shared_plotting_2D.plot_times(models_times_and_voltages, Crate=1)
+def plot_times(model_voltages):
+    shared_plotting_2D.plot_times(model_voltages, Crate=1)
     file_name = "discharge_asymptotics_solver_times.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def discharge_times_and_errors(compute):
-    savefile = "discharge_asymptotics_times_and_errors.pickle"
+def discharge_errors(compute):
+    savefile = "6by6_2d_discharge_asymptotics_errors.pickle"
     if compute:
-        try:
-            with open(savefile, "rb") as f:
-                models_times_and_voltages = pickle.load(f)
-        except FileNotFoundError:
-            models_times_and_voltages = pybamm.get_infinite_nested_dict()
         models = [
             pybamm.lead_acid.NewmanTiedemann(
-                {"surface form": "algebraic"}, name="Full"
+                {"surface form": "algebraic"}, name="1D Full"
             ),
-            pybamm.lead_acid.LOQS(name="LOQS"),
-            # pybamm.lead_acid.FOQS(name="FOQS"),
-            # pybamm.lead_acid.Composite(name="Composite"),
+            pybamm.lead_acid.LOQS(name="1D LOQS"),
+            pybamm.lead_acid.Composite(name="1D Composite"),
+            pybamm.lead_acid.Composite(
+                {"current collector": "potential pair quite conductive averaged"},
+                name="1+1D Composite Averaged",
+            ),
+            pybamm.lead_acid.NewmanTiedemann(
+                {
+                    "surface form": "algebraic",
+                    "dimensionality": 1,
+                    "current collector": "potential pair",
+                },
+                name="1+1D Full",
+            ),
+            pybamm.lead_acid.LOQS(
+                {"dimensionality": 1, "current collector": "potential pair"},
+                name="1+1D LOQS",
+            ),
+            pybamm.lead_acid.Composite(
+                {"dimensionality": 1, "current collector": "potential pair"},
+                name="1+1D Composite",
+            ),
         ]
-        Crates = np.linspace(0.01, 5, 2)
-        all_npts = [20]
+        Crates = np.logspace(np.log10(0.01), np.log10(10), 6)
+        sigmas = np.logspace(np.log10(8000), np.log10(1000 * 8000), 6)
         t_eval = np.linspace(0, 1, 100)
-        new_models_times_and_voltages = convergence_study(
-            models, Crates, all_npts, t_eval
-        )
-        models_times_and_voltages.update(new_models_times_and_voltages)
+        model_voltages = error_comparison(models, Crates, sigmas, t_eval)
         with open(savefile, "wb") as f:
-            pickle.dump(models_times_and_voltages, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(model_voltages, f, pickle.HIGHEST_PROTOCOL)
     else:
         try:
             with open(savefile, "rb") as f:
-                models_times_and_voltages = pickle.load(f)
+                model_voltages = pickle.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    plot_errors(models_times_and_voltages)
-    plot_times(models_times_and_voltages)
+    plot_errors(model_voltages)
 
 
 if __name__ == "__main__":
-    pybamm.set_logging_level("DEBUG")
+    pybamm.set_logging_level("INFO")
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    discharge_states(args.compute)
+    discharge_errors(args.compute)
     # discharge_times_and_errors(args.compute)
     plt.show()
