@@ -86,6 +86,15 @@ phi_s_cp = pybamm.Variable(
 i_boundary_cc = pybamm.Variable(
     "Current collector current density", domain="current collector"
 )
+phi_s_cn_composite = pybamm.Variable(
+    "Composite negative current collector potential", domain="current collector"
+)
+phi_s_cp_composite = pybamm.Variable(
+    "Composite positive current collector potential", domain="current collector"
+)
+i_boundary_cc_composite = pybamm.Variable(
+    "Composite current collector current density", domain="current collector"
+)
 
 
 # Particle concentration

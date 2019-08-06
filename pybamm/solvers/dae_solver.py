@@ -4,6 +4,7 @@
 import pybamm
 import numpy as np
 from scipy import optimize
+from scipy.sparse import issparse
 
 
 class DaeSolver(pybamm.BaseSolver):
@@ -194,14 +195,20 @@ class DaeSolver(pybamm.BaseSolver):
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")
+                jac_algebraic = simp.simplify(jac_algebraic)
                 jac = simp.simplify(jac)
 
             if model.use_to_python:
                 pybamm.logger.info("Converting jacobian to python")
+                jac_algebraic = pybamm.EvaluatorPython(jac_algebraic)
                 jac = pybamm.EvaluatorPython(jac)
+
+            def jac_alg_fn(t, y):
+                return jac_algebraic.evaluate(t, y)
 
         else:
             jac = None
+            jac_alg_fn = None
 
         if model.use_to_python:
             pybamm.logger.info("Converting RHS to python")
@@ -222,7 +229,7 @@ class DaeSolver(pybamm.BaseSolver):
 
         if len(model.algebraic) > 0:
             y0 = self.calculate_consistent_initial_conditions(
-                rhs, algebraic, model.concatenated_initial_conditions[:, 0]
+                rhs, algebraic, model.concatenated_initial_conditions[:, 0], jac_alg_fn
             )
         else:
             # can use DAE solver to solve ODE model
@@ -230,7 +237,9 @@ class DaeSolver(pybamm.BaseSolver):
 
         return concatenated_rhs, concatenated_algebraic, y0, events, jac
 
-    def calculate_consistent_initial_conditions(self, rhs, algebraic, y0_guess):
+    def calculate_consistent_initial_conditions(
+        self, rhs, algebraic, y0_guess, jac=None
+    ):
         """
         Calculate consistent initial conditions for the algebraic equations through
         root-finding
@@ -246,6 +255,9 @@ class DaeSolver(pybamm.BaseSolver):
         y0_guess : array-like
             Array of the user's guess for the initial conditions, used to initialise
             the root finding algorithm
+        jac : method
+            Function that takes in t and y and returns the value of the jacobian for the
+            algebraic equations
 
         Returns
         -------
@@ -270,9 +282,34 @@ class DaeSolver(pybamm.BaseSolver):
             )
             return out
 
+        if jac:
+            if issparse(jac(0, y0_guess)):
+
+                def jac_fn(y0_alg):
+                    """
+                    Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
+                    """
+                    y0 = np.concatenate([y0_diff, y0_alg])
+                    return jac(0, y0)[:, len_rhs:].toarray()
+
+            else:
+
+                def jac_fn(y0_alg):
+                    """
+                    Evaluates jacobian using y0_diff (fixed) and y0_alg (varying)
+                    """
+                    y0 = np.concatenate([y0_diff, y0_alg])
+                    return jac(0, y0)[:, len_rhs:]
+
+        else:
+            jac_fn = None
         # Find the values of y0_alg that are roots of the algebraic equations
         sol = optimize.root(
-            root_fun, y0_alg_guess, method=self.root_method, tol=self.root_tol
+            root_fun,
+            y0_alg_guess,
+            jac=jac_fn,
+            method=self.root_method,
+            tol=self.root_tol,
         )
         # Return full set of consistent initial conditions (y0_diff unchanged)
         y0_consistent = np.concatenate([y0_diff, sol.x])

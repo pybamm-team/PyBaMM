@@ -18,7 +18,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             spatial_method.divergence(None, None, None)
         with self.assertRaises(NotImplementedError):
-            spatial_method.indefinite_integral(None, None, None)
+            spatial_method.indefinite_integral(None, None)
 
     def test_discretise_equations(self):
         # get mesh

@@ -24,7 +24,6 @@ class HigherOrderBaseModel(BaseModel):
 
         self.set_leading_order_model()
         self.set_reactions()
-        self.set_current_collector_submodel()
         # Electrolyte submodel to get first-order concentrations
         self.set_electrolyte_diffusion_submodel()
         self.set_other_species_diffusion_submodels()
@@ -39,8 +38,26 @@ class HigherOrderBaseModel(BaseModel):
         self.set_full_convection_submodel()
         self.set_full_porosity_submodel()
         self.set_thermal_submodel()
+        self.set_current_collector_submodel()
 
         self.build_model()
+
+    def set_current_collector_submodel(self):
+        cc = pybamm.current_collector
+
+        if self.options["current collector"] == "uniform":
+            submodel = cc.Uniform(self.param)
+        elif self.options["current collector"] == "potential pair quite conductive":
+            if self.options["dimensionality"] == 1:
+                submodel = cc.QuiteConductivePotentialPair1plus1D(self.param)
+            elif self.options["dimensionality"] == 2:
+                submodel = cc.QuiteConductivePotentialPair2plus1D(self.param)
+        elif self.options["current collector"] == "potential pair":
+            if self.options["dimensionality"] == 1:
+                submodel = cc.CompositePotentialPair1plus1D(self.param)
+            elif self.options["dimensionality"] == 2:
+                submodel = cc.CompositePotentialPair2plus1D(self.param)
+        self.submodels["current collector"] = submodel
 
     def set_leading_order_model(self):
         leading_order_model = pybamm.lead_acid.LOQS(
@@ -61,21 +78,6 @@ class HigherOrderBaseModel(BaseModel):
         ] = leading_order_model.rhs[
             leading_order_model.variables["X-averaged electrolyte concentration"]
         ]
-
-    def set_current_collector_submodel(self):
-
-        if self.options["bc_options"]["dimensionality"] == 0:
-            self.submodels["current collector"] = pybamm.current_collector.Uniform(
-                self.param
-            )
-        elif self.options["bc_options"]["dimensionality"] == 1:
-            self.submodels[
-                "current collector"
-            ] = pybamm.current_collector.surface_form.LeadingOrder(self.param)
-        elif self.options["bc_options"]["dimensionality"] == 2:
-            self.submodels[
-                "current collector"
-            ] = pybamm.current_collector.SingleParticlePotentialPair(self.param)
 
     def set_average_interfacial_submodel(self):
         self.submodels[
@@ -157,7 +159,10 @@ class HigherOrderBaseModel(BaseModel):
         Create and return the default solver for this model
         """
         # Different solver depending on whether we solve ODEs or DAEs
-        if self.options["surface form"] == "algebraic":
+        if (
+            self.options["current collector"] != "uniform"
+            or self.options["surface form"] == "algebraic"
+        ):
             return pybamm.ScikitsDaeSolver()
         else:
             return pybamm.ScipySolver()

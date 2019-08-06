@@ -38,7 +38,7 @@ class BaseHigherOrder(BaseModel):
 
         c_e_av = self.unpack(variables)
 
-        i_boundary_cc = variables["Current collector current density"]
+        i_boundary_cc_0 = variables["Leading-order current collector current density"]
         c_e = variables["Electrolyte concentration"]
         delta_phi_n_av = variables[
             "X-averaged negative electrode surface potential difference"
@@ -74,9 +74,9 @@ class BaseHigherOrder(BaseModel):
             chi_av_p = chi_av
 
         # electrolyte current
-        i_e_n = pybamm.outer(i_boundary_cc, x_n / l_n)
-        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
-        i_e_p = pybamm.outer(i_boundary_cc, (1 - x_p) / l_p)
+        i_e_n = pybamm.outer(i_boundary_cc_0, x_n / l_n)
+        i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "separator")
+        i_e_p = pybamm.outer(i_boundary_cc_0, (1 - x_p) / l_p)
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
 
         # electrolyte potential
@@ -92,7 +92,7 @@ class BaseHigherOrder(BaseModel):
                 )
             )
             - (
-                (i_boundary_cc * param.C_e * l_n / param.gamma_e)
+                (i_boundary_cc_0 * param.C_e * l_n / param.gamma_e)
                 * (1 / (3 * kappa_n_av) - 1 / kappa_s_av)
             )
         )
@@ -106,11 +106,11 @@ class BaseHigherOrder(BaseModel):
                 )
             )
             - pybamm.outer(
-                i_boundary_cc * (param.C_e / param.gamma_e) / kappa_n_av,
+                i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_n_av,
                 (x_n ** 2 - l_n ** 2) / (2 * l_n),
             )
             - pybamm.PrimaryBroadcast(
-                i_boundary_cc * l_n * (param.C_e / param.gamma_e) / kappa_s_av,
+                i_boundary_cc_0 * l_n * (param.C_e / param.gamma_e) / kappa_s_av,
                 "negative electrode",
             )
         )
@@ -123,7 +123,9 @@ class BaseHigherOrder(BaseModel):
                     c_e_s / pybamm.PrimaryBroadcast(c_e_av, "separator")
                 )
             )
-            - pybamm.outer(i_boundary_cc * param.C_e / param.gamma_e / kappa_s_av, x_s)
+            - pybamm.outer(
+                i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_s_av, x_s
+            )
         )
 
         phi_e_p = (
@@ -135,11 +137,11 @@ class BaseHigherOrder(BaseModel):
                 )
             )
             - pybamm.outer(
-                i_boundary_cc * (param.C_e / param.gamma_e) / kappa_p_av,
+                i_boundary_cc_0 * (param.C_e / param.gamma_e) / kappa_p_av,
                 (x_p * (2 - x_p) + l_p ** 2 - 1) / (2 * l_p),
             )
             - pybamm.PrimaryBroadcast(
-                i_boundary_cc * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av,
+                i_boundary_cc_0 * (1 - l_p) * (param.C_e / param.gamma_e) / kappa_s_av,
                 "positive electrode",
             )
         )
@@ -162,7 +164,7 @@ class BaseHigherOrder(BaseModel):
         )
 
         # average electrolyte ohmic losses
-        delta_phi_e_av = -(param.C_e * i_boundary_cc / param.gamma_e) * (
+        delta_phi_e_av = -(param.C_e * i_boundary_cc_0 / param.gamma_e) * (
             param.l_n / (3 * kappa_n_av)
             + param.l_s / (kappa_s_av)
             + param.l_p / (3 * kappa_p_av)

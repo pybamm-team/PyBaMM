@@ -51,7 +51,7 @@ class Full(BaseModel):
         variables.update(self._get_standard_current_variables(i_s))
 
         if self.domain == "Positive":
-            variables.update(self._get_standard_whole_cell_current_variables(variables))
+            variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables
 
@@ -69,11 +69,12 @@ class Full(BaseModel):
     def set_boundary_conditions(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
+        phi_s_cn = variables["Negative current collector potential"]
         eps = variables[self.domain + " electrode porosity"]
         i_boundary_cc = variables["Current collector current density"]
 
         if self.domain == "Negative":
-            lbc = (pybamm.Scalar(0), "Dirichlet")
+            lbc = (phi_s_cn, "Dirichlet")
             rbc = (pybamm.Scalar(0), "Neumann")
 
         elif self.domain == "Positive":

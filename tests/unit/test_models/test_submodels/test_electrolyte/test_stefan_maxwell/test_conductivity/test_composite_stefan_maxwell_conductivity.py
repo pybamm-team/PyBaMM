@@ -14,7 +14,7 @@ class TestComposite(unittest.TestCase):
         c_e = pybamm.standard_variables.c_e
 
         variables = {
-            "Current collector current density": a,
+            "Leading-order current collector current density": a,
             "Electrolyte concentration": c_e,
             "X-averaged electrolyte concentration": a,
             "X-averaged negative electrode potential": a,

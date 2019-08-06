@@ -51,6 +51,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         phi_e_s_av = pybamm.x_average(phi_e_s)
         phi_e_p_av = pybamm.x_average(phi_e_p)
         eta_e_av = phi_e_p_av - phi_e_n_av
+        phi_e_av = pybamm.x_average(phi_e)
 
         variables = {
             "Negative electrolyte potential": phi_e_n,
@@ -60,7 +61,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             "Positive electrolyte potential": phi_e_p,
             "Positive electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e_p,
             "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": -param.U_n_ref + pot_scale * phi_e,
+            "Electrolyte potential [V]": phi_e,
+            "X-averaged electrolyte potential": phi_e_av,
+            "X-averaged electrolyte potential [V]": -param.U_n_ref
+            + pot_scale * phi_e_av,
             "X-averaged negative electrolyte potential": phi_e_n_av,
             "X-averaged negative electrolyte potential [V]": -param.U_n_ref
             + pot_scale * phi_e_n_av,

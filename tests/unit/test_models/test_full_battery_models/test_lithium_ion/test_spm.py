@@ -17,22 +17,25 @@ class TestSPM(unittest.TestCase):
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertIn("negative particle", model.default_geometry)
 
-        options = {"bc_options": {"dimensionality": 2}}
+        options = {"dimensionality": 2}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIn("current collector", model.default_geometry)
 
     def test_well_posed_2plus1D(self):
-        options = {"bc_options": {"dimensionality": 2}}
+        options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-        options = {"bc_options": {"dimensionality": 1}}
-        with self.assertRaises(NotImplementedError):
-            model = pybamm.lithium_ion.SPM(options)
+        options = {"current collector": "potential pair", "dimensionality": 2}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
 
-        options = {"bc_options": {"dimensionality": 5}}
-        with self.assertRaises(pybamm.OptionError):
-            model = pybamm.lithium_ion.SPM(options)
+        options = {
+            "current collector": "single particle potential pair",
+            "dimensionality": 2,
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
 
     def test_thermal(self):
         options = {"thermal": "lumped"}
@@ -49,7 +52,7 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         self.assertIsInstance(model.default_solver, pybamm.ScipySolver)
 
-        options = {"bc_options": {"dimensionality": 2}}
+        options = {"current collector": "potential pair", "dimensionality": 2}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
