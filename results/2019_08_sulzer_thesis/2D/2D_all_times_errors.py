@@ -16,6 +16,15 @@ except ImportError:
     OUTPUT_DIR = None
 
 
+def fill_nan(array):
+    ok = ~np.isnan(array)
+    xp = ok.ravel().nonzero()[0]
+    fp = array[~np.isnan(array)]
+    x = np.isnan(array).ravel().nonzero()[0]
+    array[np.isnan(array)] = np.interp(x, xp, fp)
+    return array
+
+
 def plot_errors(model_voltages):
     t_eval = np.linspace(0, 1)
     models = list(model_voltages.keys())
@@ -36,12 +45,8 @@ def plot_errors(model_voltages):
         for j, (Crate, sigmas_voltages) in enumerate(Crates_variables.items()):
             for k, (sigma, reduced_voltage) in enumerate(sigmas_voltages.items()):
                 full_voltage = model_voltages["1+1D Full"][Crate][sigma]
-                try:
-                    errors[k, j] = pybamm.rmse(full_voltage, reduced_voltage)
-                except:
-                    import ipdb
-
-                    ipdb.set_trace()
+                errors[k, j] = pybamm.rmse(full_voltage, reduced_voltage)
+        # errors = fill_nan(errors)
         ax = axes.flat[i]
         if i >= 3:
             ax.set_xlabel("C-rate")
@@ -65,7 +70,7 @@ def plot_times(model_voltages):
 
 
 def discharge_errors(compute):
-    savefile = "6by6_2d_discharge_asymptotics_errors.pickle"
+    savefile = "nocutoff_8by8_2d_discharge_asymptotics_errors.pickle"
     if compute:
         models = [
             pybamm.lead_acid.NewmanTiedemann(
@@ -94,8 +99,8 @@ def discharge_errors(compute):
                 name="1+1D Composite",
             ),
         ]
-        Crates = np.logspace(np.log10(0.01), np.log10(10), 6)
-        sigmas = np.logspace(np.log10(8000), np.log10(1000 * 8000), 6)
+        Crates = np.logspace(np.log10(0.01), np.log10(10), 8)
+        sigmas = np.logspace(np.log10(8000), np.log10(1000 * 8000), 8)
         t_eval = np.linspace(0, 1, 100)
         model_voltages = error_comparison(models, Crates, sigmas, t_eval)
         with open(savefile, "wb") as f:

@@ -110,8 +110,15 @@ def error_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None
     # discretise models, store discretisation
     discs = {}
     for model in models:
+        # Keep only voltage
         model.variables = {
             "Battery voltage [V]": model.variables["Battery voltage [V]"]
+        }
+        # Remove voltage cut off
+        model.events = {
+            name: event
+            for name, event in model.events.items()
+            if name != "Minimum voltage"
         }
         param.process_model(model)
         geometry = model.default_geometry
@@ -160,6 +167,9 @@ def error_comparison(models, Crates, sigmas, t_eval, extra_parameter_values=None
                             mesh,
                         )(t_eval)
                     except ValueError:
+                        import ipdb
+
+                        ipdb.set_trace()
                         voltage = np.nan * np.ones_like(t_eval)
                 else:
                     voltage = np.nan * np.ones_like(t_eval)
