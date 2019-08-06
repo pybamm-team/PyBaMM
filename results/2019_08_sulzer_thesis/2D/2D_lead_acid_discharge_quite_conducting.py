@@ -17,7 +17,7 @@ except ImportError:
 
 def plot_voltages(all_variables, t_eval):
     Crates = [0.1, 1, 2]
-    sigmas = [5 * 8000, 10 * 8000, 100 * 8000]
+    sigmas = [8000, 5 * 8000, 10 * 8000, 100 * 8000]
     all_variables = {
         k: {sigma: models for sigma, models in v.items() if sigma in sigmas}
         for k, v in all_variables.items()
@@ -26,7 +26,11 @@ def plot_voltages(all_variables, t_eval):
     linestyles = ["k:", "k-", "g--", "b-."]
     linewidths = [0.7, 1.4, 1.4, 1.4]
     shared_plotting_2D.plot_voltages(
-        all_variables, t_eval, linestyles=linestyles, linewidths=linewidths
+        all_variables,
+        t_eval,
+        linestyles=linestyles,
+        linewidths=linewidths,
+        figsize=(6.4, 5),
     )
     file_name = "2d_quite_discharge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
@@ -63,7 +67,7 @@ def discharge_states(compute):
                 "dimensionality": 1,
                 "current collector": "potential pair quite conductive",
             },
-            name="1+1D LOQS",
+            name="1+1D LOQS\n(quite conductive)",
         ),
         # pybamm.lead_acid.FOQS(
         #     {"dimensionality": 1, "current collector": "potential pair"},
@@ -74,7 +78,7 @@ def discharge_states(compute):
                 "dimensionality": 1,
                 "current collector": "potential pair quite conductive averaged",
             },
-            name="1+1D Composite",
+            name="1+1D Composite\n(quite conductive)",
         ),
     ]
     for model in models:

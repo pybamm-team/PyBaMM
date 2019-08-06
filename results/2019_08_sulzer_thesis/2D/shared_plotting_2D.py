@@ -209,6 +209,116 @@ def plot_variable(
     return fig, axes
 
 
+def plot_variable_allsigma(
+    all_variables,
+    time,
+    variable,
+    limits_exceptions=None,
+    yaxis="SOC",
+    linestyles=None,
+    linewidths=None,
+    figsize=(6.4, 4),
+):
+    limits_exceptions = limits_exceptions or {}
+    linestyles = linestyles or ["k-", "g--", "r:", "b-."]
+    linewidths = linewidths or [1.4, 1.4, 1.4, 1.4]
+    n = len(list(all_variables.values())[0])
+    m = len(all_variables)
+    Crates = list(all_variables.keys())
+    sigmas = list(all_variables[Crates[0]].keys())
+    labels = list(all_variables[Crates[0]][sigmas[0]].keys())
+
+    z = all_variables[Crates[0]][sigmas[0]][labels[0]]["z"](0, z=np.linspace(0, 1))[
+        :, 0
+    ]
+    z_dim = all_variables[Crates[0]][sigmas[0]][labels[0]]["z [m]"](
+        0, z=np.linspace(0, 1)
+    )[:, 0]
+
+    fig, axes = plt.subplots(n, m, figsize=figsize)
+
+    # Default limits
+    y_min = pybamm.ax_min(
+        [
+            np.nanmin(variables[variable](np.linspace(0, 1), z=z))
+            for allsigma_models_variables in all_variables.values()
+            for models_variables in allsigma_models_variables.values()
+            for variables in models_variables.values()
+        ]
+    )
+    y_max = pybamm.ax_max(
+        [
+            np.nanmax(variables[variable](np.linspace(0, 1), z=z))
+            for allsigma_models_variables in all_variables.values()
+            for models_variables in allsigma_models_variables.values()
+            for variables in models_variables.values()
+        ]
+    )
+    # Exceptions
+    if "min" in limits_exceptions:
+        y_min = limits_exceptions["min"]
+    if "max" in limits_exceptions:
+        y_max = limits_exceptions["max"]
+
+    # Plot
+    for i, (Crate, allsigma_models_variables) in enumerate(all_variables.items()):
+        for j, (sigma, models_variables) in enumerate(
+            allsigma_models_variables.items()
+        ):
+            if len(sigmas) == 1:
+                ax = axes[i]
+            else:
+                ax = axes[j, i]
+            ax.set_xlim([z_dim[0], z_dim[-1]])
+            ax.set_ylim([y_min, y_max])
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+
+            # Title
+            if j == 0:
+                ax.set_title(
+                    "\\textbf{{({})}} {}C ($\\mathcal{{C}}_e={}$)".format(
+                        chr(97 + i), abs(Crate), abs(Crate) * 0.6
+                    )
+                )
+            # x-axis
+            if j == len(sigmas) - 1:
+                ax.set_xlabel("z [m]")
+            else:
+                ax.set_xticklabels([])
+
+            # y-axis
+            if i == 0:
+                # If we only want to plot one time the y label is the variable
+                if len(sigmas) == 1:
+                    ax.set_ylabel(variable)
+                # Otherwise the y label is the time
+                else:
+                    sigma_exponent = int(np.floor(np.log10(sigma)))
+                    sigma_dash = 0.05 * sigma / 8000
+                    ax.set_ylabel(
+                        (
+                            "$\\hat{{\\sigma}}_p = {}\\times 10^{{{}}}$ S/m"
+                            + "\n$(\\sigma'_p={}/\\mathcal{{C}})$"
+                        ).format(
+                            sigma / 10 ** sigma_exponent, sigma_exponent, sigma_dash
+                        ),
+                        rotation=0,
+                        labelpad=50,
+                    )
+            else:
+                ax.set_yticklabels([])
+
+            # Plot
+            for j, variables in enumerate(models_variables.values()):
+                ax.plot(z_dim, variables[variable](time, z=z), linestyles[j])
+    leg = fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
+    leg.get_frame().set_edgecolor("k")
+    plt.subplots_adjust(
+        bottom=0.23, top=0.92, left=0.18, right=0.97, hspace=0.08, wspace=0.05
+    )
+    return fig, axes
+
+
 def plot_variable_x_z(
     all_variables, time_Crate_sigma, variable, limits_exceptions=None, figsize=(6.4, 4)
 ):
@@ -263,9 +373,9 @@ def plot_variable_x_z(
         )
         for c in CS.collections:
             c.set_edgecolor("face")
-        ax1 = ax
 
-    fig.colorbar(CS, ax=ax1)
+    cbar = fig.colorbar(CS, ax=ax)
+    cbar.set_label("Electrolyte concentration [Molar]", rotation=270, labelpad=20)
 
     # Electrodes
     L_n = pybamm.lead_acid.BaseModel().default_parameter_values.process_symbol(

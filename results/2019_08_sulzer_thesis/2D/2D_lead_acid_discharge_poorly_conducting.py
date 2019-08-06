@@ -18,7 +18,7 @@ except ImportError:
 
 def plot_voltages(all_variables, t_eval):
     Crates = [0.1, 1, 2]
-    sigmas = [5 * 8000, 10 * 8000, 100 * 8000]
+    sigmas = [8000, 5 * 8000, 10 * 8000, 100 * 8000]
     all_variables = {
         k: {sigma: models for sigma, models in v.items() if sigma in sigmas}
         for k, v in all_variables.items()
@@ -27,7 +27,11 @@ def plot_voltages(all_variables, t_eval):
     linestyles = ["k:", "k-", "g--", "b-."]
     linewidths = [0.7, 1.4, 1.4, 1.4]
     shared_plotting_2D.plot_voltages(
-        all_variables, t_eval, linestyles=linestyles, linewidths=linewidths
+        all_variables,
+        t_eval,
+        linestyles=linestyles,
+        linewidths=linewidths,
+        figsize=(6.4, 5),
     )
     file_name = "2d_poor_discharge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
@@ -37,7 +41,7 @@ def plot_voltages(all_variables, t_eval):
 def plot_variables(all_variables, t_eval):
     # Set up
     Crates = [0.1, 1, 2]
-    times = np.array([0, 0.195, 0.375])
+    times = np.array([0, 0.078, 0.156])
     var_file_names = {
         "X-averaged electrolyte concentration [Molar]"
         + "": "2d_poor_discharge_average_electrolyte_concentration_comparison"
@@ -51,22 +55,34 @@ def plot_variables(all_variables, t_eval):
             exceptions = limits_exceptions[var]
         else:
             exceptions = {}
-        for sigma in [5 * 8000, 10 * 8000]:
-            shared_plotting_2D.plot_variable(
-                all_variables,
-                times,
-                sigma,
-                var,
-                exceptions,
-                linestyles=linestyles,
-                linewidths=linewidths,
+        # for sigma in [8000, 5 * 8000, 10 * 8000]:
+        #     shared_plotting_2D.plot_variable(
+        #         all_variables,
+        #         times,
+        #         sigma,
+        #         var,
+        #         exceptions,
+        #         linestyles=linestyles,
+        #         linewidths=linewidths,
+        #     )
+        #     if OUTPUT_DIR is not None:
+        #         plt.savefig(
+        #             OUTPUT_DIR + file_name + "_sigma={}.eps".format(sigma),
+        #             format="eps",
+        #             dpi=1000,
+        #         )
+        shared_plotting_2D.plot_variable_allsigma(
+            all_variables,
+            0.2,
+            var,
+            exceptions,
+            linestyles=linestyles,
+            linewidths=linewidths,
+        )
+        if OUTPUT_DIR is not None:
+            plt.savefig(
+                OUTPUT_DIR + file_name + "_allsigma.eps", format="eps", dpi=1000
             )
-            if OUTPUT_DIR is not None:
-                plt.savefig(
-                    OUTPUT_DIR + file_name + "_sigma={}.eps".format(sigma),
-                    format="eps",
-                    dpi=1000,
-                )
 
 
 def plot_variables_x_z(all_variables, t_eval):
@@ -123,6 +139,11 @@ def discharge_states(compute):
             for name, variable in model.variables.items()
             if name in variables_to_keep
         }
+        model.events = {
+            name: event
+            for name, event in model.events.items()
+            if name != "Minimum voltage"
+        }
     Crates = [0.1, 1, 2]
     sigmas = [8000, 5 * 8000, 10 * 8000, 100 * 8000]
 
@@ -137,9 +158,9 @@ def discharge_states(compute):
         use_force=compute,
         extra_parameter_values=extra_parameter_values,
     )
-    plot_voltages(all_variables, t_eval)
+    # plot_voltages(all_variables, t_eval)
     plot_variables(all_variables, t_eval)
-    plot_variables_x_z(all_variables, t_eval)
+    # plot_variables_x_z(all_variables, t_eval)
 
 
 if __name__ == "__main__":

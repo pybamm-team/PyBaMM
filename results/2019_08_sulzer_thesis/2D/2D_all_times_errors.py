@@ -31,7 +31,7 @@ def plot_errors(model_voltages):
     Crates = list(model_voltages[models[0]].keys())
     sigmas = list(model_voltages[models[0]][Crates[0]].keys())
     errors = np.zeros((len(Crates), len(sigmas)))
-    fig, axes = plt.subplots(2, 3, sharex=True, sharey=True)
+    fig, axes = plt.subplots(2, 3, sharey=True, figsize=(6.4, 4.5))
     models = [
         "1+1D LOQS",
         "1+1D Composite Averaged",
@@ -48,16 +48,20 @@ def plot_errors(model_voltages):
                 errors[k, j] = pybamm.rmse(full_voltage, reduced_voltage)
         # errors = fill_nan(errors)
         ax = axes.flat[i]
-        if i >= 3:
-            ax.set_xlabel("C-rate")
+        ax.set_xlabel("C-rate, $\\mathcal{C}$")
         if i % 3 == 0:
-            ax.set_ylabel("$\\hat{{\\sigma}}_p$")
+            ax.set_ylabel("$\\hat{{\\sigma}}_p$ [S/m]")
         CS = ax.contourf(Crates, sigmas, np.log(errors), vmin=-5, vmax=1, levels=100)
+        for c in CS.collections:
+            c.set_edgecolor("face")
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.set_title(model)
-    fig.colorbar(CS)
+    cb_ax = fig.add_axes([0.89, 0.11, 0.02, 0.77])
+    cbar = fig.colorbar(CS, cax=cb_ax, ticks=[-10, -8, -6, -4, -2, 0, 2])
+    cbar.set_label("log(RMSE) [V]", rotation=270, labelpad=10)
     file_name = "2d_asymptotics_rmse.eps"
+    plt.subplots_adjust(hspace=0.5, wspace=0.1, left=0.1, right=0.87)
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 

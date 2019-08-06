@@ -25,7 +25,7 @@ os.chdir(pybamm.root_dir())
 # NOTE: the results in pybamm stop when a voltage cutoff is reached, so
 # for higher C-rate the pybamm solution may stop before the comsol solution
 Crates = [0.1, 1, 2]
-sigmas = [5 * 8000, 10 * 8000, 100 * 8000]
+sigmas = [8000, 5 * 8000, 10 * 8000, 100 * 8000]
 
 # load the comsol results
 comsol_voltages = pickle.load(
@@ -172,7 +172,7 @@ for i, Crate in enumerate(Crates):
 
 leg = fig.legend(loc="lower center", ncol=4, columnspacing=1.1)
 plt.subplots_adjust(
-    bottom=0.23, top=0.92, left=0.28, right=0.97, hspace=0.08, wspace=0.05
+    bottom=0.19, top=0.92, left=0.28, right=0.97, hspace=0.08, wspace=0.05
 )
 if OUTPUT_DIR is not None:
     plt.savefig(OUTPUT_DIR + "comsol_voltages_comparison.eps", format="eps", dpi=1000)
