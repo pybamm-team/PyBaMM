@@ -196,7 +196,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def boundary_integral(self, domain, child, discretised_child, region=None):
+    def boundary_integral(self, child, discretised_child, region=None):
         """
         Implements the boundary integral for a spatial method.
 
