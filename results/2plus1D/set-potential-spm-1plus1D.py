@@ -69,7 +69,7 @@ current_step1 = pybamm.ProcessedVariable(
 )
 # update potentials (e.g. zero volts on neg. current collector, 3.3 volts on pos.)
 phi_s_cn_dim_new = np.zeros(var_pts[var.z])
-phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z])
+phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z]) - 0.05 * np.linspace(0, 1, var_pts[var.z])
 variables = {
     "Negative current collector potential": non_dim_potential(
         phi_s_cn_dim_new, "negative"
@@ -95,3 +95,23 @@ plt.plot(t_eval1, voltage_step1(t_eval1), t_eval2, voltage_step2(t_eval2))
 plt.xlabel('t')
 plt.ylabel('Voltage [V]')
 plt.show()
+
+def plot_var(var, solution, time=-1):
+    variable = model.variables[var]
+    len_x = len(mesh.combine_submeshes(*variable.domain))
+    len_z = variable.shape[0] // len_x
+    entries = np.empty((len_x, len_z, len(solution.t)))
+
+    for idx in range(len(solution.t)):
+        t = solution.t[idx]
+        y = solution.y[:, idx]
+        entries[:, :, idx] = np.reshape(variable.evaluate(t, y), [len_x, len_z])
+    plt.figure()
+    for bat_id in range(len_x):
+        plt.plot(range(len_z), entries[bat_id, :, time].flatten())
+    plt.figure()
+    plt.imshow(entries[:, :, time])
+
+plot_var(var="Interfacial current density", solution=solution2, time=-1)
+plot_var(var="Negative particle concentration [mol.m-3]", solution=solution2, time=-1)
+plot_var(var="Positive particle concentration [mol.m-3]", solution=solution2, time=-1)
