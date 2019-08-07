@@ -142,7 +142,10 @@ def plot_variable(
             if i == 0:
                 # If we only want to plot one time the y label is the variable
                 if len(times) == 1:
-                    ax.set_ylabel(variable)
+                    if variable == "Volume-averaged velocity [m.s-1]":
+                        ax.set_ylabel("Volume-averaged velocity [m/s]")
+                    else:
+                        ax.set_ylabel(variable)
                 # Otherwise the y label is the time
                 else:
                     for variables in models_variables.values():
@@ -197,7 +200,7 @@ def plot_time_dependent_variables(
         ]
     )
     linestyles = ["--", ":", "-.", "-"]
-    colors = colors or ["k", "b"]
+    colors = colors or ["k", "r"]
     for i, (Crate, models_variables) in enumerate(all_variables.items()):
         for j, model in enumerate(models[1:]):
             full_variables = models_variables[full_model]

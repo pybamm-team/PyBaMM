@@ -73,11 +73,12 @@ def plot_variables(all_variables, t_eval):
         #         )
         shared_plotting_2D.plot_variable_allsigma(
             all_variables,
-            0.2,
+            0.1,
             var,
             exceptions,
             linestyles=linestyles,
             linewidths=linewidths,
+            figsize=(6.5, 5),
         )
         if OUTPUT_DIR is not None:
             plt.savefig(
@@ -98,7 +99,7 @@ def plot_variables_x_z(all_variables, t_eval):
         else:
             exceptions = {}
         for sigma in [8000, 5 * 8000, 10 * 8000]:
-            time_Crate_sigma = (0.195, 1, sigma)
+            time_Crate_sigma = (0.1, 1, sigma)
             shared_plotting_2D.plot_variable_x_z(
                 all_variables, time_Crate_sigma, var, exceptions
             )
@@ -158,16 +159,15 @@ def discharge_states(compute):
         use_force=compute,
         extra_parameter_values=extra_parameter_values,
     )
-    # plot_voltages(all_variables, t_eval)
+    plot_voltages(all_variables, t_eval)
     plot_variables(all_variables, t_eval)
-    # plot_variables_x_z(all_variables, t_eval)
+    plot_variables_x_z(all_variables, t_eval)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    if args.compute:
-        pybamm.set_logging_level("DEBUG")
+    pybamm.set_logging_level("DEBUG")
     discharge_states(args.compute)
     plt.show()

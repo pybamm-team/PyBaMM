@@ -305,6 +305,7 @@ def plot_variable_allsigma(
                         rotation=0,
                         labelpad=50,
                     )
+                    ax.yaxis.get_label().set_verticalalignment("center")
             else:
                 ax.set_yticklabels([])
 
@@ -314,13 +315,13 @@ def plot_variable_allsigma(
     leg = fig.legend(labels, loc="lower center", ncol=len(labels), frameon=True)
     leg.get_frame().set_edgecolor("k")
     plt.subplots_adjust(
-        bottom=0.23, top=0.92, left=0.18, right=0.97, hspace=0.08, wspace=0.05
+        bottom=0.2, top=0.92, left=0.28, right=0.97, hspace=0.08, wspace=0.05
     )
     return fig, axes
 
 
 def plot_variable_x_z(
-    all_variables, time_Crate_sigma, variable, limits_exceptions=None, figsize=(6.4, 4)
+    all_variables, time_Crate_sigma, variable, limits_exceptions=None, figsize=(6.4, 3)
 ):
     time, Crate, sigma = time_Crate_sigma
     models = ["1+1D LOQS", "1+1D Composite", "1+1D Full"]
@@ -351,6 +352,20 @@ def plot_variable_x_z(
     )
 
     # Plot
+    L_n = (
+        pybamm.lead_acid.BaseModel()
+        .default_parameter_values.process_symbol(
+            pybamm.standard_parameters_lead_acid.L_n
+        )
+        .evaluate()
+    )
+    L_s = (
+        pybamm.lead_acid.BaseModel()
+        .default_parameter_values.process_symbol(
+            pybamm.standard_parameters_lead_acid.L_s
+        )
+        .evaluate()
+    )
     for i, model in enumerate(models):
         ax = axes.flat[i]
 
@@ -370,24 +385,21 @@ def plot_variable_x_z(
             vmin=v_min,
             vmax=v_max,
             levels=100,
+            cmap="jet",
         )
         for c in CS.collections:
             c.set_edgecolor("face")
 
-    cbar = fig.colorbar(CS, ax=ax)
+        # Electrodes
+        ax.axvline(L_n, color="k", linestyle="--", linewidth=0.5)
+        ax.axvline(L_n + L_s, color="k", linestyle="--", linewidth=0.5)
+
+    cb_ax = fig.add_axes([0.86, 0.15, 0.02, 0.73])
+    cbar = fig.colorbar(CS, cax=cb_ax)
     cbar.set_label("Electrolyte concentration [Molar]", rotation=270, labelpad=20)
 
-    # Electrodes
-    L_n = pybamm.lead_acid.BaseModel().default_parameter_values.process_symbol(
-        pybamm.standard_parameters_lead_acid.L_n
-    )
-    L_s = pybamm.lead_acid.BaseModel().default_parameter_values.process_symbol(
-        pybamm.standard_parameters_lead_acid.L_s
-    )
-    # ax.plot([L_n, L_n], [0, np.max(z_dim)], "k--")
-
     # Plot
-    plt.subplots_adjust(hspace=0.35, wspace=0.05)
+    plt.subplots_adjust(hspace=0.35, wspace=0.05, right=0.84, bottom=0.15)
     return fig, axes
 
 
@@ -454,19 +466,27 @@ def plot_voltage_components(all_variables, t_eval, model, sigmas):
     fig.tight_layout()
 
 
-def plot_times(models_times, linestyles=None):
-    linestyles = {
-        "1+1D Full": "k-",
-        "1D Full": "k:",
-        "1+1D Composite": "b-",
-        "1+1D Composite Averaged": "b--",
-        # "1D Composite": "b:",
-        "1+1D LOQS": "g-",
-        "1D LOQS": "g:",
-    }
+def plot_times(models_times, dimensions):
+    if dimensions == 1:
+        linestyles = {
+            "1D Full": "k-",
+            "1D Composite": "b-",
+            # "1D FOQS": "r-",
+            "1D LOQS": "g-",
+        }
+    elif dimensions == 2:
+        linestyles = {
+            "1+1D Full": "k-",
+            "1+1D Composite": "b-",
+            "1D Full": "k:",
+            "1+1D Composite Averaged": "b--",
+            # "1D Composite": "b:",
+            "1+1D LOQS": "g-",
+            "1D LOQS": "g:",
+        }
     all_npts = defaultdict(list)
     solver_times = defaultdict(list)
-    fig, ax = plt.subplots(1, 1)
+    fig, ax = plt.subplots(1, 1, figsize=(6.4, 3))
     for i, (model, linestyle) in enumerate(linestyles.items()):
         times = models_times[model]
         for npts, solver_time in times.items():

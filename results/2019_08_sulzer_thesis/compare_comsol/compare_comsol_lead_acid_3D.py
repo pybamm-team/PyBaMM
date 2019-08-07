@@ -60,7 +60,7 @@ if args.compute:
     param["MacInnes t_plus function"] = lambda x: 1 - 2 * x
 
     var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.z: 5}
+    var_pts = {var.x_n: 8, var.x_s: 8, var.x_p: 8, var.z: 8}
     discs = {}
     for model in pybamm_models:
         param.process_model(model)
@@ -169,6 +169,8 @@ for i, Crate in enumerate(Crates):
                 ax.set_xlabel("Time [h]")
             else:
                 ax.set_xticklabels([])
+            if i == 1 and j == len(sigmas) - 1:
+                ax.set_xticks([0, 0.4, 0.8])
 
 leg = fig.legend(loc="lower center", ncol=4, columnspacing=1.1)
 plt.subplots_adjust(

@@ -34,7 +34,7 @@ models = [
     pybamm.lead_acid.CompositeExtended(
         {
             # "surface form": "algebraic",
-            "current collector": "potential pair quite conductive",
+            "current collector": "potential pair",
             "dimensionality": 1,
         },
         name="1+1D composite",
@@ -72,7 +72,7 @@ for model in models:
     geometry = model.default_geometry
     param.process_geometry(geometry)
     var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.y: 10, var.z: 20}
+    var_pts = {var.x_n: 50, var.x_s: 50, var.x_p: 50, var.y: 10, var.z: 20}
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)

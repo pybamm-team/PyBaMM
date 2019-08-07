@@ -33,12 +33,12 @@ def plot_errors(model_voltages):
     errors = np.zeros((len(Crates), len(sigmas)))
     fig, axes = plt.subplots(2, 3, sharey=True, figsize=(6.4, 4.5))
     models = [
-        "1+1D LOQS",
-        "1+1D Composite Averaged",
-        "1+1D Composite",
         "1D LOQS",
         "1D Composite",
         "1D Full",
+        "1+1D LOQS",
+        "1+1D Composite Averaged",
+        "1+1D Composite",
     ]
     for i, model in enumerate(models):
         Crates_variables = model_voltages[model]
@@ -51,7 +51,9 @@ def plot_errors(model_voltages):
         ax.set_xlabel("C-rate, $\\mathcal{C}$")
         if i % 3 == 0:
             ax.set_ylabel("$\\hat{{\\sigma}}_p$ [S/m]")
-        CS = ax.contourf(Crates, sigmas, np.log(errors), vmin=-5, vmax=1, levels=100)
+        CS = ax.contourf(
+            Crates, sigmas, np.log(errors), vmin=-5, vmax=1, levels=100, cmap="jet"
+        )
         for c in CS.collections:
             c.set_edgecolor("face")
         ax.set_xscale("log")
@@ -59,7 +61,7 @@ def plot_errors(model_voltages):
         ax.set_title(model)
     cb_ax = fig.add_axes([0.89, 0.11, 0.02, 0.77])
     cbar = fig.colorbar(CS, cax=cb_ax, ticks=[-10, -8, -6, -4, -2, 0, 2])
-    cbar.set_label("log(RMSE) [V]", rotation=270, labelpad=10)
+    cbar.set_label("log(RMSE) [V]", rotation=270, labelpad=15)
     file_name = "2d_asymptotics_rmse.eps"
     plt.subplots_adjust(hspace=0.5, wspace=0.1, left=0.1, right=0.87)
     if OUTPUT_DIR is not None:
@@ -67,7 +69,13 @@ def plot_errors(model_voltages):
 
 
 def plot_times(model_voltages):
-    shared_plotting_2D.plot_times(model_voltages)
+    "Plot solver times for both 1D and 2D"
+    shared_plotting_2D.plot_times(model_voltages, dimensions=1)
+    file_name = "1d_discharge_asymptotics_solver_times.eps"
+    if OUTPUT_DIR is not None:
+        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
+
+    shared_plotting_2D.plot_times(model_voltages, dimensions=2)
     file_name = "2d_discharge_asymptotics_solver_times.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
@@ -173,6 +181,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
     args = parser.parse_args()
-    # discharge_errors(args.compute)
+    discharge_errors(args.compute)
     discharge_times(args.compute)
     plt.show()
