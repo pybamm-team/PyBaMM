@@ -252,7 +252,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         raise NotImplementedError
 
-    def boundary_integral(self, child, discretised_child, region=None):
+    def boundary_integral(self, child, discretised_child, region):
         """Implementation of the boundary integral operator.
         See :meth:`pybamm.SpatialMethod.boundary_integral`
         """
@@ -265,7 +265,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         out.domain = []
         return out
 
-    def boundary_integral_vector(self, domain, region=None):
+    def boundary_integral_vector(self, domain, region):
         """A node in the expression tree representing an integral operator over the
         boundary of a domain
 
@@ -279,9 +279,9 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         ----------
         domain : list
             The domain(s) of the variable in the integrand
-        region : str, optional
-            The region of the boundary over which to integrate. If region is None
-            (default) the integration is carried out over the entire boundary. If
+        region : str
+            The region of the boundary over which to integrate. If region is
+            `entire` the integration is carried out over the entire boundary. If
             region is `negative tab` or `positive tab` then the integration is only
             carried out over the appropriate part of the boundary corresponding to
             the tab.
@@ -301,7 +301,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         def integral_form(v, dv, w):
             return v
 
-        if region is None:
+        if region == "entire":
             # assemble over all facets
             integration_vector = skfem.asm(integral_form, mesh.facet_basis)
         elif region == "negative tab":

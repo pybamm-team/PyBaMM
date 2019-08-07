@@ -20,8 +20,18 @@ models = [
     ),
 ]
 
-# load parameter values and process models
+# load parameter values
 param = models[0].default_parameter_values
+# adjust current to correspond to a typical current density of 24 [A.m-2]
+C_rate = 1
+param["Typical current [A]"] = (
+    C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
+)
+# make current collectors not so conductive, just for illustrative purposes
+param["Negative current collector conductivity [S.m-1]"] = 5.96e6
+param["Positive current collector conductivity [S.m-1]"] = 3.55e6
+
+# process models
 for model in models:
     param.process_model(model)
 

@@ -115,6 +115,8 @@ class EffectiveResistance2D(pybamm.BaseModel):
         l_cp = param_values.process_symbol(param.l_cp).evaluate()
         l_y = param_values.process_symbol(param.l_y).evaluate()
         l_z = param_values.process_symbol(param.l_z).evaluate()
+        neg_tab_y = param_values.process_symbol(param.centre_y_tab_n).evaluate()
+        neg_tab_z = param_values.process_symbol(param.centre_z_tab_n).evaluate()
         sigma_cn_prime = param_values.process_symbol(param.sigma_cn_prime).evaluate()
         sigma_cp_prime = param_values.process_symbol(param.sigma_cp_prime).evaluate()
         alpha = param_values.process_symbol(param.alpha).evaluate()
@@ -144,12 +146,22 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
         denominator = sigma_cn_prime * l_cn + sigma_cn_prime * l_cp
 
+        # The method onlu defines psi up to an arbitrray function of time. This
+        # is fixed by ensuring phi_s_cn = 0 on the negative tab when reconstructing
+        # the potentials
+        def phi_s_cn_tab(t):
+            phi_s_cn_tab = (
+                I_av(t) * l_y * l_z * psi(t=None, y=neg_tab_y, z=neg_tab_z)
+                - sigma_cp_prime * l_cp * V_cc(t, y=neg_tab_y, z=neg_tab_z)
+            ) / denominator
+            return phi_s_cn_tab
+
         def phi_s_cn(t, y, z):
             phi_s_cn = (
                 I_av(t) * l_y * l_z * psi(t=None, y=y, z=z)
                 - sigma_cp_prime * l_cp * V_cc(t, y, z)
             ) / denominator
-            return phi_s_cn
+            return phi_s_cn - phi_s_cn_tab(t)
 
         def phi_s_cn_dim(t, y, z):
             return phi_s_cn(t, y, z) * pot_scale
@@ -159,7 +171,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
                 I_av(t) * l_y * l_z * psi(t=None, y=y, z=z)
                 + sigma_cn_prime * l_cn * V_cc(t, y, z)
             ) / denominator
-            return phi_s_cp
+            return phi_s_cp - phi_s_cn_tab(t)
 
         def phi_s_cp_dim(t, y, z):
             return U_ref + phi_s_cp(t, y, z) * pot_scale

@@ -537,7 +537,7 @@ class BoundaryIntegral(SpatialOperator):
     function : :class:`pybamm.Symbol`
         The function to be integrated (will become self.children[0])
     region : str, optional
-        The region of the boundary over which to integrate. If region is None
+        The region of the boundary over which to integrate. If region is `entire`
         (default) the integration is carried out over the entire boundary. If
         region is `negative tab` or `positive tab` then the integration is only
         carried out over the appropriate part of the boundary corresponding to
@@ -546,13 +546,13 @@ class BoundaryIntegral(SpatialOperator):
     **Extends:** :class:`SpatialOperator`
     """
 
-    def __init__(self, child, region=None):
+    def __init__(self, child, region="entire"):
         # boundary integral removes domain
         domain = []
         auxiliary_domains = {}
 
         name = "boundary integral over "
-        if region is None:
+        if region == "entire":
             name += "entire boundary"
         elif region == "negative tab":
             name += "negative tab"
