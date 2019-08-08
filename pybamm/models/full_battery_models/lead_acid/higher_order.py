@@ -233,6 +233,13 @@ class FOQSAverageCorrection(FOQS):
             self.param, self.reactions
         )
 
+    @property
+    def default_solver(self):
+        """
+        Create and return the default solver for this model
+        """
+        return pybamm.ScikitsDaeSolver()
+
 
 class Composite(HigherOrderBaseModel):
     """Composite model for lead-acid, from [1]_.

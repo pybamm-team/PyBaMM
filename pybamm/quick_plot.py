@@ -84,14 +84,14 @@ class QuickPlot(object):
             self.spatial_scales["x"] = (variables["x [m]"] / variables["x"]).evaluate()[
                 -1
             ]
-        if "y [m]" and "y" in variables:
-            self.spatial_scales["y"] = (variables["y [m]"] / variables["y"]).evaluate()[
-                -1
-            ]
-        if "z [m]" and "z" in variables:
-            self.spatial_scales["z"] = (variables["z [m]"] / variables["z"]).evaluate()[
-                -1
-            ]
+        # if "y [m]" and "y" in variables:
+        #     self.spatial_scales["y"] = (variables["y [m]"] / variables["y"]).evaluate()[
+        #         -1
+        #     ]
+        # if "z [m]" and "z" in variables:
+        #     self.spatial_scales["z"] = (variables["z [m]"] / variables["z"]).evaluate()[
+        #         -1
+        #     ]
         if "Time [h]" and "Time" in variables:
             self.time_scale = (variables["Time [h]"] / variables["Time"]).evaluate(t=1)
 

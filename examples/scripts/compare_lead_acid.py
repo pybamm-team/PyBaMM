@@ -18,9 +18,10 @@ else:
 # load models
 models = [
     pybamm.lead_acid.NewmanTiedemann(),
-    pybamm.lead_acid.NewmanTiedemann({"convection": {"transverse": "uniform"}}),
     pybamm.lead_acid.LOQS(),
-    pybamm.lead_acid.LOQS({"convection": {"transverse": "uniform"}}),
+    pybamm.lead_acid.FOQS(),
+    pybamm.lead_acid.FOQSAverageCorrection(),
+    pybamm.lead_acid.CompositeExtended(),
     # pybamm.lead_acid.Composite(
     #     {"surface form": "differential", "side reactions": ["oxygen"]}
     # ),
@@ -38,13 +39,7 @@ models = [
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update(
-    {
-        "Volume change factor": 1,
-        "Typical current [A]": 300,
-        "Initial State of Charge": 1,
-    }
-)
+param.update({"Typical current [A]": 20, "Initial State of Charge": 1})
 for model in models:
     param.process_model(model)
 
