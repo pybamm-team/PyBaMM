@@ -287,9 +287,7 @@ class ProcessedVariable(object):
         len_z = len(z_sol)
 
         # Evaluate the base_variable
-        entries = np.reshape(
-            self.base_variable.evaluate(0, self.u_sol), [len_y, len_z]
-        )
+        entries = np.reshape(self.base_variable.evaluate(0, self.u_sol), [len_y, len_z])
 
         # assign attributes for reference
         self.entries = entries
@@ -301,10 +299,7 @@ class ProcessedVariable(object):
 
         # set up interpolation
         self._interpolation_function = interp.interp2d(
-            y_sol, z_sol,
-            entries,
-            kind=self.interp_kind,
-            fill_value=np.nan,
+            y_sol, z_sol, entries, kind=self.interp_kind, fill_value=np.nan
         )
 
     def initialise_3D_scikit_fem(self):

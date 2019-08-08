@@ -72,8 +72,19 @@ for i, model in enumerate(models):
 # plot terminal voltage
 t = np.linspace(0, solution.t[-1], 100)
 for i, model in enumerate(models):
-    plt.plot(times[i](t), voltages[i](t), lw=2, label=model.name)
-plt.xlabel("Time [h]", fontsize=15)
-plt.ylabel("Terminal voltage [V]", fontsize=15)
-plt.legend(fontsize=15)
+    plt.plot(times[i](t), voltages[i](t), label=model.name)
+plt.xlabel("Time [h]")
+plt.ylabel("Terminal voltage [V]")
+plt.legend()
+# add C-rate, delta, and alpha to title
+delta = param.process_symbol(pybamm.standard_parameters_lithium_ion.delta).evaluate()
+alpha = param.process_symbol(pybamm.standard_parameters_lithium_ion.alpha).evaluate()
+plt.title(
+    r"C-rate = {:3d}, $\alpha$ = {:.6f} , $\delta$ = {:.6f}".format(
+        C_rate, alpha, delta
+    )
+)
+# save and show
+file_name = "discharge_curve_2plus1D_comparison.eps"
+plt.savefig(file_name, format="eps", dpi=1000)
 plt.show()

@@ -84,10 +84,10 @@ for name in ["Average SPMe", "2+1D SPMe"]:
         voltage = voltage + cc_ohmic_losses
 
     # plot
-    plt.plot(time, voltage, lw=2, label=model.name)
-plt.xlabel("Time [h]", fontsize=15)
-plt.ylabel("Terminal voltage [V]", fontsize=15)
-plt.legend(fontsize=15)
+    plt.plot(time, voltage, label=model.name)
+plt.xlabel("Time [h]")
+plt.ylabel("Terminal voltage [V]")
+plt.legend()
 
 
 # plot potentials in current collector

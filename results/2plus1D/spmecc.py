@@ -52,9 +52,9 @@ R_cc = param.process_symbol(
 ).evaluate(t=cc_solution.t, y=cc_solution.y)[0][0]
 cc_ohmic_losses = -delta * current * R_cc
 
-plt.plot(time, voltage(t), lw=2, label="SPMe")
-plt.plot(time, voltage(t) + cc_ohmic_losses, lw=2, label="SPMeCC")
-plt.xlabel("Time [h]", fontsize=15)
-plt.ylabel("Terminal voltage [V]", fontsize=15)
-plt.legend(fontsize=15)
+plt.plot(time, voltage(t), label="SPMe")
+plt.plot(time, voltage(t) + cc_ohmic_losses, label="SPMeCC")
+plt.xlabel("Time [h]")
+plt.ylabel("Terminal voltage [V]")
+plt.legend()
 plt.show()
