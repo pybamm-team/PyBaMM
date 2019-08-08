@@ -8,7 +8,7 @@ import pickle
 import pybamm
 import shared_plotting
 from collections import defaultdict
-from shared_solutions import model_comparison, convergence_study
+from shared_solutions import model_comparison, error_comparison, time_comparison
 
 try:
     from config import OUTPUT_DIR
@@ -16,81 +16,98 @@ except ImportError:
     OUTPUT_DIR = None
 
 
-def plot_errors(models_times_and_voltages):
-    npts = 20
-    linestyles = ["k-", "g--", "r:", "b-."]
-    Crates = defaultdict(list)
-    voltage_errors = defaultdict(list)
-    fig, ax = plt.subplots(1, 1)
-    for i, (model, times_and_voltages) in enumerate(models_times_and_voltages.items()):
+def plot_errors_and_times(model_voltages, model_times):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6.4, 3))
+
+    # Errors
+    linestyles = {"Full": "k-", "LOQS": "g--", "FOQS": "r:", "Composite": "b-."}
+    models = list(linestyles.keys())
+    Crates = list(model_voltages[models[0]].keys())
+    errors = np.zeros(len(Crates))
+    for i, model in enumerate(models):
         if model != "Full":
-            for Crate, variables in times_and_voltages[npts].items():
-                Crates[model].append(Crate)
-                full_voltage = models_times_and_voltages["Full"][npts][Crate][
-                    "Battery voltage [V]"
-                ]
-                reduced_voltage = variables["Battery voltage [V]"]
-                voltage_errors[model].append(pybamm.rmse(full_voltage, reduced_voltage))
-            ax.semilogx(
-                Crates[model], voltage_errors[model], linestyles[i], label=model
-            )
-    ax.set_xlabel("C-rate")
-    ax.set_ylabel("RMSE [V]")
-    ax.legend(loc="best")
-    fig.tight_layout()
-    file_name = "discharge_asymptotics_rmse.eps"
+            Crates_variables = model_voltages[model]
+            for j, (Crate, reduced_voltage) in enumerate(Crates_variables.items()):
+                full_voltage = model_voltages["Full"][Crate]
+                errors[j] = pybamm.rmse(full_voltage, reduced_voltage)
+            ax1.loglog(Crates, errors, linestyles[model])
+    ax1.set_xlim(min(Crates), max(Crates))
+    ax1.set_xlabel("C-rate")
+    ax1.set_ylabel("RMSE [V]")
+    ax1.set_label("log(RMSE) [V]")
+    ax1.set_title("\\textbf{(a)} Errors")
+
+    # Times
+    # ntps is number of points in each electrode
+    all_npts = [x * 3 for x in model_times[models[0]].keys()]
+    for model in models:
+        times = list(model_times[model].values())
+        ax2.loglog(all_npts, times, linestyles[model])
+    ax2.set_xlim(min(all_npts), max(all_npts))
+    ax2.set_xlabel("Number of grid points")
+    ax2.set_ylabel("Solver time [s]")
+    ax2.set_title("\\textbf{(b)} Times")
+
+    leg = fig.legend(models, loc="lower center", ncol=len(models))
+    plt.subplots_adjust(bottom=0.3, right=0.95, wspace=0.5)
+    leg.get_frame().set_edgecolor("k")
+
+    # Save
+    file_name = "1d_times_errors.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_times(models_times_and_voltages):
-    shared_plotting.plot_times(models_times_and_voltages, Crate=1)
-    file_name = "discharge_asymptotics_solver_times.eps"
-    if OUTPUT_DIR is not None:
-        plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
-
-
-def discharge_times_and_errors(compute):
-    savefile = "discharge_asymptotics_times_and_errors.pickle"
-    if compute:
-        try:
-            with open(savefile, "rb") as f:
-                models_times_and_voltages = pickle.load(f)
-        except FileNotFoundError:
-            models_times_and_voltages = pybamm.get_infinite_nested_dict()
-        models = [
-            pybamm.lead_acid.NewmanTiedemann(
-                {"surface form": "algebraic"}, name="Full"
-            ),
-            pybamm.lead_acid.LOQS(name="LOQS"),
-            pybamm.lead_acid.FOQS(name="FOQS"),
-            pybamm.lead_acid.CompositeExtended(name="Composite"),
-        ]
-        Crates = np.linspace(0.01, 5, 2)
-        all_npts = [20]
+def discharge_times_and_errors(compute_times, compute_errors):
+    savefile_errors = "1d_discharge_asymptotics_errors.pickle"
+    savefile_times = "1d_discharge_asymptotics_times.pickle"
+    models = [
+        pybamm.lead_acid.NewmanTiedemann({"surface form": "algebraic"}, name="Full"),
+        pybamm.lead_acid.LOQS(name="LOQS"),
+        pybamm.lead_acid.FOQS(name="FOQS"),
+        pybamm.lead_acid.CompositeExtended(name="Composite"),
+    ]
+    if compute_errors:
+        Crates = np.logspace(np.log10(0.01), np.log10(10), 10)
         t_eval = np.linspace(0, 1, 100)
-        new_models_times_and_voltages = convergence_study(
-            models, Crates, all_npts, t_eval
-        )
-        models_times_and_voltages.update(new_models_times_and_voltages)
-        with open(savefile, "wb") as f:
-            pickle.dump(models_times_and_voltages, f, pickle.HIGHEST_PROTOCOL)
+        model_voltages = error_comparison(models, Crates, t_eval)
+        with open(savefile_errors, "wb") as f:
+            pickle.dump(model_voltages, f, pickle.HIGHEST_PROTOCOL)
     else:
         try:
-            with open(savefile, "rb") as f:
-                models_times_and_voltages = pickle.load(f)
+            with open(savefile_errors, "rb") as f:
+                model_voltages = pickle.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(
-                "Run script with '--compute' first to generate results"
+                "Run script with '--compute-errors' first to generate results"
             )
-    plot_errors(models_times_and_voltages)
-    plot_times(models_times_and_voltages)
+    if compute_times:
+        all_npts = np.logspace(0.5, np.log10(500), 10)
+        t_eval = np.linspace(0, 0.6, 100)
+        Crate = 1
+        model_times = time_comparison(models, Crate, all_npts, t_eval)
+        with open(savefile_times, "wb") as f:
+            pickle.dump(model_times, f, pickle.HIGHEST_PROTOCOL)
+    else:
+        try:
+            with open(savefile_times, "rb") as f:
+                model_times = pickle.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Run script with '--compute-times' first to generate results"
+            )
+    plot_errors_and_times(model_voltages, model_times)
 
 
 if __name__ == "__main__":
     pybamm.set_logging_level("INFO")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--compute", action="store_true", help="(Re)-compute results.")
+    parser.add_argument(
+        "--compute-errors", action="store_true", help="(Re)-compute error results."
+    )
+    parser.add_argument(
+        "--compute-times", action="store_true", help="(Re)-compute time results."
+    )
     args = parser.parse_args()
-    discharge_times_and_errors(args.compute)
+    discharge_times_and_errors(args.compute_times, args.compute_errors)
     plt.show()

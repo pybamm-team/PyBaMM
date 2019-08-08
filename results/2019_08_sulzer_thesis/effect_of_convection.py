@@ -40,14 +40,14 @@ def plot_variables(all_variables, t_eval, operation="standard"):
             "Electrolyte concentration [Molar]"
             + "": "convection_electrolyte_concentration_comparison_bigger_beta.eps",
         }
-    if operation == "high C":
+    elif operation == "high C":
         var_file_names = {
             "Volume-averaged velocity [m.s-1]"
             + "": "convection_velocity_comparison_high_C.eps",
             "Electrolyte concentration [Molar]"
             + "": "convection_electrolyte_concentration_comparison_high_C.eps",
         }
-    else:
+    elif operation == "standard":
         var_file_names = {
             "Volume-averaged velocity [m.s-1]": "convection_velocity_comparison.eps",
             "Electrolyte concentration [Molar]"

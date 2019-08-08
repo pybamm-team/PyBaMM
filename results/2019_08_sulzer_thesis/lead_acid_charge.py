@@ -18,7 +18,9 @@ except ImportError:
 def plot_voltages(all_variables, t_eval):
     Crates = [-0.1, -0.2, -0.5, -1, -2, -5]
     all_variables = {k: v for k, v in all_variables.items() if k in Crates}
-    shared_plotting.plot_voltages(all_variables, t_eval)
+    shared_plotting.plot_voltages(
+        all_variables, t_eval, linestyles=["k-", "g--", "b-."]
+    )
     file_name = "charge_voltage_comparison.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
@@ -29,10 +31,10 @@ def plot_interfacial_currents(all_variables, t_eval):
     all_variables = {Crate: v for Crate, v in all_variables.items() if Crate in Crates}
     file_name = "charge_interfacial_current_density_comparison.eps"
     output_vars = [
-        "Average positive electrode interfacial current density",
-        "Average positive electrode oxygen interfacial current density",
-        "Average negative electrode oxygen interfacial current density",
-        "Average negative electrode interfacial current density",
+        "X-averaged positive electrode interfacial current density",
+        "X-averaged positive electrode oxygen interfacial current density",
+        "X-averaged negative electrode oxygen interfacial current density",
+        "X-averaged negative electrode interfacial current density",
     ]
     labels = [
         "Pos electrode\n(main)",
@@ -45,11 +47,11 @@ def plot_interfacial_currents(all_variables, t_eval):
         t_eval,
         output_vars,
         labels,
-        colors=["k", "g", "r", "b"],
-        figsize=(6.4, 6.4),
+        colors=["k", "g", "b"],
+        figsize=(6.4, 4),
     )
     plt.subplots_adjust(
-        bottom=0.15, left=0.15, right=0.95, wspace=0.3, hspace=0.4, top=0.95
+        bottom=0.28, left=0.2, right=0.95, wspace=0.3, hspace=0.4, top=0.9
     )
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
@@ -72,7 +74,12 @@ def plot_variables(all_variables, t_eval):
         else:
             exceptions = {}
         shared_plotting.plot_variable(
-            all_variables, times, var, exceptions, yaxis="FCI"
+            all_variables,
+            times,
+            var,
+            exceptions,
+            linestyles=["k-", "g--", "b-."],
+            yaxis="FCI",
         )
         if OUTPUT_DIR is not None:
             plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
@@ -96,9 +103,9 @@ def charge_states(compute):
             pybamm.lead_acid.LOQS(
                 {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="LOQS"
             ),
-            pybamm.lead_acid.FOQS(
-                {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="FOQS"
-            ),
+            # pybamm.lead_acid.FOQS(
+            #     {"surface form": "algebraic", "side reactions": ["oxygen"]}, name="FOQS"
+            # ),
             # pybamm.lead_acid.Composite(
             #     {"surface form": "algebraic", "side reactions": ["oxygen"]},
             #     name="Composite",

@@ -68,14 +68,14 @@ def plot_errors(model_voltages):
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
 
-def plot_times(model_voltages):
+def plot_times(model_times):
     "Plot solver times for both 1D and 2D"
-    shared_plotting_2D.plot_times(model_voltages, dimensions=1)
+    shared_plotting_2D.plot_times(model_times, dimensions=1)
     file_name = "1d_discharge_asymptotics_solver_times.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
 
-    shared_plotting_2D.plot_times(model_voltages, dimensions=2)
+    shared_plotting_2D.plot_times(model_times, dimensions=2)
     file_name = "2d_discharge_asymptotics_solver_times.eps"
     if OUTPUT_DIR is not None:
         plt.savefig(OUTPUT_DIR + file_name, format="eps", dpi=1000)
@@ -162,18 +162,18 @@ def discharge_times(compute):
         sigma = 10 * 8000
         all_npts = np.logspace(0.5, 3, 10)
         t_eval = np.linspace(0, 0.6, 100)
-        model_voltages = time_comparison(models, Crate, sigma, all_npts, t_eval)
+        model_times = time_comparison(models, Crate, sigma, all_npts, t_eval)
         with open(savefile, "wb") as f:
-            pickle.dump(model_voltages, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(model_times, f, pickle.HIGHEST_PROTOCOL)
     else:
         try:
             with open(savefile, "rb") as f:
-                model_voltages = pickle.load(f)
+                model_times = pickle.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(
                 "Run script with '--compute' first to generate results"
             )
-    plot_times(model_voltages)
+    plot_times(model_times)
 
 
 if __name__ == "__main__":
