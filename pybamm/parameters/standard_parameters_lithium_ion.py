@@ -35,6 +35,7 @@ L_cp = pybamm.geometric_parameters.L_cp
 L_x = pybamm.geometric_parameters.L_x
 L_y = pybamm.geometric_parameters.L_y
 L_z = pybamm.geometric_parameters.L_z
+L = pybamm.geometric_parameters.L
 A_cc = pybamm.geometric_parameters.A_cc
 
 
@@ -244,6 +245,7 @@ l_p = pybamm.geometric_parameters.l_p
 l_cp = pybamm.geometric_parameters.l_cp
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
+l = pybamm.geometric_parameters.l
 delta = pybamm.geometric_parameters.delta
 
 # Tab geometry

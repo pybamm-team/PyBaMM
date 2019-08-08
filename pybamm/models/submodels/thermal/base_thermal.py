@@ -50,6 +50,10 @@ class BaseModel(pybamm.BaseSubModel):
             "Cell temperature [K]": param.Delta_T * T + param.T_ref,
             "X-averaged cell temperature": T_av,
             "X-averaged cell temperature [K]": param.Delta_T * T_av + param.T_ref,
+            "Volume-averaged cell temperature": self._yz_average(T_av),
+            "Volume-averaged cell temperature [K]": param.Delta_T
+            * self._yz_average(T_av)
+            + param.T_ref,
             "Heat flux": q,
             "Heat flux [W.m-2]": q,
         }
@@ -139,6 +143,11 @@ class BaseModel(pybamm.BaseSubModel):
                 * param.potential_scale
                 * Q_av
                 / param.L_x,
+                "Volume-averaged total heating": self._yz_average(Q_av),
+                "Volume-averaged total heating [A.V.m-3]": param.i_typ
+                * param.potential_scale
+                * self._yz_average(Q_av)
+                / param.L_x,
             }
         )
 
@@ -150,6 +159,9 @@ class BaseModel(pybamm.BaseSubModel):
         raise NotImplementedError
 
     def _unpack(self, variables):
+        raise NotImplementedError
+
+    def _yz_average(self, var):
         raise NotImplementedError
 
     def set_initial_conditions(self, variables):

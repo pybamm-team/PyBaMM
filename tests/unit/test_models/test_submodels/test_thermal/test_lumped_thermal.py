@@ -31,7 +31,7 @@ class TestLumped(unittest.TestCase):
             "Positive electrode potential": a_p,
             "Positive electrode current density": a_p,
         }
-        submodel = pybamm.thermal.Lumped(param)
+        submodel = pybamm.thermal.Lumped1D(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

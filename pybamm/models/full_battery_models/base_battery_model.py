@@ -402,7 +402,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["thermal"] == "full":
             thermal_submodel = pybamm.thermal.Full(self.param)
         elif self.options["thermal"] == "lumped":
-            thermal_submodel = pybamm.thermal.Lumped(self.param)
+            thermal_submodel = pybamm.thermal.Lumped1D(self.param)
 
         self.submodels["thermal"] = thermal_submodel
 

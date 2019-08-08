@@ -46,5 +46,12 @@ class Isothermal(BaseModel):
         )
         return q
 
+    def _yz_average(self, var):
+        """
+        Used to compute the y-z average of thermal variables. For the isothermal
+        case, this average returns the same value regardless of geometry.
+        """
+        return var
+
     def set_initial_conditions(self, variables):
         return {}
