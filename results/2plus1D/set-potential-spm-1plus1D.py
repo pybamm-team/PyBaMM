@@ -2,12 +2,14 @@ import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-
+plt.close()
 # set logging level
 pybamm.set_logging_level("INFO")
 
 # load (1+1D) SPM model
-options = {"current collector": "set external potential", "dimensionality": 1}
+options = {"current collector": "set external potential",
+           "dimensionality": 1,
+           "thermal": "lumped"}
 model = pybamm.lithium_ion.SPM(options)
 
 # create geometry
@@ -69,7 +71,8 @@ current_step1 = pybamm.ProcessedVariable(
 )
 # update potentials (e.g. zero volts on neg. current collector, 3.3 volts on pos.)
 phi_s_cn_dim_new = np.zeros(var_pts[var.z])
-phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z]) - 0.05 * np.linspace(0, 1, var_pts[var.z])
+#phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z]) - 0.05 * np.linspace(0, 1, var_pts[var.z])
+phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z])
 variables = {
     "Negative current collector potential": non_dim_potential(
         phi_s_cn_dim_new, "negative"
@@ -112,6 +115,8 @@ def plot_var(var, solution, time=-1):
     plt.figure()
     plt.imshow(entries[:, :, time])
 
-plot_var(var="Interfacial current density", solution=solution2, time=-1)
-plot_var(var="Negative particle concentration [mol.m-3]", solution=solution2, time=-1)
+#plot_var(var="Positive current collector potential", solution=solution1, time=-1)
+#plot_var(var="Total heating [A.V.m-3]", solution=solution1, time=-1)
+#plot_var(var="Interfacial current density", solution=solution2, time=-1)
+#plot_var(var="Negative particle concentration [mol.m-3]", solution=solution2, time=-1)
 plot_var(var="Positive particle concentration [mol.m-3]", solution=solution2, time=-1)
