@@ -718,6 +718,80 @@ def x_average(symbol):
         return Integral(symbol, x) / l
 
 
+def z_average(symbol):
+    """convenience function for creating an average in the z-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Symbol must have domain [] or ["current collector"]
+    if symbol.domain not in [[], ["current collector"]]:
+        raise pybamm.DomainError(
+            """z-average only implemented in the 'current collector' domain,
+            but symbol has domains {}""".format(
+                symbol.domain
+            )
+        )
+    # If symbol doesn't have a domain, its average value is itself
+    if symbol.domain == []:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    # Otherwise, use Integral to calculate average value
+    else:
+        z = pybamm.standard_spatial_vars.z
+        l_z = pybamm.geometric_parameters.l_z
+        return Integral(symbol, z) / l_z
+
+
+def yz_average(symbol):
+    """convenience function for creating an average in the y-z-direction
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Symbol must have domain [] or ["current collector"]
+    if symbol.domain not in [[], ["current collector"]]:
+        raise pybamm.DomainError(
+            """y-z-average only implemented in the 'current collector' domain,
+            but symbol has domains {}""".format(
+                symbol.domain
+            )
+        )
+    # If symbol doesn't have a domain, its average value is itself
+    if symbol.domain == []:
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+    # If symbol is a Broadcast, its average value is its child
+    elif isinstance(symbol, pybamm.Broadcast):
+        return symbol.orphans[0]
+    # Otherwise, use Integral to calculate average value
+    else:
+        y = pybamm.standard_spatial_vars.y
+        z = pybamm.standard_spatial_vars.z
+        l_y = pybamm.geometric_parameters.l_y
+        l_z = pybamm.geometric_parameters.l_z
+        return Integral(symbol, [y, z]) / (l_y * l_z)
+
+
 def boundary_value(symbol, side):
     """convenience function for creating a :class:`pybamm.BoundaryValue`
 

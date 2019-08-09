@@ -43,11 +43,6 @@ class Full(BaseModel):
         Q = variables["Total heating"]
         return T, q, Q
 
-    def _yz_average(self, T_av):
-        """In 1D the volume-averaged cell temperature is equal to the x-avergaed
-        cell temperature"""
-        return T_av
-
     def set_rhs(self, variables):
         T, q, Q = self._unpack(variables)
 

@@ -100,6 +100,8 @@ from .expression_tree.unary_operators import (
     laplacian,
     surf,
     x_average,
+    z_average,
+    yz_average,
     boundary_value,
 )
 from .expression_tree.functions import *

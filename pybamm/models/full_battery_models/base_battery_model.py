@@ -191,7 +191,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                     options["dimensionality"]
                 )
             )
-        if options["thermal"] not in [None, "lumped", "full"]:
+        if options["thermal"] not in [
+            None,
+            "lumped",
+            "lumped with current collectors",
+            "full",
+        ]:
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
@@ -398,11 +403,45 @@ class BaseBatteryModel(pybamm.BaseModel):
     def set_thermal_submodel(self):
 
         if self.options["thermal"] is None:
-            thermal_submodel = pybamm.thermal.Isothermal(self.param)
+            if self.options["dimensionality"] == 0:
+                thermal_submodel = pybamm.thermal.Isothermal(self.param)
+            elif self.options["dimensionality"] == 1:
+                thermal_submodel = pybamm.thermal.current_collector.Isothermal2D(
+                    self.param
+                )
+            elif self.options["dimensionality"] == 2:
+                thermal_submodel = pybamm.thermal.current_collector.Isothermal3D(
+                    self.param
+                )
         elif self.options["thermal"] == "full":
-            thermal_submodel = pybamm.thermal.Full(self.param)
-        elif self.options["thermal"] == "lumped":
-            thermal_submodel = pybamm.thermal.Lumped1D(self.param)
+            if self.options["dimensionality"] == 0:
+                thermal_submodel = pybamm.thermal.Full(self.param)
+            elif self.options["dimensionality"] == 1:
+                # In 1+1D full gives the 1D thermal problem in the current collector
+                raise NotImplementedError
+            elif self.options["dimensionality"] == 2:
+                # In 2+1D full gives the 2D thermal problem in the current collector
+                raise NotImplementedError
+        elif self.options["thermal"] in ["lumped", "lumped with current collectors"]:
+            if self.options["dimensionality"] == 0:
+                if self.options["thermal"] == "lumped":
+                    # No current collector effects
+                    thermal_submodel = pybamm.thermal.Lumped(self.param)
+                elif self.options["thermal"] == "lumped with current collectors":
+                    # current collector effects
+                    thermal_submodel = pybamm.thermal.current_collector.Lumped0plus1D(
+                        self.param
+                    )
+            elif self.options["dimensionality"] == 1:
+                # Always includes current collector effects
+                thermal_submodel = pybamm.thermal.current_collector.Lumped1plus1D(
+                    self.param
+                )
+            elif self.options["dimensionality"] == 2:
+                # Always inclueds current collector effects
+                thermal_submodel = pybamm.thermal.current_collector.Lumped2plus1D(
+                    self.param
+                )
 
         self.submodels["thermal"] = thermal_submodel
 
@@ -417,6 +456,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 submodel = pybamm.current_collector.PotentialPair2plus1D(self.param)
         elif self.options["current collector"] == "single particle potential pair":
             submodel = pybamm.current_collector.SingleParticlePotentialPair(self.param)
+
         self.submodels["current collector"] = submodel
 
     def set_voltage_variables(self):
