@@ -58,8 +58,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             solver.root(algebraic, y0)
         solver = pybamm.AlgebraicSolver()
         with self.assertRaisesRegex(
-            pybamm.SolverError,
-            "Could not find acceptable solution: solver terminated",
+            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
         ):
             solver.root(algebraic, y0)
 
@@ -91,15 +90,17 @@ class TestAlgebraicSolver(unittest.TestCase):
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
         model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
-        model.initial_conditions = {var1: 3, var2: 6}
+        model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
         disc = get_discretisation_for_testing()
         disc.process_model(model)
+
+        sol = np.concatenate((np.ones(100) * 3, np.ones(100) * 6))[:, np.newaxis]
 
         # Solve
         solver = pybamm.AlgebraicSolver()
         solution = solver.solve(model)
-        np.testing.assert_array_equal(solution.y[0], 3)
-        np.testing.assert_array_equal(solution.y[-1], 6)
+        np.testing.assert_array_equal(solution.y[:100], sol[:100])
+        np.testing.assert_array_equal(solution.y[100:], sol[100:])
 
         # Test time
         self.assertGreater(
@@ -109,8 +110,8 @@ class TestAlgebraicSolver(unittest.TestCase):
         # Test without jacobian
         model.use_jacobian = False
         solution_no_jac = solver.solve(model)
-        np.testing.assert_array_equal(solution_no_jac.y[0], 3)
-        np.testing.assert_array_equal(solution_no_jac.y[-1], 6)
+        np.testing.assert_array_equal(solution_no_jac.y[:100], sol[:100])
+        np.testing.assert_array_equal(solution_no_jac.y[100:], sol[100:])
 
 
 if __name__ == "__main__":
