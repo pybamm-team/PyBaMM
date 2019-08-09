@@ -38,12 +38,18 @@ class BaseNplus1D(BaseModel):
         Q_av = variables["X-averaged total heating"]
         return T_av, q, Q_av
 
-    def _current_collector_heating(self, variables):
-        """Returns the heat source terms in the 0D current collector"""
-        i_boundary_cc = variables["Current collector current density"]
-        Q_s_cn = i_boundary_cc ** 2 / self.param.sigma_cn
-        Q_s_cp = i_boundary_cc ** 2 / self.param.sigma_cp
-        return Q_s_cn, Q_s_cp
+    def set_rhs(self, variables):
+        raise NotImplementedError
+
+    def set_boundary_conditions(self, variables):
+        raise NotImplementedError
+
+
+class Full1plus1D(BaseNplus1D):
+    """Class for 1+1D thermal submodel"""
+
+    def __init__(self, param):
+        super().__init__(param)
 
     def set_rhs(self, variables):
         T_av, _, Q_av = self._unpack(variables)
@@ -55,16 +61,6 @@ class BaseNplus1D(BaseModel):
             )
             / self.param.C_th
         }
-
-    def set_boundary_conditions(self, variables):
-        raise NotImplementedError
-
-
-class Full1plus1D(BaseNplus1D):
-    """Class for 1+1D thermal submodel"""
-
-    def __init__(self, param):
-        super().__init__(param)
 
     def set_boundary_conditions(self, variables):
         T_av, _, _ = self._unpack(variables)
@@ -90,13 +86,24 @@ class Full1plus1D(BaseNplus1D):
 
 
 class Full2plus1D(BaseNplus1D):
-    """Class for 1+1D thermal submodel"""
+    """Class for 2+1D thermal submodel"""
 
     def __init__(self, param):
         super().__init__(param)
 
-    def set_boundary_conditions(self, variables):
-        raise NotImplementedError
+    def set_rhs(self, variables):
+        T_av, _, Q_av = self._unpack(variables)
+
+        # Add boundary integral term which accounts for surface cooling around
+        # the domain in the weak formulation: no boundary conditions required
+        self.rhs = {
+            T_av: (
+                pybamm.laplacian(T_av)
+                + self.param.B * Q_av
+                - 2 * self.param.h / (self.param.delta ** 2) * T_av
+            )
+            / self.param.C_th
+        }
 
     def _yz_average(self, var):
         """Computes the y-z avergage by integration over y and z"""
