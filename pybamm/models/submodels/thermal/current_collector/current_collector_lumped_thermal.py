@@ -61,7 +61,7 @@ class Lumped1D(BaseModel):
 
         self.rhs = {
             T_volume_av: (self.param.B * Q_volume_av + cooling_coeff * T_volume_av)
-            / (self.param.C_th * self.param.rho)
+            / self.param.C_th
         }
 
 

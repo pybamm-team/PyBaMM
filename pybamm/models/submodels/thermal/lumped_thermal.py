@@ -58,5 +58,5 @@ class Lumped(BaseModel):
             T_av: (
                 self.param.B * Q_av - 2 * self.param.h / (self.param.delta ** 2) * T_av
             )
-            / (self.param.C_th * self.param.rho)
+            / self.param.C_th
         }
