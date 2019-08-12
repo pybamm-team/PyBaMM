@@ -70,6 +70,10 @@ voltage_step1 = pybamm.ProcessedVariable(
 current_step1 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution1.t, solution1.y, mesh=mesh
 )
+heating_step1 = pybamm.ProcessedVariable(
+    model.variables["X-averaged total heating [A.V.m-3]"], solution1.t, solution1.y, mesh=mesh
+)
+
 
 current_state = solution1.y[:, -1]
 
@@ -99,12 +103,21 @@ solution2 = model.default_solver.solve(model, t_eval2)
 voltage_step2 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution2.t, solution2.y, mesh=mesh
 )
+heating_step2 = pybamm.ProcessedVariable(
+    model.variables["X-averaged total heating [A.V.m-3]"], solution2.t, solution2.y, mesh=mesh
+)
 
 # plot
 plt.plot(t_eval1, voltage_step1(t_eval1), t_eval2, voltage_step2(t_eval2))
 plt.xlabel('t')
 plt.ylabel('Voltage [V]')
 plt.show()
+z = np.linspace(0, 1, 10)
+plt.plot(t_eval1, heating_step1(t_eval1, z=z), t_eval2, heating_step2(t_eval2, z=z))
+plt.xlabel('t')
+plt.ylabel('X-averaged total heating [A.V.m-3]')
+plt.show()
+
 
 def plot_var(var, solution, time=-1):
     variable = model.variables[var]
@@ -128,7 +141,7 @@ def plot_var(var, solution, time=-1):
 plot_var(var="Total heating [A.V.m-3]", solution=solution1, time=-1)
 #plot_var(var="Interfacial current density", solution=solution2, time=-1)
 #plot_var(var="Negative particle concentration [mol.m-3]", solution=solution2, time=-1)
-plot_var(var="Positive particle concentration [mol.m-3]", solution=solution2, time=-1)
+#plot_var(var="Positive particle concentration [mol.m-3]", solution=solution2, time=-1)
 
 var_names = list(model.variables.keys())
 var_names.sort()
