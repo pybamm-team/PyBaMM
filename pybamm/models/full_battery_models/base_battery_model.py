@@ -192,7 +192,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     options["dimensionality"]
                 )
             )
-        if options["thermal"] not in [None, "lumped", "full"]:
+        if options["thermal"] not in [None, "lumped", "full", "set external temperature"]:
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
             )
@@ -404,6 +404,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             thermal_submodel = pybamm.thermal.Full(self.param)
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(self.param)
+        elif self.options["thermal"] == "set external temperature":
+            thermal_submodel = pybamm.thermal.SetTemperature(self.param)
 
         self.submodels["thermal"] = thermal_submodel
 
@@ -423,6 +425,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 submodel = pybamm.current_collector.SetPotentialSingleParticle1plus1D(
                     self.param
                 )
+
         self.submodels["current collector"] = submodel
 
     def set_voltage_variables(self):

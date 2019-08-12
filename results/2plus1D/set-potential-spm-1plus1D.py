@@ -3,13 +3,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 plt.close()
+
 # set logging level
 pybamm.set_logging_level("INFO")
 
 # load (1+1D) SPM model
 options = {"current collector": "set external potential",
            "dimensionality": 1,
-           "thermal": "lumped"}
+           "thermal": "set external temperature"}
 model = pybamm.lithium_ion.SPM(options)
 
 # create geometry
@@ -69,7 +70,8 @@ voltage_step1 = pybamm.ProcessedVariable(
 current_step1 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution1.t, solution1.y, mesh=mesh
 )
-# update potentials (e.g. zero volts on neg. current collector, 3.3 volts on pos.)
+
+# update potentials
 phi_s_cn_dim_new = np.zeros(var_pts[var.z])
 #phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z]) - 0.05 * np.linspace(0, 1, var_pts[var.z])
 phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z])
