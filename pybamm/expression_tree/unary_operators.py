@@ -472,6 +472,70 @@ class IndefiniteIntegral(Integral):
         return self.children[0].evaluate_for_shape()
 
 
+class BoundaryIntegral(SpatialOperator):
+    """A node in the expression tree representing an integral operator over the
+    boundary of a domain
+    .. math::
+        I = \\int_{\\partial a}\\!f(u)\\,du,
+    where :math:`\\partial a` is the boundary of the domain, and
+    :math:`u\\in\\text{domain boundary}`.
+    Parameters
+    ----------
+    function : :class:`pybamm.Symbol`
+        The function to be integrated (will become self.children[0])
+    region : str, optional
+        The region of the boundary over which to integrate. If region is `entire`
+        (default) the integration is carried out over the entire boundary. If
+        region is `negative tab` or `positive tab` then the integration is only
+        carried out over the appropriate part of the boundary corresponding to
+        the tab.
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, region="entire"):
+        # boundary integral removes domain
+        domain = []
+        auxiliary_domains = {}
+
+        name = "boundary integral over "
+        if region == "entire":
+            name += "entire boundary"
+        elif region == "negative tab":
+            name += "negative tab"
+        elif region == "positive tab":
+            name += "positive tab"
+        self.region = region
+        super().__init__(
+            name, child, domain=domain, auxiliary_domains=auxiliary_domains
+        )
+
+    def set_id(self):
+        """ See :meth:`pybamm.Symbol.set_id()` """
+        self._id = hash(
+            (self.__class__, self.name)
+            + (self.children[0].id,)
+            + tuple(self.domain)
+        )
+
+    def _unary_simplify(self, simplified_child):
+        """ See :meth:`UnaryOperator._unary_simplify()`. """
+
+        return self.__class__(simplified_child, region=self.region)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+
+        return self.__class__(child, region=self.region)
+
+    def evaluate_for_shape(self):
+        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        return pybamm.evaluate_for_shape_using_domain(self.domain)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return False
+
+
 class BoundaryOperator(SpatialOperator):
     """A node in the expression tree which gets the boundary value of a variable.
 

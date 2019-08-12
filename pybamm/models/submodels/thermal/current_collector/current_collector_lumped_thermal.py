@@ -99,7 +99,7 @@ class Lumped2plus1D(Lumped1D):
         super().__init__(param)
 
     def _current_collector_heating(self, variables):
-        """Returns the heat source terms in the 1D current collector"""
+        """Returns the heat source terms in the 2D current collector"""
         # TODO: implement grad to calculate actual heating instead of average
         # approximate heating
         i_boundary_cc = variables["Current collector current density"]
