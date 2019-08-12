@@ -329,15 +329,25 @@ class ParameterValues(dict):
                     # KeyError -> name not in parameter dict, don't update
                     continue
             elif isinstance(x, pybamm.Function):
-                # Need to update values in parameters_eval dict of current functions
                 if isinstance(x.function, pybamm.GetCurrent):
+                    # Need to update parameters dict to be that of the new current
+                    # function and make new parameters_eval dict to be processed
+                    x.function.parameters = self["Current function"].parameters
+                    x.function.parameters_eval = dict.fromkeys(x.function.parameters.keys())
                     for param, sym in x.function.parameters.items():
+                        # Need to process again as new symbols may be passed
+                        # e.g. may explicitly pass pybamm.Scalar(1) instead of
+                        # pybamm.electrical_parameters.I_typ
                         if isinstance(sym, pybamm.Scalar):
-                            try:
-                                x.function.parameters_eval[param] = self[sym.name]
-                            except KeyError:
-                                # KeyError -> name not in parameter dict, don't update
-                                continue
+                            new_sym = self.process_symbol(sym)
+                            x.function.parameters[param] = new_sym
+                            x.function.parameters_eval[param] = new_sym.evaluate()
+                        #if isinstance(sym, pybamm.Scalar):
+                        #    try:
+                        #        x.function.parameters_eval[param] = self.process_symbol(sym)
+                        #    except KeyError:
+                        #        # KeyError -> name not in parameter dict, don't update
+                        #        continue
                     if isinstance(x.function, pybamm.GetCurrentData):
                         # update interpolant
                         x.function.interpolate()
