@@ -34,19 +34,13 @@ class TestFull(unittest.TestCase):
             "Positive electrode current density": a_p,
         }
 
-        submodel = pybamm.thermal.current_collector.BaseNplus1D(param)
-        std_tests = tests.StandardSubModelTests(submodel, variables)
-        with self.assertRaises(NotImplementedError):
-            std_tests.test_all()
-
         submodel = pybamm.thermal.current_collector.Full1plus1D(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
         submodel = pybamm.thermal.current_collector.Full2plus1D(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
-        with self.assertRaises(NotImplementedError):
-            std_tests.test_all()
+        std_tests.test_all()
 
 
 if __name__ == "__main__":

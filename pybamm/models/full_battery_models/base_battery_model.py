@@ -418,10 +418,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 thermal_submodel = pybamm.thermal.Full(self.param)
             elif self.options["dimensionality"] == 1:
                 # In 1+1D full gives the 1D thermal problem in the current collector
-                raise NotImplementedError
+                thermal_submodel = pybamm.thermal.current_collector.Full1plus1D(self.param)
             elif self.options["dimensionality"] == 2:
                 # In 2+1D full gives the 2D thermal problem in the current collector
-                raise NotImplementedError
+                thermal_submodel = pybamm.thermal.current_collector.Full2plus1D(self.param)
         elif self.options["thermal"] in ["lumped", "lumped with current collectors"]:
             if self.options["dimensionality"] == 0:
                 if self.options["thermal"] == "lumped":
@@ -429,7 +429,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     thermal_submodel = pybamm.thermal.Lumped(self.param)
                 elif self.options["thermal"] == "lumped with current collectors":
                     # current collector effects
-                    thermal_submodel = pybamm.thermal.current_collector.Lumped0plus1D(
+                    thermal_submodel = pybamm.thermal.current_collector.Lumped1D(
                         self.param
                     )
             elif self.options["dimensionality"] == 1:

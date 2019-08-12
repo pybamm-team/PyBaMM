@@ -9,14 +9,55 @@ sys.setrecursionlimit(10000)
 
 # load models
 models = [
-    pybamm.lithium_ion.SPM(name="1D SPM"),
-    pybamm.lithium_ion.SPMe(name="1D SPMe"),
-    pybamm.lithium_ion.DFN(name="1D DFN"),
     pybamm.lithium_ion.SPM(
-        {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPM"
+        {"thermal": "lumped"}, name="1D SPM (lumped)"
     ),
     pybamm.lithium_ion.SPMe(
-        {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPMe"
+        {"thermal": "lumped"}, name="1D SPMe (lumped)"
+    ),
+    #pybamm.lithium_ion.DFN(
+    #    {"thermal": "lumped"}, name="1D DFN (lumped)"
+    #),
+    pybamm.lithium_ion.SPM(
+        {"thermal": "full"}, name="1D SPM (full)"
+    ),
+    pybamm.lithium_ion.SPMe(
+        {"thermal": "full"}, name="1D SPMe (full)"
+    ),
+    #pybamm.lithium_ion.DFN(
+    #    {"thermal": "full"}, name="1D DFN (full)"
+    #),
+    #pybamm.lithium_ion.SPM(
+    #    {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "lumped",
+    #    },
+    #    name="2+1D SPM (lumped)",
+    #),
+    pybamm.lithium_ion.SPMe(
+        {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "lumped",
+        },
+        name="2+1D SPMe (lumped)",
+    ),
+    #pybamm.lithium_ion.SPM(
+    #    {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "full",
+    #    },
+    #    name="2+1D SPM (full)",
+    #),
+    pybamm.lithium_ion.SPMe(
+        {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "full",
+        },
+        name="2+1D SPMe (full)",
     ),
 ]
 
@@ -27,9 +68,6 @@ C_rate = 1
 param["Typical current [A]"] = (
     C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
 )
-# make current collectors not so conductive, just for illustrative purposes
-param["Negative current collector conductivity [S.m-1]"] = 5.96e6
-param["Positive current collector conductivity [S.m-1]"] = 3.55e6
 
 # process models
 for model in models:
@@ -47,8 +85,8 @@ for i, model in enumerate(models):
         var.x_p: 5,
         var.r_n: 5,
         var.r_p: 5,
-        var.y: 10,
-        var.z: 10,
+        var.y: 5,
+        var.z: 5,
     }
     meshes[i] = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(meshes[i], model.default_spatial_methods)
@@ -58,6 +96,8 @@ for i, model in enumerate(models):
 solutions = [None] * len(models)
 times = [None] * len(models)
 voltages = [None] * len(models)
+temperatures = [None] * len(models)
+
 t_eval = np.linspace(0, 1, 1000)
 for i, model in enumerate(models):
     solution = model.default_solver.solve(model, t_eval)
@@ -68,23 +108,25 @@ for i, model in enumerate(models):
     voltages[i] = pybamm.ProcessedVariable(
         model.variables["Terminal voltage [V]"], solution.t, solution.y, mesh=meshes[i]
     )
+    temperatures[i] = pybamm.ProcessedVariable(
+        model.variables["Volume-averaged cell temperature [K]"],
+        solution.t,
+        solution.y,
+        mesh=meshes[i],
+    )
 
-# plot terminal voltage
+# plot terminal voltage and temperature
 t = np.linspace(0, solution.t[-1], 100)
+plt.subplot(121)
 for i, model in enumerate(models):
     plt.plot(times[i](t), voltages[i](t), label=model.name)
 plt.xlabel("Time [h]")
 plt.ylabel("Terminal voltage [V]")
 plt.legend()
-# add C-rate, delta, and alpha to title
-delta = param.process_symbol(pybamm.standard_parameters_lithium_ion.delta).evaluate()
-alpha = param.process_symbol(pybamm.standard_parameters_lithium_ion.alpha).evaluate()
-plt.title(
-    r"C-rate = {:3d}, $\alpha$ = {:.6f} , $\delta$ = {:.6f}".format(
-        C_rate, alpha, delta
-    )
-)
-# save and show
-file_name = "discharge_curve_2plus1D_comparison.eps"
-plt.savefig(file_name, format="eps", dpi=1000)
+plt.subplot(122)
+for i, model in enumerate(models):
+    plt.plot(times[i](t), temperatures[i](t), label=model.name)
+plt.xlabel("Time [h]")
+plt.ylabel("Temperature [K]")
+plt.tight_layout()
 plt.show()

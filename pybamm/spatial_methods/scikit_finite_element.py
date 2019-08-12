@@ -183,8 +183,13 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         stiffness = skfem.asm(stiffness_form, mesh.basis)
 
         # get boundary conditions and type, here lbc: negative tab, rbc: positive tab
-        _, lbc_type = boundary_conditions[symbol.id]["left"]
-        _, rbc_type = boundary_conditions[symbol.id]["right"]
+        try:
+            _, lbc_type = boundary_conditions[symbol.id]["left"]
+            _, rbc_type = boundary_conditions[symbol.id]["right"]
+        except KeyError:
+            raise pybamm.ModelError(
+                "No boundary conditions provided for symbol `{}``".format(symbol)
+            )
 
         # adjust matrix for Dirichlet boundary conditions
         if lbc_type == "Dirichlet":

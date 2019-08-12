@@ -1,5 +1,6 @@
 import pybamm
 import numpy as np
+import matplotlib.pyplot as plt
 
 # load model
 model = pybamm.lithium_ion.SPMe()
@@ -29,23 +30,32 @@ voltage1 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution1.t, solution1.y, mesh=mesh
 )
 current1 = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], solution1.t, solution1.y, mesh=mesh
+    model.variables["Current [A]"], solution1.t, solution1.y, mesh=mesh
 )
 
 # solve again
+import ipdb; ipdb.set_trace()
 model.concatenated_initial_conditons = solution1.y[:,-1][:,np.newaxis]
+param["Current function"] = pybamm.GetConstantCurrent(current=0)
+param.update_model(model, disc)
+
 t_eval2 = np.linspace(solution1.t[-1], 1, 100)
 solution2 = model.default_solver.solve(model, t_eval2)
 voltage2 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution2.t, solution2.y, mesh=mesh
 )
 current2 = pybamm.ProcessedVariable(
-    model.variables["Terminal voltage [V]"], solution2.t, solution2.y, mesh=mesh
+    model.variables["Current [A]"], solution2.t, solution2.y, mesh=mesh
 )
 
-
-
-
 # plot
-plot = pybamm.QuickPlot(model, mesh, solution)
-plot.dynamic_plot()
+plt.subplot(121)
+plt.plot(t_eval1, voltage1(t_eval1), t_eval2, voltage2(t_eval2))
+plt.xlabel('t')
+plt.ylabel('Voltage [V]')
+plt.subplot(122)
+z = np.linspace(0, 1, 10)
+plt.plot(t_eval1, current1(t_eval1), t_eval2, current2(t_eval2))
+plt.xlabel('t')
+plt.ylabel('Current [A]')
+plt.show()
