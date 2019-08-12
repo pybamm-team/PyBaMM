@@ -2,7 +2,7 @@ import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-plt.close()
+plt.close('all')
 # set logging level
 pybamm.set_logging_level("INFO")
 
@@ -69,10 +69,15 @@ voltage_step1 = pybamm.ProcessedVariable(
 current_step1 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution1.t, solution1.y, mesh=mesh
 )
+
+current_state = solution1.y[:, -1]
+
 # update potentials (e.g. zero volts on neg. current collector, 3.3 volts on pos.)
-phi_s_cn_dim_new = np.zeros(var_pts[var.z])
+#phi_s_cn_dim_new = np.zeros(var_pts[var.z])
+phi_s_cn_dim_new = current_state[model.variables["Negative current collector potential"].y_slices] * 0
 #phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z]) - 0.05 * np.linspace(0, 1, var_pts[var.z])
-phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z])
+#phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z])
+phi_s_cp_dim_new = current_state[model.variables["Positive current collector potential"].y_slices] - 0.05 * np.linspace(0, 1, var_pts[var.z])
 variables = {
     "Negative current collector potential": non_dim_potential(
         phi_s_cn_dim_new, "negative"
@@ -81,7 +86,7 @@ variables = {
         phi_s_cp_dim_new, "positive"
     ),
 }
-current_state = solution1.y[:, -1]
+
 new_state = update_statevector(variables, current_state)
 
 # solve again -- replace with step
@@ -112,11 +117,16 @@ def plot_var(var, solution, time=-1):
     plt.figure()
     for bat_id in range(len_x):
         plt.plot(range(len_z), entries[bat_id, :, time].flatten())
+    plt.title(var)
     plt.figure()
     plt.imshow(entries[:, :, time])
+    plt.title(var)
 
 #plot_var(var="Positive current collector potential", solution=solution1, time=-1)
-#plot_var(var="Total heating [A.V.m-3]", solution=solution1, time=-1)
+plot_var(var="Total heating [A.V.m-3]", solution=solution1, time=-1)
 #plot_var(var="Interfacial current density", solution=solution2, time=-1)
 #plot_var(var="Negative particle concentration [mol.m-3]", solution=solution2, time=-1)
 plot_var(var="Positive particle concentration [mol.m-3]", solution=solution2, time=-1)
+
+var_names = list(model.variables.keys())
+var_names.sort()
