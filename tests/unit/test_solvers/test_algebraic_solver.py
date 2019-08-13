@@ -91,6 +91,7 @@ class TestAlgebraicSolver(unittest.TestCase):
         var2 = pybamm.Variable("var2", domain=whole_cell)
         model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
         model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
+        model.variables = {"var1": var1, "var2": var2}
         disc = get_discretisation_for_testing()
         disc.process_model(model)
 
@@ -99,8 +100,12 @@ class TestAlgebraicSolver(unittest.TestCase):
         # Solve
         solver = pybamm.AlgebraicSolver()
         solution = solver.solve(model)
-        np.testing.assert_array_equal(solution.y[:100], sol[:100])
-        np.testing.assert_array_equal(solution.y[100:], sol[100:])
+        np.testing.assert_array_equal(
+            model.variables["var1"].evaluate(t=None, y=solution.y), sol[:100]
+        )
+        np.testing.assert_array_equal(
+            model.variables["var2"].evaluate(t=None, y=solution.y), sol[100:]
+        )
 
         # Test time
         self.assertGreater(
@@ -110,8 +115,12 @@ class TestAlgebraicSolver(unittest.TestCase):
         # Test without jacobian
         model.use_jacobian = False
         solution_no_jac = solver.solve(model)
-        np.testing.assert_array_equal(solution_no_jac.y[:100], sol[:100])
-        np.testing.assert_array_equal(solution_no_jac.y[100:], sol[100:])
+        np.testing.assert_array_equal(
+            model.variables["var1"].evaluate(t=None, y=solution_no_jac.y), sol[:100]
+        )
+        np.testing.assert_array_equal(
+            model.variables["var2"].evaluate(t=None, y=solution_no_jac.y), sol[100:]
+        )
 
 
 if __name__ == "__main__":
