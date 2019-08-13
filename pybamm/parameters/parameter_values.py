@@ -333,9 +333,7 @@ class ParameterValues(dict):
                     # Need to update parameters dict to be that of the new current
                     # function and make new parameters_eval dict to be processed
                     x.function.parameters = self["Current function"].parameters
-                    x.function.parameters_eval = dict.fromkeys(
-                        x.function.parameters.keys()
-                    )
+                    x.function.parameters_eval = x.function.parameters.copy()
                     for param, sym in x.function.parameters.items():
                         # Need to process again as new symbols may be passed
                         # e.g. may explicitly pass pybamm.Scalar(1) instead of
