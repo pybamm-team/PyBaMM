@@ -109,8 +109,54 @@ class ExportCSV(object):
 
                 self.column_names = np.append(self.column_names, var_name)
 
+    def add_error(self, variables, truth_index=0):
+
+        # process truth
+        truth_variables_to_process = {}
+        truth_variables_to_process.update(
+            {var: self.models[truth_index].variables[var] for var in variables}
+        )
+        truth_processed_variables = pybamm.post_process_variables(
+            truth_variables_to_process,
+            self.solutions[truth_index].t,
+            self.solutions[truth_index].y,
+            self.mesh,
+        )
+
+        for i, model in enumerate(self.models):
+
+            if i != truth_index:
+                variables_to_process = {}
+
+                variables_to_process.update(
+                    {var: model.variables[var] for var in variables}
+                )
+
+                processed_variables = pybamm.post_process_variables(
+                    variables_to_process,
+                    self.solutions[i].t,
+                    self.solutions[i].y,
+                    self.mesh,
+                )
+                for var_name, var in processed_variables.items():
+
+                    error = np.abs(
+                        var(self.times, x=self.x_locs, r=self.r_locs)
+                        - truth_processed_variables[var_name](
+                            self.times, x=self.x_locs, r=self.r_locs
+                        )
+                    )
+
+                    if self.stage is None:
+                        self.stage = error
+                    else:
+                        self.stage = np.column_stack((self.stage, error))
+
+                    self.column_names = np.append(self.column_names, var_name)
+
     def reset_stage(self):
         self.stage = None
+        self.column_names = []
 
     def export(self, filename):
 

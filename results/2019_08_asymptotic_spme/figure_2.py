@@ -7,25 +7,17 @@ import matplotlib.pyplot as plt
 
 generate_plots = True
 print_RMSE = True
-export_data = True
+export_data = False
 
-#
-# Load models set mesh etc
-#
-
-# load models
 models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.SPMe(), pybamm.lithium_ion.DFN()]
 
-# load parameter values and process models and geometry
 param = models[0].default_parameter_values
 for model in models:
     param.process_model(model)
 
-# set mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
+var_pts = {var.x_n: 30, var.x_s: 20, var.x_p: 30, var.r_n: 15, var.r_p: 15}
 
-# discretise models
 discs = []
 for model in models:
     # create geometry
@@ -37,22 +29,16 @@ for model in models:
 
     discs.append(disc)
 
-
-#
-# Loop over c-rates
-#
-
 C_rates = [0.1, 0.5, 1, 2, 3]
-
 colour = {0.1: "r", 0.5: "b", 1: "g", 2: "m", 3: "y"}
 
 variables = ["Discharge capacity [A.h.m-2]", "Terminal voltage [V]"]
 
+RMSE = {"SPM-DFN": [], "SPMe-DFN": []}
+
 if export_data:
     dir_path = "results/2019_08_asymptotic_spme/data/figure_2"
     exporter = pybamm.ExportCSV(dir_path)
-
-RMSE = {"SPM-DFN": [], "SPMe-DFN": []}
 
 for C_rate in C_rates:
 
