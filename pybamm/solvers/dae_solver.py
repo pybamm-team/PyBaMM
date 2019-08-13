@@ -195,6 +195,7 @@ class DaeSolver(pybamm.BaseSolver):
 
             if model.use_simplify:
                 pybamm.logger.info("Simplifying jacobian")
+                import ipdb; ipdb.set_trace()
                 jac_algebraic = simp.simplify(jac_algebraic)
                 jac = simp.simplify(jac)
 

@@ -117,8 +117,8 @@ class Full2plus1D(BaseNplus1D):
         # accounted for in the BoundaryIntegral term in the governing equation
         self.boundary_conditions = {
             T_av: {
-                "left": pybamm.Scalar(0),
-                "right": pybamm.Scalar(0),
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
 
