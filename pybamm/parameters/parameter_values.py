@@ -340,7 +340,7 @@ class ParameterValues(dict):
                         # Need to process again as new symbols may be passed
                         # e.g. may explicitly pass pybamm.Scalar(1) instead of
                         # pybamm.electrical_parameters.I_typ
-                        if isinstance(sym, pybamm.Scalar):
+                        if isinstance(sym, pybamm.Symbol):
                             new_sym = self.process_symbol(sym)
                             x.function.parameters[param] = new_sym
                             x.function.parameters_eval[param] = new_sym.evaluate()
