@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 generate_plots = True
 print_RMSE = True
-export_data = False
+export_data = True
 
 #
 # Load models set mesh etc
@@ -133,14 +133,21 @@ for C_rate in C_rates:
 
     if export_data:
 
+        t_dfn = solutions[2].t
+        t_out = np.linspace(0, t_dfn[-1], 200)
+        exporter.set_output_points(t_out)
+
+        exporter.reset_stage()
+
         for i, model in enumerate(models):
             exporter.set_model_solutions(model, mesh, solutions[i])
 
-            t_out = t_eval
-            exporter.set_output_points(t_out)
+            if i == 0:
+                exporter.add(variables)
+            else:
+                exporter.add([variables[-1]])
 
-            exporter.add(variables)
-            exporter.export("test")
+        exporter.export("C" + str(C_rate))
 
 if print_RMSE:
     print("The RMSE is: \n")
