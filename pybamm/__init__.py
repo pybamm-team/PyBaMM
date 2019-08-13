@@ -243,6 +243,7 @@ from .parameters.standard_current_functions.get_current_data import GetCurrentDa
 #
 from .processed_variable import post_process_variables, ProcessedVariable
 from .quick_plot import QuickPlot, ax_min, ax_max
+from .export_csv import ExportCSV
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

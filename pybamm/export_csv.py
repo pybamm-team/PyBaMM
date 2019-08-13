@@ -24,10 +24,13 @@ class ExportCSV(object):
 
         self.directory_path = directory_path
 
-        self.output_times = None
-        self.output_locations = None
+        self.output_times = np.asarray([])
+        self.output_x_locs = np.asarray([])
 
-        self.stage = np.asarray([])
+        self.stage = None
+        self.column_names = []
+
+        self.exported_files = []
 
     def set_model_solutions(self, models, mesh, solutions):
 
@@ -50,10 +53,27 @@ class ExportCSV(object):
         self.mesh = mesh
         self.solutions = solutions
 
-    def set_output_times(self, t):
-        self.output_times = t
+    def set_output_points(self, times, x_locs=None, r_locs=None):
 
-    def add_to_stage(self, variables):
+        self.times = times
+        self.x_locs = x_locs
+        self.r_locs = r_locs
+
+        if x_locs:
+            x_size = self.x_locs.size
+        else:
+            x_size = 0
+
+        if r_locs:
+            r_size = self.r_locs.size
+        else:
+            r_size = 0
+
+        # check output is one-dimensional
+        if sum([self.times.size > 1, x_size > 1, r_size > 1]) > 1:
+            raise NotImplementedError("Can only output 1D variables at the moment")
+
+    def add(self, variables):
         """
             Adds a list of variables to the stage for exporting
 
@@ -72,20 +92,50 @@ class ExportCSV(object):
                 {var: model.variables[var] for var in variables}
             )
 
-            processed_variables[model] = pybamm.post_process_variables(
+            processed_variables = pybamm.post_process_variables(
                 variables_to_process,
                 self.solutions[i].t,
                 self.solutions[i].y,
                 self.mesh,
             )
 
-    def clear_stage(self):
-        self.stage = np.asarray([])
+            for var_name, var in processed_variables.items():
+
+                evaluated_variable = var(self.times, x=self.x_locs, r=self.r_locs)
+                if self.stage is None:
+                    self.stage = evaluated_variable
+                else:
+                    self.stage = np.column_stack((self.stage, evaluated_variable))
+
+                self.column_names = np.append(self.column_names, var_name)
+
+    def reset_stage(self):
+        self.stage = None
 
     def export(self, filename):
 
         if not filename[-4:] in [".csv", ".dat"]:
             filename += ".csv"
 
-        np.savetxt(self.directory_path + filename, self.stage, delimiter=",")
+        if not self.directory_path[-1] == "/":
+            self.directory_path += "/"
+
+        export_path = self.directory_path + filename
+        np.savetxt(export_path, self.stage, delimiter=",")
+
+        self.exported_files = np.append(self.exported_files, export_path)
+
+    def delete_exported(self, to_delete):
+
+        if to_delete == "all":
+            files_to_delete = self.exported_files
+        elif to_delete == "last":
+            files_to_delete = self.exported_files[-1]
+        else:
+            raise KeyError(
+                "Please state whether you wish to delete either 'all' or 'last' exported files"
+            )
+
+        for file in files_to_delete:
+            os.remove(file)
 
