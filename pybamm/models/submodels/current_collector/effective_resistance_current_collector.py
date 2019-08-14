@@ -83,19 +83,28 @@ class EffectiveResistance2D(pybamm.BaseModel):
         }
 
         # Define effective current collector resistance
+        psi_neg_tab = pybamm.BoundaryValue(psi, "left")
+        psi_pos_tab = pybamm.BoundaryValue(psi, "right")
+        W_neg_tab = pybamm.BoundaryValue(W, "left")
+        W_pos_tab = pybamm.BoundaryValue(W, "right")
+
         R_cc = (
             (alpha_prime / l_y)
             * (
-                sigma_cn_dbl_prime * l_cn * pybamm.BoundaryValue(W, "right")
-                + sigma_cp_dbl_prime * l_cp * pybamm.BoundaryValue(W, "left")
+                sigma_cn_dbl_prime * l_cn * W_pos_tab
+                + sigma_cp_dbl_prime * l_cp * W_neg_tab
             )
-            - (pybamm.BoundaryValue(psi, "right") - pybamm.BoundaryValue(psi, "left"))
+            - (psi_pos_tab - psi_neg_tab)
         ) / (sigma_cn_dbl_prime * l_cn + sigma_cp_dbl_prime * l_cp)
 
         R_cc_dim = R_cc * param.potential_scale / param.I_typ
 
         self.variables.update(
             {
+                "Current collector potential weighted sum (negative tab)": psi_neg_tab,
+                "Current collector potential weighted sum (positive tab)": psi_pos_tab,
+                "Perturbation to c.c. potential difference (negative tab)": W_neg_tab,
+                "Perturbation to c.c. potential difference (positive tab)": W_pos_tab,
                 "Effective current collector resistance": R_cc,
                 "Effective current collector resistance [Ohm]": R_cc_dim,
             }
@@ -115,15 +124,13 @@ class EffectiveResistance2D(pybamm.BaseModel):
         l_cp = param_values.process_symbol(param.l_cp).evaluate()
         l_y = param_values.process_symbol(param.l_y).evaluate()
         l_z = param_values.process_symbol(param.l_z).evaluate()
-        neg_tab_y = param_values.process_symbol(param.centre_y_tab_n).evaluate()
-        neg_tab_z = param_values.process_symbol(param.centre_z_tab_n).evaluate()
         sigma_cn_prime = param_values.process_symbol(param.sigma_cn_prime).evaluate()
         sigma_cp_prime = param_values.process_symbol(param.sigma_cp_prime).evaluate()
         alpha = param_values.process_symbol(param.alpha).evaluate()
         pot_scale = param_values.process_symbol(param.potential_scale).evaluate()
         U_ref = param_values.process_symbol(param.U_p_ref - param.U_n_ref).evaluate()
 
-        # Process psi and W
+        # Process psi and W, and their (average) values at the negative tab
         psi = pybamm.ProcessedVariable(
             self.variables["Current collector potential weighted sum"],
             solution.t,
@@ -136,6 +143,12 @@ class EffectiveResistance2D(pybamm.BaseModel):
             solution.y,
             mesh,
         )
+        psi_neg_tab = self.variables[
+            "Current collector potential weighted sum (negative tab)"
+        ].evaluate(y=solution.y[:, 0])[0][0]
+        W_neg_tab = self.variables[
+            "Perturbation to c.c. potential difference (negative tab)"
+        ].evaluate(y=solution.y[:, 0])[0][0]
 
         # Create callable combination of ProcessedVariable objects for potentials
         def V_cc(t, y, z):
@@ -146,13 +159,13 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
         denominator = sigma_cn_prime * l_cn + sigma_cn_prime * l_cp
 
-        # The method onlu defines psi up to an arbitrray function of time. This
+        # The method only defines psi up to an arbitrary function of time. This
         # is fixed by ensuring phi_s_cn = 0 on the negative tab when reconstructing
         # the potentials
         def phi_s_cn_tab(t):
             phi_s_cn_tab = (
-                I_av(t) * l_y * l_z * psi(t=None, y=neg_tab_y, z=neg_tab_z)
-                - sigma_cp_prime * l_cp * V_cc(t, y=neg_tab_y, z=neg_tab_z)
+                I_av(t) * l_y * l_z * psi_neg_tab
+                - sigma_cp_prime * l_cp * (V_av(t) - alpha * I_av(t) * W_neg_tab)
             ) / denominator
             return phi_s_cn_tab
 

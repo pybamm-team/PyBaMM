@@ -31,8 +31,8 @@ var_pts = {
     var.x_p: 5,
     var.r_n: 5,
     var.r_p: 5,
-    var.y: 10,
-    var.z: 10,
+    var.y: 5,
+    var.z: 5,
 }
 
 # process model and geometry, and discretise
