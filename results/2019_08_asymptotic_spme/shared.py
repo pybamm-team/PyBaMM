@@ -113,9 +113,16 @@ class ModelGroup(object):
             for i, model in enumerate(self.models):
                 self.parameters.update_model(model, self.discretisations[i])
 
-        self.solutions = [
-            model.default_solver.solve(model, t_eval) for model in self.models
-        ]
+        self.solutions = [None] * len(self.models)
+        self.times = [None] * len(self.models)
+
+        timer = pybamm.Timer()
+        for i, model in enumerate(self.models):
+            start = timer.time()
+            sol = model.default_solver.solve(model, t_eval)
+            end = timer.time()
+            self.solutions[i] = sol
+            self.times[i] = end - start
 
     def process_variables(self, variables):
 
