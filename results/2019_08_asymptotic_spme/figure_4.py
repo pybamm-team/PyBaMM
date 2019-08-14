@@ -46,7 +46,12 @@ whole_cell_variables = ["Electrolyte concentration", "Electrolyte potential [V]"
 
 if export_data:
     dir_path = "results/2019_08_asymptotic_spme/data/figure_4"
-    exporter = pybamm.ExportCSV(dir_path)
+    c_s_n_exporter = pybamm.ExportCSV(dir_path)
+    c_e_exporter = pybamm.ExportCSV(dir_path)
+    c_s_p_exporter = pybamm.ExportCSV(dir_path)
+    phi_s_n_exporter = pybamm.ExportCSV(dir_path)
+    phi_e_exporter = pybamm.ExportCSV(dir_path)
+    phi_s_p_exporter = pybamm.ExportCSV(dir_path)
 
 for C_rate in C_rates:
 
@@ -92,71 +97,71 @@ for C_rate in C_rates:
         t_out,
     )
 
-    if generate_plots:
+    x = np.linspace(0, 1, 100)
+    x_n = discs[i].mesh["negative electrode"][0].nodes
+    x_p = discs[i].mesh["positive electrode"][0].nodes
+    r = discs[i].mesh["negative particle"][0].nodes
 
-        for i in [1, 0]:
+    for i in [1, 0]:
 
-            model = models[i]
+        model = models[i]
 
-            t, y = solutions[i].t, solutions[i].y
+        t, y = solutions[i].t, solutions[i].y
 
-            c_s_n = pybamm.ProcessedVariable(
-                model.variables["X-averaged negative particle concentration"],
-                t,
-                y,
-                discs[i].mesh,
-            )
-            c_e = pybamm.ProcessedVariable(
-                model.variables["Electrolyte concentration"], t, y, discs[i].mesh
-            )
-            c_s_p = pybamm.ProcessedVariable(
-                model.variables["X-averaged positive particle concentration"],
-                t,
-                y,
-                discs[i].mesh,
-            )
-            phi_s_n = pybamm.ProcessedVariable(
-                model.variables["Negative electrode potential [V]"], t, y, discs[i].mesh
-            )
-            phi_e = pybamm.ProcessedVariable(
-                model.variables["Electrolyte potential [V]"], t, y, discs[i].mesh
-            )
-            phi_s_p = pybamm.ProcessedVariable(
-                model.variables["Positive electrode potential [V]"], t, y, discs[i].mesh
-            )
+        c_s_n = pybamm.ProcessedVariable(
+            model.variables["X-averaged negative particle concentration"],
+            t,
+            y,
+            discs[i].mesh,
+        )
+        c_e = pybamm.ProcessedVariable(
+            model.variables["Electrolyte concentration"], t, y, discs[i].mesh
+        )
+        c_s_p = pybamm.ProcessedVariable(
+            model.variables["X-averaged positive particle concentration"],
+            t,
+            y,
+            discs[i].mesh,
+        )
+        phi_s_n = pybamm.ProcessedVariable(
+            model.variables["Negative electrode potential [V]"], t, y, discs[i].mesh
+        )
+        phi_e = pybamm.ProcessedVariable(
+            model.variables["Electrolyte potential [V]"], t, y, discs[i].mesh
+        )
+        phi_s_p = pybamm.ProcessedVariable(
+            model.variables["Positive electrode potential [V]"], t, y, discs[i].mesh
+        )
 
-            l_n = param.process_symbol(
-                pybamm.standard_parameters_lithium_ion.l_n
-            ).evaluate()
-            l_p = param.process_symbol(
-                pybamm.standard_parameters_lithium_ion.l_p
-            ).evaluate()
+        l_n = param.process_symbol(
+            pybamm.standard_parameters_lithium_ion.l_n
+        ).evaluate()
+        l_p = param.process_symbol(
+            pybamm.standard_parameters_lithium_ion.l_p
+        ).evaluate()
 
-            # x_n = np.linspace(0, l_n, 30)
-            # x_p = np.linspace(1 - l_p, 1, 30)
-            x = np.linspace(0, 1, 100)
-            # r = np.linspace(0, 1, 30)
+        # x_n = np.linspace(0, l_n, 30)
+        # x_p = np.linspace(1 - l_p, 1, 30)
+        # r = np.linspace(0, 1, 30)
 
-            x_n = discs[i].mesh["negative electrode"][0].nodes
-            x_p = discs[i].mesh["positive electrode"][0].nodes
-            r = discs[i].mesh["negative particle"][0].nodes
+        if i == 0:
+            c_s_n_xav = c_s_n(t_out, r=r)
+            c_s_p_xav = c_s_p(t_out, r=r)
+            linestyle = "--"
+            label = None
+            color = "k"
+        elif i == 1:
+            # still need to average the particle concentrations for dfn
+            c_s_n(t_out, x=x_n, r=r)
 
-            if i == 0:
-                c_s_n_xav = c_s_n(t_out, r=r)
-                c_s_p_xav = c_s_p(t_out, r=r)
-                linestyle = "--"
-                label = None
-                color = "k"
-            elif i == 1:
-                # still need to average the particle concentrations for dfn
-                c_s_n(t_out, x=x_n, r=r)
+            c_s_n_xav = np.mean(c_s_n(t_out, x=x_n, r=r), 0)
+            c_s_p_xav = np.mean(c_s_p(t_out, x=x_p, r=r), 0)
 
-                c_s_n_xav = np.mean(c_s_n(t_out, x=x_n, r=r), 0)
-                c_s_p_xav = np.mean(c_s_p(t_out, x=x_p, r=r), 0)
+            linestyle = "-"
+            label = C_rate
+            color = colour[C_rate]
 
-                linestyle = "-"
-                label = C_rate
-                color = colour[C_rate]
+        if generate_plots:
 
             plt.subplot(2, 3, 1)
             plt.plot(r, c_s_n_xav, lw=2, linestyle=linestyle, color=color)
@@ -176,6 +181,42 @@ for C_rate in C_rates:
 
             plt.subplot(2, 3, 6)
             plt.plot(x_p, phi_s_p(t_out, x=x_p), lw=2, linestyle=linestyle, color=color)
+
+        if export_data:
+
+            c_s_n_exporter.set_model_solutions(model, mesh, solutions[i])
+            c_e_exporter.set_model_solutions(model, mesh, solutions[i])
+            c_s_p_exporter.set_model_solutions(model, mesh, solutions[i])
+            phi_s_n_exporter.set_model_solutions(model, mesh, solutions[i])
+            phi_e_exporter.set_model_solutions(model, mesh, solutions[i])
+            phi_s_p_exporter.set_model_solutions(model, mesh, solutions[i])
+
+            c_e_exporter.set_output_points(t_out, x=x)
+            c_e_exporter.add(["Electrolyte concentration"])
+
+            x_n_phi = np.linspace(0, l_n, 30)
+            x_p_phi = np.linspace(1 - l_p, 1, 30)
+            phi_s_n_exporter.set_output_points(t_out, x=x_n_phi)
+            phi_e_exporter.set_output_points(t_out, x=x)
+            phi_s_p_exporter.set_output_points(t_out, x=x_p_phi)
+
+            if i == 0:
+                c_s_n_exporter.set_output_points(t_out, r=r)
+                c_s_n_exporter.add_array(r)
+                c_s_n_exporter.add(["X-averaged negative particle concentration"])
+
+                c_s_p_exporter.set_output_points(t_out, r=r)
+                c_s_p_exporter.add_array(r)
+                c_s_p_exporter.add(["X-averaged negative particle concentration"])
+
+                phi_s_n_exporter.add_array(x_n_phi)
+                phi_e_exporter.add_array(x)
+                phi_s_p_exporter.add_array(x_p_phi)
+
+            elif i == 1:
+                c_s_n_exporter.add_array(c_s_n_xav)
+                c_s_p_exporter.add_array(c_s_p_xav)
+
 
 if generate_plots:
 

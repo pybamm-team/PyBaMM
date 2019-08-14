@@ -102,12 +102,17 @@ class ExportCSV(object):
             for var_name, var in processed_variables.items():
 
                 evaluated_variable = var(self.times, x=self.x_locs, r=self.r_locs)
-                if self.stage is None:
-                    self.stage = evaluated_variable
-                else:
-                    self.stage = np.column_stack((self.stage, evaluated_variable))
+
+                self.add_array(evaluated_variable)
 
                 self.column_names = np.append(self.column_names, var_name)
+
+    def add_array(self, array):
+
+        if self.stage is None:
+            self.stage = array
+        else:
+            self.stage = np.column_stack((self.stage, array))
 
     def add_error(self, variables, truth_index=0):
 
