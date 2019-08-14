@@ -71,6 +71,7 @@ from .expression_tree.binary_operators import (
     Kron,
     outer,
     source,
+    boundary_source,
 )
 from .expression_tree.concatenations import (
     Concatenation,
@@ -90,6 +91,7 @@ from .expression_tree.unary_operators import (
     Divergence,
     Laplacian,
     Mass,
+    WeakSource,
     BoundaryOperator,
     BoundaryValue,
     BoundaryGradient,

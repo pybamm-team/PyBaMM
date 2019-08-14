@@ -4,37 +4,37 @@ import matplotlib.pyplot as plt
 import sys
 
 # set logging level and increase recursion limit
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 sys.setrecursionlimit(10000)
 
 # load models
 models = [
-    #pybamm.lithium_ion.SPM(
-    #    {"thermal": "lumped"}, name="1D SPM (lumped)"
-    #),
+    pybamm.lithium_ion.SPM(
+        {"thermal": "lumped"}, name="1D SPM (lumped)"
+    ),
+    pybamm.lithium_ion.SPM(
+        {"thermal": "lumped with current collectors"}, name="1D SPM (lumped with cc)"
+    ),
     #pybamm.lithium_ion.SPMe(
     #    {"thermal": "lumped"}, name="1D SPMe (lumped)"
     #),
-    ##pybamm.lithium_ion.DFN(
-    ##    {"thermal": "lumped"}, name="1D DFN (lumped)"
-    ##),
-    #pybamm.lithium_ion.SPM(
-    #    {"thermal": "full"}, name="1D SPM (full)"
-    #),
+    pybamm.lithium_ion.SPM(
+        {"thermal": "full"}, name="1D SPM (full)"
+    ),
     #pybamm.lithium_ion.SPMe(
     #    {"thermal": "full"}, name="1D SPMe (full)"
     #),
     #pybamm.lithium_ion.DFN(
     #    {"thermal": "full"}, name="1D DFN (full)"
     #),
-    #pybamm.lithium_ion.SPM(
-    #    {
-    #        "current collector": "potential pair",
-    #        "dimensionality": 2,
-    #        "thermal": "lumped",
-    #    },
-    #    name="2+1D SPM (lumped)",
-    #),
+    pybamm.lithium_ion.SPM(
+        {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "lumped",
+        },
+        name="2+1D SPM (lumped)",
+    ),
     #pybamm.lithium_ion.SPMe(
     #    {
     #        "current collector": "potential pair",

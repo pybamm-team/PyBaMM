@@ -50,6 +50,8 @@ class TestScikitFiniteElement(unittest.TestCase):
             pybamm.laplacian(var) - pybamm.source(2 * var, var),
             pybamm.laplacian(var) - pybamm.source(unit_source ** 2 + 1 / var, var),
             pybamm.Integral(var, [y, z]) - 1,
+            pybamm.boundary_source(var, var),
+            pybamm.laplacian(var) - pybamm.boundary_source(unit_source, var),
         ]:
             # Check that equation can be evaluated in each case
             # Dirichlet

@@ -97,15 +97,15 @@ class Full2plus1D(BaseNplus1D):
     def set_rhs(self, variables):
         T_av, _, Q_av = self._unpack(variables)
 
-        # Add boundary integral term which accounts for surface cooling around
-        # the edge of the domain in  the weak formulation.
+        # Add boundary source term which accounts for surface cooling around
+        # the edge of the domain in  the weak formulation. 
         # TODO: update to allow different cooling conditions at the tabs
         self.rhs = {
             T_av: (
                 pybamm.laplacian(T_av)
                 + self.param.B * Q_av
                 - 2 * self.param.h / (self.param.delta ** 2) * T_av
-                + self.param.h * pybamm.BoundaryIntegral(T_av)
+                + self.param.h * pybamm.boundary_source(T_av, T_av)
             )
             / self.param.C_th
         }
@@ -114,7 +114,7 @@ class Full2plus1D(BaseNplus1D):
         T_av, _, _ = self._unpack(variables)
 
         # Dummy no flux boundary conditions since cooling at the the tabs is
-        # accounted for in the BoundaryIntegral term in the weak form of the
+        # accounted for in the boundary source term in the weak form of the
         # governing equation
         # TODO: update to allow different cooling conditions at the tabs
         self.boundary_conditions = {

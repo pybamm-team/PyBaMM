@@ -438,6 +438,7 @@ class MatrixMultiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         return left @ right
 
+
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
         # anything multiplied by a scalar zero returns a scalar zero
@@ -713,8 +714,9 @@ def source(left, right):
     """A convinience function for creating (part of) an expression tree representing
     a source term in the (weak) finite element formulation. The left child is the
     symbol representing the source term and the right child is the symbol of the
-    equation variable (key). The method returns the matrix-vector product of the
-    mass matrix (adjusted to account for the boundary conditions imposed the the
+    equation variable (the finite element basis is assumed to be that of the right
+    child). The method returns the matrix-vector product of the mass matrix
+    (adjusted to account for any Dirichlet boundary conditions imposed the the
     right symbol) and the discretised left symbol.
     """
 
@@ -725,4 +727,24 @@ def source(left, right):
                 left.domain, right.domain
             )
         )
-    return pybamm.Mass(right) @ left
+    return pybamm.WeakSource(right, region="interior") @ left
+
+
+def boundary_source(left, right):
+    """A convinience function for creating (part of) an expression tree representing
+    a boundary source term in the (weak) finite element formulation. The left child is
+    the symbol representing the source term and the right child is the symbol of the
+    equation variable (the finite element basis is assumed to be that of the right
+    child). The method returns the matrix-vector product of the mass matrix (assembled
+    over the boundary, and adjusted to account for any Dirichlet boundary conditions
+    imposed the the right symbol) and the discretised left symbol.
+    """
+
+    if left.domain != ["current collector"] or right.domain != ["current collector"]:
+        raise pybamm.DomainError(
+            """finite element method only implemented in the 'current collector' domain,
+            but symbols have domains {} and {}""".format(
+                left.domain, right.domain
+            )
+        )
+    return pybamm.WeakSource(right, region="boundary") @ left

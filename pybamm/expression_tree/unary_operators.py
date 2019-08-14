@@ -320,12 +320,36 @@ class Laplacian(SpatialOperator):
 class Mass(SpatialOperator):
     """Returns the mass matrix for a given symbol, accounting for boundary conditions
     where necessary (e.g. in the finite element formualtion)
-
     **Extends:** :class:`SpatialOperator`
     """
 
     def __init__(self, child):
         super().__init__("mass", child)
+
+    def evaluate_for_shape(self):
+        return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
+
+
+class WeakSource(SpatialOperator):
+    """Returns the appropriate matrix for a source term in the weak formulation
+    (e.g. in the finite element formualtion) using the basis of the given symbol,
+    accounting for boundary conditions where necessary
+
+    Parameters
+    ----------
+
+    child : :class:`Symbol`
+        child node
+    region: str, optional
+        The domain over which to assemble the form. Can be `interior` (defualt)
+        or `boundary`.
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child, region="interior"):
+        super().__init__("source", child)
+        self.region = region
 
     def evaluate_for_shape(self):
         return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
