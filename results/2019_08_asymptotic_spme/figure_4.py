@@ -121,7 +121,7 @@ class ModelGroup(object):
 
     def discretise(self, var_pts):
 
-        mesh = pybamm.Mesh(self.geometry, self.submesh_types[0], var_pts)
+        mesh = pybamm.Mesh(self.geometry[0], self.submesh_types[0], var_pts)
 
         self.discretisations = [
             pybamm.Discretisation(mesh, method) for method in self.spatial_methods
