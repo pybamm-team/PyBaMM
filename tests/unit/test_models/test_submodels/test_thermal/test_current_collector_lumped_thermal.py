@@ -38,6 +38,10 @@ class TestLumped(unittest.TestCase):
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
+        submodel = pybamm.thermal.current_collector.LumpedNplus1D(param)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+
         submodel = pybamm.thermal.current_collector.Lumped1plus1D(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()

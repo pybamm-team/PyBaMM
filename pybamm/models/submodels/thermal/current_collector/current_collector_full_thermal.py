@@ -98,7 +98,7 @@ class Full2plus1D(BaseNplus1D):
         T_av, _, Q_av = self._unpack(variables)
 
         # Add boundary source term which accounts for surface cooling around
-        # the edge of the domain in  the weak formulation. 
+        # the edge of the domain in  the weak formulation.
         # TODO: update to allow different cooling conditions at the tabs
         self.rhs = {
             T_av: (

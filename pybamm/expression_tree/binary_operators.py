@@ -438,7 +438,6 @@ class MatrixMultiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         return left @ right
 
-
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.simplify()`. """
         # anything multiplied by a scalar zero returns a scalar zero

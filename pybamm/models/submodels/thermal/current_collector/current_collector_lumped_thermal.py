@@ -23,8 +23,7 @@ class Lumped1D(BaseModel):
 
     def get_fundamental_variables(self):
 
-        T_volume_av = pybamm.standard_variables.T_volume_av
-        T_av = pybamm.PrimaryBroadcast(T_volume_av, ["current collector"])
+        T_av = pybamm.standard_variables.T_av
 
         variables = self._get_standard_fundamental_variables(T_av)
         return variables
@@ -65,7 +64,22 @@ class Lumped1D(BaseModel):
         }
 
 
-class Lumped1plus1D(Lumped1D):
+class LumpedNplus1D(Lumped1D):
+    """Base class for N+1D lumped thermal submodels"""
+
+    def __init__(self, param):
+        super().__init__(param)
+
+    def get_fundamental_variables(self):
+
+        T_volume_av = pybamm.standard_variables.T_volume_av
+        T_av = pybamm.PrimaryBroadcast(T_volume_av, ["current collector"])
+
+        variables = self._get_standard_fundamental_variables(T_av)
+        return variables
+
+
+class Lumped1plus1D(LumpedNplus1D):
     """Class for 1+1D lumped thermal submodel"""
 
     def __init__(self, param):
@@ -92,7 +106,7 @@ class Lumped1plus1D(Lumped1D):
         return pybamm.z_average(var)
 
 
-class Lumped2plus1D(Lumped1D):
+class Lumped2plus1D(LumpedNplus1D):
     """Class for 2+1D lumped thermal submodel"""
 
     def __init__(self, param):
@@ -111,10 +125,7 @@ class Lumped2plus1D(Lumped1D):
         """Returns the surface cooling coefficient in 2+1D"""
         return (
             -2 * self.param.h / (self.param.delta ** 2)
-            - 2
-            * (self.param.l_y + self.param.l_z)
-            * self.param.h
-            / self.param.delta
+            - 2 * (self.param.l_y + self.param.l_z) * self.param.h / self.param.delta
         )
 
     def _yz_average(self, var):

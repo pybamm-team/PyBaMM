@@ -9,24 +9,22 @@ sys.setrecursionlimit(10000)
 
 # load models
 models = [
-    pybamm.lithium_ion.SPM(
-        {"thermal": "lumped"}, name="1D SPM (lumped)"
-    ),
+    pybamm.lithium_ion.SPM({"thermal": "lumped"}, name="1D SPM (lumped)"),
     pybamm.lithium_ion.SPM(
         {"thermal": "lumped with current collectors"}, name="1D SPM (lumped with cc)"
     ),
-    #pybamm.lithium_ion.SPMe(
+    # pybamm.lithium_ion.SPMe(
     #    {"thermal": "lumped"}, name="1D SPMe (lumped)"
-    #),
-    pybamm.lithium_ion.SPM(
-        {"thermal": "full"}, name="1D SPM (full)"
-    ),
-    #pybamm.lithium_ion.SPMe(
+    # ),
+    # pybamm.lithium_ion.SPM(
+    #    {"thermal": "full"}, name="1D SPM (full)"
+    # ),
+    # pybamm.lithium_ion.SPMe(
     #    {"thermal": "full"}, name="1D SPMe (full)"
-    #),
-    #pybamm.lithium_ion.DFN(
+    # ),
+    # pybamm.lithium_ion.DFN(
     #    {"thermal": "full"}, name="1D DFN (full)"
-    #),
+    # ),
     pybamm.lithium_ion.SPM(
         {
             "current collector": "potential pair",
@@ -35,30 +33,26 @@ models = [
         },
         name="2+1D SPM (lumped)",
     ),
-    #pybamm.lithium_ion.SPMe(
+    # pybamm.lithium_ion.SPMe(
     #    {
     #        "current collector": "potential pair",
     #        "dimensionality": 2,
     #        "thermal": "lumped",
     #    },
     #    name="2+1D SPMe (lumped)",
-    #),
+    # ),
     pybamm.lithium_ion.SPM(
-        {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "full",
-        },
+        {"current collector": "potential pair", "dimensionality": 2, "thermal": "full"},
         name="2+1D SPM (full)",
     ),
-    #pybamm.lithium_ion.SPMe(
+    # pybamm.lithium_ion.SPMe(
     #    {
     #        "current collector": "potential pair",
     #        "dimensionality": 2,
     #        "thermal": "full",
     #    },
     #    name="2+1D SPMe (full)",
-    #),
+    # ),
 ]
 
 # load parameter values
