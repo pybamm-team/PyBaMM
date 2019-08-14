@@ -60,6 +60,33 @@ class TestUpdateParameters(unittest.TestCase):
         # results should be different
         self.assertNotEqual(np.linalg.norm(Y1 - Y2), 0)
 
+        # test with new current function
+        model3 = pybamm.ReactionDiffusionModel()
+        modeltest3 = tests.StandardModelTest(model3)
+        modeltest3.test_all()
+        parameter_values_update = pybamm.ParameterValues(
+            base_parameters=model3.default_parameter_values,
+            optional_parameters={
+                "Current function": pybamm.GetConstantCurrent(current=pybamm.Scalar(0))
+            },
+        )
+        modeltest3.test_update_parameters(parameter_values_update)
+        modeltest3.test_solving(t_eval=t_eval)
+        Y3 = modeltest3.solution.y
+
+        # function.parameters should be pybamm.Scalar(0), but parameters_eval s
+        # should be a float
+        self.assertIsInstance(
+            model3.variables["Current [A]"].function.parameters["Current [A]"],
+            pybamm.Scalar,
+        )
+        self.assertEqual(
+            model3.variables["Current [A]"].function.parameters_eval["Current [A]"], 0.0
+        )
+
+        # results should be different
+        self.assertNotEqual(np.linalg.norm(Y1 - Y3), 0)
+
     def test_update_geometry(self):
         # standard model
         model1 = pybamm.ReactionDiffusionModel()
