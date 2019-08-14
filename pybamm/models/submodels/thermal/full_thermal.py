@@ -47,8 +47,8 @@ class Full(BaseModel):
         T, q, Q = self._unpack(variables)
 
         self.rhs = {
-            T: (-pybamm.div(q) + self.param.delta ** 2 * self.param.B * Q)
-            / (self.param.delta ** 2 * self.param.C_th * self.param.rho_k)
+            T: (-pybamm.div(q) / self.param.delta ** 2 + self.param.B * Q)
+            / (self.param.C_th * self.param.rho_k)
         }
 
     def set_boundary_conditions(self, variables):
@@ -58,7 +58,7 @@ class Full(BaseModel):
 
         self.boundary_conditions = {
             T: {
-                "left": (-self.param.h * T_n_left / self.param.lambda_n, "Neumann"),
+                "left": (self.param.h * T_n_left / self.param.lambda_n, "Neumann"),
                 "right": (-self.param.h * T_p_right / self.param.lambda_p, "Neumann"),
             }
         }

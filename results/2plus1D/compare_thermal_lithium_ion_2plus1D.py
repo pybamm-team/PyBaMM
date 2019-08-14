@@ -43,22 +43,22 @@ models = [
     #    },
     #    name="2+1D SPMe (lumped)",
     #),
-    #pybamm.lithium_ion.SPM(
-    #    {
-    #        "current collector": "potential pair",
-    #        "dimensionality": 2,
-    #        "thermal": "full",
-    #    },
-    #    name="2+1D SPM (full)",
-    #),
-    pybamm.lithium_ion.SPMe(
+    pybamm.lithium_ion.SPM(
         {
             "current collector": "potential pair",
             "dimensionality": 2,
             "thermal": "full",
         },
-        name="2+1D SPMe (full)",
+        name="2+1D SPM (full)",
     ),
+    #pybamm.lithium_ion.SPMe(
+    #    {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "full",
+    #    },
+    #    name="2+1D SPMe (full)",
+    #),
 ]
 
 # load parameter values

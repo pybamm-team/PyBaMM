@@ -64,7 +64,7 @@ class Full1plus1D(BaseNplus1D):
         self.boundary_conditions = {
             T_av: {
                 "left": (
-                    -self.param.h * T_av_left / self.param.lambda_k / self.param.delta,
+                    self.param.h * T_av_left / self.param.lambda_k / self.param.delta,
                     "Neumann",
                 ),
                 "right": (
@@ -114,7 +114,9 @@ class Full2plus1D(BaseNplus1D):
         T_av, _, _ = self._unpack(variables)
 
         # Dummy no flux boundary conditions since cooling at the the tabs is
-        # accounted for in the BoundaryIntegral term in the governing equation
+        # accounted for in the BoundaryIntegral term in the weak form of the
+        # governing equation
+        # TODO: update to allow different cooling conditions at the tabs
         self.boundary_conditions = {
             T_av: {
                 "left": (pybamm.Scalar(0), "Neumann"),
