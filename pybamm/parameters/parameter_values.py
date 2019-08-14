@@ -341,7 +341,12 @@ class ParameterValues(dict):
                         if isinstance(sym, pybamm.Symbol):
                             new_sym = self.process_symbol(sym)
                             x.function.parameters[param] = new_sym
-                            x.function.parameters_eval[param] = new_sym.evaluate()
+                            try:
+                                x.function.parameters_eval[param] = self[new_sym.name]
+                            except KeyError:
+                                # KeyError -> name not in parameter dict, evaluate
+                                # unnamed Scalar
+                                x.function.parameters_eval[param] = new_sym.evaluate()
                     if isinstance(x.function, pybamm.GetCurrentData):
                         # update interpolant
                         x.function.interpolate()

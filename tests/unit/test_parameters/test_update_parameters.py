@@ -48,12 +48,18 @@ class TestUpdateParameters(unittest.TestCase):
         # process and solve the model a first time
         modeltest2 = tests.StandardModelTest(model2)
         modeltest2.test_all()
+        self.assertEqual(
+            model2.variables["Current [A]"].function.parameters_eval["Current [A]"], 1.0
+        )
         # process and solve with updated parameter values
         parameter_values_update = pybamm.ParameterValues(
             base_parameters=model2.default_parameter_values,
             optional_parameters={"Typical current [A]": 2},
         )
         modeltest2.test_update_parameters(parameter_values_update)
+        self.assertEqual(
+            model2.variables["Current [A]"].function.parameters_eval["Current [A]"], 2
+        )
         modeltest2.test_solving(t_eval=t_eval)
         Y2 = modeltest2.solution.y
 
