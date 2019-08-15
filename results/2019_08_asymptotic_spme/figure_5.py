@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import shared
 
 generate_plots = True
-export_data = False
+export_data = True
 
 C_rates = [0.1, 0.5, 1, 2, 3]
 colour = {0.1: "r", 0.5: "b", 1: "g", 2: "m", 3: "y"}
@@ -39,6 +39,7 @@ disc.process_model(model)
 truth = {}
 t_out = {}
 for C_rate in C_rates:
+    print("Finding truth at ", C_rate, "C")
     param["Typical current [A]"] = (
         C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
     )
@@ -46,10 +47,14 @@ for C_rate in C_rates:
     true_sol = model.default_solver.solve(model, t_eval)
 
     t, y = true_sol.t, true_sol.y
-    t_out[C_rate] = np.linspace(0, t[-1], 100)
+    time_tol = 0.05 * t[-1]
+    final_time = t[-1] - time_tol
+    t_out[C_rate] = np.linspace(0, final_time, 100)
     truth[C_rate] = pybamm.ProcessedVariable(
         model.variables["Terminal voltage [V]"], t, y, mesh
     )(t_out[C_rate])
+
+print("Found truth")
 
 #####################
 
@@ -58,6 +63,17 @@ errors = {"spme": {}, "spm": {}, "dfn": {}}
 difference = {"spme": {}, "spm": {}}
 times = {"spme": {}, "spm": {}, "dfn": {}}
 
+# exporters
+dir_path = "results/2019_08_asymptotic_spme/data/figure_5"
+errors_exporter_dfn = pybamm.ExportCSV(dir_path)
+errors_exporter_spm = pybamm.ExportCSV(dir_path)
+errors_exporter_spme = pybamm.ExportCSV(dir_path)
+times_exporter = pybamm.ExportCSV(dir_path)
+
+
+errors_exporter_dfn.add_array(C_rates)
+errors_exporter_spm.add_array(C_rates)
+errors_exporter_spme.add_array(C_rates)
 
 # vary electrode points
 for pts in points:
@@ -84,6 +100,7 @@ for pts in points:
     times["dfn"][pts] = []
 
     for C_rate in C_rates:
+        print("Calculating for ", pts, "points and ", C_rate, "C")
         update_parameters = {
             "Typical current [A]": C_rate
             * 24
@@ -141,6 +158,10 @@ for pts in points:
     plt.xlabel("C-rate")
     plt.ylabel("Voltage error [V]")
 
+    errors_exporter_spm.add_array(errors["spm"][pts])
+    errors_exporter_spme.add_array(errors["spme"][pts])
+    errors_exporter_dfn.add_array(errors["dfn"][pts])
+
 
 average_times = {"spme": {}, "spm": {}, "dfn": {}}
 for pts in points:
@@ -148,11 +169,23 @@ for pts in points:
         for p, crates in pt.items():
             average_times[model][p] = np.mean(crates)
 
+times_exporter.add_array(points)
+times_exporter.add_array(list(average_times["spm"].values()))
+times_exporter.add_array(list(average_times["spme"].values()))
+times_exporter.add_array(list(average_times["dfn"].values()))
+
 plt.subplot(2, 1, 2)
-plt.plot(points, average_times["spm"], linestyle=":")
-plt.plot(points, average_times["spme"], linestyle="--")
-plt.plot(points, average_times["dfn"], linestyle="-")
+plt.plot(points, list(average_times["spm"].values()), linestyle=":")
+plt.plot(points, list(average_times["spme"].values()), linestyle="--")
+plt.plot(points, list(average_times["dfn"].values()), linestyle="-")
 plt.xlabel("points")
 plt.ylabel("computation time")
 
-plt.show()
+if generate_plots:
+    plt.show()
+
+if export_data:
+    times_exporter.export("average_time")
+    errors_exporter_dfn.export("dfn_errors")
+    errors_exporter_spm.export("spm_errors")
+    errors_exporter_spme.export("spme_errors")
