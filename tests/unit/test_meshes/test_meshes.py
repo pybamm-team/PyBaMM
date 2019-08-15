@@ -34,7 +34,7 @@ class TestMesh(unittest.TestCase):
         self.assertEqual(
             len(mesh["negative particle"][0].edges),
             len(mesh["negative particle"][0].nodes) + 1
-            )
+        )
 
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
