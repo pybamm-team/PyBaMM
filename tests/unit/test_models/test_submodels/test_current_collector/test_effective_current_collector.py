@@ -6,6 +6,7 @@ import unittest
 import numpy as np
 
 
+@unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
 class TestEffectiveResistance2D(unittest.TestCase):
     def test_well_posed(self):
         model = pybamm.current_collector.EffectiveResistance2D()

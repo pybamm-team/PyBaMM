@@ -11,6 +11,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
     Note:  This submodel should be solved before a one-dimensional model to calculate
     and return the effective current collector resistance.
 
+    **Extends:** :class:`pybamm.BaseModel`
     """
 
     def __init__(self):
