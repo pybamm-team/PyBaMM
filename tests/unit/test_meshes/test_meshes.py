@@ -27,7 +27,7 @@ class TestMesh(unittest.TestCase):
 
         # check boundary locations
         self.assertEqual(mesh["negative particle"][0].edges[0], 0)
-        self.assertEqual(mesh["positive particle"][0].edges[-1], 1)
+        self.assertEqual(mesh["negative particle"][0].edges[-1], 1)
 
         # check number of edges and nodes
         self.assertEqual(len(mesh["negative particle"][0].nodes), var_pts[r])
