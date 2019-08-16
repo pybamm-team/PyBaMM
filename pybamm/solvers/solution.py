@@ -20,9 +20,11 @@ class Solution(object):
 
     """
 
-    def __init__(self, t, y, termination):
+    def __init__(self, t, y, t_event, y_event, termination):
         self.t = t
         self.y = y
+        self.t_event = t_event
+        self.y_event = y_event
         self.termination = termination
 
     @property
@@ -44,6 +46,26 @@ class Solution(object):
     def y(self, value):
         "Updates the solution values"
         self._y = value
+
+    @property
+    def t_event(self):
+        "Time at which the event happens"
+        return self._t_event
+
+    @t_event.setter
+    def t_event(self, value):
+        "Updates the event time"
+        self._t_event = value
+
+    @property
+    def y_event(self):
+        "Value of the solution at the time of the event"
+        return self._y_event
+
+    @y_event.setter
+    def y_event(self, value):
+        "Updates the solution at the time of the event"
+        self._y_event = value
 
     @property
     def termination(self):
