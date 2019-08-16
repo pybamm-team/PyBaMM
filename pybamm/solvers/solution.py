@@ -15,6 +15,11 @@ class Solution(object):
     y : :class:`numpy.array`, size (m, n)
         A two-dimensional array containing the values of the solution. y[i, :] is the
         vector of solutions at time t[i].
+    t_event : :class:`numpy.array`, size (1,)
+        A zero-dimensional array containing the time at which the event happens.
+    y_event : :class:`numpy.array`, size (m,)
+        A one-dimensional array containing the value of the solution at the time when
+        the event happens.
     termination : str
         String to indicate why the solution terminated
 
