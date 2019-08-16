@@ -18,6 +18,9 @@ models = [
     pybamm.lithium_ion.SPMe(
         {"current collector": "potential pair", "dimensionality": 2}, name="2+1D SPMe"
     ),
+    pybamm.lithium_ion.DFN(
+        {"current collector": "potential pair", "dimensionality": 2}, name="2+1D DFN"
+    ),
 ]
 
 # load parameter values
@@ -47,8 +50,8 @@ for i, model in enumerate(models):
         var.x_p: 5,
         var.r_n: 5,
         var.r_p: 5,
-        var.y: 10,
-        var.z: 10,
+        var.y: 5,
+        var.z: 5,
     }
     meshes[i] = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(meshes[i], model.default_spatial_methods)

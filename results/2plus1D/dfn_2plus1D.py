@@ -6,9 +6,9 @@ import sys
 # set logging level
 pybamm.set_logging_level("INFO")
 
-# load (2+1D) SPM model
+# load (2+1D) DFN model
 options = {"current collector": "potential pair", "dimensionality": 2}
-model = pybamm.lithium_ion.SPM(options)
+model = pybamm.lithium_ion.DFN(options)
 
 # create geometry
 geometry = model.default_geometry
@@ -26,13 +26,13 @@ param.process_geometry(geometry)
 # set mesh
 var = pybamm.standard_spatial_vars
 var_pts = {
-    var.x_n: 10,
-    var.x_s: 10,
-    var.x_p: 10,
-    var.r_n: 10,
-    var.r_p: 10,
-    var.y: 10,
-    var.z: 10,
+    var.x_n: 5,
+    var.x_s: 5,
+    var.x_p: 5,
+    var.r_n: 5,
+    var.r_p: 5,
+    var.y: 5,
+    var.z: 5,
 }
 # depnding on number of points in y-z plane may need to increase recursion depth...
 sys.setrecursionlimit(10000)
