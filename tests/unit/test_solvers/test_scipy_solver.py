@@ -66,6 +66,8 @@ class TestScipySolver(unittest.TestCase):
         solution = solver.integrate(constant_growth, y0, t_eval, events=[y_eq_2])
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_allclose(0.5 * solution.t, solution.y[0])
+        np.testing.assert_allclose(solution.t_event, 4)
+        np.testing.assert_allclose(solution.y_event, 2)
         self.assertEqual(solution.termination, "event")
 
         # Exponential decay
@@ -89,6 +91,9 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_allclose(solution.y[1], 2 * np.exp(solution.t), rtol=1e-6)
         np.testing.assert_array_less(solution.t, 6)
         np.testing.assert_array_less(solution.y, 5)
+        np.testing.assert_allclose(solution.t_event, np.log(5 / 2), rtol=1e-6)
+        np.testing.assert_allclose(solution.y_event[0], 5 / 2, rtol=1e-6)
+        np.testing.assert_allclose(solution.y_event[1], 5, rtol=1e-6)
 
     def test_ode_integrate_with_jacobian(self):
         # Linear
