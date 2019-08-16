@@ -345,8 +345,7 @@ class ProcessedVariable(object):
         if self.dimensions == 1:
             return self._interpolation_function(t)
         elif self.dimensions == 2:
-            # Lazy way for evaluating 2D variable with no time dependence
-            # (enter t=None to call)
+            # Pass t=None to evaluate 2D variable with no time dependence
             if t is None:
                 return self._interpolation_function(y, z)
             else:

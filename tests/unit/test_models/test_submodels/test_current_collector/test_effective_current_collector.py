@@ -66,8 +66,12 @@ class TestEffectiveResistance2D(unittest.TestCase):
             mesh=meshes[1],
         )
 
-        # Test potential can be constructed without raising error
-        models[0].get_processed_potentials(solutions[0], meshes[0], param, V, I)
+        # Test potential can be constructed and evaluated without raising error
+        potentials = models[0].get_processed_potentials(
+            solutions[0], meshes[0], param, V, I
+        )
+        for var, processed_var in potentials.items():
+            processed_var(0.05, 0.5, 0.5)
 
 
 if __name__ == "__main__":
