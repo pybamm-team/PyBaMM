@@ -7,7 +7,11 @@ import sys
 pybamm.set_logging_level("INFO")
 
 # load (2+1D) SPM model
-options = {"current collector": "single particle potential pair", "dimensionality": 2}
+options = {
+    "current collector": "single particle potential pair",
+    "dimensionality": 2,
+    "thermal": "full",
+}
 model = pybamm.lithium_ion.SPM(options)
 model.check_well_posedness()
 
