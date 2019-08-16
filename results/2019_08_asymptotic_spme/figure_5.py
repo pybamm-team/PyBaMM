@@ -1,5 +1,5 @@
 #
-# Figure 5: Computation times and errors for changing grid points
+# Figure 6: Computation times and errors for changing grid points
 #
 import pybamm
 import numpy as np
@@ -64,7 +64,7 @@ difference = {"spme": {}, "spm": {}}
 times = {"spme": {}, "spm": {}, "dfn": {}}
 
 # exporters
-dir_path = "results/2019_08_asymptotic_spme/data/figure_5"
+dir_path = "results/2019_08_asymptotic_spme/data/figure_6"
 errors_exporter_dfn = pybamm.ExportCSV(dir_path)
 errors_exporter_spm = pybamm.ExportCSV(dir_path)
 errors_exporter_spme = pybamm.ExportCSV(dir_path)

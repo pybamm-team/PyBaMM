@@ -16,7 +16,6 @@ models.process_parameters()
 
 var = pybamm.standard_spatial_vars
 var_pts = {var.x_n: 30, var.x_s: 20, var.x_p: 30, var.r_n: 15, var.r_p: 15}
-var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5}
 
 models.discretise(var_pts)
 
@@ -187,7 +186,7 @@ for C_rate in C_rates:
     phi_s_p_exporter.add_array(
         pos_vars[dfn]["Positive electrode potential [V]"](t_out, x=x_p)
     )
-    phi_s_n_exporter.add_array(
+    phi_s_p_exporter.add_array(
         pos_vars[spme]["Positive electrode potential [V]"](t_out, x=x_p)
     )
 
