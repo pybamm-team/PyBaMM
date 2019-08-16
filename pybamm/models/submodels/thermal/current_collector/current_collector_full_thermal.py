@@ -105,7 +105,7 @@ class Full2plus1D(BaseNplus1D):
                 pybamm.laplacian(T_av)
                 + self.param.B * Q_av
                 - 2 * self.param.h / (self.param.delta ** 2) * T_av
-                + self.param.h * pybamm.boundary_source(T_av, T_av)
+                + self.param.h * pybamm.source(T_av, T_av, boundary=True)
             )
             / self.param.C_th
         }

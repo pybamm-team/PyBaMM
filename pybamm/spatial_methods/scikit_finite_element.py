@@ -372,6 +372,27 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         return self.assemble_mass_form(symbol, boundary_conditions)
 
+    def boundary_mass_matrix(self, symbol, boundary_conditions):
+        """
+        Calculates the mass matrix for the finite element method assembled
+        over the boundary.
+
+        Parameters
+        ----------
+        symbol: :class:`pybamm.Variable`
+            The variable corresponding to the equation for which we are
+            calculating the mass matrix.
+        boundary_conditions : dict
+            The boundary conditions of the model
+            ({symbol.id: {"left": left bc, "right": right bc}})
+
+        Returns
+        -------
+        :class:`pybamm.Matrix`
+            The (sparse) mass matrix for the spatial method.
+        """
+        return self.assemble_mass_form(symbol, boundary_conditions, region="boundary")
+
     def assemble_mass_form(self, symbol, boundary_conditions, region="interior"):
         """
         Assembles the form of the finite element mass matrix over the domain
@@ -386,8 +407,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The boundary conditions of the model
             ({symbol.id: {"left": left bc, "right": right bc}})
         region: str, optional
-            The domain over which to assemble the mass matrix form. Can be `interior`
-            (defualt) or `boundary`.
+            The domain over which to assemble the mass matrix form. Can be "interior"
+            (defualt) or "boundary".
 
         Returns
         -------

@@ -10,21 +10,9 @@ sys.setrecursionlimit(10000)
 # load models
 models = [
     pybamm.lithium_ion.SPM({"thermal": "lumped"}, name="1D SPM (lumped)"),
-    pybamm.lithium_ion.SPM(
-        {"thermal": "lumped with current collectors"}, name="1D SPM (lumped with cc)"
-    ),
-    # pybamm.lithium_ion.SPMe(
-    #    {"thermal": "lumped"}, name="1D SPMe (lumped)"
-    # ),
-    # pybamm.lithium_ion.SPM(
-    #    {"thermal": "full"}, name="1D SPM (full)"
-    # ),
-    # pybamm.lithium_ion.SPMe(
-    #    {"thermal": "full"}, name="1D SPMe (full)"
-    # ),
-    # pybamm.lithium_ion.DFN(
-    #    {"thermal": "full"}, name="1D DFN (full)"
-    # ),
+    #pybamm.lithium_ion.SPMe({"thermal": "lumped"}, name="1D SPMe (lumped)"),
+    #pybamm.lithium_ion.SPM({"thermal": "full"}, name="1D SPM (full)"),
+    #pybamm.lithium_ion.SPMe({"thermal": "full"}, name="1D SPMe (full)"),
     pybamm.lithium_ion.SPM(
         {
             "current collector": "potential pair",
@@ -33,26 +21,22 @@ models = [
         },
         name="2+1D SPM (lumped)",
     ),
-    # pybamm.lithium_ion.SPMe(
+    #pybamm.lithium_ion.SPMe(
     #    {
     #        "current collector": "potential pair",
     #        "dimensionality": 2,
     #        "thermal": "lumped",
     #    },
     #    name="2+1D SPMe (lumped)",
-    # ),
-    pybamm.lithium_ion.SPM(
-        {"current collector": "potential pair", "dimensionality": 2, "thermal": "full"},
-        name="2+1D SPM (full)",
-    ),
-    # pybamm.lithium_ion.SPMe(
-    #    {
-    #        "current collector": "potential pair",
-    #        "dimensionality": 2,
-    #        "thermal": "full",
-    #    },
+    #),
+    #pybamm.lithium_ion.SPM(
+    #    {"current collector": "potential pair", "dimensionality": 2, "thermal": "full"},
+    #    name="2+1D SPM (full)",
+    #),
+    #pybamm.lithium_ion.SPMe(
+    #    {"current collector": "potential pair", "dimensionality": 2, "thermal": "full"},
     #    name="2+1D SPMe (full)",
-    # ),
+    #),
 ]
 
 # load parameter values
@@ -74,13 +58,13 @@ for i, model in enumerate(models):
     param.process_geometry(geometry)
     var = pybamm.standard_spatial_vars
     var_pts = {
-        var.x_n: 3,
-        var.x_s: 3,
-        var.x_p: 3,
-        var.r_n: 3,
-        var.r_p: 3,
-        var.y: 3,
-        var.z: 3,
+        var.x_n: 5,
+        var.x_s: 5,
+        var.x_p: 5,
+        var.r_n: 5,
+        var.r_p: 5,
+        var.y: 5,
+        var.z: 5,
     }
     meshes[i] = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(meshes[i], model.default_spatial_methods)

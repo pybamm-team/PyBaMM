@@ -140,7 +140,7 @@ def D_n_dimensional(c_n, T):
 def D_p_dimensional(c_p, T):
     "Dimensional diffusivity in positive particle"
     return pybamm.FunctionParameter(
-        "Positive electrode diffusivity", c_p, T, T_ref, E_r_p, R
+        "Positive electrode diffusivity", c_p, T, T_ref, E_D_s_p, R
     )
 
 

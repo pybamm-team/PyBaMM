@@ -533,10 +533,8 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Mass):
                 return child_spatial_method.mass_matrix(child, self.bcs)
 
-            elif isinstance(symbol, pybamm.WeakSource):
-                return child_spatial_method.assemble_mass_form(
-                    symbol, self.bcs, region=symbol.region
-                )
+            elif isinstance(symbol, pybamm.BoundaryMass):
+                return child_spatial_method.boundary_mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
                 return child_spatial_method.indefinite_integral(child, disc_child)
