@@ -102,30 +102,21 @@ class BaseModel(pybamm.BaseSubModel):
         phi_s_n = variables["Negative electrode potential"]
         phi_s_p = variables["Positive electrode potential"]
 
-        # Note: this formulation uses the x-averaged source terms
+        # Note: the N+1D formulation uses the x-averaged source terms for all models,
+        # but we still add the actual heat source terms to the variables
+        # dictionary so they can be inspected after the solve
         Q_ohm_s_cn, Q_ohm_s_cp = self._current_collector_heating(variables)
-        Q_ohm_s_n_av = pybamm.x_average(-pybamm.inner(i_s_n, pybamm.grad(phi_s_n)))
-        Q_ohm_s_n = pybamm.PrimaryBroadcast(Q_ohm_s_n_av, ["negative electrode"])
-        # Q_ohm_s_s_av = pybamm.PrimaryBroadcast(0, ["current collector"])
-        # Q_ohm_s_s = pybamm.PrimaryBroadcast(Q_ohm_s_s_av, ["separator"])
+        Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
         Q_ohm_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
-        Q_ohm_s_p_av = pybamm.x_average(-pybamm.inner(i_s_p, pybamm.grad(phi_s_p)))
-        Q_ohm_s_p = pybamm.PrimaryBroadcast(Q_ohm_s_p_av, ["positive electrode"])
-
+        Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
         Q_ohm_s = pybamm.Concatenation(Q_ohm_s_n, Q_ohm_s_s, Q_ohm_s_p)
 
-        Q_ohm_e_av = pybamm.x_average(-pybamm.inner(i_e, pybamm.grad(phi_e)))
-        Q_ohm_e = pybamm.PrimaryBroadcast(
-            Q_ohm_e_av, ["negative electrode", "separator", "positive electrode"]
-        )
+        Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
 
         Q_ohm = Q_ohm_s + Q_ohm_e
 
-        Q_rxn_n_av = pybamm.x_average(j_n * eta_r_n)
-        Q_rxn_n = pybamm.PrimaryBroadcast(Q_rxn_n_av, ["negative electrode"])
-        Q_rxn_p_av = pybamm.x_average(j_p * eta_r_p)
-        Q_rxn_p = pybamm.PrimaryBroadcast(Q_rxn_p_av, ["positive electrode"])
-
+        Q_rxn_n = j_n * eta_r_n
+        Q_rxn_p = j_p * eta_r_p
         Q_rxn = pybamm.Concatenation(
             *[
                 Q_rxn_n,
@@ -134,11 +125,8 @@ class BaseModel(pybamm.BaseSubModel):
             ]
         )
 
-        Q_rev_n_av = pybamm.x_average(j_n * (param.Theta ** (-1) + T_n) * dUdT_n)
-        Q_rev_n = pybamm.PrimaryBroadcast(Q_rev_n_av, ["negative electrode"])
-        Q_rev_p_av = pybamm.x_average(j_p * (param.Theta ** (-1) + T_p) * dUdT_p)
-        Q_rev_p = pybamm.PrimaryBroadcast(Q_rev_p_av, ["positive electrode"])
-
+        Q_rev_n = j_n * (param.Theta ** (-1) + T_n) * dUdT_n
+        Q_rev_p = j_p * (param.Theta ** (-1) + T_p) * dUdT_p
         Q_rev = pybamm.Concatenation(
             *[
                 Q_rev_n,

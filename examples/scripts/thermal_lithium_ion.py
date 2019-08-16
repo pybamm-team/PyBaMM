@@ -7,10 +7,10 @@ import numpy as np
 
 # load model
 options = {"thermal": "full"}
-full_thermal_model = pybamm.lithium_ion.SPM(options)
+full_thermal_model = pybamm.lithium_ion.SPMe(options)
 
 options = {"thermal": "lumped"}
-lumped_thermal_model = pybamm.lithium_ion.SPM(options)
+lumped_thermal_model = pybamm.lithium_ion.SPMe(options)
 
 models = [full_thermal_model, lumped_thermal_model]
 
@@ -23,7 +23,7 @@ for model in models:
 
 # set mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
+var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
 
 # discretise models
 for model in models:
