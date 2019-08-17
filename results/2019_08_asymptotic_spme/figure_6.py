@@ -70,10 +70,18 @@ errors_exporter_spm = pybamm.ExportCSV(dir_path)
 errors_exporter_spme = pybamm.ExportCSV(dir_path)
 times_exporter = pybamm.ExportCSV(dir_path)
 
+error_and_time_dfn = pybamm.ExportCSV(dir_path)
+error_and_time_spme = pybamm.ExportCSV(dir_path)
+error_and_time_spm = pybamm.ExportCSV(dir_path)
+
 
 errors_exporter_dfn.add_array(C_rates)
 errors_exporter_spm.add_array(C_rates)
 errors_exporter_spme.add_array(C_rates)
+
+error_and_time_dfn.add_array(C_rates)
+error_and_time_spme.add_array(C_rates)
+error_and_time_spm.add_array(C_rates)
 
 # vary electrode points
 for pts in points:
@@ -162,6 +170,16 @@ for pts in points:
     errors_exporter_spme.add_array(errors["spme"][pts])
     errors_exporter_dfn.add_array(errors["dfn"][pts])
 
+    # combined errors and times exporter
+    error_and_time_dfn.add_array(errors["dfn"][pts])
+    error_and_time_dfn.add_array(times["dfn"][pts])
+
+    error_and_time_spme.add_array(errors["spme"][pts])
+    error_and_time_spme.add_array(times["spme"][pts])
+
+    error_and_time_spm.add_array(errors["spm"][pts])
+    error_and_time_spm.add_array(times["spm"][pts])
+
 
 average_times = {"spme": {}, "spm": {}, "dfn": {}}
 for pts in points:
@@ -189,3 +207,7 @@ if export_data:
     errors_exporter_dfn.export("dfn_errors")
     errors_exporter_spm.export("spm_errors")
     errors_exporter_spme.export("spme_errors")
+
+    error_and_time_dfn.export("dfn")
+    error_and_time_spme.export("spme")
+    error_and_time_spm.export("spm")
