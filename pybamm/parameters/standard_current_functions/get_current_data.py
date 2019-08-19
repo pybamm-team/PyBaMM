@@ -21,7 +21,7 @@ class GetCurrentData(pybamm.GetCurrent):
     units : str, optional
         The units of the current data which is to be loaded. Can be "[]" for
         dimenionless data (default), or "[A]" for current in Amperes.
-    current_cale : :class:`pybamm.Symbol` or float, optional
+    current_scale : :class:`pybamm.Symbol` or float, optional
         The scale the current in Amperes if loading non-dimensional data. Default
         is to use the typical current I_typ
 
