@@ -136,7 +136,8 @@ class AlgebraicSolver(object):
 
         if sol.success and np.all(sol.fun < self.tol * len(sol.x)):
             termination = "success"
-            return pybamm.Solution([0], sol.x[:, np.newaxis], termination)
+            # Return solution object (no events, so pass None to t_event, y_event)
+            return pybamm.Solution([0], sol.x[:, np.newaxis], None, None, termination)
         elif not sol.success:
             raise pybamm.SolverError(
                 "Could not find acceptable solution: {}".format(sol.message)
