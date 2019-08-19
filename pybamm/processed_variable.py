@@ -191,7 +191,7 @@ class ProcessedVariable(object):
             self.spatial_var_name = "z"
             self.z_sol = space
         else:
-            # default to x
+            # default to x (hack for now, to be fixed properly e.g. as part of #581)
             self.spatial_var_name = "x"
             self.x_sol = space
 
