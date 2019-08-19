@@ -353,7 +353,7 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     "max": pybamm.geometric_parameters.l_z,
                 },
             }
-            self["negative particle"]["secondary"] = {
+            self["positive particle"]["secondary"] = {
                 var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
                 var.z: {
                     "min": pybamm.Scalar(0),
@@ -372,7 +372,7 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     "max": pybamm.geometric_parameters.l_z,
                 },
             }
-            self["negative particle"]["secondary"] = {
+            self["positive particle"]["secondary"] = {
                 var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
                 var.y: {
                     "min": pybamm.Scalar(0),

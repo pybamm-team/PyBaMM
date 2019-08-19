@@ -6,14 +6,13 @@ import sys
 # set logging level
 pybamm.set_logging_level("INFO")
 
-# load (2+1D) SPM model
+# load (2+1D) DFN model
 options = {
     "current collector": "potential pair",
     "dimensionality": 2,
     "thermal": "full",
 }
-model = pybamm.lithium_ion.SPM(options)
-model.check_well_posedness()
+model = pybamm.lithium_ion.DFN(options)
 
 # create geometry
 geometry = model.default_geometry
