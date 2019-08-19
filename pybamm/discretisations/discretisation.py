@@ -462,7 +462,6 @@ class Discretisation(object):
         new_var_eqn_dict = {}
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
-
             if eqn.evaluates_to_number() and not isinstance(eqn_key, str):
                 eqn = pybamm.Broadcast(eqn, eqn_key.domain)
 
