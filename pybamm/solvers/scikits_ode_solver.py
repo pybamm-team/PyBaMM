@@ -130,7 +130,11 @@ class ScikitsOdeSolver(pybamm.OdeSolver):
             elif sol.flag == 2:
                 termination = "event"
             return pybamm.Solution(
-                sol.values.t, np.transpose(sol.values.y), termination
+                sol.values.t,
+                np.transpose(sol.values.y),
+                sol.roots.t,
+                np.transpose(sol.roots.y),
+                termination
             )
         else:
             raise pybamm.SolverError(sol.message)
