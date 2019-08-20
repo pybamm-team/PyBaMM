@@ -79,11 +79,13 @@ current_state = solution1.y[:, -1]
 
 # update potentials (e.g. zero volts on neg. current collector, 3.3 volts on pos.)
 #phi_s_cn_dim_new = np.zeros(var_pts[var.z])
-phi_s_cn_dim_new = current_state[model.variables["Negative current collector potential"].y_slices] * 0
+sf_cn = 1.0
+phi_s_cn_dim_new = current_state[model.variables["Negative current collector potential"].y_slices] * sf_cn
 
 #phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z]) - 0.05 * np.linspace(0, 1, var_pts[var.z])
 #phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z])
-phi_s_cp_dim_new = current_state[model.variables["Positive current collector potential"].y_slices] - 0.05 * np.linspace(0, 1, var_pts[var.z])
+sf_cp = 0.0
+phi_s_cp_dim_new = current_state[model.variables["Positive current collector potential"].y_slices] - sf * np.linspace(0, 1, var_pts[var.z])
 variables = {
     "Negative current collector potential": non_dim_potential(
         phi_s_cn_dim_new, "negative"
@@ -93,11 +95,12 @@ variables = {
     ),
 }
 
-new_state = update_statevector(variables, current_state)
+#new_state = update_statevector(variables, current_state)
 
 # solve again -- replace with step
 # use new state as initial condition
-model.concatenated_initial_conditions = new_state
+#model.concatenated_initial_conditions = new_state
+model.concatenated_initial_conditions = current_state[np.newaxis, :]
 t_eval2 = np.linspace(0.1, 0.2, 10)
 solution2 = model.default_solver.solve(model, t_eval2)
 voltage_step2 = pybamm.ProcessedVariable(
@@ -108,14 +111,17 @@ heating_step2 = pybamm.ProcessedVariable(
 )
 
 # plot
+plt.figure()
 plt.plot(t_eval1, voltage_step1(t_eval1), t_eval2, voltage_step2(t_eval2))
 plt.xlabel('t')
 plt.ylabel('Voltage [V]')
 plt.show()
+plt.figure()
 z = np.linspace(0, 1, 10)
 plt.plot(t_eval1, heating_step1(t_eval1, z=z), t_eval2, heating_step2(t_eval2, z=z))
 plt.xlabel('t')
 plt.ylabel('X-averaged total heating [A.V.m-3]')
+plt.yscale('log')
 plt.show()
 
 
@@ -138,7 +144,7 @@ def plot_var(var, solution, time=-1):
     plt.title(var)
 
 #plot_var(var="Positive current collector potential", solution=solution1, time=-1)
-plot_var(var="Total heating [A.V.m-3]", solution=solution1, time=-1)
+#plot_var(var="Total heating [A.V.m-3]", solution=solution1, time=-1)
 #plot_var(var="Interfacial current density", solution=solution2, time=-1)
 #plot_var(var="Negative particle concentration [mol.m-3]", solution=solution2, time=-1)
 #plot_var(var="Positive particle concentration [mol.m-3]", solution=solution2, time=-1)
