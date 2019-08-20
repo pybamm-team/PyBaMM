@@ -204,15 +204,15 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.integral`
         """
         # Calculate integration vector
-        integration_vector = self.definite_integral_vector(child.domain[0])
+        integration_vector = self.definite_integral_matrix(child.domain[0])
 
         out = integration_vector @ discretised_child
 
         return out
 
-    def definite_integral_vector(self, domain, vector_type="row"):
+    def definite_integral_matrix(self, domain, vector_type="row"):
         """
-        Vector for finite-element implementation of the definite integral over
+        Matrix for finite-element implementation of the definite integral over
         the entire domain
 
         .. math::
