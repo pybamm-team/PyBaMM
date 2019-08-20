@@ -211,44 +211,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def definite_integral_vector(self, domain, vector_type="row"):
-        """
-        Vector for finite-volume implementation of the definite integral.
-        Note: This only returns the integral vector over the primary domain, and
-        does not account for secondary dimensions
-        (see :meth:`pybamm.FiniteVolume.definite_integral_matrix`).
-
-        .. math::
-            I = \\int_{a}^{b}\\!f(s)\\,ds
-
-        for where :math:`a` and :math:`b` are the left-hand and right-hand boundaries of
-        the domain respectively
-
-        Parameters
-        ----------
-        domain : list
-            The domain(s) of integration
-        vector_type : str, optional
-            Whether to return a row or column vector (defualt is row)
-
-        Returns
-        -------
-        :class:`pybamm.Matrix`
-            The finite volume integral vector for the domain
-        """
-        # Create appropriate submesh by combining submeshes in domain
-        submesh_list = self.mesh.combine_submeshes(*domain)
-
-        # Create vector of ones using submesh
-        vector = np.array([])
-        for submesh in submesh_list:
-            vector = np.append(vector, submesh.d_edges * np.ones_like(submesh.nodes))
-        if vector_type == "row":
-            return pybamm.Matrix(vector[np.newaxis, :])
-        elif vector_type == "column":
-            return pybamm.Matrix(vector[:, np.newaxis])
-
-    def definite_integral_matrix(self, domain):
+    def definite_integral_matrix(self, domain, vector_type="row"):
         """
         Matrix for finite-volume implementation of the definite integral in the
         primary dimension
@@ -263,13 +226,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         ----------
         domain : list
             The domain(s) of integration
-        vector_type : str, optional
-            Whether to return a row or column vector (defualt is row)
 
         Returns
         -------
         :class:`pybamm.Matrix`
             The finite volume integral matrix for the domain
+        vector_type : str, optional
+            Whether to return a row or column vector in the primary dimension
+            (defualt is row)
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh_list = self.mesh.combine_submeshes(*domain)
@@ -277,6 +241,11 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Create vector of ones for primary domain submesh
         submesh = submesh_list[0]
         vector = submesh.d_edges * np.ones_like(submesh.nodes)
+
+        if vector_type == "row":
+            vector = vector[np.newaxis, :]
+        elif vector_type == "column":
+            vector = vector[:, np.newaxis]
 
         # repeat matrix for each node in secondary dimensions
         second_dim_len = len(submesh_list)

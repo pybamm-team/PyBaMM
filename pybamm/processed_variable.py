@@ -340,12 +340,11 @@ class ProcessedVariable(object):
             fill_value=np.nan,
         )
 
-    def __call__(self, t, x=None, r=None, y=None, z=None):
+    def __call__(self, t=None, x=None, r=None, y=None, z=None):
         "Evaluate the variable at arbitrary t (and x and/or r), using interpolation"
         if self.dimensions == 1:
             return self._interpolation_function(t)
         elif self.dimensions == 2:
-            # Pass t=None to evaluate 2D variable with no time dependence
             if t is None:
                 return self._interpolation_function(y, z)
             else:

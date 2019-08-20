@@ -153,7 +153,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
         # Create callable combination of ProcessedVariable objects for potentials
         def V_cc(t, y, z):
-            return V_av(t) - alpha * I_av(t) * W(t=None, y=y, z=z)
+            return V_av(t) - alpha * I_av(t) * W(y=y, z=z)
 
         def V_cc_dim(t, y, z):
             return U_ref + V_cc(t, y, z) * pot_scale
@@ -172,7 +172,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
         def phi_s_cn(t, y, z):
             phi_s_cn = (
-                I_av(t) * l_y * l_z * psi(t=None, y=y, z=z)
+                I_av(t) * l_y * l_z * psi(y=y, z=z)
                 - sigma_cp_prime * l_cp * V_cc(t, y, z)
             ) / denominator
             return phi_s_cn - phi_s_cn_tab(t)
@@ -182,7 +182,7 @@ class EffectiveResistance2D(pybamm.BaseModel):
 
         def phi_s_cp(t, y, z):
             phi_s_cp = (
-                I_av(t) * l_y * l_z * psi(t=None, y=y, z=z)
+                I_av(t) * l_y * l_z * psi(y=y, z=z)
                 + sigma_cn_prime * l_cn * V_cc(t, y, z)
             ) / denominator
             return phi_s_cp - phi_s_cn_tab(t)
