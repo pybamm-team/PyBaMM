@@ -956,6 +956,29 @@ class TestFiniteVolume(unittest.TestCase):
             integral_eqn_disc.evaluate(None, one_over_y), 4 * np.pi ** 2
         )
 
+    def test_definite_integral_vector(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "negative particle": pybamm.FiniteVolume,
+            "positive particle": pybamm.FiniteVolume,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="negative electrode")
+        disc.set_variable_slices([var])
+
+        # row (default)
+        vec = pybamm.DefiniteIntegralVector(var)
+        vec_disc = disc.process_symbol(vec)
+        self.assertEqual(vec_disc.shape[0], 1)
+        self.assertEqual(vec_disc.shape[1], mesh["negative electrode"][0].npts)
+
+        # column
+        vec = pybamm.DefiniteIntegralVector(var, vector_type="column")
+        vec_disc = disc.process_symbol(vec)
+        self.assertEqual(vec_disc.shape[0], mesh["negative electrode"][0].npts)
+        self.assertEqual(vec_disc.shape[1], 1)
+
     def test_indefinite_integral(self):
 
         # create discretisation
