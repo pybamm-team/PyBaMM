@@ -94,10 +94,15 @@ class ProcessedVariable(object):
             self.base_eval = base_variable.evaluate(t_sol[0], u_sol[:, 0])
 
         # handle 2D (in space) finite element variables differently
-        if "current collector" in self.domain and isinstance(
+        if mesh and "current collector" in self.domain and isinstance(
             self.mesh[self.domain[0]][0], pybamm.Scikit2DSubMesh
         ):
-            self.initialise_3D_scikit_fem()
+            if len(self.t_sol) == 1:
+                # space only (steady solution)
+                self.initialise_2Dspace_scikit_fem()
+            else:
+                self.initialise_3D_scikit_fem()
+
         # check variable shape
         elif (
             isinstance(self.base_eval, numbers.Number)
@@ -279,6 +284,28 @@ class ProcessedVariable(object):
             fill_value=np.nan,
         )
 
+    def initialise_2Dspace_scikit_fem(self):
+        y_sol = self.mesh[self.domain[0]][0].edges["y"]
+        len_y = len(y_sol)
+        z_sol = self.mesh[self.domain[0]][0].edges["z"]
+        len_z = len(z_sol)
+
+        # Evaluate the base_variable
+        entries = np.reshape(self.base_variable.evaluate(0, self.u_sol), [len_y, len_z])
+
+        # assign attributes for reference
+        self.entries = entries
+        self.dimensions = 2
+        self.y_sol = y_sol
+        self.z_sol = z_sol
+        self.first_dimension = "y"
+        self.second_dimension = "z"
+
+        # set up interpolation
+        self._interpolation_function = interp.interp2d(
+            y_sol, z_sol, entries, kind=self.interp_kind, fill_value=np.nan
+        )
+
     def initialise_3D_scikit_fem(self):
         y_sol = self.mesh[self.domain[0]][0].edges["y"]
         len_y = len(y_sol)
@@ -317,12 +344,15 @@ class ProcessedVariable(object):
             fill_value=np.nan,
         )
 
-    def __call__(self, t, x=None, r=None, y=None, z=None):
+    def __call__(self, t=None, x=None, r=None, y=None, z=None):
         "Evaluate the variable at arbitrary t (and x and/or r), using interpolation"
         if self.dimensions == 1:
             return self._interpolation_function(t)
         elif self.dimensions == 2:
-            return self.call_2D(t, x, r, z)
+            if t is None:
+                return self._interpolation_function(y, z)
+            else:
+                return self.call_2D(t, x, r, z)
         elif self.dimensions == 3:
             return self.call_3D(t, x, r, y, z)
 
