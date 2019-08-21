@@ -64,3 +64,6 @@ pyvenv.cfg
 
 # sundials
 sundials
+
+# experimental data
+/results/LGM50/data/
