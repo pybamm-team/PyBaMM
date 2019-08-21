@@ -32,13 +32,13 @@ class TestIndependentVariable(unittest.TestCase):
             t.evaluate(None)
 
     def test_spatial_variable(self):
-        x = pybamm.SpatialVariable("x", ["negative electrode"])
+        x = pybamm.SpatialVariable("x", "negative electrode")
         self.assertEqual(x.name, "x")
-        y = pybamm.SpatialVariable("y", ["separator"])
+        y = pybamm.SpatialVariable("y", "separator")
         self.assertEqual(y.name, "y")
-        z = pybamm.SpatialVariable("z", ["positive electrode"])
+        z = pybamm.SpatialVariable("z", "positive electrode")
         self.assertEqual(z.name, "z")
-        r = pybamm.SpatialVariable("r", ["negative particle"])
+        r = pybamm.SpatialVariable("r", "negative particle")
         self.assertEqual(r.name, "r")
         with self.assertRaises(NotImplementedError):
             x.evaluate()
@@ -49,6 +49,10 @@ class TestIndependentVariable(unittest.TestCase):
             pybamm.SpatialVariable("x", [])
         with self.assertRaises(pybamm.DomainError):
             pybamm.SpatialVariable("r", ["negative electrode"])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.SpatialVariable("r_n", ["positive particle"])
+        with self.assertRaises(pybamm.DomainError):
+            pybamm.SpatialVariable("r_p", ["negative particle"])
         with self.assertRaises(pybamm.DomainError):
             pybamm.SpatialVariable("x", ["negative particle"])
 
