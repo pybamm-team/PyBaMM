@@ -44,6 +44,8 @@ class Geometry(dict):
                 geometry = Geometryxp1p1DMicro(cc_dimension=1)
             elif geometry == "(2+1)+1D micro":
                 geometry = Geometryxp1p1DMicro(cc_dimension=2)
+            elif geometry == "2D current collector":
+                geometry = Geometry2DCurrentCollector()
             # avoid combining geometries that clash
             if any([k in self.keys() for k in geometry.keys()]):
                 raise ValueError("trying to overwrite existing geometry")
@@ -353,7 +355,7 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     "max": pybamm.geometric_parameters.l_z,
                 },
             }
-            self["negative particle"]["secondary"] = {
+            self["positive particle"]["secondary"] = {
                 var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
                 var.z: {
                     "min": pybamm.Scalar(0),
@@ -372,7 +374,7 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     "max": pybamm.geometric_parameters.l_z,
                 },
             }
-            self["negative particle"]["secondary"] = {
+            self["positive particle"]["secondary"] = {
                 var.x_p: {"min": l_n + l_s, "max": pybamm.Scalar(1)},
                 var.y: {
                     "min": pybamm.Scalar(0),
@@ -389,6 +391,52 @@ class Geometryxp1p1DMicro(Geometry1DMicro):
                     cc_dimension
                 )
             )
+
+        # update with custom geometry if non empty
+        self.update(custom_geometry)
+
+
+class Geometry2DCurrentCollector(Geometry):
+    """
+    A geometry class to store the details features of the macroscopic 2D
+    current collector geometry.
+
+    **Extends**: :class:`Geometry`
+
+    Parameters
+    ----------
+
+    custom_geometry : dict containing any extra user defined geometry
+    """
+
+    def __init__(self, custom_geometry={}):
+        super().__init__()
+        var = pybamm.standard_spatial_vars
+
+        self["current collector"] = {
+            "primary": {
+                var.y: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_y,
+                },
+                var.z: {
+                    "min": pybamm.Scalar(0),
+                    "max": pybamm.geometric_parameters.l_z,
+                },
+            },
+            "tabs": {
+                "negative": {
+                    "y_centre": pybamm.geometric_parameters.centre_y_tab_n,
+                    "z_centre": pybamm.geometric_parameters.centre_z_tab_n,
+                    "width": pybamm.geometric_parameters.l_tab_n,
+                },
+                "positive": {
+                    "y_centre": pybamm.geometric_parameters.centre_y_tab_p,
+                    "z_centre": pybamm.geometric_parameters.centre_z_tab_p,
+                    "width": pybamm.geometric_parameters.l_tab_p,
+                },
+            },
+        }
 
         # update with custom geometry if non empty
         self.update(custom_geometry)

@@ -196,6 +196,31 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
+    def boundary_integral(self, child, discretised_child, region):
+        """
+        Implements the boundary integral for a spatial method.
+
+        Parameters
+        ----------
+        child: :class:`pybamm.Symbol`
+            The symbol to which is being integrated
+        discretised_child: :class:`pybamm.Symbol`
+            The discretised symbol of the correct size
+        region: str
+            The region of the boundary over which to integrate. If region is None
+            (default) the integration is carried out over the entire boundary. If
+            region is `negative tab` or `positive tab` then the integration is only
+            carried out over the appropriate part of the boundary corresponding to
+            the tab.
+
+        Returns
+        -------
+        :class: `pybamm.Array`
+            Contains the result of acting the discretised boundary integral on
+            the child discretised_symbol
+        """
+        raise NotImplementedError
+
     def internal_neumann_condition(
         self, left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
     ):

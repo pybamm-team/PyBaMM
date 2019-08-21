@@ -94,6 +94,26 @@ class TestProcessedVariable(unittest.TestCase):
             np.reshape(u_sol, [len(y_sol), len(z_sol), len(t_sol)]),
         )
 
+    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
+    def test_processed_variable_2Dspace_scikit(self):
+        var = pybamm.Variable("var", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_2p1d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        y_sol = disc.process_symbol(y).entries[:, 0]
+        z_sol = disc.process_symbol(z).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.array([0])
+        u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            np.reshape(u_sol, [len(y_sol), len(z_sol)]),
+        )
+
     def test_processed_var_1D_interpolation(self):
         # without spatial dependence
         t = pybamm.t
@@ -306,6 +326,35 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(processed_var(t_sol, y=0.2, z=0.5).shape, (50,))
         # 3 scalars
         np.testing.assert_array_equal(processed_var(0.2, y=0.2, z=0.2).shape, ())
+
+    @unittest.skipIf(pybamm.have_scikit_fem(), "scikit-fem not installed")
+    def test_processed_var_2Dspace_scikit_interpolation(self):
+        var = pybamm.Variable("var", domain=["current collector"])
+        y = pybamm.SpatialVariable("y", domain=["current collector"])
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_2p1d_discretisation_for_testing()
+        disc.set_variable_slices([var])
+        y_sol = disc.process_symbol(y).entries[:, 0]
+        z_sol = disc.process_symbol(z).entries[:, 0]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.array([0])
+        u_sol = np.ones(var_sol.shape[0])[:, np.newaxis]
+
+        processed_var = pybamm.ProcessedVariable(var_sol, t_sol, u_sol, mesh=disc.mesh)
+        # 2 vectors
+        np.testing.assert_array_equal(
+            processed_var(t=None, y=y_sol, z=z_sol).shape, (15, 15)
+        )
+        # 1 vector, 1 scalar
+        np.testing.assert_array_equal(
+            processed_var(t=None, y=0.2, z=z_sol).shape, (15, 1)
+        )
+        np.testing.assert_array_equal(
+            processed_var(t=None, y=y_sol, z=0.5).shape, (15,)
+        )
+        # 2 scalars
+        np.testing.assert_array_equal(processed_var(t=None, y=0.2, z=0.2).shape, (1,))
 
     def test_processed_variable_ode_pde_solution(self):
         # without space
