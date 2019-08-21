@@ -4,6 +4,9 @@ Functions
 .. autoclass:: pybamm.Function
   :members:
 
+.. autoclass:: pybamm.SpecificFunction
+  :members:
+
 .. autoclass:: pybamm.Cos
   :members:
 
