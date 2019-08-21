@@ -17,18 +17,33 @@ class TestSPMe(unittest.TestCase):
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertTrue("negative particle" in model.default_geometry)
 
+        options = {"current collector": "potential pair", "dimensionality": 1}
+        model = pybamm.lithium_ion.SPMe(options)
+        self.assertIn("current collector", model.default_geometry)
+
         options = {"current collector": "potential pair", "dimensionality": 2}
         model = pybamm.lithium_ion.SPMe(options)
         self.assertIn("current collector", model.default_geometry)
 
     def test_well_posed_2plus1D(self):
+        options = {"current collector": "potential pair", "dimensionality": 1}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
         options = {"current collector": "potential pair", "dimensionality": 2}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+        options = {
+            "current collector": "single particle potential pair",
+            "dimensionality": 2,
+        }
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
         options = {"bc_options": {"dimensionality": 5}}
         with self.assertRaises(pybamm.OptionError):
-            model = pybamm.lithium_ion.SPM(options)
+            model = pybamm.lithium_ion.SPMe(options)
 
     def test_thermal(self):
         options = {"thermal": "lumped"}

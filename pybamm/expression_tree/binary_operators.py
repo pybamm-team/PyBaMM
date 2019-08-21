@@ -736,6 +736,9 @@ def source(left, right, boundary=False):
         corresponding to a source term in the bulk.
 
     """
+    # Broadcast if left is number
+    if isinstance(left, numbers.Number):
+        left = pybamm.Broadcast(left, "current collector")
 
     if left.domain != ["current collector"] or right.domain != ["current collector"]:
         raise pybamm.DomainError(

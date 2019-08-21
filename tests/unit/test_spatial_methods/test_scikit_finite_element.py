@@ -207,6 +207,28 @@ class TestScikitFiniteElement(unittest.TestCase):
             integral_eqn_disc.evaluate(None, y_test), 6 * ly * lz
         )
 
+    def test_definite_integral_vector(self):
+        mesh = get_2p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+
+        # row (default)
+        vec = pybamm.DefiniteIntegralVector(var)
+        vec_disc = disc.process_symbol(vec)
+        self.assertEqual(vec_disc.shape[0], 1)
+        self.assertEqual(vec_disc.shape[1], mesh["current collector"][0].npts)
+
+        # column
+        vec = pybamm.DefiniteIntegralVector(var, vector_type="column")
+        vec_disc = disc.process_symbol(vec)
+        self.assertEqual(vec_disc.shape[0], mesh["current collector"][0].npts)
+        self.assertEqual(vec_disc.shape[1], 1)
+
     def test_left_right(self):
         mesh = get_2p1d_mesh_for_testing()
         spatial_methods = {
@@ -215,9 +237,10 @@ class TestScikitFiniteElement(unittest.TestCase):
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
         var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+
         extrap_left = pybamm.BoundaryValue(var, "left")
         extrap_right = pybamm.BoundaryValue(var, "right")
-        disc.set_variable_slices([var])
         extrap_left_disc = disc.process_symbol(extrap_left)
         extrap_right_disc = disc.process_symbol(extrap_right)
 
@@ -225,6 +248,81 @@ class TestScikitFiniteElement(unittest.TestCase):
         constant_y = np.ones(mesh["current collector"][0].npts)
         self.assertEqual(extrap_left_disc.evaluate(None, constant_y), 1)
         self.assertEqual(extrap_right_disc.evaluate(None, constant_y), 1)
+
+    def test_boundary_integral(self):
+        mesh = get_2p1d_mesh_for_testing()
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+
+        full = pybamm.BoundaryIntegral(var)
+        neg = pybamm.BoundaryIntegral(var, region="negative tab")
+        pos = pybamm.BoundaryIntegral(var, region="positive tab")
+
+        full_disc = disc.process_symbol(full)
+        neg_disc = disc.process_symbol(neg)
+        pos_disc = disc.process_symbol(pos)
+
+        # check integrating 1 gives correct *dimensionless* region lengths
+        perimeter = 2 * (1 + 0.8)
+        l_tab_n = 0.1 / 0.5
+        l_tab_p = 0.1 / 0.5
+        constant_y = np.ones(mesh["current collector"][0].npts)
+        # Integral around boundary is exact
+        np.testing.assert_array_almost_equal(
+            full_disc.evaluate(None, constant_y), perimeter
+        )
+        # Ideally mesh edges should line up with tab edges.... then we would get
+        # better agreement between actual and numerical tab width
+        np.testing.assert_array_almost_equal(
+            neg_disc.evaluate(None, constant_y), l_tab_n, decimal=1
+        )
+        np.testing.assert_array_almost_equal(
+            pos_disc.evaluate(None, constant_y), l_tab_p, decimal=1
+        )
+
+    def test_pure_neumann_poisson(self):
+        # grad^2 u = 1, du/dz = 1 at z = 1, du/dn = 0 elsewhere, u has zero average
+        u = pybamm.Variable("u", domain="current collector")
+        c = pybamm.Variable("c")  # lagrange multiplier
+        y = pybamm.SpatialVariable("y", ["current collector"])
+        z = pybamm.SpatialVariable("z", ["current collector"])
+
+        model = pybamm.BaseModel()
+        # 0*c hack otherwise gives KeyError
+        model.algebraic = {
+            u: pybamm.laplacian(u)
+            - pybamm.source(1, u)
+            + c * pybamm.DefiniteIntegralVector(u, vector_type="column"),
+            c: pybamm.Integral(u, [y, z]) + 0 * c,
+        }
+        model.initial_conditions = {u: pybamm.Scalar(0), c: pybamm.Scalar(0)}
+        # set boundary conditions ("left" = bottom of unit square, "right" = top
+        # of unit square, elsewhere normal derivative is zero)
+        model.boundary_conditions = {
+            u: {"left": (0, "Neumann"), "right": (1, "Neumann")}
+        }
+        model.variables = {"c": c, "u": u}
+        # create discretisation
+        mesh = get_unit_2p1D_mesh_for_testing(ypts=32, zpts=32)
+        spatial_methods = {
+            "macroscale": pybamm.FiniteVolume,
+            "current collector": pybamm.ScikitFiniteElement,
+        }
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        # solve model
+        solver = pybamm.AlgebraicSolver()
+        solution = solver.solve(model)
+
+        z = mesh["current collector"][0].coordinates[1, :][:, np.newaxis]
+        u_exact = z ** 2 / 2 - 1 / 6
+        np.testing.assert_array_almost_equal(solution.y[:-1], u_exact, decimal=1)
 
 
 if __name__ == "__main__":

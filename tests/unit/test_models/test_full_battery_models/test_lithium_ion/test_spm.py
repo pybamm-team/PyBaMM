@@ -17,7 +17,11 @@ class TestSPM(unittest.TestCase):
         self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertIn("negative particle", model.default_geometry)
 
-        options = {"dimensionality": 2}
+        options = {"current collector": "potential pair", "dimensionality": 1}
+        model = pybamm.lithium_ion.SPM(options)
+        self.assertIn("current collector", model.default_geometry)
+
+        options = {"current collector": "potential pair", "dimensionality": 2}
         model = pybamm.lithium_ion.SPM(options)
         self.assertIn("current collector", model.default_geometry)
 

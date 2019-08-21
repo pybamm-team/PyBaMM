@@ -462,7 +462,6 @@ class Discretisation(object):
         new_var_eqn_dict = {}
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number(e.g. Scalar)
-
             if eqn.evaluates_to_number() and not isinstance(eqn_key, str):
                 eqn = pybamm.Broadcast(eqn, eqn_key.domain)
 
@@ -545,6 +544,11 @@ class Discretisation(object):
                 out.auxiliary_domains = symbol.auxiliary_domains
                 return out
 
+            elif isinstance(symbol, pybamm.DefiniteIntegralVector):
+                return child_spatial_method.definite_integral_matrix(
+                    child.domain, vector_type=symbol.vector_type
+                )
+                
             elif isinstance(symbol, pybamm.BoundaryIntegral):
                 return child_spatial_method.boundary_integral(
                     child, disc_child, symbol.region

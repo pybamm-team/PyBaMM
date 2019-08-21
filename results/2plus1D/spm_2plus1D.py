@@ -13,7 +13,6 @@ options = {
     "thermal": "full",
 }
 model = pybamm.lithium_ion.SPM(options)
-model.check_well_posedness()
 
 # create geometry
 geometry = model.default_geometry
