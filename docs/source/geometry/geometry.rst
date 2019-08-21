@@ -13,16 +13,16 @@ Geometry
 .. autoclass:: pybamm.Geometry1DMicro
     :members:
 
-.. autoclass:: pybamm.Geometry1p1Micro
+.. autoclass:: pybamm.Geometry1p1DMicro
     :members:
 
-.. autoclass:: pybamm.Geometryxp1Macro
+.. autoclass:: pybamm.Geometryxp1DMacro
     :members:
 
-.. autoclass:: pybamm.Geometryxp0p1Micro
+.. autoclass:: pybamm.Geometryxp0p1DMicro
     :members:
 
-.. autoclass:: pybamm.Geometryxp1p1Micro
+.. autoclass:: pybamm.Geometryxp1p1DMicro
     :members:
 
 .. autoclass:: pybamm.Geometry2DCurrentCollector
