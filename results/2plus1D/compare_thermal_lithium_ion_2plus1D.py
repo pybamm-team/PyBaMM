@@ -14,7 +14,7 @@ models = [
     pybamm.lithium_ion.DFN({"thermal": "lumped"}, name="1D DFN (lumped)"),
     pybamm.lithium_ion.SPM({"thermal": "full"}, name="1D SPM (full)"),
     pybamm.lithium_ion.SPMe({"thermal": "full"}, name="1D SPMe (full)"),
-    pybamm.lithium_ion.DFN({"thermal": "full"}, name="1D DFN (full)"),    
+    pybamm.lithium_ion.DFN({"thermal": "full"}, name="1D DFN (full)"),
     pybamm.lithium_ion.SPM(
         {
             "current collector": "potential pair",
