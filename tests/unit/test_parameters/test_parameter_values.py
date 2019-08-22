@@ -39,7 +39,7 @@ class TestParameterValues(unittest.TestCase):
             optional_parameters="input/parameters/lead-acid/optional_test.csv",
         )
         self.assertEqual(param["Reference temperature [K]"], 294.85)
-        self.assertEqual(param["Negative electrode width [m]"], 0.5)
+        self.assertEqual(param["Negative electrode thickness [m]"], 0.5)
 
     def test_check_parameter_values(self):
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
