@@ -5,13 +5,13 @@ Name [units],Value,Reference,Notes
 Reference temperature [K],298.15,25C,
 ,,,
 # Macroscale geometry,,,
-Negative current collector width [m],2.5E-05,Scott Moura FastDFN,
-Negative electrode width [m],0.0001,Scott Moura FastDFN,
-Separator width [m],2.5E-05,Scott Moura FastDFN,
-Positive electrode width [m],0.0001,Scott Moura FastDFN,
-Positive current collector width [m],2.5E-05,Scott Moura FastDFN,
+Negative current collector thickness [m],2.5E-05,Scott Moura FastDFN,
+Negative electrode thickness [m],0.0001,Scott Moura FastDFN,
+Separator thickness [m],2.5E-05,Scott Moura FastDFN,
+Positive electrode thickness [m],0.0001,Scott Moura FastDFN,
+Positive current collector thickness [m],2.5E-05,Scott Moura FastDFN,
 Electrode height [m],0.137,KOKAM SLPB78205130H,Not needed for 1D
-Electrode depth [m],0.207,KOKAM SLPB78205130H,Not needed for 1D
+Electrode width [m],0.207,KOKAM SLPB78205130H,Not needed for 1D
 Negative current collector thickness [m],2.5E-05,Scott Moura FastDFN,
 Positive current collector thickness [m],2.5E-05,Scott Moura FastDFN,
 Negative tab width [m],0.04,,Need to actual value for KOKAM cell

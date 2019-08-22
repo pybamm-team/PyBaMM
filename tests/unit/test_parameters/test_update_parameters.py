@@ -106,9 +106,9 @@ class TestUpdateParameters(unittest.TestCase):
         parameter_values_update = pybamm.ParameterValues(
             base_parameters=model1.default_parameter_values,
             optional_parameters={
-                "Negative electrode width [m]": 0.000002,
-                "Separator width [m]": 0.000003,
-                "Positive electrode width [m]": 0.000004,
+                "Negative electrode thickness [m]": 0.000002,
+                "Separator thickness [m]": 0.000003,
+                "Positive electrode thickness [m]": 0.000004,
             },
         )
         with self.assertRaisesRegex(ValueError, "geometry has changed"):
@@ -119,9 +119,9 @@ class TestUpdateParameters(unittest.TestCase):
         parameter_values_update = pybamm.ParameterValues(
             base_parameters=model2.default_parameter_values,
             optional_parameters={
-                "Negative electrode width [m]": 0.000002,
-                "Separator width [m]": 0.000003,
-                "Positive electrode width [m]": 0.000004,
+                "Negative electrode thickness [m]": 0.000002,
+                "Separator thickness [m]": 0.000003,
+                "Positive electrode thickness [m]": 0.000004,
             },
         )
         # nb: need to be careful make parameters a reasonable size
