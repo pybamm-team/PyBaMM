@@ -33,6 +33,8 @@ mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
+t_sec = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge).evaluate()
+t_hour = t_sec/(3600)
 
 # define a method which updates statevector
 def update_statevector(variables, statevector):
@@ -88,8 +90,14 @@ phi_s_cn_dim_new = current_state[model.variables["Negative current collector pot
 
 #phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z]) - 0.05 * np.linspace(0, 1, var_pts[var.z])
 #phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z])
-sf_cp = 1e-2
+sf_cp = 0.0 # 5e-2
 phi_s_cp_dim_new = current_state[model.variables["Positive current collector potential"].y_slices] - sf_cp * np.linspace(0, 1, var_pts[var.z])
+
+temp_ave = current_state[model.variables["X-averaged cell temperature"].y_slices]
+temp_neg = current_state[model.variables["X-averaged negative electrode temperature"].y_slices]
+temp_pos = current_state[model.variables["X-averaged positive electrode temperature"].y_slices]
+temp_sep = current_state[model.variables["X-averaged separator temperature"].y_slices]
+
 #variables = {
 #    "Negative current collector potential": non_dim_potential(
 #        phi_s_cn_dim_new, "negative"
@@ -98,10 +106,14 @@ phi_s_cp_dim_new = current_state[model.variables["Positive current collector pot
 #        phi_s_cp_dim_new, "positive"
 #    ),
 #}
-
+dt = np.linspace(0, 1, len(temp_ave))*1.0
 variables = {
     "Negative current collector potential": phi_s_cn_dim_new,
     "Positive current collector potential": phi_s_cp_dim_new,
+    "X-averaged cell temperature": temp_ave + dt,
+    "X-averaged negative electrode temperature": temp_neg + dt,
+    "X-averaged positive electrode temperature": temp_pos + dt,
+    "X-averaged separator temperature": temp_sep + dt,
 }
 
 new_state = update_statevector(variables, current_state)
@@ -125,28 +137,28 @@ particle_step2 = pybamm.ProcessedVariable(
     model.variables["X-averaged positive particle surface concentration [mol.m-3]"], solution2.t, solution2.y, mesh=mesh
 )
 # plot
-#plt.figure()
-#plt.plot(t_eval1, voltage_step1(t_eval1), t_eval2, voltage_step2(t_eval2))
-#plt.xlabel('t')
-#plt.ylabel('Voltage [V]')
-#plt.show()
-#plt.figure()
-#plt.plot(t_eval1, current_step1(t_eval1), t_eval2, current_step2(t_eval2))
-#plt.xlabel('t')
-#plt.ylabel('Current [A]')
-#plt.show()
-#plt.figure()
+plt.figure()
+plt.plot(t_eval1, voltage_step1(t_eval1), t_eval2, voltage_step2(t_eval2))
+plt.xlabel('t')
+plt.ylabel('Voltage [V]')
+plt.show()
+plt.figure()
+plt.plot(t_eval1, current_step1(t_eval1), t_eval2, current_step2(t_eval2))
+plt.xlabel('t')
+plt.ylabel('Current [A]')
+plt.show()
+plt.figure()
 z = np.linspace(0, 1, 10)
 for bat_id in range(nbat):
-    plt.plot(t_eval1, heating_step1(t_eval1, z=z)[bat_id, :], t_eval2, heating_step2(t_eval2, z=z)[bat_id, :])
-plt.xlabel('t')
+    plt.plot(t_eval1*t_hour, heating_step1(t_eval1, z=z)[bat_id, :], t_eval2*t_hour, heating_step2(t_eval2, z=z)[bat_id, :])
+plt.xlabel('t [hrs]')
 plt.ylabel('X-averaged total heating [A.V.m-3]')
 plt.yscale('log')
 plt.show()
 plt.figure()
 for bat_id in range(nbat):
-    plt.plot(t_eval1, particle_step1(t_eval1,z=z)[bat_id, :], t_eval2, particle_step2(t_eval2,z=z)[bat_id, :])
-plt.xlabel('t')
+    plt.plot(t_eval1*t_hour, particle_step1(t_eval1,z=z)[bat_id, :], t_eval2*t_hour, particle_step2(t_eval2,z=z)[bat_id, :])
+plt.xlabel('t [hrs]')
 plt.ylabel('X-averaged positive particle surface concentration [mol.m-3]')
 plt.show()
 
