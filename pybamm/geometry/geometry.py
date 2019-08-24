@@ -89,6 +89,40 @@ class Geometry(dict):
         # Allow overwriting with a custom geometry
         self.update(custom_geometry)
 
+    def add_domain(self, name, geometry):
+        """
+        Add a new domain to the geometry
+
+        Parameters
+        ----------
+
+        name: string giving the name of the domain
+
+        geometry: dict of variables in the domain, along with the minimum and maximum
+                extents (e.g. {"primary": {x_n: {"min": pybamm.Scalar(0), "max": l_n}}}
+        """
+
+        for k, v in geometry.items():
+            if k not in ["primary", "secondary"]:
+                raise ValueError(
+                    "keys of geometry must be either \"primary\" or \"secondary\""
+                )
+            for variable, rnge in v.items():
+                if not isinstance(variable, pybamm.Variable):
+                    raise ValueError(
+                        "inner dict of geometry must have pybamm.Variable as keys"
+                    )
+                if "min" not in rnge.keys():
+                    raise ValueError(
+                        "no minimum extents for variable {}".format(variable)
+                    )
+                if "max" not in rnge.keys():
+                    raise ValueError(
+                        "no maximum extents for variable {}".format(variable)
+                    )
+
+        self.update({name: geometry})
+
 
 class Geometry1DMacro(Geometry):
     """
