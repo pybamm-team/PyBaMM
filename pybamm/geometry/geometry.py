@@ -11,7 +11,7 @@ class Geometry(dict):
 
     Geometry extends the class dictionary and uses the key words: "negative electrode",
     "positive electrode", etc to indicate the subdomain.  Within each subdomain, there
-    are "primary" and "secondary" dimensions.  "primary" dimensions correspond to
+    are "primary", "secondary" or "tabs" dimensions.  "primary" dimensions correspond to
     dimensions on which spatial operators will be applied (e.g. the gradient and
     divergence). In contrast, spatial operators do not act along "secondary" dimensions.
     This allows for multiple independent particles to be included into a model.
@@ -52,8 +52,8 @@ class Geometry(dict):
     Parameters
     ----------
 
-    geometries: one or more strings that give the names of the pre-defined battery
-                geometries to include in the Geometry
+    geometries: one or more strings or Geometry objects. A string will be assumed to be
+                one of the predefined Geometries given above
 
     custom_geometry : dict containing any extra user defined geometry
     """
@@ -85,9 +85,13 @@ class Geometry(dict):
             # avoid combining geometries that clash
             if any([k in self.keys() for k in geometry.keys()]):
                 raise ValueError("trying to overwrite existing geometry")
-            self.update(geometry)
+
+            for k, v in geometry.items():
+                self.add_domain(k, v)
+
         # Allow overwriting with a custom geometry
-        self.update(custom_geometry)
+        for k, v in custom_geometry.items():
+            self.add_domain(k, v)
 
     def add_domain(self, name, geometry):
         """
@@ -101,25 +105,43 @@ class Geometry(dict):
         geometry: dict of variables in the domain, along with the minimum and maximum
                 extents (e.g. {"primary": {x_n: {"min": pybamm.Scalar(0), "max": l_n}}}
         """
+        if not isinstance(name, str):
+            raise ValueError("name must be a string")
 
         for k, v in geometry.items():
-            if k not in ["primary", "secondary"]:
+            if k not in ["primary", "secondary", "tabs"]:
                 raise ValueError(
-                    "keys of geometry must be either \"primary\" or \"secondary\""
+                    "keys of geometry must be either \"primary\", \"secondary\" or "
+                    "\"tabs\""
                 )
-            for variable, rnge in v.items():
-                if not isinstance(variable, pybamm.Variable):
-                    raise ValueError(
-                        "inner dict of geometry must have pybamm.Variable as keys"
-                    )
-                if "min" not in rnge.keys():
-                    raise ValueError(
-                        "no minimum extents for variable {}".format(variable)
-                    )
-                if "max" not in rnge.keys():
-                    raise ValueError(
-                        "no maximum extents for variable {}".format(variable)
-                    )
+            if k != "tabs":
+                for variable, rnge in v.items():
+                    if not isinstance(variable, pybamm.SpatialVariable):
+                        raise ValueError(
+                            "inner dict of geometry must have pybamm.SpatialVariable as keys"
+                        )
+                    if list(rnge.keys()) != ["position"]:
+                        if "min" not in rnge.keys():
+                            raise ValueError(
+                                "no minimum extents for variable {}".format(variable)
+                            )
+                        if "max" not in rnge.keys():
+                            raise ValueError(
+                                "no maximum extents for variable {}".format(variable)
+                            )
+            else:
+                for region, params in v.items():
+                    if region not in ["negative", "positive"]:
+                        raise ValueError(
+                            "tabs region must be \"negative\" or \"positive\""
+
+                        )
+                    for pname, expr in params.items():
+                        if pname not in ["y_centre", "z_centre", "width"]:
+                            raise ValueError(
+                                "tabs region params must be \"y_centre\", "
+                                "\"z_centre\" or \"width\""
+                            )
 
         self.update({name: geometry})
 
