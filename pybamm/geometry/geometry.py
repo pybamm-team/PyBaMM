@@ -5,22 +5,58 @@ import pybamm
 
 
 class Geometry(dict):
-    """A geometry class to store the details features of the cell geometry.
-        Geometry extends the class dictionary and uses the key words:
-        "negative electrode", "positive electrode", etc to indicate the subdomain.
-        Within each subdomain, there are "primary" and "secondary" dimensions.
-        "primary" dimensions correspond to dimensiones on which spatial
-        operators will be applied (e.g. the gradient and divergence). In contrast,
-        spatial operators do not act along "secondary" dimensions. This allows for
-        multiple independent particles to be included into a model.
 
-     **Extends**: :class:`dict`
+    """
+    A geometry class to store the details features of the cell geometry.
 
-     Parameters
-     ----------
+    Geometry extends the class dictionary and uses the key words: "negative electrode",
+    "positive electrode", etc to indicate the subdomain.  Within each subdomain, there
+    are "primary" and "secondary" dimensions.  "primary" dimensions correspond to
+    dimensions on which spatial operators will be applied (e.g. the gradient and
+    divergence). In contrast, spatial operators do not act along "secondary" dimensions.
+    This allows for multiple independent particles to be included into a model.
 
-     custom_geometry : dict containing any extra user defined geometry
-     """
+    The values assigned to each domain are dictionaries containing the spatial variables
+    in that domain, along with expression trees giving their min and maximum extents.
+    For example, the following dictionary structure would represent a Geometry with a
+    single domain "negative electrode", defined using the variable `x_n` which has a range
+    from 0 to the pre-defined parameter `l_n`.
+
+    {
+        "negative electrode": {
+            "primary": {x_n: {"min": pybamm.Scalar(0), "max": l_n}}
+        }
+    }
+
+    A user can create a new Geometry by combining one or more of the pre-defined
+    geometries:
+
+    "1D macro": macroscopic 1D cell geometry (i.e. electrodes)
+    "3D macro": macroscopic 3D cell geometry
+    "1+1D macro": 1D macroscopic cell geometry with a 1D current collector
+    "1+2D macro": 1D macroscopic cell geometry with a 2D current collector
+    "1D micro": 1D microscopic cell geometry (i.e. particles)
+    "1+1D micro": This is the geometry used in the standard DFN or P2D model
+    "(1+0)+1D micro": 0D macroscopic cell geometry with 1D current collector, along with
+                      the microscopic 1D particle geometry.
+    "(2+0)+1D micro": 0D macroscopic cell geometry with 1D current collector, along with
+                      the microscopic 1D particle geometry.
+    "(1+1)+1D micro": 1D macroscopic cell geometry, with 1D current collector model, along with
+                      the microscopic 1D particle geometry.
+    "(2+1)+1D micro": 1D macroscopic cell geometry, with 2D current collector model, along with
+                      the microscopic 1D particle geometry.
+    "2D current collector": macroscopic 2D current collector geometry
+
+    **Extends**: :class:`dict`
+
+    Parameters
+    ----------
+
+    geometries: one or more strings that give the names of the pre-defined battery
+                geometries to include in the Geometry
+
+    custom_geometry : dict containing any extra user defined geometry
+    """
 
     def __init__(self, *geometries, custom_geometry={}):
         for geometry in geometries:
