@@ -77,7 +77,7 @@ class TestProcessedVariable(unittest.TestCase):
             "test"
         )
 
-        c = pybamm.StateVector(slice(0, var_pts[x]),domain=["SEI layer"])
+        c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
         pybamm.ProcessedVariable(
             c, solution.t, solution.y, mesh
         )
