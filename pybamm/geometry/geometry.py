@@ -19,33 +19,35 @@ class Geometry(dict):
     The values assigned to each domain are dictionaries containing the spatial variables
     in that domain, along with expression trees giving their min and maximum extents.
     For example, the following dictionary structure would represent a Geometry with a
-    single domain "negative electrode", defined using the variable `x_n` which has a range
-    from 0 to the pre-defined parameter `l_n`.
+    single domain "negative electrode", defined using the variable `x_n` which has a
+    range from 0 to the pre-defined parameter `l_n`.
 
-    {
-        "negative electrode": {
-            "primary": {x_n: {"min": pybamm.Scalar(0), "max": l_n}}
-        }
-    }
+    .. code-block:: python
+
+       {
+           "negative electrode": {
+               "primary": {x_n: {"min": pybamm.Scalar(0), "max": l_n}}
+           }
+       }
 
     A user can create a new Geometry by combining one or more of the pre-defined
-    geometries:
+    geometries defined with the names given below.
 
-    "1D macro": macroscopic 1D cell geometry (i.e. electrodes)
-    "3D macro": macroscopic 3D cell geometry
-    "1+1D macro": 1D macroscopic cell geometry with a 1D current collector
-    "1+2D macro": 1D macroscopic cell geometry with a 2D current collector
-    "1D micro": 1D microscopic cell geometry (i.e. particles)
-    "1+1D micro": This is the geometry used in the standard DFN or P2D model
-    "(1+0)+1D micro": 0D macroscopic cell geometry with 1D current collector, along with
-                      the microscopic 1D particle geometry.
-    "(2+0)+1D micro": 0D macroscopic cell geometry with 1D current collector, along with
-                      the microscopic 1D particle geometry.
-    "(1+1)+1D micro": 1D macroscopic cell geometry, with 1D current collector model, along with
-                      the microscopic 1D particle geometry.
-    "(2+1)+1D micro": 1D macroscopic cell geometry, with 2D current collector model, along with
-                      the microscopic 1D particle geometry.
-    "2D current collector": macroscopic 2D current collector geometry
+    - "1D macro": macroscopic 1D cell geometry (i.e. electrodes)
+    - "3D macro": macroscopic 3D cell geometry
+    - "1+1D macro": 1D macroscopic cell geometry with a 1D current collector
+    - "1+2D macro": 1D macroscopic cell geometry with a 2D current collector
+    - "1D micro": 1D microscopic cell geometry (i.e. particles)
+    - "1+1D micro": This is the geometry used in the standard DFN or P2D model
+    - "(1+0)+1D micro": 0D macroscopic cell geometry with 1D current collector, along with
+    -                   the microscopic 1D particle geometry.
+    - "(2+0)+1D micro": 0D macroscopic cell geometry with 1D current collector, along with
+    -                   the microscopic 1D particle geometry.
+    - "(1+1)+1D micro": 1D macroscopic cell geometry, with 1D current collector model,
+    -                   along with the microscopic 1D particle geometry.
+    - "(2+1)+1D micro": 1D macroscopic cell geometry, with 2D current collector model,
+    -                   along with the microscopic 1D particle geometry.
+    - "2D current collector": macroscopic 2D current collector geometry
 
     **Extends**: :class:`dict`
 
@@ -118,7 +120,8 @@ class Geometry(dict):
                 for variable, rnge in v.items():
                     if not isinstance(variable, pybamm.SpatialVariable):
                         raise ValueError(
-                            "inner dict of geometry must have pybamm.SpatialVariable as keys"
+                            "inner dict of geometry must have pybamm.SpatialVariable "
+                            "as keys"
                         )
                     if list(rnge.keys()) != ["position"]:
                         if "min" not in rnge.keys():
