@@ -139,7 +139,7 @@ class Geometry(dict):
                             "tabs region must be \"negative\" or \"positive\""
 
                         )
-                    for pname, expr in params.items():
+                    for pname in params.keys():
                         if pname not in ["y_centre", "z_centre", "width"]:
                             raise ValueError(
                                 "tabs region params must be \"y_centre\", "
