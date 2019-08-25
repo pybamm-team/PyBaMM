@@ -39,14 +39,14 @@ class Geometry(dict):
     - "1+2D macro": 1D macroscopic cell geometry with a 2D current collector
     - "1D micro": 1D microscopic cell geometry (i.e. particles)
     - "1+1D micro": This is the geometry used in the standard DFN or P2D model
-    - "(1+0)+1D micro": 0D macroscopic cell geometry with 1D current collector, along with
-    -                   the microscopic 1D particle geometry.
-    - "(2+0)+1D micro": 0D macroscopic cell geometry with 1D current collector, along with
-    -                   the microscopic 1D particle geometry.
+    - "(1+0)+1D micro": 0D macroscopic cell geometry with 1D current collector,
+                        along with the microscopic 1D particle geometry.
+    - "(2+0)+1D micro": 0D macroscopic cell geometry with 1D current collector,
+                        along with the microscopic 1D particle geometry.
     - "(1+1)+1D micro": 1D macroscopic cell geometry, with 1D current collector model,
-    -                   along with the microscopic 1D particle geometry.
+                        along with the microscopic 1D particle geometry.
     - "(2+1)+1D micro": 1D macroscopic cell geometry, with 2D current collector model,
-    -                   along with the microscopic 1D particle geometry.
+                        along with the microscopic 1D particle geometry.
     - "2D current collector": macroscopic 2D current collector geometry
 
     **Extends**: :class:`dict`
