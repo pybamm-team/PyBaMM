@@ -195,6 +195,9 @@ class ProcessedVariable(object):
         elif self.domain == ["current collector"]:
             self.spatial_var_name = "z"
             self.z_sol = space
+        else:
+            self.spatial_var_name = "x"
+            self.x_sol = space
 
         # set up interpolation
         # note that the order of 't' and 'space' is the reverse of what you'd expect
