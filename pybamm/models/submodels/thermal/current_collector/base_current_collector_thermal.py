@@ -197,7 +197,7 @@ class BaseModel(pybamm.BaseSubModel):
         """
         Computes the x-average over the whole cell (including current collectors)
         from the x-averaged variable in the cell (negative electrode, separator,
-        positive electrode), negative currnet collector, and positive current
+        positive electrode), negative current collector, and positive current
         collector.
         Note: we do this as we cannot create a single variable which is
         the concatenation [var_cn, var, var_cp] since var_cn and var_cp share the

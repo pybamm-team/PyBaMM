@@ -1,13 +1,14 @@
 #
-# Class for isothermal case
+# Class for base isothermal submodel
 #
+
 import pybamm
 
-from .base_thermal import BaseModel
+from ..base_thermal import BaseThermal
 
 
-class Isothermal(BaseModel):
-    """Class for isothermal submodel
+class BaseIsothermal(BaseThermal):
+    """Class for base isothermal submodel.
 
     Parameters
     ----------
@@ -15,7 +16,7 @@ class Isothermal(BaseModel):
         The parameters to use for this submodel
 
 
-    **Extends:** :class:`pybamm.thermal.BaseModel`
+    **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
     def __init__(self, param):
@@ -23,15 +24,10 @@ class Isothermal(BaseModel):
 
     def get_fundamental_variables(self):
 
-        T_n = pybamm.PrimaryBroadcast(
-            pybamm.PrimaryBroadcast(0, "current collector"), "negative electrode"
-        )
-        T_s = pybamm.PrimaryBroadcast(
-            pybamm.PrimaryBroadcast(0, "current collector"), "separator"
-        )
-        T_p = pybamm.PrimaryBroadcast(
-            pybamm.PrimaryBroadcast(0, "current collector"), "positive electrode"
-        )
+        T_x_av = pybamm.PrimaryBroadcast(0, "current collector")
+        T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
+        T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
+        T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
         T = pybamm.Concatenation(T_n, T_s, T_p)
 
         variables = self._get_standard_fundamental_variables(T)
@@ -45,6 +41,3 @@ class Isothermal(BaseModel):
             "current collector",
         )
         return q
-
-    def set_initial_conditions(self, variables):
-        return {}
