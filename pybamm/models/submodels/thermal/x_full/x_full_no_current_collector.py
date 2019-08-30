@@ -3,11 +3,11 @@
 #
 import pybamm
 
-from .base_thermal import BaseModel
+from .base_x_full import BaseModel
 
 
-class Full(BaseModel):
-    """Class for full thermal submodel
+class NoCurrentCollector(BaseModel):
+    """Class for full x-direction thermal submodel without current collectors
 
     Parameters
     ----------
@@ -15,36 +15,16 @@ class Full(BaseModel):
         The parameters to use for this submodel
 
 
-    **Extends:** :class:`pybamm.thermal.BaseModel`
+    **Extends:** :class:`pybamm.thermal.x_full.BaseModel`
     """
 
     def __init__(self, param):
         super().__init__(param)
 
-    def get_fundamental_variables(self):
-
-        T = pybamm.standard_variables.T
-
-        variables = self._get_standard_fundamental_variables(T)
-        return variables
-
-    def get_coupled_variables(self, variables):
-        variables.update(self._get_standard_coupled_variables(variables))
-        return variables
-
-    def _flux_law(self, T):
-        """Fourier's law for heat transfer"""
-        q = -self.param.lambda_k * pybamm.grad(T)
-        return q
-
-    def _unpack(self, variables):
+    def set_rhs(self, variables):
         T = variables["Cell temperature"]
         q = variables["Heat flux"]
         Q = variables["Total heating"]
-        return T, q, Q
-
-    def set_rhs(self, variables):
-        T, q, Q = self._unpack(variables)
 
         self.rhs = {
             T: (-pybamm.div(q) / self.param.delta ** 2 + self.param.B * Q)
@@ -52,7 +32,7 @@ class Full(BaseModel):
         }
 
     def set_boundary_conditions(self, variables):
-        T, _, _ = self._unpack(variables)
+        T = variables["Cell temperature"]
         T_n_left = pybamm.boundary_value(T, "left")
         T_p_right = pybamm.boundary_value(T, "right")
 
@@ -62,3 +42,14 @@ class Full(BaseModel):
                 "right": (-self.param.h * T_p_right / self.param.lambda_p, "Neumann"),
             }
         }
+
+    def _current_collector_heating(self, variables):
+        """Returns zeros for current collector heat source terms"""
+        Q_s_cn = 0
+        Q_s_cp = 0
+        return Q_s_cn, Q_s_cp
+
+    def _yz_average(self, var):
+        """Computes the y-z avergage by integration over y and z
+            In this case this is just equal to the input variable"""
+        return var

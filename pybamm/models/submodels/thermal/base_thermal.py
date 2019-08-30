@@ -19,13 +19,11 @@ class BaseThermal(pybamm.BaseSubModel):
     def __init__(self, param):
         super().__init__(param)
 
-    def _get_standard_fundamental_variables(self, T):
+    def _get_standard_fundamental_variables(self, T, T_cn, T_cp):
         param = self.param
         T_n, T_s, T_p = T.orphans
 
         T_x_av = pybamm.x_average(T)
-        T_cn = T_x_av
-        T_cp = T_x_av
         T_vol_av = self._yz_average(T_x_av)
 
         q = self._flux_law(T)

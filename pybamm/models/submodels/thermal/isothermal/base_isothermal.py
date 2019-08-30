@@ -30,7 +30,14 @@ class BaseIsothermal(BaseThermal):
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
         T = pybamm.Concatenation(T_n, T_s, T_p)
 
-        variables = self._get_standard_fundamental_variables(T)
+        T_cn = T_x_av
+        T_cp = T_x_av
+
+        variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
+        return variables
+
+    def get_coupled_variables(self, variables):
+        variables.update(self._get_standard_coupled_variables(variables))
         return variables
 
     def _flux_law(self, T):
