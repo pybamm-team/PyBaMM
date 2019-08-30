@@ -1,14 +1,13 @@
 #
-# Class for base isothermal submodel
+# Base class for xyz-lumped thermal submodels
 #
-
 import pybamm
 
-from ..base_thermal import BaseThermal
+from .base_thermal import BaseThermal
 
 
 class BaseModel(BaseThermal):
-    """Class for base isothermal submodel.
+    """Base class for xyz-lumped thermal submodel
 
     Parameters
     ----------
@@ -16,7 +15,7 @@ class BaseModel(BaseThermal):
         The parameters to use for this submodel
 
 
-    **Extends:** :class:`pybamm.thermal.BaseThermal`
+    **Extends:** :class:`pybamm.thermal.BaseModel`
     """
 
     def __init__(self, param):
@@ -24,7 +23,9 @@ class BaseModel(BaseThermal):
 
     def get_fundamental_variables(self):
 
-        T_x_av = pybamm.PrimaryBroadcast(0, "current collector")
+        T_vol_av = pybamm.standard_variables.T_vol_av
+        T_x_av = pybamm.PrimaryBroadcast(T_vol_av, ["current collector"])
+
         T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
         T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
@@ -34,6 +35,7 @@ class BaseModel(BaseThermal):
         T_cp = T_x_av
 
         variables = self._get_standard_fundamental_variables(T, T_cn, T_cp)
+
         return variables
 
     def get_coupled_variables(self, variables):
@@ -41,10 +43,14 @@ class BaseModel(BaseThermal):
         return variables
 
     def _flux_law(self, T):
-        """Zero heat flux since temperature is constant"""
+        """Fast heat diffusion (temperature has no spatial dependence)"""
         q = pybamm.FullBroadcast(
             pybamm.Scalar(0),
             ["negative electrode", "separator", "positive electrode"],
             "current collector",
         )
         return q
+
+    def set_initial_conditions(self, variables):
+        T_vol_av = variables["Volume-averaged cell temperature"]
+        self.initial_conditions = {T_vol_av: self.param.T_init}

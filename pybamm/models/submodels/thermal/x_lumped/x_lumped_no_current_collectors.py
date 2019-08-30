@@ -19,12 +19,6 @@ class NoCurrentCollector(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-    # def _unpack(self, variables):
-    #     T_av = variables["X-averaged cell temperature"]
-    #     q = variables["Heat flux"]
-    #     Q_av = variables["X-averaged total heating"]
-    #     return T_av, q, Q_av
-
     def set_rhs(self, variables):
         T_av = variables["X-averaged cell temperature"]
         Q_av = variables["X-averaged total heating"]

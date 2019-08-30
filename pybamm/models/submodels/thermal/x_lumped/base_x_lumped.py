@@ -6,7 +6,7 @@ import pybamm
 from .base_thermal import BaseThermal
 
 
-class Lumped(BaseThermal):
+class BaseModel(BaseThermal):
     """Base class for x-lumped thermal submodel
 
     Parameters
@@ -23,7 +23,7 @@ class Lumped(BaseThermal):
 
     def get_fundamental_variables(self):
 
-        T_x_av = pybamm.PrimaryBroadcast(0, "current collector")
+        T_x_av = pybamm.standard_variables.T_av
         T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
         T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")

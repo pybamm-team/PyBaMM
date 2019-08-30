@@ -200,4 +200,4 @@ T_cp = pybamm.Variable(
 )
 T = pybamm.Concatenation(T_n, T_s, T_p)
 T_av = pybamm.Variable("X-averaged cell temperature", domain="current collector")
-T_volume_av = pybamm.Variable("Volume-averaged cell temperature")
+T_vol_av = pybamm.Variable("Volume-averaged cell temperature")
