@@ -26,7 +26,8 @@ class CurrentCollector0D(BaseModel):
         return var
 
     def set_rhs(self, variables):
-        T_volume_av, _, Q_volume_av = self._unpack(variables)
+        T_volume_av = variables["Volume-averaged cell temperature"]
+        Q_volume_av = variables["Volume-averaged total heating"]
 
         cooling_coeff = self._surface_cooling_coefficient()
 
