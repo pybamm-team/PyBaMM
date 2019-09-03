@@ -6,10 +6,10 @@ import pybamm
 import numpy as np
 
 # load model
-options = {"thermal": "full"}
+options = {"thermal": "x-full"}
 full_thermal_model = pybamm.lithium_ion.SPMe(options)
 
-options = {"thermal": "lumped"}
+options = {"thermal": "x-lumped"}
 lumped_thermal_model = pybamm.lithium_ion.SPMe(options)
 
 models = [full_thermal_model, lumped_thermal_model]
