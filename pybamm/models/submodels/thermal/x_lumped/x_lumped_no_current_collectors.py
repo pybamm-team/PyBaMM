@@ -1,10 +1,10 @@
 #
 # Class for lumped thermal submodel
 #
-from ..base_thermal import BaseThermal
+from .base_x_lumped import BaseModel
 
 
-class NoCurrentCollector(BaseThermal):
+class NoCurrentCollector(BaseModel):
     """Class for x-lumped thermal submodel without current collectors
 
     Parameters
@@ -29,3 +29,13 @@ class NoCurrentCollector(BaseThermal):
             )
             / (self.param.C_th * self.param.rho)
         }
+
+    def _current_collector_heating(self, variables):
+        """Returns zeros for current collector heat source terms"""
+        Q_s_cn = 0
+        Q_s_cp = 0
+        return Q_s_cn, Q_s_cp
+
+    def _yz_average(self, var):
+        """Computes the y-z avergage (just the variable when no current collectors)"""
+        return var
