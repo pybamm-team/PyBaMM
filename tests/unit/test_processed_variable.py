@@ -55,6 +55,33 @@ class TestProcessedVariable(unittest.TestCase):
             x_s_edge.entries[:, 0], processed_x_s_edge.entries[1:-1, 0]
         )
 
+    def test_processed_variable_2D_unknown_domain(self):
+        x = pybamm.SpatialVariable("x", domain="SEI layer", coord_sys="cartesian")
+        geometry = pybamm.Geometry()
+        geometry.add_domain("SEI layer",
+                            {"primary":
+                                {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+                            )
+
+        submesh_types = {"SEI layer": pybamm.Uniform1DSubMesh}
+        var_pts = {x: 100}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        nt = 100
+
+        solution = pybamm.Solution(
+            np.linspace(0, 1, nt),
+            np.zeros((var_pts[x], nt)),
+            np.linspace(0, 1, 1),
+            np.zeros((var_pts[x])),
+            "test"
+        )
+
+        c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])
+        pybamm.ProcessedVariable(
+            c, solution.t, solution.y, mesh
+        )
+
     def test_processed_variable_3D(self):
         var = pybamm.Variable("var", domain=["negative particle"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])

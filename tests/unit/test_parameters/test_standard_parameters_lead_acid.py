@@ -83,10 +83,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             {
                 "Electrode height [m]": 0.1,
-                "Electrode depth [m]": 0.1,
-                "Negative electrode width [m]": 1,
-                "Separator width [m]": 1,
-                "Positive electrode width [m]": 1,
+                "Electrode width [m]": 0.1,
+                "Negative electrode thickness [m]": 1,
+                "Separator thickness [m]": 1,
+                "Positive electrode thickness [m]": 1,
                 "Typical electrolyte concentration [mol.m-3]": 1,
                 "Number of electrodes connected in parallel to make a cell": 8,
                 "Typical current [A]": 2,
