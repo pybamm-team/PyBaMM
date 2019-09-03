@@ -1,6 +1,6 @@
-Base Model
-==========
+Base Thermal
+============
 
-.. autoclass:: pybamm.thermal.BaseModel
+.. autoclass:: pybamm.thermal.BaseThermal
     :members:
 
