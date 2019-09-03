@@ -42,6 +42,17 @@ class BaseModel(BaseThermal):
         variables.update(self._get_standard_coupled_variables(variables))
         return variables
 
+    def set_rhs(self, variables):
+        T_vol_av = variables["Volume-averaged cell temperature"]
+        Q_vol_av = variables["Volume-averaged total heating"]
+
+        cooling_coeff = self._surface_cooling_coefficient()
+
+        self.rhs = {
+            T_vol_av: (self.param.B * Q_vol_av + cooling_coeff * T_vol_av)
+            / self.param.C_th
+        }
+
     def _flux_law(self, T):
         """Fast heat diffusion (temperature has no spatial dependence)"""
         q = pybamm.FullBroadcast(

@@ -38,12 +38,58 @@ class TestDFN(unittest.TestCase):
         with self.assertRaises(pybamm.OptionError):
             model = pybamm.lithium_ion.DFN(options)
 
-    def test_thermal(self):
-        options = {"thermal": "lumped"}
+    def test_x_full_thermal_model_no_current_collector(self):
+        options = {"thermal": "x-full"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-        options = {"thermal": "full"}
+    def test_x_lumped_thermal_model_no_Current_collector(self):
+        options = {"thermal": "x-lumped"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_x_lumped_thermal_model_0D_current_collector(self):
+        options = {"thermal": "x-lumped", "thermal current collector": True}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    def test_xyz_lumped_thermal_1D_current_collector(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "thermal": "xyz-lumped",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    def test_xyz_lumped_thermal_2D_current_collector(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "xyz-lumped",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    def test_x_lumped_thermal_1D_current_collector(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 1,
+            "thermal": "x-lumped",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    @unittest.skipIf(pybamm.have_scikits_odes(), "scikits.odes not installed")
+    def test_x_lumped_thermal_2D_current_collector(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "x-lumped",
+        }
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
