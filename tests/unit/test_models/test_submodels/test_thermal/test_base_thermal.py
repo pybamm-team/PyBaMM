@@ -7,9 +7,10 @@ import tests
 import unittest
 
 
-class TestBaseModel(unittest.TestCase):
+class TestBaseThermal(unittest.TestCase):
     def test_public_functions(self):
-        submodel = pybamm.thermal.BaseThermal(None)
+        param = pybamm.standard_parameters_lithium_ion
+        submodel = pybamm.thermal.BaseThermal(param)
         std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()
 
