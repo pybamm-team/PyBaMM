@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from .base_thermal import BaseThermal
+from ..base_thermal import BaseThermal
 
 
 class BaseModel(BaseThermal):

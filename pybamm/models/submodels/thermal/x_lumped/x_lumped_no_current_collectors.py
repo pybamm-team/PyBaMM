@@ -1,10 +1,10 @@
 #
 # Class for lumped thermal submodel
 #
-from .base_thermal import BaseModel
+from ..base_thermal import BaseThermal
 
 
-class NoCurrentCollector(BaseModel):
+class NoCurrentCollector(BaseThermal):
     """Class for x-lumped thermal submodel without current collectors
 
     Parameters

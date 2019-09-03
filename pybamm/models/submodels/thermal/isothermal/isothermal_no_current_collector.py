@@ -1,7 +1,7 @@
 #
 # Class for isothermal case
 #
-from .base_thermal import BaseModel
+from .base_isothermal import BaseModel
 
 
 class NoCurrentCollector(BaseModel):
