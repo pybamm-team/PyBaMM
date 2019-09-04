@@ -153,6 +153,15 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return -stiffness_matrix @ discretised_symbol + boundary_load
 
+    def gradient_squared(self, symbol, discretised_symbol, boundary_conditions):
+        """Matrix-vector multiplication to implement the inner product of the
+        gradient operator with itself.
+        See :meth:`pybamm.SpatialMethod.gradient_squared`
+        """
+        stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
+
+        return stiffness_matrix @ (discretised_symbol ** 2)
+
     def stiffness_matrix(self, symbol, boundary_conditions):
         """
         Laplacian (stiffness) matrix for finite elements in the appropriate domain.

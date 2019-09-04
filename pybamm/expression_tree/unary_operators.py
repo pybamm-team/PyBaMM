@@ -317,6 +317,23 @@ class Laplacian(SpatialOperator):
         return False
 
 
+class Gradient_Squared(SpatialOperator):
+    """A node in the expression tree representing a the inner product of the grad
+    operator with itself. In particular, this is useful in the finite element
+    formualtion where we only require the (sclar valued) square of the gradient,
+    and  not the gradient itself.
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, child):
+        super().__init__("grad squared", child)
+
+    def evaluates_on_edges(self):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return True
+
+
 class Mass(SpatialOperator):
     """Returns the mass matrix for a given symbol, accounting for Dirchlet boundary
     conditions where necessary (e.g. in the finite element formualtion)
@@ -691,7 +708,7 @@ class BoundaryGradient(BoundaryOperator):
 
 
 #
-# Methods to call Gradient and Divergence
+# Methods to call Gradient, Divergence, Laplacian and Gradient_Squared
 #
 
 
@@ -751,6 +768,25 @@ def laplacian(expression):
 
     return Laplacian(expression)
 
+
+def grad_squared(expression):
+    """convenience function for creating a :class:`Gradient_Squared`
+
+    Parameters
+    ----------
+
+    expression : :class:`Symbol`
+        the inner product of the gradient with itself will be performed on this
+        sub-expression
+
+    Returns
+    -------
+
+    :class:`Gradient_Squared`
+        inner product of the gradient of ``expression`` with itself
+    """
+
+    return Gradient_Squared(expression)
 
 #
 # Method to call SurfaceValue

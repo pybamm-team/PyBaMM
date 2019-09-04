@@ -10,7 +10,7 @@ pybamm.set_logging_level("INFO")
 options = {
     "current collector": "potential pair",
     "dimensionality": 2,
-    "thermal": "full",
+    "thermal": "x-lumped",
 }
 model = pybamm.lithium_ion.SPMe(options)
 

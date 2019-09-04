@@ -14,9 +14,15 @@ from tests.unit.test_models.test_submodels.test_thermal.coupled_variables import
 class TestCurrentCollector2D(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.standard_parameters_lithium_ion
-        i_boundary_cc = pybamm.PrimaryBroadcast(pybamm.Scalar(1), ["current collector"])
+        phi_s_cn = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["current collector"])
+        phi_s_cp = pybamm.PrimaryBroadcast(pybamm.Scalar(3), ["current collector"])
 
-        coupled_variables.update({"Current collector current density": i_boundary_cc})
+        coupled_variables.update(
+            {
+                "Negative current collector potential": phi_s_cn,
+                "Positive current collector potential": phi_s_cp,
+            }
+        )
 
         submodel = pybamm.thermal.x_lumped.CurrentCollector2D(param)
         std_tests = tests.StandardSubModelTests(submodel, coupled_variables)

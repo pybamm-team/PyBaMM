@@ -418,7 +418,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
 
         elif self.options["thermal"] == "x-lumped":
-
             if self.options["dimensionality"] == 0:
                 if self.options["thermal current collector"] is False:
                     thermal_submodel = pybamm.thermal.x_lumped.NoCurrentCollector(
@@ -428,19 +427,16 @@ class BaseBatteryModel(pybamm.BaseModel):
                     thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector0D(
                         self.param
                     )
-
             elif self.options["dimensionality"] == 1:
                 thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector1D(
                     self.param
                 )
-
             elif self.options["dimensionality"] == 2:
                 thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector2D(
                     self.param
                 )
 
         elif self.options["thermal"] == "x-full":
-
             if self.options["dimensionality"] == 0:
                 if self.options["thermal current collector"] is False:
                     thermal_submodel = pybamm.thermal.x_full.NoCurrentCollector(
@@ -451,13 +447,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                         """X-full thermal submodels do
                     not yet account for current collector"""
                     )
-
             elif self.options["dimensionality"] == 1:
                 raise NotImplementedError(
                     """X-full thermal submodels do not
                 yet support 1D current collectors"""
                 )
-
             elif self.options["dimensionality"] == 2:
                 raise NotImplementedError(
                     """X-full thermal submodels do
@@ -476,7 +470,22 @@ class BaseBatteryModel(pybamm.BaseModel):
                     thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector0D(
                         self.param
                     )
+            if self.options["dimensionality"] == 1:
+                thermal_submodel = pybamm.thermal.xyz_lumped.CurrentCollector1D(
+                    self.param
+                )
+            elif self.options["dimensionality"] == 2:
+                thermal_submodel = pybamm.thermal.xyz_lumped.CurrentCollector2D(
+                    self.param
+                )
 
+        elif self.options["thermal"] == "lumped":
+            # Easy option for returning a single Temperature regardless of choice of
+            # current collector model. Note: Always includes current collector effects
+            if self.options["dimensionality"] == 0:
+                thermal_submodel = pybamm.thermal.x_lumped.CurrentCollector0D(
+                    self.param
+                )
             if self.options["dimensionality"] == 1:
                 thermal_submodel = pybamm.thermal.xyz_lumped.CurrentCollector1D(
                     self.param

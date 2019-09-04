@@ -30,7 +30,6 @@ class CurrentCollector2D(BaseModel):
 
     def set_boundary_conditions(self, variables):
         T_av = variables["X-averaged cell temperature"]
-
         # Dummy no flux boundary conditions since cooling at the the tabs is
         # accounted for in the boundary source term in the weak form of the
         # governing equation
@@ -44,11 +43,12 @@ class CurrentCollector2D(BaseModel):
 
     def _current_collector_heating(self, variables):
         """Returns the heat source terms in the 2D current collector"""
-        # TODO: implement grad to calculate actual heating instead of average
-        # approximate heating
-        i_boundary_cc = variables["Current collector current density"]
-        Q_s_cn = i_boundary_cc ** 2 / self.param.sigma_cn
-        Q_s_cp = i_boundary_cc ** 2 / self.param.sigma_cp
+        phi_s_cn = variables["Negative current collector potential"]
+        phi_s_cp = variables["Positive current collector potential"]
+        # Note: grad not implemented in 2D weak form, but can compute grad squared
+        # directly
+        Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
+        Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):
