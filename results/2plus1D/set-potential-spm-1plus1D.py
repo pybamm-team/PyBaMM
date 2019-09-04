@@ -8,8 +8,10 @@ plt.close('all')
 pybamm.set_logging_level("INFO")
 
 # load (1+1D) SPM model
-options = {"current collector": "set external potential",
-           "dimensionality": 1,
+#options = {"current collector": "set external potential",
+#           "dimensionality": 1,
+#           "thermal": "set external temperature"}
+options = {"dimensionality": 1,
            "thermal": "set external temperature"}
 model = pybamm.lithium_ion.SPM(options)
 
@@ -22,7 +24,7 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-nbat = 10
+nbat = 108
 var = pybamm.standard_spatial_vars
 var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5, var.z: nbat}
 # depnding on number of points in y-z plane may need to increase recursion depth...
@@ -63,6 +65,10 @@ def non_dim_potential(phi_dim, domain):
         phi = (phi_dim - pot_ref) / pot_scale
     return phi
 
+def non_dim_temperature(temperature):
+    Delta_T = param.process_symbol(model.submodels['thermal'].param.Delta_T).evaluate()
+    T_ref = param.process_symbol(model.submodels['thermal'].param.T_ref).evaluate()
+    return (temperature - T_ref)/Delta_T
 
 # solve model -- replace with step
 t_eval1 = np.linspace(0, 0.1, 20)
@@ -79,19 +85,21 @@ heating_step1 = pybamm.ProcessedVariable(
 particle_step1 = pybamm.ProcessedVariable(
     model.variables["X-averaged positive particle surface concentration [mol.m-3]"], solution1.t, solution1.y, mesh=mesh
 )
-
+temperature_step1 = pybamm.ProcessedVariable(
+    model.variables["X-averaged cell temperature [K]"], solution1.t, solution1.y, mesh=mesh
+)
 
 current_state = solution1.y[:, -1]
 
 # update potentials (e.g. zero volts on neg. current collector, 3.3 volts on pos.)
 #phi_s_cn_dim_new = np.zeros(var_pts[var.z])
 sf_cn = 1.0
-phi_s_cn_dim_new = current_state[model.variables["Negative current collector potential"].y_slices] * sf_cn
+#phi_s_cn_dim_new = current_state[model.variables["Negative current collector potential"].y_slices] * sf_cn
 
 #phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z]) - 0.05 * np.linspace(0, 1, var_pts[var.z])
 #phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z])
 sf_cp = 0.0 # 5e-2
-phi_s_cp_dim_new = current_state[model.variables["Positive current collector potential"].y_slices] - sf_cp * np.linspace(0, 1, var_pts[var.z])
+#phi_s_cp_dim_new = current_state[model.variables["Positive current collector potential"].y_slices] - sf_cp * np.linspace(0, 1, var_pts[var.z])
 
 temp_ave = current_state[model.variables["X-averaged cell temperature"].y_slices]
 temp_neg = current_state[model.variables["X-averaged negative electrode temperature"].y_slices]
@@ -106,14 +114,17 @@ temp_sep = current_state[model.variables["X-averaged separator temperature"].y_s
 #        phi_s_cp_dim_new, "positive"
 #    ),
 #}
-dt = np.linspace(0, 1, len(temp_ave))*1.0
+
+T_ref = param.process_symbol(model.submodels['thermal'].param.T_ref).evaluate()
+t_external = np.linspace(T_ref, T_ref + 6.0, nbat)
+non_dim_t_external = non_dim_temperature(t_external)
 variables = {
-    "Negative current collector potential": phi_s_cn_dim_new,
-    "Positive current collector potential": phi_s_cp_dim_new,
-    "X-averaged cell temperature": temp_ave + dt,
-    "X-averaged negative electrode temperature": temp_neg + dt,
-    "X-averaged positive electrode temperature": temp_pos + dt,
-    "X-averaged separator temperature": temp_sep + dt,
+#    "Negative current collector potential": phi_s_cn_dim_new,
+#    "Positive current collector potential": phi_s_cp_dim_new,
+    "X-averaged cell temperature": non_dim_t_external,
+    "X-averaged negative electrode temperature": non_dim_t_external,
+    "X-averaged positive electrode temperature": non_dim_t_external,
+    "X-averaged separator temperature": non_dim_t_external,
 }
 
 new_state = update_statevector(variables, current_state)
@@ -136,6 +147,9 @@ heating_step2 = pybamm.ProcessedVariable(
 particle_step2 = pybamm.ProcessedVariable(
     model.variables["X-averaged positive particle surface concentration [mol.m-3]"], solution2.t, solution2.y, mesh=mesh
 )
+temperature_step2 = pybamm.ProcessedVariable(
+    model.variables["X-averaged cell temperature [K]"], solution2.t, solution2.y, mesh=mesh
+)
 # plot
 plt.figure()
 plt.plot(t_eval1, voltage_step1(t_eval1), t_eval2, voltage_step2(t_eval2))
@@ -148,7 +162,7 @@ plt.xlabel('t')
 plt.ylabel('Current [A]')
 plt.show()
 plt.figure()
-z = np.linspace(0, 1, 10)
+z = np.linspace(0, 1, nbat)
 for bat_id in range(nbat):
     plt.plot(t_eval1*t_hour, heating_step1(t_eval1, z=z)[bat_id, :], t_eval2*t_hour, heating_step2(t_eval2, z=z)[bat_id, :])
 plt.xlabel('t [hrs]')
@@ -161,7 +175,12 @@ for bat_id in range(nbat):
 plt.xlabel('t [hrs]')
 plt.ylabel('X-averaged positive particle surface concentration [mol.m-3]')
 plt.show()
-
+plt.figure()
+for bat_id in range(nbat):
+    plt.plot(t_eval1*t_hour, temperature_step1(t_eval1,z=z)[bat_id, :], t_eval2*t_hour, temperature_step2(t_eval2,z=z)[bat_id, :])
+plt.xlabel('t [hrs]')
+plt.ylabel('X-averaged cell temperature [K]')
+plt.show()
 
 def plot_var(var, solution, time=-1):
     variable = model.variables[var]
