@@ -9,14 +9,14 @@ import pybamm
 # --------------------------------------------------------------------------------------
 "Dimensional Parameters"
 # Macroscale geometry
-L_cn = pybamm.Parameter("Negative current collector width [m]")
-L_n = pybamm.Parameter("Negative electrode width [m]")
-L_s = pybamm.Parameter("Separator width [m]")
-L_p = pybamm.Parameter("Positive electrode width [m]")
-L_cp = pybamm.Parameter("Positive current collector width [m]")
+L_cn = pybamm.Parameter("Negative current collector thickness [m]")
+L_n = pybamm.Parameter("Negative electrode thickness [m]")
+L_s = pybamm.Parameter("Separator thickness [m]")
+L_p = pybamm.Parameter("Positive electrode thickness [m]")
+L_cp = pybamm.Parameter("Positive current collector thickness [m]")
 L_x = L_n + L_s + L_p  # Total distance between current collectors
-L = L_cn + L_x + L_cp  # Total cell width
-L_y = pybamm.Parameter("Electrode depth [m]")
+L = L_cn + L_x + L_cp  # Total cell thickness
+L_y = pybamm.Parameter("Electrode width [m]")
 L_z = pybamm.Parameter("Electrode height [m]")
 A_cc = L_y * L_z  # Area of current collector
 

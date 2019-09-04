@@ -263,7 +263,7 @@ l_s = pybamm.geometric_parameters.l_s
 l_p = pybamm.geometric_parameters.l_p
 l_y = pybamm.geometric_parameters.l_y
 l_z = pybamm.geometric_parameters.l_z
-# In lead-acid the current collector and electrodes are the same (same width)
+# In lead-acid the current collector and electrodes are the same (same thickness)
 l_cn = l_n
 l_cp = l_p
 
