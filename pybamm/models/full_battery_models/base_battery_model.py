@@ -196,7 +196,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             None,
             "x-full",
             "x-lumped",
-            "xyz-lumped"
+            "xyz-lumped",
+            "lumped",
         ]:
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
