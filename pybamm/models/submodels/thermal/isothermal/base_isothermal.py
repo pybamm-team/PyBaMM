@@ -55,8 +55,6 @@ class BaseModel(BaseThermal):
         )
         return variables
 
-        return variables
-
     def _flux_law(self, T):
         """Zero heat flux since temperature is constant"""
         q = pybamm.FullBroadcast(
