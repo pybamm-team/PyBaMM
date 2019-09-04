@@ -17,10 +17,6 @@ class CurrentCollector0D(BaseModel):
         Q_s_cp = i_boundary_cc ** 2 / self.param.sigma_cp
         return Q_s_cn, Q_s_cp
 
-    def _surface_cooling_coefficient(self):
-        """Returns the surface cooling coefficient for 0D current collectors"""
-        return -2 * self.param.h / (self.param.delta ** 2)
-
     def _yz_average(self, var):
         """In 1D volume-averaged quantities are unchanged"""
         return var
@@ -29,9 +25,10 @@ class CurrentCollector0D(BaseModel):
         T_volume_av = variables["Volume-averaged cell temperature"]
         Q_volume_av = variables["Volume-averaged total heating"]
 
-        cooling_coeff = self._surface_cooling_coefficient()
-
         self.rhs = {
-            T_volume_av: (self.param.B * Q_volume_av + cooling_coeff * T_volume_av)
+            T_volume_av: (
+                self.param.B * Q_volume_av
+                + -2 * self.param.h / (self.param.delta ** 2) * T_volume_av
+            )
             / self.param.C_th
         }
