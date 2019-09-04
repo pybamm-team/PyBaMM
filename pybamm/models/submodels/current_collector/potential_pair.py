@@ -73,7 +73,7 @@ class BasePotentialPair(BaseModel):
 
 
 class PotentialPair1plus1D(BasePotentialPair):
-    "Base class for a 1+1D potential pair model"
+    "Base class for a 1+1D potential pair model. Note: assumes both tabs at top"
 
     def __init__(self, param):
         super().__init__(param)
@@ -159,3 +159,38 @@ class PotentialPair2plus1D(BasePotentialPair):
     def _get_effective_current_collector_area(self):
         "Return the area of the current collector"
         return self.param.l_y * self.param.l_z
+
+
+class PotentialPairUnrolled(PotentialPair1plus1D):
+    "Base class for 1+1D model used to model an jelly roll with a tab at either end"
+
+    def set_boundary_conditions(self, variables):
+
+        phi_s_cn = variables["Negative current collector potential"]
+        phi_s_cp = variables["Positive current collector potential"]
+
+        param = self.param
+        applied_current = param.current_with_time
+        cc_area = self._get_effective_current_collector_area()
+
+        # cc_area appears here due to choice of non-dimensionalisation
+        pos_tab_bc = (
+            -applied_current
+            * cc_area
+            / (param.sigma_cp * param.delta ** 2 * param.l_cp)
+        )
+
+        # Boundary condition needs to be on the variables that go into the Laplacian,
+        # even though phi_s_cp isn't a pybamm.Variable object
+        self.boundary_conditions = {
+            phi_s_cn: {
+                "left": (pybamm.Scalar(0), "Dirichlet"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            },
+            phi_s_cp: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pos_tab_bc, "Neumann"),
+            },
+        }
+
+        

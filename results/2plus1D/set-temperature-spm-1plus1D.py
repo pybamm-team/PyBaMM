@@ -8,10 +8,8 @@ plt.close('all')
 pybamm.set_logging_level("INFO")
 
 # load (1+1D) SPM model
-#options = {"current collector": "set external potential",
-#           "dimensionality": 1,
-#           "thermal": "set external temperature"}
-options = {"dimensionality": 1,
+options = {"current collector": "jelly roll",
+           "dimensionality": 1,
            "thermal": "set external temperature"}
 model = pybamm.lithium_ion.SPM(options)
 
@@ -37,6 +35,7 @@ disc.process_model(model)
 
 t_sec = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge).evaluate()
 t_hour = t_sec/(3600)
+
 
 # define a method which updates statevector
 def update_statevector(variables, statevector):
@@ -73,6 +72,12 @@ def non_dim_temperature(temperature):
 # solve model -- replace with step
 t_eval1 = np.linspace(0, 0.1, 20)
 solution1 = model.default_solver.solve(model, t_eval1)
+phi_s_cn_step1 = pybamm.ProcessedVariable(
+    model.variables["Negative current collector potential [V]"], solution1.t, solution1.y, mesh=mesh
+)
+phi_s_cp_step1 = pybamm.ProcessedVariable(
+    model.variables["Positive current collector potential [V]"], solution1.t, solution1.y, mesh=mesh
+)
 voltage_step1 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution1.t, solution1.y, mesh=mesh
 )
@@ -91,36 +96,15 @@ temperature_step1 = pybamm.ProcessedVariable(
 
 current_state = solution1.y[:, -1]
 
-# update potentials (e.g. zero volts on neg. current collector, 3.3 volts on pos.)
-#phi_s_cn_dim_new = np.zeros(var_pts[var.z])
-sf_cn = 1.0
-#phi_s_cn_dim_new = current_state[model.variables["Negative current collector potential"].y_slices] * sf_cn
-
-#phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z]) - 0.05 * np.linspace(0, 1, var_pts[var.z])
-#phi_s_cp_dim_new = 3.3 * np.ones(var_pts[var.z])
-sf_cp = 0.0 # 5e-2
-#phi_s_cp_dim_new = current_state[model.variables["Positive current collector potential"].y_slices] - sf_cp * np.linspace(0, 1, var_pts[var.z])
-
 temp_ave = current_state[model.variables["X-averaged cell temperature"].y_slices]
 temp_neg = current_state[model.variables["X-averaged negative electrode temperature"].y_slices]
 temp_pos = current_state[model.variables["X-averaged positive electrode temperature"].y_slices]
 temp_sep = current_state[model.variables["X-averaged separator temperature"].y_slices]
 
-#variables = {
-#    "Negative current collector potential": non_dim_potential(
-#        phi_s_cn_dim_new, "negative"
-#    ),
-#    "Positive current collector potential": non_dim_potential(
-#        phi_s_cp_dim_new, "positive"
-#    ),
-#}
-
 T_ref = param.process_symbol(model.submodels['thermal'].param.T_ref).evaluate()
 t_external = np.linspace(T_ref, T_ref + 6.0, nbat)
 non_dim_t_external = non_dim_temperature(t_external)
 variables = {
-#    "Negative current collector potential": phi_s_cn_dim_new,
-#    "Positive current collector potential": phi_s_cp_dim_new,
     "X-averaged cell temperature": non_dim_t_external,
     "X-averaged negative electrode temperature": non_dim_t_external,
     "X-averaged positive electrode temperature": non_dim_t_external,
@@ -135,6 +119,12 @@ model.concatenated_initial_conditions = new_state
 #model.concatenated_initial_conditions = current_state[:, np.newaxis]
 t_eval2 = np.linspace(0.1, 0.2, 20)
 solution2 = model.default_solver.solve(model, t_eval2)
+phi_s_cn_step2 = pybamm.ProcessedVariable(
+    model.variables["Negative current collector potential [V]"], solution2.t, solution2.y, mesh=mesh
+)
+phi_s_cp_step2 = pybamm.ProcessedVariable(
+    model.variables["Positive current collector potential [V]"], solution2.t, solution2.y, mesh=mesh
+)
 voltage_step2 = pybamm.ProcessedVariable(
     model.variables["Terminal voltage [V]"], solution2.t, solution2.y, mesh=mesh
 )
@@ -151,6 +141,12 @@ temperature_step2 = pybamm.ProcessedVariable(
     model.variables["X-averaged cell temperature [K]"], solution2.t, solution2.y, mesh=mesh
 )
 # plot
+plt.figure()
+z = np.linspace(0, 1, nbat)
+for bat_id in range(nbat):
+    plt.plot(t_eval1*t_hour, phi_s_cp_step1(t_eval1, z=z)[bat_id, :] - phi_s_cn_step1(t_eval1, z=z)[bat_id, :], t_eval2*t_hour, phi_s_cp_step2(t_eval2, z=z)[bat_id, :] - phi_s_cn_step2(t_eval2, z=z)[bat_id, :])
+plt.xlabel('t [hrs]')
+plt.ylabel('Local voltage [V]')
 plt.figure()
 plt.plot(t_eval1, voltage_step1(t_eval1), t_eval2, voltage_step2(t_eval2))
 plt.xlabel('t')
