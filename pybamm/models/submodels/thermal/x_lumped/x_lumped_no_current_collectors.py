@@ -1,6 +1,7 @@
 #
 # Class for lumped thermal submodel
 #
+import pybamm
 from .base_x_lumped import BaseModel
 
 
@@ -32,8 +33,8 @@ class NoCurrentCollector(BaseModel):
 
     def _current_collector_heating(self, variables):
         """Returns zeros for current collector heat source terms"""
-        Q_s_cn = 0
-        Q_s_cp = 0
+        Q_s_cn = pybamm.Scalar(0)
+        Q_s_cp = pybamm.Scalar(0)
         return Q_s_cn, Q_s_cp
 
     def _yz_average(self, var):
