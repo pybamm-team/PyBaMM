@@ -70,6 +70,8 @@ class TestScikitsSolvers(unittest.TestCase):
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_array_less(0, solution.y[0])
         np.testing.assert_array_less(solution.t, 0.5)
+        np.testing.assert_allclose(solution.t_event, 0.5)
+        np.testing.assert_allclose(solution.y_event, 0)
         self.assertEqual(solution.termination, "event")
 
         # Expnonential growth
@@ -93,6 +95,8 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(np.exp(solution.t), solution.y[0], rtol=1e-4)
         np.testing.assert_array_less(solution.y, 9)
         np.testing.assert_array_less(solution.y ** 2, 7)
+        np.testing.assert_allclose(solution.t_event, np.log(7) / 2, rtol=1e-4)
+        np.testing.assert_allclose(solution.y_event ** 2, 7, rtol=1e-4)
         self.assertEqual(solution.termination, "event")
 
     def test_ode_integrate_with_jacobian(self):
@@ -295,6 +299,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(1.0 * solution.t, solution.y[1])
         np.testing.assert_array_less(solution.y[0], 2)
         np.testing.assert_array_less(solution.y[1], 5)
+        np.testing.assert_allclose(solution.t_event, 4)
+        np.testing.assert_allclose(solution.y_event[0], 2)
+        np.testing.assert_allclose(solution.y_event[1], 4)
         self.assertEqual(solution.termination, "event")
 
         # Exponential decay
@@ -320,6 +327,9 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_allclose(solution.y[1], 2 * np.exp(-0.1 * solution.t))
         np.testing.assert_array_less(0.9, solution.y[0])
         np.testing.assert_array_less(solution.t, 0.5)
+        np.testing.assert_allclose(solution.t_event, 0.5)
+        np.testing.assert_allclose(solution.y_event[0], np.exp(-0.1 * 0.5))
+        np.testing.assert_allclose(solution.y_event[1], 2 * np.exp(-0.1 * 0.5))
         self.assertEqual(solution.termination, "event")
 
     def test_dae_integrate_with_jacobian(self):

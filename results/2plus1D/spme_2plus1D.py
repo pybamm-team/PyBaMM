@@ -6,16 +6,20 @@ import sys
 # set logging level
 pybamm.set_logging_level("INFO")
 
-# load (2+1D) SPM model
-options = {"current collector": "single particle potential pair", "dimensionality": 2}
-model = pybamm.lithium_ion.SPM(options)
-model.check_well_posedness()
+# load (2+1D) SPMe model
+options = {"current collector": "potential pair", "dimensionality": 2}
+model = pybamm.lithium_ion.SPMe(options)
 
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
+# adjust current to correspond to a typical current density of 24 [A.m-2]
+C_rate = 1
+param["Typical current [A]"] = (
+    C_rate * 24 * param.process_symbol(pybamm.geometric_parameters.A_cc).evaluate()
+)
 param.process_model(model)
 param.process_geometry(geometry)
 
@@ -39,6 +43,7 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model -- simulate one hour discharge
+# Note: This solve takes approx 3 mins. on a desktop, so need to be patient...
 tau = param.process_symbol(pybamm.standard_parameters_lithium_ion.tau_discharge)
 t_end = 3600 / tau.evaluate(0)
 t_eval = np.linspace(0, t_end, 120)
@@ -46,13 +51,13 @@ solution = model.default_solver.solve(model, t_eval)
 
 # TO DO: 2+1D automated plotting
 phi_s_cn = pybamm.ProcessedVariable(
-    model.variables["Negative current collector potential"],
+    model.variables["Negative current collector potential [V]"],
     solution.t,
     solution.y,
     mesh=mesh,
 )
 phi_s_cp = pybamm.ProcessedVariable(
-    model.variables["Positive current collector potential"],
+    model.variables["Positive current collector potential [V]"],
     solution.t,
     solution.y,
     mesh=mesh,

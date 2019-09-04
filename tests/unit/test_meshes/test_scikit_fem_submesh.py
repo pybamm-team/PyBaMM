@@ -10,7 +10,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
     def test_mesh_creation(self):
         param = pybamm.ParameterValues(
             base_parameters={
-                "Electrode depth [m]": 0.4,
+                "Electrode width [m]": 0.4,
                 "Electrode height [m]": 0.5,
                 "Negative tab width [m]": 0.1,
                 "Negative tab centre y-coordinate [m]": 0.1,
@@ -18,9 +18,9 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
                 "Positive tab width [m]": 0.1,
                 "Positive tab centre y-coordinate [m]": 0.3,
                 "Positive tab centre z-coordinate [m]": 0.5,
-                "Negative electrode width [m]": 0.3,
-                "Separator width [m]": 0.3,
-                "Positive electrode width [m]": 0.3,
+                "Negative electrode thickness [m]": 0.3,
+                "Separator thickness [m]": 0.3,
+                "Positive electrode thickness [m]": 0.3,
             }
         )
 
@@ -76,7 +76,8 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
 
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.y: 10, var.z: 10}
-        with self.assertRaises(TypeError):
+        # there are parameters in the variables that need to be processed
+        with self.assertRaises(NotImplementedError):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
         lims = {var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
@@ -117,7 +118,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         # set base parameters
         param = pybamm.ParameterValues(
             base_parameters={
-                "Electrode depth [m]": 0.4,
+                "Electrode width [m]": 0.4,
                 "Electrode height [m]": 0.5,
                 "Negative tab width [m]": 0.1,
                 "Negative tab centre y-coordinate [m]": 0.1,
@@ -125,9 +126,9 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
                 "Positive tab centre y-coordinate [m]": 10,
                 "Positive tab centre z-coordinate [m]": 10,
                 "Positive tab width [m]": 0.1,
-                "Negative electrode width [m]": 0.3,
-                "Separator width [m]": 0.3,
-                "Positive electrode width [m]": 0.3,
+                "Negative electrode thickness [m]": 0.3,
+                "Separator thickness [m]": 0.3,
+                "Positive electrode thickness [m]": 0.3,
             }
         )
 
@@ -154,7 +155,7 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         # set base parameters
         param = pybamm.ParameterValues(
             base_parameters={
-                "Electrode depth [m]": 0.4,
+                "Electrode width [m]": 0.4,
                 "Electrode height [m]": 0.5,
                 "Negative tab width [m]": 0.1,
                 "Negative tab centre y-coordinate [m]": 0.0,
@@ -162,9 +163,9 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
                 "Positive tab centre y-coordinate [m]": 0.4,
                 "Positive tab centre z-coordinate [m]": 0.25,
                 "Positive tab width [m]": 0.1,
-                "Negative electrode width [m]": 0.3,
-                "Separator width [m]": 0.3,
-                "Positive electrode width [m]": 0.3,
+                "Negative electrode thickness [m]": 0.3,
+                "Separator thickness [m]": 0.3,
+                "Positive electrode thickness [m]": 0.3,
             }
         )
 
