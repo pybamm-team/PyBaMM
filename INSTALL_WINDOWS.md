@@ -48,17 +48,17 @@ can write python code in a native windows environment, while at the same time us
 to run the code using your installed Ubuntu distribution. The following instructions
 assume that you are using Visual Studio Code.
 
-First, setup vscode to run within the `PyBaMM` directory that you created above, using
+First, setup VSCode to run within the `PyBaMM` directory that you created above, using
 the instructions provided [here](https://code.visualstudio.com/docs/remote/wsl). 
 
 Once you have opened the `PyBaMM` folder in vscode, use the `Extensions` panel to
 install the `Python` extension from Microsoft. Note that extensions are either installed
-on the Windows (Local) or on in WSL (WSL:Ubuntu), so even if you have used vscode
+on the Windows (Local) or on in WSL (WSL:Ubuntu), so even if you have used VSCode
 previously with the Python extension, you probably haven't installed it in WSL. Make
 sure to reload after installing the Python extension so that it is available.
 
 If you have installed PyBaMM into the virtual environment `env` as in the PyBaMM linux
-install guide, then vscode should automatically start using this environment and you
+install guide, then VSCode should automatically start using this environment and you
 should see something similar to "Python 3.6.8 64-bit ('env': venv)" in the bottom bar.
 
 To test that vscode can run a PyBaMM script, navigate to the `examples/scripts` folder
