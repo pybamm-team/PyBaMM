@@ -1,24 +1,29 @@
+#
+# Compares the full and lumped thermal models for a single layer Li-ion cell
+#
+
 import pybamm
 import numpy as np
 
 # load model
-options = {"thermal": "full"}
-full_thermal_model = pybamm.lithium_ion.DFN(options)
+options = {"thermal": "x-full"}
+full_thermal_model = pybamm.lithium_ion.SPMe(options)
 
-options = {"thermal": "lumped"}
-lumped_thermal_model = pybamm.lithium_ion.DFN(options)
+options = {"thermal": "x-lumped"}
+lumped_thermal_model = pybamm.lithium_ion.SPMe(options)
 
 models = [full_thermal_model, lumped_thermal_model]
 
 # load parameter values and process models and geometry
 param = models[0].default_parameter_values
-param.update({"Typical current [A]": 0.3})
+param.update({"Heat transfer coefficient [W.m-2.K-1]": 0.1})
+
 for model in models:
     param.process_model(model)
 
 # set mesh
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
+var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
 
 # discretise models
 for model in models:
@@ -37,7 +42,11 @@ for i, model in enumerate(models):
     solutions[i] = solution
 
 # plot
-output_variables = ["Electrolyte concentration", "Cell temperature [K]"]
+output_variables = [
+    "Terminal voltage [V]",
+    "X-averaged cell temperature [K]",
+    "Cell temperature [K]",
+]
 labels = ["Full thermal model", "Lumped thermal model"]
 plot = pybamm.QuickPlot(models, mesh, solutions, output_variables, labels)
 plot.dynamic_plot()

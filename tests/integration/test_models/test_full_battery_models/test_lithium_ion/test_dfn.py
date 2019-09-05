@@ -71,7 +71,7 @@ class TestDFN(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
     def test_full_thermal(self):
-        options = {"thermal": "full"}
+        options = {"thermal": "x-full"}
         model = pybamm.lithium_ion.DFN(options)
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
@@ -79,7 +79,7 @@ class TestDFN(unittest.TestCase):
         modeltest.test_all()
 
     def test_lumped_thermal(self):
-        options = {"thermal": "lumped"}
+        options = {"thermal": "x-lumped"}
         model = pybamm.lithium_ion.DFN(options)
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
