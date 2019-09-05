@@ -53,6 +53,11 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         self.assertIsInstance(model.default_solver, pybamm.ScikitsDaeSolver)
 
+    def test_particle_fast_diffusion(self):
+        options = {"particle": "fast diffusion"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

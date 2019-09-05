@@ -33,12 +33,33 @@ class ManyParticles(BaseModel):
             c_s = pybamm.PrimaryBroadcast(c_s_surf, ["negative particle"])
             c_s_xav = pybamm.x_average(c_s)
 
+            N_s = pybamm.FullBroadcast(
+                0,
+                ["negative particle"],
+                auxiliary_domains={
+                    "secondary": "negative electrode",
+                    "tertiary": "current collector",
+                },
+            )
+            N_s_xav = pybamm.x_average(N_s)
+
         elif self.domain == "Positive":
             c_s_surf = pybamm.standard_variables.c_s_p_surf
             c_s = pybamm.PrimaryBroadcast(c_s_surf, ["positive particle"])
             c_s_xav = pybamm.x_average(c_s)
 
+            N_s = pybamm.FullBroadcast(
+                0,
+                ["positive particle"],
+                auxiliary_domains={
+                    "secondary": "positive electrode",
+                    "tertiary": "current collector",
+                },
+            )
+            N_s_xav = pybamm.x_average(N_s)
+
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
+        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         return variables
 

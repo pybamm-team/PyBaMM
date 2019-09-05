@@ -147,6 +147,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "side reactions": [],
             "interfacial surface area": "constant",
             "current collector": "uniform",
+            "particle": "Fickian diffusion",
         }
         options = default_options
         # any extra options overwrite the default options
@@ -194,6 +195,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         if options["thermal"] not in [None, "lumped", "full"]:
             raise pybamm.OptionError(
                 "Unknown thermal model '{}'".format(options["thermal"])
+            )
+        if options["particle"] not in [
+            "Fickian diffusion",
+            "fast diffusion",
+        ]:
+            raise pybamm.OptionError(
+                "particle model '{}' not recognised".format(options["particle"])
             )
 
         self._options = options

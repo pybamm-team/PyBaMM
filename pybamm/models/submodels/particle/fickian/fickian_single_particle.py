@@ -38,7 +38,6 @@ class SingleParticle(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
